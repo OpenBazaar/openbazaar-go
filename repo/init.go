@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path"
-	assets "github.com/ipfs/go-ipfs/assets"
 	core "github.com/ipfs/go-ipfs/core"
 	namesys "github.com/ipfs/go-ipfs/namesys"
 	config "github.com/ipfs/go-ipfs/repo/config"
@@ -19,7 +18,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, force bool, empty bool, nBitsForKeypair int) error {
+func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
 	if _, err := fmt.Fprintf(out, "initializing ipfs node at %s\n", repoRoot); err != nil {
 		return err
 	}
@@ -45,12 +44,6 @@ func DoInit(out io.Writer, repoRoot string, force bool, empty bool, nBitsForKeyp
 
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
-	}
-
-	if !empty {
-		if err := addDefaultAssets(out, repoRoot); err != nil {
-			return err
-		}
 	}
 
 	return initializeIpnsKeyspace(repoRoot)
@@ -81,35 +74,6 @@ func checkWriteable(dir string) error {
 		return fmt.Errorf("cannot write to %s, incorrect permissions", err)
 	}
 
-	return err
-}
-
-func addDefaultAssets(out io.Writer, repoRoot string) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	r, err := fsrepo.Open(repoRoot)
-	if err != nil { // NB: repo is owned by the node
-		return err
-	}
-
-	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
-	if err != nil {
-		return err
-	}
-	defer nd.Close()
-
-	dkey, err := assets.SeedInitDocs(nd)
-	if err != nil {
-		return fmt.Errorf("init: seeding init docs failed: %s", err)
-	}
-	fmt.Fprintf(out, "init: seeded init docs %s\n", dkey)
-
-	if _, err = fmt.Fprintf(out, "to get started, enter:\n"); err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(out, "\n\tipfs cat /ipfs/%s/readme\n\n", dkey)
 	return err
 }
 
