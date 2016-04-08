@@ -13,13 +13,13 @@ import (
 	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 )
 
-var errRepoExists = errors.New(`ipfs configuration file already exists!
+var ErrRepoExists = errors.New(`ipfs configuration file already exists!
 Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
 func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
-	if _, err := fmt.Fprintf(out, "initializing ipfs node at %s\n", repoRoot); err != nil {
+	if _, err := fmt.Fprintf(out, "initializing openbazaar node at %s\n", repoRoot); err != nil {
 		return err
 	}
 
@@ -27,8 +27,12 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 		return err
 	}
 
+	if err := maybeCreateOBDirectories(repoRoot); err != nil {
+		return err
+	}
+
 	if fsrepo.IsInitialized(repoRoot) && !force {
-		return errRepoExists
+		return ErrRepoExists
 	}
 
 	conf, err := config.Init(out, nBitsForKeypair)
@@ -45,8 +49,38 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
-
 	return initializeIpnsKeyspace(repoRoot)
+}
+
+func maybeCreateOBDirectories(repoRoot string) error {
+	if err := os.MkdirAll(path.Join(repoRoot, "node"), os.ModePerm); err != nil {
+		return err
+	}
+	
+	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "unfunded"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "in progress"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "trade receipts"), os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(path.Join(repoRoot, "sales", "unfunded"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "sales", "in progress"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "sales", "trade receipts"), os.ModePerm); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(path.Join(repoRoot, "cases"), os.ModePerm); err != nil {
+		return err
+	}
+	return nil
 }
 
 func checkWriteable(dir string) error {

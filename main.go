@@ -60,7 +60,10 @@ func (x *Start) Execute(args []string) error {
 	// initalize the ipfs repo if it doesn't already exist
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
-	repo.DoInit(os.Stdout, expPath, false, 4096)
+	err := repo.DoInit(os.Stdout, expPath, false, 4096)
+	if err != nil && err != repo.ErrRepoExists {
+		panic(err)
+	}
 
 	// ipfs node setup
 	r, err := fsrepo.Open(repoPath)
@@ -109,7 +112,7 @@ func (x *Start) Execute(args []string) error {
 			return nil
 		}
 	}
-	
+
 	for err := range gwErrc {
 		fmt.Println(err)
 	}
