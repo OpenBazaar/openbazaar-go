@@ -56,7 +56,7 @@ func maybeCreateOBDirectories(repoRoot string) error {
 	if err := os.MkdirAll(path.Join(repoRoot, "node"), os.ModePerm); err != nil {
 		return err
 	}
-	
+
 	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "unfunded"), os.ModePerm); err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"path/filepath"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -179,7 +180,7 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 	}
 	errc := make(chan error)
 	go func() {
-		errc <- corehttp.Serve(node, gwLis.NetListener(), opts...)
+		errc <- api.Serve(node, gwLis.NetListener(), opts...)
 		close(errc)
 	}()
 	return nil, errc
