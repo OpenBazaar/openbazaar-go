@@ -4,6 +4,7 @@ import (
 	"os"
 	"fmt"
 	"sort"
+	"path"
 	"path/filepath"
 	"os/signal"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -13,12 +14,26 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/jessevdk/go-flags"
 	"github.com/ipfs/go-ipfs/commands"
+	"github.com/op/go-logging"
+	"github.com/natefinch/lumberjack"
 	"gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
+
 )
+
+var log = logging.MustGetLogger("main")
+
+var stdoutLogFormat = logging.MustStringFormatter(
+	`%{color:reset}%{color}%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+)
+
+var fileLogFormat = logging.MustStringFormatter(
+	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+)
+
 
 type Start struct {
 	Port int `short:"p" long:"port" description:"The port to use for p2p network traffic"`
@@ -45,8 +60,8 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func(){
 		for sig := range c {
-			fmt.Printf("Received %s\n", sig)
-			fmt.Println("OpenBazaar Server shutting down...")
+			log.Noticef("Received %s\n", sig)
+			log.Info("OpenBazaar Server shutting down...")
 			if node != nil {
 				node.Close()
 			}
@@ -73,18 +88,35 @@ func main() {
 }
 
 func (x *Start) Execute(args []string) error {
-	// initalize the ipfs repo if it doesn't already exist
+	//set repo path
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
+
+	//logging
+	w := &lumberjack.Logger{
+		Filename:   path.Join(expPath, "logs", "ob.log"),
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     30, //days
+	}
+	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
+	backendFile := logging.NewLogBackend(w, "", 0)
+	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+
+	// initalize the ipfs repo if it doesn't already exist
 	err := repo.DoInit(os.Stdout, expPath, false, 4096)
-	if err != nil && err != repo.ErrRepoExists {
-		panic(err)
+	if err != nil && err != repo.ErrRepoExists{
+		log.Error(err)
+		os.Exit(1)
 	}
 
 	// ipfs node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
-		panic(err)
+		log.Error(err)
+		os.Exit(1)
 	}
 	cctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -146,7 +178,7 @@ func printSwarmAddrs(node *core.IpfsNode) {
 	sort.Sort(sort.StringSlice(addrs))
 
 	for _, addr := range addrs {
-		fmt.Printf("Swarm listening on %s\n", addr)
+		log.Infof("Swarm listening on %s\n", addr)
 	}
 }
 
@@ -172,11 +204,7 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 	// we might have listened to /tcp/0 - lets see what we are listing on
 	gatewayMaddr = gwLis.Multiaddr()
 
-	if writable {
-		fmt.Printf("Gateway (writable) server listening on %s\n", gatewayMaddr)
-	} else {
-		fmt.Printf("Gateway (readonly) server listening on %s\n", gatewayMaddr)
-	}
+	log.Infof("Gateway/API server listening on %s\n", gatewayMaddr)
 
 	var opts = []corehttp.ServeOption{
 		corehttp.PrometheusCollectorOption("gateway"),

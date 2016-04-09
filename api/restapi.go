@@ -1,17 +1,30 @@
 package api
 
 import (
+	"io"
+	"path"
 	"net/http"
 	"fmt"
 	"runtime/debug"
 	"net/url"
 	"os"
 	"encoding/json"
+	"net/http/httputil"
+	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
-	"io"
-"github.com/ipfs/go-ipfs/commands"
-"path"
+	"github.com/op/go-logging"
+	"github.com/natefinch/lumberjack"
+)
+
+var logger = &logging.Logger{Module: "restAPI"}
+
+var stdoutLogFormat = logging.MustStringFormatter(
+	`%{color:reset}%{color}%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+)
+
+var fileLogFormat = logging.MustStringFormatter(
+	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
 )
 
 type RestAPIConfig struct {
@@ -28,6 +41,19 @@ type restAPIHandler struct {
 }
 
 func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
+	//set logging for the api
+	w := &lumberjack.Logger{
+		Filename:   path.Join(ctx.ConfigRoot, "logs", "api.log"),
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     30, //days
+	}
+	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
+	backendFile := logging.NewLogBackend(w, "", 0)
+	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
 		node:   node,
@@ -43,10 +69,15 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	dump, err := httputil.DumpRequest(r, false)
+	if err != nil {
+		logger.Errorf("Error reading http request: ", err)
+	}
+	logger.Debugf("%s", dump)
 	defer func() {
 		if r := recover(); r != nil {
-			log.Error("A panic occurred in the rest api handler!")
-			log.Error(r)
+			logger.Error("A panic occurred in the rest api handler!")
+			logger.Error(r)
 			debug.PrintStack()
 		}
 	}()

@@ -11,7 +11,10 @@ import (
 	config "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger("repo")
 
 var ErrRepoExists = errors.New(`ipfs configuration file already exists!
 Reinitializing would overwrite your keys.
@@ -19,13 +22,7 @@ Reinitializing would overwrite your keys.
 `)
 
 func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
-	if _, err := fmt.Fprintf(out, "initializing openbazaar node at %s\n", repoRoot); err != nil {
-		return err
-	}
-
-	if err := checkWriteable(repoRoot); err != nil {
-		return err
-	}
+	log.Infof("initializing openbazaar node at %s\n", repoRoot)
 
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
@@ -33,6 +30,10 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 
 	if fsrepo.IsInitialized(repoRoot) && !force {
 		return ErrRepoExists
+	}
+
+	if err := checkWriteable(repoRoot); err != nil {
+		return err
 	}
 
 	conf, err := config.Init(out, nBitsForKeypair)
