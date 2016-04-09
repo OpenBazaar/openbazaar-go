@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"runtime/debug"
 	"net/url"
+	"os"
+	"encoding/json"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
-
+	"io"
 )
 
 type RestAPIConfig struct {
@@ -52,10 +54,10 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if i.config.Writable {
 		switch r.Method {
 		case "POST":
-			post(i, u.String(), w, r)
+			fmt.Fprint(w, "post")
 			return
 		case "PUT":
-			fmt.Fprint(w, "put")
+			put(i, u.String(), w, r)
 			return
 		case "DELETE":
 			fmt.Fprint(w, "delete")
@@ -69,6 +71,32 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (i *restAPIHandler) POSTProfile (w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "post")
+func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	f, err := os.Create("/home/chris/.openbazaar2/node/profile")
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	dec := json.NewDecoder(r.Body)
+	for {
+		var v map[string]interface{}
+		if err := dec.Decode(&v); err == io.EOF{
+			break
+		}
+		b, err := json.MarshalIndent(v, "", "    ")
+		if err != nil {
+			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		}
+		if _, err := f.WriteString(string(b)); err != nil {
+			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		}
+	}
+
+	fmt.Fprint(w, `{"success": true}`)
 }
