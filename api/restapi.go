@@ -101,6 +101,61 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
 		}
 	}
+	fmt.Fprint(w, `{"success": true}`)
+}
+
+func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	file, _, err := r.FormFile("avatar")
+
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	defer file.Close()
+
+	out, err := os.Create(path.Join(i.path, "node", "avatar"))
+
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+
+	fmt.Fprint(w, `{"success": true}`)
+}
+
+func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	file, _, err := r.FormFile("header")
+
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	defer file.Close()
+
+	out, err := os.Create(path.Join(i.path, "node", "header"))
+
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
 
 	fmt.Fprint(w, `{"success": true}`)
 }

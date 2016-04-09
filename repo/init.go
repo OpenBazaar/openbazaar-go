@@ -36,6 +36,7 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	}
 
 	conf, err := config.Init(out, nBitsForKeypair)
+	conf.Discovery.MDNS.Enabled = false
 	if err != nil {
 		return err
 	}

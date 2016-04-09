@@ -75,7 +75,6 @@ func Serve(ctx commands.Context, node *core.IpfsNode, lis net.Listener, options 
 			}
 		}
 	}
-
 	log.Infof("server at %s terminated", addr)
 	return serverError
 }
