@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"path/filepath"
+	"os/signal"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
@@ -37,7 +38,21 @@ var stopServer Stop
 var restartServer Restart
 var parser = flags.NewParser(nil, flags.Default)
 
+var node *core.IpfsNode
+
 func main() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func(){
+		for sig := range c {
+			fmt.Printf("Received %s\n", sig)
+			fmt.Println("OpenBazaar Server shutting down...")
+			if node != nil {
+				node.Close()
+			}
+			os.Exit(1)
+		}
+	}()
 
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
@@ -95,8 +110,9 @@ func (x *Start) Execute(args []string) error {
 	}
 	nd, err := core.NewNode(cctx, ncfg)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	node = nd
 
 	printSwarmAddrs(nd)
 
