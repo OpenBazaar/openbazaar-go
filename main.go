@@ -180,7 +180,7 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 	}
 	errc := make(chan error)
 	go func() {
-		errc <- api.Serve(node, gwLis.NetListener(), opts...)
+		errc <- api.Serve(ctx, node, gwLis.NetListener(), opts...)
 		close(errc)
 	}()
 	return nil, errc

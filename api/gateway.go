@@ -5,17 +5,18 @@ import (
 	"net/http"
 	"time"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	core "github.com/ipfs/go-ipfs/core"
 	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
+	"github.com/ipfs/go-ipfs/commands"
+	core "github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
 	logging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
 )
 
 var log = logging.Logger("core/server")
 
-func makeHandler(n *core.IpfsNode, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
+func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
-	restAPI, err := newRestAPIHandler(n)
+	restAPI, err := newRestAPIHandler(n, ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -31,8 +32,8 @@ func makeHandler(n *core.IpfsNode, l net.Listener, options ...corehttp.ServeOpti
 	return topMux, nil
 }
 
-func Serve(node *core.IpfsNode, lis net.Listener, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(node, lis, options...)
+func Serve(ctx commands.Context, node *core.IpfsNode, lis net.Listener, options ...corehttp.ServeOption) error {
+	handler, err := makeHandler(ctx, node, lis, options...)
 	if err != nil {
 		return err
 	}

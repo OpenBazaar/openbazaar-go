@@ -10,6 +10,8 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
 	"io"
+"github.com/ipfs/go-ipfs/commands"
+"path"
 )
 
 type RestAPIConfig struct {
@@ -22,9 +24,10 @@ type RestAPIConfig struct {
 type restAPIHandler struct {
 	node   *core.IpfsNode
 	config RestAPIConfig
+	path string
 }
 
-func newRestAPIHandler(node *core.IpfsNode) (*restAPIHandler, error) {
+func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
 		node:   node,
@@ -33,6 +36,7 @@ func newRestAPIHandler(node *core.IpfsNode) (*restAPIHandler, error) {
 			BlockList:    &corehttp.BlockList{},
 			PathPrefixes: prefixes,
 		},
+		path: ctx.ConfigRoot,
 	}
 	return i, nil
 }
@@ -73,7 +77,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	f, err := os.Create("/home/chris/.openbazaar2/node/profile")
+	f, err := os.Create(path.Join(i.path, "node", "profile"))
 	if err != nil {
 		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
 	}
