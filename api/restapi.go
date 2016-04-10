@@ -14,19 +14,10 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
-	"github.com/natefinch/lumberjack"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
-var logger = &logging.Logger{Module: "restAPI"}
-
-var stdoutLogFormat = logging.MustStringFormatter(
-	`%{color:reset}%{color}%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
-)
-
-var fileLogFormat = logging.MustStringFormatter(
-	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
-)
+var log = logging.MustGetLogger("restAPI")
 
 type RestAPIConfig struct {
 	Headers      map[string][]string
@@ -43,19 +34,6 @@ type restAPIHandler struct {
 }
 
 func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
-	// set up separate logging for the api
-	w := &lumberjack.Logger{
-		Filename:   path.Join(ctx.ConfigRoot, "logs", "api.log"),
-		MaxSize:    10, // megabytes
-		MaxBackups: 3,
-		MaxAge:     30, //days
-	}
-	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFile := logging.NewLogBackend(w, "", 0)
-	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
-
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
 		node:   node,
@@ -74,13 +52,13 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
-		logger.Errorf("Error reading http request: ", err)
+		log.Errorf("Error reading http request: ", err)
 	}
-	logger.Debugf("%s", dump)
+	log.Debugf("%s", dump)
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error("A panic occurred in the rest api handler!")
-			logger.Error(r)
+			log.Error("A panic occurred in the rest api handler!")
+			log.Error(r)
 			debug.PrintStack()
 		}
 	}()
