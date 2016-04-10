@@ -88,11 +88,11 @@ func main() {
 }
 
 func (x *Start) Execute(args []string) error {
-	//set repo path
+	// set repo path
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
 
-	//logging
+	// logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(expPath, "logs", "ob.log"),
 		MaxSize:    10, // megabytes

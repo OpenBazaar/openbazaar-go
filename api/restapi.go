@@ -15,6 +15,7 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"github.com/natefinch/lumberjack"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
 var logger = &logging.Logger{Module: "restAPI"}
@@ -38,10 +39,11 @@ type restAPIHandler struct {
 	node   *core.IpfsNode
 	config RestAPIConfig
 	path string
+	context commands.Context
 }
 
 func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
-	//set logging for the api
+	// set up separate logging for the api
 	w := &lumberjack.Logger{
 		Filename:   path.Join(ctx.ConfigRoot, "logs", "api.log"),
 		MaxSize:    10, // megabytes
@@ -63,6 +65,7 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 			PathPrefixes: prefixes,
 		},
 		path: ctx.ConfigRoot,
+		context: ctx,
 	}
 	return i, nil
 }
@@ -132,6 +135,11 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
 		}
 	}
+	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	if aerr != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
+		return
+	}
 	fmt.Fprint(w, `{"success": true}`)
 }
 
@@ -157,6 +165,11 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 	_, err = io.Copy(out, file)
 	if err != nil {
 		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	if aerr != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
 		return
 	}
 
@@ -187,6 +200,10 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-
+	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	if aerr != nil {
+		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
+		return
+	}
 	fmt.Fprint(w, `{"success": true}`)
 }

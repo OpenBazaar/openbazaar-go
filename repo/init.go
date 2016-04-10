@@ -6,12 +6,13 @@ import (
 	"errors"
 	"os"
 	"path"
-	core "github.com/ipfs/go-ipfs/core"
-	namesys "github.com/ipfs/go-ipfs/namesys"
-	config "github.com/ipfs/go-ipfs/repo/config"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
-	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-"github.com/op/go-logging"
+	"github.com/op/go-logging"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/namesys"
+	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+
 )
 
 var log = logging.MustGetLogger("repo")
