@@ -29,8 +29,7 @@ func NewRequest(ctx cmds.Context, args []string) (cmds.Request, *cmds.Command, e
 		}
 	}
 	req, cmd, _, err := cli.Parse(args, nil, Root)
-	cctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cctx := context.Background()
 	rerr := req.SetRootContext(cctx)
 	if rerr != nil {
 		return nil, nil, rerr

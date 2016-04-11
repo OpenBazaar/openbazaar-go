@@ -146,7 +146,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	node = nd
-
+	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
 	cfg, err := ctx.GetConfig()

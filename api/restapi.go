@@ -91,7 +91,7 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	f, err := os.Create(path.Join(i.path, "node", "profile"))
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -107,18 +107,23 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 		}
 		b, err := json.MarshalIndent(v, "", "    ")
 		if err != nil {
-			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		}
 		if _, err := f.WriteString(string(b)); err != nil {
-			fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		}
 	}
-	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
 	if aerr != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
 		return
 	}
-	fmt.Fprint(w, `{"success": true}`)
+	_, perr := ipfs.Publish(i.context, hash)
+	if perr != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
+		return
+	}
+	fmt.Fprintf(w, `{"success": true}`)
 }
 
 func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
@@ -126,7 +131,7 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("avatar")
 
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	defer file.Close()
@@ -134,7 +139,7 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 	out, err := os.Create(path.Join(i.path, "node", "avatar"))
 
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 
@@ -142,12 +147,17 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, file)
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
 	if aerr != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+		return
+	}
+	_, perr := ipfs.Publish(i.context, hash)
+	if perr != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
 		return
 	}
 
@@ -159,7 +169,7 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("header")
 
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	defer file.Close()
@@ -167,7 +177,7 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 	out, err := os.Create(path.Join(i.path, "node", "header"))
 
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 
@@ -175,12 +185,17 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, file)
 	if err != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	_, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
+	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
 	if aerr != nil {
-		fmt.Fprint(w, `{"success": false, "reason": %s}`, aerr)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+		return
+	}
+	_, perr := ipfs.Publish(i.context, hash)
+	if perr != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
 		return
 	}
 	fmt.Fprint(w, `{"success": true}`)
