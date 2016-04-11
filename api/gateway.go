@@ -7,9 +7,13 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	"github.com/ipfs/go-ipfs/commands"
+	"github.com/op/go-logging"
 	core "github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
+
 )
+
+var log = logging.MustGetLogger("api")
 
 func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
@@ -17,7 +21,13 @@ func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options
 	if err != nil {
 		return nil, err
 	}
+	wsAPI, err := newWSAPIHandler(n, ctx)
+	if err != nil {
+		return nil, err
+	}
 	topMux.Handle("/ob/", restAPI)
+	topMux.Handle("/ws", wsAPI)
+
 	mux := topMux
 	for _, option := range options {
 		var err error

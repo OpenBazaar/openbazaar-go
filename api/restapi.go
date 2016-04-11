@@ -13,11 +13,8 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/op/go-logging"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
-
-var log = logging.MustGetLogger("restAPI")
 
 type RestAPIConfig struct {
 	Headers      map[string][]string

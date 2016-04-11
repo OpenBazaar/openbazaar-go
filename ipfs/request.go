@@ -21,6 +21,15 @@ var localCommands = map[string]*cmds.Command{
 	"commands": commandsClientCmd,
 }
 
+func init() {
+	Root.Subcommands = localCommands
+	for k, v := range commands.Root.Subcommands {
+		if _, found := Root.Subcommands[k]; !found {
+			Root.Subcommands[k] = v
+		}
+	}
+}
+
 func NewRequest(ctx cmds.Context, args []string) (cmds.Request, *cmds.Command, error) {
 	Root.Subcommands = localCommands
 	for k, v := range commands.Root.Subcommands {

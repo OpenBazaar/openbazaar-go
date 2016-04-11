@@ -24,7 +24,6 @@ Reinitializing would overwrite your keys.
 
 func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
 	log.Infof("initializing openbazaar node at %s\n", repoRoot)
-
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -32,7 +31,6 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	if fsrepo.IsInitialized(repoRoot) && !force {
 		return ErrRepoExists
 	}
-
 	if err := checkWriteable(repoRoot); err != nil {
 		return err
 	}
