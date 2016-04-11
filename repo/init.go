@@ -24,6 +24,7 @@ Reinitializing would overwrite your keys.
 
 func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
 	log.Infof("initializing openbazaar node at %s\n", repoRoot)
+
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -31,6 +32,7 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	if fsrepo.IsInitialized(repoRoot) && !force {
 		return ErrRepoExists
 	}
+
 	if err := checkWriteable(repoRoot); err != nil {
 		return err
 	}
@@ -42,7 +44,9 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	conf.Discovery.MDNS.Enabled = false
 	conf.Addresses.API = ""
 	conf.Ipns.RecordLifetime = "7d"
-	conf.Ipns.RepublishPeriod = "5h"
+	conf.Ipns.RepublishPeriod = "24h"
+	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip4/0.0.0.0/udp/4002/utp")
+	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip6/::/udp/4002/utp")
 
 	if fsrepo.IsInitialized(repoRoot) {
 		if err := fsrepo.Remove(repoRoot); err != nil {
