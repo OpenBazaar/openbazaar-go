@@ -88,6 +88,7 @@ func main() {
 }
 
 func (x *Start) Execute(args []string) error {
+	printSplashScreen()
 	// set repo path
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
@@ -228,4 +229,17 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 		close(errc)
 	}()
 	return nil, errc
+}
+
+func printSplashScreen(){
+	blue := logging.ColorSeq(logging.ColorBlue)
+	white := logging.ColorSeq(logging.ColorWhite)
+	fmt.Println(white + "________             " + blue + "         __________" + white)
+	fmt.Println(`\_____  \ ______   ____   ____` + blue + `\______   \_____  _____________  _____ _______` + white)
+	fmt.Println(` /   |   \\____ \_/ __ \ /    \` + blue + `|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ ` + white)
+	fmt.Println(`/    |    \  |_> >  ___/|   |  \    ` + blue + `|   \ / __ \_/    /  / __ \_/ __ \|  | \/` + white)
+	fmt.Println(`\_______  /   __/ \___  >___|  /` + blue + `______  /(____  /_____ \(____  (____  /__|` + white)
+	fmt.Println(`        \/|__|        \/     \/  ` + blue + `     \/      \/      \/     \/     \/` + white)
+	fmt.Println("")
+	fmt.Println("OpenBazaar Server v0.2 starting...")
 }
