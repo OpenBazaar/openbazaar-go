@@ -21,10 +21,8 @@ func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options
 	if err != nil {
 		return nil, err
 	}
-	wsAPI, err := newWSAPIHandler(n, ctx)
-	if err != nil {
-		return nil, err
-	}
+	wsAPI := newWSAPIHandler(n, ctx)
+
 	topMux.Handle("/ob/", restAPI)
 	topMux.Handle("/ws", wsAPI)
 
