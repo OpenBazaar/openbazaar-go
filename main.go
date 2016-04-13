@@ -7,8 +7,10 @@ import (
 	"path"
 	"path/filepath"
 	"os/signal"
+	"strconv"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -21,7 +23,6 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
-
 )
 
 var log = logging.MustGetLogger("main")
@@ -39,10 +40,10 @@ type Start struct {
 	Port int `short:"p" long:"port" description:"The port to use for p2p network traffic"`
 	Daemon bool `short:"d" long:"daemon" description:"run the server in the background as a daemon"`
 	Testnet bool `short:"t" long:"testnet" description:"use the test network"`
-	LogLevel string `short:"l" long:"loglevel" description:"set the logging level [debug, info, warning, error, critical]"`
+	LogLevel string `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
 	AllowIP []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	RestPort int `short:"r" long:"restport" description:"set the rest API port"`
-	WebSocketPort int `short:"w" long:"websocketport" description:"set the websocket API port"`
+	GatewayPort int `short:"g" long:"gatewayport" description:"set the API port"`
+	STUN bool `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	PIDFile string `long:"pidfile" description:"name of the PID file if running as daemon"`
 }
 type Stop struct {}
@@ -89,6 +90,7 @@ func main() {
 
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
+
 	// set repo path
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
@@ -110,18 +112,41 @@ func (x *Start) Execute(args []string) error {
 	err := repo.DoInit(os.Stdout, expPath, false, 4096)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)
-		os.Exit(1)
+		return err
 	}
 
 	// ipfs node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
 		log.Error(err)
-		os.Exit(1)
+		return err
 	}
 	cctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	cfg, err := r.Config()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	// Run stun and set uTP port
+	if x.STUN {
+		for i, addr := range(cfg.Addresses.Swarm) {
+			m, _ := ma.NewMultiaddr(addr)
+			p := m.Protocols()
+			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp"{
+				port, serr := net.Stun()
+				if serr != nil {
+					log.Error(serr)
+					return err
+				}
+				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
+				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/" + strconv.Itoa(port) + "/utp")
+				break
+			}
+		}
+	}
 
 	ctx := commands.Context{}
 
@@ -143,23 +168,20 @@ func (x *Start) Execute(args []string) error {
 	}
 	nd, err := core.NewNode(cctx, ncfg)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
 	node = nd
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
-	cfg, err := ctx.GetConfig()
-	if err != nil {
-		return nil
-	}
-
 	var gwErrc <-chan error
 	if len(cfg.Addresses.Gateway) > 0 {
 		var err error
 		err, gwErrc = serveHTTPGateway(ctx)
 		if err != nil {
-			return nil
+			log.Error(err)
+			return err
 		}
 	}
 

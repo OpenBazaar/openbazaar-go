@@ -45,8 +45,8 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	conf.Addresses.API = ""
 	conf.Ipns.RecordLifetime = "7d"
 	conf.Ipns.RepublishPeriod = "24h"
-	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip4/0.0.0.0/udp/4002/utp")
-	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip6/::/udp/4002/utp")
+	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip4/0.0.0.0/udp/4001/utp")
+	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip6/::/udp/4001/utp")
 
 	if fsrepo.IsInitialized(repoRoot) {
 		if err := fsrepo.Remove(repoRoot); err != nil {
