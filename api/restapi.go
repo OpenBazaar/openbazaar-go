@@ -14,6 +14,11 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/namesys"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
+
 )
 
 type RestAPIConfig struct {
@@ -28,9 +33,21 @@ type restAPIHandler struct {
 	config RestAPIConfig
 	path string
 	context commands.Context
+	rootHash string
 }
 
 func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
+
+	// Get current directory hash
+	id := node.Identity
+	_, ipnskey := namesys.IpnsKeysForID(id)
+	ival, _ := node.Repo.Datastore().Get(ipnskey.DsKey())
+	val := ival.([]byte)
+	dhtrec := new(dhtpb.Record)
+	proto.Unmarshal(val, dhtrec)
+	e := new(pb.IpnsEntry)
+	proto.Unmarshal(dhtrec.GetValue(), e)
+
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
 		node:   node,
@@ -41,6 +58,7 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 		},
 		path: ctx.ConfigRoot,
 		context: ctx,
+		rootHash: string(e.Value),
 	}
 	return i, nil
 }
@@ -99,15 +117,18 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	for {
 		var v map[string]interface{}
-		if err := dec.Decode(&v); err == io.EOF{
+		err := dec.Decode(&v)
+		if err == io.EOF {
 			break
 		}
 		b, err := json.MarshalIndent(v, "", "    ")
 		if err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			return
 		}
 		if _, err := f.WriteString(string(b)); err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			return
 		}
 	}
 	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
@@ -120,6 +141,14 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
 		return
 	}
+	if hash != i.rootHash {
+		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
+			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			return
+		}
+		i.rootHash = hash
+	}
+
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
@@ -156,6 +185,13 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 	if perr != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
 		return
+	}
+	if hash != i.rootHash {
+		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
+			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			return
+		}
+		i.rootHash = hash
 	}
 
 	fmt.Fprint(w, `{"success": true}`)
@@ -195,5 +231,13 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
 		return
 	}
+	if hash != i.rootHash {
+		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
+			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			return
+		}
+		i.rootHash = hash
+	}
+
 	fmt.Fprint(w, `{"success": true}`)
 }

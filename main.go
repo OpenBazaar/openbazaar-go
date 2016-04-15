@@ -175,6 +175,11 @@ func (x *Start) Execute(args []string) error {
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
+	if err := net.SetupOpenBazaarService(nd); err != nil {
+		log.Error(err)
+		return err
+	}
+
 	var gwErrc <-chan error
 	if len(cfg.Addresses.Gateway) > 0 {
 		var err error
@@ -230,7 +235,7 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 	log.Infof("Gateway/API server listening on %s\n", gatewayMaddr)
 
 	var opts = []corehttp.ServeOption{
-		corehttp.PrometheusCollectorOption("gateway"),
+		corehttp.MetricsCollectionOption("gateway"),
 		corehttp.CommandsROOption(ctx),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
