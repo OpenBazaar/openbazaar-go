@@ -14,11 +14,6 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/namesys"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-
 )
 
 type RestAPIConfig struct {
@@ -38,15 +33,12 @@ type restAPIHandler struct {
 
 func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
 
-	// Get current directory hash
-	id := node.Identity
-	_, ipnskey := namesys.IpnsKeysForID(id)
-	ival, _ := node.Repo.Datastore().Get(ipnskey.DsKey())
-	val := ival.([]byte)
-	dhtrec := new(dhtpb.Record)
-	proto.Unmarshal(val, dhtrec)
-	e := new(pb.IpnsEntry)
-	proto.Unmarshal(dhtrec.GetValue(), e)
+	// Add the current node directory in case it's note already added.
+	dirHash, aerr := ipfs.AddDirectory(ctx, path.Join(ctx.ConfigRoot, "node"))
+	if aerr != nil {
+		log.Error(aerr)
+		return nil, aerr
+	}
 
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
@@ -58,7 +50,7 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 		},
 		path: ctx.ConfigRoot,
 		context: ctx,
-		rootHash: string(e.Value),
+		rootHash: dirHash,
 	}
 	return i, nil
 }

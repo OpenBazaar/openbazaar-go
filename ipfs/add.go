@@ -33,6 +33,5 @@ func AddDirectory(ctx commands.Context, fpath string) (string, error) {
 	if rootHash == "" {
 		return "", addErr
 	}
-	log.Infof("Added directory %s to IPFS", rootHash)
 	return rootHash, nil
 }
