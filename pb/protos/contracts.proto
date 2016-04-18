@@ -21,17 +21,6 @@ message Listing {
     Shipping shipping             = 5;
     repeated string moderators    = 6;
 
-    message ID {
-        string guid          = 1;
-        string blockchainID  = 2;
-        Pubkeys pubkeys      = 3;
-
-        message Pubkeys {
-            string guid    = 1;
-            string bitcoin = 2;
-        }
-    }
-
     message Metadata {
         string version           = 1;
         Category category        = 2;
@@ -53,8 +42,8 @@ message Listing {
     message Item {
         string title                = 1;
         string description          = 2;
-        string process_time         = 3;
-        PPU price_per_unit          = 4;
+        string processingTime       = 3;
+        PPU pricePerUnit            = 4;
         bool nsfw                   = 5;
         repeated string tags        = 6;
         repeated string imageHashes = 7;
@@ -104,6 +93,17 @@ message Refund {}
 message Timestamp {
   // Seconds since Unix epoch
   int64 seconds = 1;
+}
+
+message ID {
+    string guid          = 1;
+    string blockchainID  = 2;
+    Pubkeys pubkeys      = 3;
+
+    message Pubkeys {
+        string guid    = 1;
+        string bitcoin = 2;
+    }
 }
 
 message Signatures {
