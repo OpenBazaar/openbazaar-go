@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+import "countrycodes.proto";
+
+message RicardianContract {
+    Listing vendorListing                       = 1;
+    Order buyerOrder                            = 2;
+    OrderConfirmation vendorOrderConfirmation   = 3;
+    Rating buyerRating                          = 4;
+    Dispute dispute                             = 5;
+    DisputeResolution disputeResolution         = 6;
+    Refund refund                               = 7;
+    repeated Signatures sigs                    = 8;
+}
+
+message Listing {
+    string listingName            = 1;
+    ID vendorID                   = 2;
+    Metadata metadata             = 3;
+    Item item                     = 4;
+    Shipping shipping             = 5;
+    repeated string moderators    = 6;
+
+    message ID {
+        string guid          = 1;
+        string blockchainID  = 2;
+        Pubkeys pubkeys      = 3;
+
+        message Pubkeys {
+            string guid    = 1;
+            string bitcoin = 2;
+        }
+    }
+
+    message Metadata {
+        string version           = 1;
+        Category category        = 2;
+        CategorySub categorySub  = 3;
+        Timestamp expiry         = 4;
+
+        enum CategorySub {
+            FIXED_PRICE = 0;
+            AUCTION     = 1;
+        }
+
+        enum Category {
+            PHYSICAL_GOOD = 0;
+            DIGITAL_GOOD  = 1;
+            SERVICE       = 2;
+        }
+    }
+
+    message Item {
+        string title                = 1;
+        string description          = 2;
+        string process_time         = 3;
+        PPU price_per_unit          = 4;
+        bool nsfw                   = 5;
+        repeated string tags        = 6;
+        repeated string imageHashes = 7;
+        string SKU                  = 8;
+        string condition            = 9;
+        repeated Options options    = 10;
+
+        message Options {
+            string name             = 1;
+            repeated string values  = 2;
+        }
+    }
+
+    message Shipping {
+        bool freeShipping                     = 1;
+        PPU domestic                          = 2;
+        PPU international                     = 3;
+        repeated CountryCode shippingRegions  = 4;
+        EstimatedDelivery estimatedDelivery   = 5;
+        CountryCode shippingOrigin            = 6;
+
+        message EstimatedDelivery {
+            string domestic    = 1;
+            string internation = 2;
+        }
+    }
+
+    message PPU {
+        uint32 bitcoin = 1;
+        Fiat fiat      = 2;
+
+        message Fiat {
+            string currencyCode = 1;
+            float price         = 2;
+        }
+    }
+}
+
+// TODO: complete other messages
+message Order {}
+message OrderConfirmation {}
+message Rating {}
+message Dispute {}
+message DisputeResolution {}
+message Refund {}
+
+message Timestamp {
+  // Seconds since Unix epoch
+  int64 seconds = 1;
+}
+
+message Signatures {
+    Section section   = 1;
+    bytes guid        = 2;
+    bytes bitcoin     = 3;
+
+    enum Section {
+        LISTING            = 0;
+        ORDER              = 1;
+        ORDER_CONFIRMATION = 2;
+        RATING             = 3;
+        DISPUTE            = 4;
+        DISPUTE_RESOLUTION = 5;
+        REFUND             = 6;
+    }
+}
