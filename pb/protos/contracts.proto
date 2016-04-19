@@ -10,7 +10,7 @@ message RicardianContract {
     Dispute dispute                             = 5;
     DisputeResolution disputeResolution         = 6;
     Refund refund                               = 7;
-    repeated Signatures sigs                    = 8;
+    repeated Signatures signatures              = 8;
 }
 
 message Listing {
@@ -22,20 +22,22 @@ message Listing {
     repeated string moderators    = 6;
 
     message Metadata {
-        string version           = 1;
+        uint32 version           = 1;
         Category category        = 2;
         CategorySub categorySub  = 3;
         Timestamp expiry         = 4;
 
         enum CategorySub {
-            FIXED_PRICE = 0;
-            AUCTION     = 1;
+            NONE        = 0;
+            FIXED_PRICE = 1;
+            AUCTION     = 2;
         }
 
         enum Category {
-            PHYSICAL_GOOD = 0;
-            DIGITAL_GOOD  = 1;
-            SERVICE       = 2;
+            NA            = 0;
+            PHYSICAL_GOOD = 1;
+            DIGITAL_GOOD  = 2;
+            SERVICE       = 3;
         }
     }
 
@@ -61,14 +63,15 @@ message Listing {
         bool freeShipping                     = 1;
         PPU domestic                          = 2;
         PPU international                     = 3;
-        repeated CountryCode shippingRegions  = 4;
+        repeated string shippingRegions       = 4;
         EstimatedDelivery estimatedDelivery   = 5;
         CountryCode shippingOrigin            = 6;
 
         message EstimatedDelivery {
             string domestic    = 1;
-            string internation = 2;
+            string international = 2;
         }
+
     }
 
     message PPU {
@@ -91,8 +94,7 @@ message DisputeResolution {}
 message Refund {}
 
 message Timestamp {
-  // Seconds since Unix epoch
-  int64 seconds = 1;
+  int64 secondsFromUnixEpoch = 1;
 }
 
 message ID {
@@ -112,12 +114,13 @@ message Signatures {
     bytes bitcoin     = 3;
 
     enum Section {
-        LISTING            = 0;
-        ORDER              = 1;
-        ORDER_CONFIRMATION = 2;
-        RATING             = 3;
-        DISPUTE            = 4;
-        DISPUTE_RESOLUTION = 5;
-        REFUND             = 6;
+        NA                 = 0;
+        LISTING            = 1;
+        ORDER              = 2;
+        ORDER_CONFIRMATION = 3;
+        RATING             = 4;
+        DISPUTE            = 5;
+        DISPUTE_RESOLUTION = 6;
+        REFUND             = 7;
     }
 }

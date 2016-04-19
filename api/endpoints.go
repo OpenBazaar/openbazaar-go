@@ -12,5 +12,16 @@ func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	case "/ob/header", "/ob/header/":
 		i.PUTHeader(w, r)
 		return
+	case "/ob/images", "/ob/images/":
+		i.PUTImage(w, r)
+		return
+	}
+}
+
+func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+	switch path {
+	case "/ob/contract", "/ob/contract/":
+		i.POSTContract(w, r)
+		return
 	}
 }
