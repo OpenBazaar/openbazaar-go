@@ -1,10 +1,27 @@
 syntax = "proto3";
 
+import "google/protobuf/any.proto";
+
 message Message {
-    MessageType messageType   = 1;
-    repeated string arguments = 2;
+    MessageType messageType     = 1;
+    google.protobuf.Any payload = 2;
 
     enum MessageType {
-        PING = 0;
+        PING                    = 0;
+        MESSAGE                 = 1;
+        FOLLOW                  = 2;
+        UNFOLLOW                = 3;
+        ORDER                   = 4;
+        ORDER_ACK               = 5;
+        ORDER_CONFIRMATION      = 6;
+        RATING                  = 7;
+        DISPUTE_OPEN            = 8;
+        DISPUTE_CLOSE           = 9;
+        REFUND                  = 10;
     }
+}
+
+message EncryptedMessage {
+    bytes ephemPubKey      = 1;
+    bytes ciphertext       = 2;
 }
