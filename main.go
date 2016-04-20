@@ -175,10 +175,7 @@ func (x *Start) Execute(args []string) error {
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
-	if err := net.SetupOpenBazaarService(nd); err != nil {
-		log.Error(err)
-		return err
-	}
+	net.SetupOpenBazaarService(nd, ctx)
 
 	var gwErrc <-chan error
 	if len(cfg.Addresses.Gateway) > 0 {

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message Message {
+    MessageType messageType   = 1;
+    repeated string arguments = 2;
+
+    enum MessageType {
+        PING = 0;
+    }
+}
