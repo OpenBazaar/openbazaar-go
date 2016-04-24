@@ -63,14 +63,12 @@ message Listing {
         bool freeShipping                     = 1;
         PPU domestic                          = 2;
         PPU international                     = 3;
-        // This should be a reapeated CountryCode but there is a
-        // known bug in golang/protobuf unmarshalling repeated enums.
-        repeated string shippingRegions       = 4;
+        repeated CountryCode shippingRegions  = 4;
         EstimatedDelivery estimatedDelivery   = 5;
         CountryCode shippingOrigin            = 6;
 
         message EstimatedDelivery {
-            string domestic    = 1;
+            string domestic      = 1;
             string international = 2;
         }
 
