@@ -61,6 +61,14 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
+	// Stop here if its Preflighted OPTIONS request
+	if r.Method == "OPTIONS" {
+		return
+	}
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		log.Errorf("Error reading http request: ", err)

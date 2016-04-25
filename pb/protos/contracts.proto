@@ -28,16 +28,16 @@ message Listing {
         Timestamp expiry         = 4;
 
         enum CategorySub {
-            NONE        = 0;
-            FIXED_PRICE = 1;
-            AUCTION     = 2;
+            CATEGORYSUB_NOT_SET = 0;
+            FIXED_PRICE         = 1;
+            AUCTION             = 2;
         }
 
         enum Category {
-            NA            = 0;
-            PHYSICAL_GOOD = 1;
-            DIGITAL_GOOD  = 2;
-            SERVICE       = 3;
+            CATEGORY_NOT_SET = 0;
+            PHYSICAL_GOOD    = 1;
+            DIGITAL_GOOD     = 2;
+            SERVICE          = 3;
         }
     }
 
@@ -45,7 +45,7 @@ message Listing {
         string title                = 1;
         string description          = 2;
         string processingTime       = 3;
-        PPU pricePerUnit            = 4;
+        Price pricePerUnit          = 4;
         bool nsfw                   = 5;
         repeated string tags        = 6;
         repeated string imageHashes = 7;
@@ -61,8 +61,8 @@ message Listing {
 
     message Shipping {
         bool freeShipping                     = 1;
-        PPU domestic                          = 2;
-        PPU international                     = 3;
+        Price domestic                        = 2;
+        Price international                   = 3;
         repeated CountryCode shippingRegions  = 4;
         EstimatedDelivery estimatedDelivery   = 5;
         CountryCode shippingOrigin            = 6;
@@ -74,7 +74,7 @@ message Listing {
 
     }
 
-    message PPU {
+    message Price {
         uint32 bitcoin = 1;
         Fiat fiat      = 2;
 
@@ -114,7 +114,7 @@ message Signatures {
     bytes bitcoin     = 3;
 
     enum Section {
-        NA                 = 0;
+        SECTION_NOT_SET    = 0;
         LISTING            = 1;
         ORDER              = 2;
         ORDER_CONFIRMATION = 3;
