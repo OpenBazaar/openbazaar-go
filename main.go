@@ -186,7 +186,6 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	}
-
 	for err := range gwErrc {
 		fmt.Println(err)
 	}

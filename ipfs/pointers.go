@@ -19,34 +19,26 @@ import (
 
 const MAGIC string = "0000000000000000000000000000000000000000000000000000000000000000"
 
-
 // A pointer is a custom provider inserted into the dht which points to a location of a file.
 // For offline messaging purposes we use a hash of the recipient's ID as the key and set the
 // provider to the location of the ciphertext. We set the Peer ID of the provider object to
 // a magic number so we distinguish it from regular providers and use a longer ttl.
-func Point(node core.IpfsNode, ctx context.Context, skey string, addr ma.Multiaddr) error {
-	hash := sha256.New()
-	hash.Write([]byte(skey))
-	md := hash.Sum(nil)
-	keyHash, err := multihash.EncodeName(md, multihash.SHA2_256)
-	if err != nil {
-		return err
-	}
-	var mhKey multihash.Multihash = keyHash
-
+// Note this will only be compatible with the OpenBazaar/go-ipfs fork.
+func AddPointer(node *core.IpfsNode, ctx context.Context, skey string, addr ma.Multiaddr) error {
+	keyhash := hashStringToKey(skey)
+	k := key.B58KeyDecode(keyhash.B58String())
 	dht := node.Routing.(*routing.IpfsDHT)
 	peerHosts := node.PeerHost
-	peers, err := dht.GetClosestPeers(ctx, key.B58KeyDecode(mhKey.B58String()))
+	peers, err := dht.GetClosestPeers(ctx, k)
 	if err != nil {
 		return err
 	}
-
 	wg := sync.WaitGroup{}
 	for p := range peers {
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			err := putPointer(ctx, peerHosts, p, mhKey.B58String(), addr)
+			err := putPointer(ctx, peerHosts, p, string(k), addr)
 			if err != nil {
 				log.Debug(err)
 			}
@@ -56,8 +48,14 @@ func Point(node core.IpfsNode, ctx context.Context, skey string, addr ma.Multiad
 	return nil
 }
 
+// Fetch pointers from the dht. They will be returned asynchronously.
+func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, skey string) <-chan peer.PeerInfo {
+	keyhash := hashStringToKey(skey)
+	peerout := dht.FindProvidersAsync(ctx, key.Key(keyhash.B58String()), 100000)
+	return peerout
+}
+
 func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string, addr ma.Multiaddr) error{
-	// add self as the provider
 	magicID, err := getMagicID()
 	if err != nil {
 		return err
@@ -67,9 +65,9 @@ func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string
 		Addrs: []ma.Multiaddr{addr},
 	}
 
-
 	pmes := pb.NewMessage(pb.Message_ADD_PROVIDER, skey, 0)
 	pmes.ProviderPeers = pb.RawPeerInfosToPBPeers([]peer.PeerInfo{pi})
+	log.Debugf("Sending PutProvider message to %s", p)
 	err = sendMessage(ctx, peerHosts, p, pmes)
 	if err != nil {
 		return err
@@ -79,7 +77,6 @@ func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string
 }
 
 func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Message) error {
-
 	s, err := host.NewStream(ctx, routing.ProtocolDHT, p)
 	if err != nil {
 		return err
@@ -93,6 +90,15 @@ func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Messag
 		return err
 	}
 	return nil
+}
+
+func hashStringToKey(s string) multihash.Multihash {
+	hash := sha256.New()
+	hash.Write([]byte(s))
+	md := hash.Sum(nil)
+	keyHash, _ := multihash.Encode(md, multihash.SHA2_256)
+	var mhKey multihash.Multihash = keyHash
+	return mhKey
 }
 
 func getMagicID() (peer.ID, error){
