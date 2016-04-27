@@ -4,6 +4,7 @@ import (
 	"sync"
 	"crypto/sha256"
 	"encoding/hex"
+	"strconv"
 	"github.com/ipfs/go-ipfs/core"
 	"gx/ipfs/QmYgaiNVVL7f2nydijAwpDRunRkmxfu3PoK87Y3pH84uAW/go-libp2p/p2p/host"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
@@ -15,6 +16,7 @@ import (
 	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	key "github.com/ipfs/go-ipfs/blocks/key"
+	"encoding/binary"
 )
 
 const MAGIC string = "0000000000000000000000000000000000000000000000000000000000000000"
@@ -24,8 +26,8 @@ const MAGIC string = "0000000000000000000000000000000000000000000000000000000000
 // provider to the location of the ciphertext. We set the Peer ID of the provider object to
 // a magic number so we distinguish it from regular providers and use a longer ttl.
 // Note this will only be compatible with the OpenBazaar/go-ipfs fork.
-func AddPointer(node *core.IpfsNode, ctx context.Context, skey string, addr ma.Multiaddr) error {
-	keyhash := hashStringToKey(skey)
+func AddPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) error {
+	keyhash := createKey(mhKey, prefixLen)
 	k := key.B58KeyDecode(keyhash.B58String())
 	dht := node.Routing.(*routing.IpfsDHT)
 	peerHosts := node.PeerHost
@@ -49,8 +51,8 @@ func AddPointer(node *core.IpfsNode, ctx context.Context, skey string, addr ma.M
 }
 
 // Fetch pointers from the dht. They will be returned asynchronously.
-func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, skey string) <-chan peer.PeerInfo {
-	keyhash := hashStringToKey(skey)
+func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) <-chan peer.PeerInfo {
+	keyhash := createKey(mhKey, prefixLen)
 	peerout := dht.FindProvidersAsync(ctx, key.Key(keyhash.B58String()), 100000)
 	return peerout
 }
@@ -67,7 +69,6 @@ func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string
 
 	pmes := pb.NewMessage(pb.Message_ADD_PROVIDER, skey, 0)
 	pmes.ProviderPeers = pb.RawPeerInfosToPBPeers([]peer.PeerInfo{pi})
-	log.Debugf("Sending PutProvider message to %s", p)
 	err = sendMessage(ctx, peerHosts, p, pmes)
 	if err != nil {
 		return err
@@ -92,13 +93,35 @@ func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Messag
 	return nil
 }
 
-func hashStringToKey(s string) multihash.Multihash {
+func createKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
+	// Grab the first 8 bytes from the multihash digest
+	m, _ := multihash.Decode(mh)
+	prefix64 := binary.BigEndian.Uint64(m.Digest[:8])
+
+	// Convert to binary string
+	bin := strconv.FormatUint(prefix64, 2)
+
+	// Pad with leading zeros
+	leadingZeros := 64 - len(bin)
+	for i := 0; i < leadingZeros; i++ {
+		bin = "0" + bin
+	}
+
+	// Grab the bits corresponding to the prefix length and convert to int
+	intPrefix, _ := strconv.ParseUint(bin[:prefixLen], 2, 64)
+
+	// Convert to 8 byte array
+	bs := make([]byte, 8)
+	binary.BigEndian.PutUint64(bs, intPrefix)
+
+	// Hash the array
 	hash := sha256.New()
-	hash.Write([]byte(s))
+	hash.Write(bs)
 	md := hash.Sum(nil)
+
+	// Encode as multihash
 	keyHash, _ := multihash.Encode(md, multihash.SHA2_256)
-	var mhKey multihash.Multihash = keyHash
-	return mhKey
+	return keyHash
 }
 
 func getMagicID() (peer.ID, error){
