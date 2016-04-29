@@ -23,6 +23,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
+	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
 )
 
 var log = logging.MustGetLogger("main")
@@ -107,6 +108,15 @@ func (x *Start) Execute(args []string) error {
 	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
 	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+
+	ipfslogging.LdJSONFormatter()
+	w2 := &lumberjack.Logger{
+		Filename:   path.Join(expPath, "logs", "ipfs.log"),
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     30, //days
+	}
+	ipfslogging.Output(w2)()
 
 	// initalize the ipfs repo if it doesn't already exist
 	err := repo.DoInit(os.Stdout, expPath, false, 4096)

@@ -4,6 +4,7 @@ import (
 	"sync"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/binary"
 	"strconv"
 	"github.com/ipfs/go-ipfs/core"
 	"gx/ipfs/QmYgaiNVVL7f2nydijAwpDRunRkmxfu3PoK87Y3pH84uAW/go-libp2p/p2p/host"
@@ -16,7 +17,6 @@ import (
 	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	key "github.com/ipfs/go-ipfs/blocks/key"
-	"encoding/binary"
 )
 
 const MAGIC string = "0000000000000000000000000000000000000000000000000000000000000000"
