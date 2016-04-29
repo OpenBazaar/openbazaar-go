@@ -119,7 +119,7 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.Output(w2)()
 
 	// initalize the ipfs repo if it doesn't already exist
-	err := repo.DoInit(os.Stdout, expPath, false, 4096)
+	err := repo.DoInit(os.Stdout, expPath, 4096)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)
 		return err

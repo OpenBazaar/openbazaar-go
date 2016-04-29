@@ -27,7 +27,7 @@ var OBService *OpenBazaarService
 
 func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context) {
 	OBService = &OpenBazaarService {
-		host: node.PeerHost,
+		host: node.PeerHost.(host.Host),
 		self: node.Identity,
 		peerstore: node.PeerHost.Peerstore(),
 		cmdCtx: ctx,

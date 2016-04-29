@@ -22,14 +22,14 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) error {
+func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int) error {
 	log.Infof("initializing openbazaar node at %s\n", repoRoot)
 
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
 
-	if fsrepo.IsInitialized(repoRoot) && !force {
+	if fsrepo.IsInitialized(repoRoot) {
 		return ErrRepoExists
 	}
 
@@ -47,12 +47,6 @@ func DoInit(out io.Writer, repoRoot string, force bool, nBitsForKeypair int) err
 	conf.Ipns.RepublishPeriod = "24h"
 	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip4/0.0.0.0/udp/4001/utp")
 	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip6/::/udp/4001/utp")
-
-	if fsrepo.IsInitialized(repoRoot) {
-		if err := fsrepo.Remove(repoRoot); err != nil {
-			return err
-		}
-	}
 
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err

@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"strconv"
 	"github.com/ipfs/go-ipfs/core"
-	"gx/ipfs/QmYgaiNVVL7f2nydijAwpDRunRkmxfu3PoK87Y3pH84uAW/go-libp2p/p2p/host"
+	host"gx/ipfs/QmYgaiNVVL7f2nydijAwpDRunRkmxfu3PoK87Y3pH84uAW/go-libp2p/p2p/host"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
@@ -40,7 +40,7 @@ func AddPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multih
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			err := putPointer(ctx, peerHosts, p, string(k), addr)
+			err := putPointer(ctx, peerHosts.(host.Host), p, string(k), addr)
 			if err != nil {
 				log.Debug(err)
 			}
