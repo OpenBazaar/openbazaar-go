@@ -199,7 +199,7 @@ func (x *Start) Execute(args []string) error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Database
-	sqliteDB, err := db.Create(repoPath)
+	sqliteDB, err := db.Create(expPath)
 	if err != nil {
 		log.Error(err)
 		return err

@@ -6,29 +6,30 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger("db")
 
 type SQLiteDatastore struct {
 	followers repo.Followers
-
-	db *sql.DB
-	lock sync.Mutex
 }
 
 func Create(repoPath string) (*SQLiteDatastore, error) {
 	dbPath := path.Join(repoPath, "datastore", "mainnet.db")
-	dbConn, err := sql.Open("sqlite3", dbPath)
+	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
 	}
 
+	l := new(sync.Mutex)
 	sqliteDB := &SQLiteDatastore{
 		followers: &FollowerDB{
-			db: dbConn,
+			db: conn,
+			lock: l,
 		},
-		db: dbConn,
-
 	}
+
 	return sqliteDB, nil
 }
 

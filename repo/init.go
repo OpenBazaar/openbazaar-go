@@ -153,7 +153,7 @@ func initDatabaseTables(repoRoot string) error {
 	defer db.Close()
 
 	sqlStmt := `
-	create table followers (peerID text);
+	create table followers (peerID text primary key not null);
 	`
 	db.Exec(sqlStmt)
 	return nil
