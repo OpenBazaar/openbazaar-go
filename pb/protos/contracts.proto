@@ -103,8 +103,8 @@ message ID {
     Pubkeys pubkeys      = 3;
 
     message Pubkeys {
-        string guid    = 1;
-        string bitcoin = 2;
+        bytes guid     = 1;
+        bytes bitcoin  = 2;
     }
 }
 

@@ -20,8 +20,3 @@ message Message {
         REFUND                  = 10;
     }
 }
-
-message EncryptedMessage {
-    bytes ephemPubKey      = 1;
-    bytes ciphertext       = 2;
-}

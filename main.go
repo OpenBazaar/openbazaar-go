@@ -14,6 +14,7 @@ import (
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/jessevdk/go-flags"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/op/go-logging"
@@ -24,6 +25,10 @@ import (
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
 	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	namepb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipath "github.com/ipfs/go-ipfs/path"
 )
 
 var log = logging.MustGetLogger("main")
@@ -55,7 +60,7 @@ var stopServer Stop
 var restartServer Restart
 var parser = flags.NewParser(nil, flags.Default)
 
-var node *core.IpfsNode
+var node *OpenBazaarNode
 
 func main() {
 	c := make(chan os.Signal, 1)
@@ -65,7 +70,7 @@ func main() {
 			log.Noticef("Received %s\n", sig)
 			log.Info("OpenBazaar Server shutting down...")
 			if node != nil {
-				node.Close()
+				node.IpfsNode.Close()
 			}
 			os.Exit(1)
 		}
@@ -158,20 +163,6 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	ctx := commands.Context{}
-
-	ctx.ConfigRoot = expPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
-		return fsrepo.ConfigAt(expPath)
-	}
-	ctx.ConstructNode = func () (*core.IpfsNode, error) {
-		n, err := core.NewNode(cctx, &core.BuildCfg{
-			Online: true,
-			Repo:   r,
-		})
-		return n, err
-	}
-
 	ncfg := &core.BuildCfg{
 		Repo:   r,
 		Online: true,
@@ -181,11 +172,38 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	node = nd
+
+	ctx := commands.Context{}
+	ctx.Online = true
+	ctx.ConfigRoot = expPath
+	ctx.LoadConfig = func(path string) (*config.Config, error) {
+		return fsrepo.ConfigAt(expPath)
+	}
+	ctx.ConstructNode = func () (*core.IpfsNode, error) {
+		return nd, nil
+	}
+
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
-	net.SetupOpenBazaarService(nd, ctx)
+	OBService := net.SetupOpenBazaarService(nd, ctx)
+
+	// Get current directory root hash
+	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
+	ival, _ := nd.Repo.Datastore().Get(ipnskey.DsKey())
+	val := ival.([]byte)
+	dhtrec := new(dhtpb.Record)
+	proto.Unmarshal(val, dhtrec)
+	e := new(namepb.IpnsEntry)
+	proto.Unmarshal(dhtrec.GetValue(), e)
+
+	node = &OpenBazaarNode{
+		Context: ctx,
+		IpfsNode: nd,
+		RootHash: ipath.Path(e.Value).String(),
+		RepoPath: expPath,
+		Service: OBService,
+	}
 
 	var gwErrc <-chan error
 	if len(cfg.Addresses.Gateway) > 0 {

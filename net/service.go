@@ -25,7 +25,7 @@ type OpenBazaarService struct {
 
 var OBService *OpenBazaarService
 
-func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context) {
+func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context) *OpenBazaarService {
 	OBService = &OpenBazaarService {
 		host: node.PeerHost.(host.Host),
 		self: node.Identity,
@@ -35,6 +35,7 @@ func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context) {
 	}
 	node.PeerHost.SetStreamHandler(ProtocolOpenBazaar, OBService.handleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
+	return OBService
 }
 
 func (service *OpenBazaarService) handleNewStream(s inet.Stream) {

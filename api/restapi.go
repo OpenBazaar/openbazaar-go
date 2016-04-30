@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"encoding/base64"
 	"net/http/httputil"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/ipfs/go-ipfs/commands"
@@ -329,8 +330,29 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Add vendor identity to contract
-	// TODO: Sign contract before dumping to disk
+	c.VendorListing.VendorID.Guid = i.node.Identity.Pretty()
+	pubkey, err := i.node.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	c.VendorListing.VendorID.Pubkeys.Guid = pubkey
+	// TODO: Add vendor bitcoin key to contract and settle on serialization for pubkeys
+	s := new(pb.Signatures)
+	s.Section = pb.Signatures_LISTING
+	serializedContract, err := proto.Marshal(c)
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	sig, err := i.node.PrivateKey.Sign(serializedContract)
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	s.Guid = sig
+	c.Signatures = append(c.Signatures, s)
+	// TODO: Sign with bitcoin key
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
