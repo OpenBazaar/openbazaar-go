@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -13,7 +14,7 @@ type OpenBazaarNode struct {
 	// IPFS node object
 	IpfsNode   *core.IpfsNode
 
-	// The roothash of the Node directory inside the openbazaar repo.
+	// The roothash of the node directory inside the openbazaar repo.
 	// This directory hash is published on IPNS at our peer ID making
 	// the directory publically viewable on the network.
 	RootHash   string
@@ -24,8 +25,10 @@ type OpenBazaarNode struct {
 	// The OpenBazaar network service for direct communication between peers
 	Service    *net.OpenBazaarService
 
+	// Database for storing node specific data
+	Datastore repo.Datastore
+
 	// TODO: Offline Session Manager
 	// TODO: Pointer Republisher
-	// TODO: Database
 	// TODO: BitcoinWallet
 }

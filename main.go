@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strconv"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
@@ -197,12 +198,20 @@ func (x *Start) Execute(args []string) error {
 	e := new(namepb.IpnsEntry)
 	proto.Unmarshal(dhtrec.GetValue(), e)
 
+	// Database
+	sqliteDB, err := db.Create(repoPath)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
 	node = &OpenBazaarNode{
 		Context: ctx,
 		IpfsNode: nd,
 		RootHash: ipath.Path(e.Value).String(),
 		RepoPath: expPath,
 		Service: OBService,
+		Datastore: sqliteDB,
 	}
 
 	var gwErrc <-chan error
