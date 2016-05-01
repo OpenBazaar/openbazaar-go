@@ -15,7 +15,7 @@ $(BINARY): $(SOURCES)
 godep:
 	go get github.com/tools/godep
 
-toolkit_upgrade: gx_upgrade gxgo_upgrade godep
+toolkit_upgrade: gx_upgrade gxgo_upgrade
 
 gx_upgrade:
 	go get -u github.com/whyrusleeping/gx
@@ -31,7 +31,7 @@ vendor:
 
 .PHONY: install
 install: deps
-	godep go install ${LDFLAGS} ./...
+	go install ${LDFLAGS} ./...
 
 .PHONY: clean
 clean:

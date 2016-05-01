@@ -24,4 +24,4 @@ _testmain.go
 *.prof
 .idea/
 *.iml
-.gx.
+.gx/
