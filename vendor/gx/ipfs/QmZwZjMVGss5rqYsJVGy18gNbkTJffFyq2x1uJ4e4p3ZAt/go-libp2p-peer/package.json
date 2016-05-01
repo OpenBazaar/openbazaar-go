@@ -1,0 +1,64 @@
+{
+  "name": "go-libp2p-peer",
+  "author": "whyrusleeping",
+  "version": "1.0.2",
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "name": "go-base58",
+      "hash": "QmT8rehPR3F6bmwL6zjUN8XpiDBFFpMP2myPdC6ApsWfJf",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-multihash",
+      "hash": "QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-ipfs-util",
+      "hash": "QmZNVWh8LLjAavuQ2JXuFmuYH3C11xo988vSgp7UQrTRj1",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-log",
+      "hash": "Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-multiaddr",
+      "hash": "QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-net",
+      "hash": "QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-keyspace",
+      "hash": "QmUusaX99BZoELh7dmPgirqRQ1FAmMnmnBn3oiqDFGBUSc",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-libp2p-crypto",
+      "hash": "QmUEUu1CM8bxBJxc3ZLojAi8evhTr4byQogWstABet79oY",
+      "version": "1.0.2"
+    }
+  ],
+  "language": "go",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-libp2p-peer"
+  },
+  "gxVersion": "0.4.0",
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-libp2p-peer"
+  }
+}

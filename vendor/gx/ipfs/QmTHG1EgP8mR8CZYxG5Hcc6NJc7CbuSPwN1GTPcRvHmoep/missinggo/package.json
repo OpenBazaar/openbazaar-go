@@ -1,0 +1,12 @@
+{
+  "name": "missinggo",
+  "author": "whyrusleeping",
+  "version": "0.0.0",
+  "language": "go",
+  "license": "",
+  "bugs": "",
+  "gxVersion": "0.4.0",
+  "gx": {
+    "dvcsimport": "github.com/anacrolix/missinggo"
+  }
+}

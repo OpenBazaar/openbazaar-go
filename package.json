@@ -1,0 +1,14 @@
+{
+  "author": "chris",
+  "bugs": {
+    "url": "https://github.com/OpenBazaar/openbazaar-go/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/OpenBazaar/openbazaar-go"
+  },
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "openbazaar-go",
+  "version": "0.2.0"
+}

@@ -1,0 +1,40 @@
+{
+  "name": "go-libp2p-crypto",
+  "author": "whyrusleeping",
+  "version": "1.0.2",
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "name": "gogo-protobuf",
+      "hash": "QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-log",
+      "hash": "Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-ipfs-util",
+      "hash": "QmZNVWh8LLjAavuQ2JXuFmuYH3C11xo988vSgp7UQrTRj1",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "name": "go-msgio",
+      "hash": "QmRQhVisS8dmPbjBUthVkenn81pBxrx1GxE281csJhm2vL",
+      "version": "0.0.0"
+    }
+  ],
+  "language": "go",
+  "gxVersion": "0.4.0",
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-libp2p-crypto"
+  },
+  "bugs": {
+    "url": "https://github.com/ipfs/go-libp2p-transport"
+  },
+  "license": "MIT"
+}

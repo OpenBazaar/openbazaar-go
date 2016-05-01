@@ -1,0 +1,17 @@
+{
+  "name": "mafmt",
+  "author": "whyrusleeping",
+  "version": "0.0.0",
+  "gxDependencies": [
+    {
+      "name": "go-multiaddr",
+      "hash": "QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz",
+      "version": "0.0.0"
+    }
+  ],
+  "language": "go",
+  "issues_url": "https://github.com/whyrusleeping/mafmt",
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/mafmt"
+  }
+}
