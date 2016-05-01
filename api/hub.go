@@ -1,6 +1,6 @@
 package api
 
-type Hub struct {
+type hub struct {
 	// Registered connections.
 	connections map[*connection]bool
 
@@ -14,8 +14,8 @@ type Hub struct {
 	unregister chan *connection
 }
 
-func NewHub() *Hub {
-	return &Hub{
+func newHub() *hub {
+	return &hub{
 		Broadcast:   make(chan []byte),
 		register:    make(chan *connection),
 		unregister:  make(chan *connection),
@@ -23,7 +23,7 @@ func NewHub() *Hub {
 	}
 }
 
-func (h *Hub) run() {
+func (h *hub) run() {
 	for {
 		select {
 			case c := <-h.register:

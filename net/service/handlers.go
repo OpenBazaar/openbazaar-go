@@ -1,4 +1,4 @@
-package net
+package service
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -31,7 +31,7 @@ func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message) (
 	if err != nil {
 		return nil, err
 	}
-	service.hub.Broadcast <- []byte(`{"notification": {"follow":"` + peer.Pretty() + `"}}`)
+	service.broadcast <- []byte(`{"notification": {"follow":"` + peer.Pretty() + `"}}`)
 	return nil, nil
 }
 
@@ -41,6 +41,6 @@ func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message)
 	if err != nil {
 		return nil, err
 	}
-	service.hub.Broadcast <- []byte(`{"notification": {"unfollow":"` + peer.Pretty() + `"}}`)
+	service.broadcast <- []byte(`{"notification": {"unfollow":"` + peer.Pretty() + `"}}`)
 	return nil, nil
 }

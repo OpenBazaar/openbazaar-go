@@ -3,8 +3,8 @@ package net
 import (
 	"fmt"
 	"errors"
-	"github.com/op/go-logging"
 	"math/rand"
+	"github.com/op/go-logging"
 	stunlib "github.com/ccding/go-stun/stun"
 )
 

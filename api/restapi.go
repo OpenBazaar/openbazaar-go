@@ -312,15 +312,15 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 
-	c := new(pb.RicardianContract)
-	if err := jsonpb.Unmarshal(r.Body, c); err != nil {
+	l := new(pb.Listing)
+	if err := jsonpb.Unmarshal(r.Body, l); err != nil {
 		errstr := err.Error()
 		if errstr != "json: cannot unmarshal string into Go value of type pb.CountryCode" {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 			return
 		}
 	}
-	listingPath:= path.Join(i.path, "node", "listings", c.VendorListing.ListingName)
+	listingPath:= path.Join(i.path, "node", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -367,7 +367,7 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		Indent: "    ",
 		OrigName: false,
 	}
-	out, err := m.MarshalToString(c)
+	out, err := m.MarshalToString(l)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return

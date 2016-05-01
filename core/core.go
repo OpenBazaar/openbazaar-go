@@ -5,7 +5,6 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/api"
 )
 
 var Node *OpenBazaarNode
@@ -26,13 +25,13 @@ type OpenBazaarNode struct {
 	RepoPath   string
 
 	// The OpenBazaar network service for direct communication between peers
-	Service    *net.OpenBazaarService
+	Service    net.NetworkService
 
 	// Database for storing node specific data
 	Datastore  repo.Datastore
 
-	// Websocket hub used for broadcasting to the UI.
-	Hub        *api.Hub
+	// Websocket channel used for pushing data to the UI.
+	Broadcast        chan []byte
 
 	// TODO: Offline Session Manager
 	// TODO: Pointer Republisher

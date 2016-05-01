@@ -12,6 +12,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -201,28 +202,36 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	hub := api.NewHub()
-	OBService := net.SetupOpenBazaarService(nd, ctx, hub, sqliteDB)
 
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,
 		IpfsNode: nd,
 		RootHash: ipath.Path(e.Value).String(),
 		RepoPath: expPath,
-		Service: OBService,
 		Datastore: sqliteDB,
-		Hub: hub,
 	}
 
 	var gwErrc <-chan error
+	var cb <-chan bool
 	if len(cfg.Addresses.Gateway) > 0 {
 		var err error
-		err, gwErrc = serveHTTPGateway(core.Node)
+		err, cb, gwErrc = serveHTTPGateway(core.Node)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 	}
+
+	// Wait for gateway to start before starting the network service.
+	// This way the websocket channel we pass into the service gets created first.
+	for b := range cb {
+		if b == true {
+			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)
+			core.Node.Service = OBService
+		}
+		break
+	}
+
 	for err := range gwErrc {
 		fmt.Println(err)
 	}
@@ -244,23 +253,23 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
 	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil
+		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
 	}
 
 	writable := cfg.Gateway.Writable
 
 	gwLis, err := manet.Listen(gatewayMaddr)
 	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil
+		return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
 	}
 	// we might have listened to /tcp/0 - lets see what we are listing on
 	gatewayMaddr = gwLis.Multiaddr()
@@ -280,14 +289,15 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan error) {
 	}
 
 	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err), nil
+		return fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err), nil, nil
 	}
 	errc := make(chan error)
+	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(node.IpfsNode, node.Context, node.Hub, gwLis.NetListener(), opts...)
+		errc <- api.Serve(cb, node, node.Context, gwLis.NetListener(), opts...)
 		close(errc)
 	}()
-	return nil, errc
+	return nil, cb, errc
 }
 
 func printSplashScreen(){

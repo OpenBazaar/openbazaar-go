@@ -7,20 +7,22 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	"github.com/ipfs/go-ipfs/commands"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/op/go-logging"
-	"github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
+
 )
 
 var log = logging.MustGetLogger("api")
 
-func makeHandler(n *core.IpfsNode, ctx commands.Context, hub *Hub, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
+func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
 	restAPI, err := newRestAPIHandler(ctx)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI := newWSAPIHandler(ctx, hub)
+	wsAPI := newWSAPIHandler(ctx)
+	n.Broadcast = wsAPI.h.Broadcast
 
 	topMux.Handle("/ob/", restAPI)
 	topMux.Handle("/ws", wsAPI)
@@ -28,7 +30,7 @@ func makeHandler(n *core.IpfsNode, ctx commands.Context, hub *Hub, l net.Listene
 	mux := topMux
 	for _, option := range options {
 		var err error
-		mux, err = option(n, l, mux)
+		mux, err = option(n.IpfsNode, l, mux)
 		if err != nil {
 			return nil, err
 		}
@@ -36,8 +38,9 @@ func makeHandler(n *core.IpfsNode, ctx commands.Context, hub *Hub, l net.Listene
 	return topMux, nil
 }
 
-func Serve(node *core.IpfsNode, ctx commands.Context, hub *Hub, lis net.Listener, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(node, ctx, hub, lis, options...)
+func Serve(cb chan<-bool, node *core.OpenBazaarNode, ctx commands.Context, lis net.Listener, options ...corehttp.ServeOption) error {
+	handler, err := makeHandler(node, ctx, lis, options...)
+	cb <- true
 	if err != nil {
 		return err
 	}
@@ -51,7 +54,7 @@ func Serve(node *core.IpfsNode, ctx commands.Context, hub *Hub, lis net.Listener
 	var serverError error
 	serverExited := make(chan struct{})
 
-	node.Process().Go(func(p goprocess.Process) {
+	node.IpfsNode.Process().Go(func(p goprocess.Process) {
 		serverError = http.Serve(lis, handler)
 		close(serverExited)
 	})
@@ -61,7 +64,7 @@ func Serve(node *core.IpfsNode, ctx commands.Context, hub *Hub, lis net.Listener
 	case <-serverExited:
 
 	// if node being closed before server exits, close server
-	case <-node.Process().Closing():
+	case <-node.IpfsNode.Process().Closing():
 		log.Infof("server at %s terminating...", addr)
 
 		lis.Close()

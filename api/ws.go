@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/gorilla/websocket"
-
 )
 
 type connection struct {
@@ -15,7 +14,7 @@ type connection struct {
 	send chan []byte
 
 	// The hub.
-	h *Hub
+	h *hub
 }
 
 func (c *connection) reader() {
@@ -51,13 +50,14 @@ var upgrader = &websocket.Upgrader{
 var handler wsHandler;
 
 type wsHandler struct {
-	h *Hub
+	h *hub
 	path string
 	context commands.Context
 }
 
 
-func newWSAPIHandler(ctx commands.Context, hub *Hub) *wsHandler {
+func newWSAPIHandler(ctx commands.Context) *wsHandler {
+	hub := newHub()
 	go hub.run()
 	handler = wsHandler {
 		h: hub,
