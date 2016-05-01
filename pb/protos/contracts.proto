@@ -3,7 +3,7 @@ syntax = "proto3";
 import "countrycodes.proto";
 
 message RicardianContract {
-    Listing vendorListing                       = 1;
+    repeated Listing vendorListing              = 1;
     Order buyerOrder                            = 2;
     OrderConfirmation vendorOrderConfirmation   = 3;
     Rating buyerRating                          = 4;
@@ -20,6 +20,8 @@ message Listing {
     Item item                     = 4;
     Shipping shipping             = 5;
     repeated string moderators    = 6;
+    string termsAndConditions     = 7;
+    string refundPolicy           = 8;
 
     message Metadata {
         uint32 version           = 1;
@@ -56,6 +58,7 @@ message Listing {
         message Options {
             string name             = 1;
             repeated string values  = 2;
+            Price priceWithOption   = 3;
         }
     }
 
