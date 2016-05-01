@@ -1,11 +1,14 @@
-package main
+package core
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/api"
 )
+
+var Node *OpenBazaarNode
 
 type OpenBazaarNode struct {
 	// Context for issuing IPFS commands
@@ -26,7 +29,10 @@ type OpenBazaarNode struct {
 	Service    *net.OpenBazaarService
 
 	// Database for storing node specific data
-	Datastore repo.Datastore
+	Datastore  repo.Datastore
+
+	// Websocket hub used for broadcasting to the UI.
+	Hub        *api.Hub
 
 	// TODO: Offline Session Manager
 	// TODO: Pointer Republisher

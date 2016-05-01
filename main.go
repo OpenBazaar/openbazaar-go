@@ -12,8 +12,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/jessevdk/go-flags"
@@ -24,6 +24,7 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	ipfscore "github.com/ipfs/go-ipfs/core"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
 	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
@@ -61,8 +62,6 @@ var stopServer Stop
 var restartServer Restart
 var parser = flags.NewParser(nil, flags.Default)
 
-var node *OpenBazaarNode
-
 func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -70,8 +69,8 @@ func main() {
 		for sig := range c {
 			log.Noticef("Received %s\n", sig)
 			log.Info("OpenBazaar Server shutting down...")
-			if node != nil {
-				node.IpfsNode.Close()
+			if core.Node != nil {
+				core.Node.IpfsNode.Close()
 			}
 			os.Exit(1)
 		}
@@ -164,11 +163,11 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	ncfg := &core.BuildCfg{
+	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
 	}
-	nd, err := core.NewNode(cctx, ncfg)
+	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -180,14 +179,12 @@ func (x *Start) Execute(args []string) error {
 	ctx.LoadConfig = func(path string) (*config.Config, error) {
 		return fsrepo.ConfigAt(expPath)
 	}
-	ctx.ConstructNode = func () (*core.IpfsNode, error) {
+	ctx.ConstructNode = func () (*ipfscore.IpfsNode, error) {
 		return nd, nil
 	}
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
-
-	OBService := net.SetupOpenBazaarService(nd, ctx)
 
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
@@ -204,20 +201,23 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+	hub := api.NewHub()
+	OBService := net.SetupOpenBazaarService(nd, ctx, hub, sqliteDB)
 
-	node = &OpenBazaarNode{
+	core.Node = &core.OpenBazaarNode{
 		Context: ctx,
 		IpfsNode: nd,
 		RootHash: ipath.Path(e.Value).String(),
 		RepoPath: expPath,
 		Service: OBService,
 		Datastore: sqliteDB,
+		Hub: hub,
 	}
 
 	var gwErrc <-chan error
 	if len(cfg.Addresses.Gateway) > 0 {
 		var err error
-		err, gwErrc = serveHTTPGateway(ctx)
+		err, gwErrc = serveHTTPGateway(core.Node)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -231,7 +231,7 @@ func (x *Start) Execute(args []string) error {
 }
 
 // printSwarmAddrs prints the addresses of the host
-func printSwarmAddrs(node *core.IpfsNode) {
+func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	var addrs []string
 	for _, addr := range node.PeerHost.Addrs() {
 		addrs = append(addrs, addr.String())
@@ -244,9 +244,9 @@ func printSwarmAddrs(node *core.IpfsNode) {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan error) {
 
-	cfg, err := ctx.GetConfig()
+	cfg, err := node.Context.GetConfig()
 	if err != nil {
 		return nil, nil
 	}
@@ -269,7 +269,7 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
-		corehttp.CommandsROOption(ctx),
+		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
 		corehttp.GatewayOption(writable, cfg.Gateway.PathPrefixes),
@@ -279,13 +279,12 @@ func serveHTTPGateway(ctx commands.Context) (error, <-chan error) {
 		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
 	}
 
-	node, err := ctx.ConstructNode()
 	if err != nil {
 		return fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err), nil
 	}
 	errc := make(chan error)
 	go func() {
-		errc <- api.Serve(ctx, node, gwLis.NetListener(), opts...)
+		errc <- api.Serve(node.IpfsNode, node.Context, node.Hub, gwLis.NetListener(), opts...)
 		close(errc)
 	}()
 	return nil, errc

@@ -11,6 +11,8 @@ import (
 	inet "gx/ipfs/QmYgaiNVVL7f2nydijAwpDRunRkmxfu3PoK87Y3pH84uAW/go-libp2p/p2p/net"
 	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
+	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 var ProtocolOpenBazaar protocol.ID = "/app/openbazaar"
@@ -21,17 +23,21 @@ type OpenBazaarService struct {
 	peerstore peer.Peerstore
 	cmdCtx    commands.Context
 	ctx       context.Context
+	hub       *api.Hub
+	datastore repo.Datastore
 }
 
 var OBService *OpenBazaarService
 
-func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context) *OpenBazaarService {
+func SetupOpenBazaarService(node *core.IpfsNode, ctx commands.Context, hub *api.Hub, datastore repo.Datastore) *OpenBazaarService {
 	OBService = &OpenBazaarService {
 		host: node.PeerHost.(host.Host),
 		self: node.Identity,
 		peerstore: node.PeerHost.Peerstore(),
 		cmdCtx: ctx,
 		ctx: node.Context(),
+		hub: hub,
+		datastore: datastore,
 	}
 	node.PeerHost.SetStreamHandler(ProtocolOpenBazaar, OBService.handleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
@@ -72,7 +78,6 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 
 	// if nil response, return it before serializing
 	if rpmes == nil {
-		log.Debug("Got back nil response from request.")
 		return
 	}
 

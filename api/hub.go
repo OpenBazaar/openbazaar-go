@@ -1,11 +1,11 @@
 package api
 
-type hub struct {
+type Hub struct {
 	// Registered connections.
 	connections map[*connection]bool
 
 	// Inbound messages from the connections.
-	broadcast chan []byte
+	Broadcast chan []byte
 
 	// Register requests from the connections.
 	register chan *connection
@@ -14,16 +14,16 @@ type hub struct {
 	unregister chan *connection
 }
 
-func newHub() *hub {
-	return &hub{
-		broadcast:   make(chan []byte),
+func NewHub() *Hub {
+	return &Hub{
+		Broadcast:   make(chan []byte),
 		register:    make(chan *connection),
 		unregister:  make(chan *connection),
 		connections: make(map[*connection]bool),
 	}
 }
 
-func (h *hub) run() {
+func (h *Hub) run() {
 	for {
 		select {
 			case c := <-h.register:
@@ -35,7 +35,7 @@ func (h *hub) run() {
 					close(c.send)
 				}
 				log.Debug("Unregistered websocket connection")
-			case m := <-h.broadcast:
+			case m := <-h.Broadcast:
 				for c := range h.connections {
 					select {
 						case c.send <- m:

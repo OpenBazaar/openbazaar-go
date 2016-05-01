@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/gorilla/websocket"
 
 )
@@ -16,7 +15,7 @@ type connection struct {
 	send chan []byte
 
 	// The hub.
-	h *hub
+	h *Hub
 }
 
 func (c *connection) reader() {
@@ -28,7 +27,7 @@ func (c *connection) reader() {
 		log.Debugf("Incoming websocket message: %s", string(message))
 
 		// Just echo for now until we set up the api
-		c.h.broadcast <- message
+		c.h.Broadcast <- message
 	}
 	c.ws.Close()
 }
@@ -52,19 +51,16 @@ var upgrader = &websocket.Upgrader{
 var handler wsHandler;
 
 type wsHandler struct {
-	h *hub
-	node   *core.IpfsNode
+	h *Hub
 	path string
 	context commands.Context
 }
 
 
-func newWSAPIHandler(node *core.IpfsNode, ctx commands.Context) *wsHandler {
-	h := newHub()
-	go h.run()
+func newWSAPIHandler(ctx commands.Context, hub *Hub) *wsHandler {
+	go hub.run()
 	handler = wsHandler {
-		h: h,
-		node:   node,
+		h: hub,
 		path: ctx.ConfigRoot,
 		context: ctx,
 	}

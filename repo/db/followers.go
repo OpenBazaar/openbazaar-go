@@ -16,18 +16,15 @@ func (f *FollowerDB) Put(follower string) error {
 	defer f.lock.Unlock()
 	tx, err := f.db.Begin()
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	stmt, err := tx.Prepare("insert into followers(peerID) values(?)")
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(follower)
 	if err != nil {
-		log.Fatal(err)
 		return err
 	}
 	tx.Commit()
@@ -37,21 +34,18 @@ func (f *FollowerDB) Put(follower string) error {
 func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	stm := "select peerID, rowid from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	stm := "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 	rows, err := f.db.Query(stm)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
 		return nil, err
 	}
 	var ret []string
 	for rows.Next() {
-
 		var peerID string
-		var rowid int
-		if err := rows.Scan(&peerID, &rowid); err != nil {
-			log.Fatal(err)
+		if err := rows.Scan(&peerID); err != nil {
+			log.Error(err)
 		}
-		log.Notice(peerID, rowid)
 		ret = append(ret, peerID)
 	}
 	return ret, nil

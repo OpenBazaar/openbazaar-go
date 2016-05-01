@@ -12,12 +12,10 @@ import (
 	"encoding/json"
 	"encoding/base64"
 	"net/http/httputil"
-	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
@@ -29,14 +27,13 @@ type RestAPIConfig struct {
 }
 
 type restAPIHandler struct {
-	node   *core.IpfsNode
 	config RestAPIConfig
 	path string
 	context commands.Context
 	rootHash string
 }
 
-func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandler, error) {
+func newRestAPIHandler(ctx commands.Context) (*restAPIHandler, error) {
 
 	// Add the current node directory in case it's note already added.
 	dirHash, aerr := ipfs.AddDirectory(ctx, path.Join(ctx.ConfigRoot, "node"))
@@ -47,7 +44,6 @@ func newRestAPIHandler(node *core.IpfsNode, ctx commands.Context) (*restAPIHandl
 
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
-		node:   node,
 		config: RestAPIConfig{
 			Writable:     true,
 			BlockList:    &corehttp.BlockList{},
@@ -329,9 +325,9 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-
-	c.VendorListing.VendorID.Guid = i.node.Identity.Pretty()
-	pubkey, err := i.node.PrivateKey.GetPublic().Bytes()
+	/*
+	c.VendorListing.VendorID.Guid = i.node.IpfsNode.Identity.Pretty()
+	pubkey, err := i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -345,7 +341,7 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	sig, err := i.node.PrivateKey.Sign(serializedContract)
+	sig, err := i.node.IpfsNode.PrivateKey.Sign(serializedContract)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -353,6 +349,7 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 	s.Guid = sig
 	c.Signatures = append(c.Signatures, s)
 	// TODO: Sign with bitcoin key
+	*/
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)

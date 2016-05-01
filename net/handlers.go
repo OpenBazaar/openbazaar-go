@@ -11,6 +11,10 @@ func (service *OpenBazaarService) handlerForMsgType(t pb.Message_MessageType) se
 	switch t {
 		case pb.Message_PING:
 			return service.handlePing
+		case pb.Message_FOLLOW:
+			return service.handleFollow
+		case pb.Message_UNFOLLOW:
+			return service.handleUnFollow
 		default:
 			return nil
 	}
@@ -19,4 +23,24 @@ func (service *OpenBazaarService) handlerForMsgType(t pb.Message_MessageType) se
 func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received PING message from %s", peer.Pretty())
 	return pmes, nil
+}
+
+func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received FOLLOW message from %s", peer.Pretty())
+	err := service.datastore.Followers().Put(peer.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	service.hub.Broadcast <- []byte(`{"notification": {"follow":"` + peer.Pretty() + `"}}`)
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received UNFOLLOW message from %s", peer.Pretty())
+	err := service.datastore.Followers().Delete(peer.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	service.hub.Broadcast <- []byte(`{"notification": {"unfollow":"` + peer.Pretty() + `"}}`)
+	return nil, nil
 }

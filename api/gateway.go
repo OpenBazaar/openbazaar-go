@@ -8,20 +8,19 @@ import (
 	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/op/go-logging"
-	core "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
-
 )
 
 var log = logging.MustGetLogger("api")
 
-func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
+func makeHandler(n *core.IpfsNode, ctx commands.Context, hub *Hub, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
-	restAPI, err := newRestAPIHandler(n, ctx)
+	restAPI, err := newRestAPIHandler(ctx)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI := newWSAPIHandler(n, ctx)
+	wsAPI := newWSAPIHandler(ctx, hub)
 
 	topMux.Handle("/ob/", restAPI)
 	topMux.Handle("/ws", wsAPI)
@@ -37,8 +36,8 @@ func makeHandler(ctx commands.Context, n *core.IpfsNode, l net.Listener, options
 	return topMux, nil
 }
 
-func Serve(ctx commands.Context, node *core.IpfsNode, lis net.Listener, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(ctx, node, lis, options...)
+func Serve(node *core.IpfsNode, ctx commands.Context, hub *Hub, lis net.Listener, options ...corehttp.ServeOption) error {
+	handler, err := makeHandler(node, ctx, hub, lis, options...)
 	if err != nil {
 		return err
 	}
