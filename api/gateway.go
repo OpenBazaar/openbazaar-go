@@ -17,7 +17,7 @@ var log = logging.MustGetLogger("api")
 
 func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
-	restAPI, err := newRestAPIHandler(ctx)
+	restAPI, err := newRestAPIHandler(n)
 	if err != nil {
 		return nil, err
 	}

@@ -72,6 +72,7 @@ func main() {
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
 				core.Node.IpfsNode.Close()
+				core.Node.Datastore.Close()
 			}
 			os.Exit(1)
 		}

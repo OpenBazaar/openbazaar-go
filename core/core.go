@@ -1,10 +1,12 @@
 package core
 
 import (
+	"path"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
 var Node *OpenBazaarNode
@@ -33,7 +35,24 @@ type OpenBazaarNode struct {
 	// Websocket channel used for pushing data to the UI.
 	Broadcast        chan []byte
 
-	// TODO: Offline Session Manager
+	// TODO: Libsignal Client
 	// TODO: Pointer Republisher
 	// TODO: BitcoinWallet
+}
+
+// Unpin the current node repo, re-add it, then publish to ipns
+func (n *OpenBazaarNode) SeedNode() error {
+	if err := ipfs.UnPinDir(n.Context, n.RootHash); err != nil {
+		return err
+	}
+	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "node"))
+	if aerr != nil {
+		return aerr
+	}
+	_, perr := ipfs.Publish(n.Context, hash)
+	if perr != nil {
+		return perr
+	}
+	n.RootHash = hash
+	return nil
 }

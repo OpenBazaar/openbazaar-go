@@ -2,6 +2,7 @@ package repo
 
 type Datastore interface {
 	Followers() Followers
+	Close()
 }
 
 type Followers interface {

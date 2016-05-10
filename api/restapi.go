@@ -2,7 +2,7 @@ package api
 
 import (
 	"io"
-	"path"
+		"path"
 	"net/http"
 	"fmt"
 	"runtime/debug"
@@ -14,9 +14,9 @@ import (
 	"net/http/httputil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/core"
 )
 
 type RestAPIConfig struct {
@@ -28,19 +28,18 @@ type RestAPIConfig struct {
 
 type restAPIHandler struct {
 	config RestAPIConfig
-	path string
-	context commands.Context
-	rootHash string
+	node   *core.OpenBazaarNode
 }
 
-func newRestAPIHandler(ctx commands.Context) (*restAPIHandler, error) {
+func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 	// Add the current node directory in case it's note already added.
-	dirHash, aerr := ipfs.AddDirectory(ctx, path.Join(ctx.ConfigRoot, "node"))
+	dirHash, aerr := ipfs.AddDirectory(node.Context, path.Join(node.RepoPath, "node"))
 	if aerr != nil {
 		log.Error(aerr)
 		return nil, aerr
 	}
+	node.RootHash = dirHash
 
 	prefixes := []string{"/ob/"}
 	i := &restAPIHandler{
@@ -49,9 +48,7 @@ func newRestAPIHandler(ctx commands.Context) (*restAPIHandler, error) {
 			BlockList:    &corehttp.BlockList{},
 			PathPrefixes: prefixes,
 		},
-		path: ctx.ConfigRoot,
-		context: ctx,
-		rootHash: dirHash,
+		node: node,
 	}
 	return i, nil
 }
@@ -105,7 +102,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	f, err := os.Create(path.Join(i.path, "node", "profile"))
+	f, err := os.Create(path.Join(i.node.RepoPath, "node", "profile"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
@@ -132,24 +129,10 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
-	if aerr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+	if err := i.node.SeedNode(); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	_, perr := ipfs.Publish(i.context, hash)
-	if perr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
-		return
-	}
-	if hash != i.rootHash {
-		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-			return
-		}
-		i.rootHash = hash
-	}
-
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
@@ -166,7 +149,7 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	imgPath := path.Join(i.path, "node", "avatar")
+	imgPath := path.Join(i.node.RepoPath, "node", "avatar")
 	out, err := os.Create(imgPath)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -183,23 +166,9 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
-	if aerr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+	if err := i.node.SeedNode(); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
-	}
-
-	_, perr := ipfs.Publish(i.context, hash)
-	if perr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
-		return
-	}
-	if hash != i.rootHash {
-		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-			return
-		}
-		i.rootHash = hash
 	}
 
 	fmt.Fprint(w, `{"success": true}`)
@@ -218,7 +187,7 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	imgPath := path.Join(i.path, "node", "header")
+	imgPath := path.Join(i.node.RepoPath, "node", "header")
 	out, err := os.Create(imgPath)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -235,23 +204,9 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
-	if aerr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+	if err := i.node.SeedNode(); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
-	}
-
-	_, perr := ipfs.Publish(i.context, hash)
-	if perr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
-		return
-	}
-	if hash != i.rootHash {
-		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-			return
-		}
-		i.rootHash = hash
 	}
 
 	fmt.Fprint(w, `{"success": true}`)
@@ -273,11 +228,11 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 	}
 	var imageHashes []string
 	for _, img := range(images) {
-		if err := os.MkdirAll(path.Join(i.path, "node", "listings", img.Directory), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Join(i.node.RepoPath, "node", "listings", img.Directory), os.ModePerm); err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 			return
 		}
-		imgPath := path.Join(i.path, "node", "listings", img.Directory, img.Filename)
+		imgPath := path.Join(i.node.RepoPath, "node", "listings", img.Directory, img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -293,7 +248,7 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 			return
 		}
-		hash, aerr := ipfs.AddFile(i.context, imgPath)
+		hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
 		if aerr != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
 			return
@@ -320,7 +275,7 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	listingPath:= path.Join(i.path, "node", "listings", l.ListingName)
+	listingPath:= path.Join(i.node.RepoPath, "node", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -378,23 +333,9 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, aerr := ipfs.AddDirectory(i.context, path.Join(i.path, "node"))
-	if aerr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+	if err := i.node.SeedNode(); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
-	}
-
-	_, perr := ipfs.Publish(i.context, hash)
-	if perr != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, perr)
-		return
-	}
-	if hash != i.rootHash {
-		if err := ipfs.UnPinDir(i.context, i.rootHash); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-			return
-		}
-		i.rootHash = hash
 	}
 
 	fmt.Fprintf(w, `{"success": true}`)

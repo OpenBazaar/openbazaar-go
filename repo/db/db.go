@@ -13,6 +13,7 @@ var log = logging.MustGetLogger("db")
 
 type SQLiteDatastore struct {
 	followers repo.Followers
+	db *sql.DB
 }
 
 func Create(repoPath string) (*SQLiteDatastore, error) {
@@ -31,6 +32,10 @@ func Create(repoPath string) (*SQLiteDatastore, error) {
 	}
 
 	return sqliteDB, nil
+}
+
+func (d *SQLiteDatastore) Close() {
+	d.db.Close()
 }
 
 func (d *SQLiteDatastore) Followers() repo.Followers {
