@@ -32,6 +32,7 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 )
 
 var log = logging.MustGetLogger("main")
@@ -204,12 +205,21 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	// Wallet
+	privkeyBytes, err := nd.PrivateKey.Bytes()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes)
+
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,
 		IpfsNode: nd,
 		RootHash: ipath.Path(e.Value).String(),
 		RepoPath: expPath,
 		Datastore: sqliteDB,
+		Wallet: wallet,
 	}
 
 	var gwErrc <-chan error

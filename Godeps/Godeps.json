@@ -8,6 +8,10 @@
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
 		},
 		{
+			"ImportPath": "github.com/cmars/basen",
+			"Rev": "fe3947df716ebfda9847eb1b9a48f9592e06478c"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/jsonpb",
 			"Rev": "bf531ff1a004f24ee53329dfd5ce0b41bfdc17df"
 		},
@@ -719,6 +723,10 @@
 			"Rev": "467f50b0c026317ad28fc2c0a08aab6f755cfc7a"
 		},
 		{
+			"ImportPath": "github.com/mndrix/btcutil",
+			"Rev": "d3a63a5752ecf3fbc06bd97365da752111c263df"
+		},
+		{
 			"ImportPath": "github.com/natefinch/lumberjack",
 			"Comment": "v1.0-21-g514cbda",
 			"Rev": "514cbda263a734ae8caac038dadf05f8f3f9f738"
@@ -727,6 +735,14 @@
 			"ImportPath": "github.com/op/go-logging",
 			"Comment": "v1-7-g970db52",
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
+			"ImportPath": "github.com/tyler-smith/go-bip32",
+			"Rev": "1f9494efd1fa025d581aaa8530a0986c5c4937a3"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ripemd160",
+			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
 		},
 		{
 			"ImportPath": "gx/ipfs/QmNLvkCDV6ZjUJsEwGNporYBuZdhWT6q7TBVYQwwRv12HT/go-nat",

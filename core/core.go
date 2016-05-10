@@ -7,6 +7,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 var Node *OpenBazaarNode
@@ -33,11 +34,13 @@ type OpenBazaarNode struct {
 	Datastore  repo.Datastore
 
 	// Websocket channel used for pushing data to the UI.
-	Broadcast        chan []byte
+	Broadcast  chan []byte
+
+	// Bitcoin wallet implementation
+	Wallet 	   bitcoin.BitcoinWallet
 
 	// TODO: Libsignal Client
 	// TODO: Pointer Republisher
-	// TODO: BitcoinWallet
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns
