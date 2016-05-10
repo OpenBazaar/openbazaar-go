@@ -280,31 +280,13 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	/*
-	c.VendorListing.VendorID.Guid = i.node.IpfsNode.Identity.Pretty()
-	pubkey, err := i.node.IpfsNode.PrivateKey.GetPublic().Bytes()
+
+	contract, err := i.node.SignListing(l)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	c.VendorListing.VendorID.Pubkeys.Guid = pubkey
-	// TODO: Add vendor bitcoin key to contract and settle on serialization for pubkeys
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_LISTING
-	serializedContract, err := proto.Marshal(c)
-	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-		return
-	}
-	sig, err := i.node.IpfsNode.PrivateKey.Sign(serializedContract)
-	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-		return
-	}
-	s.Guid = sig
-	c.Signatures = append(c.Signatures, s)
-	// TODO: Sign with bitcoin key
-	*/
+
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -322,7 +304,7 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		Indent: "    ",
 		OrigName: false,
 	}
-	out, err := m.MarshalToString(l)
+	out, err := m.MarshalToString(contract)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
