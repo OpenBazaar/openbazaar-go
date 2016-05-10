@@ -1,4 +1,5 @@
 syntax = "proto3";
+package pb;
 
 enum CountryCode {
     NA                             = 0;

@@ -1,4 +1,5 @@
 syntax = "proto3";
+package pb;
 
 import "countrycodes.proto";
 
@@ -30,13 +31,13 @@ message Listing {
         Timestamp expiry         = 4;
 
         enum CategorySub {
-            CATEGORYSUB_NOT_SET = 0;
+            NA                  = 0;
             FIXED_PRICE         = 1;
             AUCTION             = 2;
         }
 
         enum Category {
-            CATEGORY_NOT_SET = 0;
+            UNKNOWN          = 0;
             PHYSICAL_GOOD    = 1;
             DIGITAL_GOOD     = 2;
             SERVICE          = 3;
@@ -78,7 +79,7 @@ message Listing {
     }
 
     message Price {
-        uint32 bitcoin = 1;
+        uint32 bitcoin = 1; // satoshis
         Fiat fiat      = 2;
 
         message Fiat {
@@ -88,8 +89,50 @@ message Listing {
     }
 }
 
+message Order {
+    string refundAddress          = 1;
+    Shipping shipping             = 2;
+    ID buyerID                    = 3;
+    Timestamp timestamp           = 4;
+    repeated Item item            = 5;
+    Payment payment               = 6;
+
+    message Shipping {
+        string shipTo       = 1;
+        string address      = 2;
+        string city         = 3;
+        string state        = 4;
+        string postalCode   = 5;
+        CountryCode country = 6;
+    }
+
+    message Item {
+        string listingHash      = 1;
+        uint32 quantity         = 2;
+        repeated Option option  = 3;
+
+        message Option {
+            string name  = 1;
+            string value = 2;
+        }
+    }
+
+    message Payment {
+        Method method       = 1;
+        string moderator    = 2;
+        uint32 amount       = 3; // satoshis
+        string chaincode    = 4; // hex encoded
+        string address      = 5; // b58check encoded
+        string redeemScript = 6; // hex encoded
+
+        enum Method {
+            DIRECT    = 0;
+            MODERATED = 1;
+        }
+    }
+}
+
 // TODO: complete other messages
-message Order {}
 message OrderConfirmation {}
 message Rating {}
 message Dispute {}
@@ -117,13 +160,12 @@ message Signatures {
     bytes bitcoin     = 3;
 
     enum Section {
-        SECTION_NOT_SET    = 0;
-        LISTING            = 1;
-        ORDER              = 2;
-        ORDER_CONFIRMATION = 3;
-        RATING             = 4;
-        DISPUTE            = 5;
-        DISPUTE_RESOLUTION = 6;
-        REFUND             = 7;
+        LISTING            = 0;
+        ORDER              = 1;
+        ORDER_CONFIRMATION = 2;
+        RATING             = 3;
+        DISPUTE            = 4;
+        DISPUTE_RESOLUTION = 5;
+        REFUND             = 6;
     }
 }

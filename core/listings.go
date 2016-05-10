@@ -9,6 +9,9 @@ import (
 
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	c := new(pb.RicardianContract)
+	if err := validate(listing); err != nil {
+		return c, err
+	}
 	listing.VendorID.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
@@ -37,4 +40,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	c.VendorListing = append(c.VendorListing, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
+}
+
+func validate(listing *pb.Listing) error {
+	// TODO: validate this listing to make sure all values are correct
+	return nil
 }
