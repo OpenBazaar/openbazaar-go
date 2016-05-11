@@ -4,6 +4,39 @@
 	"GodepVersion": "v62",
 	"Deps": [
 		{
+			"ImportPath": "github.com/btcsuite/btcd/btcec",
+			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
+			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/chaincfg",
+			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
+			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/wire",
+			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
+			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil",
+			"Comment": "BTCUTIL_0_5_0-7-g2c26dd8",
+			"Rev": "2c26dd81a59fd671a2218d63ad138a6dd4d693bd"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/base58",
+			"Comment": "BTCUTIL_0_5_0-7-g2c26dd8",
+			"Rev": "2c26dd81a59fd671a2218d63ad138a6dd4d693bd"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/fastsha256",
+			"Rev": "302ad4db268b46f9ebda3078f6f7397f96047735"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/golangcrypto/ripemd160",
+			"Rev": "53f62d9b43e87a6c56975cf862af7edf33a8d0df"
+		},
+		{
 			"ImportPath": "github.com/ccding/go-stun/stun",
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
 		},

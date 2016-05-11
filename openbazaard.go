@@ -21,6 +21,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/op/go-logging"
 	"github.com/natefinch/lumberjack"
+	"github.com/btcsuite/btcd/chaincfg"
 	"gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/repo/config"
@@ -211,7 +212,13 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes)
+	var params chaincfg.Params
+	if !x.Testnet {
+		params = chaincfg.MainNetParams
+	} else {
+		params = chaincfg.TestNet3Params
+	}
+	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes, &params)
 
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,

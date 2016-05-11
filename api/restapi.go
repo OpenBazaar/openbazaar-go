@@ -263,7 +263,7 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true, hashes: %s}`, string(jsonHashes))
 }
 
-func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 
@@ -286,7 +286,11 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-
+	err = i.node.UpdateListingIndex(contract)
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -320,6 +324,22 @@ func (i *restAPIHandler) POSTContract (w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Fprintf(w, `{"success": true}`)
+}
+func (i *restAPIHandler) POSTPurchase (w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	decoder := json.NewDecoder(r.Body)
+	var data core.PurchaseData
+	err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	if err := i.node.Purchase(&data); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
 	fmt.Fprintf(w, `{"success": true}`)
 }
 

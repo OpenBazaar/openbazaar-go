@@ -28,7 +28,7 @@ message Listing {
         uint32 version           = 1;
         Category category        = 2;
         CategorySub categorySub  = 3;
-        Timestamp expiry         = 4;
+        uint64 expiry            = 4; // unix timestamp
 
         enum CategorySub {
             NA                  = 0;
@@ -54,28 +54,26 @@ message Listing {
         repeated string imageHashes = 7;
         string SKU                  = 8;
         string condition            = 9;
-        repeated Options options    = 10;
+        repeated Option options     = 10;
 
-        message Options {
+        message Option {
             string name             = 1;
-            repeated string values  = 2;
-            Price priceWithOption   = 3;
+            string description      = 2;
+            repeated string values  = 3;
         }
     }
 
     message Shipping {
-        bool freeShipping                     = 1;
-        Price domestic                        = 2;
-        Price international                   = 3;
-        repeated CountryCode shippingRegions  = 4;
-        EstimatedDelivery estimatedDelivery   = 5;
-        CountryCode shippingOrigin            = 6;
+        Price domestic                        = 1;
+        Price international                   = 2;
+        repeated CountryCode shippingRegions  = 3;
+        EstimatedDelivery estimatedDelivery   = 4;
+        CountryCode shippingOrigin            = 5;
 
         message EstimatedDelivery {
             string domestic      = 1;
             string international = 2;
         }
-
     }
 
     message Price {
@@ -93,7 +91,7 @@ message Order {
     string refundAddress          = 1;
     Shipping shipping             = 2;
     ID buyerID                    = 3;
-    Timestamp timestamp           = 4;
+    uint64 timestamp              = 4; // unix timestamp
     repeated Item item            = 5;
     Payment payment               = 6;
 
@@ -107,9 +105,9 @@ message Order {
     }
 
     message Item {
-        string listingHash      = 1;
-        uint32 quantity         = 2;
-        repeated Option option  = 3;
+        string listingHash       = 1;
+        uint32 quantity          = 2;
+        repeated Option options  = 3;
 
         message Option {
             string name  = 1;
@@ -138,10 +136,6 @@ message Rating {}
 message Dispute {}
 message DisputeResolution {}
 message Refund {}
-
-message Timestamp {
-  int64 secondsFromUnixEpoch = 1;
-}
 
 message ID {
     string guid          = 1;
