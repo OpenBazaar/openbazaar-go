@@ -34,6 +34,7 @@ import (
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
 var log = logging.MustGetLogger("main")
@@ -228,6 +229,8 @@ func (x *Start) Execute(args []string) error {
 		Datastore: sqliteDB,
 		Wallet: wallet,
 	}
+
+	ipfs.Cat(core.Node.Context, "QmNZmTghsXtPwsCLKoBKQYKqTFf8LBCFLcvvRmh68kPSYu")
 
 	var gwErrc <-chan error
 	var cb <-chan bool

@@ -4,7 +4,7 @@ package pb;
 import "countrycodes.proto";
 
 message RicardianContract {
-    repeated Listing vendorListing              = 1;
+    repeated Listing vendorListings             = 1;
     Order buyerOrder                            = 2;
     OrderConfirmation vendorOrderConfirmation   = 3;
     Rating buyerRating                          = 4;
@@ -92,7 +92,7 @@ message Order {
     Shipping shipping             = 2;
     ID buyerID                    = 3;
     uint64 timestamp              = 4; // unix timestamp
-    repeated Item item            = 5;
+    repeated Item items           = 5;
     Payment payment               = 6;
 
     message Shipping {
@@ -105,7 +105,7 @@ message Order {
     }
 
     message Item {
-        string listingHash       = 1;
+        bytes listingHash         = 1;
         uint32 quantity          = 2;
         repeated Option options  = 3;
 

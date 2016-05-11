@@ -3,6 +3,10 @@ package core
 import (
 	"time"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/golang/protobuf/jsonpb"
+	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	"crypto/sha256"
 )
 
 type option struct {
@@ -29,6 +33,7 @@ type PurchaseData struct{
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	// TODO: validate the purchase data is formatted properly
+	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
 	order.RefundAddress = n.Wallet.GetNextRefundAddress().EncodeAddress()
 
@@ -50,6 +55,38 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	order.Timestamp = uint64(time.Now().Unix())
 
-	// TODO: need to finish this
+	for _, item := range(data.items) {
+		i := new(pb.Order_Item)
+		b, err := ipfs.Cat(n.Context, item.listingHash)
+		if err != nil {
+			return err
+		}
+		rc := new(pb.RicardianContract)
+		err = jsonpb.UnmarshalString(string(b), rc)
+		if err != nil {
+			return err
+		}
+		// TODO: validate signatures on this contract before we purchase it
+		contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
+		contract.Signatures = append(contract.Signatures, rc.Signatures[0])
+		ser, err := proto.Marshal(rc.VendorListings[0])
+		if err != nil {
+			return err
+		}
+		h := sha256.Sum256(ser)
+		i.ListingHash = h[:]
+		i.Quantity = uint32(item.quantity)
+
+		for _, option := range(item.options) {
+			o := new(pb.Order_Item_Option)
+			o.Name = option.name
+			o.Value = option.value
+			i.Options = append(i.Options, o)
+		}
+		order.Items = append(order.Items, i)
+	}
+
+	// TODO: create payment obj
+	// TODO: send to vendor
 	return nil
 }

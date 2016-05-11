@@ -8,10 +8,11 @@ import (
 	"crypto/sha256"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	ec "github.com/btcsuite/btcd/btcec"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	ec "github.com/btcsuite/btcd/btcec"
 )
 
+// Add our identity to the listings and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	c := new(pb.RicardianContract)
 	if err := validate(listing); err != nil {
@@ -43,18 +44,21 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
-	c.VendorListing = append(c.VendorListing, listing)
+	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
 }
 
+// Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type listingData struct {
 		Hash      string
 		Name      string
 	}
 	indexPath:= path.Join(n.RepoPath, "node", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "node", "listings", contract.VendorListing[0].ListingName, "listing.json")
+	listingPath := path.Join(n.RepoPath, "node", "listings", contract.VendorListings[0].ListingName, "listing.json")
+
+	// read existing file
 	file, _ := ioutil.ReadFile(indexPath)
 	listingHash, err := ipfs.AddFile(n.Context, listingPath)
 	if err != nil {
@@ -62,11 +66,13 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 	ld := listingData {
 		Hash: listingHash,
-		Name: contract.VendorListing[0].ListingName,
+		Name: contract.VendorListings[0].ListingName,
 	}
 
 	var index []listingData
 	json.Unmarshal(file, &index)
+
+	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	for i, d := range(index){
 		if d.Name == ld.Name {
 			if len(index) == 1 {
@@ -78,8 +84,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		}
 	}
 
-
+	// Append our listing with the new hash to the list
 	index = append(index, ld)
+
+	// write it back to file
 	f, err := os.Create(indexPath)
 	if err != nil {
 		return err
