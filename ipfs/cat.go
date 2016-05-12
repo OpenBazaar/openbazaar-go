@@ -15,7 +15,6 @@ func Cat(ctx commands.Context, hash string) ([]byte, error) {
 	res := commands.NewResponse(req)
 	cmd.Run(req, res)
 
-
 	if res.Error() != nil {
 		return nil, res.Error()
 	}

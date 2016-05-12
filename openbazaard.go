@@ -25,6 +25,7 @@ import (
 	"gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	ma "gx/ipfs/QmcobAGsCjYt5DXoq9et9L8yR8er7o7Cu3DTvpaq12jYSz/go-multiaddr"
@@ -33,8 +34,6 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
 var log = logging.MustGetLogger("main")
@@ -229,8 +228,6 @@ func (x *Start) Execute(args []string) error {
 		Datastore: sqliteDB,
 		Wallet: wallet,
 	}
-
-	ipfs.Cat(core.Node.Context, "QmNZmTghsXtPwsCLKoBKQYKqTFf8LBCFLcvvRmh68kPSYu")
 
 	var gwErrc <-chan error
 	var cb <-chan bool

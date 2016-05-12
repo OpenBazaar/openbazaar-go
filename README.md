@@ -9,5 +9,5 @@ make install
 ```
 ##### Run
 ```
-go run main.go start
+go run openbazaard.go start
 ```

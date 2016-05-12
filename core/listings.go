@@ -18,14 +18,18 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	if err := validate(listing); err != nil {
 		return c, err
 	}
-	listing.VendorID.Guid = n.IpfsNode.Identity.Pretty()
+	id := new(pb.ID)
+	id.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
 		return c, err
 	}
 	//TODO: add blockchain ID to listing
-	listing.VendorID.Pubkeys.Guid = pubkey
-	listing.VendorID.Pubkeys.Bitcoin = n.Wallet.GetMasterPublicKey().Key
+	p := new(pb.ID_Pubkeys)
+	p.Guid = pubkey
+	p.Bitcoin = n.Wallet.GetMasterPublicKey().Key
+	id.Pubkeys = p
+	listing.VendorID = id
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING
 	serializedListing, err := proto.Marshal(listing)

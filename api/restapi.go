@@ -266,15 +266,8 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-
 	l := new(pb.Listing)
-	if err := jsonpb.Unmarshal(r.Body, l); err != nil {
-		errstr := err.Error()
-		if errstr != "json: cannot unmarshal string into Go value of type pb.CountryCode" {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-			return
-		}
-	}
+	jsonpb.Unmarshal(r.Body, l)
 	listingPath:= path.Join(i.node.RepoPath, "node", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -282,11 +275,6 @@ func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 	}
 
 	contract, err := i.node.SignListing(l)
-	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-		return
-	}
-	err = i.node.UpdateListingIndex(contract)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -315,6 +303,11 @@ func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := f.WriteString(out); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	err = i.node.UpdateListingIndex(contract)
+	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}

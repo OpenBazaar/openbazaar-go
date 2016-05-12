@@ -2,11 +2,11 @@ package core
 
 import (
 	"time"
+	"crypto/sha256"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/golang/protobuf/jsonpb"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
-	"crypto/sha256"
 )
 
 type option struct {

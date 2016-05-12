@@ -121,6 +121,56 @@
 				});
 			}
 
+			function postListing(){
+				$.ajax({
+					url: "http://localhost:8080/ob/listing",
+					type: 'POST',
+					data: JSON.stringify({
+						"listingName": EL("listingName").value,
+						"metadata": {
+	            "version": 1,
+	            "category": EL("categoryType").value,
+	            "categorySub": "FIXED_PRICE",
+	            "expiry": 1461020128
+        		},
+						"item": {
+		            "title": EL("title").value,
+		            "description": EL("description").value,
+		            "processingTime": EL("processingTime").value,
+		            "pricePerUnit": {
+		                "bitcoin": 1000000
+		            },
+		            "imageHashes": [
+		                EL("imageHash").value
+		            ],
+		            "sKU": "123-456-789",
+		            "condition": "New"
+						},
+						"shipping": {
+		            "domestic": {
+		                "fiat": {
+		                    "currencyCode": "USD",
+		                    "price": 7
+		                }
+		            },
+								"shippingOrigin": "UNITED_STATES",
+		            "shippingRegions": [
+									"EUROPE",
+									"UNITED_STATES"
+		            ],
+        	}
+					}),
+					crossDomain: true,
+					contentType: 'application/json; charset=utf-8',
+					success: function (response) {
+							alert("Success")
+					},
+					error: function () {
+							alert("Server returned an error")
+					}
+				});
+			}
+
 			function init() {
 				EL("inpAVI").addEventListener("change", readAvatar, false);
 				EL("inpHeader").addEventListener("change", readHeader, false);
@@ -194,6 +244,37 @@
 					</select>
 				</row></br></br>
 				<row class="col-lg-12"><input onclick="setProfile()" class="btn btn-success" type="submit" value="Submit"/></row>
+    	</div>
+			<div class="col-lg-12">
+				<h3>Listing</h3>
+				<row class="col-lg-5">Listing Name:</row>
+				<row class="col-lg-7"><input id="listingName" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">Title:</row>
+				<row class="col-lg-7"><input id="title" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">Description:</row>
+				<row class="col-lg-7"><input id="description" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">Processing Time:</row>
+				<row class="col-lg-7"><input id="processingTime" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">Type:</row>
+				<row class="col-lg-7">
+					<select id="categoryType" name="categoryType" >
+						<option value="DIGITAL_GOOD">Digital Good</option>
+						<option value="PHYSICAL_GOOD">Physical Good</option>
+						<option value="SERVICE">Service</option>
+					</select>
+				</row></br></br>
+				<row class="col-lg-5">Image Hash:</row>
+				<row class="col-lg-7"><input id="imageHash" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">Shipping Domestic:</row>
+				<row class="col-lg-7"><input id="shippingDomestic" autocomplete="off"></row></br></br>
+				<row class="col-lg-5">NSFW:</row>
+				<row class="col-lg-7">
+					<select id="nsfwListing" name="nsfw" >
+						<option value="true">true</option>
+						<option value="false">false</option>
+					</select>
+				</row></br></br>
+				<row class="col-lg-12"><input onclick="postListing()" class="btn btn-success" type="submit" value="Submit"/></row>
     	</div>
 		</div>
 	</body>

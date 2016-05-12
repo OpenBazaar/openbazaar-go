@@ -1,5 +1,4 @@
 syntax = "proto3";
-package pb;
 
 import "google/protobuf/any.proto";
 
