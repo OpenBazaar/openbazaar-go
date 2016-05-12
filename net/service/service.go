@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/ipfs/go-ipfs/commands"
@@ -91,8 +92,34 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 }
 
 func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
-	// TODO: build this out
-	return pmes, nil
+	log.Debugf("Sending %s request to %s", pmes.MessageType.String(), p.Pretty())
+	s, err := service.host.NewStream(ctx, ProtocolOpenBazaar, p)
+	if err != nil {
+		return nil, err
+	}
+	defer s.Close()
+
+	cr := ctxio.NewReader(ctx, s) // ok to use. we defer close stream in this func
+	cw := ctxio.NewWriter(ctx, s) // ok to use. we defer close stream in this func
+	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
+	w := ggio.NewDelimitedWriter(cw)
+
+	if err := w.WriteMsg(pmes); err != nil {
+		return nil, err
+	}
+
+	rpmes := new(pb.Message)
+	if err := r.ReadMsg(rpmes); err != nil {
+		log.Debugf("No response from %s", p.Pretty())
+		return nil, err
+	}
+	if rpmes == nil {
+		log.Debugf("No response from %s", p.Pretty())
+		return nil, errors.New("no response from peer")
+	}
+	log.Debugf("Received response from %s", p.Pretty())
+
+	return rpmes, nil
 }
 
 func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {

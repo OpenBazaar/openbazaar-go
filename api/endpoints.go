@@ -29,3 +29,11 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		return
 	}
 }
+
+func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+	switch path {
+	case "/ob/status", "/ob/status/":
+		i.GETStatus(w, r)
+		return
+	}
+}

@@ -153,12 +153,13 @@ message Signatures {
     bytes bitcoin     = 3;
 
     enum Section {
-        LISTING            = 0;
-        ORDER              = 1;
-        ORDER_CONFIRMATION = 2;
-        RATING             = 3;
-        DISPUTE            = 4;
-        DISPUTE_RESOLUTION = 5;
-        REFUND             = 6;
+        NA                 = 0;
+        LISTING            = 1;
+        ORDER              = 2;
+        ORDER_CONFIRMATION = 3;
+        RATING             = 4;
+        DISPUTE            = 5;
+        DISPUTE_RESOLUTION = 6;
+        REFUND             = 7;
     }
 }
