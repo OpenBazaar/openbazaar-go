@@ -14,7 +14,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/jessevdk/go-flags"
@@ -25,6 +24,7 @@ import (
 	"gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/repo/config"
+        "github.com/mitchellh/go-homedir"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -217,7 +217,12 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.TestNet3Params
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes, &params)
+	libbitcoinServers, err := repo.GetLibbitcoinServers(path.Join(expPath, "config"), x.Testnet)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes, &params, libbitcoinServers)
 
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,
