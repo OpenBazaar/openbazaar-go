@@ -4,6 +4,10 @@
 	"GodepVersion": "v62",
 	"Deps": [
 		{
+			"ImportPath": "github.com/OpenBazaar/go-libbitcoinclient",
+			"Rev": "9ec0c4360e92068fc213e2d4341594d6d7fbddfa"
+		},
+		{
 			"ImportPath": "github.com/btcsuite/btcd/btcec",
 			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
 			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
@@ -754,6 +758,10 @@
 			"ImportPath": "github.com/mattn/go-sqlite3",
 			"Comment": "v1.1.0-62-g467f50b",
 			"Rev": "467f50b0c026317ad28fc2c0a08aab6f755cfc7a"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "981ab348d865cf048eb7d17e78ac7192632d8415"
 		},
 		{
 			"ImportPath": "github.com/mndrix/btcutil",

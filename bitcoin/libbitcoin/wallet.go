@@ -21,7 +21,7 @@ func NewLibbitcoinWallet(seed []byte, params *chaincfg.Params, servers []libbitc
 	l.MasterPrivateKey = mk
 	l.MasterPublicKey = mk.PublicKey()
 	l.Params = params
-	//l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
+	l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
 	return l
 }
 
