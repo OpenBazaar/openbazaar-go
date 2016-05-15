@@ -16,8 +16,16 @@ type SQLiteDatastore struct {
 	db *sql.DB
 }
 
-func Create(repoPath string) (*SQLiteDatastore, error) {
-	dbPath := path.Join(repoPath, "datastore", "mainnet.db")
+func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
+	var dbPath string
+	if testnet {
+		dbPath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
+	}
+	if err := initDatabaseTables(dbPath); err != nil {
+		return nil, err
+	}
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
@@ -32,6 +40,20 @@ func Create(repoPath string) (*SQLiteDatastore, error) {
 	}
 
 	return sqliteDB, nil
+}
+
+func initDatabaseTables(dbPath string) error {
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	sqlStmt := `
+	create table followers (peerID text primary key not null);
+	`
+	db.Exec(sqlStmt)
+	return nil
 }
 
 func (d *SQLiteDatastore) Close() {

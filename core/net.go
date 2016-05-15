@@ -2,8 +2,8 @@ package core
 
 import (
 	"golang.org/x/net/context"
-	peer "gx/ipfs/QmZwZjMVGss5rqYsJVGy18gNbkTJffFyq2x1uJ4e4p3ZAt/go-libp2p-peer"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	peer "gx/ipfs/QmZwZjMVGss5rqYsJVGy18gNbkTJffFyq2x1uJ4e4p3ZAt/go-libp2p-peer"
 )
 
 func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {

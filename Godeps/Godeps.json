@@ -770,12 +770,20 @@
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
 		},
 		{
+			"ImportPath": "github.com/pebbe/zmq4",
+			"Rev": "83e3214acbc851e6f7d5be2d0c02886c6d752203"
+		},
+		{
 			"ImportPath": "github.com/tyler-smith/go-bip32",
 			"Rev": "1f9494efd1fa025d581aaa8530a0986c5c4937a3"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ripemd160",
 			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
 		},
 		{
 			"ImportPath": "gx/ipfs/QmNLvkCDV6ZjUJsEwGNporYBuZdhWT6q7TBVYQwwRv12HT/go-nat",

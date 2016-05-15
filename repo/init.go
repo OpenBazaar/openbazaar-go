@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path"
-	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/op/go-logging"
 	"github.com/ipfs/go-ipfs/core"
@@ -14,6 +13,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"github.com/pebbe/zmq4"
 )
 
 var log = logging.MustGetLogger("repo")
@@ -27,10 +27,6 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int) error {
 	log.Infof("initializing openbazaar node at %s\n", repoRoot)
 
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
-		return err
-	}
-
-	if err := initDatabaseTables(repoRoot); err != nil {
 		return err
 	}
 
@@ -56,6 +52,11 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int) error {
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
+
+	if err := addConfigExtensions(repoRoot); err != nil {
+		return err
+	}
+
 	return initializeIpnsKeyspace(repoRoot)
 }
 
@@ -144,17 +145,32 @@ func initializeIpnsKeyspace(repoRoot string) error {
 	return namesys.InitializeKeyspace(ctx, nd.DAG, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
-func initDatabaseTables(repoRoot string) error {
-	dbPath := path.Join(repoRoot, "datastore", "mainnet.db")
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
+func addConfigExtensions(repoRoot string) error {
+	r, err := fsrepo.Open(repoRoot)
+	if err != nil { // NB: repo is owned by the node
 		return err
 	}
-	defer db.Close()
-
-	sqlStmt := `
-	create table followers (peerID text primary key not null);
-	`
-	db.Exec(sqlStmt)
+	type Server struct {
+		Url       string
+		PublicKey []byte
+	}
+	type LibbitcoinServers struct {
+		Mainnet  []Server
+		Testnet  []Server
+	}
+	ls := &LibbitcoinServers{
+		Mainnet: []Server{
+			Server{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
+			Server{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
+			Server{Url: "tcp://obelisk.airbitz.co:9091", PublicKey: []byte{}},
+		},
+		Testnet: []Server {
+			Server{Url: "tcp://libbitcoin2.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("baihZB[vT(dcVCwkhYLAzah<t2gJ>{3@k?+>T&^3"))},
+			Server{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
+		},
+	}
+	if err := extendConfigFile(r, "LibbitcoinServers", ls); err != nil {
+		return err
+	}
 	return nil
 }
