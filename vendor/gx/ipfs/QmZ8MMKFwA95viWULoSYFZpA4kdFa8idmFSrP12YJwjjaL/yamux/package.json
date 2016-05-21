@@ -1,0 +1,12 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/hashicorp/yamux"
+  },
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "yamux",
+  "version": "1.0.1"
+}

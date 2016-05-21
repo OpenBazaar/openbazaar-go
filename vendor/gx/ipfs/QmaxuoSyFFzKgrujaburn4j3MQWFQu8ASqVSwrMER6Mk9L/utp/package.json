@@ -1,0 +1,24 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/anacrolix/utp"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmTkhYH91R1gBjThpAqrvfiCAbnkUxtBwddpUTRkSh2iiR",
+      "name": "missinggo",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmSAMS9xcUc3pD3ZCwbj9uZCdHfoyv35WAe8D77dcKquXZ",
+      "name": "sync",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "utp",
+  "version": "0.0.0"
+}

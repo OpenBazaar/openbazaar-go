@@ -1,0 +1,12 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/bradfitz/iter"
+  },
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "iter",
+  "version": "0.0.0"
+}

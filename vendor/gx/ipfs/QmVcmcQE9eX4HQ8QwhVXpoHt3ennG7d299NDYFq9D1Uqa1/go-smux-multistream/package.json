@@ -1,0 +1,28 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/whyrusleeping/go-smux-multistream"
+  },
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/go-smux-multistream"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmf91yhgRLo2dhhbc5zZ7TxjMaR1oxaWaoc9zRZdi1kU4a",
+      "name": "go-multistream",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmb1US8uyZeEpMyc56wVZy2cDFdQjNFojAUYVCoo9ieTqp",
+      "name": "go-stream-muxer",
+      "version": "1.0.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "go-smux-multistream",
+  "version": "1.0.0"
+}

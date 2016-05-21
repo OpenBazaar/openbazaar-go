@@ -1,0 +1,14 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/whyrusleeping/go-multistream"
+  },
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/go-multistream"
+  },
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "go-multistream",
+  "version": "0.0.0"
+}

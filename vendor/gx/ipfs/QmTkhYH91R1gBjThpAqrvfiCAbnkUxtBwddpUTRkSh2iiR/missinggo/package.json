@@ -1,0 +1,19 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/anacrolix/missinggo"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmSJFi67yPwUFHmnMWAWURGv9HcjZhWprLenhEuKUSvCPL",
+      "name": "iter",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "missinggo",
+  "version": "0.0.0"
+}

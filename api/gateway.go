@@ -9,8 +9,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/op/go-logging"
-	manet "gx/ipfs/QmYVqhVfbK4BKvbW88Lhm26b3ud14sTBvcm1H7uWUx1Fkp/go-multiaddr-net"
-
+	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
 )
 
 var log = logging.MustGetLogger("api")
