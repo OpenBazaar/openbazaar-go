@@ -15,8 +15,8 @@ func GetLibbitcoinServers(cfgPath string, testnet bool) ([]libbitcoin.Server, er
 	if err != nil {
 		return servers, err
 	}
-	var ls interface{}
-	json.Unmarshal(file, &ls)
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
 	var net string
 	if testnet {
 		net = "Testnet"
@@ -24,10 +24,10 @@ func GetLibbitcoinServers(cfgPath string, testnet bool) ([]libbitcoin.Server, er
 		net = "Mainnet"
 	}
 
-	for _, s := range(ls.(map[string]interface{})["LibbitcoinServers"].(map[string]interface{})[net].([]interface{})){
+	for _, s := range(cfg.(map[string]interface{})["LibbitcoinServers"].(map[string]interface{})[net].([]interface{})){
 		encodedKey := s.(map[string]interface{})["PublicKey"].(string)
 		if encodedKey != "" {
-			b, _ := base64.StdEncoding.DecodeString(s.(map[string]interface{})["PublicKey"].(string))
+			b, _ := base64.StdEncoding.DecodeString(encodedKey)
 			encodedKey = zmq4.Z85encode(string(b))
 		}
 		server := libbitcoin.Server{
@@ -41,9 +41,6 @@ func GetLibbitcoinServers(cfgPath string, testnet bool) ([]libbitcoin.Server, er
 
 func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 	if err := r.SetConfigKey(key, value); err != nil {
-		return err
-	}
-	if err := r.Close(); err != nil {
 		return err
 	}
 	return nil

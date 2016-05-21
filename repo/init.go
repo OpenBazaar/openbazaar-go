@@ -172,5 +172,11 @@ func addConfigExtensions(repoRoot string) error {
 	if err := extendConfigFile(r, "LibbitcoinServers", ls); err != nil {
 		return err
 	}
+	if err := extendConfigFile(r, "Resolver", "https://resolver.onename.com/"); err != nil {
+		return err
+	}
+	if err := r.Close(); err != nil {
+		return err
+	}
 	return nil
 }
