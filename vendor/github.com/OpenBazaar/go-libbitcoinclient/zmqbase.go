@@ -47,12 +47,16 @@ func (cb *ClientBase) SendCommand(command string, data []byte, callback func(int
 
 	ticker := time.NewTicker(10 * time.Second)
 	c := make(chan interface{})
-	go func() {
+	cb.outstanding[txid] = outstanding{
+		callback: callback,
+		stop: c,
+	}
+	listen:
 		for {
 			select {
 			case <- c: // Server returned properly.
 				ticker.Stop()
-				return
+				break listen
 			case <- ticker.C: //Server timed out. Rotate servers and resend message.
 				log.Warningf("Libbitcoin server timed out on %s\n", command)
 				ticker.Stop()
@@ -62,15 +66,9 @@ func (cb *ClientBase) SendCommand(command string, data []byte, callback func(int
 					delete(cb.outstanding, txid)
 				}
 				cb.SendCommand(command, data, callback)
-				return
+				break listen
 			}
 		}
-	}()
-
-	cb.outstanding[txid] = outstanding{
-		callback: callback,
-		stop: c,
-	}
 }
 
 func (cb *ClientBase) messageReceived(command string, id, data []byte){

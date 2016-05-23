@@ -47,7 +47,7 @@ func (s *ZMQSocket) Connect(address, publicKey string) error {
 	if err != nil {
 		return err
 	}
-	go s.poll()
+ 	go s.poll()
 	return nil
 }
 
@@ -77,4 +77,12 @@ func (s *ZMQSocket) Send(data []byte, flag zmq.Flag) {
 
 func (s *ZMQSocket) Close() {
 	s.socket.Close()
+}
+
+func (s *ZMQSocket) ChangeEndpoint(current, newUrl, newPublicKey string){
+	s.socket.Disconnect(current)
+	s.socket.Connect(newUrl)
+	if newPublicKey != "" {
+		s.socket.SetCurveServerkey(newPublicKey)
+	}
 }

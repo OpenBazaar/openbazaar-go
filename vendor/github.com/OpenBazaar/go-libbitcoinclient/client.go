@@ -60,10 +60,9 @@ func NewLibbitcoinClient(servers []Server, params *chaincfg.Params) *LibbitcoinC
 }
 
 func (l *LibbitcoinClient) RotateServer(){
+	currentUrl := l.ServerList[l.ServerIndex].Url
 	l.ServerIndex = (l.ServerIndex + 1) % len(l.ServerList)
-	l.ClientBase.socket.Close()
-	l.ClientBase.socket = NewSocket(l.ClientBase.handler, zmq.DEALER)
-	l.ClientBase.socket.Connect(l.ServerList[l.ServerIndex].Url, l.ServerList[l.ServerIndex].PublicKey)
+	l.ClientBase.socket.ChangeEndpoint(currentUrl, l.ServerList[l.ServerIndex].Url, l.ServerList[l.ServerIndex].PublicKey)
 	for k, v := range(l.subscriptions){
 		addr, _ := btc.DecodeAddress(k, l.Params)
 		l.SubscribeAddress(addr, v.callback)
@@ -75,31 +74,27 @@ func (l *LibbitcoinClient) ListenHeartbeat() {
 	i := strings.LastIndex(l.ServerList[l.ServerIndex].Url, ":")
 	heartbeatUrl := l.ServerList[l.ServerIndex].Url[:i] + ":" + strconv.Itoa(HeartbeatPort)
 	c := make(chan Response)
-	makeSocket := func() *ZMQSocket {
-		s := NewSocket(c, zmq.SUB)
-		s.Connect(heartbeatUrl, "")
-		return s
-	}
-	s := makeSocket()
+	s := NewSocket(c, zmq.SUB)
+	s.Connect(heartbeatUrl, "")
 
 	timeout := func(){
-		s.Close()
 		log.Warningf("Libbitcoin server at %s timed out on heartbeat\n", l.ServerList[l.ServerIndex].Url)
 		l.RotateServer()
-		s = makeSocket()
+		currentUrl := heartbeatUrl
+		i := strings.LastIndex(l.ServerList[l.ServerIndex].Url, ":")
+		heartbeatUrl = l.ServerList[l.ServerIndex].Url[:i] + ":" + strconv.Itoa(HeartbeatPort)
+		s.ChangeEndpoint(currentUrl, heartbeatUrl, "")
 	}
 	ticker := time.NewTicker(10 * time.Second)
-	go func() {
-		for {
-			select {
-			case <- c:
-				ticker.Stop()
-				ticker = time.NewTicker(10 * time.Second)
-			case <- ticker.C:
-				timeout()
-			}
+	for {
+		select {
+		case <- c:
+			ticker.Stop()
+			ticker = time.NewTicker(10 * time.Second)
+		case <- ticker.C:
+			timeout()
 		}
-	}()
+	}
 }
 
 func(l *LibbitcoinClient) renewSubscriptions(){
@@ -145,21 +140,21 @@ func (l *LibbitcoinClient) FetchHistory2(address btc.Address, fromHeight uint32,
 	req = append(req, netID)
 	req = append(req, hash160...)
 	req = append(req, height...)
-	l.SendCommand("address.fetch_history2", req, callback)
+	go l.SendCommand("address.fetch_history2", req, callback)
 }
 
 func (l *LibbitcoinClient) FetchLastHeight(callback func(interface{}, error)){
-	l.SendCommand("blockchain.fetch_last_height", []byte{}, callback)
+	go l.SendCommand("blockchain.fetch_last_height", []byte{}, callback)
 }
 
 func (l *LibbitcoinClient) FetchTransaction(txid string, callback func(interface{}, error)){
 	b, _ := wire.NewShaHashFromStr(txid)
-	l.SendCommand("blockchain.fetch_transaction", b.Bytes(), callback)
+	go l.SendCommand("blockchain.fetch_transaction", b.Bytes(), callback)
 }
 
 func (l *LibbitcoinClient) FetchUnconfirmedTransaction(txid string, callback func(interface{}, error)){
 	b, _ := wire.NewShaHashFromStr(txid)
-	l.SendCommand("transaction_pool.fetch_transaction", b.Bytes(), callback)
+	go l.SendCommand("transaction_pool.fetch_transaction", b.Bytes(), callback)
 }
 
 func (l *LibbitcoinClient) SubscribeAddress(address btc.Address, callback func(interface{})) {
@@ -167,7 +162,7 @@ func (l *LibbitcoinClient) SubscribeAddress(address btc.Address, callback func(i
 	req = append(req, byte(0))
 	req = append(req, byte(160))
 	req = append(req, address.ScriptAddress()...)
-	l.SendCommand("address.subscribe", req, nil)
+	go l.SendCommand("address.subscribe", req, nil)
 	l.subscriptions[address.String()] = subscription{
 		expiration: time.Now().Add(24 * time.Hour),
 		callback: callback,
@@ -186,7 +181,7 @@ func (l *LibbitcoinClient) RenewSubscription(address btc.Address, callback func(
 	req = append(req, byte(0))
 	req = append(req, byte(160))
 	req = append(req, address.ScriptAddress()...)
-	l.SendCommand("address.renew", req, nil)
+	go l.SendCommand("address.renew", req, nil)
 	l.subscriptions[address.String()] = subscription{
 		expiration: time.Now().Add(24 * time.Hour),
 		callback: callback,
@@ -194,11 +189,11 @@ func (l *LibbitcoinClient) RenewSubscription(address btc.Address, callback func(
 }
 
 func (l *LibbitcoinClient) Broadcast(tx []byte, callback func(interface{}, error)) {
-	l.SendCommand("protocol.broadcast_transaction", tx, nil)
+	go l.SendCommand("protocol.broadcast_transaction", tx, nil)
 }
 
 func (l *LibbitcoinClient) Validate(tx []byte, callback func(interface{}, error)) {
-	l.SendCommand("transaction_pool.validate", tx, nil)
+	go l.SendCommand("transaction_pool.validate", tx, nil)
 }
 
 func (l *LibbitcoinClient) Parse(command string, data []byte, callback func(interface{}, error)) {

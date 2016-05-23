@@ -18,7 +18,7 @@ import (
 
 var log = logging.MustGetLogger("service")
 
-var ProtocolOpenBazaar protocol.ID = "/app/openbazaar"
+var ProtocolOpenBazaar protocol.ID = "/app/openbazaar/1.0.0"
 
 type OpenBazaarService struct {
 	host       host.Host

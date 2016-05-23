@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-libbitcoinclient",
-			"Rev": "9ec0c4360e92068fc213e2d4341594d6d7fbddfa"
+			"Rev": "b8c668f950a314e316dfb2c4c32ae6f34d0f2fcc"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcec",
