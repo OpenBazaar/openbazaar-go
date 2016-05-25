@@ -69,7 +69,7 @@ func initDatabaseTables(dbPath string) error {
 
 	sqlStmt := `
 	create table followers (peerID text primary key not null);
-	create table config (mnemonic text, identityKey blob);
+	create table config (key text primary key not null, value blob);
 	`
 	db.Exec(sqlStmt)
 	return nil
@@ -91,12 +91,16 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert into config(mnemonic, identityKey) values(?,?)")
+	stmt, err := tx.Prepare("insert into config(key, value) values(?,?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(mnemonic, identityKey)
+	_, err = stmt.Exec("mnemonic", mnemonic)
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec("identityKey", identityKey)
 	if err != nil {
 		return err
 	}
@@ -108,19 +112,12 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte) error {
 func (c *ConfigDB) GetMnemonic() (string, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stm := "select mnemonic from config"
-	rows, err := c.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return "", err
-	}
+	stmt, err := c.db.Prepare("select value from config where key=?")
+	defer stmt.Close()
 	var mnemonic string
-	for rows.Next() {
-		if err := rows.Scan(&mnemonic); err != nil {
-			log.Error(err)
-			return "", err
-		}
-		break
+	err = stmt.QueryRow("mnemonic").Scan(&mnemonic)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return mnemonic, nil
 }
@@ -128,19 +125,12 @@ func (c *ConfigDB) GetMnemonic() (string, error) {
 func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stm := "select identityKey from config"
-	rows, err := c.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
+	stmt, err := c.db.Prepare("select value from config where key=?")
+	defer stmt.Close()
 	var identityKey []byte
-	for rows.Next() {
-		if err := rows.Scan(&identityKey); err != nil {
-			log.Error(err)
-			return nil, err
-		}
-		break
+	err = stmt.QueryRow("identityKey").Scan(&identityKey)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return identityKey, nil
 }

@@ -112,6 +112,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+
 	// logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(expPath, "logs", "ob.log"),
