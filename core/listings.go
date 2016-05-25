@@ -78,14 +78,15 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	for i, d := range(index){
-		if d.Name == ld.Name {
-			if len(index) == 1 {
-				index = []listingData{}
-				break
-			} else {
-				index = append(index[:i], index[i + 1:]...)
-			}
+		if d.Name != ld.Name {
+			continue
 		}
+		
+		if len(index) == 1 {
+			index = []listingData{}
+			break
+		} 
+		index = append(index[:i], index[i + 1:]...)
 	}
 
 	// Append our listing with the new hash to the list
