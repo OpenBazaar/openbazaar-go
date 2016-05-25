@@ -12,8 +12,10 @@ import (
 var log = logging.MustGetLogger("db")
 
 type SQLiteDatastore struct {
+	config    repo.Config
 	followers repo.Followers
-	db *sql.DB
+	db        *sql.DB
+	lock      *sync.Mutex
 }
 
 func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
@@ -23,9 +25,6 @@ func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
 	} else {
 		dbPath = path.Join(repoPath, "datastore", "mainnet.db")
 	}
-	if err := initDatabaseTables(dbPath); err != nil {
-		return nil, err
-	}
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
@@ -33,13 +32,32 @@ func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
 
 	l := new(sync.Mutex)
 	sqliteDB := &SQLiteDatastore{
+		config: &ConfigDB{
+			db: conn,
+			lock: l,
+			path: dbPath,
+		},
 		followers: &FollowerDB{
 			db: conn,
 			lock: l,
 		},
+		db: conn,
+		lock: l,
 	}
 
 	return sqliteDB, nil
+}
+
+func (d *SQLiteDatastore) Close() {
+	d.db.Close()
+}
+
+func (d *SQLiteDatastore) Config() repo.Config {
+	return d.config
+}
+
+func (d *SQLiteDatastore) Followers() repo.Followers {
+	return d.followers
 }
 
 func initDatabaseTables(dbPath string) error {
@@ -51,15 +69,80 @@ func initDatabaseTables(dbPath string) error {
 
 	sqlStmt := `
 	create table followers (peerID text primary key not null);
+	create table config (mnemonic text, identityKey blob);
 	`
 	db.Exec(sqlStmt)
 	return nil
 }
 
-func (d *SQLiteDatastore) Close() {
-	d.db.Close()
+type ConfigDB struct {
+	db   *sql.DB
+	lock *sync.Mutex
+	path string
 }
 
-func (d *SQLiteDatastore) Followers() repo.Followers {
-	return d.followers
+func (c *ConfigDB) Init(mnemonic string, identityKey []byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if err := initDatabaseTables(c.path); err != nil {
+		return err
+	}
+	tx, err := c.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare("insert into config(mnemonic, identityKey) values(?,?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(mnemonic, identityKey)
+	if err != nil {
+		return err
+	}
+	tx.Commit()
+	return nil
+
 }
+
+func (c *ConfigDB) GetMnemonic() (string, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	stm := "select mnemonic from config"
+	rows, err := c.db.Query(stm)
+	if err != nil {
+		log.Error(err)
+		return "", err
+	}
+	var mnemonic string
+	for rows.Next() {
+		if err := rows.Scan(&mnemonic); err != nil {
+			log.Error(err)
+			return "", err
+		}
+		break
+	}
+	return mnemonic, nil
+}
+
+func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	stm := "select identityKey from config"
+	rows, err := c.db.Query(stm)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	var identityKey []byte
+	for rows.Next() {
+		if err := rows.Scan(&identityKey); err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		break
+	}
+	return identityKey, nil
+}
+
+

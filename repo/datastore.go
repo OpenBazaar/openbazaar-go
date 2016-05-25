@@ -1,8 +1,21 @@
 package repo
 
 type Datastore interface {
+	Config() Config
 	Followers() Followers
 	Close()
+}
+
+type Config interface {
+	// Initialize the database with the node's mnemonic seed and
+	// identity key. This will be called during repo init
+	Init(mnemonic string, identityKey []byte) error
+
+	// Return the mnemonic string
+	GetMnemonic() (string, error)
+
+	// Return the identity key
+	GetIdentityKey() ([]byte, error)
 }
 
 type Followers interface {
@@ -19,3 +32,5 @@ type Followers interface {
 	// Return the number of followers in the database.
 	Count() int
 }
+
+

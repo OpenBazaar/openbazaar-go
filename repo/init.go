@@ -6,14 +6,14 @@ import (
 	"errors"
 	"os"
 	"path"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/op/go-logging"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"github.com/tyler-smith/go-bip39"
 	"github.com/pebbe/zmq4"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 )
 
 var log = logging.MustGetLogger("repo")
@@ -23,9 +23,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int) error {
-	log.Infof("initializing openbazaar node at %s\n", repoRoot)
-
+func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, dbInit func(string, []byte)error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -38,26 +36,44 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int) error {
 		return err
 	}
 
-	conf, err := config.Init(out, nBitsForKeypair)
+	conf, err := initConfig(out)
 	if err != nil {
 		return err
 	}
-	conf.Discovery.MDNS.Enabled = false
-	conf.Addresses.API = ""
-	conf.Ipns.RecordLifetime = "7d"
-	conf.Ipns.RepublishPeriod = "24h"
-	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip4/0.0.0.0/udp/4001/utp")
-	conf.Addresses.Swarm = append(conf.Addresses.Swarm, "/ip6/::/udp/4001/utp")
 
+	mnemonic, err := createMnemonic()
+	if err != nil {
+		return err
+	}
+
+	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
+	fmt.Printf("generating %d-bit RSA keypair...", nBitsForKeypair)
+	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("done\n")
+
+	identity, err := ipfs.IdentityFromKey(identityKey)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("initializing openbazaar node at %s\n", repoRoot)
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
+	conf.Identity = identity
 
 	if err := addConfigExtensions(repoRoot); err != nil {
 		return err
 	}
 
-	return initializeIpnsKeyspace(repoRoot)
+	if err := dbInit(mnemonic, identityKey); err != nil {
+		return err
+	}
+
+	return initializeIpnsKeyspace(repoRoot, identityKey)
 }
 
 func maybeCreateOBDirectories(repoRoot string) error {
@@ -122,7 +138,7 @@ func checkWriteable(dir string) error {
 	return err
 }
 
-func initializeIpnsKeyspace(repoRoot string) error {
+func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -130,7 +146,17 @@ func initializeIpnsKeyspace(repoRoot string) error {
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
+	cfg, err := r.Config()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	identity, err := ipfs.IdentityFromKey(privKeyBytes)
+	if err != nil {
+		return err
+	}
 
+	cfg.Identity = identity
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
@@ -179,4 +205,16 @@ func addConfigExtensions(repoRoot string) error {
 		return err
 	}
 	return nil
+}
+
+func createMnemonic() (string, error){
+	entropy, err := bip39.NewEntropy(256)
+	if err != nil {
+		return "", err
+	}
+	mnemonic, err := bip39.NewMnemonic(entropy)
+	if err != nil {
+		return "", err
+	}
+	return mnemonic, nil
 }

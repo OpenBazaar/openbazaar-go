@@ -34,6 +34,7 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 )
 
 var log = logging.MustGetLogger("main")
@@ -105,6 +106,12 @@ func (x *Start) Execute(args []string) error {
 	repoPath := "~/.openbazaar2"
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
 
+	// Database
+	sqliteDB, err := db.Create(expPath, x.Testnet)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	// logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(expPath, "logs", "ob.log"),
@@ -128,7 +135,7 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.Output(w2)()
 
 	// initalize the ipfs repo if it doesn't already exist
-	err := repo.DoInit(os.Stdout, expPath, 4096)
+	err = repo.DoInit(os.Stdout, expPath, 4096, sqliteDB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)
 		return err
@@ -148,6 +155,17 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+
+	identityKey, err := sqliteDB.Config().GetIdentityKey()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	identity, err := ipfs.IdentityFromKey(identityKey)
+	if err != nil {
+		return err
+	}
+	cfg.Identity = identity
 
 	// Run stun and set uTP port
 	if x.STUN {
@@ -197,13 +215,6 @@ func (x *Start) Execute(args []string) error {
 	proto.Unmarshal(val, dhtrec)
 	e := new(namepb.IpnsEntry)
 	proto.Unmarshal(dhtrec.GetValue(), e)
-
-	// Database
-	sqliteDB, err := db.Create(expPath, x.Testnet)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 
 	// Wallet
 	privkeyBytes, err := nd.PrivateKey.Bytes()
