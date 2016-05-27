@@ -83,30 +83,6 @@ func maybeCreateOBDirectories(repoRoot string) error {
 	if err := os.MkdirAll(path.Join(repoRoot, "node", "listings"), os.ModePerm); err != nil {
 		return err
 	}
-
-	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "unfunded"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "in progress"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "purchases", "trade receipts"), os.ModePerm); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(path.Join(repoRoot, "sales", "unfunded"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "sales", "in progress"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "sales", "trade receipts"), os.ModePerm); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(path.Join(repoRoot, "cases"), os.ModePerm); err != nil {
-		return err
-	}
 	return nil
 }
 

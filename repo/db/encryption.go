@@ -5,9 +5,11 @@ import (
 	"os"
 	"fmt"
 	"strings"
-	"path/filepath"
+	"syscall"
 	"path"
+	"path/filepath"
 	"github.com/mitchellh/go-homedir"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 //FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
@@ -55,9 +57,13 @@ func Encrypt() error {
 	var pw string
 	for {
 		fmt.Print("Enter a veerrrry strong password: ")
-		resp, _ := reader.ReadString('\n')
-		if resp != "\n" {
-			pw = resp[:len(resp) - 1]
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		resp := string(bytePassword)
+		if len(resp) < 8 {
+			fmt.Println("You call that a password? Try again.")
+		} else if resp != "" {
+			pw = resp
 			break
 		} else {
 			fmt.Println("Seriously, enter a password.")
@@ -65,11 +71,12 @@ func Encrypt() error {
 	}
 	for {
 		fmt.Print("Confirm your password: ")
-		resp, _ := reader.ReadString('\n')
-		if resp[:len(resp) - 1] == pw {
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		resp := string(bytePassword)
+		if resp == pw {
 			break
 		} else {
-			fmt.Println("Your passwords didn't match. Try again")
+			fmt.Println("Quit effin around. Try again.")
 		}
 	}
 	tmpPath := path.Join(repoPath, "tmp")
@@ -147,8 +154,9 @@ func Decrypt() error {
 		}
 	}
 	fmt.Print("Enter your password: ")
-	pw, _ := reader.ReadString('\n')
-	pw = pw[:len(pw)-1]
+	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+	fmt.Println("")
+	pw := string(bytePassword)
 	sqlliteDB, err := Create(repoPath, pw, testnet)
 	if err != nil || sqlliteDB.Config().IsEncrypted(){
 		fmt.Println("Invalid password")
