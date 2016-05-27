@@ -755,11 +755,6 @@
 			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
 		},
 		{
-			"ImportPath": "github.com/mattn/go-sqlite3",
-			"Comment": "v1.1.0-62-g467f50b",
-			"Rev": "467f50b0c026317ad28fc2c0a08aab6f755cfc7a"
-		},
-		{
 			"ImportPath": "github.com/mitchellh/go-homedir",
 			"Rev": "981ab348d865cf048eb7d17e78ac7192632d8415"
 		},
@@ -788,6 +783,10 @@
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip39",
 			"Rev": "32e294b638a7246c6f0c85736d627a2562604f80"
+		},
+		{
+			"ImportPath": "github.com/xeodou/go-sqlcipher",
+			"Rev": "242cae0e70a5225948001575e124a88abc3838ae"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/pbkdf2",

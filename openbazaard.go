@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"os/signal"
 	"strconv"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -47,9 +48,11 @@ var fileLogFormat = logging.MustStringFormatter(
 	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
 )
 
+var encryptedDatabaseError = errors.New("could not decrypt the database")
+
 
 type Start struct {
-	Port int `short:"p" long:"port" description:"The port to use for p2p network traffic"`
+	Password string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Daemon bool `short:"d" long:"daemon" description:"run the server in the background as a daemon"`
 	Testnet bool `short:"t" long:"testnet" description:"use the test network"`
 	LogLevel string `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
@@ -60,10 +63,15 @@ type Start struct {
 }
 type Stop struct {}
 type Restart struct {}
+type EncryptDatabase struct {}
+type DecryptDatabase struct {}
 
 var startServer Start
 var stopServer Stop
 var restartServer Restart
+var encryptDatabase EncryptDatabase
+var decryptDatabase DecryptDatabase
+
 var parser = flags.NewParser(nil, flags.Default)
 
 func main() {
@@ -93,10 +101,26 @@ func main() {
 		"restart the server",
 		"The restart command shuts down the server and restarts",
 		&restartServer)
+	parser.AddCommand("encryptdatabase",
+		"encrypt your database",
+		"This command encrypts the database containing your bitcoin private keys, identity key, and contracts",
+		&encryptDatabase)
+	parser.AddCommand("decryptdatabase",
+		"decrypt your database",
+		"This command decrypts the database containing your bitcoin private keys, identity key, and contracts.\n [Warning] doing so may put your bitcoins at risk.",
+		&decryptDatabase)
 
 	if _, err := parser.Parse(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func (x *EncryptDatabase) Execute(args []string) error {
+	return db.Encrypt()
+}
+
+func (x *DecryptDatabase) Execute(args []string) error {
+	return db.Decrypt()
 }
 
 func (x *Start) Execute(args []string) error {
@@ -112,9 +136,8 @@ func (x *Start) Execute(args []string) error {
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
 
 	// Database
-	sqliteDB, err := db.Create(expPath, x.Testnet)
+	sqliteDB, err := db.Create(expPath, x.Password, x.Testnet)
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 
@@ -141,10 +164,15 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.Output(w2)()
 
 	// initalize the ipfs repo if it doesn't already exist
-	err = repo.DoInit(os.Stdout, expPath, 4096, x.Testnet, sqliteDB.Config().Init)
+	err = repo.DoInit(os.Stdout, expPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)
 		return err
+	}
+
+	// if the db can't be decrypted, exit
+	if sqliteDB.Config().IsEncrypted() {
+		return encryptedDatabaseError
 	}
 
 	// ipfs node setup

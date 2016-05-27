@@ -23,7 +23,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, dbInit func(string, []byte)error) error {
+func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string)error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, d
 		return err
 	}
 
-	if err := dbInit(mnemonic, identityKey); err != nil {
+	if err := dbInit(mnemonic, identityKey, password); err != nil {
 		return err
 	}
 

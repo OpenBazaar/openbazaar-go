@@ -4,7 +4,7 @@ import (
 	"path"
 	"sync"
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/xeodou/go-sqlcipher"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
 )
@@ -18,7 +18,7 @@ type SQLiteDatastore struct {
 	lock      *sync.Mutex
 }
 
-func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
+func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -28,6 +28,10 @@ func Create(repoPath string, testnet bool) (*SQLiteDatastore, error) {
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
+	}
+	if password != "" {
+		p := "pragma key = '" + password + "';"
+		conn.Exec(p)
 	}
 
 	l := new(sync.Mutex)
@@ -60,18 +64,43 @@ func (d *SQLiteDatastore) Followers() repo.Followers {
 	return d.followers
 }
 
-func initDatabaseTables(dbPath string) error {
-	db, err := sql.Open("sqlite3", dbPath)
+func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	var cp string
+	if password == "" {
+		cp = `
+			attach database '` + dbPath + `' as plaintext key '';
+			insert into plaintext.followers select * from main.followers
+		`
+	} else {
+		cp = `
+			attach database '` + dbPath + `' as encrypted key '`+ password +`';
+			insert into encrypted.followers select * from main.followers
+		`
+	}
+
+	_, err := d.db.Exec(cp)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
-	sqlStmt := `
+	return nil
+}
+
+func initDatabaseTables(db *sql.DB, password string) error {
+	var sqlStmt string
+	if password != "" {
+		sqlStmt = "PRAGMA key = '" + password + "';"
+	}
+	sqlStmt = sqlStmt + `
 	create table followers (peerID text primary key not null);
 	create table config (key text primary key not null, value blob);
 	`
-	db.Exec(sqlStmt)
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -81,10 +110,10 @@ type ConfigDB struct {
 	path string
 }
 
-func (c *ConfigDB) Init(mnemonic string, identityKey []byte) error {
+func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := initDatabaseTables(c.path); err != nil {
+	if err := initDatabaseTables(c.db, password); err != nil {
 		return err
 	}
 	tx, err := c.db.Begin()
@@ -133,6 +162,15 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 		log.Fatal(err)
 	}
 	return identityKey, nil
+}
+
+func (c *ConfigDB) IsEncrypted() bool {
+	pwdCheck := "select count(*) from sqlite_master;"
+	_, err := c.db.Exec(pwdCheck) // fails is wrong pw entered
+	if err != nil {
+		return true
+	}
+	return false
 }
 
 
