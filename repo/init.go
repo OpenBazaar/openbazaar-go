@@ -23,7 +23,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, dbInit func(string, []byte)error) error {
+func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, dbInit func(string, []byte)error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, dbInit func(str
 	}
 	conf.Identity = identity
 
-	if err := addConfigExtensions(repoRoot); err != nil {
+	if err := addConfigExtensions(repoRoot, testnet); err != nil {
 		return err
 	}
 
@@ -171,7 +171,7 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	return namesys.InitializeKeyspace(ctx, nd.DAG, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
-func addConfigExtensions(repoRoot string) error {
+func addConfigExtensions(repoRoot string, testnet bool) error {
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
@@ -180,20 +180,18 @@ func addConfigExtensions(repoRoot string) error {
 		Url       string
 		PublicKey []byte
 	}
-	type LibbitcoinServers struct {
-		Mainnet  []Server
-		Testnet  []Server
-	}
-	ls := &LibbitcoinServers{
-		Mainnet: []Server{
+	var ls []Server
+	if !testnet {
+		ls = []Server {
 			Server{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
 			Server{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
 			Server{Url: "tcp://obelisk.airbitz.co:9091", PublicKey: []byte{}},
-		},
-		Testnet: []Server {
+		}
+	} else {
+		ls = []Server{
 			Server{Url: "tcp://libbitcoin2.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("baihZB[vT(dcVCwkhYLAzah<t2gJ>{3@k?+>T&^3"))},
 			Server{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
-		},
+		}
 	}
 	if err := extendConfigFile(r, "LibbitcoinServers", ls); err != nil {
 		return err
@@ -208,7 +206,7 @@ func addConfigExtensions(repoRoot string) error {
 }
 
 func createMnemonic() (string, error){
-	entropy, err := bip39.NewEntropy(256)
+	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
 		return "", err
 	}

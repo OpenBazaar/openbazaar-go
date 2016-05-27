@@ -11,7 +11,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 )
 
-func GetLibbitcoinServers(cfgPath string, testnet bool) ([]libbitcoin.Server, error) {
+func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 	servers := []libbitcoin.Server{}
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
@@ -19,14 +19,8 @@ func GetLibbitcoinServers(cfgPath string, testnet bool) ([]libbitcoin.Server, er
 	}
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
-	var net string
-	if testnet {
-		net = "Testnet"
-	} else {
-		net = "Mainnet"
-	}
 
-	for _, s := range(cfg.(map[string]interface{})["LibbitcoinServers"].(map[string]interface{})[net].([]interface{})){
+	for _, s := range(cfg.(map[string]interface{})["LibbitcoinServers"].([]interface{})){
 		encodedKey := s.(map[string]interface{})["PublicKey"].(string)
 		if encodedKey != "" {
 			b, _ := base64.StdEncoding.DecodeString(encodedKey)

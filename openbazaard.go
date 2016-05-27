@@ -103,7 +103,12 @@ func (x *Start) Execute(args []string) error {
 	printSplashScreen()
 
 	// set repo path
-	repoPath := "~/.openbazaar2"
+	var repoPath string
+	if x.Testnet {
+		repoPath = "~/.openbazaar2-testnet"
+	} else {
+		repoPath = "~/.openbazaar2"
+	}
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
 
 	// Database
@@ -136,7 +141,7 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.Output(w2)()
 
 	// initalize the ipfs repo if it doesn't already exist
-	err = repo.DoInit(os.Stdout, expPath, 4096, sqliteDB.Config().Init)
+	err = repo.DoInit(os.Stdout, expPath, 4096, x.Testnet, sqliteDB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)
 		return err
@@ -218,7 +223,7 @@ func (x *Start) Execute(args []string) error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Wallet
-	privkeyBytes, err := nd.PrivateKey.Bytes()
+	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
 		log.Error(err)
 		return err
@@ -229,12 +234,12 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.TestNet3Params
 	}
-	libbitcoinServers, err := repo.GetLibbitcoinServers(path.Join(expPath, "config"), x.Testnet)
+	libbitcoinServers, err := repo.GetLibbitcoinServers(path.Join(expPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(privkeyBytes, &params, libbitcoinServers)
+	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, libbitcoinServers)
 
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,

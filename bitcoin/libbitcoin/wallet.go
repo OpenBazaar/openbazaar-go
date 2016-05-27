@@ -4,6 +4,7 @@ import (
 	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/OpenBazaar/go-libbitcoinclient"
+	"github.com/tyler-smith/go-bip39"
 )
 
 type LibbitcoinWallet struct {
@@ -15,7 +16,8 @@ type LibbitcoinWallet struct {
 	MasterPublicKey     *b32.Key
 }
 
-func NewLibbitcoinWallet(seed []byte, params *chaincfg.Params, servers []libbitcoin.Server) *LibbitcoinWallet {
+func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, servers []libbitcoin.Server) *LibbitcoinWallet {
+	seed := bip39.NewSeed(mnemonic, "")
 	mk, _ := b32.NewMasterKey(seed)
 	l := new(LibbitcoinWallet)
 	l.MasterPrivateKey = mk
