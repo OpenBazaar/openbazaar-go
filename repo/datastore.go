@@ -41,14 +41,14 @@ type Following interface {
 	// Put a B58 encoded peer ID to the database
 	Put(peer string) error
 
-	// Get following list from the database.
+	// Get a list of following peers from the database.
 	// The offset and limit arguments can be used to for lazy loading.
 	Get(offset int, limit int) ([]string, error)
 
-	// Delete a follower from the databse.
+	// Delete a peer from the databse.
 	Delete(peer string) error
 
-	// Return the number of followers in the database.
+	// Return the number of peers in the database.
 	Count() int
 }
 
