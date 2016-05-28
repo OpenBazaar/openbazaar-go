@@ -25,6 +25,7 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
 }
 
 func (n *OpenBazaarNode) Follow(peerId string) error {
+	n.Datastore.Following().Put(peerId)
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err
@@ -40,6 +41,7 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 }
 
 func (n *OpenBazaarNode) Unfollow(peerId string) error {
+	n.Datastore.Following().Delete(peerId)
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err

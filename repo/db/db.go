@@ -14,6 +14,7 @@ var log = logging.MustGetLogger("db")
 type SQLiteDatastore struct {
 	config    repo.Config
 	followers repo.Followers
+	following repo.Following
 	db        *sql.DB
 	lock      *sync.Mutex
 }
@@ -45,6 +46,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db: conn,
 			lock: l,
 		},
+		following: &FollowingDB{
+			db: conn,
+			lock: l,
+		},
 		db: conn,
 		lock: l,
 	}
@@ -62,6 +67,10 @@ func (d *SQLiteDatastore) Config() repo.Config {
 
 func (d *SQLiteDatastore) Followers() repo.Followers {
 	return d.followers
+}
+
+func (d *SQLiteDatastore) Following() repo.Following {
+	return d.following
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -111,6 +120,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	PRAGMA user_version = 0;
 	create table config (key text primary key not null, value blob);
 	create table followers (peerID text primary key not null);
+	create table following (peerID text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

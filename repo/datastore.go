@@ -3,6 +3,7 @@ package repo
 type Datastore interface {
 	Config() Config
 	Followers() Followers
+	Following() Following
 	Close()
 }
 
@@ -31,6 +32,21 @@ type Followers interface {
 
 	// Delete a follower from the databse.
 	Delete(follower string) error
+
+	// Return the number of followers in the database.
+	Count() int
+}
+
+type Following interface {
+	// Put a B58 encoded peer ID to the database
+	Put(peer string) error
+
+	// Get following list from the database.
+	// The offset and limit arguments can be used to for lazy loading.
+	Get(offset int, limit int) ([]string, error)
+
+	// Delete a follower from the databse.
+	Delete(peer string) error
 
 	// Return the number of followers in the database.
 	Count() int
