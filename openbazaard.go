@@ -294,6 +294,7 @@ func (x *Start) Execute(args []string) error {
 
 	// Wait for gateway to start before starting the network service.
 	// This way the websocket channel we pass into the service gets created first.
+	// FIXME: There has to be a better way
 	for b := range cb {
 		if b == true {
 			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)

@@ -19,12 +19,6 @@ import (
 // Create a temp encrypted database, read the unencrypted db into it then replace the unencrypted db
 func Encrypt() error {
 	reader := bufio.NewReader(os.Stdin)
-	doesNotExist := func() {
-		fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
-	}
-	daemonRunning := func() {
-		fmt.Println("Cannot encrypt while openbazaard is running.")
-	}
 	var repoPath string
 	var filename string
 	var testnet bool
@@ -39,11 +33,11 @@ func Encrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				daemonRunning()
+				fmt.Println("Cannot decrypt while openbazaard is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				doesNotExist()
+				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
 				return nil
 			}
 			break
@@ -55,11 +49,11 @@ func Encrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				daemonRunning()
+				fmt.Println("Cannot decrypt while openbazaard is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				doesNotExist()
+				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
 				return nil
 			}
 			break
@@ -129,12 +123,6 @@ func Encrypt() error {
 // Create a temp database, read the encrypted db into it then replace the encrypted db
 func Decrypt() error {
 	reader := bufio.NewReader(os.Stdin)
-	doesNotExist := func() {
-		fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
-	}
-	daemonRunning := func() {
-		fmt.Println("Cannot decrypt while openbazaard is running.")
-	}
 	var repoPath string
 	var filename string
 	var testnet bool
@@ -149,11 +137,11 @@ func Decrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				daemonRunning()
+				fmt.Println("Cannot decrypt while openbazaard is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				doesNotExist()
+				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
 				return nil
 			}
 			break
@@ -163,8 +151,13 @@ func Decrypt() error {
 			testnet = true
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
 			repoPath = expPath
+			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
+				fmt.Println("Cannot decrypt while openbazaard is running.")
+				return nil
+			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				doesNotExist()
+				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
 				return nil
 			}
 			break

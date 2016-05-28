@@ -69,21 +69,33 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	defer d.lock.Unlock()
 	var cp string
 	//FIXME: there's probably a way to iterate the tables in these statements rather than hard code them
+	stmt := "select name from sqlite_master where type='table'"
+	rows, err := d.db.Query(stmt)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	var tables []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		tables = append(tables, name)
+	}
 	if password == "" {
-		cp = `
-			attach database '` + dbPath + `' as plaintext key '';
-			insert into plaintext.config select * from main.config;
-			insert into plaintext.followers select * from main.followers;
-		`
+		cp = `attach database '` + dbPath + `' as plaintext key '';`
+		for _, name := range(tables){
+			cp = cp + "insert into plaintext." + name + " select * from main." + name + ";"
+		}
 	} else {
-		cp = `
-			attach database '` + dbPath + `' as encrypted key '`+ password +`';
-			insert into encrypted.config select * from main.config;
-			insert into encrypted.followers select * from main.followers;
-		`
+		cp = `attach database '` + dbPath + `' as encrypted key '`+ password +`';`
+		for _, name := range(tables){
+			cp = cp + "insert into encrypted." + name + " select * from main." + name + ";"
+		}
 	}
 
-	_, err := d.db.Exec(cp)
+	_, err = d.db.Exec(cp)
 	if err != nil {
 		return err
 	}
@@ -97,6 +109,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 		sqlStmt = "PRAGMA key = '" + password + "';"
 	}
 	sqlStmt = sqlStmt + `
+	PRAGMA user_version = 0
 	create table followers (peerID text primary key not null);
 	create table config (key text primary key not null, value blob);
 	`
