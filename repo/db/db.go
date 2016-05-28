@@ -68,7 +68,6 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	var cp string
-	//FIXME: there's probably a way to iterate the tables in these statements rather than hard code them
 	stmt := "select name from sqlite_master where type='table'"
 	rows, err := d.db.Query(stmt)
 	if err != nil {
@@ -109,7 +108,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 		sqlStmt = "PRAGMA key = '" + password + "';"
 	}
 	sqlStmt = sqlStmt + `
-	PRAGMA user_version = 0
+	PRAGMA user_version = 0;
 	create table followers (peerID text primary key not null);
 	create table config (key text primary key not null, value blob);
 	`

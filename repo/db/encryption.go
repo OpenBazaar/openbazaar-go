@@ -33,7 +33,7 @@ func Encrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				fmt.Println("Cannot decrypt while openbazaard is running.")
+				fmt.Println("Cannot encrypt while the daemon is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
@@ -49,11 +49,11 @@ func Encrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				fmt.Println("Cannot decrypt while openbazaard is running.")
+				fmt.Println("Cannot encrypt while the daemon is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
+				fmt.Println("Database does not exist. You may need to run the daemon at least once to initialize it.")
 				return nil
 			}
 			break
@@ -79,6 +79,7 @@ func Encrypt() error {
 	for {
 		fmt.Print("Confirm your password: ")
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
 		resp := string(bytePassword)
 		if resp == pw {
 			break
@@ -137,11 +138,11 @@ func Decrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				fmt.Println("Cannot decrypt while openbazaard is running.")
+				fmt.Println("Cannot decrypt while the daemon is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
-				fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
+				fmt.Println("Database does not exist. You may need to run the daemon at least once to initialize it.")
 				return nil
 			}
 			break
@@ -153,7 +154,7 @@ func Decrypt() error {
 			repoPath = expPath
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
-				fmt.Println("Cannot decrypt while openbazaard is running.")
+				fmt.Println("Cannot decrypt while the daemon is running.")
 				return nil
 			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
