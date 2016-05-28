@@ -13,8 +13,8 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 )
 
-//FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
-//FIXME: and the stdin stuff should be moved somewhere outside of this package.
+// FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
+// FIXME: and the stdin stuff should be moved somewhere outside of this package.
 
 // Create a temp encrypted database, read the unencrypted db into it then replace the unencrypted db
 func Encrypt() error {

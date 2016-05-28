@@ -1,6 +1,9 @@
 package api
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
@@ -27,12 +30,17 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/purchase", "/ob/purchase/":
 		i.POSTPurchase(w, r)
 		return
+	case "/ob/follow", "/ob/follow/":
+		i.POSTFollow(w, r)
+		return
+	case "/ob/unfollow", "/ob/unfollow/":
+		i.POSTUnfollow(w, r)
+		return
 	}
 }
 
 func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	switch path {
-	case "/ob/status", "/ob/status/":
+	if strings.Contains(path, "/ob/status/"){
 		i.GETStatus(w, r)
 		return
 	}

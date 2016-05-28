@@ -6,6 +6,9 @@ import (
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
+// TODO: Right now these outgoing messages are only sent directly to the other peer.
+// TODO: Once offline messaging is hooked up then failed direct messages should be sent via offline messaging.
+
 func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
@@ -19,4 +22,34 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
 		return "offline"
 	}
 	return "online"
+}
+
+func (n *OpenBazaarNode) Follow(peerId string) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m := pb.Message{MessageType: pb.Message_FOLLOW,}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) Unfollow(peerId string) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	m := pb.Message{MessageType: pb.Message_UNFOLLOW,}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		return err
+	}
+	return nil
 }

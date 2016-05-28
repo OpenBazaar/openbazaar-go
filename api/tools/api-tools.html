@@ -171,6 +171,60 @@
 				});
 			}
 
+			function postFollow(){
+				$.ajax({
+					url: "http://localhost:8080/ob/follow",
+					type: 'POST',
+					data: JSON.stringify({
+						"id": EL("followID").value,
+					}),
+					crossDomain: true,
+					contentType: 'application/json; charset=utf-8',
+					success: function (response) {
+							alert("Success")
+					},
+					error: function () {
+							alert("Server returned an error")
+					}
+				});
+			}
+
+			function postUnollow(){
+				$.ajax({
+					url: "http://localhost:8080/ob/unfollow",
+					type: 'POST',
+					data: JSON.stringify({
+						"id": EL("unfollowID").value,
+					}),
+					crossDomain: true,
+					contentType: 'application/json; charset=utf-8',
+					success: function (response) {
+							alert("Success")
+					},
+					error: function () {
+							alert("Server returned an error")
+					}
+				});
+			}
+
+			function getStatus(){
+				var id = EL("statusID").value;
+				var url = "http://localhost:8080/ob/status/";
+
+				$.ajax({
+					url: url.concat(id),
+					type: 'GET',
+					crossDomain: true,
+					contentType: 'application/json; charset=utf-8',
+					success: function (response) {
+							alert("Success")
+					},
+					error: function () {
+							alert("Server returned an error")
+					}
+				});
+			}
+
 			function init() {
 				EL("inpAVI").addEventListener("change", readAvatar, false);
 				EL("inpHeader").addEventListener("change", readHeader, false);
@@ -276,6 +330,24 @@
 				</row></br></br>
 				<row class="col-lg-12"><input onclick="postListing()" class="btn btn-success" type="submit" value="Submit"/></row>
     	</div>
+			<div class="col-lg-12">
+				<h3>Follow</h3>
+				<row class="col-lg-5">Peer ID:</row>
+				<row class="col-lg-7"><input id="followID" autocomplete="off"></row></br></br>
+				<row class="col-lg-12"><input onclick="postFollow()" class="btn btn-success" type="submit" value="Submit"/></row>
+			</div>
+			<div class="col-lg-12">
+				<h3>Unfollow</h3>
+				<row class="col-lg-5">Peer ID:</row>
+				<row class="col-lg-7"><input id="unfollowID" autocomplete="off"></row></br></br>
+				<row class="col-lg-12"><input onclick="postUnollow()" class="btn btn-success" type="submit" value="Submit"/></row>
+			</div>
+			<div class="col-lg-12">
+				<h3>Status</h3>
+				<row class="col-lg-5">Peer ID:</row>
+				<row class="col-lg-7"><input id="statusID" autocomplete="off"></row></br></br>
+				<row class="col-lg-12"><input onclick="getStatus()" class="btn btn-success" type="submit" value="Submit"/></row>
+			</div>
 		</div>
 	</body>
 </html>

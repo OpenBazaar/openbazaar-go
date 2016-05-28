@@ -123,6 +123,18 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 }
 
 func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
-	// TODO: build this out
+	log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
+	s, err := service.host.NewStream(ctx, ProtocolOpenBazaar, p)
+	if err != nil {
+		return err
+	}
+	defer s.Close()
+
+	cw := ctxio.NewWriter(ctx, s) // ok to use. we defer close stream in this func
+	w := ggio.NewDelimitedWriter(cw)
+
+	if err := w.WriteMsg(pmes); err != nil {
+		return err
+	}
 	return nil
 }

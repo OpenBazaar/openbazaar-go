@@ -109,8 +109,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	}
 	sqlStmt = sqlStmt + `
 	PRAGMA user_version = 0;
-	create table followers (peerID text primary key not null);
 	create table config (key text primary key not null, value blob);
+	create table followers (peerID text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
