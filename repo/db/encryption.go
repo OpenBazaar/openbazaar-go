@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh/terminal"
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 )
 
 //FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
@@ -17,10 +18,12 @@ import (
 
 // Create a temp encrypted database, read the unencrypted db into it then replace the unencrypted db
 func Encrypt() error {
-	//TODO: make sure we're not running when they do this
 	reader := bufio.NewReader(os.Stdin)
 	doesNotExist := func() {
 		fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
+	}
+	daemonRunning := func() {
+		fmt.Println("Cannot encrypt while openbazaard is running.")
 	}
 	var repoPath string
 	var filename string
@@ -34,6 +37,11 @@ func Encrypt() error {
 			testnet = false
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
 			repoPath = expPath
+			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
+				daemonRunning()
+				return nil
+			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
 				doesNotExist()
 				return nil
@@ -45,6 +53,11 @@ func Encrypt() error {
 			testnet = true
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
 			repoPath = expPath
+			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
+				daemonRunning()
+				return nil
+			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
 				doesNotExist()
 				return nil
@@ -97,9 +110,8 @@ func Encrypt() error {
 		fmt.Println(err)
 		return err
 	}
-	mnemonic, _ := sqlliteDB.Config().GetMnemonic()
-	identityKey, _ := sqlliteDB.Config().GetIdentityKey()
-	tmpDB.Config().Init(mnemonic, identityKey, pw)
+
+	initDatabaseTables(tmpDB.db, pw)
 	if err := sqlliteDB.Copy(path.Join(tmpPath, "datastore", filename), pw); err != nil {
 		fmt.Println(err)
 		return err
@@ -116,10 +128,12 @@ func Encrypt() error {
 
 // Create a temp database, read the encrypted db into it then replace the encrypted db
 func Decrypt() error {
-	//TODO: make sure we're not running when they do this
 	reader := bufio.NewReader(os.Stdin)
 	doesNotExist := func() {
 		fmt.Println("Database does not exist. You may need to run the node at least once to initialize it.")
+	}
+	daemonRunning := func() {
+		fmt.Println("Cannot decrypt while openbazaard is running.")
 	}
 	var repoPath string
 	var filename string
@@ -133,6 +147,11 @@ func Decrypt() error {
 			testnet = false
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
 			repoPath = expPath
+			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
+				daemonRunning()
+				return nil
+			}
 			if _, err := os.Stat(expPath); os.IsNotExist(err) {
 				doesNotExist()
 				return nil
@@ -170,9 +189,7 @@ func Decrypt() error {
 		fmt.Println(err)
 		return err
 	}
-	mnemonic, _ := sqlliteDB.Config().GetMnemonic()
-	identityKey, _ := sqlliteDB.Config().GetIdentityKey()
-	tmpDB.Config().Init(mnemonic, identityKey, "")
+	initDatabaseTables(tmpDB.db, "")
 	if err := sqlliteDB.Copy(path.Join(repoPath, "tmp", "datastore", filename), ""); err != nil {
 		fmt.Println(err)
 		return err

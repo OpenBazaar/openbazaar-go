@@ -27,6 +27,7 @@ import (
         "github.com/mitchellh/go-homedir"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
@@ -82,8 +83,10 @@ func main() {
 			log.Noticef("Received %s\n", sig)
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
-				core.Node.IpfsNode.Close()
 				core.Node.Datastore.Close()
+				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
+				os.Remove(repoLockFile)
+				core.Node.IpfsNode.Close()
 			}
 			os.Exit(1)
 		}

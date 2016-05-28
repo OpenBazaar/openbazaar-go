@@ -68,15 +68,18 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 	var cp string
+	//FIXME: there's probably a way to iterate the tables in these statements rather than hard code them
 	if password == "" {
 		cp = `
 			attach database '` + dbPath + `' as plaintext key '';
-			insert into plaintext.followers select * from main.followers
+			insert into plaintext.config select * from main.config;
+			insert into plaintext.followers select * from main.followers;
 		`
 	} else {
 		cp = `
 			attach database '` + dbPath + `' as encrypted key '`+ password +`';
-			insert into encrypted.followers select * from main.followers
+			insert into encrypted.config select * from main.config;
+			insert into encrypted.followers select * from main.followers;
 		`
 	}
 
