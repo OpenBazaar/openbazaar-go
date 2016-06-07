@@ -34,7 +34,7 @@ type restAPIHandler struct {
 func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 	// Add the current node directory in case it's note already added.
-	dirHash, aerr := ipfs.AddDirectory(node.Context, path.Join(node.RepoPath, "node"))
+	dirHash, aerr := ipfs.AddDirectory(node.Context, path.Join(node.RepoPath, "root"))
 	if aerr != nil {
 		log.Error(aerr)
 		return nil, aerr
@@ -105,7 +105,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	f, err := os.Create(path.Join(i.node.RepoPath, "node", "profile"))
+	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
@@ -152,7 +152,7 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "node", "avatar")
+	imgPath := path.Join(i.node.RepoPath, "root", "avatar")
 	out, err := os.Create(imgPath)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -190,7 +190,7 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "node", "header")
+	imgPath := path.Join(i.node.RepoPath, "root", "header")
 	out, err := os.Create(imgPath)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -231,11 +231,11 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 	}
 	var imageHashes []string
 	for _, img := range(images) {
-		if err := os.MkdirAll(path.Join(i.node.RepoPath, "node", "listings", img.Directory), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 			return
 		}
-		imgPath := path.Join(i.node.RepoPath, "node", "listings", img.Directory, img.Filename)
+		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Directory, img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -271,7 +271,7 @@ func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 
 	l := new(pb.Listing)
 	jsonpb.Unmarshal(r.Body, l)
-	listingPath:= path.Join(i.node.RepoPath, "node", "listings", l.ListingName)
+	listingPath:= path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -344,6 +344,22 @@ func (i *restAPIHandler) GETStatus (w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	status := i.node.GetPeerStatus(peerId)
 	fmt.Fprintf(w, `{"status": %s}`, status)
+}
+
+func (i *restAPIHandler) GETPeers (w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	peers, err := ipfs.ConnectedPeers(i.node.Context)
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+
+	peerJson, err := json.MarshalIndent(peers, "", "    ")
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	fmt.Fprintf(w, string(peerJson))
 }
 
 func (i *restAPIHandler) POSTFollow (w http.ResponseWriter, r *http.Request) {

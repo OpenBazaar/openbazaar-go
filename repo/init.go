@@ -77,10 +77,16 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, p
 }
 
 func maybeCreateOBDirectories(repoRoot string) error {
-	if err := os.MkdirAll(path.Join(repoRoot, "node"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Join(repoRoot, "root"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(path.Join(repoRoot, "node", "listings"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "listings"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "feed"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "channel"), os.ModePerm); err != nil {
 		return err
 	}
 	return nil

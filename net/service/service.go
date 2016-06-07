@@ -18,7 +18,7 @@ import (
 
 var log = logging.MustGetLogger("service")
 
-var ProtocolOpenBazaar protocol.ID = "/app/openbazaar/1.0.0"
+var ProtocolOpenBazaar protocol.ID = "/openbazaar/app/1.0.0"
 
 type OpenBazaarService struct {
 	host       host.Host
@@ -128,6 +128,7 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	if err != nil {
 		return err
 	}
+	s.Close()
 	defer s.Close()
 
 	cw := ctxio.NewWriter(ctx, s) // ok to use. we defer close stream in this func

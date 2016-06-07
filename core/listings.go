@@ -59,8 +59,8 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Hash      string
 		Name      string
 	}
-	indexPath:= path.Join(n.RepoPath, "node", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "node", "listings", contract.VendorListings[0].ListingName, "listing.json")
+	indexPath:= path.Join(n.RepoPath, "root", "listings", "index.json")
+	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].ListingName, "listing.json")
 
 	// read existing file
 	file, _ := ioutil.ReadFile(indexPath)

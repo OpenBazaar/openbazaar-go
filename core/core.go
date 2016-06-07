@@ -48,7 +48,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 	if err := ipfs.UnPinDir(n.Context, n.RootHash); err != nil {
 		return err
 	}
-	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "node"))
+	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
 	}

@@ -44,4 +44,8 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETStatus(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/peers"){
+		i.GETPeers(w, r)
+		return
+	}
 }
