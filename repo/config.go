@@ -11,6 +11,10 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 )
 
+var DefaultBootstrapAddresses = []string{
+	"/ip4/107.170.127.73/tcp/4001/ipfs/QmWZKgbSHzfkUMxLh7xRA4XaSeqxcTnw7rb9x3jMMkbQZr",
+}
+
 func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 	servers := []libbitcoin.Server{}
 	file, err := ioutil.ReadFile(cfgPath)
@@ -44,8 +48,7 @@ func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 
 func initConfig(out io.Writer) (*config.Config, error) {
 
-	// TODO: override config.DefaultBootstrapAddresses with OpenBazaar nodes
-	bootstrapPeers, err := config.DefaultBootstrapPeers()
+	bootstrapPeers, err := config.ParseBootstrapPeers(DefaultBootstrapAddresses)
 	if err != nil {
 		return nil, err
 	}
