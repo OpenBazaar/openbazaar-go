@@ -281,7 +281,6 @@ func (x *Start) Execute(args []string) error {
 		Wallet: wallet,
 	}
 
-
 	var gwErrc <-chan error
 	var cb <-chan bool
 	if len(cfg.Addresses.Gateway) > 0 {
