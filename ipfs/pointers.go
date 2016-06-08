@@ -3,6 +3,7 @@ package ipfs
 import (
 	"sync"
 	"crypto/sha256"
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/binary"
 	"strconv"
@@ -19,7 +20,7 @@ import (
 	key "github.com/ipfs/go-ipfs/blocks/key"
 )
 
-const MAGIC string = "0000000000000000000000000000000000000000000000000000000000000000"
+const MAGIC string = "000000000000000000000000"
 
 // A pointer is a custom provider inserted into the dht which points to a location of a file.
 // For offline messaging purposes we use a hash of the recipient's ID as the key and set the
@@ -55,6 +56,16 @@ func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihas
 	keyhash := createKey(mhKey, prefixLen)
 	peerout := dht.FindProvidersAsync(ctx, key.Key(keyhash.B58String()), 100000)
 	return peerout
+}
+
+// Fetch pointers from the dht.
+func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) ([]peer.PeerInfo, error) {
+	keyhash := createKey(mhKey, prefixLen)
+	providers, err := dht.FindProviders(ctx, key.Key(keyhash.B58String()))
+	if err != nil {
+		return nil, err
+	}
+	return providers, nil
 }
 
 func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string, addr ma.Multiaddr) error{
@@ -129,6 +140,9 @@ func getMagicID() (peer.ID, error){
 	if err != nil {
 		return "", err
 	}
+	randBytes := make([]byte, 20)
+	rand.Read(randBytes)
+	magicBytes = append(magicBytes, randBytes[:]...)
 	h, err := multihash.Encode(magicBytes, multihash.SHA2_256)
 	if err != nil {
 		return "", err
