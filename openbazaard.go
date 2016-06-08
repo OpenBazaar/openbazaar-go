@@ -37,6 +37,7 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"github.com/OpenBazaar/openbazaar-go/net/selfhosted"
 )
 
 var log = logging.MustGetLogger("main")
@@ -279,6 +280,7 @@ func (x *Start) Execute(args []string) error {
 		RepoPath: expPath,
 		Datastore: sqliteDB,
 		Wallet: wallet,
+		MessageStorage: selfhosted.NewSelfHostedStorage(expPath, ctx),
 	}
 
 	var gwErrc <-chan error

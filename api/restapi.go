@@ -364,18 +364,18 @@ func (i *restAPIHandler) GETPeers (w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) POSTFollow (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	type ID struct {
-		PeerId string
+	type PeerId struct {
+		ID string
 	}
 	decoder := json.NewDecoder(r.Body)
-	var id ID
-	err := decoder.Decode(&id)
+	var pid PeerId
+	err := decoder.Decode(&pid)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	if err := i.node.Follow(id.PeerId); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": "peer offline"}`)
+	if err := i.node.Follow(pid.ID); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
@@ -383,18 +383,18 @@ func (i *restAPIHandler) POSTFollow (w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) POSTUnfollow (w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	type ID struct {
-		PeerId string
+	type PeerId struct {
+		ID string
 	}
 	decoder := json.NewDecoder(r.Body)
-	var id ID
-	err := decoder.Decode(&id)
+	var pid PeerId
+	err := decoder.Decode(&pid)
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
-	if err := i.node.Unfollow(id.PeerId); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": "peer offline"}`)
+	if err := i.node.Unfollow(pid.ID); err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)

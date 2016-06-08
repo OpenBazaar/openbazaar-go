@@ -20,5 +20,5 @@ type OfflineMessagingStorage interface {
 	// Custom Options -> create your own free or paid service.
 	//
 	// Note all messages are encrypted before passed in here.
-	Store(peerID peer.ID, ciphertext []byte) ma.Multiaddr
+	Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr, error)
 }
