@@ -10,7 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/op/go-logging"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"github.com/OpenBazaar/go-ipfs/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 var log = logging.MustGetLogger("core")
