@@ -5,19 +5,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/dropbox/dropbox-sdk-go-unofficial"
-	"github.com/dropbox/dropbox-sdk-go-unofficial/sharing"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/files"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/sharing"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 )
 
-
 type DropBoxStorage struct {
-	apiToken   string
+	apiToken string
 }
 
-func NewDropBoxStorage(apiToken string) (*DropBoxStorage, error){
+func NewDropBoxStorage(apiToken string) (*DropBoxStorage, error) {
 	api := dropbox.Client(apiToken, dropbox.Options{Verbose: true})
 	if _, err := api.GetCurrentAccount(); err != nil {
 		return nil, err
@@ -48,7 +47,7 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 	}
 
 	// Create encoded multiaddr
-	url := res.Url[:len(res.Url) - 1] + "1"
+	url := res.Url[:len(res.Url)-1] + "1"
 	b, err := mh.Encode([]byte(url), mh.SHA1)
 	if err != nil {
 		return nil, err

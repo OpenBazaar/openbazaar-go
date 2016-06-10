@@ -1,18 +1,17 @@
 package core
 
 import (
-	"path"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	sto "github.com/OpenBazaar/openbazaar-go/storage"
-
+	"path"
 )
 
 var log = logging.MustGetLogger("core")
@@ -21,30 +20,30 @@ var Node *OpenBazaarNode
 
 type OpenBazaarNode struct {
 	// Context for issuing IPFS commands
-	Context    commands.Context
+	Context commands.Context
 
 	// IPFS node object
-	IpfsNode   *core.IpfsNode
+	IpfsNode *core.IpfsNode
 
 	// The roothash of the node directory inside the openbazaar repo.
 	// This directory hash is published on IPNS at our peer ID making
 	// the directory publically viewable on the network.
-	RootHash   string
+	RootHash string
 
 	// The path to the openbazaar repo in the file system.
-	RepoPath   string
+	RepoPath string
 
 	// The OpenBazaar network service for direct communication between peers
-	Service    net.NetworkService
+	Service net.NetworkService
 
 	// Database for storing node specific data
-	Datastore  repo.Datastore
+	Datastore repo.Datastore
 
 	// Websocket channel used for pushing data to the UI.
-	Broadcast  chan []byte
+	Broadcast chan []byte
 
 	// Bitcoin wallet implementation
-	Wallet 	   bitcoin.BitcoinWallet
+	Wallet bitcoin.BitcoinWallet
 
 	// Storage for our outgoing messages
 	MessageStorage sto.OfflineMessagingStorage

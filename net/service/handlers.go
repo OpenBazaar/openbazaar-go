@@ -9,14 +9,14 @@ type serviceHandler func(peer.ID, *pb.Message) (*pb.Message, error)
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) serviceHandler {
 	switch t {
-		case pb.Message_PING:
-			return service.handlePing
-		case pb.Message_FOLLOW:
-			return service.handleFollow
-		case pb.Message_UNFOLLOW:
-			return service.handleUnFollow
-		default:
-			return nil
+	case pb.Message_PING:
+		return service.handlePing
+	case pb.Message_FOLLOW:
+		return service.handleFollow
+	case pb.Message_UNFOLLOW:
+		return service.handleUnFollow
+	default:
+		return nil
 	}
 }
 

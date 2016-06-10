@@ -2,7 +2,6 @@ package ipfs
 
 import "github.com/ipfs/go-ipfs/commands"
 
-
 // Recursively un-pin a directory given it's hash.
 // This will allow it to be garbage collected.
 func UnPinDir(ctx commands.Context, rootHash string) error {

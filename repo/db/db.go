@@ -1,12 +1,12 @@
 package db
 
 import (
-	"path"
-	"sync"
 	"database/sql"
-	_ "github.com/xeodou/go-sqlcipher"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
+	_ "github.com/xeodou/go-sqlcipher"
+	"path"
+	"sync"
 )
 
 var log = logging.MustGetLogger("db")
@@ -39,23 +39,23 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	l := new(sync.Mutex)
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
-			db: conn,
+			db:   conn,
 			lock: l,
 			path: dbPath,
 		},
 		followers: &FollowerDB{
-			db: conn,
+			db:   conn,
 			lock: l,
 		},
 		following: &FollowingDB{
-			db: conn,
+			db:   conn,
 			lock: l,
 		},
 		offlineMessages: &OfflineMessagesDB{
-			db: conn,
+			db:   conn,
 			lock: l,
 		},
-		db: conn,
+		db:   conn,
 		lock: l,
 	}
 
@@ -102,12 +102,12 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	}
 	if password == "" {
 		cp = `attach database '` + dbPath + `' as plaintext key '';`
-		for _, name := range(tables){
+		for _, name := range tables {
 			cp = cp + "insert into plaintext." + name + " select * from main." + name + ";"
 		}
 	} else {
-		cp = `attach database '` + dbPath + `' as encrypted key '`+ password +`';`
-		for _, name := range(tables){
+		cp = `attach database '` + dbPath + `' as encrypted key '` + password + `';`
+		for _, name := range tables {
 			cp = cp + "insert into encrypted." + name + " select * from main." + name + ";"
 		}
 	}
@@ -207,5 +207,3 @@ func (c *ConfigDB) IsEncrypted() bool {
 	}
 	return false
 }
-
-

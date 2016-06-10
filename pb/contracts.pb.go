@@ -437,12 +437,12 @@ func (m *Order) GetPayment() *Order_Payment {
 }
 
 type Order_Shipping struct {
-	ShipTo     string                   `protobuf:"bytes,1,opt,name=shipTo" json:"shipTo,omitempty"`
-	Address    string                   `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
-	City       string                   `protobuf:"bytes,3,opt,name=city" json:"city,omitempty"`
-	State      string                   `protobuf:"bytes,4,opt,name=state" json:"state,omitempty"`
-	PostalCode string                   `protobuf:"bytes,5,opt,name=postalCode" json:"postalCode,omitempty"`
-	Country    CountryCode              `protobuf:"varint,6,opt,name=country,enum=CountryCode" json:"country,omitempty"`
+	ShipTo     string      `protobuf:"bytes,1,opt,name=shipTo" json:"shipTo,omitempty"`
+	Address    string      `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
+	City       string      `protobuf:"bytes,3,opt,name=city" json:"city,omitempty"`
+	State      string      `protobuf:"bytes,4,opt,name=state" json:"state,omitempty"`
+	PostalCode string      `protobuf:"bytes,5,opt,name=postalCode" json:"postalCode,omitempty"`
+	Country    CountryCode `protobuf:"varint,6,opt,name=country,enum=CountryCode" json:"country,omitempty"`
 }
 
 func (m *Order_Shipping) Reset()                    { *m = Order_Shipping{} }

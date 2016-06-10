@@ -1,14 +1,14 @@
 package net
 
 import (
-	"fmt"
 	"errors"
-	"math/rand"
-	"github.com/op/go-logging"
+	"fmt"
 	stunlib "github.com/ccding/go-stun/stun"
+	"github.com/op/go-logging"
+	"math/rand"
 )
 
-var STUN_SERVERS []string = []string {
+var STUN_SERVERS []string = []string{
 	"stun.ekiga.net",
 	"stun.ideasip.com",
 	"stun.voiparound.com",
@@ -22,13 +22,14 @@ var STUN_PORT int = 3478
 var log = logging.MustGetLogger("stun")
 
 const _NATType_name = "NAT_ERRORNAT_UNKNOWNNAT_NONENAT_BLOCKEDNAT_FULLNAT_SYMETRICNAT_RESTRICTEDNAT_PORT_RESTRICTEDNAT_SYMETRIC_UDP_FIREWALL"
+
 var _NATType_index = [...]uint8{0, 9, 20, 28, 39, 47, 59, 73, 92, 117}
 
 var errStunFailed error = errors.New("Exhausted list of stun servers")
 
 func Stun() (int, error) {
 	Shuffle(STUN_SERVERS)
-	for _, server := range (STUN_SERVERS) {
+	for _, server := range STUN_SERVERS {
 		client := stunlib.NewClient()
 		client.SetServerHost(server, STUN_PORT)
 		nat, host, err := client.Discover()

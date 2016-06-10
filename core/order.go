@@ -1,12 +1,12 @@
 package core
 
 import (
-	"time"
 	"crypto/sha256"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	"time"
 )
 
 type option struct {
@@ -15,12 +15,12 @@ type option struct {
 }
 
 type item struct {
-	listingHash  string
-	quantity     int
-	options      []option
+	listingHash string
+	quantity    int
+	options     []option
 }
 
-type PurchaseData struct{
+type PurchaseData struct {
 	shipTo      string
 	address     string
 	city        string
@@ -55,7 +55,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	order.Timestamp = uint64(time.Now().Unix())
 
-	for _, item := range(data.items) {
+	for _, item := range data.items {
 		i := new(pb.Order_Item)
 		b, err := ipfs.Cat(n.Context, item.listingHash)
 		if err != nil {
@@ -77,7 +77,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		i.ListingHash = h[:]
 		i.Quantity = uint32(item.quantity)
 
-		for _, option := range(item.options) {
+		for _, option := range item.options {
 			o := new(pb.Order_Item_Option)
 			o.Name = option.name
 			o.Value = option.value

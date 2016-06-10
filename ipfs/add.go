@@ -1,10 +1,10 @@
 package ipfs
 
 import (
-	"path"
 	"errors"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	"path"
 )
 
 var addErr = errors.New(`Add directory failed`)

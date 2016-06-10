@@ -1,15 +1,15 @@
 package core
 
 import (
-	"path"
-	"os"
-	"io/ioutil"
-	"encoding/json"
 	"crypto/sha256"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/proto"
+	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	ec "github.com/btcsuite/btcd/btcec"
+	"github.com/golang/protobuf/proto"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
 // Add our identity to the listings and sign it
@@ -56,10 +56,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 // Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type listingData struct {
-		Hash      string
-		Name      string
+		Hash string
+		Name string
 	}
-	indexPath:= path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].ListingName, "listing.json")
 
 	// read existing file
@@ -68,7 +68,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	if err != nil {
 		return err
 	}
-	ld := listingData {
+	ld := listingData{
 		Hash: listingHash,
 		Name: contract.VendorListings[0].ListingName,
 	}
@@ -77,16 +77,16 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	json.Unmarshal(file, &index)
 
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
-	for i, d := range(index){
+	for i, d := range index {
 		if d.Name != ld.Name {
 			continue
 		}
-		
+
 		if len(index) == 1 {
 			index = []listingData{}
 			break
-		} 
-		index = append(index[:i], index[i + 1:]...)
+		}
+		index = append(index[:i], index[i+1:]...)
 	}
 
 	// Append our listing with the new hash to the list
