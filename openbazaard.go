@@ -17,6 +17,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
+	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/commands"
@@ -37,7 +38,6 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	"github.com/OpenBazaar/openbazaar-go/net/selfhosted"
 )
 
 var log = logging.MustGetLogger("main")
@@ -301,7 +301,7 @@ func (x *Start) Execute(args []string) error {
 		if b == true {
 			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)
 			core.Node.Service = OBService
-			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 20)
+			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16)
 			go MR.Run()
 			core.Node.MessageRetriever = MR
 		}

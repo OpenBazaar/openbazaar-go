@@ -35,7 +35,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	}
 	// TODO: We're just using a default prefix length for now. Eventually we will want to customize this,
 	// but we will need some way to get the recipient's desired prefix length. Likely will be in profile.
-	if err := ipfs.AddPointer(n.IpfsNode, ctx, mh, 20, addr); err != nil {
+	if err := ipfs.AddPointer(n.IpfsNode, ctx, mh, 16, addr); err != nil {
 		return err
 	}
 	return nil

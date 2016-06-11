@@ -2,6 +2,7 @@ package core
 
 import (
 	"path"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/commands"
@@ -10,7 +11,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/op/go-logging"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"errors"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
+
 )
 
 var log = logging.MustGetLogger("core")
@@ -45,7 +47,7 @@ type OpenBazaarNode struct {
 	Wallet 	   bitcoin.BitcoinWallet
 
 	// Storage for our outgoing messages
-	MessageStorage net.OfflineMessagingStorage
+	MessageStorage sto.OfflineMessagingStorage
 
 	// A service that periodically checks the dht for outstanding messages
 	MessageRetriever *net.MessageRetriever
