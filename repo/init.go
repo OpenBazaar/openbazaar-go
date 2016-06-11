@@ -184,6 +184,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err := extendConfigFile(r, "Resolver", "https://resolver.onename.com/"); err != nil {
 		return err
 	}
+	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+		return err
+	}
 	if err := r.Close(); err != nil {
 		return err
 	}

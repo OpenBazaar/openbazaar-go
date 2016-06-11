@@ -39,6 +39,19 @@ func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 	return  servers, nil
 }
 
+func GetDropboxApiToken(cfgPath string) (string, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	token := cfg.(map[string]interface{})["Dropbox-api-token"].(string)
+
+	return  token, nil
+}
+
 func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 	if err := r.SetConfigKey(key, value); err != nil {
 		return err

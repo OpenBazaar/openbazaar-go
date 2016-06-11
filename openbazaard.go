@@ -18,6 +18,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/commands"
@@ -29,6 +30,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
         "github.com/mitchellh/go-homedir"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
@@ -62,6 +64,7 @@ type Start struct {
 	GatewayPort int `short:"g" long:"gatewayport" description:"set the API port"`
 	STUN bool `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	PIDFile string `long:"pidfile" description:"name of the PID file if running as daemon"`
+	Storage string `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
 type Stop struct {}
 type Restart struct {}
@@ -273,6 +276,32 @@ func (x *Start) Execute(args []string) error {
 	}
 	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, libbitcoinServers)
 
+	// Offline messaging storage
+	var storage sto.OfflineMessagingStorage
+	if x.Storage == "self-hosted" {
+		storage = selfhosted.NewSelfHostedStorage(expPath, ctx)
+	} else if x.Storage == "dropbox" {
+		token, err := repo.GetDropboxApiToken(path.Join(expPath, "config"))
+		if err != nil {
+			log.Error(err)
+			return err
+		} else if token == "" {
+			err = errors.New("Dropbox token not set in config file")
+			log.Error(err)
+			return err
+		}
+		storage, err = dropbox.NewDropBoxStorage(token)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		err = errors.New("Invalid storage option")
+		log.Error(err)
+		return err
+	}
+
+	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context: ctx,
 		IpfsNode: nd,
@@ -280,7 +309,7 @@ func (x *Start) Execute(args []string) error {
 		RepoPath: expPath,
 		Datastore: sqliteDB,
 		Wallet: wallet,
-		MessageStorage: selfhosted.NewSelfHostedStorage(expPath, ctx),
+		MessageStorage: storage,
 	}
 
 	var gwErrc <-chan error

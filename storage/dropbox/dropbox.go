@@ -17,16 +17,20 @@ type DropBoxStorage struct {
 	apiToken   string
 }
 
-func NewDropBoxStorage(apiToken string) *DropBoxStorage {
+func NewDropBoxStorage(apiToken string) (*DropBoxStorage, error){
+	api := dropbox.Client(apiToken, dropbox.Options{Verbose: true})
+	if _, err := api.GetCurrentAccount(); err != nil {
+		return nil, err
+	}
 	return &DropBoxStorage{
 		apiToken: apiToken,
-	}
+	}, nil
 }
 
 func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr, error) {
 	api := dropbox.Client(s.apiToken, dropbox.Options{Verbose: true})
 	hash := sha256.Sum256(ciphertext)
-	hex := hex.EncodeToString(hash)
+	hex := hex.EncodeToString(hash[:])
 
 	// Upload ciphertext
 	uploadArg := files.NewCommitInfo("/" + hex)
