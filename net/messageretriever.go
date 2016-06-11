@@ -15,7 +15,7 @@ import (
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
-	"bufio"
+	"io/ioutil"
 )
 
 type MessageRetriever struct {
@@ -59,13 +59,12 @@ func (m *MessageRetriever) fetchPointers() {
 		select {
 		case  p:= <- peerOut:
 			if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
-				log.Notice(p)
 				// ipfs
 				if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
 					m.fetchIPFS(m.ctx, p.Addrs[0])
 				}
 				// dropbox
-				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[0].Code == 501 {
+				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 501 {
 					enc, err := p.Addrs[0].ValueForProtocol(421)
 					if err != nil {
 						continue
@@ -101,9 +100,10 @@ func (m *MessageRetriever) fetchDropBox(url string) {
 	if err != nil {
 		return
 	}
-	reader := bufio.NewReader(resp.Body)
-	var ciphertext []byte
-	reader.Read(ciphertext)
+	ciphertext, err := ioutil.ReadAll(resp.Body);
+	if err != nil {
+		return
+	}
 	m.attemptDecrypt(ciphertext)
 }
 

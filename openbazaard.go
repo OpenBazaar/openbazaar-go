@@ -40,6 +40,7 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	//"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 var log = logging.MustGetLogger("main")
@@ -279,7 +280,7 @@ func (x *Start) Execute(args []string) error {
 	// Offline messaging storage
 	ma.AddProtocol(ma.Protocol{501, 0, "dropbox", ma.CodeToVarint(501)},)
 	var storage sto.OfflineMessagingStorage
-	if x.Storage == "self-hosted" {
+	if x.Storage == "self-hosted" || x.Storage == "" {
 		storage = selfhosted.NewSelfHostedStorage(expPath, ctx)
 	} else if x.Storage == "dropbox" {
 		token, err := repo.GetDropboxApiToken(path.Join(expPath, "config"))
