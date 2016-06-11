@@ -12,7 +12,7 @@ import (
 )
 
 var DefaultBootstrapAddresses = []string{
-	"/ip4/107.170.127.73/tcp/4001/ipfs/QmWZKgbSHzfkUMxLh7xRA4XaSeqxcTnw7rb9x3jMMkbQZr",
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",
 }
 
 func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
