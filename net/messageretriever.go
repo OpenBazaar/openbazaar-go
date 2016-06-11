@@ -56,7 +56,7 @@ func (m *MessageRetriever) fetchPointers() {
 	for {
 		select {
 		case  p:= <- peerOut:
-			if !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
+			if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
 				if p.Addrs[0].Protocols()[0].Code == 421 {
 					m.fetchIPFS(m.ctx, p.Addrs[0])
 				}
