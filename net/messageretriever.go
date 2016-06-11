@@ -7,26 +7,29 @@ import (
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/commands"
+	"github.com/golang/protobuf/proto"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
-	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer/addr"
+	"github.com/OpenBazaar/openbazaar-go/net/service"
 )
 
 type MessageRetriever struct {
 	db        repo.Datastore
-	dht       *routing.IpfsDHT
+	node      *core.IpfsNode
 	ctx       commands.Context
-	peerID    peer.ID
+	service   *service.OpenBazaarService
 	prefixLen int
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, dht *routing.IpfsDHT, peerId peer.ID, prefixLen int) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service *service.OpenBazaarService, prefixLen int) *MessageRetriever {
 	return &MessageRetriever{
-		db: db,
-		dht: dht,
-		ctx: ctx,
-		peerID: peerId,
+		db:        db,
+		node:      node,
+		ctx:       ctx,
+		service:   service,
 		prefixLen: prefixLen,
 	}
 }
@@ -47,16 +50,15 @@ func (m *MessageRetriever) fetchPointers() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mh, _ := multihash.FromB58String(m.peerID.Pretty())
+	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 
-	peerOut := ipfs.FindPointersAsync(m.dht, ctx, mh, m.prefixLen)
+	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 	for {
-		var p peer.PeerInfo
 		select {
-		case p <- peerOut:
+		case  p:= <- peerOut:
 			if !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
 				if p.Addrs[0].Protocols()[0].Code == 421 {
-					fetchIPFS(m.ctx, p.Addrs[0])
+					m.fetchIPFS(m.ctx, p.Addrs[0])
 				}
 				m.db.OfflineMessages().Put(p.Addrs[0].String())
 			}
@@ -66,14 +68,35 @@ func (m *MessageRetriever) fetchPointers() {
 	}
 }
 
-func fetchIPFS(ctx commands.Context, addr ma.Multiaddr) {
+func (m *MessageRetriever) fetchIPFS(ctx commands.Context, addr ma.Multiaddr) {
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
 		return
 	}
-	attemptDecrypt(ciphertext)
+	m.attemptDecrypt(ciphertext)
 }
 
-func attemptDecrypt(ciphertext []byte) {
+func (m *MessageRetriever) attemptDecrypt(ciphertext []byte) {
+	plaintext, err := m.node.PrivateKey.Decrypt(ciphertext)
+	if err == nil {
+		env := pb.Envelope{}
+		proto.Unmarshal(plaintext, &env)
+		id, err := peer.IDB58Decode(env.PeerID)
+		if err != nil {
+			return
+		}
+		// get handler for this msg type.
+		handler := m.service.HandlerForMsgType(env.Message.MessageType)
+		if handler == nil {
+			log.Debug("Got back nil handler from handlerForMsgType")
+			return
+		}
 
+		// dispatch handler.
+		_, err = handler(id, env.Message)
+		if err != nil {
+			log.Debugf("handle message error: %s", err)
+			return
+		}
+	}
 }

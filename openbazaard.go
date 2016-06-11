@@ -301,6 +301,9 @@ func (x *Start) Execute(args []string) error {
 		if b == true {
 			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)
 			core.Node.Service = OBService
+			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 20)
+			go MR.Run()
+			core.Node.MessageRetriever = MR
 		}
 		break
 	}

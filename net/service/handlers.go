@@ -7,7 +7,7 @@ import (
 
 type serviceHandler func(peer.ID, *pb.Message) (*pb.Message, error)
 
-func (service *OpenBazaarService) handlerForMsgType(t pb.Message_MessageType) serviceHandler {
+func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) serviceHandler {
 	switch t {
 		case pb.Message_PING:
 			return service.handlePing

@@ -20,3 +20,8 @@ message Message {
         REFUND                  = 10;
     }
 }
+
+message Envelope {
+    Message message = 1;
+    string peerID   = 2;
+}

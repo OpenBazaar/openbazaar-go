@@ -14,7 +14,8 @@ import (
 
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
-	messageBytes, merr := proto.Marshal(m)
+	env := pb.Envelope{Message: m, PeerID: p.Pretty()}
+	messageBytes, merr := proto.Marshal(&env)
 	if merr != nil {
 		return merr
 	}

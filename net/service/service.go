@@ -66,7 +66,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	}
 
 	// get handler for this msg type.
-	handler := service.handlerForMsgType(pmes.MessageType)
+	handler := service.HandlerForMsgType(pmes.MessageType)
 	if handler == nil {
 		log.Debug("Got back nil handler from handlerForMsgType")
 		return
