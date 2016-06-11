@@ -12,7 +12,10 @@ import (
 )
 
 var DefaultBootstrapAddresses = []string{
-	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",  // Le Marché Serpette
+	"/ip4/139.59.174.197/tcp/4001/ipfs/QmWPRBSdhmhfWLUZapvfg6GCuyYyscgPnaKycYfWqJJcdB",  // Brixton-Village
+	"/ip4/139.59.6.222/tcp/4001/ipfs/QmVW1nDx2rt8eff8nAB3L8MannsHFsidje6YC3EQvhcwZF",    // Johar
+
 }
 
 func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
