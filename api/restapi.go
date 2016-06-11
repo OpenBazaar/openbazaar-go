@@ -98,7 +98,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == "GET" {
-		fmt.Fprint(w, "get")
+		get(i, u.String(), w, r)
 		return
 	}
 }

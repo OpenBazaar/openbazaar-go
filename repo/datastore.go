@@ -4,6 +4,7 @@ type Datastore interface {
 	Config() Config
 	Followers() Followers
 	Following() Following
+	OfflineMessages() OfflineMessages
 	Close()
 }
 
@@ -52,4 +53,12 @@ type Following interface {
 	Count() int
 }
 
+type OfflineMessages interface {
+
+	// Put a url from a retrieved message
+	Put(url string) error
+
+	// Does the given url exist in the db?
+	Exists(url string) bool
+}
 

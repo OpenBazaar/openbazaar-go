@@ -47,6 +47,9 @@ type OpenBazaarNode struct {
 	// Storage for our outgoing messages
 	MessageStorage net.OfflineMessagingStorage
 
+	// A service that periodically checks the dht for outstanding messages
+	MessageRetriever net.MessageRetriever
+
 	// TODO: Libsignal Client
 	// TODO: Pointer Republisher
 }

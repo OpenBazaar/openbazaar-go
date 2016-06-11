@@ -12,11 +12,12 @@ import (
 var log = logging.MustGetLogger("db")
 
 type SQLiteDatastore struct {
-	config    repo.Config
-	followers repo.Followers
-	following repo.Following
-	db        *sql.DB
-	lock      *sync.Mutex
+	config          repo.Config
+	followers       repo.Followers
+	following       repo.Following
+	offlineMessages repo.OfflineMessages
+	db              *sql.DB
+	lock            *sync.Mutex
 }
 
 func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
@@ -50,6 +51,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db: conn,
 			lock: l,
 		},
+		offlineMessages: &OfflineMessagesDB{
+			db: conn,
+			lock: l,
+		},
 		db: conn,
 		lock: l,
 	}
@@ -71,6 +76,10 @@ func (d *SQLiteDatastore) Followers() repo.Followers {
 
 func (d *SQLiteDatastore) Following() repo.Following {
 	return d.following
+}
+
+func (d *SQLiteDatastore) OfflineMessages() repo.OfflineMessages {
+	return d.offlineMessages
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -121,6 +130,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table config (key text primary key not null, value blob);
 	create table followers (peerID text primary key not null);
 	create table following (peerID text primary key not null);
+	create table offlinemessages (url text primary key not null, timestamp integer);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
