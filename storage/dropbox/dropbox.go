@@ -58,7 +58,7 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 		return nil, err
 	}
 
-	addr, err := ma.NewMultiaddr("/ipfs/" + m.B58String() + "/dropbox/")
+	addr, err := ma.NewMultiaddr("/ipfs/" + m.B58String() + "/https/")
 	if err != nil {
 		return nil, err
 	}

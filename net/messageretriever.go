@@ -61,10 +61,10 @@ func (m *MessageRetriever) fetchPointers() {
 			if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
 				// ipfs
 				if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
-					m.fetchIPFS(m.ctx, p.Addrs[0])
+					go m.fetchIPFS(m.ctx, p.Addrs[0])
 				}
-				// dropbox
-				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 501 {
+				// https
+				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
 					enc, err := p.Addrs[0].ValueForProtocol(421)
 					if err != nil {
 						continue
@@ -77,7 +77,7 @@ func (m *MessageRetriever) fetchPointers() {
 					if err != nil {
 						continue
 					}
-					m.fetchDropBox(string(d.Digest))
+					go m.fetchHTTPS(string(d.Digest))
 				}
 				m.db.OfflineMessages().Put(p.Addrs[0].String())
 			}
@@ -95,7 +95,7 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, addr ma.Multiaddr) {
 	m.attemptDecrypt(ciphertext)
 }
 
-func (m *MessageRetriever) fetchDropBox(url string) {
+func (m *MessageRetriever) fetchHTTPS(url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return
