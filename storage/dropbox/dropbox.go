@@ -48,7 +48,8 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 	}
 
 	// Create encoded multiaddr
-	b, err := mh.Encode([]byte(res.Url), mh.SHA1)
+	url := res.Url[:len(res.Url) - 1] + "1"
+	b, err := mh.Encode([]byte(url), mh.SHA1)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +58,7 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 		return nil, err
 	}
 
-	addr, err := ma.NewMultiaddr("/ipfs/" + m.B58String() + "/https/")
+	addr, err := ma.NewMultiaddr("/ipfs/" + m.B58String() + "/dropbox/")
 	if err != nil {
 		return nil, err
 	}

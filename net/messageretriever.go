@@ -2,6 +2,7 @@ package net
 
 import (
 	"time"
+	"net/http"
 	"golang.org/x/net/context"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
@@ -14,6 +15,7 @@ import (
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
+	"bufio"
 )
 
 type MessageRetriever struct {
@@ -57,8 +59,26 @@ func (m *MessageRetriever) fetchPointers() {
 		select {
 		case  p:= <- peerOut:
 			if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
-				if p.Addrs[0].Protocols()[0].Code == 421 {
+				log.Notice(p)
+				// ipfs
+				if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
 					m.fetchIPFS(m.ctx, p.Addrs[0])
+				}
+				// dropbox
+				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[0].Code == 501 {
+					enc, err := p.Addrs[0].ValueForProtocol(421)
+					if err != nil {
+						continue
+					}
+					mh, err := multihash.FromB58String(enc)
+					if err != nil {
+						continue
+					}
+					d, err := multihash.Decode(mh)
+					if err != nil {
+						continue
+					}
+					m.fetchDropBox(string(d.Digest))
 				}
 				m.db.OfflineMessages().Put(p.Addrs[0].String())
 			}
@@ -73,6 +93,17 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, addr ma.Multiaddr) {
 	if err != nil {
 		return
 	}
+	m.attemptDecrypt(ciphertext)
+}
+
+func (m *MessageRetriever) fetchDropBox(url string) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	reader := bufio.NewReader(resp.Body)
+	var ciphertext []byte
+	reader.Read(ciphertext)
 	m.attemptDecrypt(ciphertext)
 }
 

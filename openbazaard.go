@@ -277,6 +277,7 @@ func (x *Start) Execute(args []string) error {
 	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, libbitcoinServers)
 
 	// Offline messaging storage
+	ma.AddProtocol(ma.Protocol{501, 0, "dropbox", ma.CodeToVarint(501)},)
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" {
 		storage = selfhosted.NewSelfHostedStorage(expPath, ctx)
