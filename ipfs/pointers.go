@@ -55,8 +55,6 @@ func AddPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multih
 // Fetch pointers from the dht. They will be returned asynchronously.
 func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) <-chan peer.PeerInfo {
 	keyhash := createKey(mhKey, prefixLen)
-	//events := make(chan *notif.QueryEvent)
-	//ctx := notif.RegisterForQueryEvents(cctx, events)
 	peerout := dht.FindProvidersAsync(ctx, key.B58KeyDecode(keyhash.B58String()), 100000)
 	return peerout
 }
