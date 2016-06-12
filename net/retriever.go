@@ -51,7 +51,6 @@ func (m *MessageRetriever) Run(){
 func (m *MessageRetriever) fetchPointers() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)

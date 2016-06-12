@@ -61,10 +61,9 @@ func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihas
 
 // Fetch pointers from the dht.
 func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) ([]peer.PeerInfo, error) {
-	keyhash := createKey(mhKey, prefixLen)
-	providers, err := dht.FindProviders(ctx, key.B58KeyDecode(keyhash.B58String()))
-	if err != nil {
-		return nil, err
+	var providers []peer.PeerInfo
+	for p := range FindPointersAsync(dht, ctx, mhKey, prefixLen) {
+		providers = append(providers, p)
 	}
 	return providers, nil
 }
