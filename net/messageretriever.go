@@ -55,34 +55,29 @@ func (m *MessageRetriever) fetchPointers() {
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
-	for {
-		select {
-		case  p:= <- peerOut:
-			if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
-				// ipfs
-				if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
-					go m.fetchIPFS(m.ctx, p.Addrs[0])
-				}
-				// https
-				if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
-					enc, err := p.Addrs[0].ValueForProtocol(421)
-					if err != nil {
-						continue
-					}
-					mh, err := multihash.FromB58String(enc)
-					if err != nil {
-						continue
-					}
-					d, err := multihash.Decode(mh)
-					if err != nil {
-						continue
-					}
-					go m.fetchHTTPS(string(d.Digest))
-				}
-				m.db.OfflineMessages().Put(p.Addrs[0].String())
+	for p:= range peerOut {
+		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
+			// ipfs
+			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
+				go m.fetchIPFS(m.ctx, p.Addrs[0])
 			}
-		case <-ctx.Done():
-			return
+			// https
+			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
+				enc, err := p.Addrs[0].ValueForProtocol(421)
+				if err != nil {
+					continue
+				}
+				mh, err := multihash.FromB58String(enc)
+				if err != nil {
+					continue
+				}
+				d, err := multihash.Decode(mh)
+				if err != nil {
+					continue
+				}
+				go m.fetchHTTPS(string(d.Digest))
+			}
+			m.db.OfflineMessages().Put(p.Addrs[0].String())
 		}
 	}
 }

@@ -40,7 +40,6 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	//"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 var log = logging.MustGetLogger("main")
