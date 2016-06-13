@@ -5,20 +5,22 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/ipfs/go-ipfs/core"
 	"strconv"
 	"sync"
+
+	"github.com/ipfs/go-ipfs/core"
 	//notif "github.com/ipfs/go-ipfs/notifications"
-	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
-	key "github.com/ipfs/go-ipfs/blocks/key"
-	routing "github.com/ipfs/go-ipfs/routing/dht"
-	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	host "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/host"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+
+	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
+	key "github.com/ipfs/go-ipfs/blocks/key"
+	routing "github.com/ipfs/go-ipfs/routing/dht"
+	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
 )
 
 const MAGIC string = "000000000000000000000000"

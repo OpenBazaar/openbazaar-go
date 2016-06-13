@@ -1,9 +1,10 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/gorilla/websocket"
 	"github.com/ipfs/go-ipfs/commands"
-	"net/http"
 )
 
 type connection struct {

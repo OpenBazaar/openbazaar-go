@@ -4,11 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/ipfs/go-ipfs/core/corehttp"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -17,6 +12,12 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
+
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/ipfs/go-ipfs/core/corehttp"
 )
 
 type RestAPIConfig struct {

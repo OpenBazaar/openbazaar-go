@@ -1,26 +1,26 @@
 package selfhosted
 
 import (
-	"os"
-	"path"
 	"crypto/sha256"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/commands"
+	"encoding/hex"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"encoding/hex"
+	"os"
+	"path"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/commands"
 )
 
-
 type SelfHostedStorage struct {
-	repoPath   string
-	context    commands.Context
+	repoPath string
+	context  commands.Context
 }
 
 func NewSelfHostedStorage(repoPath string, context commands.Context) *SelfHostedStorage {
 	return &SelfHostedStorage{
 		repoPath: repoPath,
-		context: context,
+		context:  context,
 	}
 }
 

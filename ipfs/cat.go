@@ -1,8 +1,9 @@
 package ipfs
 
 import (
-	"github.com/ipfs/go-ipfs/commands"
 	"io"
+
+	"github.com/ipfs/go-ipfs/commands"
 )
 
 // Fetch data from IPFS given the hash

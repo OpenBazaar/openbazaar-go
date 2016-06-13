@@ -3,12 +3,13 @@ package repo
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"io/ioutil"
+
 	"github.com/OpenBazaar/go-libbitcoinclient"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/pebbe/zmq4"
-	"io"
-	"io/ioutil"
 )
 
 var DefaultBootstrapAddresses = []string{

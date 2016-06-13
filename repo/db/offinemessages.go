@@ -1,13 +1,13 @@
 package db
 
 import (
-	"sync"
 	"database/sql"
+	"sync"
 	"time"
 )
 
 type OfflineMessagesDB struct {
-	db *sql.DB
+	db   *sql.DB
 	lock *sync.Mutex
 }
 

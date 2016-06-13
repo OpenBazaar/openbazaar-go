@@ -3,9 +3,10 @@ package net
 import (
 	"errors"
 	"fmt"
+	"math/rand"
+
 	stunlib "github.com/ccding/go-stun/stun"
 	"github.com/op/go-logging"
-	"math/rand"
 )
 
 var STUN_SERVERS []string = []string{

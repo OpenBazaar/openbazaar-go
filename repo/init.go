@@ -3,6 +3,11 @@ package repo
 import (
 	"errors"
 	"fmt"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"io"
+	"os"
+	"path"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
@@ -10,10 +15,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/pebbe/zmq4"
 	"github.com/tyler-smith/go-bip39"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-	"io"
-	"os"
-	"path"
 )
 
 var log = logging.MustGetLogger("repo")

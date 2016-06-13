@@ -1,15 +1,16 @@
 package api
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/op/go-logging"
 	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
 	"net"
 	"net/http"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("api")

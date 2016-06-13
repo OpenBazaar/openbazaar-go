@@ -3,13 +3,14 @@ package core
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	ec "github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
-	"io/ioutil"
-	"os"
-	"path"
 )
 
 // Add our identity to the listings and sign it
