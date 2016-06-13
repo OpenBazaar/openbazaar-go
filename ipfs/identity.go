@@ -1,9 +1,9 @@
 package ipfs
 
 import (
-	"encoding/binary"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"github.com/ipfs/go-ipfs/repo/config"
 	libp2p "gx/ipfs/QmUEUu1CM8bxBJxc3ZLojAi8evhTr4byQogWstABet79oY/go-libp2p-crypto"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
@@ -48,7 +48,7 @@ type DeterministicReader struct {
 }
 
 // TODO: this is a place holder until we settle on a key expansion algorithm
-func (d *DeterministicReader) Read(p []byte) (n int, err error){
+func (d *DeterministicReader) Read(p []byte) (n int, err error) {
 	l := len(p)
 	deterministcBytes := []byte{}
 	for {
@@ -62,7 +62,7 @@ func (d *DeterministicReader) Read(p []byte) (n int, err error){
 		}
 		d.Counter++
 	}
-	for a:=0; a<l; a++ {
+	for a := 0; a < l; a++ {
 		p[a] = deterministcBytes[a]
 	}
 	return l, nil

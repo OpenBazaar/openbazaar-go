@@ -1,12 +1,12 @@
 package core
 
 import (
-	"golang.org/x/net/context"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	"golang.org/x/net/context"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 // TODO: Right now these outgoing messages are only sent directly to the other peer.
@@ -48,7 +48,7 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m := pb.Message{MessageType: pb.Message_PING,}
+	m := pb.Message{MessageType: pb.Message_PING}
 	_, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
 		return "offline"
@@ -64,7 +64,7 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m := pb.Message{MessageType: pb.Message_FOLLOW,}
+	m := pb.Message{MessageType: pb.Message_FOLLOW}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil { // Couldn't connect directly to peer. Likely offline.
 		if err := n.SendOfflineMessage(p, &m); err != nil {
@@ -82,7 +82,7 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	m := pb.Message{MessageType: pb.Message_UNFOLLOW,}
+	m := pb.Message{MessageType: pb.Message_UNFOLLOW}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
 		if err := n.SendOfflineMessage(p, &m); err != nil {

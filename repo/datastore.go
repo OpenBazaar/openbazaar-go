@@ -61,4 +61,3 @@ type OfflineMessages interface {
 	// Does the given url exist in the db?
 	Exists(url string) bool
 }
-

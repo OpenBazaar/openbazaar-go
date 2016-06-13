@@ -1,20 +1,20 @@
 package repo
 
 import (
-	"io"
-	"github.com/ipfs/go-ipfs/repo"
-	"encoding/json"
-	"io/ioutil"
-	"github.com/OpenBazaar/go-libbitcoinclient"
 	"encoding/base64"
-	"github.com/pebbe/zmq4"
+	"encoding/json"
+	"github.com/OpenBazaar/go-libbitcoinclient"
+	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/pebbe/zmq4"
+	"io"
+	"io/ioutil"
 )
 
 var DefaultBootstrapAddresses = []string{
-	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",  // Le Marché Serpette
-	"/ip4/139.59.174.197/tcp/4001/ipfs/QmWPRBSdhmhfWLUZapvfg6GCuyYyscgPnaKycYfWqJJcdB",  // Brixton-Village
-	"/ip4/139.59.6.222/tcp/4001/ipfs/QmVW1nDx2rt8eff8nAB3L8MannsHFsidje6YC3EQvhcwZF",    // Johar
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5", // Le Marché Serpette
+	"/ip4/139.59.174.197/tcp/4001/ipfs/QmWPRBSdhmhfWLUZapvfg6GCuyYyscgPnaKycYfWqJJcdB", // Brixton-Village
+	"/ip4/139.59.6.222/tcp/4001/ipfs/QmVW1nDx2rt8eff8nAB3L8MannsHFsidje6YC3EQvhcwZF",   // Johar
 
 }
 
@@ -27,19 +27,19 @@ func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	for _, s := range(cfg.(map[string]interface{})["LibbitcoinServers"].([]interface{})){
+	for _, s := range cfg.(map[string]interface{})["LibbitcoinServers"].([]interface{}) {
 		encodedKey := s.(map[string]interface{})["PublicKey"].(string)
 		if encodedKey != "" {
 			b, _ := base64.StdEncoding.DecodeString(encodedKey)
 			encodedKey = zmq4.Z85encode(string(b))
 		}
 		server := libbitcoin.Server{
-			Url: s.(map[string]interface{})["Url"].(string),
+			Url:       s.(map[string]interface{})["Url"].(string),
 			PublicKey: encodedKey,
 		}
 		servers = append(servers, server)
 	}
-	return  servers, nil
+	return servers, nil
 }
 
 func GetDropboxApiToken(cfgPath string) (string, error) {
@@ -52,7 +52,7 @@ func GetDropboxApiToken(cfgPath string) (string, error) {
 
 	token := cfg.(map[string]interface{})["Dropbox-api-token"].(string)
 
-	return  token, nil
+	return token, nil
 }
 
 func extendConfigFile(r repo.Repo, key string, value interface{}) error {
@@ -104,8 +104,8 @@ func initConfig(out io.Writer) (*config.Config, error) {
 
 		Ipns: config.Ipns{
 			ResolveCacheSize: 128,
-			RecordLifetime: "7d",
-			RepublishPeriod: "24h",
+			RecordLifetime:   "7d",
+			RepublishPeriod:  "24h",
 		},
 
 		Gateway: config.Gateway{
