@@ -40,11 +40,11 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 }
 
 func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	if strings.Contains(path, "/ob/status/"){
+	if strings.Contains(path, "/ob/status/") {
 		i.GETStatus(w, r)
 		return
 	}
-	if strings.Contains(path, "/ob/peers"){
+	if strings.Contains(path, "/ob/peers") {
 		i.GETPeers(w, r)
 		return
 	}

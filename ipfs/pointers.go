@@ -1,24 +1,24 @@
 package ipfs
 
 import (
-	"sync"
-	"crypto/sha256"
 	"crypto/rand"
-	"encoding/hex"
+	"crypto/sha256"
 	"encoding/binary"
-	"strconv"
+	"encoding/hex"
+	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
+	key "github.com/ipfs/go-ipfs/blocks/key"
 	"github.com/ipfs/go-ipfs/core"
 	//notif "github.com/ipfs/go-ipfs/notifications"
-	host "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/host"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	host "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/host"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	key "github.com/ipfs/go-ipfs/blocks/key"
+	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	"strconv"
+	"sync"
 )
 
 const MAGIC string = "000000000000000000000000"
@@ -68,7 +68,7 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 	return providers, nil
 }
 
-func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string, addr ma.Multiaddr) error{
+func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string, addr ma.Multiaddr) error {
 	magicID, err := getMagicID()
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func createKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
 	return keyHash
 }
 
-func getMagicID() (peer.ID, error){
+func getMagicID() (peer.ID, error) {
 	magicBytes, err := hex.DecodeString(MAGIC)
 	if err != nil {
 		return "", err

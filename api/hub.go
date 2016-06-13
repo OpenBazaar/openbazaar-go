@@ -26,24 +26,24 @@ func newHub() *hub {
 func (h *hub) run() {
 	for {
 		select {
-			case c := <-h.register:
-				h.connections[c] = true
-				log.Debug("Registered new websocket connection")
-			case c := <-h.unregister:
-				if _, ok := h.connections[c]; ok {
+		case c := <-h.register:
+			h.connections[c] = true
+			log.Debug("Registered new websocket connection")
+		case c := <-h.unregister:
+			if _, ok := h.connections[c]; ok {
+				delete(h.connections, c)
+				close(c.send)
+			}
+			log.Debug("Unregistered websocket connection")
+		case m := <-h.Broadcast:
+			for c := range h.connections {
+				select {
+				case c.send <- m:
+				default:
 					delete(h.connections, c)
 					close(c.send)
 				}
-				log.Debug("Unregistered websocket connection")
-			case m := <-h.Broadcast:
-				for c := range h.connections {
-					select {
-						case c.send <- m:
-						default:
-							delete(h.connections, c)
-							close(c.send)
-					}
-				}
+			}
 		}
 	}
 }

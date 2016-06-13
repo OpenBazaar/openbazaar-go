@@ -1,15 +1,15 @@
 package api
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/op/go-logging"
+	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
+	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
 	"net"
 	"net/http"
 	"time"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/op/go-logging"
-	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
 )
 
 var log = logging.MustGetLogger("api")
@@ -37,7 +37,7 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, o
 	return topMux, nil
 }
 
-func Serve(cb chan<-bool, node *core.OpenBazaarNode, ctx commands.Context, lis net.Listener, options ...corehttp.ServeOption) error {
+func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, lis net.Listener, options ...corehttp.ServeOption) error {
 	handler, err := makeHandler(node, ctx, lis, options...)
 	cb <- true
 	if err != nil {
@@ -68,12 +68,12 @@ func Serve(cb chan<-bool, node *core.OpenBazaarNode, ctx commands.Context, lis n
 
 		lis.Close()
 
-		outer:
+	outer:
 		for {
 			// wait until server exits
 			select {
 			case <-serverExited:
-			// if the server exited as we are closing, we really dont care about errors
+				// if the server exited as we are closing, we really dont care about errors
 				serverError = nil
 				break outer
 			case <-time.After(5 * time.Second):

@@ -2,18 +2,18 @@ package service
 
 import (
 	"errors"
-	"github.com/ipfs/go-ipfs/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/op/go-logging"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-	protocol "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/protocol"
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/op/go-logging"
 	host "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/host"
 	inet "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/net"
-	ctxio "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/jbenet/go-context/io"
+	protocol "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/protocol"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 var log = logging.MustGetLogger("service")
@@ -21,24 +21,24 @@ var log = logging.MustGetLogger("service")
 var ProtocolOpenBazaar protocol.ID = "/openbazaar/app/1.0.0"
 
 type OpenBazaarService struct {
-	host       host.Host
-	self       peer.ID
-	peerstore  peer.Peerstore
-	cmdCtx     commands.Context
-	ctx        context.Context
-	broadcast  chan []byte
-	datastore  repo.Datastore
+	host      host.Host
+	self      peer.ID
+	peerstore peer.Peerstore
+	cmdCtx    commands.Context
+	ctx       context.Context
+	broadcast chan []byte
+	datastore repo.Datastore
 }
 
 var OBService *OpenBazaarService
 
 func SetupOpenBazaarService(node *core.IpfsNode, broadcast chan []byte, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
-	OBService = &OpenBazaarService {
-		host: node.PeerHost.(host.Host),
-		self: node.Identity,
+	OBService = &OpenBazaarService{
+		host:      node.PeerHost.(host.Host),
+		self:      node.Identity,
 		peerstore: node.PeerHost.Peerstore(),
-		cmdCtx: ctx,
-		ctx: node.Context(),
+		cmdCtx:    ctx,
+		ctx:       node.Context(),
 		broadcast: broadcast,
 		datastore: datastore,
 	}

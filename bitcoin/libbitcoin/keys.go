@@ -1,8 +1,8 @@
 package libbitcoin
 
 import (
-	b32 "github.com/tyler-smith/go-bip32"
 	btc "github.com/btcsuite/btcutil"
+	b32 "github.com/tyler-smith/go-bip32"
 )
 
 // BIP32 hierarchy

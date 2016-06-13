@@ -1,13 +1,13 @@
 package db
 
 import (
-	"sync"
 	"database/sql"
 	"strconv"
+	"sync"
 )
 
 type FollowerDB struct {
-	db *sql.DB
+	db   *sql.DB
 	lock *sync.Mutex
 }
 
