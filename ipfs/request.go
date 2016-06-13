@@ -1,11 +1,12 @@
 package ipfs
 
 import (
-	"github.com/op/go-logging"
-	cmds "github.com/ipfs/go-ipfs/commands"
-	commands "github.com/ipfs/go-ipfs/core/commands"
-	cli "github.com/ipfs/go-ipfs/commands/cli"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+
+	cmds "github.com/ipfs/go-ipfs/commands"
+	cli "github.com/ipfs/go-ipfs/commands/cli"
+	commands "github.com/ipfs/go-ipfs/core/commands"
+	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("ipfs")

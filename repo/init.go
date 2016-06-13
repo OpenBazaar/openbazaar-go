@@ -1,19 +1,20 @@
 package repo
 
 import (
-	"io"
-	"fmt"
 	"errors"
+	"fmt"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"io"
 	"os"
 	"path"
-	"github.com/op/go-logging"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/tyler-smith/go-bip39"
+	"github.com/op/go-logging"
 	"github.com/pebbe/zmq4"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"github.com/tyler-smith/go-bip39"
 )
 
 var log = logging.MustGetLogger("repo")
@@ -23,7 +24,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string)error) error {
+func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -167,15 +168,15 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	}
 	var ls []Server
 	if !testnet {
-		ls = []Server {
-			Server{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
-			Server{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
-			Server{Url: "tcp://obelisk.airbitz.co:9091", PublicKey: []byte{}},
+		ls = []Server{
+			{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
+			{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
+			{Url: "tcp://obelisk.airbitz.co:9091", PublicKey: []byte{}},
 		}
 	} else {
 		ls = []Server{
-			Server{Url: "tcp://libbitcoin2.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("baihZB[vT(dcVCwkhYLAzah<t2gJ>{3@k?+>T&^3"))},
-			Server{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
+			{Url: "tcp://libbitcoin2.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("baihZB[vT(dcVCwkhYLAzah<t2gJ>{3@k?+>T&^3"))},
+			{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
 		}
 	}
 	if err := extendConfigFile(r, "LibbitcoinServers", ls); err != nil {
@@ -193,7 +194,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	return nil
 }
 
-func createMnemonic() (string, error){
+func createMnemonic() (string, error) {
 	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
 		return "", err

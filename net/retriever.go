@@ -1,21 +1,22 @@
 package net
 
 import (
-	"time"
-	"net/http"
-	"golang.org/x/net/context"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	routing "github.com/ipfs/go-ipfs/routing/dht"
-	"github.com/OpenBazaar/openbazaar-go/net/service"
+	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"io/ioutil"
+	"net/http"
+	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net/service"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/proto"
+	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core"
+	routing "github.com/ipfs/go-ipfs/routing/dht"
+	"golang.org/x/net/context"
 )
 
 type MessageRetriever struct {
@@ -36,7 +37,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	}
 }
 
-func (m *MessageRetriever) Run(){
+func (m *MessageRetriever) Run() {
 	tick := time.NewTicker(time.Hour)
 	defer tick.Stop()
 	m.fetchPointers()
@@ -54,7 +55,7 @@ func (m *MessageRetriever) fetchPointers() {
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
-	for p:= range peerOut {
+	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
 			// ipfs
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
@@ -94,7 +95,7 @@ func (m *MessageRetriever) fetchHTTPS(url string) {
 	if err != nil {
 		return
 	}
-	ciphertext, err := ioutil.ReadAll(resp.Body);
+	ciphertext, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
 	}

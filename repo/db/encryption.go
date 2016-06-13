@@ -2,15 +2,16 @@ package db
 
 import (
 	"bufio"
-	"os"
 	"fmt"
-	"strings"
-	"syscall"
+	"os"
 	"path"
 	"path/filepath"
+	"strings"
+	"syscall"
+
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	"github.com/mitchellh/go-homedir"
 	"golang.org/x/crypto/ssh/terminal"
-	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 )
 
 // FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
@@ -171,7 +172,7 @@ func Decrypt() error {
 	fmt.Println("")
 	pw := string(bytePassword)
 	sqlliteDB, err := Create(repoPath, pw, testnet)
-	if err != nil || sqlliteDB.Config().IsEncrypted(){
+	if err != nil || sqlliteDB.Config().IsEncrypted() {
 		fmt.Println("Invalid password")
 		return err
 	}

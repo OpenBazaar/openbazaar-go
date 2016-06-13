@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"errors"
+
 	"github.com/ipfs/go-ipfs/commands"
 	coreCmds "github.com/ipfs/go-ipfs/core/commands"
 )

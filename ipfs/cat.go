@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"io"
+
 	"github.com/ipfs/go-ipfs/commands"
 )
 

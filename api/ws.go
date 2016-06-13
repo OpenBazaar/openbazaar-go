@@ -2,8 +2,9 @@ package api
 
 import (
 	"net/http"
-	"github.com/ipfs/go-ipfs/commands"
+
 	"github.com/gorilla/websocket"
+	"github.com/ipfs/go-ipfs/commands"
 )
 
 type connection struct {
@@ -42,26 +43,25 @@ func (c *connection) writer() {
 }
 
 var upgrader = &websocket.Upgrader{
-	ReadBufferSize: 1024,
+	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request)bool{return true},
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-var handler wsHandler;
+var handler wsHandler
 
 type wsHandler struct {
-	h *hub
-	path string
+	h       *hub
+	path    string
 	context commands.Context
 }
-
 
 func newWSAPIHandler(ctx commands.Context) *wsHandler {
 	hub := newHub()
 	go hub.run()
-	handler = wsHandler {
-		h: hub,
-		path: ctx.ConfigRoot,
+	handler = wsHandler{
+		h:       hub,
+		path:    ctx.ConfigRoot,
 		context: ctx,
 	}
 	return &handler

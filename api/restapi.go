@@ -1,22 +1,23 @@
 package api
 
 import (
-	"io"
-	"path"
-	"net/http"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"runtime/debug"
+	"io"
+	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
+	"runtime/debug"
 	"strings"
-	"encoding/json"
-	"encoding/base64"
-	"net/http/httputil"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/ipfs/go-ipfs/core/corehttp"
 )
 
 type RestAPIConfig struct {
@@ -103,7 +104,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
 	if err != nil {
@@ -139,16 +140,16 @@ func (i *restAPIHandler) PUTProfile (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
-func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	type ImgData struct{
+	type ImgData struct {
 		Avatar string
 	}
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
 	err := decoder.Decode(&data)
 
-	if err != nil{
+	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
@@ -177,16 +178,16 @@ func (i *restAPIHandler) PUTAvatar (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, `{"success": true}`)
 }
 
-func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	type ImgData struct{
+	type ImgData struct {
 		Header string
 	}
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
 	err := decoder.Decode(&data)
 
-	if err != nil{
+	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
@@ -215,22 +216,22 @@ func (i *restAPIHandler) PUTHeader (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, `{"success": true}`)
 }
 
-func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	type ImgData struct{
+	type ImgData struct {
 		Directory string
-		Filename string
-		Image string
+		Filename  string
+		Image     string
 	}
 	decoder := json.NewDecoder(r.Body)
 	var images []ImgData
 	err := decoder.Decode(&images)
-	if err != nil{
+	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	var imageHashes []string
-	for _, img := range(images) {
+	for _, img := range images {
 		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 			return
@@ -256,7 +257,7 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
 			return
 		}
-		imageHashes = append(imageHashes, hash + " " + img.Filename)
+		imageHashes = append(imageHashes, hash+" "+img.Filename)
 	}
 	jsonHashes, err := json.Marshal(imageHashes)
 	if err != nil {
@@ -266,12 +267,12 @@ func (i *restAPIHandler) PUTImage (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true, hashes: %s}`, string(jsonHashes))
 }
 
-func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	l := new(pb.Listing)
 	jsonpb.Unmarshal(r.Body, l)
-	listingPath:= path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -293,11 +294,11 @@ func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	m := jsonpb.Marshaler {
-		EnumsAsInts: false,
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
 		EmitDefaults: false,
-		Indent: "    ",
-		OrigName: false,
+		Indent:       "    ",
+		OrigName:     false,
 	}
 	out, err := m.MarshalToString(contract)
 	if err != nil {
@@ -322,7 +323,7 @@ func (i *restAPIHandler) POSTListing (w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, `{"success": true}`)
 }
-func (i *restAPIHandler) POSTPurchase (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	decoder := json.NewDecoder(r.Body)
@@ -339,14 +340,14 @@ func (i *restAPIHandler) POSTPurchase (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
-func (i *restAPIHandler) GETStatus (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_, peerId := path.Split(r.URL.Path)
 	status := i.node.GetPeerStatus(peerId)
 	fmt.Fprintf(w, `{"status": %s}`, status)
 }
 
-func (i *restAPIHandler) GETPeers (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	peers, err := ipfs.ConnectedPeers(i.node.Context)
 	if err != nil {
@@ -362,7 +363,7 @@ func (i *restAPIHandler) GETPeers (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(peerJson))
 }
 
-func (i *restAPIHandler) POSTFollow (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type PeerId struct {
 		ID string
@@ -381,7 +382,7 @@ func (i *restAPIHandler) POSTFollow (w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
-func (i *restAPIHandler) POSTUnfollow (w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type PeerId struct {
 		ID string

@@ -1,19 +1,19 @@
 package libbitcoin
 
 import (
-	b32 "github.com/tyler-smith/go-bip32"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/OpenBazaar/go-libbitcoinclient"
+	"github.com/btcsuite/btcd/chaincfg"
+	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 )
 
 type LibbitcoinWallet struct {
-	Client              *libbitcoin.LibbitcoinClient
+	Client *libbitcoin.LibbitcoinClient
 
-	Params              *chaincfg.Params
+	Params *chaincfg.Params
 
-	MasterPrivateKey    *b32.Key
-	MasterPublicKey     *b32.Key
+	MasterPrivateKey *b32.Key
+	MasterPublicKey  *b32.Key
 }
 
 func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, servers []libbitcoin.Server) *LibbitcoinWallet {
@@ -26,4 +26,3 @@ func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, servers []lib
 	l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
 	return l
 }
-
