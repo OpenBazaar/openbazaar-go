@@ -1,18 +1,18 @@
 package core
 
 import (
-	"errors"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"path"
-
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
+	"golang.org/x/net/context"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
 )
 
 var log = logging.MustGetLogger("core")
@@ -78,14 +78,13 @@ func (n *OpenBazaarNode) SeedNode() error {
 // This is a placeholder until the libsignal is operational
 // For now we will just encrypt outgoing offline messages with the long lived identity key.
 func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []byte, rerr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			ct = nil
-			log.Warningf("Could not find public key for %s", peerId.Pretty())
-			rerr = errors.New("Could not find public key for peer")
-		}
-	}()
-	pubKey := n.IpfsNode.Peerstore.PubKey(peerId)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pubKey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, peerId)
+	if err != nil {
+		log.Errorf("Failed to find public key for %s", peerId.Pretty())
+		return nil, err
+	}
 	ciphertext, err := pubKey.Encrypt(message)
 	if err != nil {
 		return nil, err
