@@ -25,33 +25,44 @@ import (
 
 const MAGIC string = "000000000000000000000000"
 
+type Purpose int
+
+const (
+	MESSAGE Purpose   = 1
+	MODERATOR Purpose = 2
+	TAG Purpose       = 3
+	CHANNEL Purpose   = 4
+)
+
+
 // A pointer is a custom provider inserted into the dht which points to a location of a file.
 // For offline messaging purposes we use a hash of the recipient's ID as the key and set the
 // provider to the location of the ciphertext. We set the Peer ID of the provider object to
 // a magic number so we distinguish it from regular providers and use a longer ttl.
 // Note this will only be compatible with the OpenBazaar/go-ipfs fork.
-func AddPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) error {
+type Pointer struct {
+	Key     key.Key
+	Value   peer.PeerInfo
+	Purpose Purpose
+}
+
+func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) (Pointer, error) {
 	keyhash := createKey(mhKey, prefixLen)
 	k := key.B58KeyDecode(keyhash.B58String())
-	dht := node.Routing.(*routing.IpfsDHT)
-	peerHosts := node.PeerHost
-	peers, err := dht.GetClosestPeers(ctx, k)
+
+	magicID, err := getMagicID()
 	if err != nil {
-		return err
+		return Pointer{}, err
 	}
-	wg := sync.WaitGroup{}
-	for p := range peers {
-		wg.Add(1)
-		go func(p peer.ID) {
-			defer wg.Done()
-			err := putPointer(ctx, peerHosts.(host.Host), p, string(k), addr)
-			if err != nil {
-				log.Debug(err)
-			}
-		}(p)
+	pi := peer.PeerInfo {
+		ID:    magicID,
+		Addrs: []ma.Multiaddr{addr},
 	}
-	wg.Wait()
-	return nil
+	return Pointer{Key: k, Value: pi}, addPointer(node, ctx, k, pi)
+}
+
+func RePublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer) error {
+	return addPointer(node, ctx, pointer.Key, pointer.Value)
 }
 
 // Fetch pointers from the dht. They will be returned asynchronously.
@@ -70,23 +81,35 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 	return providers, nil
 }
 
-func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, skey string, addr ma.Multiaddr) error {
-	magicID, err := getMagicID()
+func addPointer(node *core.IpfsNode, ctx context.Context, k key.Key, pi peer.PeerInfo) error {
+	dht := node.Routing.(*routing.IpfsDHT)
+	peerHosts := node.PeerHost
+	peers, err := dht.GetClosestPeers(ctx, k)
 	if err != nil {
 		return err
 	}
-	pi := peer.PeerInfo{
-		ID:    magicID,
-		Addrs: []ma.Multiaddr{addr},
+	wg := sync.WaitGroup{}
+	for p := range peers {
+		wg.Add(1)
+		go func(p peer.ID) {
+			defer wg.Done()
+			err := putPointer(ctx, peerHosts.(host.Host), p, pi, string(k))
+			if err != nil {
+				log.Debug(err)
+			}
+		}(p)
 	}
+	wg.Wait()
+	return nil
+}
 
+func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, pi peer.PeerInfo, skey string) error {
 	pmes := pb.NewMessage(pb.Message_ADD_PROVIDER, skey, 0)
 	pmes.ProviderPeers = pb.RawPeerInfosToPBPeers([]peer.PeerInfo{pi})
-	err = sendMessage(ctx, peerHosts, p, pmes)
+	err := sendMessage(ctx, peerHosts, p, pmes)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

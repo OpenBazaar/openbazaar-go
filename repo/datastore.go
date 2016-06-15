@@ -1,10 +1,16 @@
 package repo
 
+import (
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+)
+
 type Datastore interface {
 	Config() Config
 	Followers() Followers
 	Following() Following
 	OfflineMessages() OfflineMessages
+	Pointers() Pointers
 	Close()
 }
 
@@ -60,4 +66,16 @@ type OfflineMessages interface {
 
 	// Does the given url exist in the db?
 	Exists(url string) bool
+}
+
+type Pointers interface {
+
+	// Put a pointer to the database.
+	Put(p ipfs.Pointer) error
+
+	// Delete a pointer from the db.
+	Delete(id peer.ID) error
+
+	// Fetch the entire list of pointers
+	GetAll() ([]ipfs.Pointer, error)
 }
