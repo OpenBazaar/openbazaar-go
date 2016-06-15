@@ -171,7 +171,6 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		ls = []Server{
 			{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
 			{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
-			{Url: "tcp://obelisk.airbitz.co:9091", PublicKey: []byte{}},
 		}
 	} else {
 		ls = []Server{

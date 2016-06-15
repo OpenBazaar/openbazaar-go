@@ -333,6 +333,9 @@ func (x *Start) Execute(args []string) error {
 			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16)
 			go MR.Run()
 			core.Node.MessageRetriever = MR
+			PR := net.NewPointerRepublisher(nd, sqliteDB)
+			go PR.Run()
+			core.Node.PointerRepublisher = PR
 		}
 		break
 	}

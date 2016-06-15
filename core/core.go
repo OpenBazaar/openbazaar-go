@@ -52,8 +52,10 @@ type OpenBazaarNode struct {
 	// A service that periodically checks the dht for outstanding messages
 	MessageRetriever *net.MessageRetriever
 
+	// A service that periodically republishes active pointers
+	PointerRepublisher *net.PointerRepublisher
+
 	// TODO: Libsignal Client
-	// TODO: Pointer Republisher
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns

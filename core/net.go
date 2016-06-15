@@ -10,9 +10,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-// TODO: Right now these outgoing messages are only sent directly to the other peer.
-// TODO: Once offline messaging is hooked up then failed direct messages should be sent via offline messaging.
-
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
 	env := pb.Envelope{Message: m, PeerID: n.IpfsNode.Identity.Pretty()}

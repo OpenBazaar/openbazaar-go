@@ -40,7 +40,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 func (m *MessageRetriever) Run() {
 	tick := time.NewTicker(time.Hour)
 	defer tick.Stop()
-	m.fetchPointers()
+	go m.fetchPointers()
 	for {
 		select {
 		case <-tick.C:

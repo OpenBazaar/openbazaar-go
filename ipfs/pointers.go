@@ -21,6 +21,7 @@ import (
 	key "github.com/ipfs/go-ipfs/blocks/key"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	"time"
 )
 
 const MAGIC string = "000000000000000000000000"
@@ -41,9 +42,10 @@ const (
 // a magic number so we distinguish it from regular providers and use a longer ttl.
 // Note this will only be compatible with the OpenBazaar/go-ipfs fork.
 type Pointer struct {
-	Key     key.Key
-	Value   peer.PeerInfo
-	Purpose Purpose
+	Key       key.Key
+	Value     peer.PeerInfo
+	Purpose   Purpose
+	Timestamp time.Time
 }
 
 func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) (Pointer, error) {

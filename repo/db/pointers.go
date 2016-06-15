@@ -80,6 +80,7 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 				Addrs: []ma.Multiaddr{maAddr},
 			},
 			Purpose: ipfs.Purpose(purpose),
+			Timestamp: time.Unix(int64(timestamp), 0),
 		}
 		ret = append(ret, pointer)
 	}
