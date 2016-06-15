@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/any"
 	"golang.org/x/net/context"
 )
 
@@ -37,10 +38,33 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	if err != nil {
 		return err
 	}
-	pointer.Purpose = ipfs.MESSAGE
-	err = n.Datastore.Pointers().Put(pointer)
+	if m.MessageType != pb.Message_OFFLINE_ACK {
+		pointer.Purpose = ipfs.MESSAGE
+		err = n.Datastore.Pointers().Put(pointer)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error {
+	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	a := &any.Any{Value: []byte(pointerID.Pretty())}
+	m := pb.Message{
+		MessageType: pb.Message_OFFLINE_ACK,
+		Payload: a}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil { // Couldn't connect directly to peer. Likely offline.
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -61,7 +85,6 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
 }
 
 func (n *OpenBazaarNode) Follow(peerId string) error {
-	n.Datastore.Following().Put(peerId)
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err
@@ -75,11 +98,11 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 			return err
 		}
 	}
+	n.Datastore.Following().Put(peerId)
 	return nil
 }
 
 func (n *OpenBazaarNode) Unfollow(peerId string) error {
-	n.Datastore.Following().Delete(peerId)
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err
@@ -93,5 +116,6 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 			return err
 		}
 	}
+	n.Datastore.Following().Delete(peerId)
 	return nil
 }

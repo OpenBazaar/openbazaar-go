@@ -22,7 +22,7 @@ func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert into pointers(peerID, key, address, purpose, timestamp) values(?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert into pointers(pointerID, key, address, purpose, timestamp) values(?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 func (p *PointersDB) Delete(id peer.ID) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	_, err := p.db.Exec("delete from pointers where peerID=?", id.Pretty())
+	_, err := p.db.Exec("delete from pointers where pointerID=?", id.Pretty())
 	if err != nil {
 		log.Error(err)
 		return err
@@ -57,19 +57,19 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 	}
 	var ret []ipfs.Pointer
 	for rows.Next() {
-		var peerID string
+		var pointerID string
 		var key string
 		var address string
 		var purpose int
 		var timestamp int
-		if err := rows.Scan(&peerID, &key, &address, &purpose, &timestamp); err != nil {
+		if err := rows.Scan(&pointerID, &key, &address, &purpose, &timestamp); err != nil {
 			log.Error(err)
 		}
 		maAddr, err := ma.NewMultiaddr(address)
 		if err != nil {
 			return ret, err
 		}
-		pid, err := peer.IDB58Decode(peerID)
+		pid, err := peer.IDB58Decode(pointerID)
 		if err != nil {
 			return ret, err
 		}

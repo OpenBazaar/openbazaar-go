@@ -25,15 +25,17 @@ type MessageRetriever struct {
 	ctx       commands.Context
 	service   *service.OpenBazaarService
 	prefixLen int
+	sendAck   func(peerId string, pointerID peer.ID) error
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service *service.OpenBazaarService, prefixLen int) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service *service.OpenBazaarService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
 	return &MessageRetriever{
 		db:        db,
 		node:      node,
 		ctx:       ctx,
 		service:   service,
 		prefixLen: prefixLen,
+		sendAck:   sendAck,
 	}
 }
 
@@ -59,7 +61,7 @@ func (m *MessageRetriever) fetchPointers() {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
 			// ipfs
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
-				go m.fetchIPFS(m.ctx, p.Addrs[0])
+				go m.fetchIPFS(m.ctx, p.ID, p.Addrs[0])
 			}
 			// https
 			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
@@ -75,22 +77,22 @@ func (m *MessageRetriever) fetchPointers() {
 				if err != nil {
 					continue
 				}
-				go m.fetchHTTPS(string(d.Digest))
+				go m.fetchHTTPS(p.ID, string(d.Digest))
 			}
 			m.db.OfflineMessages().Put(p.Addrs[0].String())
 		}
 	}
 }
 
-func (m *MessageRetriever) fetchIPFS(ctx commands.Context, addr ma.Multiaddr) {
+func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.Multiaddr) {
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
 		return
 	}
-	m.attemptDecrypt(ciphertext)
+	m.attemptDecrypt(ciphertext, pid)
 }
 
-func (m *MessageRetriever) fetchHTTPS(url string) {
+func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return
@@ -99,10 +101,10 @@ func (m *MessageRetriever) fetchHTTPS(url string) {
 	if err != nil {
 		return
 	}
-	m.attemptDecrypt(ciphertext)
+	m.attemptDecrypt(ciphertext, pid)
 }
 
-func (m *MessageRetriever) attemptDecrypt(ciphertext []byte) {
+func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	plaintext, err := m.node.PrivateKey.Decrypt(ciphertext)
 	if err == nil {
 		env := pb.Envelope{}
@@ -123,6 +125,10 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte) {
 		if err != nil {
 			log.Debugf("handle message error: %s", err)
 			return
+		}
+
+		if env.Message.MessageType != pb.Message_OFFLINE_ACK {
+			m.sendAck(id.Pretty(), pid)
 		}
 	}
 }

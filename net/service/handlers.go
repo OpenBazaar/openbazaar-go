@@ -2,7 +2,6 @@ package service
 
 import (
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
@@ -43,5 +42,18 @@ func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message)
 		return nil, err
 	}
 	service.broadcast <- []byte(`{"notification": {"unfollow":"` + peer.Pretty() + `"}}`)
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
+	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
+	if err != nil {
+		return nil, err
+	}
+	err = service.datastore.Pointers().Delete(pid)
+	if err != nil {
+		return nil, err
+	}
 	return nil, nil
 }

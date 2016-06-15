@@ -18,6 +18,7 @@ message Message {
         DISPUTE_OPEN            = 8;
         DISPUTE_CLOSE           = 9;
         REFUND                  = 10;
+        OFFLINE_ACK             = 11;
     }
 }
 

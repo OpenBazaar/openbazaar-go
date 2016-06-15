@@ -330,7 +330,7 @@ func (x *Start) Execute(args []string) error {
 		if b == true {
 			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)
 			core.Node.Service = OBService
-			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16)
+			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16, core.Node.SendOfflineAck)
 			go MR.Run()
 			core.Node.MessageRetriever = MR
 			PR := net.NewPointerRepublisher(nd, sqliteDB)
