@@ -15,6 +15,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) se
 		return service.handleFollow
 	case pb.Message_UNFOLLOW:
 		return service.handleUnFollow
+	case pb.Message_OFFLINE_ACK:
+		return service.handleOfflineAck
 	default:
 		return nil
 	}
