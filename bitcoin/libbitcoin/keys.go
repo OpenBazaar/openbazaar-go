@@ -25,36 +25,27 @@ func (w *LibbitcoinWallet) GetMasterPublicKey() *b32.Key {
 func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	key, used, _ := w.db.Keys().GetLastKey(purpose)
 	if key == nil { // No keys in this chain have been generated yet. Let's generate key 0.
-		accountMK, _ := w.masterPrivateKey.NewChildKey(b32.FirstHardenedChild)
-		purposeMK, _ := accountMK.NewChildKey(uint32(purpose))
-		childKey, _ := purposeMK.NewChildKey(0)
-
-		pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
-		w.db.Keys().Put(childKey, pubkey.ScriptAddress(), purpose)
+		childKey := w.generateChildKey(purpose, 0)
+		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+		w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
 		return childKey
-	} else if !used { // The last key in the chain is unused so let's just return it.
-		return key
-	} else { // The last key in the chain has been used. Let's generated a new key and save it in the db.
+	} else if used { // The last key in the chain has been used. Let's generated a new key and save it in the db.
 		index := binary.BigEndian.Uint32(key.ChildNumber)
-		accountMK, _ := w.masterPrivateKey.NewChildKey(b32.FirstHardenedChild)
-		purposeMK, _ := accountMK.NewChildKey(uint32(purpose))
-		childKey, _ := purposeMK.NewChildKey(index + 1)
-
-		pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
-		w.db.Keys().Put(childKey, pubkey.ScriptAddress(), purpose)
+		childKey := w.generateChildKey(purpose, index + 1)
+		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+		w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
 		return childKey
+	} else { // The last key in the chain is unused so let's just return it.
+		return key
 	}
 }
 
 func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	key, _, _ := w.db.Keys().GetLastKey(purpose)
 	index := binary.BigEndian.Uint32(key.ChildNumber)
-	accountMK, _ := w.masterPrivateKey.NewChildKey(b32.FirstHardenedChild)
-	purposeMK, _ := accountMK.NewChildKey(uint32(purpose))
-	childKey, _ := purposeMK.NewChildKey(index + 1)
-
-	pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
-	w.db.Keys().Put(childKey, pubkey.ScriptAddress(), purpose)
+	childKey := w.generateChildKey(purpose, index + 1)
+	addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+	w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
 	return childKey
 }
 
@@ -68,4 +59,11 @@ func (w *LibbitcoinWallet) GetFreshAddress(purpose bitcoin.KeyPurpose) *btc.Addr
 	key := w.GetFreshKey(purpose)
 	pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
 	return pubkey.AddressPubKeyHash()
+}
+
+func (w *LibbitcoinWallet) generateChildKey(purpose bitcoin.KeyPurpose, index uint32) *b32.Key {
+	accountMK, _ := w.masterPrivateKey.NewChildKey(b32.FirstHardenedChild)
+	purposeMK, _ := accountMK.NewChildKey(uint32(purpose))
+	childKey, _ := purposeMK.NewChildKey(index )
+	return childKey
 }
