@@ -34,7 +34,7 @@ func (f *FollowerDB) Put(follower string) error {
 func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	stm := "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	stm := "select peerID, used from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 	rows, err := f.db.Query(stm)
 	if err != nil {
 		log.Error(err)

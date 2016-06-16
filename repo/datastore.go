@@ -85,9 +85,16 @@ type Pointers interface {
 
 type Keys interface {
 
-	Put(key *b32.Key, purpose bitcoin.KeyPurpose) error
+	// Put a bip32 key to the database
+	Put(key *b32.Key, scriptPubKey []byte, purpose bitcoin.KeyPurpose) error
 
+	// Mark the given key as used
 	MarkKeyAsUsed(key *b32.Key) error
 
-	GetCurrentKey(purpose bitcoin.KeyPurpose) (*b32.Key, error)
+	// Fetch the key at the last index for the given purpose
+	// The bool should state whether the key has been used or not
+	GetLastKey(purpose bitcoin.KeyPurpose) (*b32.Key, bool, error)
+
+	// Given a scriptPubKey return the corresponding bip32 key
+	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
 }

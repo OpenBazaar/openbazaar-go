@@ -151,7 +151,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table following (peerID text primary key not null);
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
-	create table keys (key text primary key not null, purpose integer, used integer);
+	create table keys (key text primary key not null, scriptPubKey text, purpose integer, used integer);
+	create index keys_scriptPubKey ON keys(scriptPubKey);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
