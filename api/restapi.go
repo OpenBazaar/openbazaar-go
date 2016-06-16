@@ -123,12 +123,12 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 //     Security:
 //
 //     Responses:
-//       default: profile
+//       default: ProfileResponse
+//	 200: ProfileResponse
 func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	p := ProfileParam{}
-	p.Profile = r.Body
+	//p := ProfileParam{}
 
 	// Create profile file
 	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
@@ -142,7 +142,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// Check JSON decoding and add proper indentation
-	dec := json.NewDecoder(p.Profile)
+	dec := json.NewDecoder(r.Body)
 	for {
 		var v map[string]interface{}
 		err := dec.Decode(&v)
@@ -151,18 +151,18 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		b, err := json.MarshalIndent(v, "", "    ")
 		if err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "JSON marshalling error: %s"}`, err)
 			return
 		}
 		if _, err := f.WriteString(string(b)); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 			return
 		}
 	}
 
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
