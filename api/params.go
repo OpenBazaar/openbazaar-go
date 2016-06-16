@@ -3,11 +3,12 @@ package api
 
 // swagger:parameters status
 type PeerIdParam struct {
+    //
     // IPNS id for the peer you're trying to reach.
     // eg: QmewaTzuA2gMjHyAGFN6wTWH7cVfZeApFM98TC28aSTy1P
     //
     // in: path
-    // schema: Profile
+    // schema: object
     // required: true
     PeerId string
 }
@@ -66,14 +67,6 @@ type ProfileParam struct {
     Profile ProfileModel
 }
 
-//// swagger:parameters putProfile
-//type CookieParam struct {
-//    // Holds a Session ID cookie for auth
-//    //
-//    // in: header
-//    SESSIONID string
-//}
-
 // A ProfileResponse is the response for Profile calls
 // swagger:response ProfileResponse
 type ProfileResponse struct {
@@ -86,5 +79,18 @@ type ProfileResponse struct {
 		Success string `json:"success"`
 		// An optional reason if there is a failure or error
 		Reason string `json:"reason"`
+	}
+}
+
+// A StatusResponse is the response for Status calls
+// swagger:response StatusResponse
+type StatusResponse struct {
+	// Response from server
+	// in: body
+	Body struct {
+		// Success Status of true or false
+		//
+		// Required: true
+		Status string `json:"status"`
 	}
 }
