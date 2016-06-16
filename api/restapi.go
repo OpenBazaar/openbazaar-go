@@ -178,13 +178,13 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	imgPath := path.Join(i.node.RepoPath, "root", "avatar")
 	out, err := os.Create(imgPath)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
@@ -194,16 +194,16 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, dec)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
-	fmt.Fprint(w, `{"success": true}`)
+	fmt.Fprint(w, `{"success": "true"}`)
 }
 
 func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
@@ -216,13 +216,13 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	imgPath := path.Join(i.node.RepoPath, "root", "header")
 	out, err := os.Create(imgPath)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
@@ -232,12 +232,12 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, dec)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
@@ -255,19 +255,19 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	var images []ImgData
 	err := decoder.Decode(&images)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	var imageHashes []string
 	for _, img := range images {
 		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
 		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Directory, img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
 
@@ -277,22 +277,22 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 
 		_, err = io.Copy(out, dec)
 		if err != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
 		hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
 		if aerr != nil {
-			fmt.Fprintf(w, `{"success": false, "reason": %s}`, aerr)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
 			return
 		}
 		imageHashes = append(imageHashes, hash+" "+img.Filename)
 	}
 	jsonHashes, err := json.Marshal(imageHashes)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true, hashes: %s}`, string(jsonHashes))
+	fmt.Fprintf(w, `{"success": true, hashes: "%s"}`, string(jsonHashes))
 }
 
 func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
@@ -302,18 +302,18 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	jsonpb.Unmarshal(r.Body, l)
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	contract, err := i.node.SignListing(l)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	defer func() {
@@ -330,22 +330,22 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := m.MarshalToString(contract)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if _, err := f.WriteString(out); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	err = i.node.UpdateListingIndex(contract)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
@@ -360,11 +360,11 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	var data core.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	if err := i.node.Purchase(&data); err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
@@ -386,7 +386,8 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 //
 //
 //     Responses:
-//       default: status
+//       default: StatusResponse
+//	 200: StatusResponse
 //
 func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
@@ -394,20 +395,20 @@ func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	s.PeerId = peerId
 	status := i.node.GetPeerStatus(s.PeerId)
-	fmt.Fprintf(w, `{"status": %s}`, status)
+	fmt.Fprintf(w, `{"status": "%s"}`, status)
 }
 
 func (i *restAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	peers, err := ipfs.ConnectedPeers(i.node.Context)
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
 	if err != nil {
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, string(peerJson))
