@@ -56,6 +56,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// TODO: These headers should be removed in production.
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
