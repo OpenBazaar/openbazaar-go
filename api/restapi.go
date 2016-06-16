@@ -56,7 +56,6 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: These headers should be removed in production.
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
@@ -105,8 +104,32 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// swagger:route PUT /profile putProfile
+//
+// Update profile
+//
+// This will update the profile file and then re-publish
+// to IPNS for consumption by other peers.
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http, https
+//
+//     Security:
+//
+//     Responses:
+//       default: profile
 func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
+
+	p := ProfileParam{}
+	p.Profile = r.Body
+
+	// Create profile file
 	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
 	if err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -117,7 +140,8 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	dec := json.NewDecoder(r.Body)
+	// Check JSON decoding and add proper indentation
+	dec := json.NewDecoder(p.Profile)
 	for {
 		var v map[string]interface{}
 		err := dec.Decode(&v)
@@ -134,6 +158,8 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
@@ -324,6 +350,8 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, `{"success": true}`)
 }
+
+
 func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
@@ -341,10 +369,30 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"success": true}`)
 }
 
+// swagger:route GET /status/{PeerId} status
+//
+// Get Status of Peer
+//
+// This will give you the status of a specific peer by id
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http, https
+//
+//
+//     Responses:
+//       default: status
+//
 func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
+	s := PeerIdParam{}
 	_, peerId := path.Split(r.URL.Path)
-	status := i.node.GetPeerStatus(peerId)
+	s.PeerId = peerId
+	status := i.node.GetPeerStatus(s.PeerId)
 	fmt.Fprintf(w, `{"status": %s}`, status)
 }
 
