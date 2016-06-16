@@ -64,6 +64,6 @@ func (w *LibbitcoinWallet) GetFreshAddress(purpose bitcoin.KeyPurpose) *btc.Addr
 func (w *LibbitcoinWallet) generateChildKey(purpose bitcoin.KeyPurpose, index uint32) *b32.Key {
 	accountMK, _ := w.masterPrivateKey.NewChildKey(b32.FirstHardenedChild)
 	purposeMK, _ := accountMK.NewChildKey(uint32(purpose))
-	childKey, _ := purposeMK.NewChildKey(index )
+	childKey, _ := purposeMK.NewChildKey(index)
 	return childKey
 }
