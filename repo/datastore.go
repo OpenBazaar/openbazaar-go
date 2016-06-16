@@ -1,8 +1,10 @@
 package repo
 
 import (
+	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type Datastore interface {
@@ -11,6 +13,7 @@ type Datastore interface {
 	Following() Following
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
+	Keys() Keys
 	Close()
 }
 
@@ -78,4 +81,13 @@ type Pointers interface {
 
 	// Fetch the entire list of pointers
 	GetAll() ([]ipfs.Pointer, error)
+}
+
+type Keys interface {
+
+	Put(key *b32.Key, purpose bitcoin.KeyPurpose) error
+
+	MarkKeyAsUsed(key *b32.Key) error
+
+	GetCurrentKey(purpose bitcoin.KeyPurpose) (*b32.Key, error)
 }

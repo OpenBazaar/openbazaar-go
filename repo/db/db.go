@@ -18,6 +18,7 @@ type SQLiteDatastore struct {
 	following       repo.Following
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
+	keys 	        repo.Keys
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -61,6 +62,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		keys: &KeysDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -90,6 +95,10 @@ func (d *SQLiteDatastore) OfflineMessages() repo.OfflineMessages {
 
 func (d *SQLiteDatastore) Pointers() repo.Pointers {
 	return d.pointers
+}
+
+func (d *SQLiteDatastore) Keys() repo.Keys {
+	return d.keys
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -142,6 +151,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table following (peerID text primary key not null);
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
+	create table keys (key text primary key not null, purpose integer, used integer);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

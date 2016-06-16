@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type option struct {
@@ -36,7 +37,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	// TODO: validate the purchase data is formatted properly
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
-	order.RefundAddress = n.Wallet.GetNextRefundAddress().EncodeAddress()
+	order.RefundAddress = n.Wallet.GetCurrentAddress(bitcoin.REFUND).EncodeAddress()
 
 	order.Shipping.ShipTo = data.shipTo
 	order.Shipping.Address = data.address

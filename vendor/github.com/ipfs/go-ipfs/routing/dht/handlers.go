@@ -76,7 +76,6 @@ func (dht *IpfsDHT) handleGetValue(ctx context.Context, p peer.ID, pmes *pb.Mess
 
 		resp.CloserPeers = pb.PeerInfosToPBPeers(dht.host.Network(), closerinfos)
 	}
-
 	return resp, nil
 }
 

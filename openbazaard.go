@@ -274,7 +274,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, libbitcoinServers)
+	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, sqliteDB, libbitcoinServers)
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage

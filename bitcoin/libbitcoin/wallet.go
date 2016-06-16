@@ -2,9 +2,10 @@ package libbitcoin
 
 import (
 	"github.com/OpenBazaar/go-libbitcoinclient"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/btcsuite/btcd/chaincfg"
 	b32 "github.com/tyler-smith/go-bip32"
-	"github.com/tyler-smith/go-bip39"
+	b39 "github.com/tyler-smith/go-bip39"
 )
 
 type LibbitcoinWallet struct {
@@ -12,17 +13,20 @@ type LibbitcoinWallet struct {
 
 	Params *chaincfg.Params
 
-	MasterPrivateKey *b32.Key
-	MasterPublicKey  *b32.Key
+	masterPrivateKey *b32.Key
+	masterPublicKey  *b32.Key
+
+	db repo.Datastore
 }
 
-func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, servers []libbitcoin.Server) *LibbitcoinWallet {
-	seed := bip39.NewSeed(mnemonic, "")
+func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datastore, servers []libbitcoin.Server) *LibbitcoinWallet {
+	seed := b39.NewSeed(mnemonic, "")
 	mk, _ := b32.NewMasterKey(seed)
 	l := new(LibbitcoinWallet)
-	l.MasterPrivateKey = mk
-	l.MasterPublicKey = mk.PublicKey()
+	l.masterPrivateKey = mk
+	l.masterPublicKey = mk.PublicKey()
 	l.Params = params
 	l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
+	l.db = db
 	return l
 }
