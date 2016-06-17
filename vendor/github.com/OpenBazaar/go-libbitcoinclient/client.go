@@ -205,8 +205,13 @@ func (l *LibbitcoinClient) Parse(command string, data []byte, callback func(inte
 		rows := []FetchHistory2Resp{}
 		for i:=0; i<numRows; i++{
 			r := FetchHistory2Resp{}
-			spendByte := buff.Next(1)
-			spendBool, _ := strconv.ParseBool(string(spendByte))
+			spendByte := int(buff.Next(1)[0])
+			var spendBool bool
+			if spendByte == 0 {
+				spendBool = false
+			} else {
+				spendBool = true
+			}
 			r.IsSpend = spendBool
 			lehash := buff.Next(32)
 			sh, _:= wire.NewShaHash(lehash)
