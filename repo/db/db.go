@@ -20,6 +20,7 @@ type SQLiteDatastore struct {
 	pointers        repo.Pointers
 	keys 	        repo.Keys
 	transactions    repo.Transactions
+	coins           repo.Coins
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -71,6 +72,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		coins: &CoinsDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -108,6 +113,10 @@ func (d *SQLiteDatastore) Keys() repo.Keys {
 
 func (d *SQLiteDatastore) Transactions() repo.Transactions {
 	return d.transactions
+}
+
+func (d *SQLiteDatastore) Coins() repo.Coins {
+	return d.coins
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -162,7 +171,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
 	create table keys (key text primary key not null, scriptPubKey text, purpose integer, used integer);
 	create index keys_scriptPubKey ON keys(scriptPubKey);
-	create table transactions (txid text primary key not null, tx blob, height integer, state integer, timestamp integer, exchangeRate real, exchangeCurrency text);
+	create table transactions (txid text primary key not null, tx blob, height integer, state integer, timestamp integer, value integer, exchangeRate real, exchangeCurrency text);
 	create table coins (outpoint text primary key not null, value integer, scriptPubKey text);
 	`
 	_, err := db.Exec(sqlStmt)

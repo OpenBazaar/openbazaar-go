@@ -15,7 +15,7 @@ type Datastore interface {
 	Pointers() Pointers
 	Keys() Keys
 	Transactions() Transactions
-	//Coins() Coins
+	Coins() Coins
 	Close()
 }
 
@@ -121,7 +121,7 @@ type Coins interface {
 	Put(bitcoin.Utxo) error
 
 	// Remove a coin from the database
-	Delete(txid []byte) error
+	Delete(txid []byte, index int) error
 
 	// Fetch all coins from the db
 	// Useful for coin selection

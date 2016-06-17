@@ -43,6 +43,7 @@ type TransactionInfo struct {
 	Height          int
 	State           TransactionState
 	Timestamp       time.Time
+	Value           int
 	ExchangeRate    float64
 	ExchangCurrency string
 }

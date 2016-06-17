@@ -20,7 +20,7 @@ func (t *TransactionsDB) Put(txinfo bitcoin.TransactionInfo) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert into transactions(txid, tx, height, state, timestamp, exchangeRate, exchangeCurrency) values(?,?,?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert into transactions(txid, tx, height, state, timestamp, value, exchangeRate, exchangeCurrency) values(?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -31,6 +31,7 @@ func (t *TransactionsDB) Put(txinfo bitcoin.TransactionInfo) error {
 		txinfo.Height,
 		int(txinfo.State),
 		int(txinfo.Timestamp.Unix()),
+		txinfo.Value,
 		txinfo.ExchangeRate,
 		txinfo.ExchangCurrency,
 	)
@@ -81,9 +82,10 @@ func (t *TransactionsDB) GetAll() []bitcoin.TransactionInfo {
 		var height int
 		var state int
 		var timestamp int
+		var value int
 		var exchangeRate float64
 		var exchangeCurrency string
-		if err := rows.Scan(&txidhex, &tx, &height, &state, &timestamp, &exchangeRate, &exchangeCurrency); err != nil {
+		if err := rows.Scan(&txidhex, &tx, &height, &state, &timestamp, &value, &exchangeRate, &exchangeCurrency); err != nil {
 			log.Error(err)
 			return ret
 		}
@@ -98,6 +100,7 @@ func (t *TransactionsDB) GetAll() []bitcoin.TransactionInfo {
 			Height: height,
 			State: bitcoin.TransactionState(state),
 			Timestamp: time.Unix(int64(timestamp), 0),
+			Value: value,
 			ExchangeRate: exchangeRate,
 			ExchangCurrency: exchangeCurrency,
 
