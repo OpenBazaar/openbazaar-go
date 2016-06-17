@@ -19,6 +19,7 @@ type SQLiteDatastore struct {
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
 	keys 	        repo.Keys
+	transactions    repo.Transactions
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -66,6 +67,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		transactions: &TransactionsDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -99,6 +104,10 @@ func (d *SQLiteDatastore) Pointers() repo.Pointers {
 
 func (d *SQLiteDatastore) Keys() repo.Keys {
 	return d.keys
+}
+
+func (d *SQLiteDatastore) Transactions() repo.Transactions {
+	return d.transactions
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {

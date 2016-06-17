@@ -14,7 +14,7 @@ type Datastore interface {
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
 	Keys() Keys
-	//Transactions() Transactions
+	Transactions() Transactions
 	//Coins() Coins
 	Close()
 }
