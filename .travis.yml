@@ -16,6 +16,7 @@ before_install:
   - gx install
 script:
   - go test -v -covermode=count -coverprofile=coverage.out $(go list ./... | grep -v /vendor/)
+  - ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:
 #  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
