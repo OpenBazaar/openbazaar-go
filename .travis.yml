@@ -15,7 +15,7 @@ before_install:
   - go get -u github.com/whyrusleeping/gx
   - gx install
 script:
-  - go test -v -covermode=count -coverprofile=coverage.out ./...
+  - go test -v -covermode=count -coverprofile=coverage.out $(go list ./... | grep -v /vendor/)
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:
 #  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
