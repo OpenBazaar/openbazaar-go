@@ -73,9 +73,12 @@ func (cb *ClientBase) SendCommand(command string, data []byte, callback func(int
 
 func (cb *ClientBase) messageReceived(command string, id, data []byte){
 	txid := int(binary.LittleEndian.Uint32(id))
-	cb.outstanding[txid].stop <- ""
-	callback := cb.outstanding[txid].callback
-	delete(cb.outstanding, txid)
+	var callback func(interface{}, error)
+	if _, ok := cb.outstanding[txid]; ok {
+		cb.outstanding[txid].stop <- ""
+		callback = cb.outstanding[txid].callback
+		delete(cb.outstanding, txid)
+	}
 	cb.parser(command, data, callback)
 }
 

@@ -21,3 +21,17 @@ const (
 	CHANGE    = 1
 	REFUND    = 2
 )
+
+type TransactionState int
+
+const (
+	// A (unconfirmed) transaction which does not appear in the best chain
+	PENDING   = 0
+
+	// Transaction appears in the best chain
+	CONFIRMED = 1
+
+	// We have reason to believe the transaction will never confirm. Either it was double
+	// spent or has sat unconfirmed for an unreasonably long period of time.
+	DEAD      = 2
+)
