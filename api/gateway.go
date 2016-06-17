@@ -25,6 +25,7 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, o
 	n.Broadcast = wsAPI.h.Broadcast
 
 	topMux.Handle("/ob/", restAPI)
+	topMux.Handle("/wallet/", restAPI)
 	topMux.Handle("/ws", wsAPI)
 
 	mux := topMux

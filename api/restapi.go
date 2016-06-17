@@ -18,6 +18,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type RestAPIConfig struct {
@@ -42,7 +43,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 	}
 	node.RootHash = dirHash
 
-	prefixes := []string{"/ob/"}
+	prefixes := []string{"/ob/", "/wallet/"}
 	i := &restAPIHandler{
 		config: RestAPIConfig{
 			Writable:     true,
@@ -450,4 +451,20 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
+}
+
+func (i *restAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	addr := i.node.Wallet.GetCurrentAddress(bitcoin.RECEIVING)
+	fmt.Fprintf(w, `{"address": "%s"}`, addr.EncodeAddress())
+}
+
+func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	mn, err := i.node.Datastore.Config().GetMnemonic()
+	if err != nil {
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		return
+	}
+	fmt.Fprintf(w, `{"mnemonic": "%s"}`, mn)
 }

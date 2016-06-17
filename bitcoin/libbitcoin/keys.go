@@ -51,14 +51,14 @@ func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 
 func (w *LibbitcoinWallet) GetCurrentAddress(purpose bitcoin.KeyPurpose) *btc.AddressPubKeyHash {
 	key := w.GetCurrentKey(purpose)
-	pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
-	return pubkey.AddressPubKeyHash()
+	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
+	return addr.AddressPubKeyHash()
 }
 
 func (w *LibbitcoinWallet) GetFreshAddress(purpose bitcoin.KeyPurpose) *btc.AddressPubKeyHash {
 	key := w.GetFreshKey(purpose)
-	pubkey, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
-	return pubkey.AddressPubKeyHash()
+	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
+	return addr.AddressPubKeyHash()
 }
 
 func (w *LibbitcoinWallet) generateChildKey(purpose bitcoin.KeyPurpose, index uint32) *b32.Key {

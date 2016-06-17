@@ -48,4 +48,12 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETPeers(w, r)
 		return
 	}
+	if strings.Contains(path, "/wallet/address") {
+		i.GETAddress(w, r)
+		return
+	}
+	if strings.Contains(path, "/wallet/mnemonic") {
+		i.GETMnemonic(w, r)
+		return
+	}
 }
