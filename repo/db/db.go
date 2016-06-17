@@ -195,10 +195,12 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) er
 	defer stmt.Close()
 	_, err = stmt.Exec("mnemonic", mnemonic)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	_, err = stmt.Exec("identityKey", identityKey)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

@@ -25,6 +25,7 @@ func (o *OfflineMessagesDB) Put(url string) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(url, int(time.Now().Unix()))
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

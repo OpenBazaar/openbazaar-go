@@ -35,6 +35,7 @@ func (t *TransactionsDB) Put(txinfo bitcoin.TransactionInfo) error {
 		txinfo.ExchangCurrency,
 	)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()
@@ -119,6 +120,7 @@ func (t *TransactionsDB) UpdateState(txid []byte, state bitcoin.TransactionState
 	defer stmt.Close()
 	_, err = stmt.Exec(int(state), hex.EncodeToString(txid))
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()
@@ -139,6 +141,7 @@ func (t *TransactionsDB) UpdateHeight(txid []byte, height int) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(height, hex.EncodeToString(txid))
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

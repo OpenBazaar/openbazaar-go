@@ -33,6 +33,7 @@ func (k *KeysDB) Put(key *b32.Key, scriptPubKey []byte, purpose bitcoin.KeyPurpo
 	}
 	_, err = stmt.Exec(key.String(), hex.EncodeToString(scriptPubKey), int(purpose), 0)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()
@@ -53,6 +54,7 @@ func (k *KeysDB) MarkKeyAsUsed(key *b32.Key) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(key.String())
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

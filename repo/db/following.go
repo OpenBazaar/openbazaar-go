@@ -25,6 +25,7 @@ func (f *FollowingDB) Put(follower string) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(follower)
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()

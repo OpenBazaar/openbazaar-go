@@ -29,6 +29,7 @@ func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 	defer stmt.Close()
 	_, err = stmt.Exec(pointer.Value.ID.Pretty(), pointer.Key.B58String(), pointer.Value.Addrs[0].String(), pointer.Purpose, int(time.Now().Unix()))
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	tx.Commit()
