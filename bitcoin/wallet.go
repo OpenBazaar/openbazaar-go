@@ -3,6 +3,7 @@ package bitcoin
 import (
 	btc "github.com/btcsuite/btcutil"
 	b32 "github.com/tyler-smith/go-bip32"
+	"time"
 )
 
 // TODO: Build out this interface
@@ -35,3 +36,20 @@ const (
 	// spent or has sat unconfirmed for an unreasonably long period of time.
 	DEAD      = 2
 )
+
+type TransactionInfo struct {
+	Txid            []byte
+	Tx              []byte
+	Height          int
+	State           TransactionState
+	Timestamp       time.Time
+	ExchangeRate    float64
+	ExchangCurrency string
+}
+
+type Utxo struct {
+	Txid         []byte
+	Index        int
+	Value        int
+	ScriptPubKey []byte
+}

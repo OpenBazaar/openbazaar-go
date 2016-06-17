@@ -153,6 +153,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
 	create table keys (key text primary key not null, scriptPubKey text, purpose integer, used integer);
 	create index keys_scriptPubKey ON keys(scriptPubKey);
+	create table transactions (txid text primary key not null, tx blob, height integer, state integer, timestamp integer, exchangeRate real, exchangeCurrency text);
+	create table coins (outpoint text primary key not null, value integer, scriptPubKey text);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

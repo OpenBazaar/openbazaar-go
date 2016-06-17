@@ -31,7 +31,7 @@ func (o *OfflineMessagesDB) Put(url string) error {
 	return nil
 }
 
-func (o *OfflineMessagesDB) Exists(url string) bool {
+func (o *OfflineMessagesDB) Has(url string) bool {
 	o.lock.Lock()
 	defer o.lock.Unlock()
 	stm := `select url from offlinemessages where url="` + url + `"`

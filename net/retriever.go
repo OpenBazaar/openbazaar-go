@@ -58,7 +58,7 @@ func (m *MessageRetriever) fetchPointers() {
 
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 	for p := range peerOut {
-		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Exists(p.Addrs[0].String()) {
+		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
 			// ipfs
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
 				go m.fetchIPFS(m.ctx, p.ID, p.Addrs[0])

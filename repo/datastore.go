@@ -14,6 +14,8 @@ type Datastore interface {
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
 	Keys() Keys
+	//Transactions() Transactions
+	//Coins() Coins
 	Close()
 }
 
@@ -63,16 +65,14 @@ type Following interface {
 }
 
 type OfflineMessages interface {
-
 	// Put a url from a retrieved message
 	Put(url string) error
 
 	// Does the given url exist in the db?
-	Exists(url string) bool
+	Has(url string) bool
 }
 
 type Pointers interface {
-
 	// Put a pointer to the database.
 	Put(p ipfs.Pointer) error
 
@@ -84,7 +84,6 @@ type Pointers interface {
 }
 
 type Keys interface {
-
 	// Put a bip32 key to the database
 	Put(key *b32.Key, scriptPubKey []byte, purpose bitcoin.KeyPurpose) error
 
@@ -97,4 +96,34 @@ type Keys interface {
 
 	// Given a scriptPubKey return the corresponding bip32 key
 	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
+}
+
+type Transactions interface {
+	// Put a new transaction to the database
+	Put(txinfo bitcoin.TransactionInfo) error
+
+	// Does the transaction already exist in the database?
+	Has(txid []byte) bool
+
+	// Fetch all transactions
+	GetAll() []bitcoin.TransactionInfo
+
+	// Update the transaction state
+	UpdateState(txid []byte, state bitcoin.TransactionState) error
+
+	// Update the transaction height. This should only be needed
+	// for newly confirmed transactions and reorgs.
+	UpdateHeight(txid []byte, height int) error
+}
+
+type Coins interface {
+	// Put a new coin (utxo) to the database
+	Put(bitcoin.Utxo) error
+
+	// Remove a coin from the database
+	Delete(txid []byte) error
+
+	// Fetch all coins from the db
+	// Useful for coin selection
+	GetAll() []bitcoin.Utxo
 }
