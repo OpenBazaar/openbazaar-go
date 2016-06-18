@@ -7,62 +7,62 @@ import (
 	"strconv"
 )
 
-var fdb FollowerDB
+var fldb FollowingDB
 
 func init(){
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	fdb = FollowerDB{
+	fldb = FollowingDB{
 		db: conn,
 		lock: new(sync.Mutex),
 	}
 }
 
-func TestPutFollower(t *testing.T) {
-	err := fdb.Put("abc")
+func TestPutFollowing(t *testing.T) {
+	err := fldb.Put("abc")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := fdb.db.Prepare("select peerID from followers where peerID=?")
+	stmt, err := fldb.db.Prepare("select peerID from following where peerID=?")
 	defer stmt.Close()
-	var follower string
-	err = stmt.QueryRow("abc").Scan(&follower)
+	var following string
+	err = stmt.QueryRow("abc").Scan(&following)
 	if err != nil {
 		t.Error(err)
 	}
-	if follower != "abc" {
-		t.Errorf(`Expected "abc" got %s`, follower)
+	if following != "abc" {
+		t.Errorf(`Expected "abc" got %s`, following)
 	}
 }
 
-func TestPutDuplicateFollower(t *testing.T) {
-	fdb.Put("abc")
-	err := fdb.Put("abc")
+func TestPutDuplicateFollowing(t *testing.T) {
+	fldb.Put("abc")
+	err := fldb.Put("abc")
 	if err == nil {
 		t.Error("Expected unquire constriant error to be thrown")
 	}
 }
 
-func TestCountFollowers(t *testing.T){
-	fdb.Put("abc")
-	fdb.Put("123")
-	fdb.Put("xyz")
-	x := fdb.Count()
+func TestCountFollowing(t *testing.T){
+	fldb.Put("abc")
+	fldb.Put("123")
+	fldb.Put("xyz")
+	x := fldb.Count()
 	if x != 3 {
 		t.Errorf("Expected 3 got %d", x)
 	}
-	fdb.Delete("abc")
-	fdb.Delete("123")
-	fdb.Delete("xyz")
+	fldb.Delete("abc")
+	fldb.Delete("123")
+	fldb.Delete("xyz")
 }
 
-func TestDeleteFollower(t *testing.T){
-	fdb.Put("abc")
-	err := fdb.Delete("abc")
+func TestDeleteFollowing(t *testing.T){
+	fldb.Put("abc")
+	err := fldb.Delete("abc")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := fdb.db.Prepare("select peerID from followers where peerID=?")
+	stmt, err := fldb.db.Prepare("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string
 	stmt.QueryRow("abc").Scan(&follower)
@@ -71,11 +71,11 @@ func TestDeleteFollower(t *testing.T){
 	}
 }
 
-func TestGetFollowers(t *testing.T){
+func TestGetFollowing(t *testing.T){
 	for i:=0; i<100; i++ {
-		fdb.Put(strconv.Itoa(i))
+		fldb.Put(strconv.Itoa(i))
 	}
-	followers, err := fdb.Get(0, 100)
+	followers, err := fldb.Get(0, 100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,7 +86,7 @@ func TestGetFollowers(t *testing.T){
 		}
 	}
 
-	followers, err = fdb.Get(30, 100)
+	followers, err = fldb.Get(30, 100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,7 +100,7 @@ func TestGetFollowers(t *testing.T){
 		t.Error("Incorrect number of followers returned")
 	}
 
-	followers, err = fdb.Get(30, 5)
+	followers, err = fldb.Get(30, 5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,5 +113,5 @@ func TestGetFollowers(t *testing.T){
 			t.Errorf("Returned %d expected %d", f, 69 - i)
 		}
 	}
-
 }
+
