@@ -9,9 +9,6 @@ before_install:
   - go get github.com/tcnksm/ghr
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
-  - go get -d github.com/ipfs/go-ipfs
-  - cd $GOPATH/src/github.com/ipfs/go-ipfs
-  - make install
   - go get -u github.com/whyrusleeping/gx
   - gx install
 script:
