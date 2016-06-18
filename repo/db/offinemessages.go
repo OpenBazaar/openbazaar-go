@@ -40,11 +40,7 @@ func (o *OfflineMessagesDB) Has(url string) bool {
 	var ret string
 	err = stmt.QueryRow(url).Scan(&ret)
 	if err != nil {
-		log.Fatal(err)
-	}
-	if ret == "" {
 		return false
-	} else {
-		return true
 	}
+	return true
 }

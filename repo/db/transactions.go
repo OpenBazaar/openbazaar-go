@@ -51,13 +51,9 @@ func (t *TransactionsDB) Has(txid []byte) bool {
 	var ret string
 	err = stmt.QueryRow(hex.EncodeToString(txid)).Scan(&ret)
 	if err != nil {
-		log.Fatal(err)
-	}
-	if ret == "" {
 		return false
-	} else {
-		return true
 	}
+	return true
 }
 
 func (t *TransactionsDB) GetAll() []bitcoin.TransactionInfo {

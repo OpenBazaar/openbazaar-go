@@ -93,14 +93,10 @@ func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
 	var key string
 	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&key)
 	if err != nil {
-		log.Fatal(err)
+		return nil, errors.New("Key not found")
 	}
 	b32key := &b32.Key{}
-	if key == "" {
-		return nil, errors.New("Key not found")
-	} else {
-		// FIXME: b32key := b32.Deserialize(key)
-	}
+	// FIXME: b32key := b32.Deserialize(key)
 	return b32key, nil
 }
 
