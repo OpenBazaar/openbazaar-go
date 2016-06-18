@@ -14,16 +14,11 @@ type FollowerDB struct {
 func (f *FollowerDB) Put(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	tx, err := f.db.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into followers(peerID) values(?)")
-	if err != nil {
-		return err
-	}
+	tx, _ := f.db.Begin()
+	stmt, _ := tx.Prepare("insert into followers(peerID) values(?)")
+
 	defer stmt.Close()
-	_, err = stmt.Exec(follower)
+	_, err := stmt.Exec(follower)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -35,18 +30,13 @@ func (f *FollowerDB) Put(follower string) error {
 func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	stm := "select peerID, used from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
-	rows, err := f.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
+	stm := "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	rows, _ := f.db.Query(stm)
+
 	var ret []string
 	for rows.Next() {
 		var peerID string
-		if err := rows.Scan(&peerID); err != nil {
-			log.Error(err)
-		}
+		rows.Scan(&peerID)
 		ret = append(ret, peerID)
 	}
 	return ret, nil
@@ -55,11 +45,7 @@ func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
 func (f *FollowerDB) Delete(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	_, err := f.db.Exec("delete from followers where peerID=?", follower)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
+	f.db.Exec("delete from followers where peerID=?", follower)
 	return nil
 }
 
