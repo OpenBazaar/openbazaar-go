@@ -18,19 +18,10 @@ type KeysDB struct {
 func (k *KeysDB) Put(key *b32.Key, scriptPubKey []byte, purpose bitcoin.KeyPurpose) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	tx, err := k.db.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare("insert into keys(key, scriptPubKey, purpose, used) values(?,?,?,?)")
-	if err != nil {
-		return err
-	}
+	tx, _ := k.db.Begin()
+	stmt, _ := tx.Prepare("insert into keys(key, scriptPubKey, purpose, used) values(?,?,?,?)")
 	defer stmt.Close()
-	if err != nil {
-		return err
-	}
-	_, err = stmt.Exec(key.String(), hex.EncodeToString(scriptPubKey), int(purpose), 0)
+	_, err := stmt.Exec(key.String(), hex.EncodeToString(scriptPubKey), int(purpose), 0)
 	if err != nil {
 		tx.Rollback()
 		return err
