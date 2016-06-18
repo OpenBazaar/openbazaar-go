@@ -10,6 +10,7 @@ before_install:
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
 script:
+  - make install
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
 after_success:
