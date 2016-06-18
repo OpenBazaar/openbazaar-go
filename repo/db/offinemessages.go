@@ -35,21 +35,14 @@ func (o *OfflineMessagesDB) Put(url string) error {
 func (o *OfflineMessagesDB) Has(url string) bool {
 	o.lock.Lock()
 	defer o.lock.Unlock()
-	stm := `select url from offlinemessages where url="` + url + `"`
-	rows, err := o.db.Query(stm)
+	stmt, err := o.db.Prepare("select url from offlinemessages where url=?")
+	defer stmt.Close()
+	var ret string
+	err = stmt.QueryRow(url).Scan(&ret)
 	if err != nil {
-		log.Error(err)
-		return false
+		log.Fatal(err)
 	}
-	var ret []string
-	for rows.Next() {
-		var url string
-		if err := rows.Scan(&url); err != nil {
-			log.Error(err)
-		}
-		ret = append(ret, url)
-	}
-	if len(ret) == 0 {
+	if ret == "" {
 		return false
 	} else {
 		return true

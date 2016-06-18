@@ -46,18 +46,12 @@ func (t *TransactionsDB) Put(txinfo bitcoin.TransactionInfo) error {
 func (t *TransactionsDB) Has(txid []byte) bool {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	stm := `select tx from transactions where txid="` + hex.EncodeToString(txid) + `"`
-	rows, err := t.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return false
-	}
+	stmt, err := t.db.Prepare("select txid from transactions where txid=?")
+	defer stmt.Close()
 	var ret string
-	for rows.Next() {
-		if err := rows.Scan(&ret); err != nil {
-			log.Error(err)
-		}
-		break
+	err = stmt.QueryRow(hex.EncodeToString(txid)).Scan(&ret)
+	if err != nil {
+		log.Fatal(err)
 	}
 	if ret == "" {
 		return false

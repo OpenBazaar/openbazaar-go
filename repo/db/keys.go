@@ -8,7 +8,6 @@ import (
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	b32 "github.com/tyler-smith/go-bip32"
-	"fmt"
 )
 
 type KeysDB struct {
@@ -64,54 +63,38 @@ func (k *KeysDB) MarkKeyAsUsed(key *b32.Key) error {
 func (k *KeysDB) GetLastKey(purpose bitcoin.KeyPurpose) (*b32.Key, bool, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
+
 	stm := "select key, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " order by rowid desc limit 1"
-	rows, err := k.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return nil, false, err
-	}
+	stmt, err := k.db.Prepare(stm)
+	defer stmt.Close()
 	var key string
 	var usedInt int
-	for rows.Next() {
-		if err := rows.Scan(&key, &usedInt); err != nil {
-			log.Error(err)
-		}
-		break
-
+	err = stmt.QueryRow().Scan(&key, &usedInt)
+	if err != nil {
+		return nil, false, nil
 	}
 	b32key := &b32.Key{}
 	var used bool
-	if key == "" {
-		return nil, false, nil
+	if usedInt == 0 {
+		used = false
 	} else {
-		if usedInt == 0 {
-			used = false
-		} else {
-			used = true
-		}
-		// FIXME: b32key := b32.Deserialize(key)
+		used = true
 	}
+	// FIXME: b32key := b32.Deserialize(key)
 	return b32key, used, nil
 }
 
 func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	stm := `select key from keys where scriptPubKey="` + hex.EncodeToString(scriptPubKey) + `"`
-	rows, err := k.db.Query(stm)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	var key string
-	for rows.Next() {
-		if err := rows.Scan(&key); err != nil {
-			log.Error(err)
-		}
-		break
 
+	stmt, err := k.db.Prepare("select key from keys where scriptPubKey=?")
+	defer stmt.Close()
+	var key string
+	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&key)
+	if err != nil {
+		log.Fatal(err)
 	}
-	fmt.Println(key)
 	b32key := &b32.Key{}
 	if key == "" {
 		return nil, errors.New("Key not found")
