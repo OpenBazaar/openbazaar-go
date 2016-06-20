@@ -134,6 +134,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	// Create profile file
 	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
 	defer func() {
@@ -152,10 +153,12 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		b, err := json.MarshalIndent(v, "", "    ")
 		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
 			fmt.Fprintf(w, `{"success": false, "reason": "JSON marshalling error: %s"}`, err)
 			return
 		}
 		if _, err := f.WriteString(string(b)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 			return
 		}
@@ -163,6 +166,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
@@ -179,12 +183,14 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	imgPath := path.Join(i.node.RepoPath, "root", "avatar")
 	out, err := os.Create(imgPath)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -195,11 +201,13 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, dec)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -217,12 +225,14 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&data)
 
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	imgPath := path.Join(i.node.RepoPath, "root", "header")
 	out, err := os.Create(imgPath)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -233,11 +243,13 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(out, dec)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -256,18 +268,21 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	var images []ImgData
 	err := decoder.Decode(&images)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	var imageHashes []string
 	for _, img := range images {
 		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
 		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Directory, img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
@@ -278,11 +293,13 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 
 		_, err = io.Copy(out, dec)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
 		hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
 		if aerr != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
 			return
 		}
@@ -290,6 +307,7 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonHashes, err := json.Marshal(imageHashes)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -303,17 +321,20 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	jsonpb.Unmarshal(r.Body, l)
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	contract, err := i.node.SignListing(l)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	f, err := os.Create(path.Join(listingPath, "listing.json"))
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -331,21 +352,25 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := m.MarshalToString(contract)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if _, err := f.WriteString(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	err = i.node.UpdateListingIndex(contract)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -361,10 +386,12 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	var data core.PurchaseData
 	err := decoder.Decode(&data)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	if err := i.node.Purchase(&data); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -403,12 +430,14 @@ func (i *restAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	peers, err := ipfs.ConnectedPeers(i.node.Context)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
@@ -424,10 +453,12 @@ func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 	var pid PeerId
 	err := decoder.Decode(&pid)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	if err := i.node.Follow(pid.ID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
@@ -443,10 +474,12 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	var pid PeerId
 	err := decoder.Decode(&pid)
 	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
 	if err := i.node.Unfollow(pid.ID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
@@ -463,6 +496,7 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	mn, err := i.node.Datastore.Config().GetMnemonic()
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 		return
 	}
