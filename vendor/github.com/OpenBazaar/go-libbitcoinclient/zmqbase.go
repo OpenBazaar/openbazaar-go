@@ -4,12 +4,14 @@ import (
 	"time"
 	"math/rand"
 	"encoding/binary"
+	"sync"
 	zmq "github.com/pebbe/zmq4"
 )
 const MAX_UNIT32 = 4294967295
 
 type ClientBase struct {
 	socket         *ZMQSocket
+	lock           *sync.Mutex
 	outstanding    map[int]outstanding
 	messages       [][]byte
 	handler        chan Response
@@ -24,12 +26,14 @@ type outstanding struct {
 
 func NewClientBase(address string, publicKey string) *ClientBase {
 	handler := make(chan Response)
+	l := new(sync.Mutex)
 	o := make(map[int]outstanding)
 	cb := ClientBase{
 		socket: NewSocket(handler, zmq.DEALER),
 		handler: handler,
 		outstanding: o,
 		messages: [][]byte{},
+		lock: l,
 	}
 	cb.socket.Connect(address, publicKey)
 	go cb.handleResponse()
@@ -47,10 +51,12 @@ func (cb *ClientBase) SendCommand(command string, data []byte, callback func(int
 
 	ticker := time.NewTicker(10 * time.Second)
 	c := make(chan interface{})
+	cb.lock.Lock()
 	cb.outstanding[txid] = outstanding{
 		callback: callback,
 		stop: c,
 	}
+	cb.lock.Unlock()
 	listen:
 		for {
 			select {
@@ -77,7 +83,9 @@ func (cb *ClientBase) messageReceived(command string, id, data []byte){
 	if _, ok := cb.outstanding[txid]; ok {
 		cb.outstanding[txid].stop <- ""
 		callback = cb.outstanding[txid].callback
+		cb.lock.Lock()
 		delete(cb.outstanding, txid)
+		cb.lock.Unlock()
 	}
 	cb.parser(command, data, callback)
 }
