@@ -36,6 +36,9 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/unfollow", "/ob/unfollow/":
 		i.POSTUnfollow(w, r)
 		return
+	case "/ob/profile", "/ob/profile/":
+		i.PUTProfile(w, r) // POST and PUT are the same here
+		return
 	}
 }
 
