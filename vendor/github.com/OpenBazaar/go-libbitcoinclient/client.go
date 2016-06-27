@@ -7,6 +7,7 @@ import (
 	"time"
 	"reflect"
 	"strings"
+	"sync"
 	"encoding/binary"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -33,6 +34,8 @@ type LibbitcoinClient struct {
 	ServerIndex      int
 	Params           *chaincfg.Params
 	subscriptions    map[string]subscription
+	connectionTime   time.Time
+	lock             *sync.Mutex
 }
 
 type subscription struct {
@@ -44,12 +47,15 @@ func NewLibbitcoinClient(servers []Server, params *chaincfg.Params) *LibbitcoinC
 	r := rand.Intn(len(servers))
 	cb := NewClientBase(servers[r].Url, servers[r].PublicKey)
 	subs := make(map[string]subscription)
+	l := new(sync.Mutex)
 	client := LibbitcoinClient{
 		ClientBase: cb,
 		ServerList: servers,
 		ServerIndex: r,
 		Params: params,
 		subscriptions: subs,
+		connectionTime: time.Now(),
+		lock: l,
 	}
 	cb.parser = client.Parse
 	cb.timeout = client.RotateServer
@@ -60,14 +66,19 @@ func NewLibbitcoinClient(servers []Server, params *chaincfg.Params) *LibbitcoinC
 }
 
 func (l *LibbitcoinClient) RotateServer(){
-	currentUrl := l.ServerList[l.ServerIndex].Url
-	l.ServerIndex = (l.ServerIndex + 1) % len(l.ServerList)
-	l.ClientBase.socket.ChangeEndpoint(currentUrl, l.ServerList[l.ServerIndex].Url, l.ServerList[l.ServerIndex].PublicKey)
-	for k, v := range(l.subscriptions){
-		addr, _ := btc.DecodeAddress(k, l.Params)
-		l.SubscribeAddress(addr, v.callback)
+	if time.Now().Sub(l.connectionTime) > time.Second * 30 {
+		currentUrl := l.ServerList[l.ServerIndex].Url
+		l.ServerIndex = (l.ServerIndex + 1) % len(l.ServerList)
+		l.ClientBase.socket.ChangeEndpoint(currentUrl, l.ServerList[l.ServerIndex].Url, l.ServerList[l.ServerIndex].PublicKey)
+		l.lock.Lock()
+		for k, v := range (l.subscriptions) {
+			addr, _ := btc.DecodeAddress(k, l.Params)
+			l.SubscribeAddress(addr, v.callback)
+		}
+		l.lock.Unlock()
+		l.connectionTime = time.Now()
+		log.Infof("Rotating libbitcoin server, using %s\n", l.ServerList[l.ServerIndex].Url)
 	}
-	log.Infof("Rotating libbitcoin server, using %s\n", l.ServerList[l.ServerIndex].Url)
 }
 
 func (l *LibbitcoinClient) ListenHeartbeat() {
@@ -103,12 +114,14 @@ func(l *LibbitcoinClient) renewSubscriptions(){
 		for {
 			select {
 			case <- ticker.C:
+				l.lock.Lock()
 				for k, v := range(l.subscriptions){
 					if v.expiration.After(time.Now()){
 						addr, _ := btc.DecodeAddress(k, l.Params)
 						l.RenewSubscription(addr, v.callback)
 					}
 				}
+				l.lock.Unlock()
 			}
 		}
 	}()
@@ -163,17 +176,21 @@ func (l *LibbitcoinClient) SubscribeAddress(address btc.Address, callback func(i
 	req = append(req, byte(160))
 	req = append(req, address.ScriptAddress()...)
 	go l.SendCommand("address.subscribe", req, nil)
-	l.subscriptions[address.String()] = subscription{
+	l.lock.Lock()
+	l.subscriptions[address.String()] = subscription {
 		expiration: time.Now().Add(24 * time.Hour),
 		callback: callback,
 	}
+	l.lock.Unlock()
 }
 
 func (l *LibbitcoinClient) UnsubscribeAddress(address btc.Address){
+	l.lock.Lock()
 	_, ok := l.subscriptions[address.String()]
 	if ok {
 		delete(l.subscriptions, address.String())
 	}
+	l.lock.Unlock()
 }
 
 func (l *LibbitcoinClient) RenewSubscription(address btc.Address, callback func(interface{})) {
@@ -182,10 +199,12 @@ func (l *LibbitcoinClient) RenewSubscription(address btc.Address, callback func(
 	req = append(req, byte(160))
 	req = append(req, address.ScriptAddress()...)
 	go l.SendCommand("address.renew", req, nil)
+	l.lock.Lock()
 	l.subscriptions[address.String()] = subscription{
 		expiration: time.Now().Add(24 * time.Hour),
 		callback: callback,
 	}
+	l.lock.Unlock()
 }
 
 func (l *LibbitcoinClient) Broadcast(tx []byte, callback func(interface{}, error)) {
@@ -259,7 +278,9 @@ func (l *LibbitcoinClient) Parse(command string, data []byte, callback func(inte
 			Block: bl.String(),
 			Tx: *txn,
 		}
+		l.lock.Lock()
 		l.subscriptions[addr.String()].callback(resp)
+		l.lock.Unlock()
 	case "protocol.broadcast_transaction":
 		callback(nil, ParseError(data[:4]))
 	case "transaction_pool.validate":

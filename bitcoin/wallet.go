@@ -13,6 +13,9 @@ type BitcoinWallet interface {
 	GetMasterPublicKey() *b32.Key
 	GetCurrentAddress(purpose KeyPurpose) *btc.AddressPubKeyHash
 	GetFreshAddress(purpose KeyPurpose) *btc.AddressPubKeyHash
+
+	// Wallet
+	GetBalance() uint64
 }
 
 type KeyPurpose int

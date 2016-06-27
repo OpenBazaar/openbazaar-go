@@ -73,6 +73,8 @@ func (w *LibbitcoinWallet) ProcessTransaction(tx *btc.Tx, height uint32) {
 	} else {
 		if height > 0 {
 			w.db.Transactions().UpdateState(txid, bitcoin.CONFIRMED)
+		} else {
+			w.db.Transactions().UpdateState(txid, bitcoin.PENDING)
 		}
 		w.db.Transactions().UpdateHeight(txid, int(height))
 	}

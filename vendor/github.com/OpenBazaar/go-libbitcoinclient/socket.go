@@ -80,9 +80,11 @@ func (s *ZMQSocket) Close() {
 }
 
 func (s *ZMQSocket) ChangeEndpoint(current, newUrl, newPublicKey string){
-	s.socket.Disconnect(current)
-	s.socket.Connect(newUrl)
-	if newPublicKey != "" {
-		s.socket.SetCurveServerkey(newPublicKey)
+	if current != newUrl {
+		s.socket.Disconnect(current)
+		s.socket.Connect(newUrl)
+		if newPublicKey != "" {
+			s.socket.SetCurveServerkey(newPublicKey)
+		}
 	}
 }

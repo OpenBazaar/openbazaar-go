@@ -59,4 +59,8 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETMnemonic(w, r)
 		return
 	}
+	if strings.Contains(path, "/wallet/balance") {
+		i.GETBalance(w, r)
+		return
+	}
 }
