@@ -64,14 +64,16 @@ func (k *KeysDB) GetLastKey(purpose bitcoin.KeyPurpose) (*b32.Key, bool, error) 
 	if err != nil {
 		return nil, false, nil
 	}
-	b32key := &b32.Key{}
 	var used bool
 	if usedInt == 0 {
 		used = false
 	} else {
 		used = true
 	}
-	// FIXME: b32key := b32.Deserialize(key)
+	b32key, err := b32.B58Deserialize(key)
+	if err != nil {
+		return nil, used, err
+	}
 	return b32key, used, nil
 }
 
@@ -86,8 +88,10 @@ func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
 	if err != nil {
 		return nil, errors.New("Key not found")
 	}
-	b32key := &b32.Key{}
-	// FIXME: b32key := b32.Deserialize(key)
+	b32key, err := b32.B58Deserialize(key)
+	if err != nil {
+		return nil, err
+	}
 	return b32key, nil
 }
 

@@ -59,6 +59,10 @@ func base58Encode(data []byte) []byte {
 	return []byte(BitcoinBase58Encoding.EncodeToString(data))
 }
 
+func base58Decode(data string) ([]byte, error) {
+	return BitcoinBase58Encoding.DecodeString(data)
+}
+
 // Keys
 func publicKeyForPrivateKey(key []byte) []byte {
 	return compressPublicKey(curve.ScalarBaseMult([]byte(key)))

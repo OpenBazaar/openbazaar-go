@@ -778,7 +778,7 @@
 		},
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip32",
-			"Rev": "1f9494efd1fa025d581aaa8530a0986c5c4937a3"
+			"Rev": "0dddba8f2dd3e88cc90f40a81d12ff2301efb5fa"
 		},
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip39",

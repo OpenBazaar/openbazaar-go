@@ -170,6 +170,46 @@ func (key *Key) String() string {
 	return string(base58Encode(key.Serialize()))
 }
 
+// Deserialize a byte slice into a Key
+func Deserialize(data []byte) (*Key, error) {
+	if len(data) != 82 {
+		return nil, errors.New("Serialized keys should by exactly 82 bytes")
+	}
+	var key = &Key{}
+	key.Version = data[0:4]
+	key.Depth = data[4]
+	key.ChildNumber = data[5:9]
+	key.FingerPrint = data[9:13]
+	key.ChainCode = data[13:45]
+
+	if data[45] == byte(0) {
+		key.IsPrivate = true
+		key.Key = data[46:78]
+	} else {
+		key.IsPrivate = false
+		key.Key = data[45:78]
+	}
+
+	// validate checksum
+	cs1 := checksum(data[0: len(data) - 4])
+	cs2 := data[len(data) - 4: len(data)]
+	for i := range cs1 {
+		if cs1[i] != cs2[i] {
+			return nil, errors.New("Checksum doesn't match")
+		}
+	}
+	return key, nil
+}
+
+// Deserialize a Key encoded in base58 encoding
+func B58Deserialize(data string) (*Key, error) {
+	b, err := base58Decode(data)
+	if err != nil {
+		return nil, err
+	}
+	return Deserialize(b)
+}
+
 // Cryptographically secure seed
 func NewSeed() ([]byte, error) {
 	// Well that easy, just make go read 256 random bytes into a slice
