@@ -178,8 +178,8 @@ func Deserialize(data []byte) (*Key, error) {
 	var key = &Key{}
 	key.Version = data[0:4]
 	key.Depth = data[4]
-	key.ChildNumber = data[5:9]
-	key.FingerPrint = data[9:13]
+	key.FingerPrint = data[5:9]
+	key.ChildNumber = data[9:13]
 	key.ChainCode = data[13:45]
 
 	if data[45] == byte(0) {

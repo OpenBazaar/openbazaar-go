@@ -3,6 +3,7 @@ package libbitcoin
 import (
 	btc "github.com/btcsuite/btcutil"
 	b32 "github.com/tyler-smith/go-bip32"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"encoding/binary"
 )
@@ -27,13 +28,17 @@ func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	if key == nil { // No keys in this chain have been generated yet. Let's generate key 0.
 		childKey := w.generateChildKey(purpose, 0)
 		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
-		w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
+		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
+		w.db.Keys().Put(childKey, script, purpose)
+		w.SubscribeAddress(addr.AddressPubKeyHash())
 		return childKey
 	} else if used { // The last key in the chain has been used. Let's generated a new key and save it in the db.
 		index := binary.BigEndian.Uint32(key.ChildNumber)
 		childKey := w.generateChildKey(purpose, index + 1)
 		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
-		w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
+		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
+		w.db.Keys().Put(childKey, script, purpose)
+		w.SubscribeAddress(addr.AddressPubKeyHash())
 		return childKey
 	} else { // The last key in the chain is unused so let's just return it.
 		return key
@@ -45,7 +50,9 @@ func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	index := binary.BigEndian.Uint32(key.ChildNumber)
 	childKey := w.generateChildKey(purpose, index + 1)
 	addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
-	w.db.Keys().Put(childKey, addr.ScriptAddress(), purpose)
+	script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
+	w.db.Keys().Put(childKey, script, purpose)
+	w.SubscribeAddress(addr.AddressPubKeyHash())
 	return childKey
 }
 

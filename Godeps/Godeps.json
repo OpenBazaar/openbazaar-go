@@ -18,9 +18,19 @@
 			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
 		},
 		{
+			"ImportPath": "github.com/btcsuite/btcd/txscript",
+			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
+			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
+		},
+		{
 			"ImportPath": "github.com/btcsuite/btcd/wire",
 			"Comment": "BTCD_0_12_0_BETA-88-g0d7f526",
 			"Rev": "0d7f52660096c5a22f2cb95c102e0693f773a593"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btclog",
+			"Comment": "BTCLOG_0_0_3-6-gf96df23",
+			"Rev": "f96df2375f37300305f329b8e5258764b4f19a7f"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil",
@@ -41,12 +51,45 @@
 			"Rev": "53f62d9b43e87a6c56975cf862af7edf33a8d0df"
 		},
 		{
+			"ImportPath": "github.com/btcsuite/seelog",
+			"Comment": "v2.1-84-g313961b",
+			"Rev": "313961b101eb55f65ae0f03ddd4e322731763b6c"
+		},
+		{
 			"ImportPath": "github.com/ccding/go-stun/stun",
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
 		},
 		{
 			"ImportPath": "github.com/cmars/basen",
 			"Rev": "fe3947df716ebfda9847eb1b9a48f9592e06478c"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/apierror",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/async",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/files",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/sharing",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/team",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/users",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/jsonpb",
@@ -778,7 +821,7 @@
 		},
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip32",
-			"Rev": "0dddba8f2dd3e88cc90f40a81d12ff2301efb5fa"
+			"Rev": "a961ffc016d0eabea1e37d4d82d1c357bccc3674"
 		},
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip39",
@@ -803,6 +846,14 @@
 		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "65a8d08c6292395d47053be10b3c5e91960def76"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/internal",
+			"Rev": "65a8d08c6292395d47053be10b3c5e91960def76"
 		},
 		{
 			"ImportPath": "gx/ipfs/QmNLvkCDV6ZjUJsEwGNporYBuZdhWT6q7TBVYQwwRv12HT/go-nat",

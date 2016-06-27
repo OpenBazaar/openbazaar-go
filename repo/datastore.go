@@ -96,6 +96,9 @@ type Keys interface {
 
 	// Given a scriptPubKey return the corresponding bip32 key
 	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
+
+	// Fetch all keys from the database
+	GetAll() ([]*b32.Key, error)
 }
 
 type Transactions interface {
@@ -120,10 +123,16 @@ type Coins interface {
 	// Put a new coin (utxo) to the database
 	Put(bitcoin.Utxo) error
 
+	// Does the outpoint exist in the database?
+	Has(txid []byte, index int) bool
+
 	// Remove a coin from the database
 	Delete(txid []byte, index int) error
 
 	// Fetch all coins from the db
 	// Useful for coin selection
 	GetAll() []bitcoin.Utxo
+
+	// Get the value associated with a utxo
+	GetValue(txid []byte, index int) (int, error)
 }

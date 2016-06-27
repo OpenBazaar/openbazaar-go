@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"strconv"
 	"strings"
+	"errors"
 )
 
 type CoinsDB struct {
@@ -38,6 +39,20 @@ func (c *CoinsDB) Put(utxo bitcoin.Utxo) error {
 	}
 	tx.Commit()
 	return nil
+}
+
+func (c *CoinsDB) Has(txid []byte, index int) bool {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	stmt, err := c.db.Prepare("select outpoint from coins where outpoint=?")
+	defer stmt.Close()
+	outpoint := hex.EncodeToString(txid) + ":" + strconv.Itoa(index)
+	var ret string
+	err = stmt.QueryRow(outpoint).Scan(&ret)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (c *CoinsDB) Delete(txid []byte, index int) error {
@@ -95,4 +110,19 @@ func (c *CoinsDB) GetAll() []bitcoin.Utxo {
 		})
 	}
 	return ret
+}
+
+func (c *CoinsDB) GetValue(txid []byte, index int) (int, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	stmt, err := c.db.Prepare("select value from coins where outpoint=?")
+	defer stmt.Close()
+	outpoint := hex.EncodeToString(txid) + ":" + strconv.Itoa(index)
+	var value int
+	err = stmt.QueryRow(outpoint).Scan(&value)
+	if err != nil {
+		return 0, errors.New("Coin not found")
+	}
+	return value, nil
 }

@@ -37,7 +37,7 @@ func (k *KeysDB) MarkKeyAsUsed(key *b32.Key) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update keys set used = 1 where key=?")
+	stmt, err := tx.Prepare("update keys set used=1 where key=?")
 	if err != nil {
 		return err
 	}
@@ -95,3 +95,26 @@ func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
 	return b32key, nil
 }
 
+func (k *KeysDB) GetAll() ([]*b32.Key, error) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	var ret []*b32.Key
+	stm := "select key from keys"
+	rows, err := k.db.Query(stm)
+	if err != nil {
+		log.Error(err)
+		return ret, err
+	}
+	for rows.Next() {
+		var serializedKey string
+		if err := rows.Scan(&serializedKey); err != nil {
+			log.Error(err)
+		}
+		b32key, err := b32.B58Deserialize(serializedKey)
+		if err != nil {
+			return ret, err
+		}
+		ret = append(ret, b32key)
+	}
+	return ret, nil
+}
