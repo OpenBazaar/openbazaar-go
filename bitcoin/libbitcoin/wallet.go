@@ -58,7 +58,7 @@ func (w *LibbitcoinWallet) startUpdateLoop() {
 // For each returned txid, fetch the full transaction, checking the mempool first then the blockchain.
 // If a transaction is returned well will parse it and check to see if we need to update our wallet state.
 func (w *LibbitcoinWallet) updateWalletBalances() {
-	keys, _ := w.db.Keys().GetAll()
+	keys, _ := w.db.Keys().GetAllExternal()
 	for _, k := range(keys) {
 		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.Params)
 		// FIXME: we don't want to fetch from height zero every time. Ideally it would use the height of the last
@@ -88,7 +88,7 @@ func (w *LibbitcoinWallet) updateWalletBalances() {
 }
 
 func (w *LibbitcoinWallet) subscribeAll() {
-	keys, _ := w.db.Keys().GetAll()
+	keys, _ := w.db.Keys().GetAllExternal()
 	for _, k := range(keys) {
 		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.Params)
 		w.Client.SubscribeAddress(addr.AddressPubKeyHash(), func(i interface{}){

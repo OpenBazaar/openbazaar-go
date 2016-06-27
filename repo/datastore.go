@@ -97,8 +97,8 @@ type Keys interface {
 	// Given a scriptPubKey return the corresponding bip32 key
 	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
 
-	// Fetch all keys from the database
-	GetAll() ([]*b32.Key, error)
+	// Fetch all external keys
+	GetAllExternal() ([]*b32.Key, error)
 }
 
 type Transactions interface {

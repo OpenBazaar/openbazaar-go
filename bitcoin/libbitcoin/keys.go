@@ -30,7 +30,9 @@ func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
 		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 		w.db.Keys().Put(childKey, script, purpose)
-		w.SubscribeAddress(addr.AddressPubKeyHash())
+		if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
+			w.SubscribeAddress(addr.AddressPubKeyHash())
+		}
 		return childKey
 	} else if used { // The last key in the chain has been used. Let's generated a new key and save it in the db.
 		index := binary.BigEndian.Uint32(key.ChildNumber)
@@ -38,7 +40,9 @@ func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
 		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 		w.db.Keys().Put(childKey, script, purpose)
-		w.SubscribeAddress(addr.AddressPubKeyHash())
+		if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
+			w.SubscribeAddress(addr.AddressPubKeyHash())
+		}
 		return childKey
 	} else { // The last key in the chain is unused so let's just return it.
 		return key
@@ -52,7 +56,9 @@ func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
 	script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 	w.db.Keys().Put(childKey, script, purpose)
-	w.SubscribeAddress(addr.AddressPubKeyHash())
+	if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
+		w.SubscribeAddress(addr.AddressPubKeyHash())
+	}
 	return childKey
 }
 

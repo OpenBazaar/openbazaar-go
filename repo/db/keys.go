@@ -95,11 +95,11 @@ func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
 	return b32key, nil
 }
 
-func (k *KeysDB) GetAll() ([]*b32.Key, error) {
+func (k *KeysDB) GetAllExternal() ([]*b32.Key, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ret []*b32.Key
-	stm := "select key from keys"
+	stm := "select key from keys where purpose=0 or purpose=2"
 	rows, err := k.db.Query(stm)
 	if err != nil {
 		log.Error(err)
