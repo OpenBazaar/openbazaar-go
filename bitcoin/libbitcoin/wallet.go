@@ -14,17 +14,25 @@ import (
 var log = logging.MustGetLogger("LibitcoinWallet")
 
 type LibbitcoinWallet struct {
-	Client *libbitcoin.LibbitcoinClient
+	Client           *libbitcoin.LibbitcoinClient
 
-	Params *chaincfg.Params
+	Params           *chaincfg.Params
 
 	masterPrivateKey *b32.Key
 	masterPublicKey  *b32.Key
 
-	db repo.Datastore
+	maxFee           uint64
+	priorityFee      uint64
+	normalFee        uint64
+	economicFee      uint64
+	feeAPI           string
+
+	db               repo.Datastore
 }
 
-func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datastore, servers []libbitcoin.Server) *LibbitcoinWallet {
+func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datastore, servers []libbitcoin.Server,
+	maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi string) *LibbitcoinWallet {
+
 	seed := b39.NewSeed(mnemonic, "")
 	mk, _ := b32.NewMasterKey(seed)
 	l := new(LibbitcoinWallet)
@@ -33,6 +41,11 @@ func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datas
 	l.Params = params
 	l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
 	l.db = db
+	l.maxFee = maxFee
+	l.priorityFee = highFee
+	l.normalFee = mediumFee
+	l.economicFee = lowFee
+	l.feeAPI = feeApi
 	go l.startUpdateLoop()
 	go l.subscribeAll()
 	return l

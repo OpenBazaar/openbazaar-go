@@ -274,7 +274,22 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, sqliteDB, libbitcoinServers)
+	maxFee, err := repo.GetMaxFee(path.Join(expPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	feeApi, err := repo.GetFeeAPI(path.Join(expPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	low, medium, high, err := repo.GetDefaultFees(path.Join(expPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, sqliteDB, libbitcoinServers, maxFee, low, medium, high, feeApi)
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
