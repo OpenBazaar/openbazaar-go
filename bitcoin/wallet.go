@@ -15,7 +15,7 @@ type BitcoinWallet interface {
 	GetFreshAddress(purpose KeyPurpose) *btc.AddressPubKeyHash
 
 	// Wallet
-	GetBalance() uint64
+	GetBalance() (unconfirmed uint64, confirmed uint64)
 }
 
 type KeyPurpose int
@@ -57,3 +57,11 @@ type Utxo struct {
 	Value        int
 	ScriptPubKey []byte
 }
+
+type FeeLevel int
+
+const (
+	PRIOIRTY = 0
+	NORMAL   = 1
+	ECONOMIC = 2
+)

@@ -99,6 +99,19 @@ func (t *TransactionsDB) GetAll() []bitcoin.TransactionInfo {
 	return ret
 }
 
+func (t *TransactionsDB) GetHeight(txid []byte) (int, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	stmt, err := t.db.Prepare("select height from transactions where txid=?")
+	defer stmt.Close()
+	var ret int
+	err = stmt.QueryRow(hex.EncodeToString(txid)).Scan(&ret)
+	if err != nil {
+		return 0, err
+	}
+	return ret, nil
+}
+
 func (t *TransactionsDB) UpdateState(txid []byte, state bitcoin.TransactionState) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()

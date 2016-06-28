@@ -2,6 +2,7 @@ package libbitcoin
 
 import (
 	zmq "github.com/pebbe/zmq4"
+	"github.com/anacrolix/sync"
 )
 
 type ZMQSocket struct {
@@ -10,6 +11,7 @@ type ZMQSocket struct {
 	callback   chan Response
 	publicKey  string
 	secretKey  string
+	lock       *sync.Mutex
 }
 
 type Response struct {
@@ -19,11 +21,13 @@ type Response struct {
 
 func NewSocket(cb chan Response, socketType zmq.Type) *ZMQSocket {
 	pub, secret, _ := zmq.NewCurveKeypair()
+	l := new(sync.Mutex)
 	socket := ZMQSocket{
 		socketType: socketType,
 		publicKey: pub,
 		secretKey: secret,
 		callback: cb,
+		lock: l,
 	}
 	return &socket
 }
@@ -72,7 +76,9 @@ func (s *ZMQSocket) poll() {
 }
 
 func (s *ZMQSocket) Send(data []byte, flag zmq.Flag) {
+	s.lock.Lock()
 	s.socket.SendBytes(data, flag)
+	s.lock.Unlock()
 }
 
 func (s *ZMQSocket) Close() {
@@ -80,6 +86,7 @@ func (s *ZMQSocket) Close() {
 }
 
 func (s *ZMQSocket) ChangeEndpoint(current, newUrl, newPublicKey string){
+	s.lock.Lock()
 	if current != newUrl {
 		s.socket.Disconnect(current)
 		s.socket.Connect(newUrl)
@@ -87,4 +94,5 @@ func (s *ZMQSocket) ChangeEndpoint(current, newUrl, newPublicKey string){
 			s.socket.SetCurveServerkey(newPublicKey)
 		}
 	}
+	s.lock.Unlock()
 }

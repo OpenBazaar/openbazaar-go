@@ -111,6 +111,9 @@ type Transactions interface {
 	// Fetch all transactions
 	GetAll() []bitcoin.TransactionInfo
 
+	// Fetch the height of a tx
+	GetHeight(txid []byte) (int, error)
+
 	// Update the transaction state
 	UpdateState(txid []byte, state bitcoin.TransactionState) error
 

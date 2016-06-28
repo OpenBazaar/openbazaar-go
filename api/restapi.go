@@ -505,6 +505,6 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	satoshis := i.node.Wallet.GetBalance()
-	fmt.Fprintf(w, `{"satoshis": "%d"}`, int(satoshis))
+	unconfirmed, confirmed := i.node.Wallet.GetBalance()
+	fmt.Fprintf(w, `{"unconfirmed": "%d", "confirmed": "%d"}`, int(unconfirmed), int(confirmed))
 }

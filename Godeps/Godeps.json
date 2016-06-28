@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-libbitcoinclient",
-			"Rev": "7f3216a0bff758e448f974abc207b8314af12427"
+			"Rev": "846e083087ef46ce3305aca94819c867a5ce8673"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcec",
@@ -39,6 +39,11 @@
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/base58",
+			"Comment": "BTCUTIL_0_5_0-7-g2c26dd8",
+			"Rev": "2c26dd81a59fd671a2218d63ad138a6dd4d693bd"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/coinset",
 			"Comment": "BTCUTIL_0_5_0-7-g2c26dd8",
 			"Rev": "2c26dd81a59fd671a2218d63ad138a6dd4d693bd"
 		},

@@ -1,10 +1,17 @@
 package libbitcoin
 
-func (w *LibbitcoinWallet) GetBalance() uint64 {
+func (w *LibbitcoinWallet) GetBalance() (unconfirmed uint64, confirmed uint64) {
 	coins := w.db.Coins().GetAll()
-	var value uint64
 	for _, c := range(coins) {
-		value += uint64(c.Value)
+		height, err := w.db.Transactions().GetHeight(c.Txid)
+		if err != nil {
+			continue
+		}
+		if height == 0 {
+			unconfirmed += uint64(c.Value)
+		} else {
+			confirmed += uint64(c.Value)
+		}
 	}
-	return value
+	return unconfirmed, confirmed
 }

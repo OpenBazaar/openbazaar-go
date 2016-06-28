@@ -43,7 +43,7 @@ func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datas
 // correctly returning Subscribe data, then we will pick up missing transactions
 // when this loops through.
 func (w *LibbitcoinWallet) startUpdateLoop() {
-	tick := time.NewTicker(time.Hour * 24)
+	tick := time.NewTicker(time.Hour)
 	defer tick.Stop()
 	go w.updateWalletBalances()
 	for {
