@@ -178,7 +178,23 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 			{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
 		}
 	}
-	if err := extendConfigFile(r, "LibbitcoinServers", ls); err != nil {
+	type Wallet struct {
+		LibbitcoinServers []Server
+		MaxFee            int
+		FeeAPI            string
+		HighFeeDefault    int
+		MediumFeeDefault  int
+		LowFeeDefault     int
+	}
+	var w Wallet = Wallet{
+		LibbitcoinServers: ls,
+		MaxFee: 1500000,
+		FeeAPI: "https://bitcoinfees.21.co/api/v1/fees/recommended",
+		HighFeeDefault: 60,
+		MediumFeeDefault: 40,
+		LowFeeDefault: 20,
+	}
+	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Resolver", "https://resolver.onename.com/"); err != nil {

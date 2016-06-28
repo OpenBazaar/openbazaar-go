@@ -9,6 +9,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/fastsha256"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/tyler-smith/go-bip32"
 )
 
 type Coin struct {
@@ -38,20 +39,29 @@ func NewCoin(index int64, value btcutil.Amount, numConfs int64) coinset.Coin {
 	return coinset.Coin(c)
 }
 
-func (w *LibbitcoinWallet) gatherCoins() []coinset.Coin {
+func (w *LibbitcoinWallet) gatherCoins() map[coinset.Coin]*bip32.Key {
 	utxos := w.db.Coins().GetAll()
-	var coins []coinset.Coin
+	m := make(map[coinset.Coin]*bip32.Key)
 	for _, u := range(utxos) {
 		c := NewCoin(int64(u.Index), btcutil.Amount(int64(u.Value)), 0)
-		coins = append(coins, c)
+		key, err := w.db.Keys().GetKeyForScript(u.ScriptPubKey)
+		if err != nil {
+			continue
+		}
+		m[c] = key
 	}
-	return coins
+	return m
 }
 
 // TODO: unfinished
 func (w *LibbitcoinWallet) Send(amount int64, addr btcutil.Address, fee bitcoin.FeeLevel) error {
 	coinSelector := coinset.MinNumberCoinSelector{MaxInputs: 10000, MinChangeAmount: 10000}
-	_, err := coinSelector.CoinSelect(btcutil.Amount(amount), w.gatherCoins())
+	coinMap := w.gatherCoins()
+	coins := make([]coinset.Coin, 0, len(coinMap))
+	for k := range coinMap {
+		coins = append(coins, k)
+	}
+	_, err := coinSelector.CoinSelect(btcutil.Amount(amount), coins)
 	if err != nil {
 		return err
 	}

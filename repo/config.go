@@ -28,7 +28,8 @@ func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	for _, s := range cfg.(map[string]interface{})["LibbitcoinServers"].([]interface{}) {
+	wallet := cfg.(map[string]interface{})["Wallet"]
+	for _, s := range wallet.(map[string]interface{})["LibbitcoinServers"].([]interface{}) {
 		encodedKey := s.(map[string]interface{})["PublicKey"].(string)
 		if encodedKey != "" {
 			b, _ := base64.StdEncoding.DecodeString(encodedKey)
@@ -41,6 +42,48 @@ func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
 		servers = append(servers, server)
 	}
 	return servers, nil
+}
+
+func GetFeeAPI(cfgPath string) (string, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	wallet := cfg.(map[string]interface{})["Wallet"]
+	feeAPI := wallet.(map[string]interface{})["FeeAPI"].(string)
+	return feeAPI, nil
+}
+
+func GetDefaultFees(cfgPath string) (Low uint64, Medium uint64, High uint64, err error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	ret := uint64(0)
+	if err != nil {
+		return ret, ret, ret, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	wallet := cfg.(map[string]interface{})["Wallet"]
+	low := wallet.(map[string]interface{})["LowFeeDefault"].(float64)
+	medium := wallet.(map[string]interface{})["MediumFeeDefault"].(float64)
+	high := wallet.(map[string]interface{})["HighFeeDefault"].(float64)
+	return uint64(low), uint64(medium), uint64(high), nil
+}
+
+func GetMaxFee(cfgPath string) (uint64, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return 0, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	wallet := cfg.(map[string]interface{})["Wallet"]
+	maxFee := wallet.(map[string]interface{})["MaxFee"].(float64)
+	return uint64(maxFee), nil
 }
 
 func GetDropboxApiToken(cfgPath string) (string, error) {
