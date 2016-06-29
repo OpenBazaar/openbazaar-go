@@ -84,7 +84,6 @@ func (w *LibbitcoinWallet) updateWalletBalances() {
 						w.Client.FetchTransaction(response.TxHash, func(i interface{}, err error) {
 							if err != nil {
 								log.Error(err.Error())
-
 							} else {
 								tx := i.(*btc.Tx)
 								w.ProcessTransaction(tx, response.Height)

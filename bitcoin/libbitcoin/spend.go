@@ -35,11 +35,11 @@ func (c *Coin) PkScript() []byte      { return c.ScriptPubKey }
 func (c *Coin) NumConfs() int64       { return c.TxNumConfs }
 func (c *Coin) ValueAge() int64       { return int64(c.TxValue) * c.TxNumConfs }
 
-func NewCoin(txid []byte, index int64, value btc.Amount, numConfs int64, scriptPubKey []byte) coinset.Coin {
+func NewCoin(txid []byte, index uint32, value btc.Amount, numConfs int64, scriptPubKey []byte) coinset.Coin {
 	shaTxid, _ := wire.NewShaHash(txid)
 	c := &Coin{
 		TxHash:       shaTxid,
-		TxIndex:      0,
+		TxIndex:      index,
 		TxValue:      value,
 		TxNumConfs:   numConfs,
 		ScriptPubKey: scriptPubKey,
@@ -52,7 +52,7 @@ func (w *LibbitcoinWallet) gatherCoins() map[coinset.Coin]*bip32.Key {
 	m := make(map[coinset.Coin]*bip32.Key)
 	for _, u := range(utxos) {
 		sha, _ := wire.NewShaHashFromStr(hex.EncodeToString(u.Txid))
-		c := NewCoin(sha.Bytes(), int64(u.Index), btc.Amount(int64(u.Value)), 0, u.ScriptPubKey)
+		c := NewCoin(sha.Bytes(), uint32(u.Index), btc.Amount(int64(u.Value)), 0, u.ScriptPubKey)
 		key, err := w.db.Keys().GetKeyForScript(u.ScriptPubKey)
 		if err != nil {
 			continue
@@ -152,7 +152,6 @@ func (w *LibbitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel bitcoi
 
 	serializedTx := new(bytes.Buffer)
 	authoredTx.Tx.Serialize(serializedTx)
-	log.Notice(hex.EncodeToString(serializedTx.Bytes()))
 	w.Client.Broadcast(serializedTx.Bytes(), func(i interface{}, err error){
 		if err == nil {
 			log.Infof("Broadcast tx %s to bitcoin network\n", authoredTx.Tx.TxSha().String())
