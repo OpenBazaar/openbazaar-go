@@ -107,14 +107,12 @@ func (w *LibbitcoinWallet) subscribeAll() {
 	keys, _ := w.db.Keys().GetAllExternal()
 	for _, k := range(keys) {
 		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.params)
-		w.Client.SubscribeAddress(addr.AddressPubKeyHash(), func(i interface{}){
-			resp := i.(libbitcoin.SubscribeResp)
-			w.ProcessTransaction(&resp.Tx, resp.Height)
-		})
+		w.SubscribeAddress(addr.AddressPubKeyHash())
 	}
 }
 
 func (w *LibbitcoinWallet) SubscribeAddress(addr btc.Address) {
+	log.Debug(addr)
 	w.Client.SubscribeAddress(addr, func(i interface{}){
 		resp := i.(libbitcoin.SubscribeResp)
 		w.ProcessTransaction(&resp.Tx, resp.Height)
