@@ -27,7 +27,7 @@ func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	key, used, _ := w.db.Keys().GetLastKey(purpose)
 	if key == nil { // No keys in this chain have been generated yet. Let's generate key 0.
 		childKey := w.generateChildKey(purpose, 0)
-		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.params)
 		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 		w.db.Keys().Put(childKey, script, purpose)
 		if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
@@ -37,7 +37,7 @@ func (w *LibbitcoinWallet) GetCurrentKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	} else if used { // The last key in the chain has been used. Let's generated a new key and save it in the db.
 		index := binary.BigEndian.Uint32(key.ChildNumber)
 		childKey := w.generateChildKey(purpose, index + 1)
-		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+		addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.params)
 		script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 		w.db.Keys().Put(childKey, script, purpose)
 		if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
@@ -53,7 +53,7 @@ func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 	key, _, _ := w.db.Keys().GetLastKey(purpose)
 	index := binary.BigEndian.Uint32(key.ChildNumber)
 	childKey := w.generateChildKey(purpose, index + 1)
-	addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.Params)
+	addr, _ := btc.NewAddressPubKey(childKey.PublicKey().Key, w.params)
 	script, _ := txscript.PayToAddrScript(addr.AddressPubKeyHash())
 	w.db.Keys().Put(childKey, script, purpose)
 	if purpose == bitcoin.RECEIVING || purpose == bitcoin.REFUND {
@@ -64,13 +64,13 @@ func (w *LibbitcoinWallet) GetFreshKey(purpose bitcoin.KeyPurpose) *b32.Key {
 
 func (w *LibbitcoinWallet) GetCurrentAddress(purpose bitcoin.KeyPurpose) *btc.AddressPubKeyHash {
 	key := w.GetCurrentKey(purpose)
-	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
+	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.params)
 	return addr.AddressPubKeyHash()
 }
 
 func (w *LibbitcoinWallet) GetFreshAddress(purpose bitcoin.KeyPurpose) *btc.AddressPubKeyHash {
 	key := w.GetFreshKey(purpose)
-	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.Params)
+	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.params)
 	return addr.AddressPubKeyHash()
 }
 

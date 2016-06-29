@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-libbitcoinclient",
-			"Rev": "846e083087ef46ce3305aca94819c867a5ce8673"
+			"Rev": "d3a361922eb17d21b83da3e8b43dd45c23d4372a"
 		},
 		{
 			"ImportPath": "github.com/anacrolix/missinggo",

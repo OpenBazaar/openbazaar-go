@@ -16,7 +16,7 @@ var log = logging.MustGetLogger("LibitcoinWallet")
 type LibbitcoinWallet struct {
 	Client           *libbitcoin.LibbitcoinClient
 
-	Params           *chaincfg.Params
+	params           *chaincfg.Params
 
 	masterPrivateKey *b32.Key
 	masterPublicKey  *b32.Key
@@ -38,7 +38,7 @@ func NewLibbitcoinWallet(mnemonic string, params *chaincfg.Params, db repo.Datas
 	l := new(LibbitcoinWallet)
 	l.masterPrivateKey = mk
 	l.masterPublicKey = mk.PublicKey()
-	l.Params = params
+	l.params = params
 	l.Client = libbitcoin.NewLibbitcoinClient(servers, params)
 	l.db = db
 	l.maxFee = maxFee
@@ -73,7 +73,7 @@ func (w *LibbitcoinWallet) startUpdateLoop() {
 func (w *LibbitcoinWallet) updateWalletBalances() {
 	keys, _ := w.db.Keys().GetAllExternal()
 	for _, k := range(keys) {
-		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.Params)
+		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.params)
 		// FIXME: we don't want to fetch from height zero every time. Ideally it would use the height of the last
 		// FIXME: seen block but to handle cases where the server failed to send a transaction we should probably
 		// FIXME: use the last height of any transaction in the database ― which requires another db function.
@@ -103,7 +103,7 @@ func (w *LibbitcoinWallet) updateWalletBalances() {
 func (w *LibbitcoinWallet) subscribeAll() {
 	keys, _ := w.db.Keys().GetAllExternal()
 	for _, k := range(keys) {
-		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.Params)
+		addr, _ := btc.NewAddressPubKey(k.PublicKey().Key, w.params)
 		w.Client.SubscribeAddress(addr.AddressPubKeyHash(), func(i interface{}){
 			resp := i.(libbitcoin.SubscribeResp)
 			w.ProcessTransaction(&resp.Tx, resp.Height)
@@ -116,4 +116,8 @@ func (w *LibbitcoinWallet) SubscribeAddress(addr btc.Address) {
 		resp := i.(libbitcoin.SubscribeResp)
 		w.ProcessTransaction(&resp.Tx, resp.Height)
 	})
+}
+
+func (w *LibbitcoinWallet) Params() *chaincfg.Params {
+	return w.params
 }

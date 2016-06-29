@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	btc "github.com/btcsuite/btcutil"
 )
 
 type RestAPIConfig struct {
@@ -454,12 +455,12 @@ func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&pid)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	if err := i.node.Follow(pid.ID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
@@ -475,12 +476,12 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&pid)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	if err := i.node.Unfollow(pid.ID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"success": true}`)
@@ -497,7 +498,7 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 	mn, err := i.node.Datastore.Config().GetMnemonic()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	fmt.Fprintf(w, `{"mnemonic": "%s"}`, mn)
@@ -507,4 +508,42 @@ func (i *restAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	unconfirmed, confirmed := i.node.Wallet.GetBalance()
 	fmt.Fprintf(w, `{"unconfirmed": "%d", "confirmed": "%d"}`, int(unconfirmed), int(confirmed))
+}
+
+func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type Send struct {
+		Address  string
+		Amount   int64
+		FeeLevel string
+	}
+	decoder := json.NewDecoder(r.Body)
+	var snd Send
+	err := decoder.Decode(&snd)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	addr, err := btc.DecodeAddress("2ND3E7kix3xogR77H8F35zjufXZkHUvWTvA", i.node.Wallet.Params())
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	var feeLevel bitcoin.FeeLevel
+	switch strings.ToUpper(snd.FeeLevel) {
+	case "PRIORITY":
+		feeLevel = bitcoin.PRIOIRTY
+	case "NORMAL":
+		feeLevel = bitcoin.NORMAL
+	case "Economic":
+		feeLevel = bitcoin.ECONOMIC
+	}
+	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, `{"success": true}`)
 }

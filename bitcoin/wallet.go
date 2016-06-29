@@ -1,9 +1,10 @@
 package bitcoin
 
 import (
+	"time"
 	btc "github.com/btcsuite/btcutil"
 	b32 "github.com/tyler-smith/go-bip32"
-	"time"
+	"github.com/btcsuite/btcd/chaincfg"
 )
 
 // TODO: Build out this interface
@@ -16,6 +17,10 @@ type BitcoinWallet interface {
 
 	// Wallet
 	GetBalance() (unconfirmed uint64, confirmed uint64)
+	Spend(amount int64, addr btc.Address, feeLevel FeeLevel) error
+
+	// Params
+	Params() *chaincfg.Params
 }
 
 type KeyPurpose int

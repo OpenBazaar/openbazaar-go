@@ -208,7 +208,7 @@ func (l *LibbitcoinClient) RenewSubscription(address btc.Address, callback func(
 }
 
 func (l *LibbitcoinClient) Broadcast(tx []byte, callback func(interface{}, error)) {
-	go l.SendCommand("protocol.broadcast_transaction", tx, nil)
+	go l.SendCommand("protocol.broadcast_transaction", tx, callback)
 }
 
 func (l *LibbitcoinClient) Validate(tx []byte, callback func(interface{}, error)) {

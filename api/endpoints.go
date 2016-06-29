@@ -39,6 +39,9 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/profile", "/ob/profile/":
 		i.PUTProfile(w, r) // POST and PUT are the same here
 		return
+	case "/wallet/spend", "/wallet/spend/":
+		i.POSTSpendCoins(w, r) // POST and PUT are the same here
+		return
 	}
 }
 
