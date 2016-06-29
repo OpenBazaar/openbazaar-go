@@ -79,24 +79,28 @@ func (w *LibbitcoinWallet) updateWalletBalances() {
 		// FIXME: use the last height of any transaction in the database ― which requires another db function.
 		w.Client.FetchHistory2(addr.AddressPubKeyHash(), 0, func(i interface{}, err error){
 			for _, response := range(i.([]libbitcoin.FetchHistory2Resp)) {
-				w.Client.FetchUnconfirmedTransaction(response.TxHash, func(i interface{}, err error){
-					if err != nil {
-						w.Client.FetchTransaction(response.TxHash, func(i interface{}, err error) {
-							if err != nil {
-								log.Error(err.Error())
-							} else {
-								tx := i.(*btc.Tx)
-								w.ProcessTransaction(tx, response.Height)
-							}
-						})
-					} else {
-						tx := i.(*btc.Tx)
-						w.ProcessTransaction(tx, response.Height)
-					}
-				})
+				w.fetchFullTx(response.TxHash, response.Height)
 			}
 		})
 	}
+}
+
+func (w *LibbitcoinWallet) fetchFullTx(txid string, height uint32) {
+	w.Client.FetchUnconfirmedTransaction(txid, func(i interface{}, err error){
+		if err != nil {
+			w.Client.FetchTransaction(txid, func(i interface{}, err error) {
+				if err != nil {
+					log.Error(err.Error())
+				} else {
+					tx := i.(*btc.Tx)
+					w.ProcessTransaction(tx, height)
+				}
+			})
+		} else {
+			tx := i.(*btc.Tx)
+			w.ProcessTransaction(tx, height)
+		}
+	})
 }
 
 func (w *LibbitcoinWallet) subscribeAll() {
