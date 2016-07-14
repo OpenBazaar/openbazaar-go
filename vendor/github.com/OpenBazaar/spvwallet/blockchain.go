@@ -15,7 +15,6 @@ import (
 	"time"
 	"fmt"
 	"sort"
-	"syscall"
 )
 
 type Headers interface {
@@ -54,7 +53,7 @@ var (
 
 func NewHeaderDB(filePath string) *HeaderDB {
 	h := new(HeaderDB)
-	db, _ := bolt.Open(path.Join(filePath, "headers.bin"), 0644, &bolt.Options{MmapFlags: syscall.MAP_POPULATE, InitialMmapSize: 5000000})
+	db, _ := bolt.Open(path.Join(filePath, "headers.bin"), 0644, &bolt.Options{InitialMmapSize: 5000000})
 	h.db = db
 	h.lock = new(sync.Mutex)
 	h.filePath = filePath
