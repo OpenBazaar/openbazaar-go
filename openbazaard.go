@@ -285,13 +285,16 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	w3 := &lumberjack.Logger{
+	w3 := &lumberjack.Logger {
 		Filename:   path.Join(expPath, "logs", "bitcoin.log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 3,
 		MaxAge:     30, //days
 	}
-	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, expPath, sqliteDB, "OpenBazaar", w3)
+	bitcoinFile := logging.NewLogBackend(w3, "", 0)
+	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
+	ml := logging.MultiLogger(bitcoinFileFormatter)
+	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, expPath, sqliteDB, "OpenBazaar", ml)
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage

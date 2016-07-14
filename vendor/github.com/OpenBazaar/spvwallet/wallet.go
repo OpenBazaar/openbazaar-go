@@ -8,11 +8,10 @@ import (
 	"sync"
 	"math/rand"
 	"github.com/btcsuite/btcd/chaincfg"
-	logging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
+	"github.com/op/go-logging"
 	b32 "github.com/tyler-smith/go-bip32"
 	b39 "github.com/tyler-smith/go-bip39"
 	btc "github.com/btcsuite/btcutil"
-	"io"
 )
 
 type SPVWallet struct {
@@ -42,17 +41,16 @@ type SPVWallet struct {
 	state             *TxStore
 }
 
+var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
 
 const MAX_PEERS = 10
 
-var log = logging.Logger("bitcoin")
-
 func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
-	repoPath string, db Datastore, userAgent string, logOutput io.Writer) *SPVWallet {
+	repoPath string, db Datastore, userAgent string, logger logging.Backend) *SPVWallet {
 
-	logging.Output(logOutput)()
+	log.SetBackend(logger)
 
 	seed := b39.NewSeed(mnemonic, "")
 	mk, _ := b32.NewMasterKey(seed)
@@ -105,6 +103,10 @@ func (w *SPVWallet) run() {
 
 	go w.connectToPeers()
 	go w.onPeerDisconnect()
+
+	log.Notice(w.CurrentAddress(KeyPurpose(0)))
+
+	log.Notice(w.Balance())
 }
 
 // Loop through creating new peers until we reach MAX_PEERS

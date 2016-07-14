@@ -159,7 +159,7 @@ func (p *Peer) TxHandler(m *wire.MsgTx) {
 		return
 	}
 	p.UpdateFilterAndSend()
-	log.Infof("Tx %s ingested and matches %d utxo/adrs.",
+	log.Noticef("Tx %s ingested and matches %d utxo/adrs.",
 		m.TxSha().String(), hits)
 	//TODO: remove txid from map
 }
