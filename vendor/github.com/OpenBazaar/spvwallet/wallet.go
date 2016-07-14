@@ -48,7 +48,7 @@ const WALLET_VERSION = "0.1.0"
 const MAX_PEERS = 10
 
 func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
-	repoPath string, db Datastore, userAgent string, logger logging.Backend) *SPVWallet {
+	repoPath string, db Datastore, userAgent string, logger logging.LeveledBackend) *SPVWallet {
 
 	log.SetBackend(logger)
 

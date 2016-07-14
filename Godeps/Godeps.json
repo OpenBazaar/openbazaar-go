@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "1e5cbb10ab54654f73938f38321c8ab0af5ac980"
+			"Rev": "d5ad8043c212c6239345cdd204bea5763ab82508"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
