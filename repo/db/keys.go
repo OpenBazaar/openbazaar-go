@@ -8,7 +8,6 @@ import (
 	"errors"
 	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/OpenBazaar/spvwallet"
-	"fmt"
 )
 
 type KeysDB struct {
@@ -22,6 +21,7 @@ func (k *KeysDB) Put(key *b32.Key, scriptPubKey []byte, purpose spvwallet.KeyPur
 	tx, err := k.db.Begin()
 	if err != nil {
 		log.Error(err)
+		return err
 	}
 	stmt, _ := tx.Prepare("insert into keys(key, scriptPubKey, purpose, used) values(?,?,?,?)")
 	defer stmt.Close()
@@ -126,13 +126,14 @@ func (k *KeysDB) GetAll() ([]*b32.Key, error) {
 	stm := "select key from keys"
 	rows, err := k.db.Query(stm)
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 		return ret, err
 	}
 	for rows.Next() {
 		var serializedKey string
 		if err := rows.Scan(&serializedKey); err != nil {
-			fmt.Println(err)
+			log.Error(err)
+			return ret, err
 		}
 		b32key, err := b32.B58Deserialize(serializedKey)
 		if err != nil {
@@ -151,7 +152,8 @@ func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose] int {
 		stm := "select used from keys where purpose=" + strconv.Itoa(i) +" order by rowid desc"
 		rows, err := k.db.Query(stm)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
+			return windows
 		}
 		var unusedCount int
 		for rows.Next() {

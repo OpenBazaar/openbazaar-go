@@ -15,13 +15,17 @@ type TxnsDB struct {
 func (u *TxnsDB) Put(txn *wire.MsgTx) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
-	tx, _ := u.db.Begin()
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	stmt, _ := tx.Prepare("insert into txns(txid, tx) values(?,?)")
 	defer stmt.Close()
 
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
-	_, err := stmt.Exec(txn.TxSha().String(), buf.Bytes())
+	_, err = stmt.Exec(txn.TxSha().String(), buf.Bytes())
 	if err != nil {
 		tx.Rollback()
 		return err

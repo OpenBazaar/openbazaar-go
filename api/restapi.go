@@ -58,7 +58,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: These headers should be removed in production.
+	// TODO: These headers should be removed in production. Or maybe an option in config.
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
@@ -107,33 +107,19 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// swagger:route PUT /profile putProfile
-//
-// Update profile
-//
-// This will update the profile file and then re-publish
-// to IPNS for consumption by other peers.
-//
-//     Consumes:
-//     - application/json
-//
-//     Produces:
-//     - application/json
-//
-//     Schemes: http, https
-//
-//     Security:
-//
-//     Responses:
-//       default: ProfileResponse
-//	 200: ProfileResponse
-func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
+func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	//p := ProfileParam{}
 
+	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	if _, err := os.Stat(profilePath); !os.IsNotExist(err) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": Profile already exists}`)
+	}
+
 	// Create profile file
-	f, err := os.Create(path.Join(i.node.RepoPath, "root", "profile"))
+	f, err := os.Create(profilePath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
@@ -171,7 +157,80 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true}`)
+	return fmt.Fprintf(w, `{"guid": "%s"}`, i.node.IpfsNode.Identity.Pretty())
+}
+
+// swagger:route PUT /profile putProfile
+//
+// Update profile
+//
+// This will update the profile file and then re-publish
+// to IPNS for consumption by other peers.
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Schemes: http, https
+//
+//     Security:
+//
+//     Responses:
+//       default: ProfileResponse
+//	 200: ProfileResponse
+func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	//p := ProfileParam{}
+
+	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": Profile doesn't exist}`)
+	}
+
+	// Create profile file
+	f, err := os.Create(profilePath)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Check JSON decoding and add proper indentation
+	dec := json.NewDecoder(r.Body)
+	for {
+		var v map[string]interface{}
+		err := dec.Decode(&v)
+		if err == io.EOF {
+			break
+		}
+		b, err := json.MarshalIndent(v, "", "    ")
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"success": false, "reason": "JSON marshalling error: %s"}`, err)
+			return
+		}
+		if _, err := f.WriteString(string(b)); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+			return
+		}
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
+		return
+	}
+	return
 }
 
 func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +272,7 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, `{"success": "true"}`)
+	return
 }
 
 func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
@@ -254,8 +313,7 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-
-	fmt.Fprint(w, `{"success": true}`)
+	return
 }
 
 func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
@@ -312,7 +370,7 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true, hashes: "%s"}`, string(jsonHashes))
+	fmt.Fprintf(w, `{"hashes: "%s"}`, string(jsonHashes))
 }
 
 func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
@@ -375,8 +433,7 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-
-	fmt.Fprintf(w, `{"success": true}`)
+	return
 }
 
 
@@ -396,7 +453,7 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true}`)
+	return
 }
 
 // swagger:route GET /status/{PeerId} status
@@ -463,7 +520,7 @@ func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true}`)
+	return
 }
 
 func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
@@ -484,7 +541,7 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true}`)
+	return
 }
 
 func (i *restAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
@@ -507,7 +564,7 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *restAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	fmt.Fprintf(w, `{"confirmed": "%d", "unconfirmed": "%d"}`, int(unconfirmed), int(confirmed))
+	fmt.Fprintf(w, `{"confirmed": "%d", "unconfirmed": "%d"}`, int(confirmed), int(unconfirmed))
 }
 
 func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
@@ -545,5 +602,10 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"success": true}`)
+	return
+}
+
+func (i *restAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"guid": "%s"}`, i.node.IpfsNode.Identity.Pretty())
 }

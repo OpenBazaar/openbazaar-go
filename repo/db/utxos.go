@@ -18,12 +18,16 @@ type UtxoDB struct {
 func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
-	tx, _ := u.db.Begin()
+	tx, err := u.db.Begin()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 	stmt, _ := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey) values(?,?,?,?)")
 	defer stmt.Close()
 
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	_, err := stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey))
+	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey))
 	if err != nil {
 		tx.Rollback()
 		return err

@@ -24,6 +24,9 @@ func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 
 func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
+	case "/ob/profile", "/ob/profile/":
+		i.POSTListing(w, r)
+		return
 	case "/ob/listing", "/ob/listing/":
 		i.POSTListing(w, r)
 		return
@@ -52,6 +55,10 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 	if strings.Contains(path, "/ob/peers") {
 		i.GETPeers(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/config") {
+		i.GETConfig(w, r)
 		return
 	}
 	if strings.Contains(path, "/wallet/address") {
