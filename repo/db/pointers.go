@@ -52,6 +52,7 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 	defer p.lock.Unlock()
 	stm := "select * from pointers"
 	rows, err := p.db.Query(stm)
+	defer rows.Close()
 	if err != nil {
 		log.Error(err)
 		return nil, err

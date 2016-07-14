@@ -32,7 +32,7 @@ func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
 	defer f.lock.Unlock()
 	stm := "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
 	rows, _ := f.db.Query(stm)
-
+	defer rows.Close()
 	var ret []string
 	for rows.Next() {
 		var peerID string
