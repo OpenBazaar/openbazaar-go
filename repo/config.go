@@ -1,15 +1,12 @@
 package repo
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 
-	"github.com/OpenBazaar/go-libbitcoinclient"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
-	"github.com/pebbe/zmq4"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -17,31 +14,6 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/139.59.174.197/tcp/4001/ipfs/QmWPRBSdhmhfWLUZapvfg6GCuyYyscgPnaKycYfWqJJcdB", // Brixton-Village
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmVW1nDx2rt8eff8nAB3L8MannsHFsidje6YC3EQvhcwZF",   // Johar
 
-}
-
-func GetLibbitcoinServers(cfgPath string) ([]libbitcoin.Server, error) {
-	servers := []libbitcoin.Server{}
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return servers, err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	wallet := cfg.(map[string]interface{})["Wallet"]
-	for _, s := range wallet.(map[string]interface{})["LibbitcoinServers"].([]interface{}) {
-		encodedKey := s.(map[string]interface{})["PublicKey"].(string)
-		if encodedKey != "" {
-			b, _ := base64.StdEncoding.DecodeString(encodedKey)
-			encodedKey = zmq4.Z85encode(string(b))
-		}
-		server := libbitcoin.Server{
-			Url:       s.(map[string]interface{})["Url"].(string),
-			PublicKey: encodedKey,
-		}
-		servers = append(servers, server)
-	}
-	return servers, nil
 }
 
 func GetFeeAPI(cfgPath string) (string, error) {

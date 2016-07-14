@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
 	_ "github.com/xeodou/go-sqlcipher"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 var log = logging.MustGetLogger("db")
@@ -18,9 +19,11 @@ type SQLiteDatastore struct {
 	following       repo.Following
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
-	keys 	        repo.Keys
-	transactions    repo.Transactions
-	coins           repo.Coins
+	keys            spvwallet.Keys
+	state           spvwallet.State
+	stxos           spvwallet.Stxos
+	txns            spvwallet.Txns
+	utxos           spvwallet.Utxos
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -68,11 +71,19 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
-		transactions: &TransactionsDB{
+		state: &StateDB{
 			db:   conn,
 			lock: l,
 		},
-		coins: &CoinsDB{
+		stxos: &StxoDB{
+			db:   conn,
+			lock: l,
+		},
+		txns: &TxnsDB{
+			db:   conn,
+			lock: l,
+		},
+		utxos: &UtxoDB{
 			db:   conn,
 			lock: l,
 		},
@@ -107,16 +118,24 @@ func (d *SQLiteDatastore) Pointers() repo.Pointers {
 	return d.pointers
 }
 
-func (d *SQLiteDatastore) Keys() repo.Keys {
+func (d *SQLiteDatastore) Keys() spvwallet.Keys {
 	return d.keys
 }
 
-func (d *SQLiteDatastore) Transactions() repo.Transactions {
-	return d.transactions
+func (d *SQLiteDatastore) State() spvwallet.State {
+	return d.state
 }
 
-func (d *SQLiteDatastore) Coins() repo.Coins {
-	return d.coins
+func (d *SQLiteDatastore) Stxos() spvwallet.Stxos {
+	return d.stxos
+}
+
+func (d *SQLiteDatastore) Txns() spvwallet.Txns {
+	return d.txns
+}
+
+func (d *SQLiteDatastore) Utxos() spvwallet.Utxos {
+	return d.utxos
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -171,8 +190,10 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
 	create table keys (key text primary key not null, scriptPubKey text, purpose integer, used integer);
 	create index keys_scriptPubKey ON keys(scriptPubKey);
-	create table transactions (txid text primary key not null, tx blob, height integer, state integer, timestamp integer, value integer, exchangeRate real, exchangeCurrency text);
-	create table coins (outpoint text primary key not null, value integer, scriptPubKey text);
+	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text);
+	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
+	create table txns (txid text primary key not null, tx blob);
+	create table state (key text primary key not null, value text);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

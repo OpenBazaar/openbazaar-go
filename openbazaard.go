@@ -16,7 +16,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/libbitcoin"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -40,6 +39,7 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 var log = logging.MustGetLogger("main")
@@ -269,11 +269,6 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.TestNet3Params
 	}
-	libbitcoinServers, err := repo.GetLibbitcoinServers(path.Join(expPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 	maxFee, err := repo.GetMaxFee(path.Join(expPath, "config"))
 	if err != nil {
 		log.Error(err)
@@ -289,7 +284,14 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	wallet := libbitcoin.NewLibbitcoinWallet(mn, &params, sqliteDB, libbitcoinServers, maxFee, low, medium, high, feeApi)
+
+	w3 := &lumberjack.Logger{
+		Filename:   path.Join(expPath, "logs", "bitcoin.log"),
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     30, //days
+	}
+	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, expPath, sqliteDB, "OpenBazaar", w3)
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage

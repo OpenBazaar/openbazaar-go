@@ -18,8 +18,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	btc "github.com/btcsuite/btcutil"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 type RestAPIConfig struct {
@@ -489,7 +489,7 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	addr := i.node.Wallet.GetCurrentAddress(bitcoin.RECEIVING)
+	addr := i.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	fmt.Fprintf(w, `{"address": "%s"}`, addr.EncodeAddress())
 }
 
@@ -506,8 +506,8 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 
 func (i *restAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	unconfirmed, confirmed := i.node.Wallet.GetBalance()
-	fmt.Fprintf(w, `{"unconfirmed": "%d", "confirmed": "%d"}`, int(unconfirmed), int(confirmed))
+	confirmed, unconfirmed := i.node.Wallet.Balance()
+	fmt.Fprintf(w, `{"confirmed": "%d", "unconfirmed": "%d"}`, int(unconfirmed), int(confirmed))
 }
 
 func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
@@ -531,14 +531,14 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	var feeLevel bitcoin.FeeLevel
+	var feeLevel spvwallet.FeeLevel
 	switch strings.ToUpper(snd.FeeLevel) {
 	case "PRIORITY":
-		feeLevel = bitcoin.PRIOIRTY
+		feeLevel = spvwallet.PRIOIRTY
 	case "NORMAL":
-		feeLevel = bitcoin.NORMAL
+		feeLevel = spvwallet.NORMAL
 	case "Economic":
-		feeLevel = bitcoin.ECONOMIC
+		feeLevel = spvwallet.ECONOMIC
 	}
 	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

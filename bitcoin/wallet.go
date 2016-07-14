@@ -1,72 +1,32 @@
 package bitcoin
 
 import (
-	"time"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	b32 "github.com/tyler-smith/go-bip32"
-	"github.com/btcsuite/btcd/chaincfg"
 )
 
-// TODO: Build out this interface
 type BitcoinWallet interface {
-	// Keys
-	GetMasterPrivateKey() *b32.Key
-	GetMasterPublicKey() *b32.Key
-	GetCurrentAddress(purpose KeyPurpose) *btc.AddressPubKeyHash
-	GetFreshAddress(purpose KeyPurpose) *btc.AddressPubKeyHash
 
-	// Wallet
-	GetBalance() (unconfirmed uint64, confirmed uint64)
-	Spend(amount int64, addr btc.Address, feeLevel FeeLevel) error
+	// Returns the type of crytocurrency this wallet implements
+	CurrencyCode() string
 
-	// Params
+	// Get the master private key
+	MasterPrivateKey() *b32.Key
+
+	// Get the master public key
+	MasterPublicKey() *b32.Key
+
+	// Get the current address for the given purpose
+	CurrentAddress(purpose spvwallet.KeyPurpose) *btc.AddressPubKeyHash
+
+	// Get the confirmed and unconfirmed balances
+	Balance() (confirmed, unconfirmed int64)
+
+	// Send bitcoins to an external wallet
+	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
+
+	// Returnt the network parameters
 	Params() *chaincfg.Params
 }
-
-type KeyPurpose int
-
-const (
-	RECEIVING = 0
-	CHANGE    = 1
-	REFUND    = 2
-)
-
-type TransactionState int
-
-const (
-	// A (unconfirmed) transaction which does not appear in the best chain
-	PENDING   = 0
-
-	// Transaction appears in the best chain
-	CONFIRMED = 1
-
-	// We have reason to believe the transaction will never confirm. Either it was double
-	// spent or has sat unconfirmed for an unreasonably long period of time.
-	DEAD      = 2
-)
-
-type TransactionInfo struct {
-	Txid            []byte
-	Tx              []byte
-	Height          int
-	State           TransactionState
-	Timestamp       time.Time
-	Value           int
-	ExchangeRate    float64
-	ExchangCurrency string
-}
-
-type Utxo struct {
-	Txid         []byte
-	Index        int
-	Value        int
-	ScriptPubKey []byte
-}
-
-type FeeLevel int
-
-const (
-	PRIOIRTY = 0
-	NORMAL   = 1
-	ECONOMIC = 2
-)

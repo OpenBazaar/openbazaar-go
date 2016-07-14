@@ -17,6 +17,10 @@ const (
 var (
 	PrivateWalletVersion, _ = hex.DecodeString("0488ADE4")
 	PublicWalletVersion, _  = hex.DecodeString("0488B21E")
+
+	ErrSerializedKeyWrongSize = errors.New("Serialized keys should by exactly 82 bytes")
+	ErrHardnedChildPublicKey  = errors.New("Can't create hardened child for public key")
+	ErrInvalidChecksum        = errors.New("Checksum doesn't match")
 )
 
 // Represents a bip32 extended key containing key data, chain code, parent information, and other meta data
@@ -68,7 +72,7 @@ func (key *Key) NewChildKey(childIdx uint32) (*Key, error) {
 
 	// Fail early if trying to create hardned child from public key
 	if !key.IsPrivate && hardenedChild {
-		return nil, errors.New("Can't create hardened child for public key")
+		return nil, ErrHardnedChildPublicKey
 	}
 
 	// Get intermediary to create key and chaincode from
@@ -165,15 +169,20 @@ func (key *Key) Serialize() []byte {
 	return serializedKey
 }
 
-// Encode the Key in the standard Bitcoin base58 encoding
+// B58Serialize encodes the Key in the standard Bitcoin base58 encoding
+func (key *Key) B58Serialize() string {
+	return base58Encode(key.Serialize())
+}
+
+// String encodes the Key in the standard Bitcoin base58 encoding
 func (key *Key) String() string {
-	return string(base58Encode(key.Serialize()))
+	return key.B58Serialize()
 }
 
 // Deserialize a byte slice into a Key
 func Deserialize(data []byte) (*Key, error) {
 	if len(data) != 82 {
-		return nil, errors.New("Serialized keys should by exactly 82 bytes")
+		return nil, ErrSerializedKeyWrongSize
 	}
 	var key = &Key{}
 	key.Version = data[0:4]
@@ -191,11 +200,11 @@ func Deserialize(data []byte) (*Key, error) {
 	}
 
 	// validate checksum
-	cs1 := checksum(data[0: len(data) - 4])
-	cs2 := data[len(data) - 4: len(data)]
+	cs1 := checksum(data[0 : len(data)-4])
+	cs2 := data[len(data)-4 : len(data)]
 	for i := range cs1 {
 		if cs1[i] != cs2[i] {
-			return nil, errors.New("Checksum doesn't match")
+			return nil, ErrInvalidChecksum
 		}
 	}
 	return key, nil

@@ -13,7 +13,6 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
-	"github.com/pebbe/zmq4"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -166,20 +165,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		Url       string
 		PublicKey []byte
 	}
-	var ls []Server
-	if !testnet {
-		ls = []Server{
-			{Url: "tcp://libbitcoin1.openbazaar.org:9091", PublicKey: []byte{}},
-			{Url: "tcp://libbitcoin3.openbazaar.org:9091", PublicKey: []byte{}},
-		}
-	} else {
-		ls = []Server{
-			{Url: "tcp://libbitcoin2.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("baihZB[vT(dcVCwkhYLAzah<t2gJ>{3@k?+>T&^3"))},
-			{Url: "tcp://libbitcoin4.openbazaar.org:9091", PublicKey: []byte(zmq4.Z85decode("<Z&{.=LJSPySefIKgCu99w.L%b^6VvuVp0+pbnOM"))},
-		}
-	}
 	type Wallet struct {
-		LibbitcoinServers []Server
 		MaxFee            int
 		FeeAPI            string
 		HighFeeDefault    int
@@ -187,8 +173,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		LowFeeDefault     int
 	}
 	var w Wallet = Wallet{
-		LibbitcoinServers: ls,
-		MaxFee: 1500000,
+		MaxFee: 2000,
 		FeeAPI: "https://bitcoinfees.21.co/api/v1/fees/recommended",
 		HighFeeDefault: 60,
 		MediumFeeDefault: 40,

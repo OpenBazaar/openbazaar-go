@@ -4,11 +4,10 @@ import (
 	"crypto/sha256"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"time"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 type option struct {
@@ -37,7 +36,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	// TODO: validate the purchase data is formatted properly
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
-	order.RefundAddress = n.Wallet.GetCurrentAddress(bitcoin.REFUND).EncodeAddress()
+	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
 
 	order.Shipping.ShipTo = data.shipTo
 	order.Shipping.Address = data.address
@@ -53,7 +52,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		return err
 	}
 	order.BuyerID.Pubkeys.Guid = pubkey
-	order.BuyerID.Pubkeys.Bitcoin = n.Wallet.GetMasterPublicKey().Key
+	order.BuyerID.Pubkeys.Bitcoin = n.Wallet.MasterPublicKey().Key
 
 	order.Timestamp = uint64(time.Now().Unix())
 

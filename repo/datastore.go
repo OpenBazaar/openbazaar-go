@@ -1,10 +1,8 @@
 package repo
 
 import (
-	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type Datastore interface {
@@ -13,9 +11,6 @@ type Datastore interface {
 	Following() Following
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
-	Keys() Keys
-	Transactions() Transactions
-	Coins() Coins
 	Close()
 }
 
@@ -81,61 +76,4 @@ type Pointers interface {
 
 	// Fetch the entire list of pointers
 	GetAll() ([]ipfs.Pointer, error)
-}
-
-type Keys interface {
-	// Put a bip32 key to the database
-	Put(key *b32.Key, scriptPubKey []byte, purpose bitcoin.KeyPurpose) error
-
-	// Mark the given key as used
-	MarkKeyAsUsed(key *b32.Key) error
-
-	// Fetch the key at the last index for the given purpose
-	// The bool should state whether the key has been used or not
-	GetLastKey(purpose bitcoin.KeyPurpose) (*b32.Key, bool, error)
-
-	// Given a scriptPubKey return the corresponding bip32 key
-	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
-
-	// Fetch all external keys
-	GetAllExternal() ([]*b32.Key, error)
-}
-
-type Transactions interface {
-	// Put a new transaction to the database
-	Put(txinfo bitcoin.TransactionInfo) error
-
-	// Does the transaction already exist in the database?
-	Has(txid []byte) bool
-
-	// Fetch all transactions
-	GetAll() []bitcoin.TransactionInfo
-
-	// Fetch the height of a tx
-	GetHeight(txid []byte) (int, error)
-
-	// Update the transaction state
-	UpdateState(txid []byte, state bitcoin.TransactionState) error
-
-	// Update the transaction height. This should only be needed
-	// for newly confirmed transactions and reorgs.
-	UpdateHeight(txid []byte, height int) error
-}
-
-type Coins interface {
-	// Put a new coin (utxo) to the database
-	Put(bitcoin.Utxo) error
-
-	// Does the outpoint exist in the database?
-	Has(txid []byte, index int) bool
-
-	// Remove a coin from the database
-	Delete(txid []byte, index int) error
-
-	// Fetch all coins from the db
-	// Useful for coin selection
-	GetAll() []bitcoin.Utxo
-
-	// Get the value associated with a utxo
-	GetValue(txid []byte, index int) (int, error)
 }

@@ -1,0 +1,266 @@
+package spvwallet
+
+import (
+	"net"
+	"os"
+	"bytes"
+	"io/ioutil"
+	"sync"
+	"math/rand"
+	"github.com/btcsuite/btcd/chaincfg"
+	logging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
+	b32 "github.com/tyler-smith/go-bip32"
+	b39 "github.com/tyler-smith/go-bip39"
+	btc "github.com/btcsuite/btcutil"
+	"io"
+)
+
+type SPVWallet struct {
+	params           *chaincfg.Params
+
+	peerGroup         map[string] *Peer
+	pgMutex           sync.Mutex
+	downloadPeer      *Peer
+	diconnectChan     chan string
+
+	masterPrivateKey *b32.Key
+	masterPublicKey  *b32.Key
+
+	maxFee            uint64
+	priorityFee       uint64
+	normalFee         uint64
+	economicFee       uint64
+	feeAPI            string
+
+	repoPath          string
+
+	addrs             []string
+	userAgent         string
+
+	db                Datastore
+	blockchain        *Blockchain
+	state             *TxStore
+}
+
+
+const WALLET_VERSION = "0.1.0"
+
+const MAX_PEERS = 10
+
+var log = logging.Logger("bitcoin")
+
+func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
+	repoPath string, db Datastore, userAgent string, logOutput io.Writer) *SPVWallet {
+
+	logging.Output(logOutput)()
+
+	seed := b39.NewSeed(mnemonic, "")
+	mk, _ := b32.NewMasterKey(seed)
+
+	w := new(SPVWallet)
+	w.masterPrivateKey = mk
+	w.masterPublicKey = mk.PublicKey()
+	w.params = params
+	w.maxFee = maxFee
+	w.priorityFee = highFee
+	w.normalFee = mediumFee
+	w.economicFee = lowFee
+	w.feeAPI = feeApi
+	w.repoPath = repoPath
+	w.db = db
+	w.userAgent = userAgent
+	w.diconnectChan = make(chan string)
+	w.peerGroup = make(map[string]*Peer)
+	go w.run()
+	return w
+}
+
+func (w *SPVWallet) run() {
+	w.queryDNSSeeds()
+
+	// setup TxStore first (before spvcon)
+	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey)
+
+	// shuffle addrs
+	for i := range w.addrs {
+		j := rand.Intn(i + 1)
+		w.addrs[i], w.addrs[j] = w.addrs[j], w.addrs[i]
+	}
+
+	// create header db
+	bc := NewBlockchain(w.repoPath, w.params)
+	w.blockchain = bc
+	//bc.Print()
+
+	// If this is a new wallet or restoring from seed. Set the db height to the
+	// height of the checkpoint block.
+	tipHeight, _ := w.state.GetDBSyncHeight()
+	if tipHeight == 0 {
+		if w.params.Name == chaincfg.MainNetParams.Name {
+			w.state.SetDBSyncHeight(MAINNET_CHECKPOINT_HEIGHT)
+		} else if w.params.Name == chaincfg.TestNet3Params.Name {
+			w.state.SetDBSyncHeight(TESTNET3_CHECKPOINT_HEIGHT)
+		}
+	}
+
+	go w.connectToPeers()
+	go w.onPeerDisconnect()
+}
+
+// Loop through creating new peers until we reach MAX_PEERS
+// If we don't have a download peer set we will set one
+func (w *SPVWallet) connectToPeers() {
+	for {
+		if len(w.peerGroup) < MAX_PEERS {
+			var addr string
+			addr, w.addrs = w.addrs[len(w.addrs)-1], w.addrs[:len(w.addrs)-1]
+			var dp bool
+			if w.downloadPeer == nil {
+				dp = true
+				// Set this temporarily to avoid a race condition which sets two download peers
+				w.downloadPeer = &Peer{}
+			}
+			peer, err := NewPeer(addr, w.blockchain, w.state, w.params, w.userAgent, w.diconnectChan, dp)
+			if err != nil {
+				if dp {
+					// Unset as download peer on failure
+					w.downloadPeer = nil
+				}
+				continue
+			}
+			if dp {
+				w.downloadPeer = peer
+			}
+			w.pgMutex.Lock()
+			w.peerGroup[addr] = peer
+			w.pgMutex.Unlock()
+		} else {
+			break
+		}
+	}
+}
+
+func (w *SPVWallet) onPeerDisconnect() {
+	for {
+		select {
+		case addr := <- w.diconnectChan:
+			w.pgMutex.Lock()
+			p, ok := w.peerGroup[addr]
+			if ok {
+				p.con.Close()
+				p.connectionState = DEAD
+				if p.downloadPeer {
+					w.downloadPeer = nil
+				}
+				delete(w.peerGroup, addr)
+			}
+			w.pgMutex.Unlock()
+			log.Infof("Disconnected from peer %s", addr)
+			w.connectToPeers()
+		}
+	}
+}
+
+func (w *SPVWallet) queryDNSSeeds() {
+	// Query DNS seeds for addrs. Eventually we will cache these.
+	log.Info("Querying DNS seeds...")
+	for _, seed := range(w.params.DNSSeeds) {
+		addrs, err := net.LookupHost(seed)
+		if err != nil {
+			continue
+		}
+		for _, addr := range(addrs) {
+			w.addrs = append(w.addrs, addr + ":" + w.params.DefaultPort)
+		}
+	}
+	log.Infof("DNS seeds returned %d addresses.", len(w.addrs))
+}
+
+func (w *SPVWallet) openHeaderFile(hfn string) error {
+	_, err := os.Stat(hfn)
+	if err != nil {
+		if os.IsNotExist(err) {
+			var b bytes.Buffer
+			if w.params.Name == chaincfg.MainNetParams.Name {
+				pad := make([]byte, MAINNET_CHECKPOINT_HEIGHT * 80)
+				b.Write(pad)
+				err = MainnetCheckpoint.Serialize(&b)
+				if err != nil {
+					return err
+				}
+			} else if w.params.Name == chaincfg.TestNet3Params.Name {
+				pad := make([]byte, TESTNET3_CHECKPOINT_HEIGHT * 80)
+				b.Write(pad)
+				err = Testnet3Checkpoint.Serialize(&b)
+				if err != nil {
+					return err
+				}
+			}
+			err = ioutil.WriteFile(hfn, b.Bytes(), 0600)
+			if err != nil {
+				return err
+			}
+			log.Debugf("Created hardcoded checkpoint header at %s\n", hfn)
+		}
+	}
+
+	return nil
+}
+
+func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
+	for _, stxo := range(stxos) {
+		if stxo.SpendTxid == utxo.Op.Hash {
+			if stxo.Utxo.AtHeight > 0 {
+				return true
+			} else {
+				return w.checkIfStxoIsConfirmed(stxo.Utxo, stxos)
+			}
+		}
+	}
+	return false
+}
+
+
+//////////////////////////
+//
+// API
+//
+
+func (w *SPVWallet) CurrencyCode() string {
+	return "btc"
+}
+
+func (w *SPVWallet) MasterPrivateKey() *b32.Key {
+	return w.masterPrivateKey
+}
+
+func (w *SPVWallet) MasterPublicKey() *b32.Key {
+	return w.masterPublicKey
+}
+
+func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) *btc.AddressPubKeyHash {
+	key := w.state.GetCurrentKey(purpose)
+	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.params)
+	return addr.AddressPubKeyHash()
+}
+
+func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
+	utxos, _ := w.db.Utxos().GetAll()
+	stxos, _ := w.db.Stxos().GetAll()
+	for _, utxo := range utxos {
+		if utxo.AtHeight > 0 {
+			confirmed += utxo.Value
+		} else {
+			if w.checkIfStxoIsConfirmed(utxo, stxos) {
+				confirmed += utxo.Value
+			} else {
+				unconfirmed += utxo.Value
+			}
+		}
+	}
+	return confirmed, unconfirmed
+}
+
+func (w *SPVWallet) Params() *chaincfg.Params {
+	return w.params
+}
