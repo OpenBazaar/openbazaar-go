@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "d5ad8043c212c6239345cdd204bea5763ab82508"
+			"Rev": "74ff9660fe04e45d5b9c6ad573bfd66cc3121765"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -68,6 +68,11 @@
 			"Rev": "f735405eedc1f56f0ec4f779ce874cb922803d5f"
 		},
 		{
+			"ImportPath": "github.com/btcsuite/btcutil/hdkeychain",
+			"Comment": "BTCUTIL_0_5_0-8-gf735405",
+			"Rev": "f735405eedc1f56f0ec4f779ce874cb922803d5f"
+		},
+		{
 			"ImportPath": "github.com/btcsuite/btcutil/txsort",
 			"Comment": "BTCUTIL_0_5_0-8-gf735405",
 			"Rev": "f735405eedc1f56f0ec4f779ce874cb922803d5f"
@@ -108,10 +113,6 @@
 		{
 			"ImportPath": "github.com/ccding/go-stun/stun",
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
-		},
-		{
-			"ImportPath": "github.com/cmars/basen",
-			"Rev": "fe3947df716ebfda9847eb1b9a48f9592e06478c"
 		},
 		{
 			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial",
@@ -852,10 +853,6 @@
 			"Rev": "981ab348d865cf048eb7d17e78ac7192632d8415"
 		},
 		{
-			"ImportPath": "github.com/mndrix/btcutil",
-			"Rev": "d3a63a5752ecf3fbc06bd97365da752111c263df"
-		},
-		{
 			"ImportPath": "github.com/natefinch/lumberjack",
 			"Comment": "v1.0-21-g514cbda",
 			"Rev": "514cbda263a734ae8caac038dadf05f8f3f9f738"
@@ -864,10 +861,6 @@
 			"ImportPath": "github.com/op/go-logging",
 			"Comment": "v1-7-g970db52",
 			"Rev": "970db520ece77730c7e4724c61121037378659d9"
-		},
-		{
-			"ImportPath": "github.com/tyler-smith/go-bip32",
-			"Rev": "eb790af526c30f23a7c8b00a48e342f9d0bd6386"
 		},
 		{
 			"ImportPath": "github.com/tyler-smith/go-bip39",
@@ -879,10 +872,6 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/pbkdf2",
-			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
-		},
-		{
-			"ImportPath": "golang.org/x/crypto/ripemd160",
 			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
 		},
 		{

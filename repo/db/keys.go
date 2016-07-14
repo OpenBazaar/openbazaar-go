@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"sync"
 	"errors"
-	b32 "github.com/tyler-smith/go-bip32"
 	"github.com/OpenBazaar/spvwallet"
+	"fmt"
 )
 
 type KeysDB struct {
@@ -15,39 +15,16 @@ type KeysDB struct {
 	lock *sync.Mutex
 }
 
-func (k *KeysDB) Put(key *b32.Key, scriptPubKey []byte, purpose spvwallet.KeyPurpose) error {
-	k.lock.Lock()
-	defer k.lock.Unlock()
-	tx, err := k.db.Begin()
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	stmt, _ := tx.Prepare("insert into keys(key, scriptPubKey, purpose, used) values(?,?,?,?)")
-	defer stmt.Close()
-	_, err = stmt.Exec(key.String(), hex.EncodeToString(scriptPubKey), int(purpose), 0)
-	if err != nil {
-		log.Error("Error executing statement.")
-		tx.Rollback()
-		return err
-	}
-	tx.Commit()
-	return nil
-}
-
-func (k *KeysDB) MarkKeyAsUsed(key *b32.Key) error {
+func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	tx, err := k.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update keys set used=1 where key=?")
-	if err != nil {
-		return err
-	}
+	stmt, _ := tx.Prepare("insert into keys(scriptPubKey, purpose, keyIndex, used) values(?,?,?,?)")
 	defer stmt.Close()
-	_, err = stmt.Exec(key.String())
+	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey), int(keyPath.Purpose), keyPath.Index, 0)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -56,18 +33,40 @@ func (k *KeysDB) MarkKeyAsUsed(key *b32.Key) error {
 	return nil
 }
 
-func (k *KeysDB) GetLastKey(purpose spvwallet.KeyPurpose) (*b32.Key, bool, error) {
+func (k *KeysDB) MarkKeyAsUsed(scriptPubKey []byte) error {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	tx, err := k.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare("update keys set used=1 where scriptPubKey=?")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey))
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (k *KeysDB) GetLastKeyIndex(purpose spvwallet.KeyPurpose) (int, bool, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stm := "select key, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " order by rowid desc limit 1"
+	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " order by rowid desc limit 1"
 	stmt, err := k.db.Prepare(stm)
 	defer stmt.Close()
-	var key string
+	var index int
 	var usedInt int
-	err = stmt.QueryRow().Scan(&key, &usedInt)
+	err = stmt.QueryRow().Scan(&index, &usedInt)
 	if err != nil {
-		return nil, false, nil
+		return 0, false, err
 	}
 	var used bool
 	if usedInt == 0 {
@@ -75,71 +74,65 @@ func (k *KeysDB) GetLastKey(purpose spvwallet.KeyPurpose) (*b32.Key, bool, error
 	} else {
 		used = true
 	}
-	b32key, err := b32.B58Deserialize(key)
-	if err != nil {
-		return nil, used, err
-	}
-	return b32key, used, nil
+	return index, used, nil
 }
 
-func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*b32.Key, error) {
+func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stmt, err := k.db.Prepare("select key from keys where scriptPubKey=?")
+	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptPubKey=?")
 	defer stmt.Close()
-	var key string
-	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&key)
+	var purpose int
+	var index int
+	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&purpose, &index)
 	if err != nil {
-		return nil, errors.New("Key not found")
+		return spvwallet.KeyPath{}, errors.New("Key not found")
 	}
-	b32key, err := b32.B58Deserialize(key)
-	if err != nil {
-		return nil, err
+	p := spvwallet.KeyPath{
+		Purpose: spvwallet.KeyPurpose(purpose),
+		Index: index,
 	}
-	return b32key, nil
+	return p, nil
 }
 
-func (k *KeysDB) GetUnused(purpose spvwallet.KeyPurpose) (*b32.Key, error) {
+func (k *KeysDB) GetUnused(purpose spvwallet.KeyPurpose) (int, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stm := "select key from keys where purpose=" + strconv.Itoa(int(purpose)) + " and used=0 order by rowid asc limit 1"
+	stm := "select keyIndex from keys where purpose=" + strconv.Itoa(int(purpose)) + " and used=0 order by rowid asc limit 1"
 	stmt, err := k.db.Prepare(stm)
 	defer stmt.Close()
-	var key string
-	err = stmt.QueryRow().Scan(&key)
+	var index int
+	err = stmt.QueryRow().Scan(&index)
 	if err != nil {
-		return nil, nil
+		return 0, err
 	}
-	b32key, err := b32.B58Deserialize(key)
-	if err != nil {
-		return nil, err
-	}
-	return b32key, nil
+	return index, nil
 }
 
-func (k *KeysDB) GetAll() ([]*b32.Key, error) {
+func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	var ret []*b32.Key
-	stm := "select key from keys"
+	var ret []spvwallet.KeyPath
+	stm := "select purpose, keyIndex from keys"
 	rows, err := k.db.Query(stm)
+	defer rows.Close()
 	if err != nil {
-		log.Error(err)
+		fmt.Println(err)
 		return ret, err
 	}
 	for rows.Next() {
-		var serializedKey string
-		if err := rows.Scan(&serializedKey); err != nil {
-			log.Error(err)
-			return ret, err
+		var purpose int
+		var index int
+		if err := rows.Scan(&purpose, &index); err != nil {
+			fmt.Println(err)
 		}
-		b32key, err := b32.B58Deserialize(serializedKey)
-		if err != nil {
-			return ret, err
+		p := spvwallet.KeyPath{
+			Purpose: spvwallet.KeyPurpose(purpose),
+			Index: index,
 		}
-		ret = append(ret, b32key)
+		ret = append(ret, p)
 	}
 	return ret, nil
 }
@@ -152,8 +145,7 @@ func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose] int {
 		stm := "select used from keys where purpose=" + strconv.Itoa(i) +" order by rowid desc"
 		rows, err := k.db.Query(stm)
 		if err != nil {
-			log.Error(err)
-			return windows
+			continue
 		}
 		var unusedCount int
 		for rows.Next() {
@@ -169,6 +161,7 @@ func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose] int {
 		}
 		purpose := spvwallet.KeyPurpose(i)
 		windows[purpose] = unusedCount
+		rows.Close()
 	}
 	return windows
 }

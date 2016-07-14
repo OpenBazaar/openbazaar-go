@@ -2,15 +2,11 @@ package spvwallet
 
 import (
 	"bytes"
-
+	"strconv"
 	"github.com/btcsuite/btcd/blockchain"
-
 	"github.com/btcsuite/btcd/txscript"
-
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-
-	"strconv"
 )
 
 
@@ -81,15 +77,15 @@ func (ts *TxStore) GetPendingInv() (*wire.MsgInv, error) {
 // PopulateAdrs just puts a bunch of adrs in ram; it doesn't touch the DB
 func (ts *TxStore) PopulateAdrs() error {
 	ts.lookahead()
-	keys, err := ts.db.Keys().GetAll()
-	if err != nil {
-		return err
-	}
+	keys := ts.GetKeys()
 	ts.addrMutex.Lock()
 	ts.Adrs = []btcutil.Address{}
 	for _, k := range keys {
-		addr, _ := btcutil.NewAddressPubKey(k.PublicKey().Key, ts.Param)
-		ts.Adrs = append(ts.Adrs, addr.AddressPubKeyHash())
+		addr, err := k.Address(ts.Param)
+		if err != nil {
+			continue
+		}
+		ts.Adrs = append(ts.Adrs, addr)
 	}
 	ts.addrMutex.Unlock()
 	return nil
@@ -129,10 +125,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	for i, out := range tx.TxOut {
 		for _, script := range PKscripts {
 			if bytes.Equal(out.PkScript, script) { // new utxo found
-				key, err := ts.db.Keys().GetKeyForScript(out.PkScript)
-				if err == nil {
-					ts.db.Keys().MarkKeyAsUsed(key)
-				}
+				ts.db.Keys().MarkKeyAsUsed(out.PkScript)
 				var newu Utxo // create new utxo
 				newu.AtHeight = height
 				newu.Value = out.Value
@@ -162,7 +155,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				st.SpendTxid = cachedSha  // spent by txid
 				ts.db.Stxos().Put(st)
 				ts.db.Utxos().Delete(u)
-
 			}
 		}
 	}

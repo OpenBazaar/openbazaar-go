@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil/bloom"
-	"github.com/tyler-smith/go-bip32"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/coinset"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -105,17 +105,17 @@ func NewCoin(txid []byte, index uint32, value btc.Amount, numConfs int64, script
 	return coinset.Coin(c)
 }
 
-func (w *SPVWallet) gatherCoins() map[coinset.Coin]*bip32.Key {
+func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	height, _ := w.state.GetDBSyncHeight()
 	utxos, _ := w.db.Utxos().GetAll()
-	m := make(map[coinset.Coin]*bip32.Key)
+	m := make(map[coinset.Coin]*hd.ExtendedKey)
 	for _, u := range(utxos) {
 		var confirmations int32
 		if u.AtHeight > 0 {
 			confirmations = height - u.AtHeight
 		}
 		c := NewCoin(u.Op.Hash.Bytes(), u.Op.Index, btc.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
-		key, err := w.db.Keys().GetKeyForScript(u.ScriptPubkey)
+		key, err := w.state.GetKeyForScript(u.ScriptPubkey)
 		if err != nil {
 			continue
 		}
@@ -156,10 +156,16 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 			inputs = append(inputs, in)
 			additionalPrevScripts[*outpoint] = c.PkScript()
 			key := coinMap[c]
-			addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.params)
-			pk, _ := btcec.PrivKeyFromBytes(btcec.S256(), key.Key)
-			wif, _ := btc.NewWIF(pk, w.params, true)
-			additionalKeysByAddress[addr.AddressPubKeyHash().EncodeAddress()] = wif
+			addr, err := key.Address(w.params)
+			if err != nil {
+				continue
+			}
+			privKey, err := key.ECPrivKey()
+			if err != nil {
+				continue
+			}
+			wif, _ := btc.NewWIF(privKey, w.params, true)
+			additionalKeysByAddress[addr.EncodeAddress()] = wif
 		}
 		return total, inputs, scripts, nil
 	}
@@ -189,8 +195,7 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 	txsort.InPlaceSort(authoredTx.Tx)
 
 	// Sign tx
-	getKey := txscript.KeyClosure(func(addr btc.Address) (
-	*btcec.PrivateKey, bool, error) {
+	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
 		addrStr := addr.EncodeAddress()
 		wif := additionalKeysByAddress[addrStr]
 		return wif.PrivKey, wif.CompressPubKey, nil

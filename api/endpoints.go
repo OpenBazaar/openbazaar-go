@@ -24,9 +24,6 @@ func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 
 func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
-	case "/ob/profile", "/ob/profile/":
-		i.POSTListing(w, r)
-		return
 	case "/ob/listing", "/ob/listing/":
 		i.POSTListing(w, r)
 		return
@@ -40,7 +37,7 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTUnfollow(w, r)
 		return
 	case "/ob/profile", "/ob/profile/":
-		i.PUTProfile(w, r) // POST and PUT are the same here
+		i.POSTProfile(w, r) // POST and PUT are the same here
 		return
 	case "/wallet/spend", "/wallet/spend/":
 		i.POSTSpendCoins(w, r) // POST and PUT are the same here

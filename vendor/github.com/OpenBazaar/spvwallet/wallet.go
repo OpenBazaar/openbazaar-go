@@ -9,9 +9,9 @@ import (
 	"math/rand"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/op/go-logging"
-	b32 "github.com/tyler-smith/go-bip32"
 	b39 "github.com/tyler-smith/go-bip39"
 	btc "github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
 type SPVWallet struct {
@@ -22,8 +22,8 @@ type SPVWallet struct {
 	downloadPeer      *Peer
 	diconnectChan     chan string
 
-	masterPrivateKey *b32.Key
-	masterPublicKey  *b32.Key
+	masterPrivateKey *hd.ExtendedKey
+	masterPublicKey  *hd.ExtendedKey
 
 	maxFee            uint64
 	priorityFee       uint64
@@ -53,11 +53,13 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	log.SetBackend(logger)
 
 	seed := b39.NewSeed(mnemonic, "")
-	mk, _ := b32.NewMasterKey(seed)
+
+	mPrivKey, _ := hd.NewMaster(seed, params)
+	mPubKey, _ := mPrivKey.Neuter()
 
 	w := new(SPVWallet)
-	w.masterPrivateKey = mk
-	w.masterPublicKey = mk.PublicKey()
+	w.masterPrivateKey = mPrivKey
+	w.masterPublicKey = mPubKey
 	w.params = params
 	w.maxFee = maxFee
 	w.priorityFee = highFee
@@ -232,18 +234,18 @@ func (w *SPVWallet) CurrencyCode() string {
 	return "btc"
 }
 
-func (w *SPVWallet) MasterPrivateKey() *b32.Key {
+func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
 	return w.masterPrivateKey
 }
 
-func (w *SPVWallet) MasterPublicKey() *b32.Key {
+func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
 func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) *btc.AddressPubKeyHash {
 	key := w.state.GetCurrentKey(purpose)
-	addr, _ := btc.NewAddressPubKey(key.PublicKey().Key, w.params)
-	return addr.AddressPubKeyHash()
+	addr, _ := key.Address(w.params)
+	return addr
 }
 
 func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {

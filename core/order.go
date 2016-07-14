@@ -52,7 +52,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		return err
 	}
 	order.BuyerID.Pubkeys.Guid = pubkey
-	order.BuyerID.Pubkeys.Bitcoin = n.Wallet.MasterPublicKey().Key
+	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return err
+	}
+	order.BuyerID.Pubkeys.Bitcoin = ecPubKey.SerializeCompressed()
 
 	order.Timestamp = uint64(time.Now().Unix())
 

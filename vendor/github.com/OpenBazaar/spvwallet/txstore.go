@@ -7,7 +7,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
-	b32 "github.com/tyler-smith/go-bip32"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
 type Datastore interface {
@@ -59,23 +59,23 @@ type Txns interface {
 // used keys, and manage the look ahead window.
 type Keys interface {
 	// Put a bip32 key to the database
-	Put(key *b32.Key, scriptPubKey []byte, purpose KeyPurpose) error
+	Put(scriptPubKey []byte, keyPath KeyPath) error
 
-	// Mark the given key as used
-	MarkKeyAsUsed(key *b32.Key) error
+	// Mark the script as used
+	MarkKeyAsUsed(scriptPubKey []byte) error
 
-	// Fetch the key at the last index for the given purpose
+	// Fetch the last index for the given key purpose
 	// The bool should state whether the key has been used or not
-	GetLastKey(purpose KeyPurpose) (*b32.Key, bool, error)
+	GetLastKeyIndex(purpose KeyPurpose) (int, bool, error)
 
-	// Returns the first unused key for the given purpose
-	GetUnused(purpose KeyPurpose) (*b32.Key, error)
+	// Returns the first unused path for the given purpose
+	GetPathForScript(scriptPubKey []byte) (KeyPath, error)
 
-	// Given a scriptPubKey return the corresponding bip32 key
-	GetKeyForScript(scriptPubKey []byte) (*b32.Key, error)
+	// Get the first unused index for the given purpose
+	GetUnused(purpose KeyPurpose) (int, error)
 
-	// Fetch all keys
-	GetAll() ([]*b32.Key, error)
+	// Fetch all key paths
+	GetAll() ([]KeyPath, error)
 
 	// Get the number of unused keys following the last used key
 	// for each key purpose.
@@ -105,7 +105,7 @@ type TxStore struct {
 
 	Param *chaincfg.Params
 
-	masterPrivKey *b32.Key
+	masterPrivKey *hd.ExtendedKey
 
 	chainState ChainState
 }
@@ -127,7 +127,7 @@ type Stxo struct {
 	SpendTxid   wire.ShaHash // the tx that consumed it
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *b32.Key) *TxStore {
+func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) *TxStore {
 	txs := new(TxStore)
 	txs.Param = p
 	txs.db = db

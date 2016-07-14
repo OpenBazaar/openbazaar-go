@@ -12,17 +12,19 @@ type TxnsDB struct {
 	lock *sync.Mutex
 }
 
-func (u *TxnsDB) Put(txn *wire.MsgTx) error {
-	u.lock.Lock()
-	defer u.lock.Unlock()
-	tx, err := u.db.Begin()
+func (t *TxnsDB) Put(txn *wire.MsgTx) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	tx, err := t.db.Begin()
 	if err != nil {
-		log.Error(err)
 		return err
 	}
-	stmt, _ := tx.Prepare("insert into txns(txid, tx) values(?,?)")
+	stmt, err := tx.Prepare("insert into txns(txid, tx) values(?,?)")
 	defer stmt.Close()
-
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
 	_, err = stmt.Exec(txn.TxSha().String(), buf.Bytes())
@@ -34,10 +36,10 @@ func (u *TxnsDB) Put(txn *wire.MsgTx) error {
 	return nil
 }
 
-func (u *TxnsDB) Get(txid wire.ShaHash) (*wire.MsgTx, error) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
-	stmt, err := u.db.Prepare("select tx from txns where txid=?")
+func (t *TxnsDB) Get(txid wire.ShaHash) (*wire.MsgTx, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	stmt, err := t.db.Prepare("select tx from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
 	err = stmt.QueryRow(txid.String()).Scan(&ret)
@@ -50,12 +52,13 @@ func (u *TxnsDB) Get(txid wire.ShaHash) (*wire.MsgTx, error) {
 	return msgTx, nil
 }
 
-func (u *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+func (t *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	var ret []*wire.MsgTx
 	stm := "select tx from txns"
-	rows, err := u.db.Query(stm)
+	rows, err := t.db.Query(stm)
+	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
@@ -72,10 +75,10 @@ func (u *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
 	return ret, nil
 }
 
-func (u *TxnsDB) Delete(txid *wire.ShaHash) error {
-	u.lock.Lock()
-	defer u.lock.Unlock()
-	_, err := u.db.Exec("delete from txns where txid=?", txid.String())
+func (t *TxnsDB) Delete(txid *wire.ShaHash) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	_, err := t.db.Exec("delete from txns where txid=?", txid.String())
 	if err != nil {
 		return err
 	}

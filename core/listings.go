@@ -6,10 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	ec "github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -28,7 +26,11 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	//TODO: add blockchain ID to listing
 	p := new(pb.ID_Pubkeys)
 	p.Guid = pubkey
-	p.Bitcoin = n.Wallet.MasterPublicKey().Key
+	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return c, err
+	}
+	p.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = p
 	listing.VendorID = id
 	s := new(pb.Signatures)
@@ -41,7 +43,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	if err != nil {
 		return c, err
 	}
-	priv, _ := ec.PrivKeyFromBytes(ec.S256(), n.Wallet.MasterPrivateKey().Key)
+	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return c, err
+	}
 	hashed := sha256.Sum256(serializedListing)
 	bitcoinSig, err := priv.Sign(hashed[:])
 	if err != nil {

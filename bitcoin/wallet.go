@@ -4,7 +4,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
-	b32 "github.com/tyler-smith/go-bip32"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
 type BitcoinWallet interface {
@@ -13,10 +13,10 @@ type BitcoinWallet interface {
 	CurrencyCode() string
 
 	// Get the master private key
-	MasterPrivateKey() *b32.Key
+	MasterPrivateKey() *hd.ExtendedKey
 
 	// Get the master public key
-	MasterPublicKey() *b32.Key
+	MasterPublicKey() *hd.ExtendedKey
 
 	// Get the current address for the given purpose
 	CurrentAddress(purpose spvwallet.KeyPurpose) *btc.AddressPubKeyHash

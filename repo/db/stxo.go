@@ -15,17 +15,16 @@ type StxoDB struct {
 	lock *sync.Mutex
 }
 
-func (u *StxoDB) Put(stxo spvwallet.Stxo) error {
-	u.lock.Lock()
-	defer u.lock.Unlock()
-	tx, err := u.db.Begin()
+func (s *StxoDB) Put(stxo spvwallet.Stxo) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	tx, _ := s.db.Begin()
+	stmt, err := tx.Prepare("insert or replace into stxos(outpoint, value, height, scriptPubKey, spendHeight, spendTxid) values(?,?,?,?,?,?)")
+	defer stmt.Close()
 	if err != nil {
-		log.Error(err)
+		tx.Rollback()
 		return err
 	}
-	stmt, _ := tx.Prepare("insert or replace into stxos(outpoint, value, height, scriptPubKey, spendHeight, spendTxid) values(?,?,?,?,?,?)")
-	defer stmt.Close()
-
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
 	_, err = stmt.Exec(outpoint, int(stxo.Utxo.Value), int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), int(stxo.SpendHeight), stxo.SpendTxid.String())
 	if err != nil {
@@ -36,12 +35,13 @@ func (u *StxoDB) Put(stxo spvwallet.Stxo) error {
 	return nil
 }
 
-func (u *StxoDB) GetAll() ([]spvwallet.Stxo, error) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+func (s *StxoDB) GetAll() ([]spvwallet.Stxo, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	var ret []spvwallet.Stxo
 	stm := "select outpoint, value, height, scriptPubKey, spendHeight, spendTxid from stxos"
-	rows, err := u.db.Query(stm)
+	rows, err := s.db.Query(stm)
+	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
@@ -90,11 +90,11 @@ func (u *StxoDB) GetAll() ([]spvwallet.Stxo, error) {
 	return ret, nil
 }
 
-func (u *StxoDB) Delete(stxo spvwallet.Stxo) error {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+func (s *StxoDB) Delete(stxo spvwallet.Stxo) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
-	_, err := u.db.Exec("delete from stxos where outpoint=?", outpoint)
+	_, err := s.db.Exec("delete from stxos where outpoint=?", outpoint)
 	if err != nil {
 		return err
 	}
