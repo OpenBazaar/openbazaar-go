@@ -144,16 +144,10 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		obFolderName = "~/OpenBazaar2.0"
 	}
-	var dirPath string
 	if runtime.GOOS == "linux" {
-		dirPath = ""
 		obFolderName = "~/." + strings.ToLower(obFolderName[2:])
-	} else if runtime.GOOS == "windows" {
-		dirPath = os.Getenv(`APPDATA`)
-	} else {
-		dirPath = path.Join("Library", "Application Support")
 	}
-	expPath, _ := homedir.Expand(filepath.Clean(path.Join(dirPath, obFolderName)))
+	expPath, _ := homedir.Expand(filepath.Clean(obFolderName))
 
 	// Database
 	sqliteDB, err := db.Create(expPath, x.Password, x.Testnet)
