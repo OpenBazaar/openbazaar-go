@@ -10,6 +10,7 @@ before_install:
   - go get github.com/mattn/goveralls
   - go get -u github.com/whyrusleeping/gx
 script:
+  - diff -u <(echo -n) <(gofmt -d -s .)
   - make install
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci 
