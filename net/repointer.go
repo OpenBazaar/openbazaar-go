@@ -1,11 +1,11 @@
 package net
 
 import (
-	"time"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"golang.org/x/net/context"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"time"
 )
 
 type PointerRepublisher struct {
@@ -13,10 +13,10 @@ type PointerRepublisher struct {
 	db       repo.Datastore
 }
 
-func NewPointerRepublisher(node *core.IpfsNode, database repo.Datastore) *PointerRepublisher{
+func NewPointerRepublisher(node *core.IpfsNode, database repo.Datastore) *PointerRepublisher {
 	return &PointerRepublisher{
 		ipfsNode: node,
-		db: database,
+		db:       database,
 	}
 }
 
@@ -43,7 +43,7 @@ func (r *PointerRepublisher) republish() {
 		if p.Purpose != ipfs.MESSAGE {
 			ipfs.RePublishPointer(r.ipfsNode, ctx, p)
 		} else {
-			if time.Now().Sub(p.Timestamp) > time.Hour * 24 * 30 {
+			if time.Now().Sub(p.Timestamp) > time.Hour*24*30 {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				ipfs.RePublishPointer(r.ipfsNode, ctx, p)

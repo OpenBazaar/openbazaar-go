@@ -1,8 +1,8 @@
 package bitcoin
 
 import (
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 )

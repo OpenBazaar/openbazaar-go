@@ -1,19 +1,19 @@
 package db
 
 import (
-	"sync"
 	"database/sql"
-	"testing"
 	"strconv"
+	"sync"
+	"testing"
 )
 
 var fdb FollowerDB
 
-func init(){
+func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	fdb = FollowerDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }
@@ -43,7 +43,7 @@ func TestPutDuplicateFollower(t *testing.T) {
 	}
 }
 
-func TestCountFollowers(t *testing.T){
+func TestCountFollowers(t *testing.T) {
 	fdb.Put("abc")
 	fdb.Put("123")
 	fdb.Put("xyz")
@@ -56,7 +56,7 @@ func TestCountFollowers(t *testing.T){
 	fdb.Delete("xyz")
 }
 
-func TestDeleteFollower(t *testing.T){
+func TestDeleteFollower(t *testing.T) {
 	fdb.Put("abc")
 	err := fdb.Delete("abc")
 	if err != nil {
@@ -71,18 +71,18 @@ func TestDeleteFollower(t *testing.T){
 	}
 }
 
-func TestGetFollowers(t *testing.T){
-	for i:=0; i<100; i++ {
+func TestGetFollowers(t *testing.T) {
+	for i := 0; i < 100; i++ {
 		fdb.Put(strconv.Itoa(i))
 	}
 	followers, err := fdb.Get(0, 100)
 	if err != nil {
 		t.Error(err)
 	}
-	for i:=0; i < 100; i++ {
+	for i := 0; i < 100; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 99- i {
-			t.Errorf("Returned %d expected %d", f, 99 - i)
+		if f != 99-i {
+			t.Errorf("Returned %d expected %d", f, 99-i)
 		}
 	}
 
@@ -90,10 +90,10 @@ func TestGetFollowers(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	for i:=0; i < 70; i++ {
+	for i := 0; i < 70; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69- i {
-			t.Errorf("Returned %d expected %d", f, 69 - i)
+		if f != 69-i {
+			t.Errorf("Returned %d expected %d", f, 69-i)
 		}
 	}
 	if len(followers) != 70 {
@@ -107,10 +107,10 @@ func TestGetFollowers(t *testing.T){
 	if len(followers) != 5 {
 		t.Error("Incorrect number of followers returned")
 	}
-	for i:=0; i < 5; i++ {
+	for i := 0; i < 5; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69- i {
-			t.Errorf("Returned %d expected %d", f, 69 - i)
+		if f != 69-i {
+			t.Errorf("Returned %d expected %d", f, 69-i)
 		}
 	}
 

@@ -1,16 +1,15 @@
 package api
 
-
 // swagger:parameters status
 type PeerIdParam struct {
-    //
-    // IPNS id for the peer you're trying to reach.
-    // eg: QmewaTzuA2gMjHyAGFN6wTWH7cVfZeApFM98TC28aSTy1P
-    //
-    // in: path
-    // schema: object
-    // required: true
-    PeerId string
+	//
+	// IPNS id for the peer you're trying to reach.
+	// eg: QmewaTzuA2gMjHyAGFN6wTWH7cVfZeApFM98TC28aSTy1P
+	//
+	// in: path
+	// schema: object
+	// required: true
+	PeerId string
 }
 
 // ProfileModel represents a profile object
@@ -19,52 +18,52 @@ type PeerIdParam struct {
 //
 // swagger:model ProfileModel
 type ProfileModel struct {
-    // Name of the user
-    // required: true
-    Name string `json:"name"`
+	// Name of the user
+	// required: true
+	Name string `json:"name"`
 
-    // User handle
-    // Either IPNS id or Blockchain ID (i.e. @OpenBazaar)
-    // required: true
-    Handle string `json:"handle"`
+	// User handle
+	// Either IPNS id or Blockchain ID (i.e. @OpenBazaar)
+	// required: true
+	Handle string `json:"handle"`
 
-    // About description of the peer
-    // required: true
-    About string `json:"about"`
+	// About description of the peer
+	// required: true
+	About string `json:"about"`
 
-    // Email address
-    // required: true
-    Email string `json:"email"`
+	// Email address
+	// required: true
+	Email string `json:"email"`
 
-    // Location
-    // required: true
-    Location string `json:"location"`
+	// Location
+	// required: true
+	Location string `json:"location"`
 
-    // NSFW status of the peer
-    // required: true
-    NSFW string `json:"nsfw"`
+	// NSFW status of the peer
+	// required: true
+	NSFW string `json:"nsfw"`
 
-    // Short Description
-    // required: true
-    ShortDescription string `json:"short_description"`
+	// Short Description
+	// required: true
+	ShortDescription string `json:"short_description"`
 
-    // Vendor status of peer
-    // required: true
-    Vendor string `json:"vendor"`
+	// Vendor status of peer
+	// required: true
+	Vendor string `json:"vendor"`
 
-    // URL of the user's website
-    // required: true
-    Website string `json:"website"`
+	// URL of the user's website
+	// required: true
+	Website string `json:"website"`
 }
 
 // swagger:parameters putProfile
 type ProfileParam struct {
-    // Holds a Profile JSON object
-    //
-    // in: body
-    // type: object
-    // required: true
-    Profile ProfileModel
+	// Holds a Profile JSON object
+	//
+	// in: body
+	// type: object
+	// required: true
+	Profile ProfileModel
 }
 
 // A ProfileResponse is the response for Profile calls

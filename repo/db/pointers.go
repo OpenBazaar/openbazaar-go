@@ -1,13 +1,13 @@
 package db
 
 import (
-	"time"
 	"database/sql"
-	"sync"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	keys "github.com/ipfs/go-ipfs/blocks/key"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	"sync"
+	"time"
 )
 
 type PointersDB struct {
@@ -78,14 +78,13 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 		pointer := ipfs.Pointer{
 			Key: keys.B58KeyDecode(key),
 			Value: peer.PeerInfo{
-				ID: pid,
+				ID:    pid,
 				Addrs: []ma.Multiaddr{maAddr},
 			},
-			Purpose: ipfs.Purpose(purpose),
+			Purpose:   ipfs.Purpose(purpose),
 			Timestamp: time.Unix(int64(timestamp), 0),
 		}
 		ret = append(ret, pointer)
 	}
 	return ret, nil
 }
-

@@ -1,19 +1,19 @@
 package db
 
 import (
-	"sync"
 	"database/sql"
-	"testing"
 	"strconv"
+	"sync"
+	"testing"
 )
 
 var fldb FollowingDB
 
-func init(){
+func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	fldb = FollowingDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }
@@ -43,7 +43,7 @@ func TestPutDuplicateFollowing(t *testing.T) {
 	}
 }
 
-func TestCountFollowing(t *testing.T){
+func TestCountFollowing(t *testing.T) {
 	fldb.Put("abc")
 	fldb.Put("123")
 	fldb.Put("xyz")
@@ -56,7 +56,7 @@ func TestCountFollowing(t *testing.T){
 	fldb.Delete("xyz")
 }
 
-func TestDeleteFollowing(t *testing.T){
+func TestDeleteFollowing(t *testing.T) {
 	fldb.Put("abc")
 	err := fldb.Delete("abc")
 	if err != nil {
@@ -71,18 +71,18 @@ func TestDeleteFollowing(t *testing.T){
 	}
 }
 
-func TestGetFollowing(t *testing.T){
-	for i:=0; i<100; i++ {
+func TestGetFollowing(t *testing.T) {
+	for i := 0; i < 100; i++ {
 		fldb.Put(strconv.Itoa(i))
 	}
 	followers, err := fldb.Get(0, 100)
 	if err != nil {
 		t.Error(err)
 	}
-	for i:=0; i < 100; i++ {
+	for i := 0; i < 100; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 99- i {
-			t.Errorf("Returned %d expected %d", f, 99 - i)
+		if f != 99-i {
+			t.Errorf("Returned %d expected %d", f, 99-i)
 		}
 	}
 
@@ -90,10 +90,10 @@ func TestGetFollowing(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	for i:=0; i < 70; i++ {
+	for i := 0; i < 70; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69- i {
-			t.Errorf("Returned %d expected %d", f, 69 - i)
+		if f != 69-i {
+			t.Errorf("Returned %d expected %d", f, 69-i)
 		}
 	}
 	if len(followers) != 70 {
@@ -107,11 +107,10 @@ func TestGetFollowing(t *testing.T){
 	if len(followers) != 5 {
 		t.Error("Incorrect number of followers returned")
 	}
-	for i:=0; i < 5; i++ {
+	for i := 0; i < 5; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69- i {
-			t.Errorf("Returned %d expected %d", f, 69 - i)
+		if f != 69-i {
+			t.Errorf("Returned %d expected %d", f, 69-i)
 		}
 	}
 }
-

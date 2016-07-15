@@ -59,7 +59,7 @@ func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error 
 	a := &any.Any{Value: []byte(pointerID.Pretty())}
 	m := pb.Message{
 		MessageType: pb.Message_OFFLINE_ACK,
-		Payload: a}
+		Payload:     a}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil { // Couldn't connect directly to peer. Likely offline.
 		if err := n.SendOfflineMessage(p, &m); err != nil {

@@ -16,10 +16,10 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
+	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	btc "github.com/btcsuite/btcutil"
-	"github.com/OpenBazaar/spvwallet"
 )
 
 type RestAPIConfig struct {
@@ -435,7 +435,6 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 	return
 }
-
 
 func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")

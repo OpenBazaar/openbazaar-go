@@ -1,47 +1,47 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"sort"
-	"path"
-	"path/filepath"
-	"os/signal"
-	"strconv"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api"
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
-	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/ipfs/go-ipfs/namesys"
-	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	"github.com/ipfs/go-ipfs/repo/config"
-	"github.com/jessevdk/go-flags"
-	"github.com/op/go-logging"
-	"github.com/natefinch/lumberjack"
-	"github.com/btcsuite/btcd/chaincfg"
-        "github.com/mitchellh/go-homedir"
-	"github.com/OpenBazaar/spvwallet"
-	"github.com/fatih/color"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/net/service"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
-	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
+	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/fatih/color"
+	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
-	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	"github.com/jessevdk/go-flags"
+	"github.com/mitchellh/go-homedir"
+	"github.com/natefinch/lumberjack"
+	"github.com/op/go-logging"
+	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
+	"os"
+	"os/signal"
+	"path"
+	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -57,20 +57,19 @@ var fileLogFormat = logging.MustStringFormatter(
 
 var encryptedDatabaseError = errors.New("could not decrypt the database")
 
-
 type Start struct {
-	Password string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	Testnet bool `short:"t" long:"testnet" description:"use the test network"`
-	LogLevel string `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
-	AllowIP []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	STUN bool `short:"s" long:"stun" description:"use stun on µTP IPv4"`
-	DisableWallet bool `long:"disablewallet" description:"disable the wallet functionality of the node"`
-	Storage string `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
+	Password      string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
+	Testnet       bool     `short:"t" long:"testnet" description:"use the test network"`
+	LogLevel      string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
+	AllowIP       []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
+	STUN          bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
+	DisableWallet bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
+	Storage       string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
-type Stop struct {}
-type Restart struct {}
-type EncryptDatabase struct {}
-type DecryptDatabase struct {}
+type Stop struct{}
+type Restart struct{}
+type EncryptDatabase struct{}
+type DecryptDatabase struct{}
 
 var startServer Start
 var stopServer Stop
@@ -83,7 +82,7 @@ var parser = flags.NewParser(nil, flags.Default)
 func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
-	go func(){
+	go func() {
 		for sig := range c {
 			log.Noticef("Received %s\n", sig)
 			log.Info("OpenBazaar Server shutting down...")
@@ -177,7 +176,7 @@ func (x *Start) Execute(args []string) error {
 
 	// initialize the ipfs repo if it doesn't already exist
 	err = repo.DoInit(os.Stdout, expPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
-	if err != nil && err != repo.ErrRepoExists{
+	if err != nil && err != repo.ErrRepoExists {
 		log.Error(err)
 		return err
 	}
@@ -215,17 +214,17 @@ func (x *Start) Execute(args []string) error {
 
 	// Run stun and set uTP port
 	if x.STUN {
-		for i, addr := range(cfg.Addresses.Swarm) {
+		for i, addr := range cfg.Addresses.Swarm {
 			m, _ := ma.NewMultiaddr(addr)
 			p := m.Protocols()
-			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp"{
+			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
 				port, serr := net.Stun()
 				if serr != nil {
 					log.Error(serr)
 					return err
 				}
 				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
-				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/" + strconv.Itoa(port) + "/utp")
+				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 				break
 			}
 		}
@@ -246,7 +245,7 @@ func (x *Start) Execute(args []string) error {
 	ctx.LoadConfig = func(path string) (*config.Config, error) {
 		return fsrepo.ConfigAt(expPath)
 	}
-	ctx.ConstructNode = func () (*ipfscore.IpfsNode, error) {
+	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
 		return nd, nil
 	}
 
@@ -290,7 +289,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	w3 := &lumberjack.Logger {
+	w3 := &lumberjack.Logger{
 		Filename:   path.Join(expPath, "logs", "bitcoin.log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 3,
@@ -332,12 +331,12 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context: ctx,
-		IpfsNode: nd,
-		RootHash: ipath.Path(e.Value).String(),
-		RepoPath: expPath,
-		Datastore: sqliteDB,
-		Wallet: wallet,
+		Context:        ctx,
+		IpfsNode:       nd,
+		RootHash:       ipath.Path(e.Value).String(),
+		RepoPath:       expPath,
+		Datastore:      sqliteDB,
+		Wallet:         wallet,
 		MessageStorage: storage,
 	}
 
@@ -437,7 +436,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 	return nil, cb, errc
 }
 
-func printSplashScreen(){
+func printSplashScreen() {
 	blue := color.New(color.FgBlue)
 	white := color.New(color.FgWhite)
 	white.Printf("________             ")
@@ -449,7 +448,7 @@ func printSplashScreen(){
 	white.Printf(`/    |    \  |_> >  ___/|   |  \    `)
 	blue.Println(`|   \ / __ \_/    /  / __ \_/ __ \|  | \/`)
 	white.Printf(`\_______  /   __/ \___  >___|  /`)
-	blue.Println(`______  /(____  /_____ \(____  (____  /__|` )
+	blue.Println(`______  /(____  /_____ \(____  (____  /__|`)
 	white.Printf(`        \/|__|        \/     \/  `)
 	blue.Println(`     \/      \/      \/     \/     \/`)
 	blue.DisableColor()

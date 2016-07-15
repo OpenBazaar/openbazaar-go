@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/spvwallet"
 	"github.com/op/go-logging"
 	_ "github.com/xeodou/go-sqlcipher"
-	"github.com/OpenBazaar/spvwallet"
 )
 
 var log = logging.MustGetLogger("db")

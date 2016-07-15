@@ -29,12 +29,11 @@ const MAGIC string = "000000000000000000000000"
 type Purpose int
 
 const (
-	MESSAGE Purpose   = 1
+	MESSAGE   Purpose = 1
 	MODERATOR Purpose = 2
-	TAG Purpose       = 3
-	CHANNEL Purpose   = 4
+	TAG       Purpose = 3
+	CHANNEL   Purpose = 4
 )
-
 
 // A pointer is a custom provider inserted into the dht which points to a location of a file.
 // For offline messaging purposes we use a hash of the recipient's ID as the key and set the
@@ -56,7 +55,7 @@ func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Mu
 	if err != nil {
 		return Pointer{}, err
 	}
-	pi := peer.PeerInfo {
+	pi := peer.PeerInfo{
 		ID:    magicID,
 		Addrs: []ma.Multiaddr{addr},
 	}

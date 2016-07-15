@@ -1,9 +1,9 @@
 package db
 
 import (
-	"testing"
-	"path"
 	"os"
+	"path"
+	"testing"
 )
 
 var testDB *SQLiteDatastore
@@ -15,10 +15,10 @@ func TestMain(m *testing.M) {
 	os.Exit(retCode)
 }
 
-func setup(){
+func setup() {
 	os.MkdirAll(path.Join("./", "datastore"), os.ModePerm)
 	testDB, _ = Create("", "LetMeIn", false)
-	testDB.config.Init("Mnemonic Passphrase" , []byte("Private Key"), "LetMeIn")
+	testDB.config.Init("Mnemonic Passphrase", []byte("Private Key"), "LetMeIn")
 }
 
 func teardown() {

@@ -41,5 +41,3 @@ func (s *StateDB) Get(key string) (string, error) {
 	}
 	return ret, nil
 }
-
-

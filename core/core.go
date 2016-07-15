@@ -1,18 +1,18 @@
 package core
 
 import (
-	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-	"path"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
-	sto "github.com/OpenBazaar/openbazaar-go/storage"
+	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
+	"path"
 )
 
 var log = logging.MustGetLogger("core")

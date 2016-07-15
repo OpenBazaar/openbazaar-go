@@ -3,11 +3,11 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"errors"
+	"fmt"
+	"github.com/OpenBazaar/spvwallet"
 	"strconv"
 	"sync"
-	"errors"
-	"github.com/OpenBazaar/spvwallet"
-	"fmt"
 )
 
 type KeysDB struct {
@@ -91,7 +91,7 @@ func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error
 	}
 	p := spvwallet.KeyPath{
 		Purpose: spvwallet.KeyPurpose(purpose),
-		Index: index,
+		Index:   index,
 	}
 	return p, nil
 }
@@ -130,19 +130,19 @@ func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
 		}
 		p := spvwallet.KeyPath{
 			Purpose: spvwallet.KeyPurpose(purpose),
-			Index: index,
+			Index:   index,
 		}
 		ret = append(ret, p)
 	}
 	return ret, nil
 }
 
-func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose] int {
+func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose]int {
 	k.lock.Lock()
 	defer k.lock.Unlock()
-	windows := make(map[spvwallet.KeyPurpose] int)
-	for i:=0; i<2; i++ {
-		stm := "select used from keys where purpose=" + strconv.Itoa(i) +" order by rowid desc"
+	windows := make(map[spvwallet.KeyPurpose]int)
+	for i := 0; i < 2; i++ {
+		stm := "select used from keys where purpose=" + strconv.Itoa(i) + " order by rowid desc"
 		rows, err := k.db.Query(stm)
 		if err != nil {
 			continue

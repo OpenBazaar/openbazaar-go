@@ -1,8 +1,8 @@
 package service
 
 import (
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 type serviceHandler func(peer.ID, *pb.Message) (*pb.Message, error)

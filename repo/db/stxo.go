@@ -2,12 +2,12 @@ package db
 
 import (
 	"database/sql"
-	"sync"
-	"strconv"
 	"encoding/hex"
-	"strings"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/wire"
+	"strconv"
+	"strings"
+	"sync"
 )
 
 type StxoDB struct {
@@ -76,15 +76,15 @@ func (s *StxoDB) GetAll() ([]spvwallet.Stxo, error) {
 			continue
 		}
 		utxo := spvwallet.Utxo{
-			Op: *wire.NewOutPoint(shaHash, uint32(index)),
-			AtHeight: int32(height),
-			Value: int64(value),
+			Op:           *wire.NewOutPoint(shaHash, uint32(index)),
+			AtHeight:     int32(height),
+			Value:        int64(value),
 			ScriptPubkey: scriptBytes,
 		}
 		ret = append(ret, spvwallet.Stxo{
-			Utxo: utxo,
+			Utxo:        utxo,
 			SpendHeight: int32(spendHeight),
-			SpendTxid: *spentHash,
+			SpendTxid:   *spentHash,
 		})
 	}
 	return ret, nil
