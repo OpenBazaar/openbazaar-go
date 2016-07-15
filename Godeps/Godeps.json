@@ -143,6 +143,11 @@
 			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
 		},
 		{
+			"ImportPath": "github.com/fatih/color",
+			"Comment": "v0.2.0",
+			"Rev": "87d4004f2ab62d0d255e0a38f1680aa534549fe3"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/jsonpb",
 			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
@@ -847,6 +852,15 @@
 			"ImportPath": "github.com/jessevdk/go-flags",
 			"Comment": "v1-334-g6b9493b",
 			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-colorable",
+			"Comment": "v0.0.5",
+			"Rev": "9056b7a9f2d1f2d96498d6d146acd1f9d5ed3d59"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/go-homedir",

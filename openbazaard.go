@@ -28,6 +28,8 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/btcsuite/btcd/chaincfg"
         "github.com/mitchellh/go-homedir"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/fatih/color"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
@@ -39,7 +41,6 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	"github.com/OpenBazaar/spvwallet"
 )
 
 var log = logging.MustGetLogger("main")
@@ -136,9 +137,9 @@ func (x *Start) Execute(args []string) error {
 	// set repo path
 	var repoPath string
 	if x.Testnet {
-		repoPath = "~/.openbazaar2-testnet"
+		repoPath = "~/.openbazaar2.0-testnet"
 	} else {
-		repoPath = "~/.openbazaar2"
+		repoPath = "~/.openbazaar2.0"
 	}
 	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
 
@@ -429,14 +430,22 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 }
 
 func printSplashScreen(){
-	blue := logging.ColorSeq(logging.ColorBlue)
-	white := logging.ColorSeq(logging.ColorWhite)
-	fmt.Println(white + "________             " + blue + "         __________" + white)
-	fmt.Println(`\_____  \ ______   ____   ____` + blue + `\______   \_____  _____________  _____ _______` + white)
-	fmt.Println(` /   |   \\____ \_/ __ \ /    \` + blue + `|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ ` + white)
-	fmt.Println(`/    |    \  |_> >  ___/|   |  \    ` + blue + `|   \ / __ \_/    /  / __ \_/ __ \|  | \/` + white)
-	fmt.Println(`\_______  /   __/ \___  >___|  /` + blue + `______  /(____  /_____ \(____  (____  /__|` + white)
-	fmt.Println(`        \/|__|        \/     \/  ` + blue + `     \/      \/      \/     \/     \/` + white)
+	blue := color.New(color.FgBlue)
+	white := color.New(color.FgWhite)
+	white.Printf("________             ")
+	blue.Println("         __________")
+	white.Printf(`\_____  \ ______   ____   ____`)
+	blue.Println(`\______   \_____  _____________  _____ _______`)
+	white.Printf(` /   |   \\____ \_/ __ \ /    \`)
+	blue.Println(`|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ `)
+	white.Printf(`/    |    \  |_> >  ___/|   |  \    `)
+	blue.Println(`|   \ / __ \_/    /  / __ \_/ __ \|  | \/`)
+	white.Printf(`\_______  /   __/ \___  >___|  /`)
+	blue.Println(`______  /(____  /_____ \(____  (____  /__|` )
+	white.Printf(`        \/|__|        \/     \/  `)
+	blue.Println(`     \/      \/      \/     \/     \/`)
+	blue.DisableColor()
+	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v0.2 starting...")
+	fmt.Println("OpenBazaar Server v2.0 starting...")
 }
