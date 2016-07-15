@@ -1,6 +1,5 @@
 language: go
 go:
- - 1.5.2
  - 1.6.2
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
@@ -15,6 +14,5 @@ script:
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci 
 after_success:
-
-#  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
+  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
 #  - ghr --username tcnksm-sample --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
