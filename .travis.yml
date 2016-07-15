@@ -13,7 +13,7 @@ before_install:
 script:
   - make install
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
-  - goveralls -coverprofile=coverage.out -service travis-ci -repotoken $COVERALLS_TOKEN
+  - goveralls -coverprofile=coverage.out -service travis-ci 
 after_success:
 
 #  - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
