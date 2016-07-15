@@ -2,7 +2,6 @@
 
 go test -coverprofile=api.cover.out -coverpkg=./api
 go test -coverprofile=bitcoin.cover.out -coverpkg=./bitcoin
-go test -coverprofile=bitcoinlibbitcoin.cover.out -coverpkg=./bitcoin/libbitcoin
 go test -coverprofile=core.cover.out -coverpkg=./core
 go test -coverprofile=ipfs.cover.out -coverpkg=./ipfs
 go test -coverprofile=net.cover.out -coverpkg=./net
