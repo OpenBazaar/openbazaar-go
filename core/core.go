@@ -28,7 +28,7 @@ type OpenBazaarNode struct {
 
 	// The roothash of the node directory inside the openbazaar repo.
 	// This directory hash is published on IPNS at our peer ID making
-	// the directory publically viewable on the network.
+	// the directory publicly viewable on the network.
 	RootHash string
 
 	// The path to the openbazaar repo in the file system.

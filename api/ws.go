@@ -70,7 +70,7 @@ func newWSAPIHandler(ctx commands.Context) *wsHandler {
 func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Errorf("Error upgrading to websockets: ", err)
+		log.Error("Error upgrading to websockets:", err)
 		return
 	}
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}

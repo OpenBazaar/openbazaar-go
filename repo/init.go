@@ -112,7 +112,7 @@ func checkWriteable(dir string) error {
 	}
 
 	if os.IsNotExist(err) {
-		// dir doesnt exist, check that we can create it
+		// dir does not exist, check that we can create it
 		return os.Mkdir(dir, 0775)
 	}
 

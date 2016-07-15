@@ -69,7 +69,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
-		log.Errorf("Error reading http request: ", err)
+		log.Error("Error reading http request:", err)
 	}
 	log.Debugf("%s", dump)
 	defer func() {

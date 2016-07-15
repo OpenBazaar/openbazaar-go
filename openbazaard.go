@@ -175,7 +175,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	ipfslogging.Output(w2)()
 
-	// initalize the ipfs repo if it doesn't already exist
+	// initialize the ipfs repo if it doesn't already exist
 	err = repo.DoInit(os.Stdout, expPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists{
 		log.Error(err)

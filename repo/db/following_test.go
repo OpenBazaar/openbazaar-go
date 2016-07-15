@@ -62,7 +62,7 @@ func TestDeleteFollowing(t *testing.T){
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := fldb.db.Prepare("select peerID from followers where peerID=?")
+	stmt, _ := fldb.db.Prepare("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string
 	stmt.QueryRow("abc").Scan(&follower)
