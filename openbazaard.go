@@ -41,6 +41,8 @@ import (
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	"runtime"
+	"strings"
 )
 
 var log = logging.MustGetLogger("main")
@@ -133,15 +135,25 @@ func (x *DecryptDatabase) Execute(args []string) error {
 
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
+	var err error
 
 	// set repo path
-	var repoPath string
+	var obFolderName string
 	if x.Testnet {
-		repoPath = "~/.openbazaar2.0-testnet"
+		obFolderName = "~/OpenBazaar2.0-testnet"
 	} else {
-		repoPath = "~/.openbazaar2.0"
+		obFolderName = "~/OpenBazaar2.0"
 	}
-	expPath, _ := homedir.Expand(filepath.Clean(repoPath))
+	var dirPath string
+	if runtime.GOOS == "linux" {
+		dirPath = ""
+		obFolderName = "~/." + strings.ToLower(obFolderName[2:])
+	} else if runtime.GOOS == "windows" {
+		dirPath = os.Getenv(`APPDATA`)
+	} else {
+		dirPath = path.Join("Library", "Application Support")
+	}
+	expPath, _ := homedir.Expand(filepath.Clean(path.Join(dirPath, obFolderName)))
 
 	// Database
 	sqliteDB, err := db.Create(expPath, x.Password, x.Testnet)
@@ -184,7 +196,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// ipfs node setup
-	r, err := fsrepo.Open(repoPath)
+	r, err := fsrepo.Open(obFolderName)
 	if err != nil {
 		log.Error(err)
 		return err
