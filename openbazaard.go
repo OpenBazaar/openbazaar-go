@@ -255,12 +255,12 @@ func (x *Start) Execute(args []string) error {
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey.DsKey())
-        if hasherr != nil {
+	if hasherr != nil {
 		log.Error("Error getting current directory root hash")
 		log.Error(hasherr)
 		return hasherr
 	}
-        val := ival.([]byte)
+	val := ival.([]byte)
 	dhtrec := new(dhtpb.Record)
 	proto.Unmarshal(val, dhtrec)
 	e := new(namepb.IpnsEntry)

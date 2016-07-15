@@ -1,10 +1,10 @@
 package db
 
 import (
-	"sync"
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"encoding/json"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"sync"
 )
 
 type SettingsDB struct {
