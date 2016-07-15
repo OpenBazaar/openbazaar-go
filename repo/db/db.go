@@ -24,6 +24,7 @@ type SQLiteDatastore struct {
 	stxos           spvwallet.Stxos
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
+	settings        repo.Settings
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -87,6 +88,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		settings: &SettingsDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -136,6 +141,10 @@ func (d *SQLiteDatastore) Txns() spvwallet.Txns {
 
 func (d *SQLiteDatastore) Utxos() spvwallet.Utxos {
 	return d.utxos
+}
+
+func (d *SQLiteDatastore) Settings() repo.Settings {
+	return d.settings
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {

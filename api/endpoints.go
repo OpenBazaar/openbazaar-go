@@ -19,6 +19,9 @@ func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	case "/ob/images", "/ob/images/":
 		i.PUTImage(w, r)
 		return
+	case "/ob/settings", "/ob/settings/":
+		i.PUTSettings(w, r)
+		return
 	}
 }
 
@@ -41,6 +44,9 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		return
 	case "/wallet/spend", "/wallet/spend/":
 		i.POSTSpendCoins(w, r) // POST and PUT are the same here
+		return
+	case "/ob/settings", "/ob/settings/":
+		i.POSTSettings(w, r)
 		return
 	}
 }
@@ -68,6 +74,18 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 	if strings.Contains(path, "/wallet/balance") {
 		i.GETBalance(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/settings") {
+		i.GETSettings(w, r)
+		return
+	}
+}
+
+func patch(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+	switch path {
+	case "/ob/settings", "/ob/settings/":
+		i.PATCHSettings(w, r)
 		return
 	}
 }

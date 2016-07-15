@@ -20,6 +20,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type RestAPIConfig struct {
@@ -96,7 +97,10 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			put(i, u.String(), w, r)
 			return
 		case "DELETE":
-			fmt.Fprint(w, "delete")
+			// TODO: not yet implemented
+			return
+		case "PATCH":
+			patch(i, u.String(), w, r)
 			return
 		}
 	}
@@ -607,4 +611,90 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 func (i *restAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"guid": "%s"}`, i.node.IpfsNode.Identity.Pretty())
+}
+
+func (i *restAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	var settings repo.SettingsData
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&settings)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	_, err = i.node.Datastore.Settings().Get()
+	if err == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "Settings is already set. Use PUT."}`)
+		return
+	}
+	err = i.node.Datastore.Settings().Put(settings)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	return
+}
+
+func (i *restAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	var settings repo.SettingsData
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&settings)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	_, err = i.node.Datastore.Settings().Get()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "Settings is not yet set. Use POST."}`)
+		return
+	}
+	err = i.node.Datastore.Settings().Put(settings)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	return
+}
+
+func (i *restAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	settings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	settingsJson, err := json.MarshalIndent(&settings, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, string(settingsJson))
+}
+
+func (i *restAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	var settings repo.SettingsData
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&settings)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	err = i.node.Datastore.Settings().Update(settings)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	return
 }

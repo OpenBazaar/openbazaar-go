@@ -11,6 +11,7 @@ type Datastore interface {
 	Following() Following
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
+	Settings() Settings
 	Close()
 }
 
@@ -76,4 +77,16 @@ type Pointers interface {
 
 	// Fetch the entire list of pointers
 	GetAll() ([]ipfs.Pointer, error)
+}
+
+type Settings interface {
+	// Put settings to the database
+	// Override all fields
+	Put(settings SettingsData) error
+
+	// Update all non-nil fields
+	Update(settings SettingsData) error
+
+	// Return the settings object
+	Get() (SettingsData, error)
 }
