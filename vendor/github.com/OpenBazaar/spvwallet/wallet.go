@@ -71,11 +71,10 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	w.userAgent = userAgent
 	w.diconnectChan = make(chan string)
 	w.peerGroup = make(map[string]*Peer)
-	go w.run()
 	return w
 }
 
-func (w *SPVWallet) run() {
+func (w *SPVWallet) Start() {
 	w.queryDNSSeeds()
 
 	// setup TxStore first (before spvcon)

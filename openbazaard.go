@@ -60,13 +60,11 @@ var encryptedDatabaseError = errors.New("could not decrypt the database")
 
 type Start struct {
 	Password string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	Daemon bool `short:"d" long:"daemon" description:"run the server in the background as a daemon"`
 	Testnet bool `short:"t" long:"testnet" description:"use the test network"`
 	LogLevel string `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
 	AllowIP []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	GatewayPort int `short:"g" long:"gatewayport" description:"set the API port"`
 	STUN bool `short:"s" long:"stun" description:"use stun on µTP IPv4"`
-	PIDFile string `long:"pidfile" description:"name of the PID file if running as daemon"`
+	DisableWallet bool `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	Storage string `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
 type Stop struct {}
@@ -302,6 +300,10 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, expPath, sqliteDB, "OpenBazaar", ml)
+	if !x.DisableWallet {
+		log.Info("Starting bitcoin wallet...")
+		go wallet.Start()
+	}
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
