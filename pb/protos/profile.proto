@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+message Profile {
+    string handle                 = 1;
+    string name                   = 2;
+    string location               = 3;
+    string about                  = 4;
+    string shortDescription       = 5;
+    string website                = 6;
+    string email                  = 7;
+    repeated SocialAccount social = 8;
+
+    bool nsfw                     = 9;
+    bool vendor                   = 10;
+    bool moderator                = 11;
+
+    uint32 primaryColor           = 12;
+    uint32 secondaryColor         = 13;
+    uint32 textColor              = 14;
+
+    uint32 follower_count         = 15;
+    uint32 following_count        = 16;
+    uint32 listing_count          = 17;
+
+    uint64 last_modified          = 18;
+
+    message SocialAccount {
+        string type     = 1;
+        string username = 2;
+        string proof    = 3;
+    }
+}

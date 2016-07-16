@@ -208,10 +208,6 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	//p := ProfileParam{}
 
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": Profile doesn't exist}`)
-	}
 
 	// Create profile file
 	f, err := os.Create(profilePath)
@@ -219,31 +215,31 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
 
 	// Check JSON decoding and add proper indentation
-	dec := json.NewDecoder(r.Body)
-	for {
-		var v map[string]interface{}
-		err := dec.Decode(&v)
-		if err == io.EOF {
-			break
-		}
-		b, err := json.MarshalIndent(v, "", "    ")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"success": false, "reason": "JSON marshalling error: %s"}`, err)
-			return
-		}
-		if _, err := f.WriteString(string(b)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
-			return
-		}
+	profile := new(pb.Profile)
+	err = jsonpb.Unmarshal(r.Body, profile)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(profile)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
 	}
 
 	// Republish to IPNS
@@ -399,7 +395,12 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	l := new(pb.Listing)
-	jsonpb.Unmarshal(r.Body, l)
+	err := jsonpb.Unmarshal(r.Body, l)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -419,11 +420,6 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
