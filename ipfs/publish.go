@@ -19,10 +19,11 @@ func Publish(ctx commands.Context, hash string) (string, error) {
 	res := commands.NewResponse(req)
 	cmd.Run(req, res)
 	resp := res.Output()
-	returnedVal := resp.(*coreCmds.IpnsEntry).Value
 	if res.Error() != nil {
+		log.Error(res.Error())
 		return "", res.Error()
 	}
+	returnedVal := resp.(*coreCmds.IpnsEntry).Value
 	if returnedVal != hash {
 		return "", pubErr
 	}
