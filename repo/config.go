@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
 )
@@ -14,6 +13,52 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/139.59.174.197/tcp/4001/ipfs/QmWPRBSdhmhfWLUZapvfg6GCuyYyscgPnaKycYfWqJJcdB", // Brixton-Village
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmVW1nDx2rt8eff8nAB3L8MannsHFsidje6YC3EQvhcwZF",   // Johar
 
+}
+
+func GetAPIHeaders(cfgPath string) (map[string][]string, error) {
+	headers := make(map[string][]string)
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return headers, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["OB-API"]
+	h := api.(map[string]interface{})["HTTPHeaders"]
+	if h == nil {
+		headers = nil
+	} else {
+		headers = h.(map[string][]string)
+	}
+
+	return headers, nil
+}
+
+func GetAPIEnabled(cfgPath string) (bool, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return false, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["OB-API"]
+	enabled := api.(map[string]interface{})["Enabled"].(bool)
+	return enabled, nil
+}
+
+func GetAPICORS(cfgPath string) (bool, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return false, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["OB-API"]
+	cors := api.(map[string]interface{})["CORS"].(bool)
+	return cors, nil
 }
 
 func GetFeeAPI(cfgPath string) (string, error) {

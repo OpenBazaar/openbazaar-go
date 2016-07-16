@@ -43,7 +43,7 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTProfile(w, r) // POST and PUT are the same here
 		return
 	case "/wallet/spend", "/wallet/spend/":
-		i.POSTSpendCoins(w, r) // POST and PUT are the same here
+		i.POSTSpendCoins(w, r)
 		return
 	case "/ob/settings", "/ob/settings/":
 		i.POSTSettings(w, r)

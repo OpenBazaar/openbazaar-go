@@ -161,10 +161,6 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
-	type Server struct {
-		Url       string
-		PublicKey []byte
-	}
 	type Wallet struct {
 		MaxFee           int
 		FeeAPI           string
@@ -172,12 +168,22 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		MediumFeeDefault int
 		LowFeeDefault    int
 	}
-	var w Wallet = Wallet{
+	var w Wallet = Wallet {
 		MaxFee:           2000,
 		FeeAPI:           "https://bitcoinfees.21.co/api/v1/fees/recommended",
 		HighFeeDefault:   60,
 		MediumFeeDefault: 40,
 		LowFeeDefault:    20,
+	}
+	type APIConfig struct {
+		CORS        bool
+		Enabled     bool
+		HTTPHeaders map[string][]string
+	}
+	var a APIConfig = APIConfig {
+		Enabled: true,
+		CORS: false,
+		HTTPHeaders: nil,
 	}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
@@ -186,6 +192,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		return err
 	}
 	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+		return err
+	}
+	if err := extendConfigFile(r, "OB-API", a); err != nil {
 		return err
 	}
 	if err := r.Close(); err != nil {

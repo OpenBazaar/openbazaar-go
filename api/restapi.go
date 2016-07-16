@@ -26,8 +26,8 @@ import (
 type RestAPIConfig struct {
 	Headers      map[string][]string
 	BlockList    *corehttp.BlockList
-	Writable     bool
-	PathPrefixes []string
+	Enabled      bool
+	Cors         bool
 }
 
 type restAPIHandler struct {
@@ -45,12 +45,27 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 	}
 	node.RootHash = dirHash
 
-	prefixes := []string{"/ob/", "/wallet/"}
+	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	cors, err := repo.GetAPICORS(path.Join(node.RepoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	headers, err := repo.GetAPIHeaders(path.Join(node.RepoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 	i := &restAPIHandler{
 		config: RestAPIConfig{
-			Writable:     true,
+			Enabled: enabled,
+			Cors: cors,
+			Headers: headers,
 			BlockList:    &corehttp.BlockList{},
-			PathPrefixes: prefixes,
 		},
 		node: node,
 	}
@@ -59,10 +74,20 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// TODO: These headers should be removed in production. Or maybe an option in config.
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	if !i.config.Enabled{
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		fmt.Fprint(w, "api access disallowed")
+		return
+	}
+	if i.config.Cors {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	}
+
+	for k, v := range i.config.Headers {
+		w.Header()[k] = v
+	}
 
 	// Stop here if its Preflighted OPTIONS request
 	if r.Method == "OPTIONS" {
@@ -85,28 +110,21 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	if i.config.Writable {
-		switch r.Method {
-		case "GET":
-			get(i, u.String(), w, r)
-			return
-		case "POST":
-			post(i, u.String(), w, r)
-			return
-		case "PUT":
-			put(i, u.String(), w, r)
-			return
-		case "DELETE":
-			// TODO: not yet implemented
-			return
-		case "PATCH":
-			patch(i, u.String(), w, r)
-			return
-		}
-	}
-
-	if r.Method == "GET" {
+	switch r.Method {
+	case "GET":
 		get(i, u.String(), w, r)
+		return
+	case "POST":
+		post(i, u.String(), w, r)
+		return
+	case "PUT":
+		put(i, u.String(), w, r)
+		return
+	case "DELETE":
+		// TODO: not yet implemented
+		return
+	case "PATCH":
+		patch(i, u.String(), w, r)
 		return
 	}
 }
