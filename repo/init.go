@@ -36,7 +36,7 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, p
 		return err
 	}
 
-	conf, err := initConfig(out)
+	conf, err := initConfig(out, repoRoot)
 	if err != nil {
 		return err
 	}

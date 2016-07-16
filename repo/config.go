@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"path"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -123,17 +124,14 @@ func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 	return nil
 }
 
-func initConfig(out io.Writer) (*config.Config, error) {
+func initConfig(out io.Writer, repoRoot string) (*config.Config, error) {
 
 	bootstrapPeers, err := config.ParseBootstrapPeers(DefaultBootstrapAddresses)
 	if err != nil {
 		return nil, err
 	}
 
-	datastore, err := datastoreConfig()
-	if err != nil {
-		return nil, err
-	}
+	datastore := datastoreConfig(repoRoot)
 
 	conf := &config.Config{
 
@@ -179,16 +177,13 @@ func initConfig(out io.Writer) (*config.Config, error) {
 	return conf, nil
 }
 
-func datastoreConfig() (config.Datastore, error) {
-	dspath, err := config.DataStorePath("")
-	if err != nil {
-		return config.Datastore{}, err
-	}
+func datastoreConfig(repoRoot string) config.Datastore {
+	dspath := path.Join(repoRoot, "datastore")
 	return config.Datastore{
 		Path:               dspath,
 		Type:               "leveldb",
 		StorageMax:         "10GB",
 		StorageGCWatermark: 90, // 90%
 		GCPeriod:           "1h",
-	}, nil
+	}
 }
