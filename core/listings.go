@@ -69,7 +69,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].ListingName, "listing.json")
 
 	// read existing file
-	file, _ := ioutil.ReadFile(indexPath)
+	file, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return err
+	}
 	listingHash, err := ipfs.AddFile(n.Context, listingPath)
 	if err != nil {
 		return err
@@ -120,7 +123,30 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	return nil
 }
 
+func (n *OpenBazaarNode) GetListingCount() int {
+	type listingData struct {
+		Hash string
+		Name string
+	}
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	// read existing file
+	file, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return 0
+	}
+
+	var index []listingData
+	err = json.Unmarshal(file, &index)
+	if err != nil {
+		return 0
+	}
+	return len(index)
+}
+
 func validate(listing *pb.Listing) error {
 	// TODO: validate this listing to make sure all values are correct
 	return nil
 }
+
+

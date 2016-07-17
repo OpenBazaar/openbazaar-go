@@ -21,6 +21,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	"time"
 )
 
 type RestAPIConfig struct {
@@ -224,9 +225,13 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	profile.FollowerCount = uint32(i.node.Datastore.Followers().Count())
+	profile.FollowingCount = uint32(i.node.Datastore.Following().Count())
+	profile.ListingCount = uint32(i.node.GetListingCount())
+	profile.LastModified = uint64(time.Now().Unix())
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
-		EmitDefaults: false,
+		EmitDefaults: true,
 		Indent:       "    ",
 		OrigName:     false,
 	}
