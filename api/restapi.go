@@ -12,15 +12,14 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	btc "github.com/btcsuite/btcutil"
 )
 
 type RestAPIConfig struct {
@@ -75,8 +74,8 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !i.config.Enabled{
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprint(w, "api access disallowed")
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
 	if i.config.Cors {

@@ -117,6 +117,19 @@ func GetDropboxApiToken(cfgPath string) (string, error) {
 	return token, nil
 }
 
+func GetResolverUrl(cfgPath string) (string, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	r := cfg.(map[string]interface{})["Resolver"].(string)
+
+	return r, nil
+}
+
 func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 	if err := r.SetConfigKey(key, value); err != nil {
 		return err

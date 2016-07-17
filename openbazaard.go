@@ -35,6 +35,7 @@ import (
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
+	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"os"
 	"os/signal"
 	"path"
@@ -43,6 +44,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
 )
 
 var log = logging.MustGetLogger("main")
@@ -334,6 +336,13 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	// Resolver
+	resolverUrl, err := repo.GetResolverUrl(path.Join(expPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:        ctx,
@@ -343,6 +352,7 @@ func (x *Start) Execute(args []string) error {
 		Datastore:      sqliteDB,
 		Wallet:         wallet,
 		MessageStorage: storage,
+		Resolver: bstk.NewBlockStackClient(resolverUrl),
 	}
 
 	var gwErrc <-chan error
@@ -422,7 +432,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(writable, cfg.Gateway.PathPrefixes),
+		corehttp.GatewayOption(writable, cfg.Gateway.PathPrefixes, node.Resolver),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

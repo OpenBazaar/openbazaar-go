@@ -13,6 +13,7 @@ import (
 	"golang.org/x/net/context"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"path"
+	bstk "github.com/OpenBazaar/go-blockstackclient"
 )
 
 var log = logging.MustGetLogger("core")
@@ -54,6 +55,9 @@ type OpenBazaarNode struct {
 
 	// A service that periodically republishes active pointers
 	PointerRepublisher *net.PointerRepublisher
+
+	// Used to resolve blockchainIDs to OpenBazaar IDs
+	Resolver *bstk.BlockstackClient
 
 	// TODO: Libsignal Client
 }
