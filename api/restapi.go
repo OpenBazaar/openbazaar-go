@@ -21,7 +21,6 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	"time"
 )
 
 type RestAPIConfig struct {
@@ -136,9 +135,12 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	//p := ProfileParam{}
 
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-	if _, err := os.Stat(profilePath); !os.IsNotExist(err) {
+
+	_, ferr := os.Stat(profilePath)
+	if !os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": Profile already exists}`)
+		fmt.Fprintf(w, `{"success": false, "reason": "Profile already exists. Use PUT."}`)
+		return
 	}
 
 	// Create profile file
@@ -147,31 +149,40 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
 
 	// Check JSON decoding and add proper indentation
-	dec := json.NewDecoder(r.Body)
-	for {
-		var v map[string]interface{}
-		err := dec.Decode(&v)
-		if err == io.EOF {
-			break
-		}
-		b, err := json.MarshalIndent(v, "", "    ")
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprintf(w, `{"success": false, "reason": "JSON marshalling error: %s"}`, err)
-			return
-		}
-		if _, err := f.WriteString(string(b)); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
-			return
-		}
+	profile := new(pb.Profile)
+	err = jsonpb.Unmarshal(r.Body, profile)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	profile.ListingCount = uint32(i.node.GetListingCount())
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(profile)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
 	}
 
 	// Republish to IPNS
@@ -180,7 +191,6 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"guid": "%s"}`, i.node.IpfsNode.Identity.Pretty())
 }
 
 // swagger:route PUT /profile putProfile
@@ -210,6 +220,13 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 
+	_, ferr := os.Stat(profilePath)
+	if os.IsNotExist(ferr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "Profile doesn't exist yet. Use POST."}`)
+		return
+	}
+
 	// Create profile file
 	f, err := os.Create(profilePath)
 	if err != nil {
@@ -225,10 +242,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	profile.FollowerCount = uint32(i.node.Datastore.Followers().Count())
-	profile.FollowingCount = uint32(i.node.Datastore.Following().Count())
 	profile.ListingCount = uint32(i.node.GetListingCount())
-	profile.LastModified = uint64(time.Now().Unix())
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -242,6 +256,14 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := f.WriteString(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
@@ -289,6 +311,14 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
 	if err := i.node.SeedNode(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
@@ -328,6 +358,14 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
 	}
 
@@ -448,6 +486,14 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
 	}
 

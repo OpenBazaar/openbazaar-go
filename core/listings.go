@@ -68,22 +68,30 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].ListingName, "listing.json")
 
-	// read existing file
-	file, err := ioutil.ReadFile(indexPath)
-	if err != nil {
-		return err
-	}
+	var index []listingData
+
 	listingHash, err := ipfs.AddFile(n.Context, listingPath)
 	if err != nil {
 		return err
 	}
+
 	ld := listingData{
 		Hash: listingHash,
 		Name: contract.VendorListings[0].ListingName,
 	}
 
-	var index []listingData
-	json.Unmarshal(file, &index)
+	_, ferr := os.Stat(indexPath)
+	if !os.IsNotExist(ferr) {
+		// read existing file
+		file, err := ioutil.ReadFile(indexPath)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, &index)
+		if err != nil {
+			return err
+		}
+	}
 
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	for i, d := range index {
@@ -103,14 +111,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	// write it back to file
 	f, err := os.Create(indexPath)
+	defer f.Close()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			panic(err)
-		}
-	}()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {

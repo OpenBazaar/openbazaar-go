@@ -40,7 +40,7 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTUnfollow(w, r)
 		return
 	case "/ob/profile", "/ob/profile/":
-		i.POSTProfile(w, r) // POST and PUT are the same here
+		i.POSTProfile(w, r)
 		return
 	case "/wallet/spend", "/wallet/spend/":
 		i.POSTSpendCoins(w, r)

@@ -14,7 +14,7 @@ message RicardianContract {
 }
 
 message Listing {
-    string listingName            = 1;
+    string slug                   = 1;
     ID vendorID                   = 2;
     Metadata metadata             = 3;
     Item item                     = 4;
@@ -50,7 +50,7 @@ message Listing {
         Price pricePerUnit          = 4;
         bool nsfw                   = 5;
         repeated string tags        = 6;
-        repeated string imageHashes = 7;
+        repeated Image images       = 7;
         string SKU                  = 8;
         string condition            = 9;
         repeated Option options     = 10;
@@ -59,6 +59,11 @@ message Listing {
             string name             = 1;
             string description      = 2;
             repeated string values  = 3;
+        }
+
+        message Image {
+            string hash             = 1;
+            string file             = 2;
         }
     }
 
