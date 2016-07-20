@@ -18,9 +18,9 @@ message Profile {
     string secondaryColor         = 13;
     string textColor              = 14;
 
-    uint32 follower_count         = 15;
-    uint32 following_count        = 16;
-    uint32 listing_count          = 17;
+    uint32 followerCount         = 15;
+    uint32 followingCount        = 16;
+    uint32 listingCount          = 17;
 
     uint64 last_modified          = 18;
 
