@@ -5,7 +5,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/routing/dht"
@@ -14,6 +13,7 @@ import (
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"path"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	sto "github.com/OpenBazaar/openbazaar-go/storage"
 )
 
 var log = logging.MustGetLogger("core")
