@@ -14,9 +14,9 @@ message Profile {
     bool vendor                   = 10;
     bool moderator                = 11;
 
-    uint32 primaryColor           = 12;
-    uint32 secondaryColor         = 13;
-    uint32 textColor              = 14;
+    string primaryColor           = 12;
+    string secondaryColor         = 13;
+    string textColor              = 14;
 
     uint32 follower_count         = 15;
     uint32 following_count        = 16;
