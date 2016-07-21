@@ -152,5 +152,3 @@ func validate(listing *pb.Listing) error {
 	// TODO: validate this listing to make sure all values are correct
 	return nil
 }
-
-

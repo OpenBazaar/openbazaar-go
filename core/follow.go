@@ -1,13 +1,13 @@
 package core
 
 import (
-	"path"
-	"os"
 	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"io/ioutil"
-	"time"
 	"github.com/golang/protobuf/jsonpb"
+	"io/ioutil"
+	"os"
+	"path"
+	"time"
 )
 
 func (n *OpenBazaarNode) UpdateFollow() error {
