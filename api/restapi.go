@@ -190,6 +190,8 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, out)
+	return
 }
 
 // swagger:route PUT /profile putProfile
@@ -274,6 +276,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, out)
 	return
 }
 
@@ -323,7 +326,7 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -373,6 +376,7 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -431,6 +435,7 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, `{"hashes: "%s"}`, string(jsonHashes))
+	return
 }
 
 func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
@@ -501,6 +506,7 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -520,6 +526,7 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -587,6 +594,7 @@ func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -608,6 +616,7 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -669,6 +678,7 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -699,6 +709,7 @@ func (i *restAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -724,6 +735,7 @@ func (i *restAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
 
@@ -760,5 +772,6 @@ func (i *restAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+	fmt.Fprintf(w, `{}`)
 	return
 }
