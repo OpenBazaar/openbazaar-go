@@ -109,7 +109,7 @@ message Order {
     }
 
     message Item {
-        bytes listingHash         = 1;
+        bytes listingHash        = 1;
         uint32 quantity          = 2;
         repeated Option options  = 3;
 
