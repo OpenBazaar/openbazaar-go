@@ -4,6 +4,10 @@
 	"GodepVersion": "v62",
 	"Deps": [
 		{
+			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
+			"Rev": "0754dfcca172cfc4c07a61c123b23e5127d26760"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
 			"Rev": "a64e35ed001e756dafc52f08a573ab3a50426387"
 		},
@@ -849,6 +853,15 @@
 			"Rev": "9c14d2274db119e20be5e073e61f737e8b956d65"
 		},
 		{
+			"ImportPath": "github.com/jbenet/go-base58",
+			"Rev": "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-multihash",
+			"Comment": "0.1.0-39-ge8d2374",
+			"Rev": "e8d2374934f16a971d1e94a864514a21ac74bf7f"
+		},
+		{
 			"ImportPath": "github.com/jessevdk/go-flags",
 			"Comment": "v1-334-g6b9493b",
 			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
@@ -886,6 +899,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/pbkdf2",
+			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/sha3",
 			"Rev": "285fb2ed20d1dc450fc743a1b3ff7c36bef372b9"
 		},
 		{
