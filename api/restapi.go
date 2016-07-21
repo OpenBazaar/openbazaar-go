@@ -4,6 +4,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/spvwallet"
+	btc "github.com/btcsuite/btcutil"
+	"github.com/golang/protobuf/jsonpb"
+	"github.com/ipfs/go-ipfs/core/corehttp"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -12,21 +20,13 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	btc "github.com/btcsuite/btcutil"
 )
 
 type RestAPIConfig struct {
-	Headers      map[string][]string
-	BlockList    *corehttp.BlockList
-	Enabled      bool
-	Cors         bool
+	Headers   map[string][]string
+	BlockList *corehttp.BlockList
+	Enabled   bool
+	Cors      bool
 }
 
 type restAPIHandler struct {
@@ -61,10 +61,10 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 	}
 	i := &restAPIHandler{
 		config: RestAPIConfig{
-			Enabled: enabled,
-			Cors: cors,
-			Headers: headers,
-			BlockList:    &corehttp.BlockList{},
+			Enabled:   enabled,
+			Cors:      cors,
+			Headers:   headers,
+			BlockList: &corehttp.BlockList{},
 		},
 		node: node,
 	}
@@ -73,7 +73,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
 // TODO: Build out the api
 func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !i.config.Enabled{
+	if !i.config.Enabled {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, "403 - Forbidden")
 		return

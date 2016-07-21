@@ -168,7 +168,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		MediumFeeDefault int
 		LowFeeDefault    int
 	}
-	var w Wallet = Wallet {
+	var w Wallet = Wallet{
 		MaxFee:           2000,
 		FeeAPI:           "https://bitcoinfees.21.co/api/v1/fees/recommended",
 		HighFeeDefault:   60,
@@ -180,9 +180,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		Enabled     bool
 		HTTPHeaders map[string][]string
 	}
-	var a APIConfig = APIConfig {
-		Enabled: true,
-		CORS: false,
+	var a APIConfig = APIConfig{
+		Enabled:     true,
+		CORS:        false,
 		HTTPHeaders: nil,
 	}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
