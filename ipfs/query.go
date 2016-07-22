@@ -23,16 +23,10 @@ func Query(ctx commands.Context, peerID string) ([]peer.ID, error) {
 	peerChan := resp.(<-chan interface{})
 	peerMap := make(map[string]peer.ID)
 	for p := range peerChan {
-		_, ok := peerMap[p.(*notifications.QueryEvent).ID.Pretty()]
-		if !ok {
-			peerMap[p.(*notifications.QueryEvent).ID.Pretty()] = p.(*notifications.QueryEvent).ID
-		}
+		peerMap[p.(*notifications.QueryEvent).ID.Pretty()] = p.(*notifications.QueryEvent).ID
 		if len(p.(*notifications.QueryEvent).Responses) > 0 {
 			for _, r := range p.(*notifications.QueryEvent).Responses {
-				_, ok := peerMap[r.ID.Pretty()]
-				if !ok {
-					peerMap[r.ID.Pretty()] = r.ID
-				}
+				peerMap[r.ID.Pretty()] = r.ID
 			}
 		}
 	}
