@@ -80,6 +80,10 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETSettings(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/closestpeers") {
+		i.GETClosestPeers(w, r)
+		return
+	}
 }
 
 func patch(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
