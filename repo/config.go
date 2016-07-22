@@ -2,10 +2,10 @@ package repo
 
 import (
 	"encoding/json"
-	"io"
-	"io/ioutil"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"io"
+	"io/ioutil"
 	"path"
 )
 
