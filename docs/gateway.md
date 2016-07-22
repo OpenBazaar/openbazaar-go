@@ -39,4 +39,5 @@ To enable writing to your gateway set the writable flag in the config file:
 ```
 "Gateway": {
     "Writable": true
+}
 ```

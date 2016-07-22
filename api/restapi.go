@@ -551,10 +551,8 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 //
 func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	s := PeerIdParam{}
 	_, peerId := path.Split(r.URL.Path)
-	s.PeerId = peerId
-	status := i.node.GetPeerStatus(s.PeerId)
+	status := i.node.GetPeerStatus(peerId)
 	fmt.Fprintf(w, `{"status": "%s"}`, status)
 }
 
@@ -774,4 +772,21 @@ func (i *restAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, `{}`)
 	return
+}
+
+func (i *restAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	_, peerId := path.Split(r.URL.Path)
+	var peerIds []string
+	peers, err := ipfs.Query(i.node.Context, peerId)
+	if err == nil {
+		for _, p := range peers {
+			peerIds = append(peerIds, p.Pretty())
+		}
+	}
+	ret, _ := json.MarshalIndent(peerIds, "", "")
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprintf(w, string(ret))
 }
