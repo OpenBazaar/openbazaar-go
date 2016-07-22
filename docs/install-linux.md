@@ -1,4 +1,4 @@
-LINUX INSTALL NOTES
+Linux Install Notes
 ====================
 
 You need to have Go (and git) installed to compile and run the daemon.
