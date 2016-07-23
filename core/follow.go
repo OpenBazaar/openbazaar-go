@@ -78,7 +78,7 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 	}
 	profile.FollowerCount = uint32(n.Datastore.Followers().Count())
 	profile.FollowingCount = uint32(n.Datastore.Following().Count())
-	profile.LastModified = uint64(time.Now().Unix())
+	profile.LastModified = uint32(time.Now().Unix())
 
 	f3, err := os.Create(profilePath)
 	defer f3.Close()

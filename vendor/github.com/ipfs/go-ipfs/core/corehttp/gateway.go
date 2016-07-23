@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"sync"
 
+	bc "github.com/OpenBazaar/go-blockstackclient"
 	core "github.com/ipfs/go-ipfs/core"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	id "gx/ipfs/QmVL44QeoQDTYK8RVdpkyja7uYcK3WDNoBNHVLonf9YDtm/go-libp2p/p2p/protocol/identify"
-	bc "github.com/OpenBazaar/go-blockstackclient"
 )
 
 // Gateway should be instantiated using NewGateway

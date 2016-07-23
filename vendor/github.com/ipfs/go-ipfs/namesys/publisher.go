@@ -53,7 +53,7 @@ func NewRoutingPublisher(route routing.IpfsRouting, ds ds.Datastore) *ipnsPublis
 // and publishes it out to the routing system
 func (p *ipnsPublisher) Publish(ctx context.Context, k ci.PrivKey, value path.Path) error {
 	log.Debugf("Publish %s", value)
-	return p.PublishWithEOL(ctx, k, value, time.Now().Add(time.Hour*24*7))
+	return p.PublishWithEOL(ctx, k, value, time.Now().Add(time.Hour*24))
 }
 
 // PublishWithEOL is a temporary stand in for the ipns records implementation
@@ -121,10 +121,17 @@ func (p *ipnsPublisher) getPreviousSeqNo(ctx context.Context, ipnskey key.Key) (
 	return e.GetSequence(), nil
 }
 
-// Record ttl 1 week
+// setting the TTL on published records is an experimental feature.
+// as such, i'm using the context to wire it through to avoid changing too
+// much code along the way.
 func checkCtxTTL(ctx context.Context) (time.Duration, bool) {
-	d := time.Hour*24*7
-	return d, true
+	v := ctx.Value("ipns-publish-ttl")
+	if v == nil {
+		return 0, false
+	}
+
+	d, ok := v.(time.Duration)
+	return d, ok
 }
 
 func PutRecordToRouting(ctx context.Context, k ci.PrivKey, value path.Path, seqnum uint64, eol time.Time, r routing.IpfsRouting, id peer.ID) error {

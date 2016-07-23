@@ -22,7 +22,7 @@ message Profile {
     uint32 followingCount         = 16;
     uint32 listingCount           = 17;
 
-    uint64 lastModified          = 18;
+    uint32 lastModified           = 18;
 
     message SocialAccount {
         string type     = 1;

@@ -6,8 +6,8 @@ import (
 	key "github.com/ipfs/go-ipfs/blocks/key"
 	goprocess "gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	goprocessctx "gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess/context"
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 )
 
 const MAGIC string = "000000000000000000000000"
@@ -19,11 +19,11 @@ type ProviderManager struct {
 	local     map[key.Key]struct{}
 	lpeer     peer.ID
 
-	getlocal     chan chan []key.Key
-	newprovs     chan *addProv
-	getprovs     chan *getProv
-	period       time.Duration
-	proc         goprocess.Process
+	getlocal chan chan []key.Key
+	newprovs chan *addProv
+	getprovs chan *getProv
+	period   time.Duration
+	proc     goprocess.Process
 }
 
 type providerSet struct {
