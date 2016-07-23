@@ -89,6 +89,9 @@ func maybeCreateOBDirectories(repoRoot string) error {
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "channel"), os.ModePerm); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "files"), os.ModePerm); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(path.Join(repoRoot, "outbox"), os.ModePerm); err != nil {
 		return err
 	}
