@@ -36,14 +36,6 @@ type restAPIHandler struct {
 
 func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 
-	// Add the current node directory in case it's note already added.
-	dirHash, aerr := ipfs.AddDirectory(node.Context, path.Join(node.RepoPath, "root"))
-	if aerr != nil {
-		log.Error(aerr)
-		return nil, aerr
-	}
-	node.RootHash = dirHash
-
 	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
@@ -789,4 +781,16 @@ func (i *restAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 		ret = []byte("[]")
 	}
 	fmt.Fprintf(w, string(ret))
+}
+
+func (i *restAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	_, currencyCode := path.Split(r.URL.Path)
+	rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, `%.2f`, rate)
 }

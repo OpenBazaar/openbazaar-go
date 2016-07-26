@@ -59,6 +59,9 @@ type OpenBazaarNode struct {
 	// Used to resolve blockchainIDs to OpenBazaar IDs
 	Resolver *bstk.BlockstackClient
 
+	// A service that periodically fetches and caches the bitcoin exchange rates
+	ExchangeRates bitcoin.ExchangeRates
+
 	// TODO: Libsignal Client
 }
 
