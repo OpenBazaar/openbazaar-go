@@ -26,6 +26,8 @@ func NewBitcoinPriceFetcher() *BitcoinPriceFetcher {
 }
 
 func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
+	b.Lock()
+	defer b.Unlock()
 	price, ok := b.cache[currencyCode]
 	if !ok {
 		return 0, errors.New("Currency not tracked")
@@ -35,6 +37,8 @@ func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, err
 
 func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
 	b.fetchCurrentRates()
+	b.Lock()
+	defer b.Unlock()
 	price, ok := b.cache[currencyCode]
 	if !ok {
 		return 0, errors.New("Currency not tracked")
@@ -54,6 +58,8 @@ func (b *BitcoinPriceFetcher) run() {
 }
 
 func (b *BitcoinPriceFetcher) fetchCurrentRates() {
+	b.Lock()
+	defer b.Unlock()
 	log.Infof("Fetching bitcoin exchange rates...")
 	err := b.fetchBitcoinAverage()
 	if err == nil {
