@@ -72,7 +72,7 @@ func NewFilter(elements, tweak uint32, fprate float64, flags wire.BloomUpdateTyp
 
 	return &Filter{
 		msgFilterLoad: msg,
-		mtx: new(sync.Mutex),
+		mtx:           new(sync.Mutex),
 	}
 }
 
@@ -81,7 +81,7 @@ func NewFilter(elements, tweak uint32, fprate float64, flags wire.BloomUpdateTyp
 func LoadFilter(filter *wire.MsgFilterLoad) *Filter {
 	return &Filter{
 		msgFilterLoad: filter,
-		mtx: new(sync.Mutex),
+		mtx:           new(sync.Mutex),
 	}
 }
 

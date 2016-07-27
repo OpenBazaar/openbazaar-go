@@ -49,11 +49,8 @@ func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error
 func (b *BitcoinPriceFetcher) run() {
 	b.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
-	for {
-		select {
-		case <-ticker.C:
-			b.fetchCurrentRates()
-		}
+	for range ticker.C {
+		b.fetchCurrentRates()
 	}
 }
 
