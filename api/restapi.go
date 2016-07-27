@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 	"runtime/debug"
+	"strconv"
 	"strings"
 )
 
@@ -793,4 +794,75 @@ func (i *restAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	fmt.Fprintf(w, `%.2f`, rate)
+}
+
+func (i *restAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	offset := r.URL.Query().Get("offset")
+	if offset == "" {
+		offset = "0"
+	}
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	o, err := strconv.ParseInt(offset, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	l, err := strconv.ParseInt(limit, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	followers, err := i.node.Datastore.Followers().Get(int(o), int(l))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	ret, _ := json.MarshalIndent(followers, "", "")
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprintf(w, string(ret))
+}
+
+func (i *restAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	offset := r.URL.Query().Get("offset")
+	if offset == "" {
+		offset = "0"
+	}
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	o, err := strconv.ParseInt(offset, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	l, err := strconv.ParseInt(limit, 10, 32)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	following, err := i.node.Datastore.Following().Get(int(o), int(l))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	ret, _ := json.MarshalIndent(following, "", "")
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprintf(w, string(ret))
+	return
 }

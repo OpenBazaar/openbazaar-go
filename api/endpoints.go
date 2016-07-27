@@ -88,6 +88,14 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETExchangeRate(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/followers") {
+		i.GETFollowers(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/following") {
+		i.GETFollowing(w, r)
+		return
+	}
 }
 
 func patch(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
