@@ -1,10 +1,11 @@
 package api
 
 import (
-	"net/http"
-
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/gorilla/websocket"
 	"github.com/ipfs/go-ipfs/commands"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	"net/http"
 )
 
 type connection struct {
@@ -51,20 +52,42 @@ var upgrader = &websocket.Upgrader{
 var handler wsHandler
 
 type wsHandler struct {
-	h       *hub
-	path    string
-	context commands.Context
+	h             *hub
+	path          string
+	context       commands.Context
+	authenticated bool
+	cookieJar     []http.Cookie
 }
 
-func newWSAPIHandler(ctx commands.Context) *wsHandler {
+func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, cookieJar []http.Cookie) (*wsHandler, error) {
+	cfg, err := node.Context.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
+	if err != nil {
+		return nil, err
+	}
+	var authenticated bool
+	if addr != "127.0.0.1" {
+		authenticated = true
+	}
+
 	hub := newHub()
 	go hub.run()
 	handler = wsHandler{
-		h:       hub,
-		path:    ctx.ConfigRoot,
-		context: ctx,
+		h:             hub,
+		path:          ctx.ConfigRoot,
+		context:       ctx,
+		authenticated: authenticated,
+		cookieJar:     cookieJar,
 	}
-	return &handler
+	return &handler, nil
 }
 
 func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +95,24 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("Error upgrading to websockets:", err)
 		return
+	}
+	if wsh.authenticated {
+		cookie, err := r.Cookie("OpenBazaarSession")
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		var auth bool
+		for _, key := range wsh.cookieJar {
+			if key.Value == cookie.Value {
+				auth = true
+				break
+			}
+		}
+		if !auth {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
 	}
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}
 	c.h.register <- c

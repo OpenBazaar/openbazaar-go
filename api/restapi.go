@@ -1,7 +1,9 @@
 package api
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -12,6 +14,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -24,10 +27,14 @@ import (
 )
 
 type RestAPIConfig struct {
-	Headers   map[string][]string
-	BlockList *corehttp.BlockList
-	Enabled   bool
-	Cors      bool
+	Headers       map[string][]string
+	BlockList     *corehttp.BlockList
+	Enabled       bool
+	Cors          bool
+	Authenticated bool
+	CookieJar     []http.Cookie
+	Username      string
+	Password      string
 }
 
 type restAPIHandler struct {
@@ -35,9 +42,13 @@ type restAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
-
+func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*restAPIHandler, error) {
 	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	username, password, err := repo.GetAPIUsernameAndPw(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -52,12 +63,35 @@ func newRestAPIHandler(node *core.OpenBazaarNode) (*restAPIHandler, error) {
 		log.Error(err)
 		return nil, err
 	}
+
+	cfg, err := node.Context.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	if err != nil {
+		return nil, err
+	}
+	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
+	if err != nil {
+		return nil, err
+	}
+	var authenticated bool
+	if addr != "127.0.0.1" {
+		authenticated = true
+	}
+
 	i := &restAPIHandler{
 		config: RestAPIConfig{
-			Enabled:   enabled,
-			Cors:      cors,
-			Headers:   headers,
-			BlockList: &corehttp.BlockList{},
+			Enabled:       enabled,
+			Cors:          cors,
+			Headers:       headers,
+			BlockList:     &corehttp.BlockList{},
+			Authenticated: authenticated,
+			CookieJar:     cookieJar,
+			Username:      username,
+			Password:      password,
 		},
 		node: node,
 	}
@@ -79,6 +113,33 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for k, v := range i.config.Headers {
 		w.Header()[k] = v
+	}
+
+	if i.config.Authenticated {
+		cookie, err := r.Cookie("OpenBazaarSession")
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+		var auth bool
+		for _, key := range i.config.CookieJar {
+			if key.Value == cookie.Value {
+				auth = true
+				break
+			}
+		}
+		endpoint, err := url.Parse(r.URL.Path)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+		if !auth && (endpoint.String() != `/ob/login` || endpoint.String() != `/ob/login/`) {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
 	}
 
 	// Stop here if its Preflighted OPTIONS request
@@ -864,5 +925,35 @@ func (i *restAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		ret = []byte("[]")
 	}
 	fmt.Fprintf(w, string(ret))
+	return
+}
+
+func (i *restAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type Credentials struct {
+		Username string
+		Password string
+	}
+	decoder := json.NewDecoder(r.Body)
+	var cred Credentials
+	err := decoder.Decode(&cred)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	if cred.Username == i.config.Username && cred.Password == i.config.Password {
+		var r []byte = make([]byte, 32)
+		_, err := rand.Read(r)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+		cookie := &http.Cookie{Name: "OpenBazaarSession", Value: hex.EncodeToString(r)}
+		i.config.CookieJar = append(i.config.CookieJar, *cookie)
+		http.SetCookie(w, cookie)
+	}
+	fmt.Fprintf(w, `{}`)
 	return
 }

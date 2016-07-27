@@ -182,6 +182,8 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		CORS        bool
 		Enabled     bool
 		HTTPHeaders map[string][]string
+		Username    string
+		Password    string
 	}
 	var a APIConfig = APIConfig{
 		Enabled:     true,

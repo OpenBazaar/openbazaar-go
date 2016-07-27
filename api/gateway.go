@@ -17,11 +17,15 @@ var log = logging.MustGetLogger("api")
 
 func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
-	restAPI, err := newRestAPIHandler(n)
+	var cookieJar []http.Cookie
+	restAPI, err := newRestAPIHandler(n, cookieJar)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI := newWSAPIHandler(ctx)
+	wsAPI, err := newWSAPIHandler(n, ctx, cookieJar)
+	if err != nil {
+		return nil, err
+	}
 	n.Broadcast = wsAPI.h.Broadcast
 
 	topMux.Handle("/ob/", restAPI)

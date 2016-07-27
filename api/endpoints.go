@@ -48,6 +48,9 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/settings", "/ob/settings/":
 		i.POSTSettings(w, r)
 		return
+	case "/ob/login":
+		i.POSTLogin(w, r)
+		return
 	}
 }
 

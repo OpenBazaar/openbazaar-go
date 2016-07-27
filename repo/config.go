@@ -16,6 +16,21 @@ var DefaultBootstrapAddresses = []string{
 
 }
 
+func GetAPIUsernameAndPw(cfgPath string) (username, password string, err error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return "", "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["OB-API"]
+	uname := api.(map[string]interface{})["Username"].(string)
+	pw := api.(map[string]interface{})["Password"].(string)
+
+	return uname, pw, nil
+}
+
 func GetAPIHeaders(cfgPath string) (map[string][]string, error) {
 	headers := make(map[string][]string)
 	file, err := ioutil.ReadFile(cfgPath)
