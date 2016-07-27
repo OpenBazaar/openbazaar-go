@@ -1,13 +1,13 @@
 package exchange
 
 import (
-	"github.com/anacrolix/sync"
-	"time"
 	"encoding/json"
-	"net/http"
 	"errors"
+	"github.com/anacrolix/sync"
 	"github.com/op/go-logging"
+	"net/http"
 	"strconv"
+	"time"
 )
 
 var log = logging.MustGetLogger("ipfs")
@@ -51,7 +51,7 @@ func (b *BitcoinPriceFetcher) run() {
 	ticker := time.NewTicker(time.Minute * 15)
 	for {
 		select {
-		case <- ticker.C:
+		case <-ticker.C:
 			b.fetchCurrentRates()
 		}
 	}
@@ -98,7 +98,14 @@ func (b *BitcoinPriceFetcher) fetchBitcoinAverage() (err error) {
 	}
 	for k, v := range data {
 		if k != "timestamp" {
-			price := v.(map[string]interface{})["last"].(float64)
+			val, ok := v.(map[string]interface{})
+			if !ok {
+				return errors.New("Type assertion failed")
+			}
+			price, ok := val["last"].(float64)
+			if !ok {
+				return errors.New("Type assertion failed")
+			}
 			b.cache[k] = price
 		}
 	}
@@ -122,8 +129,14 @@ func (b *BitcoinPriceFetcher) fetchBitpay() (err error) {
 		return err
 	}
 	for _, obj := range data {
-		k := obj["code"].(string)
-		price := obj["rate"].(float64)
+		k, ok := obj["code"].(string)
+		if !ok {
+			return errors.New("Type assertion failed")
+		}
+		price, ok := obj["rate"].(float64)
+		if !ok {
+			return errors.New("Type assertion failed")
+		}
 		b.cache[k] = price
 	}
 	return nil
@@ -146,7 +159,14 @@ func (b *BitcoinPriceFetcher) fetchBlockchainDotInfo() (err error) {
 		return err
 	}
 	for k, v := range data {
-		price := v.(map[string]interface{})["last"].(float64)
+		val, ok := v.(map[string]interface{})
+		if !ok {
+			return errors.New("Type assertion failed")
+		}
+		price, ok := val["last"].(float64)
+		if !ok {
+			return errors.New("Type assertion failed")
+		}
 		b.cache[k] = price
 	}
 	return nil
@@ -170,11 +190,19 @@ func (b *BitcoinPriceFetcher) fetchBitcoinCharts() (err error) {
 	}
 	for k, v := range data {
 		if k != "timestamp" {
-			p, ok := v.(map[string]interface{})["24h"]
+			val, ok := v.(map[string]interface{})
+			if !ok {
+				return errors.New("Type assertion failed")
+			}
+			p, ok := val["24h"]
 			if !ok {
 				continue
 			}
-			price, err := strconv.ParseFloat(p.(string), 64)
+			pr, ok := p.(string)
+			if !ok {
+				return errors.New("Type assertion failed")
+			}
+			price, err := strconv.ParseFloat(pr, 64)
 			if err != nil {
 				return err
 			}
