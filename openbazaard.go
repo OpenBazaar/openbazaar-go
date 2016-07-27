@@ -19,6 +19,7 @@ import (
 
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -353,6 +354,7 @@ func (x *Start) Execute(args []string) error {
 		Wallet:         wallet,
 		MessageStorage: storage,
 		Resolver:       bstk.NewBlockStackClient(resolverUrl),
+		ExchangeRates:  exchange.NewBitcoinPriceFetcher(),
 	}
 
 	var gwErrc <-chan error
@@ -379,6 +381,7 @@ func (x *Start) Execute(args []string) error {
 			PR := net.NewPointerRepublisher(nd, sqliteDB)
 			go PR.Run()
 			core.Node.PointerRepublisher = PR
+			core.Node.SeedNode()
 		}
 		break
 	}

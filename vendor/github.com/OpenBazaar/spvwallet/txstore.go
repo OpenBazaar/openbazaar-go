@@ -2,19 +2,19 @@ package spvwallet
 
 import (
 	"fmt"
-	"sync"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"sync"
 )
 
 type Datastore interface {
 	Utxos() Utxos
 	Stxos() Stxos
-	Txns()  Txns
-	Keys()  Keys
+	Txns() Txns
+	Keys() Keys
 	State() State
 }
 
@@ -79,7 +79,7 @@ type Keys interface {
 
 	// Get the number of unused keys following the last used key
 	// for each key purpose.
-	GetLookaheadWindows() map[KeyPurpose] int
+	GetLookaheadWindows() map[KeyPurpose]int
 }
 
 type State interface {
@@ -114,15 +114,15 @@ type Utxo struct { // cash money.
 	Op wire.OutPoint // where
 
 	// all the info needed to spend
-	AtHeight int32  // block height where this tx was confirmed, 0 for unconf
-	Value    int64  // higher is better
+	AtHeight int32 // block height where this tx was confirmed, 0 for unconf
+	Value    int64 // higher is better
 
 	ScriptPubkey []byte
 }
 
 // Stxo is a utxo that has moved on.
 type Stxo struct {
-	Utxo        Utxo           // when it used to be a utxo
+	Utxo        Utxo         // when it used to be a utxo
 	SpendHeight int32        // height at which it met its demise
 	SpendTxid   wire.ShaHash // the tx that consumed it
 }
@@ -136,8 +136,6 @@ func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey)
 	txs.PopulateAdrs()
 	return txs
 }
-
-
 
 // ... or I'm gonna fade away
 func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
@@ -213,4 +211,3 @@ func OutPointsEqual(a, b wire.OutPoint) bool {
 	}
 	return a.Index == b.Index
 }
-
