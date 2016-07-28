@@ -7,8 +7,8 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/op/go-logging"
 	_ "github.com/mutecomm/go-sqlcipher"
+	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("db")

@@ -27,7 +27,7 @@ func Encrypt() error {
 		fmt.Print("Encrypt the mainnet or testnet db?: ")
 		resp, _ := reader.ReadString('\n')
 		if strings.ToLower(resp) == "mainnet\n" {
-			rPath := "~/.openbazaar2"
+			rPath := "~/.openbazaar2.0"
 			filename = "mainnet.db"
 			testnet = false
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
@@ -43,7 +43,7 @@ func Encrypt() error {
 			}
 			break
 		} else if strings.ToLower(resp) == "testnet\n" {
-			rPath := "~/.openbazaar2-testnet"
+			rPath := "~/.openbazaar2.0-testnet"
 			filename = "testnet.db"
 			testnet = true
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
@@ -132,7 +132,7 @@ func Decrypt() error {
 		fmt.Print("Decrypt the mainnet or testnet db?: ")
 		resp, _ := reader.ReadString('\n')
 		if strings.ToLower(resp) == "mainnet\n" {
-			rPath := "~/.openbazaar2"
+			rPath := "~/.openbazaar2.0"
 			filename = "mainnet.db"
 			testnet = false
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
@@ -148,7 +148,7 @@ func Decrypt() error {
 			}
 			break
 		} else if strings.ToLower(resp) == "testnet\n" {
-			rPath := "~/.openbazaar2-testnet"
+			rPath := "~/.openbazaar2.0-testnet"
 			filename = "testnet.db"
 			testnet = true
 			expPath, _ := homedir.Expand(filepath.Clean(rPath))
