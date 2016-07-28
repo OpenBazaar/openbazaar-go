@@ -10,12 +10,6 @@ brew install git
 brew install go
 ```
 
-The server requires ssl for database encryption. Install OpenSSL if you don't already have it.
-```
-brew install openssl
-brew link openssl --force
-```
-
 ### Setup Go
 
 Create a directory to store all your Go projects (below we just put the directory in our home directory but you can use any directory you want).

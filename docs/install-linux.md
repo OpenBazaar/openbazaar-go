@@ -1,5 +1,7 @@
-Linux Install Notes
+LINUX INSTALL NOTES
 ====================
+
+### Install dependencies
 
 You need to have Go (and git) installed to compile and run the daemon.
 ```
@@ -7,6 +9,8 @@ sudo add-apt-repository ppa:ubuntu-lxc/lxd-stable
 sudo apt-get update
 sudo apt-get install golang git
 ```
+
+### Setup Go
 
 Create a directory to store all your Go projects (below we just put the directory in our home directory but you can use any directory you want).
 
@@ -28,12 +32,8 @@ source ~/.profile
 
 Go should now be installed.
 
-The server requires ssl for database encryption. Install `libssl-dev` if you don't already have it.
-```
-sudo apt-get install libssl-dev
-```
+### Install openbazaar-go
 
-Finally install openbazaar-go
 ```
 go get github.com/OpenBazaar/openbazaar-go
 ```
