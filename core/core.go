@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 	"gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"path"
+	"time"
 )
 
 var log = logging.MustGetLogger("core")

@@ -3,10 +3,10 @@ package exchange
 import (
 	"encoding/json"
 	"errors"
-	"github.com/anacrolix/sync"
 	"github.com/op/go-logging"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 )
 
