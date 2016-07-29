@@ -11,7 +11,6 @@ before_install:
   - go get -u github.com/whyrusleeping/gx
 script:
   - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
-  - make install
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci 
 after_success:
