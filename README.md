@@ -13,3 +13,7 @@ go get github.com/OpenBazaar/openbazaar-go
 ```
 go run openbazaard.go start
 ```
+
+##### Dependency management
+
+This project uses [Godep](https://github.com/tools/godep) as the dependency management tool.
