@@ -57,7 +57,7 @@ func (b *BitcoinPriceFetcher) run() {
 func (b *BitcoinPriceFetcher) fetchCurrentRates() {
 	b.Lock()
 	defer b.Unlock()
-	log.Infof("Fetching bitcoin exchange rates...")
+	log.Infof("Fetching bitcoin exchange rates")
 	err := b.fetchBitcoinAverage()
 	if err == nil {
 		return
