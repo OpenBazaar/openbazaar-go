@@ -8,21 +8,22 @@ message Profile {
     string shortDescription       = 5;
     string website                = 6;
     string email                  = 7;
-    repeated SocialAccount social = 8;
+    string phoneNumber            = 8;
+    repeated SocialAccount social = 9;
 
-    bool nsfw                     = 9;
-    bool vendor                   = 10;
-    bool moderator                = 11;
+    bool nsfw                     = 10;
+    bool vendor                   = 11;
+    bool moderator                = 12;
 
-    string primaryColor           = 12;
-    string secondaryColor         = 13;
-    string textColor              = 14;
+    string primaryColor           = 13;
+    string secondaryColor         = 14;
+    string textColor              = 15;
 
-    uint32 followerCount          = 15;
-    uint32 followingCount         = 16;
-    uint32 listingCount           = 17;
+    uint32 followerCount          = 16;
+    uint32 followingCount         = 17;
+    uint32 listingCount           = 18;
 
-    uint32 lastModified           = 18;
+    uint32 lastModified           = 19;
 
     message SocialAccount {
         string type     = 1;
