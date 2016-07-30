@@ -1,18 +1,18 @@
 package repo
 
 type SettingsData struct {
-	PaymentDataInQR    *bool
-	ShowNotifications  *bool
-	ShowNsfw           *bool
-	ShippingAddresses  *[]ShippingAddress
-	LocalCurrency      *string
-	Country            *string
-	Language           *string
-	TermsAndConditions *string
-	RefundPolicy       *string
-	BlockedNodes       *[]string
-	StoreModerators    *[]string
-	SMTPSettings       *SMTPSettings
+	PaymentDataInQR    *bool              `json:"paymentDataInQR"`
+	ShowNotifications  *bool              `json:"showNotificatons"`
+	ShowNsfw           *bool              `json:"showNsfw"`
+	ShippingAddresses  *[]ShippingAddress `json:"shippingAddresses"`
+	LocalCurrency      *string            `json:"localCurrency"`
+	Country            *string            `json:"country"`
+	Language           *string            `json:"language"`
+	TermsAndConditions *string            `json:"termsAndConditions"`
+	RefundPolicy       *string            `json:"refundPolicy"`
+	BlockedNodes       *[]string          `json:"blockedNodes"`
+	StoreModerators    *[]string          `json:"storeModerators"`
+	SMTPSettings       *SMTPSettings      `json:"smtpSettings"`
 }
 
 type ShippingAddress struct {
