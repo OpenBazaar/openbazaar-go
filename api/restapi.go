@@ -502,7 +502,7 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.ListingName)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.Slug)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)

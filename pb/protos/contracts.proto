@@ -14,14 +14,21 @@ message RicardianContract {
 }
 
 message Listing {
-    string slug                   = 1;
-    ID vendorID                   = 2;
-    Metadata metadata             = 3;
-    Item item                     = 4;
-    Shipping shipping             = 5;
-    repeated string moderators    = 6;
-    string termsAndConditions     = 7;
-    string refundPolicy           = 8;
+    string slug                             = 1;
+    ID vendorID                             = 2;
+    Metadata metadata                       = 3;
+    Item item                               = 4;
+    repeated ShippingOption shippingOptions = 5;
+    Tax tax                                 = 6;
+    repeated Coupon coupons                 = 7;
+    repeated string moderators              = 8;
+    string termsAndConditions               = 9;
+    string refundPolicy                     = 10;
+
+    // Only used by the API when posting a new listing.
+    // Shouldn't be included in the seeded listing.
+    // Negative implies no inventory tracking.
+    int32 inventoryCount                    = 11;
 
     message Metadata {
         uint32 version           = 1;
@@ -56,38 +63,56 @@ message Listing {
         repeated Option options     = 10;
 
         message Option {
-            string name             = 1;
-            string description      = 2;
-            repeated string values  = 3;
+            string title                = 1;
+            string description          = 2;
+            repeated Variants variants  = 3;
+
+            message Variants {
+                string name         = 1;
+                Image image         = 2;
+                Price priceModifier = 3;
+            }
         }
 
         message Image {
-            string hash             = 1;
-            string file             = 2;
+            string hash     = 1;
+            string fileName = 2;
         }
     }
 
-    message Shipping {
-        Price domestic                        = 1;
-        Price international                   = 2;
-        repeated CountryCode shippingRegions  = 3;
-        EstimatedDelivery estimatedDelivery   = 4;
-        CountryCode shippingOrigin            = 5;
+    message ShippingOption {
+        repeated CountryCode regions = 1;
+        repeated Option options      = 2;
 
-        message EstimatedDelivery {
-            string domestic      = 1;
-            string international = 2;
+        message Option {
+            string name                        = 1;
+            Price price                        = 2;
+            repeated Discount quantityDiscount = 3;
+            string estimatedDelivery           = 4;
+
+            message Discount {
+                uint32 quantity = 1;
+                Price discount  = 2;
+            }
         }
+    }
+
+    message Tax {
+        string taxType                  = 1;
+        repeated CountryCode taxRegions = 2;
+        bool taxShipping                = 3;
+        float percentage                = 4;
+    }
+
+    message Coupon {
+        string title   = 1;
+        string hash    = 2;
+        Price discount = 3;
     }
 
     message Price {
-        uint32 bitcoin = 1; // satoshis
-        Fiat fiat      = 2;
-
-        message Fiat {
-            string currencyCode = 1;
-            float price         = 2;
-        }
+        string currencyCode = 1;
+        double price        = 2; // bitcoins must be in satoshi
     }
 }
 

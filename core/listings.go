@@ -54,6 +54,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
+	listing.InventoryCount = 0 //TODO: set inventory in table before clearing this field
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
@@ -66,7 +67,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Name string
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].ListingName, "listing.json")
+	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
 
 	var index []listingData
 
@@ -77,7 +78,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	ld := listingData{
 		Hash: listingHash,
-		Name: contract.VendorListings[0].ListingName,
+		Name: contract.VendorListings[0].Slug,
 	}
 
 	_, ferr := os.Stat(indexPath)
