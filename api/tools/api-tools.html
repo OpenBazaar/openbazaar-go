@@ -98,7 +98,7 @@
 			function setProfile(){
 				$.ajax({
 					url: "http://localhost:8080/ob/profile",
-					type: 'PUT',
+					type: 'POST',
 					data: JSON.stringify({
 						"name": EL("name").value,
 						"handle": EL("handle").value,
