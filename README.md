@@ -31,7 +31,6 @@ A typical install of OpenBazaar contains a bundle of the server deamon and user 
 
 The easiest way to run the server is to download a pre-built binary. You can find binaries of our latest release for each operating system [here](). //TODO
 
-
 ### Build from Source
 
 To build from source you will need to have Go installed and properly configured. Detailed instructs for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs). 
