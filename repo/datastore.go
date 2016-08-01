@@ -12,6 +12,7 @@ type Datastore interface {
 	OfflineMessages() OfflineMessages
 	Pointers() Pointers
 	Settings() Settings
+	Inventory() Inventory
 	Close()
 }
 
@@ -89,4 +90,16 @@ type Settings interface {
 
 	// Return the settings object
 	Get() (SettingsData, error)
+}
+
+type Inventory interface {
+	// Put an inventory count for a listing
+	// Override the existing count if it exists
+	Put(slug string, count int) error
+
+	// Return the count for a listing
+	Get(slug string) (int, error)
+
+	// Delete a listing and related count
+	Delete(slug string) error
 }

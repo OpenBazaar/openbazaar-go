@@ -25,6 +25,7 @@ type SQLiteDatastore struct {
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
 	settings        repo.Settings
+	inventory       repo.Inventory
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -92,6 +93,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		inventory: &InventoryDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -145,6 +150,10 @@ func (d *SQLiteDatastore) Utxos() spvwallet.Utxos {
 
 func (d *SQLiteDatastore) Settings() repo.Settings {
 	return d.settings
+}
+
+func (d *SQLiteDatastore) Inventory() repo.Inventory {
+	return d.inventory
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
@@ -202,6 +211,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);
 	create table state (key text primary key not null, value text);
+	create table inventory (slug text primary key not null, count integer);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

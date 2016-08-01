@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/golang/protobuf/jsonpb"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"time"
 )
 
@@ -79,7 +80,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			return err
 		}
 		h := sha256.Sum256(ser)
-		i.ListingHash = h[:]
+		encoded, err := mh.Encode(h[:], mh.SHA2_256)
+		if err != nil {
+			return err
+		}
+		listingMH, err := mh.Cast(encoded)
+		if err != nil {
+			return err
+		}
+		i.ListingHash = listingMH.B58String()
 		i.Quantity = uint32(item.quantity)
 
 		for _, option := range item.options {
