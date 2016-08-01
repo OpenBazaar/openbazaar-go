@@ -60,8 +60,9 @@ message Listing {
         repeated string tags        = 6;
         repeated Image images       = 7;
         string SKU                  = 8;
-        string condition            = 9;
-        repeated Option options     = 10;
+        float weight                = 9; // kilograms
+        string condition            = 10;
+        repeated Option options     = 11;
 
         message Option {
             string title                = 1;
@@ -101,15 +102,16 @@ message Listing {
     message ShippingRule {
         RuleType ruleType            = 1;
         repeated CountryCode regions = 2;
-        uint32 minimumQuantity       = 3;
-        uint32 maxQuantity           = 4;
+        uint32 minimumRange          = 3;
+        uint32 maxRange              = 4;
         Price price                  = 5;
 
         enum RuleType {
             QUANTITY_DISCOUNT                       = 0;
             FLAT_FEE_QUANTITY_RANGE                 = 1;
-            COMBINED_SHIPPING_ADD                   = 2;
-            COMBINED_SHIPPING_SUBTRACT              = 3;
+            FLAT_FEE_WEIGHT_RANGE                   = 2;
+            COMBINED_SHIPPING_ADD                   = 3;
+            COMBINED_SHIPPING_SUBTRACT              = 4;
         }
     }
 
