@@ -20,7 +20,7 @@ message Listing {
     Item item                               = 4;
     repeated ShippingOption shippingOptions = 5;
     repeated ShippingRule shippingRules     = 6;
-    Tax tax                                 = 7;
+    repeated Tax tax                        = 7;
     repeated Coupon coupons                 = 8;
     repeated string moderators              = 9;
     string termsAndConditions               = 10;
@@ -55,7 +55,7 @@ message Listing {
         string title                = 1;
         string description          = 2;
         string processingTime       = 3;
-        Price pricePerUnit          = 4;
+        Price price                 = 4;
         bool nsfw                   = 5;
         repeated string tags        = 6;
         repeated Image images       = 7;
@@ -152,7 +152,7 @@ message Order {
     }
 
     message Item {
-        bytes listingHash        = 1;
+        string listingHash       = 1;
         uint32 quantity          = 2;
         repeated Option options  = 3;
 

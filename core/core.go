@@ -74,12 +74,19 @@ func (n *OpenBazaarNode) SeedNode() error {
 	if aerr != nil {
 		return aerr
 	}
-	_, perr := ipfs.Publish(n.Context, hash)
-	if perr != nil {
-		return perr
-	}
-	n.RootHash = hash
+	go n.publish(hash)
 	return nil
+}
+
+func (n *OpenBazaarNode) publish(hash string) {
+	n.Broadcast <- []byte(`{"status": "publishing"}`)
+	_, err := ipfs.Publish(n.Context, hash)
+	if err != nil {
+		n.Broadcast <- []byte(`{"status": "error publishing"}`)
+	} else {
+		n.RootHash = hash
+		n.Broadcast <- []byte(`{"status": "publish complete"}`)
+	}
 }
 
 // This is a placeholder until the libsignal is operational
