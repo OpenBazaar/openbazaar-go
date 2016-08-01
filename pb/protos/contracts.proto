@@ -19,16 +19,17 @@ message Listing {
     Metadata metadata                       = 3;
     Item item                               = 4;
     repeated ShippingOption shippingOptions = 5;
-    Tax tax                                 = 6;
-    repeated Coupon coupons                 = 7;
-    repeated string moderators              = 8;
-    string termsAndConditions               = 9;
-    string refundPolicy                     = 10;
+    repeated ShippingRule shippingRules     = 6;
+    Tax tax                                 = 7;
+    repeated Coupon coupons                 = 8;
+    repeated string moderators              = 9;
+    string termsAndConditions               = 10;
+    string refundPolicy                     = 11;
 
     // Only used by the API when posting a new listing.
     // Shouldn't be included in the seeded listing.
     // Negative implies no inventory tracking.
-    int32 inventoryCount                    = 11;
+    int32 inventoryCount                    = 12;
 
     message Metadata {
         uint32 version           = 1;
@@ -81,19 +82,34 @@ message Listing {
     }
 
     message ShippingOption {
-        repeated CountryCode regions = 1;
-        repeated Option options      = 2;
+        ShippingType type            = 1;
+        repeated CountryCode regions = 2;
+        repeated Option options      = 3;
+
+        enum ShippingType {
+            LOCAL_PICKUP = 0;
+            FIXED_PRICE  = 1;
+        }
 
         message Option {
-            string name                        = 1;
+            string service                     = 1;
             Price price                        = 2;
-            repeated Discount quantityDiscount = 3;
-            string estimatedDelivery           = 4;
+            string estimatedDelivery           = 3;
+        }
+    }
 
-            message Discount {
-                uint32 quantity = 1;
-                Price discount  = 2;
-            }
+    message ShippingRule {
+        RuleType ruleType            = 1;
+        repeated CountryCode regions = 2;
+        uint32 minimumQuantity       = 3;
+        uint32 maxQuantity           = 4;
+        Price price                  = 5;
+
+        enum RuleType {
+            QUANTITY_DISCOUNT                       = 0;
+            FLAT_FEE_QUANTITY_RANGE                 = 1;
+            COMBINED_SHIPPING_ADD                   = 2;
+            COMBINED_SHIPPING_SUBTRACT              = 3;
         }
     }
 
