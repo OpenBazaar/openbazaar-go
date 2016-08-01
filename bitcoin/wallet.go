@@ -19,7 +19,7 @@ type BitcoinWallet interface {
 	MasterPublicKey() *hd.ExtendedKey
 
 	// Get the current address for the given purpose
-	CurrentAddress(purpose spvwallet.KeyPurpose) *btc.AddressPubKeyHash
+	CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address
 
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)

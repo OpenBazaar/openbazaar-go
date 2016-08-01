@@ -736,7 +736,7 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 
 func (i *restAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"guid": "%s"}`, i.node.IpfsNode.Identity.Pretty())
+	fmt.Fprintf(w, `{"guid": "%s", "cryptoCurrency": "%s"}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode())
 }
 
 func (i *restAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
