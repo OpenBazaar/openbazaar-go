@@ -957,3 +957,52 @@ func (i *restAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{}`)
 	return
 }
+
+func (i *restAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type inv struct {
+		Slug  string `json:"slug"`
+		Count int    `json:"count"`
+	}
+	var invList []inv
+	inventory, err := i.node.Datastore.Inventory().GetAll()
+	if err != nil {
+		fmt.Fprintf(w, `[]`)
+	}
+	for k, v := range inventory {
+		i := inv{k, v}
+		invList = append(invList, i)
+	}
+	ret, _ := json.MarshalIndent(invList, "", "")
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprintf(w, string(ret))
+	return
+}
+
+func (i *restAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type inv struct {
+		Slug  string
+		Count int
+	}
+	decoder := json.NewDecoder(r.Body)
+	var invList []inv
+	err := decoder.Decode(&invList)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	for _, in := range invList {
+		err := i.node.Datastore.Inventory().Put(in.Slug, in.Count)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+	}
+	fmt.Fprintf(w, `{}`)
+	return
+}
