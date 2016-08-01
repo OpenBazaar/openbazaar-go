@@ -100,6 +100,9 @@ type Inventory interface {
 	// Return the count for a listing
 	Get(slug string) (int, error)
 
+	// Fetch all inventory countes
+	GetAll() (map[string]int, error)
+
 	// Delete a listing and related count
 	Delete(slug string) error
 }

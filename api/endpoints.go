@@ -99,6 +99,10 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETFollowing(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/inventory") {
+		i.GETInventory(w, r)
+		return
+	}
 }
 
 func patch(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {

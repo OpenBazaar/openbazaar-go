@@ -957,3 +957,26 @@ func (i *restAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{}`)
 	return
 }
+
+func (i *restAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type inv struct {
+		Slug  string `json:"slug"`
+		Count int    `json:"count"`
+	}
+	var invList []inv
+	inventory, err := i.node.Datastore.Inventory().GetAll()
+	if err != nil {
+		fmt.Fprintf(w, `[]`)
+	}
+	for k, v := range inventory {
+		i := inv{k, v}
+		invList = append(invList, i)
+	}
+	ret, _ := json.MarshalIndent(invList, "", "")
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprintf(w, string(ret))
+	return
+}

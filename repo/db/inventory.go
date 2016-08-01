@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"strconv"
 	"sync"
 )
 
@@ -36,6 +37,25 @@ func (i *InventoryDB) Get(slug string) (int, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (i *InventoryDB) GetAll() (map[string]int, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	ret := make(map[string]int)
+	stm := "select slug, count from inventory"
+	rows, err := i.db.Query(stm)
+	defer rows.Close()
+	if err != nil {
+		return ret, err
+	}
+	for rows.Next() {
+		var slug string
+		var count int
+		rows.Scan(&slug, &count)
+		ret[slug] = count
+	}
+	return ret, nil
 }
 
 func (i *InventoryDB) Delete(slug string) error {
