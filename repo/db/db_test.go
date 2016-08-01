@@ -70,10 +70,4 @@ func TestInterface(t *testing.T) {
 	if testDB.Keys() != testDB.keys {
 		t.Error("Keys() return wrong value")
 	}
-	if testDB.Transactions() != testDB.transactions {
-		t.Error("Transactions() return wrong value")
-	}
-	if testDB.Coins() != testDB.coins {
-		t.Error("Coins() return wrong value")
-	}
 }
