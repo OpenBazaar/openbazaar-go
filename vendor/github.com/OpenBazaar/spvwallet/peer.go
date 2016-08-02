@@ -1,10 +1,10 @@
 package spvwallet
 
 import (
-	"net"
+	"fmt"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
-	"fmt"
+	"net"
 	"strings"
 )
 
@@ -15,7 +15,6 @@ const (
 	CONNECTED  = 1
 	DEAD       = 2
 )
-
 
 // OpenPV starts a
 func NewPeer(remoteNode string, blockchain *Blockchain, inTs *TxStore, params *chaincfg.Params, userAgent string, diconnectChan chan string, downloadPeer bool) (*Peer, error) {
@@ -38,7 +37,7 @@ func NewPeer(remoteNode string, blockchain *Blockchain, inTs *TxStore, params *c
 	ip := net.ParseIP(remoteNode)
 	if ip.To4() == nil {
 		li := strings.LastIndex(remoteNode, ":")
-		remoteNode = "[" + remoteNode[:li] +"]" + remoteNode[li: len(remoteNode)]
+		remoteNode = "[" + remoteNode[:li] + "]" + remoteNode[li:len(remoteNode)]
 	}
 
 	// open TCP connection
@@ -123,7 +122,7 @@ func (p *Peer) run() {
 	log.Debugf("Sent filter to %s\n", p.con.RemoteAddr().String())
 
 	p.blockQueue = make(chan HashAndHeight, 32)
-	p.fPositives = make(chan int32, 4000)       // a block full, approx
+	p.fPositives = make(chan int32, 4000) // a block full, approx
 	go p.fPositiveHandler()
 
 	if p.downloadPeer {
@@ -134,6 +133,3 @@ func (p *Peer) run() {
 		}
 	}
 }
-
-
-

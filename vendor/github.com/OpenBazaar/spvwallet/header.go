@@ -6,11 +6,11 @@ The blocks themselves don't really make a chain.  Just the headers do.
 package spvwallet
 
 import (
-	"math/big"
-	"time"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
+	"math/big"
+	"time"
 )
 
 // blockchain settings.  These are kindof bitcoin specific, but not contained in

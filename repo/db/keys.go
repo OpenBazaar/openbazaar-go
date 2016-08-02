@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"github.com/OpenBazaar/spvwallet"
 	"strconv"
 	"sync"
@@ -40,11 +39,8 @@ func (k *KeysDB) MarkKeyAsUsed(scriptPubKey []byte) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update keys set used=1 where scriptPubKey=?")
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
+	stmt, _ := tx.Prepare("update keys set used=1 where scriptPubKey=?")
+
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey))
 	if err != nil {
@@ -119,14 +115,13 @@ func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
 	rows, err := k.db.Query(stm)
 	defer rows.Close()
 	if err != nil {
-		fmt.Println(err)
 		return ret, err
 	}
 	for rows.Next() {
 		var purpose int
 		var index int
 		if err := rows.Scan(&purpose, &index); err != nil {
-			fmt.Println(err)
+			continue
 		}
 		p := spvwallet.KeyPath{
 			Purpose: spvwallet.KeyPurpose(purpose),

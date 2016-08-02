@@ -19,13 +19,13 @@ import (
 	chunk "github.com/ipfs/go-ipfs/importer/chunk"
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	dagutils "github.com/ipfs/go-ipfs/merkledag/utils"
+	"github.com/ipfs/go-ipfs/namesys"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/routing"
-	uio "github.com/ipfs/go-ipfs/unixfs/io"
-	"github.com/ipfs/go-ipfs/namesys"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
+	uio "github.com/ipfs/go-ipfs/unixfs/io"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
 const (
@@ -138,7 +138,6 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 		r.URL.Path = strings.Replace(r.URL.Path, paths[2], peerID, 1)
 	}
-
 
 	// If this is an ipns query let's check to see if it's using our own peer ID.
 	// If so let's resolve it locally instead of going out to the network.
