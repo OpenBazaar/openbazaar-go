@@ -4,23 +4,30 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/op/go-logging"
+	"io"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 )
 
-var log = logging.MustGetLogger("ipfs")
+var log = logging.MustGetLogger("exchangeRates")
+
+type ExchangeRateProvider interface {
+	fetch() error
+}
 
 type BitcoinPriceFetcher struct {
 	sync.Mutex
-	cache map[string]float64
+	cache     map[string]float64
+	providers []ExchangeRateProvider
 }
 
 func NewBitcoinPriceFetcher() *BitcoinPriceFetcher {
 	b := BitcoinPriceFetcher{
 		cache: make(map[string]float64),
 	}
+	b.providers = []ExchangeRateProvider{&BitcoinAverage{b.cache}, &BitPay{b.cache}, &BlockchainInfo{b.cache}, &BitcoinCharts{b.cache}}
 	go b.run()
 	return &b
 }
@@ -54,40 +61,34 @@ func (b *BitcoinPriceFetcher) run() {
 	}
 }
 
-func (b *BitcoinPriceFetcher) fetchCurrentRates() {
+func (b *BitcoinPriceFetcher) fetchCurrentRates() error {
 	b.Lock()
 	defer b.Unlock()
 	log.Infof("Fetching bitcoin exchange rates")
-	err := b.fetchBitcoinAverage()
-	if err == nil {
-		return
+	for _, provider := range b.providers {
+		err := provider.fetch()
+		if err == nil {
+			return nil
+		}
 	}
-	err = b.fetchBitpay()
-	if err == nil {
-		return
-	}
-	err = b.fetchBlockchainDotInfo()
-	if err == nil {
-		return
-	}
-	err = b.fetchBitcoinCharts()
-	if err != nil {
-		log.Error("Failed to fetch bitcoin exchange rates")
-	}
-
+	log.Error("Failed to fetch bitcoin exchange rates")
+	return errors.New("All exchange rate API queries failed")
 }
 
-func (b *BitcoinPriceFetcher) fetchBitcoinAverage() (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			err = errors.New("Panic fetching exchange rates")
-		}
-	}()
+type BitcoinAverage struct {
+	cache map[string]float64
+}
+
+func (b *BitcoinAverage) fetch() (err error) {
 	resp, err := http.Get("https://api.bitcoinaverage.com/ticker/global/all")
 	if err != nil {
 		return err
 	}
-	decoder := json.NewDecoder(resp.Body)
+	return b.decode(resp.Body)
+}
+
+func (b *BitcoinAverage) decode(body io.ReadCloser) (err error) {
+	decoder := json.NewDecoder(body)
 	var data map[string]interface{}
 	err = decoder.Decode(&data)
 	if err != nil {
@@ -109,17 +110,20 @@ func (b *BitcoinPriceFetcher) fetchBitcoinAverage() (err error) {
 	return nil
 }
 
-func (b *BitcoinPriceFetcher) fetchBitpay() (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			err = errors.New("Panic fetching exchange rates")
-		}
-	}()
+type BitPay struct {
+	cache map[string]float64
+}
+
+func (b *BitPay) fetch() (err error) {
 	resp, err := http.Get("https://bitpay.com/api/rates")
 	if err != nil {
 		return err
 	}
-	decoder := json.NewDecoder(resp.Body)
+	return b.decode(resp.Body)
+}
+
+func (b *BitPay) decode(body io.ReadCloser) (err error) {
+	decoder := json.NewDecoder(body)
 	var data []map[string]interface{}
 	err = decoder.Decode(&data)
 	if err != nil {
@@ -139,17 +143,20 @@ func (b *BitcoinPriceFetcher) fetchBitpay() (err error) {
 	return nil
 }
 
-func (b *BitcoinPriceFetcher) fetchBlockchainDotInfo() (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			err = errors.New("Panic fetching exchange rates")
-		}
-	}()
+type BlockchainInfo struct {
+	cache map[string]float64
+}
+
+func (b *BlockchainInfo) fetch() (err error) {
 	resp, err := http.Get("https://blockchain.info/ticker")
 	if err != nil {
 		return err
 	}
-	decoder := json.NewDecoder(resp.Body)
+	return b.decode(resp.Body)
+}
+
+func (b *BlockchainInfo) decode(body io.ReadCloser) (err error) {
+	decoder := json.NewDecoder(body)
 	var data map[string]interface{}
 	err = decoder.Decode(&data)
 	if err != nil {
@@ -169,17 +176,20 @@ func (b *BitcoinPriceFetcher) fetchBlockchainDotInfo() (err error) {
 	return nil
 }
 
-func (b *BitcoinPriceFetcher) fetchBitcoinCharts() (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			err = errors.New("Panic fetching exchange rates")
-		}
-	}()
+type BitcoinCharts struct {
+	cache map[string]float64
+}
+
+func (b *BitcoinCharts) fetch() (err error) {
 	resp, err := http.Get("https://api.bitcoincharts.com/v1/weighted_prices.json")
 	if err != nil {
 		return err
 	}
-	decoder := json.NewDecoder(resp.Body)
+	return b.decode(resp.Body)
+}
+
+func (b *BitcoinCharts) decode(body io.ReadCloser) (err error) {
+	decoder := json.NewDecoder(body)
 	var data map[string]interface{}
 	err = decoder.Decode(&data)
 	if err != nil {
