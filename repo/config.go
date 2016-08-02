@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
-	"io"
 	"io/ioutil"
 	"path"
 )
@@ -152,7 +151,7 @@ func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 	return nil
 }
 
-func initConfig(out io.Writer, repoRoot string) (*config.Config, error) {
+func InitConfig(repoRoot string) (*config.Config, error) {
 
 	bootstrapPeers, err := config.ParseBootstrapPeers(DefaultBootstrapAddresses)
 	if err != nil {

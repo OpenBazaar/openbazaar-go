@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-	"io"
 	"os"
 	"path"
 
@@ -23,7 +22,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string) error) error {
+func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -36,7 +35,7 @@ func DoInit(out io.Writer, repoRoot string, nBitsForKeypair int, testnet bool, p
 		return err
 	}
 
-	conf, err := initConfig(out, repoRoot)
+	conf, err := InitConfig(repoRoot)
 	if err != nil {
 		return err
 	}

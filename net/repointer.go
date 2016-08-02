@@ -24,11 +24,8 @@ func (r *PointerRepublisher) Run() {
 	tick := time.NewTicker(time.Hour * 24)
 	defer tick.Stop()
 	go r.republish()
-	for {
-		select {
-		case <-tick.C:
-			go r.republish()
-		}
+	for _ = range tick.C {
+		go r.republish()
 	}
 }
 
