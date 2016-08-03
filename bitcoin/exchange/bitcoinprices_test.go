@@ -2,7 +2,6 @@ package exchange
 
 import (
 	"bytes"
-	"github.com/OpenBazaar/go-ipfs/Godeps/_workspace/src/github.com/syndtr/goleveldb/leveldb/errors"
 	"io"
 	"testing"
 )
