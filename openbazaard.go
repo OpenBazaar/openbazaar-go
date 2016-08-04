@@ -15,7 +15,6 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
-	"strings"
 
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -138,26 +137,20 @@ func (x *Start) Execute(args []string) error {
 	var err error
 
 	// set repo path
-	var obFolderName string
-	if x.Testnet {
-		obFolderName = "~/OpenBazaar2.0-testnet"
-	} else {
-		obFolderName = "~/OpenBazaar2.0"
+	repoPath, err := getRepoPath(x.Testnet)
+	if err != nil {
+		return err
 	}
-	if runtime.GOOS == "linux" {
-		obFolderName = "~/." + strings.ToLower(obFolderName[2:])
-	}
-	expPath, _ := homedir.Expand(filepath.Clean(obFolderName))
 
 	// Database
-	sqliteDB, err := db.Create(expPath, x.Password, x.Testnet)
+	sqliteDB, err := db.Create(repoPath, x.Password, x.Testnet)
 	if err != nil {
 		return err
 	}
 
 	// logging
 	w := &lumberjack.Logger{
-		Filename:   path.Join(expPath, "logs", "ob.log"),
+		Filename:   path.Join(repoPath, "logs", "ob.log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 3,
 		MaxAge:     30, //days
@@ -170,7 +163,7 @@ func (x *Start) Execute(args []string) error {
 
 	ipfslogging.LdJSONFormatter()
 	w2 := &lumberjack.Logger{
-		Filename:   path.Join(expPath, "logs", "ipfs.log"),
+		Filename:   path.Join(repoPath, "logs", "ipfs.log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 3,
 		MaxAge:     30, //days
@@ -178,7 +171,7 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.Output(w2)()
 
 	// initialize the ipfs repo if it doesn't already exist
-	err = repo.DoInit(expPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
+	err = repo.DoInit(repoPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists {
 		log.Error(err)
 		return err
@@ -190,7 +183,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// ipfs node setup
-	r, err := fsrepo.Open(obFolderName)
+	r, err := fsrepo.Open(repoPath)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -244,9 +237,9 @@ func (x *Start) Execute(args []string) error {
 	}
 	ctx := commands.Context{}
 	ctx.Online = true
-	ctx.ConfigRoot = expPath
+	ctx.ConfigRoot = repoPath
 	ctx.LoadConfig = func(path string) (*config.Config, error) {
-		return fsrepo.ConfigAt(expPath)
+		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
 		return nd, nil
@@ -281,24 +274,24 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.TestNet3Params
 	}
-	maxFee, err := repo.GetMaxFee(path.Join(expPath, "config"))
+	maxFee, err := repo.GetMaxFee(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	feeApi, err := repo.GetFeeAPI(path.Join(expPath, "config"))
+	feeApi, err := repo.GetFeeAPI(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	low, medium, high, err := repo.GetDefaultFees(path.Join(expPath, "config"))
+	low, medium, high, err := repo.GetDefaultFees(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
 	w3 := &lumberjack.Logger{
-		Filename:   path.Join(expPath, "logs", "bitcoin.log"),
+		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 3,
 		MaxAge:     30, //days
@@ -306,7 +299,7 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, expPath, sqliteDB, "OpenBazaar", ml)
+	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", ml)
 	if !x.DisableWallet {
 		log.Info("Starting bitcoin wallet...")
 		go wallet.Start()
@@ -315,9 +308,9 @@ func (x *Start) Execute(args []string) error {
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(expPath, ctx)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx)
 	} else if x.Storage == "dropbox" {
-		token, err := repo.GetDropboxApiToken(path.Join(expPath, "config"))
+		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
 		if err != nil {
 			log.Error(err)
 			return err
@@ -338,7 +331,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Resolver
-	resolverUrl, err := repo.GetResolverUrl(path.Join(expPath, "config"))
+	resolverUrl, err := repo.GetResolverUrl(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -349,7 +342,7 @@ func (x *Start) Execute(args []string) error {
 		Context:        ctx,
 		IpfsNode:       nd,
 		RootHash:       ipath.Path(e.Value).String(),
-		RepoPath:       expPath,
+		RepoPath:       repoPath,
 		Datastore:      sqliteDB,
 		Wallet:         wallet,
 		MessageStorage: storage,
@@ -452,6 +445,36 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 		close(errc)
 	}()
 	return nil, cb, errc
+}
+
+// getRepoPath returns the directory to store repo data in. It depends on the
+// operating system and whether or not we're on testnet.
+func getRepoPath(isTestnet bool) (string, error) {
+	// Set default base path and directory name
+	path := "~"
+	directoryName := "OpenBazaar2.0"
+
+	// Override OS-specific names
+	switch runtime.GOOS {
+	case "linux":
+		directoryName = ".openbazaar2.0"
+	case "darwin":
+		path = "~/Library/Application Support"
+	}
+
+	// Append testnet flag if on testnet
+	if isTestnet {
+		directoryName = directoryName + "-testnet"
+	}
+
+	// Join the path and directory name, then expand the home path
+	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
+	if err != nil {
+		return "", nil
+	}
+
+	// Return the shortest lexical representation of the path
+	return filepath.Clean(fullPath), nil
 }
 
 func printSplashScreen() {
