@@ -3,6 +3,7 @@
 pwd
 go test -coverprofile=api.cover.out ./api
 go test -coverprofile=bitcoin.cover.out ./bitcoin
+go test -coverprofile=bitcoin.cover.out ./bitcoin/exchange
 go test -coverprofile=core.cover.out ./core
 go test -coverprofile=ipfs.cover.out ./ipfs
 go test -coverprofile=net.cover.out ./net
