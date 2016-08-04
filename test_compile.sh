@@ -7,7 +7,6 @@ go test -coverprofile=core.cover.out ./core
 go test -coverprofile=ipfs.cover.out ./ipfs
 go test -coverprofile=net.cover.out ./net
 go test -coverprofile=netservice.cover.out ./net/service
-go test -coverprofile=pb.cover.out ./pb
 go test -coverprofile=repo.cover.out ./repo
 go test -coverprofile=repodb.cover.out ./repo/db
 go test -coverprofile=storage.cover.out ./storage
