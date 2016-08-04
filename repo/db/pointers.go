@@ -41,7 +41,6 @@ func (p *PointersDB) Delete(id peer.ID) error {
 	defer p.lock.Unlock()
 	_, err := p.db.Exec("delete from pointers where pointerID=?", id.Pretty())
 	if err != nil {
-		log.Error(err)
 		return err
 	}
 	return nil
@@ -54,7 +53,6 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 	rows, err := p.db.Query(stm)
 	defer rows.Close()
 	if err != nil {
-		log.Error(err)
 		return nil, err
 	}
 	var ret []ipfs.Pointer
@@ -65,7 +63,7 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 		var purpose int
 		var timestamp int
 		if err := rows.Scan(&pointerID, &key, &address, &purpose, &timestamp); err != nil {
-			log.Error(err)
+			return ret, err
 		}
 		maAddr, err := ma.NewMultiaddr(address)
 		if err != nil {
