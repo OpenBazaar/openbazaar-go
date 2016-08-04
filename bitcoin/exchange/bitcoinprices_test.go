@@ -2,6 +2,7 @@ package exchange
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
 )
