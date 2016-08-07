@@ -32,7 +32,7 @@
       "Interval": 10
     }
   },
-  "Dropbox-api-token": "",
+  "Dropbox-api-token": "dropbox123",
   "Gateway": {
     "HTTPHeaders": null,
     "PathPrefixes": [],
