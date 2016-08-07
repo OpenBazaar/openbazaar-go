@@ -4,9 +4,10 @@ import (
 	"testing"
 )
 
+const testConfigPath = "testdata/config"
+
 func TestGetAPIUsernameAndPw(t *testing.T) {
-	var path = "testdata/config"
-	username, pw, err := GetAPIUsernameAndPw(path)
+	username, pw, err := GetAPIUsernameAndPw(testConfigPath)
 	if username != "TestUsername" {
 		t.Error("Expected TestUsername, got ", username)
 	}
@@ -17,8 +18,7 @@ func TestGetAPIUsernameAndPw(t *testing.T) {
 		t.Error("GetAPIUsernameAndPw threw an unexpected error")
 	}
 
-	path = "testdata/nonexistent"
-	username, pw, err = GetAPIUsernameAndPw(path)
+	username, pw, err = GetAPIUsernameAndPw("testdata/nonexistent")
 	if username != "" {
 		t.Error("Expected empty string, got ", username)
 	}
