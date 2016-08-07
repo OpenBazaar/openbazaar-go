@@ -70,4 +70,29 @@ func TestInterface(t *testing.T) {
 	if testDB.Keys() != testDB.keys {
 		t.Error("Keys() return wrong value")
 	}
+	if testDB.State() != testDB.state {
+		t.Error("State() return wrong value")
+	}
+	if testDB.Txns() != testDB.txns {
+		t.Error("Txns() return wrong value")
+	}
+	if testDB.Stxos() != testDB.stxos {
+		t.Error("Stxos() return wrong value")
+	}
+	if testDB.Utxos() != testDB.utxos {
+		t.Error("Utxos() return wrong value")
+	}
+	if testDB.Settings() != testDB.settings {
+		t.Error("Settings() return wrong value")
+	}
+	if testDB.Inventory() != testDB.inventory {
+		t.Error("Inventory() return wrong value")
+	}
+}
+
+func TestEncryptedDb(t *testing.T) {
+	encrypted := testDB.Config().IsEncrypted()
+	if encrypted {
+		t.Error("IsEncrypted returned incorrectly")
+	}
 }
