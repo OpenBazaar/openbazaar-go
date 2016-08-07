@@ -54,7 +54,7 @@
     "IPNS": "/ipns"
   },
   "OB-API": {
-    "CORS": false,
+    "CORS": true,
     "Enabled": true,
     "HTTPHeaders": null,
     "Password": "TestPassword",
