@@ -48,7 +48,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*res
 		log.Error(err)
 		return nil, err
 	}
-	username, password, err := repo.GetAPIUsernameAndPw(path.Join(node.RepoPath, "config"))
+	username, password, err := repo.Credentials(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return nil, err
