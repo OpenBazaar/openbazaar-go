@@ -1,0 +1,80 @@
+{
+  "API": {
+    "HTTPHeaders": null
+  },
+  "Addresses": {
+    "API": "",
+    "Gateway": "/ip4/127.0.0.1/tcp/8080",
+    "Swarm": [
+      "/ip4/0.0.0.0/tcp/4001",
+      "/ip4/0.0.0.0/udp/4001/utp",
+      "/ip6/::/tcp/4001",
+      "/ip6/::/udp/4001/utp"
+    ]
+  },
+  "Bootstrap": [
+    "/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",
+    "/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
+    "/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
+  ],
+  "Datastore": {
+    "GCPeriod": "1h",
+    "NoSync": false,
+    "Params": null,
+    "Path": "/Users/uscreen/OpenBazaar2.0/datastore",
+    "StorageGCWatermark": 90,
+    "StorageMax": "10GB",
+    "Type": "leveldb"
+  },
+  "Discovery": {
+    "MDNS": {
+      "Enabled": false,
+      "Interval": 10
+    }
+  },
+  "Dropbox-api-token": "",
+  "Gateway": {
+    "HTTPHeaders": null,
+    "PathPrefixes": [],
+    "RootRedirect": "",
+    "Writable": false
+  },
+  "Identity": {
+    "PeerID": "",
+    "PrivKey": ""
+  },
+  "Ipns": {
+    "RecordLifetime": "7d",
+    "RepublishPeriod": "24h",
+    "ResolveCacheSize": 128
+  },
+  "Mounts": {
+    "FuseAllowOther": false,
+    "IPFS": "/ipfs",
+    "IPNS": "/ipns"
+  },
+  "OB-API": {
+    "CORS": false,
+    "Enabled": true,
+    "HTTPHeaders": null,
+    "Password": "TestPassword",
+    "Username": "TestUsername"
+  },
+  "Resolver": "https://resolver.onename.com/",
+  "SupernodeRouting": {
+    "Servers": null
+  },
+  "Swarm": {
+    "AddrFilters": null
+  },
+  "Tour": {
+    "Last": ""
+  },
+  "Wallet": {
+    "FeeAPI": "https://bitcoinfees.21.co/api/v1/fees/recommended",
+    "HighFeeDefault": 60,
+    "LowFeeDefault": 20,
+    "MaxFee": 2000,
+    "MediumFeeDefault": 40
+  }
+}
