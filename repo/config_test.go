@@ -4,10 +4,10 @@ import (
 	"testing"
 )
 
-const testConfigPath = "testdata/config"
+const testConfigPath = "testdata/"
 
-func TestGetAPIUsernameAndPw(t *testing.T) {
-	username, pw, err := GetAPIUsernameAndPw(testConfigPath)
+func TestCredentials(t *testing.T) {
+	username, pw, err := Credentials(testConfigPath + "configExample.json")
 	if username != "TestUsername" {
 		t.Error("Expected TestUsername, got ", username)
 	}
@@ -15,10 +15,10 @@ func TestGetAPIUsernameAndPw(t *testing.T) {
 		t.Error("Expected TestPassword, got ", pw)
 	}
 	if err != nil {
-		t.Error("GetAPIUsernameAndPw threw an unexpected error")
+		t.Error("Credentials threw an unexpected error")
 	}
 
-	username, pw, err = GetAPIUsernameAndPw("testdata/nonexistent")
+	username, pw, err = Credentials("testdata/nonexistent")
 	if username != "" {
 		t.Error("Expected empty string, got ", username)
 	}
@@ -26,6 +26,20 @@ func TestGetAPIUsernameAndPw(t *testing.T) {
 		t.Error("Expected empty string, got ", pw)
 	}
 	if err == nil {
-		t.Error("GetAPIUsernameAndPw didn`t throw an error")
+		t.Error("Credentials didn't throw an error")
 	}
+}
+
+func TestCredentialsMissingPassword(t *testing.T) {
+    username, password, err := Credentials(testConfigPath + "configCredentialsMissingPassword.json")
+
+    if err != nil {
+        t.Error("No error expected")
+    }
+    if username != "duosearch" {
+        t.Error("Username improperly parsed")
+    }
+    if password != "" {
+        t.Error("Password improperly parsed")
+    }
 }
