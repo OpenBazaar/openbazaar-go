@@ -4,10 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"github.com/ipfs/go-ipfs/repo/config"
 	libp2p "gx/ipfs/QmUEUu1CM8bxBJxc3ZLojAi8evhTr4byQogWstABet79oY/go-libp2p-crypto"
 	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
-
-	"github.com/ipfs/go-ipfs/repo/config"
 )
 
 func IdentityFromKey(privkey []byte) (config.Identity, error) {

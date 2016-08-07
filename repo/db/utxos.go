@@ -40,11 +40,8 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 	defer u.lock.Unlock()
 	var ret []spvwallet.Utxo
 	stm := "select outpoint, value, height, scriptPubKey from utxos"
-	rows, err := u.db.Query(stm)
+	rows, _ := u.db.Query(stm)
 	defer rows.Close()
-	if err != nil {
-		return ret, err
-	}
 	for rows.Next() {
 		var outpoint string
 		var value int
@@ -54,9 +51,6 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 			continue
 		}
 		s := strings.Split(outpoint, ":")
-		if err != nil {
-			continue
-		}
 		shaHash, err := wire.NewShaHashFromStr(s[0])
 		if err != nil {
 			continue
