@@ -3,11 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	manet "gx/ipfs/QmUBa4w6CbHJUMeGJPDiMEDWsM93xToK1fTnFXnrC8Hksw/go-multiaddr-net"
+	ipfslogging "gx/ipfs/QmNQynaz7qfriSUJkiEZUrm2Wen1u3Kj9goZzWtrPyu7XR/go-log"
+	manet "gx/ipfs/QmPpRcbNUXauP3zWZ1NJMLWpe4QnmEHrd2ba2D3yqWznw7/go-multiaddr-net"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
-	ipfslogging "gx/ipfs/Qmazh5oNUVsDZTs2g59rq8aYQqwpss8tcUWQzor5sCCEuH/go-log"
 	"os"
 	"os/signal"
 	"path"
@@ -415,8 +415,6 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
 	}
 
-	writable := cfg.Gateway.Writable
-
 	gwLis, err := manet.Listen(gatewayMaddr)
 	if err != nil {
 		return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
@@ -431,7 +429,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(writable, cfg.Gateway.PathPrefixes, node.Resolver),
+		corehttp.GatewayOption(node.Resolver),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

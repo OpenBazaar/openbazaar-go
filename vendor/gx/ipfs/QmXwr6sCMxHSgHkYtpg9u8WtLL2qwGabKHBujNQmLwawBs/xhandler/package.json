@@ -1,0 +1,22 @@
+{
+  "author": "rs",
+  "bugs": {
+    "url": "https://github.com/rs/xhandler/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/rs/xhandler"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt",
+      "name": "go-net",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "xhandler",
+  "version": "0.0.0"
+}

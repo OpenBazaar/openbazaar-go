@@ -101,10 +101,6 @@ func (w *SPVWallet) Start() {
 
 	go w.connectToPeers()
 	go w.onPeerDisconnect()
-
-	log.Notice(w.CurrentAddress(KeyPurpose(0)))
-
-	log.Notice(w.Balance())
 }
 
 // Loop through creating new peers until we reach MAX_PEERS

@@ -4,8 +4,7 @@ import cmds "github.com/ipfs/go-ipfs/commands"
 
 var UnixFSCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
-		Tagline:  "Interact with ipfs objects representing Unix filesystems.",
-		Synopsis: "ipfs file <command>",
+		Tagline: "Interact with ipfs objects representing Unix filesystems.",
 		ShortDescription: `
 'ipfs file' provides a familiar interface to file systems represented
 by IPFS objects, which hides IPFS implementation details like layout

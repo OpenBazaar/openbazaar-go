@@ -13,7 +13,6 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/ipfs/go-ipfs/core/corehttp"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io"
 	"net/http"
@@ -28,7 +27,6 @@ import (
 
 type RestAPIConfig struct {
 	Headers       map[string][]string
-	BlockList     *corehttp.BlockList
 	Enabled       bool
 	Cors          bool
 	Authenticated bool
@@ -87,7 +85,6 @@ func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*res
 			Enabled:       enabled,
 			Cors:          cors,
 			Headers:       headers,
-			BlockList:     &corehttp.BlockList{},
 			Authenticated: authenticated,
 			CookieJar:     cookieJar,
 			Username:      username,

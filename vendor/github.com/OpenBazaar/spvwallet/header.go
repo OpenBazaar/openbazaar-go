@@ -57,7 +57,7 @@ true if the correct dificulty adjustment is seen in the "next" header.
 Only feed it headers n-2016 and n-1, otherwise it will calculate a difficulty
 when no adjustment should take place, and return false.
 Note that the epoch is actually 2015 blocks long, which is confusing. */
-func calcDiffAdjust(start, end wire.BlockHeader, p *chaincfg.Params) *big.Int {
+func calcDiffAdjust(start, end wire.BlockHeader, p *chaincfg.Params) uint32 {
 	duration := end.Timestamp.UnixNano() - start.Timestamp.UnixNano()
 	if duration < minRetargetTimespan {
 		log.Debugf("whoa there, block %s off-scale high 4X diff adjustment!",
@@ -82,5 +82,5 @@ func calcDiffAdjust(start, end wire.BlockHeader, p *chaincfg.Params) *big.Int {
 		newTarget.Set(p.PowLimit)
 	}
 
-	return newTarget
+	return blockchain.BigToCompact(newTarget)
 }

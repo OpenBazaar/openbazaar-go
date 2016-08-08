@@ -1,0 +1,20 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/anacrolix/sync"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmeQKXFrogdhUZ5LJpJFa4jQgwX8edLzKft6GskfJR2yJT",
+      "name": "missinggo",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "sync",
+  "version": "0.0.0"
+}
