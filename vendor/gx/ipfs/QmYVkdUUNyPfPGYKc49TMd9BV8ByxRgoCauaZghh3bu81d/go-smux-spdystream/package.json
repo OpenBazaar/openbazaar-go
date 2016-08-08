@@ -1,0 +1,28 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/whyrusleeping/go-smux-spdystream"
+  },
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/go-smux-spdystream"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVdtNvi3madh1HtiX4HByrpjQqkkHUYh6DARq2QC6NxXt",
+      "name": "spdystream",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmb1US8uyZeEpMyc56wVZy2cDFdQjNFojAUYVCoo9ieTqp",
+      "name": "go-stream-muxer",
+      "version": "1.0.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "",
+  "name": "go-smux-spdystream",
+  "version": "1.0.1"
+}

@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	keys "github.com/ipfs/go-ipfs/blocks/key"
+	ps "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	peer "gx/ipfs/QmbyvM8zRFDkbFdYyt1MnevUMJ62SiSGbfDFZ3Z8nkrzr4/go-libp2p-peer"
 	"sync"
 	"time"
 )
@@ -75,7 +76,7 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 		}
 		pointer := ipfs.Pointer{
 			Key: keys.B58KeyDecode(key),
-			Value: peer.PeerInfo{
+			Value: ps.PeerInfo{
 				ID:    pid,
 				Addrs: []ma.Multiaddr{maAddr},
 			},

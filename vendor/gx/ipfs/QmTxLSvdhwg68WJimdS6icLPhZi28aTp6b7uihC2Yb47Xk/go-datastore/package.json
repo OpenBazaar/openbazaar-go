@@ -1,0 +1,63 @@
+{
+  "author": "jbenet",
+  "bugs": {
+    "url": "https://github.com/jbenet/go-datastore"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-datastore"
+  },
+  "gxDependencies": [
+    {
+      "author": "satori",
+      "hash": "QmcyaFHbyiZfoX5GTpcqqCPYmbjYNAhRDekXSJPFHdYNSV",
+      "name": "go.uuid",
+      "version": "1.0.0"
+    },
+    {
+      "author": "syndtr",
+      "hash": "QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g",
+      "name": "goleveldb",
+      "version": "0.0.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn",
+      "name": "goprocess",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmNQynaz7qfriSUJkiEZUrm2Wen1u3Kj9goZzWtrPyu7XR",
+      "name": "go-log",
+      "version": "1.1.2"
+    },
+    {
+      "author": "codahale",
+      "hash": "QmV3NSS3A1kX5s28r7yLczhDsXzkgo65cqRgKFXYunWZmD",
+      "name": "metrics",
+      "version": "0.0.0"
+    },
+    {
+      "author": "fzzy",
+      "hash": "QmTsDAZ4xQsVkTwR299nBfYtjrbG9B1pJcheKodubm99Wr",
+      "name": "radix",
+      "version": "0.5.6"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmaeRR9SpXumU5tYLRkq6x6pfMe8qKzxn4ujBpsTJ2zQG7",
+      "name": "go-os-rename",
+      "version": "0.0.0"
+    },
+    {
+      "author": "hashicorp",
+      "hash": "QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy",
+      "name": "golang-lru",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-datastore",
+  "version": "0.2.0"
+}

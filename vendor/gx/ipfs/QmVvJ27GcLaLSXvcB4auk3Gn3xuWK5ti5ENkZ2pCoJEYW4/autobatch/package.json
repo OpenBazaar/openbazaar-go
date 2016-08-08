@@ -1,0 +1,22 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/whyrusleeping/autobatch"
+  },
+  "gx": {
+    "dvcsimport": "github.com/whyrusleeping/autobatch"
+  },
+  "gxDependencies": [
+    {
+      "author": "jbenet",
+      "hash": "QmTxLSvdhwg68WJimdS6icLPhZi28aTp6b7uihC2Yb47Xk",
+      "name": "go-datastore",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.8.0",
+  "language": "go",
+  "license": "",
+  "name": "autobatch",
+  "version": "0.2.0"
+}
