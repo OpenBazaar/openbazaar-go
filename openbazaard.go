@@ -142,6 +142,9 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+	os.Remove(repoLockFile)
+
 	// Database
 	sqliteDB, err := db.Create(repoPath, x.Password, x.Testnet)
 	if err != nil {

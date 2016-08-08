@@ -63,8 +63,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 // Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type listingData struct {
-		Hash string
-		Name string
+		Hash     string
+		Name     string
+		Category string
+		ItemType string
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
@@ -77,8 +79,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 
 	ld := listingData{
-		Hash: listingHash,
-		Name: contract.VendorListings[0].Slug,
+		Hash:     listingHash,
+		Name:     contract.VendorListings[0].Slug,
+		Category: contract.VendorListings[0].Item.Category,
+		ItemType: contract.VendorListings[0].Metadata.ItemType.String(),
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -130,8 +134,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 func (n *OpenBazaarNode) GetListingCount() int {
 	type listingData struct {
-		Hash string
-		Name string
+		Hash     string
+		Name     string
+		Category string
+		ItemType string
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 

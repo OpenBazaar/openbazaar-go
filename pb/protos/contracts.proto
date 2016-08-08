@@ -33,17 +33,17 @@ message Listing {
 
     message Metadata {
         uint32 version           = 1;
-        Category category        = 2;
-        CategorySub categorySub  = 3;
+        ItemType itemType        = 2;
+        ListingType listingType  = 3;
         uint64 expiry            = 4; // unix timestamp
 
-        enum CategorySub {
+        enum ListingType {
             NA                  = 0;
             FIXED_PRICE         = 1;
             AUCTION             = 2;
         }
 
-        enum Category {
+        enum ItemType {
             UNKNOWN          = 0;
             PHYSICAL_GOOD    = 1;
             DIGITAL_GOOD     = 2;
@@ -59,10 +59,11 @@ message Listing {
         bool nsfw                   = 5;
         repeated string tags        = 6;
         repeated Image images       = 7;
-        string SKU                  = 8;
-        float weight                = 9; // kilograms
-        string condition            = 10;
-        repeated Option options     = 11;
+        string category             = 8;
+        string SKU                  = 9;
+        float weight                = 10; // kilograms
+        string condition            = 11;
+        repeated Option options     = 12;
 
         message Option {
             string title                = 1;
