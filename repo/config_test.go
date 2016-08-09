@@ -3,8 +3,11 @@ package repo
 import (
 	"reflect"
 	"testing"
+
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
+const testConfigFolder = "testdata"
 const testConfigPath = "testdata/config"
 const nonexistentTestConfigPath = "testdata/nonexistent"
 
@@ -185,5 +188,36 @@ func TestGetResolverUrl(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("GetResolverUrl didn't throw an error")
+	}
+}
+
+func TestExtendConfigFile(t *testing.T) {
+	r, err := fsrepo.Open(testConfigFolder)
+	if err != nil {
+		t.Error("fsrepo.Open threw an unexpected error", err)
+	}
+	originalMaxFee, _ := GetMaxFee(testConfigPath)
+	newMaxFee := originalMaxFee + 1
+	if err := extendConfigFile(r, "Wallet.MaxFee", newMaxFee); err != nil {
+		t.Error("extendConfigFile threw an unexpected error ", err)
+	}
+	maxFee, _ := GetMaxFee(testConfigPath)
+	if maxFee != newMaxFee {
+		t.Errorf("Expected maxFee to be %v, got %v", newMaxFee, maxFee)
+	}
+	// reset maxFee to original value
+	extendConfigFile(r, "Wallet.MaxFee", originalMaxFee)
+}
+
+func TestInitConfig(t *testing.T) {
+	config, err := InitConfig(testConfigFolder)
+	if config == nil {
+		t.Error("config empty", err)
+	}
+	if err != nil {
+		t.Error("InitConfig threw an unexpected error")
+	}
+	if config.Addresses.Gateway != "/ip4/127.0.0.1/tcp/8080" {
+		t.Error("config.Addresses.Gateway is not set")
 	}
 }
