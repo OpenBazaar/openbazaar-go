@@ -9,10 +9,9 @@ import (
 )
 
 var DefaultBootstrapAddresses = []string{
-	"/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5", // Le Marché Serpette
-	"/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj", // Brixton-Village
-	"/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod",   // Johar
-
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmSwHSqtUi9GhHTegi8gA5n2fsjP7LcnxGQeedj8ScLi8q", // Le Marché Serpette
+	"/ip4/139.59.174.197/tcp/4001/ipfs/Qmf6ZASu56X3iS9zBh5CQRDCLHttDY41637qn87gzSGybs", // Brixton-Village
+	"/ip4/139.59.6.222/tcp/4001/ipfs/QmZAZYJ5MvqkdoTuaFaoeyHkHLd8muENfr9JTo7ikQZPSG",   // Johari
 }
 
 func GetAPIUsernameAndPw(cfgPath string) (username, password string, err error) {
