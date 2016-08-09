@@ -429,7 +429,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver),
+		corehttp.GatewayOption(node.Resolver, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
