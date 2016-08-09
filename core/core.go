@@ -67,9 +67,6 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to ipns
 func (n *OpenBazaarNode) SeedNode() error {
-	if err := ipfs.UnPinDir(n.Context, n.RootHash); err != nil {
-		return err
-	}
 	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
@@ -81,12 +78,14 @@ func (n *OpenBazaarNode) SeedNode() error {
 func (n *OpenBazaarNode) publish(hash string) {
 	n.Broadcast <- []byte(`{"status": "publishing"}`)
 	_, err := ipfs.Publish(n.Context, hash)
-	if err != nil {
+	perr := ipfs.UnPinDir(n.Context, n.RootHash)
+	n.RootHash = hash
+	if err != nil || perr != nil {
 		n.Broadcast <- []byte(`{"status": "error publishing"}`)
 	} else {
-		n.RootHash = hash
 		n.Broadcast <- []byte(`{"status": "publish complete"}`)
 	}
+
 }
 
 // This is a placeholder until the libsignal is operational
