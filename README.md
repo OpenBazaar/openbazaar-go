@@ -25,7 +25,7 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 
 ## Install
 
-A typical install of OpenBazaar contains a bundle of the server deamon and user interface. If this is what you are looking for you can find and installer at https://openbazaar.org/download.html. If you're looking to run the server daemon by itself or to contribute to developement see below for instructions. 
+A typical install of OpenBazaar contains a bundle of the server deamon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you're looking to run the server daemon by itself or to contribute to developement see below for instructions.
 
 ### Install prebuilt packages
 
