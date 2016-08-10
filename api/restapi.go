@@ -184,8 +184,8 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	//p := ProfileParam{}
 
+	// If the profile is already set tell them to use PUT
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -193,35 +193,18 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create profile file
-	f, err := os.Create(profilePath)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-	}
-
 	// Check JSON decoding and add proper indentation
 	profile := new(pb.Profile)
-	err = jsonpb.Unmarshal(r.Body, profile)
+	err := jsonpb.Unmarshal(r.Body, profile)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	profile.ListingCount = uint32(i.node.GetListingCount())
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-	}
 
-	if _, err := f.WriteString(out); err != nil {
+	// Save to file
+	err = i.node.UpdateProfile(profile)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
@@ -237,6 +220,20 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
+		return
+	}
+
+	// Write profile back out as json
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(profile)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
@@ -270,8 +267,8 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 	//p := ProfileParam{}
 
+	// If profile isn't set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
@@ -279,35 +276,18 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create profile file
-	f, err := os.Create(profilePath)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-	}
-
 	// Check JSON decoding and add proper indentation
 	profile := new(pb.Profile)
-	err = jsonpb.Unmarshal(r.Body, profile)
+	err := jsonpb.Unmarshal(r.Body, profile)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	profile.ListingCount = uint32(i.node.GetListingCount())
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
-	}
 
-	if _, err := f.WriteString(out); err != nil {
+	// Save to file
+	err = i.node.UpdateProfile(profile)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
@@ -326,6 +306,19 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
 		return
+	}
+
+	// Return the profile in json format
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(profile)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": %s}`, err)
 	}
 	fmt.Fprintf(w, out)
 	return

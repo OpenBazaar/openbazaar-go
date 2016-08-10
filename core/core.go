@@ -79,10 +79,13 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		n.Broadcast <- []byte(`{"status": "publishing"}`)
 	}
+	var err, perr error
 	inflightPublishRequests++
-	_, err := ipfs.Publish(n.Context, hash)
-	perr := ipfs.UnPinDir(n.Context, n.RootHash)
-	n.RootHash = hash
+	_, err = ipfs.Publish(n.Context, hash)
+	if hash != n.RootHash {
+		perr = ipfs.UnPinDir(n.Context, n.RootHash)
+		n.RootHash = hash
+	}
 	inflightPublishRequests--
 	if inflightPublishRequests == 0 {
 		if err != nil || perr != nil {
