@@ -20,6 +20,8 @@ var log = logging.MustGetLogger("core")
 
 var Node *OpenBazaarNode
 
+var inflightPublishRequests int
+
 type OpenBazaarNode struct {
 	// Context for issuing IPFS commands
 	Context commands.Context
@@ -61,13 +63,10 @@ type OpenBazaarNode struct {
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates
-
-	inflightPublishRequests int
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns
 func (n *OpenBazaarNode) SeedNode() error {
-	n.inflightPublishRequests++
 	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
@@ -77,18 +76,22 @@ func (n *OpenBazaarNode) SeedNode() error {
 }
 
 func (n *OpenBazaarNode) publish(hash string) {
-	if n.inflightPublishRequests == 0 {
+	if inflightPublishRequests == 0 {
 		n.Broadcast <- []byte(`{"status": "publishing"}`)
 	}
+	inflightPublishRequests++
 	_, err := ipfs.Publish(n.Context, hash)
 	perr := ipfs.UnPinDir(n.Context, n.RootHash)
 	n.RootHash = hash
-	if err != nil || perr != nil {
-		n.Broadcast <- []byte(`{"status": "error publishing"}`)
-	} else {
-		n.Broadcast <- []byte(`{"status": "publish complete"}`)
+	inflightPublishRequests--
+	if inflightPublishRequests == 0 {
+		if err != nil || perr != nil {
+			log.Error(err, perr)
+			n.Broadcast <- []byte(`{"status": "error publishing"}`)
+		} else {
+			n.Broadcast <- []byte(`{"status": "publish complete"}`)
+		}
 	}
-
 }
 
 // This is a placeholder until the libsignal is operational
