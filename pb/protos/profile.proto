@@ -20,7 +20,7 @@ message Profile {
     string textColor              = 15;
 
     // The following data is added to the profile
-    // automatically be the server and may be omitted
+    // automatically by the server and may be omitted
     // when setting the profile via api.
 
     string avatarHash             = 16;
