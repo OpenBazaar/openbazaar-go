@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Title:     contract.VendorListings[0].Item.Title,
 		Category:  contract.VendorListings[0].Item.Categories,
 		ItemType:  contract.VendorListings[0].Metadata.ItemType.String(),
-		Desc:      contract.VendorListings[0].Item.Description,
+		Desc:      contract.VendorListings[0].Item.Description[:140],
 		Thumbnail: contract.VendorListings[0].Item.Images[0].Hash,
 		Price:     price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Price},
 	}
