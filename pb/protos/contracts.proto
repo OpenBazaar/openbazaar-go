@@ -71,9 +71,13 @@ message Listing {
             repeated Variants variants  = 3;
 
             message Variants {
-                string name         = 1;
-                Image image         = 2;
-                Price priceModifier = 3;
+                string name          = 1;
+                Image image          = 2;
+                Price priceModifier  = 3;
+
+                // same as the inventory above
+                // only used by the api
+                int32 inventoryCount = 4;
             }
         }
 

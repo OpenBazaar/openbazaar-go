@@ -54,10 +54,32 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
-	listing.InventoryCount = 0 //TODO: set inventory in table before clearing this field
+
+	// set to zero as the inventory counts shouldn't be seeded with the listing
+	listing.InventoryCount = 0
+	for _, option := range listing.Item.Options {
+		for _, variant := range option.Variants {
+			variant.InventoryCount = 0
+		}
+	}
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
+}
+
+func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
+	if len(listing.Item.Options) == 0 {
+		return n.Datastore.Inventory().Put(listing.Slug, int(listing.InventoryCount))
+	}
+	for _, option := range listing.Item.Options {
+		for _, variant := range option.Variants {
+			err := n.Datastore.Inventory().Put(path.Join(listing.Slug, option.Title, variant.Name), int(variant.InventoryCount))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Update the index.json file in the listings directory
