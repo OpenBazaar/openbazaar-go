@@ -59,7 +59,7 @@ message Listing {
         bool nsfw                   = 5;
         repeated string tags        = 6;
         repeated Image images       = 7;
-        string category             = 8;
+        repeated string categories  = 8;
         string SKU                  = 9;
         float weight                = 10; // kilograms
         string condition            = 11;

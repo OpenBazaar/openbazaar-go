@@ -88,11 +88,19 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 
 // Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
+	type price struct {
+		CurrencyCode string
+		Price        float64
+	}
 	type listingData struct {
-		Hash     string
-		Name     string
-		Category string
-		ItemType string
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
@@ -105,10 +113,14 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 
 	ld := listingData{
-		Hash:     listingHash,
-		Name:     contract.VendorListings[0].Slug,
-		Category: contract.VendorListings[0].Item.Category,
-		ItemType: contract.VendorListings[0].Metadata.ItemType.String(),
+		Hash:      listingHash,
+		Slug:      contract.VendorListings[0].Slug,
+		Title:     contract.VendorListings[0].Item.Title,
+		Category:  contract.VendorListings[0].Item.Categories,
+		ItemType:  contract.VendorListings[0].Metadata.ItemType.String(),
+		Desc:      contract.VendorListings[0].Item.Description,
+		Thumbnail: contract.VendorListings[0].Item.Images[0].Hash,
+		Price:     price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Price},
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -126,7 +138,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	for i, d := range index {
-		if d.Name != ld.Name {
+		if d.Slug != ld.Slug {
 			continue
 		}
 
@@ -159,11 +171,19 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 }
 
 func (n *OpenBazaarNode) GetListingCount() int {
+	type price struct {
+		CurrencyCode string
+		Price        float64
+	}
 	type listingData struct {
-		Hash     string
-		Name     string
-		Category string
-		ItemType string
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
