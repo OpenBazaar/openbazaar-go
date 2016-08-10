@@ -62,11 +62,12 @@ type OpenBazaarNode struct {
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates
 
-	// TODO: Libsignal Client
+	inflightPublishRequests int
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns
 func (n *OpenBazaarNode) SeedNode() error {
+	n.inflightPublishRequests++
 	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
@@ -76,7 +77,9 @@ func (n *OpenBazaarNode) SeedNode() error {
 }
 
 func (n *OpenBazaarNode) publish(hash string) {
-	n.Broadcast <- []byte(`{"status": "publishing"}`)
+	if n.inflightPublishRequests == 0 {
+		n.Broadcast <- []byte(`{"status": "publishing"}`)
+	}
 	_, err := ipfs.Publish(n.Context, hash)
 	perr := ipfs.UnPinDir(n.Context, n.RootHash)
 	n.RootHash = hash
