@@ -19,11 +19,18 @@ message Profile {
     string secondaryColor         = 14;
     string textColor              = 15;
 
-    uint32 followerCount          = 16;
-    uint32 followingCount         = 17;
-    uint32 listingCount           = 18;
+    // The following data is added to the profile
+    // automatically be the server and may be omitted
+    // when setting the profile via api.
 
-    uint32 lastModified           = 19;
+    string avatarHash             = 16;
+    string headerHash             = 17;
+
+    uint32 followerCount          = 18;
+    uint32 followingCount         = 19;
+    uint32 listingCount           = 20;
+
+    uint32 lastModified           = 21;
 
     message SocialAccount {
         string type     = 1;

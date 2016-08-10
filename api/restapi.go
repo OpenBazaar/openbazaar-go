@@ -357,6 +357,27 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add hash to profile
+	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
+	if aerr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
+		return
+	}
+	profile, err := i.node.GetProfile()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
+		return
+	}
+	profile.AvatarHash = hash
+	err = i.node.UpdateProfile(&profile)
+	if aerr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
+		return
+	}
+
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -404,6 +425,27 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Add hash to profile
+	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
+	if aerr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
+		return
+	}
+	profile, err := i.node.GetProfile()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
+		return
+	}
+	profile.HeaderHash = hash
+	err = i.node.UpdateProfile(&profile)
+	if aerr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
 		return
 	}
 
