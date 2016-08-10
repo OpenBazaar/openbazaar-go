@@ -23,7 +23,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	if err != nil {
 		return c, err
 	}
-	//TODO: add blockchain ID to listing
+	profile, err := n.GetProfile()
+	if err != nil {
+		return c, err
+	}
 	p := new(pb.ID_Pubkeys)
 	p.Guid = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
@@ -32,6 +35,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	}
 	p.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = p
+	id.BlockchainID = profile.Handle
 	listing.VendorID = id
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING
