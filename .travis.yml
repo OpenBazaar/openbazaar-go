@@ -15,4 +15,5 @@ script:
   - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
   - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
-  - ghr --username $GITHUB_USERNAME --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
+  - echo $GITHUB_USERNAME
+  - ghr --username $GITHUB_USERNAME -t $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
