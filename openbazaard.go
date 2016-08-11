@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 
+	"bufio"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
@@ -45,6 +46,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"strings"
 )
 
 var log = logging.MustGetLogger("main")
@@ -61,8 +63,10 @@ var encryptedDatabaseError = errors.New("could not decrypt the database")
 
 type Init struct {
 	Password string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
-	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used" required:"true"`
+	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Mnemonic string `short:"m" long:"mnemonic" description:"speficy a mnemonic seed to use to derive the keychain"`
+	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
+	Force    bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
 }
 
 type Start struct {
@@ -109,7 +113,7 @@ func main() {
 	parser.AddCommand("init",
 		"initialize a new repo and exit",
 		"Initializes a new repo without starting the server",
-		&startServer)
+		&initRepo)
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
@@ -144,6 +148,39 @@ func (x *DecryptDatabase) Execute(args []string) error {
 	return db.Decrypt()
 }
 
+func (x *Init) Execute(args []string) error {
+	// set repo path
+	repoPath, err := getRepoPath(x.Testnet)
+	if err != nil {
+		return err
+	}
+	if x.DataDir != "" {
+		repoPath = x.DataDir
+	}
+
+	_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet)
+	if err == repo.ErrRepoExists && x.Force {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Force overwriting the db will destroy your existing keys and history. Are you really, really sure you want to continue? (y/n): ")
+		resp, _ := reader.ReadString('\n')
+		if strings.ToLower(resp) == "y\n" || strings.ToLower(resp) == "yes\n" {
+			os.RemoveAll(repoPath)
+			_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("OpenBazaar repo initialized at %s\n", repoPath)
+			return nil
+		} else {
+			return nil
+		}
+	} else if err != nil {
+		return err
+	}
+	fmt.Printf("OpenBazaar repo initialized at %s\n", repoPath)
+	return nil
+}
+
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
 	var err error
@@ -160,8 +197,8 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
 
-	sqliteDB, err := initializeRepo(repoPath, x.Password, x.Testnet)
-	if err != nil {
+	sqliteDB, err := initializeRepo(repoPath, x.Password, "", x.Testnet)
+	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
 
@@ -396,7 +433,7 @@ func (x *Start) Execute(args []string) error {
 	return nil
 }
 
-func initializeRepo(dataDir, password string, testnet bool) (*db.SQLiteDatastore, error) {
+func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet)
 	if err != nil {
@@ -404,8 +441,8 @@ func initializeRepo(dataDir, password string, testnet bool) (*db.SQLiteDatastore
 	}
 
 	// initialize the ipfs repo if it doesn't already exist
-	err = repo.DoInit(dataDir, 4096, testnet, password, sqliteDB.Config().Init)
-	if err != nil && err != repo.ErrRepoExists {
+	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, sqliteDB.Config().Init)
+	if err != nil {
 		return sqliteDB, err
 	}
 	return sqliteDB, nil
