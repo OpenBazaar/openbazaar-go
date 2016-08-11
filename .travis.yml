@@ -14,6 +14,7 @@ script:
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
+  - export CGO_ENABLED=1
   - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
   - echo $GITHUB_USERNAME
   - ghr --username $GITHUB_USERNAME -t $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
