@@ -19,8 +19,8 @@ const ListingVersion = 1
 const TitleMaxCharacters = 140
 const DescriptionMaxCharacters = 50000
 const MaxTags = 10
-
-
+const CategoryMaxCharacters = 70
+const TagMaxCharacters = 70
 
 // Add our identity to the listings and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
@@ -248,6 +248,14 @@ func validate(listing *pb.Listing) error {
 	if len(listing.Item.Tags) > MaxTags {
 		return fmt.Errorf("Number of tags exceeds the max of %d", MaxTags)
 	}
+	for _, tag := range listing.Item.Tags {
+		if tag == "" {
+			return errors.New("Tags must not be nil")
+		}
+		if len(tag) > TagMaxCharacters {
+			return fmt.Errorf("Tags must be less than max of %d", TagMaxCharacters)
+		}
+	}
 	for _, img := range listing.Item.Images {
 		_, err := mh.FromB58String(img.Hash)
 		if err != nil {
@@ -260,6 +268,9 @@ func validate(listing *pb.Listing) error {
 	for _, category := range listing.Item.Categories {
 		if category == "" {
 			return errors.New("Categories must not be nil")
+		}
+		if len(category) > CategoryMaxCharacters {
+			return fmt.Errorf("Category length must be less than the max of %d", CategoryMaxCharacters)
 		}
 	}
 	for _, option := range listing.Item.Options {

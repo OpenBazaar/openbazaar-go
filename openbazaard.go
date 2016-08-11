@@ -65,6 +65,7 @@ type Start struct {
 	LogLevel      string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
 	AllowIP       []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN          bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
+	DataDir       string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	DisableWallet bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	Storage       string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
@@ -140,6 +141,9 @@ func (x *Start) Execute(args []string) error {
 	repoPath, err := getRepoPath(x.Testnet)
 	if err != nil {
 		return err
+	}
+	if x.DataDir != "" {
+		repoPath = x.DataDir
 	}
 
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
