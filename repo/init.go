@@ -22,7 +22,7 @@ Reinitializing would overwrite your keys.
 (use -f to force overwrite)
 `)
 
-func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, dbInit func(string, []byte, string) error) error {
+func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -40,9 +40,11 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		return err
 	}
 
-	mnemonic, err := createMnemonic()
-	if err != nil {
-		return err
+	if mnemonic == "" {
+		mnemonic, err = createMnemonic()
+		if err != nil {
+			return err
+		}
 	}
 
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
