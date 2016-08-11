@@ -59,6 +59,12 @@ var fileLogFormat = logging.MustStringFormatter(
 
 var encryptedDatabaseError = errors.New("could not decrypt the database")
 
+type Init struct {
+	Password string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
+	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used" required:"true"`
+	Mnemonic string `short:"m" long:"mnemonic" description:"speficy a mnemonic seed to use to derive the keychain"`
+}
+
 type Start struct {
 	Password      string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet       bool     `short:"t" long:"testnet" description:"use the test network"`
@@ -74,6 +80,7 @@ type Restart struct{}
 type EncryptDatabase struct{}
 type DecryptDatabase struct{}
 
+var initRepo Init
 var startServer Start
 var stopServer Stop
 var restartServer Restart
@@ -99,6 +106,10 @@ func main() {
 		}
 	}()
 
+	parser.AddCommand("init",
+		"initialize a new repo and exit",
+		"Initializes a new repo without starting the server",
+		&startServer)
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
@@ -149,8 +160,7 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
 
-	// Database
-	sqliteDB, err := db.Create(repoPath, x.Password, x.Testnet)
+	sqliteDB, err := initializeRepo(repoPath, x.Password, x.Testnet)
 	if err != nil {
 		return err
 	}
@@ -176,13 +186,6 @@ func (x *Start) Execute(args []string) error {
 		MaxAge:     30, //days
 	}
 	ipfslogging.Output(w2)()
-
-	// initialize the ipfs repo if it doesn't already exist
-	err = repo.DoInit(repoPath, 4096, x.Testnet, x.Password, sqliteDB.Config().Init)
-	if err != nil && err != repo.ErrRepoExists {
-		log.Error(err)
-		return err
-	}
 
 	// if the db can't be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -391,6 +394,21 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func initializeRepo(dataDir, password string, testnet bool) (*db.SQLiteDatastore, error) {
+	// Database
+	sqliteDB, err := db.Create(dataDir, password, testnet)
+	if err != nil {
+		return sqliteDB, err
+	}
+
+	// initialize the ipfs repo if it doesn't already exist
+	err = repo.DoInit(dataDir, 4096, testnet, password, sqliteDB.Config().Init)
+	if err != nil && err != repo.ErrRepoExists {
+		return sqliteDB, err
+	}
+	return sqliteDB, nil
 }
 
 // printSwarmAddrs prints the addresses of the host

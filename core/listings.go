@@ -4,15 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
-	"fmt"
-	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 )
 
 const ListingVersion = 1
@@ -224,10 +224,10 @@ func validate(listing *pb.Listing) error {
 	if listing.Slug == "" {
 		return errors.New("Slug must not be nil")
 	}
-	if int(listing.Metadata.ListingType) == 0 ||  int(listing.Metadata.ListingType) > 2 {
+	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
-	if int(listing.Metadata.ItemType) == 0 ||  int(listing.Metadata.ItemType) > 3 {
+	if int(listing.Metadata.ItemType) == 0 || int(listing.Metadata.ItemType) > 3 {
 		return errors.New("Invalid item type")
 	}
 	if time.Unix(int64(listing.Metadata.Expiry), 0).Before(time.Now()) {

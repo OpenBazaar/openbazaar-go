@@ -5,10 +5,10 @@ import (
 	"net"
 	"net/http"
 
+	bc "github.com/OpenBazaar/go-blockstackclient"
 	core "github.com/ipfs/go-ipfs/core"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	id "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/protocol/identify"
-	bc "github.com/OpenBazaar/go-blockstackclient"
 )
 
 type GatewayConfig struct {
@@ -29,7 +29,7 @@ func GatewayOption(resolver *bc.BlockstackClient, paths ...string) ServeOption {
 			Headers:      cfg.Gateway.HTTPHeaders,
 			Writable:     cfg.Gateway.Writable,
 			PathPrefixes: cfg.Gateway.PathPrefixes,
-			Resolver: resolver,
+			Resolver:     resolver,
 		})
 
 		for _, p := range paths {
