@@ -12,7 +12,7 @@ before_install:
 script:
   - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
-  - goveralls -coverprofile=coverage.out -service travis-ci 
+  - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
   - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
-#  - ghr --username tcnksm-sample --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
+  - ghr --username $GITHUB_USERNAME --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
