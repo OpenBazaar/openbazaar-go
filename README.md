@@ -29,7 +29,7 @@ A typical install of OpenBazaar contains a bundle of the server deamon and user 
 
 ### Install prebuilt packages
 
-The easiest way to run the server is to download a pre-built binary. You can find binaries of our latest release for each operating system [here](). //TODO
+The easiest way to run the server is to download a pre-built binary. You can find binaries of our latest release for each operating system [here](https://github.com/OpenBazaar/openbazaar-go/releases/).
 
 ### Build from Source
 
