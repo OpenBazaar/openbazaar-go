@@ -22,7 +22,7 @@ after_success:
   - go get github.com/karalabe/xgo
   - mkdir dist/
   - cd dist/
-  - xgo --targets=windows/*,darwin/*,linux/*
+  - xgo --targets=windows/*,darwin/*,linux/* ../
   #- gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
   #- echo $GITHUB_USERNAME
   #- ghr --username $GITHUB_USERNAME -t $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
