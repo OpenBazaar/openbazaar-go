@@ -54,7 +54,7 @@ You can run the server with `go run openbazaard.go start`
 ### Options
 ```
 Usage:
-  openbazaard [OPTIONS] start [start-OPTIONS]
+  openbazaar-go [OPTIONS] start [start-OPTIONS]
 
 The start command starts the OpenBazaar-Server
 
@@ -68,6 +68,7 @@ Help Options:
                            error, critical]
       -a, --allowip=       only allow API connections from these IPs
       -s, --stun           use stun on µTP IPv4
+      -d, --datadir=       specify the data directory to be used
           --disablewallet  disable the wallet functionality of the node
           --storage=       set the outgoing message storage option
                            [self-hosted, dropbox] default=self-hosted
