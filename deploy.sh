@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if ([ "$TRAVIS_BRANCH" == "master" ] && [ ! -z "$TRAVIS_TAG" ]) &&
     [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
@@ -7,7 +7,7 @@ if ([ "$TRAVIS_BRANCH" == "master" ] && [ ! -z "$TRAVIS_TAG" ]) &&
   docker pull karalabe/xgo-latest
   go get github.com/karalabe/xgo
   mkdir dist/ && cd dist/
-  xgo --targets=windows/386,windows/amd64,darwin/amd64,linux/386,linux/amd64 ../
+  xgo --targets=windows/386,windows/amd64,darwin/amd64,linux/386,linux/amd64,linux/arm ../
   chmod +x *
   ghr --username OpenBazaar -t $GITHUB_TOKEN --replace --prerelease --debug $TRAVIS_TAG .
 else
