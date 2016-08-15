@@ -19,8 +19,8 @@ const ListingVersion = 1
 const TitleMaxCharacters = 140
 const DescriptionMaxCharacters = 50000
 const MaxTags = 10
-const CategoryMaxCharacters = 70
-const TagMaxCharacters = 70
+const WordMaxCharacters = 40
+const SentanceMaxCharacters = 70
 
 // Add our identity to the listings and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
@@ -224,6 +224,9 @@ func validate(listing *pb.Listing) error {
 	if listing.Slug == "" {
 		return errors.New("Slug must not be nil")
 	}
+	if len(listing.Slug) > SentanceMaxCharacters {
+		return fmt.Errorf("Slug lenght exceeds max of %d", SentanceMaxCharacters)
+	}
 	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
@@ -252,8 +255,8 @@ func validate(listing *pb.Listing) error {
 		if tag == "" {
 			return errors.New("Tags must not be nil")
 		}
-		if len(tag) > TagMaxCharacters {
-			return fmt.Errorf("Tags must be less than max of %d", TagMaxCharacters)
+		if len(tag) > WordMaxCharacters {
+			return fmt.Errorf("Tags must be less than max of %d", WordMaxCharacters)
 		}
 	}
 	for _, img := range listing.Item.Images {
@@ -264,14 +267,26 @@ func validate(listing *pb.Listing) error {
 		if img.FileName == "" {
 			return errors.New("Image file names must not be nil")
 		}
+		if len(img.FileName) > SentanceMaxCharacters {
+			return fmt.Errorf("Image filename length must be less than the max of %d", SentanceMaxCharacters)
+		}
 	}
 	for _, category := range listing.Item.Categories {
 		if category == "" {
 			return errors.New("Categories must not be nil")
 		}
-		if len(category) > CategoryMaxCharacters {
-			return fmt.Errorf("Category length must be less than the max of %d", CategoryMaxCharacters)
+		if len(category) > WordMaxCharacters {
+			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
 		}
+	}
+	if len(listing.Item.ProcessingTime) > SentanceMaxCharacters {
+		return fmt.Errorf("Processing time length must be less than the max of %d", SentanceMaxCharacters)
+	}
+	if len(listing.Item.SKU) > SentanceMaxCharacters {
+		return fmt.Errorf("Sku length must be less than the max of %d", SentanceMaxCharacters)
+	}
+	if len(listing.Item.Condition) > SentanceMaxCharacters {
+		return fmt.Errorf("Condition length must be less than the max of %d", SentanceMaxCharacters)
 	}
 	for _, option := range listing.Item.Options {
 		if option.Title == "" {
@@ -280,13 +295,25 @@ func validate(listing *pb.Listing) error {
 		if len(option.Variants) < 2 {
 			return errors.New("Options must have more than one varients")
 		}
+		if len(option.Title) > WordMaxCharacters {
+			return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
+		}
+		if len(option.Description) > SentanceMaxCharacters {
+			return fmt.Errorf("Option description length must be less than the max of %d", SentanceMaxCharacters)
+		}
 		for _, variant := range option.Variants {
 			if variant.Name == "" {
 				return errors.New("Variant names must not be nil")
 			}
+			if len(variant.Name) > WordMaxCharacters {
+				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
+			}
 			_, err := mh.FromB58String(variant.Image.Hash)
 			if err != nil {
 				return errors.New("Variant image hashes must be a multihash")
+			}
+			if len(variant.Image.FileName) > SentanceMaxCharacters {
+				return fmt.Errorf("Variant image filename length must be less than the max of %d", SentanceMaxCharacters)
 			}
 			if variant.Image.FileName == "" {
 				return errors.New("Variant image file names must not be nil")
@@ -304,11 +331,17 @@ func validate(listing *pb.Listing) error {
 			if option.Service == "" {
 				return errors.New("Shipping option service name must not be nil")
 			}
+			if len(option.Service) > WordMaxCharacters {
+				return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+			}
 			if option.Price.CurrencyCode == "" {
 				return errors.New("Shipping option price currency code must not be nil")
 			}
 			if option.EstimatedDelivery == "" {
 				return errors.New("Shipping option estimated delivery must not be nil")
+			}
+			if len(option.EstimatedDelivery) > SentanceMaxCharacters {
+				return fmt.Errorf("Shipping option estimated delivery length must be less than the max of %d", SentanceMaxCharacters)
 			}
 		}
 	}
@@ -331,6 +364,9 @@ func validate(listing *pb.Listing) error {
 		if tax.TaxType == "" {
 			return errors.New("Tax type must be specified")
 		}
+		if len(tax.TaxType) > WordMaxCharacters {
+			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
+		}
 		if len(tax.TaxRegions) == 0 {
 			return errors.New("Tax must specifiy at least one region")
 		}
@@ -341,6 +377,9 @@ func validate(listing *pb.Listing) error {
 	for _, coupon := range listing.Coupons {
 		if coupon.Title == "" {
 			return errors.New("Coupon titles must not be nil")
+		}
+		if len(coupon.Title) > SentanceMaxCharacters {
+			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
 		if coupon.Discount.CurrencyCode == "" {
 			return errors.New("Coupon price currency code must not be nil")
