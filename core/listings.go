@@ -323,10 +323,24 @@ func validate(listing *pb.Listing) error {
 			}
 		}
 	}
+	var shippingTitles []string
 	for _, shippingOption := range listing.ShippingOptions {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
+		if shippingOption.Title == "" {
+			return errors.New("Shipping option title name must not be nil")
+		}
+		if len(shippingOption.Title) > WordMaxCharacters {
+			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+		}
+		for _, t := range shippingTitles {
+			if t == shippingOption.Title {
+				return errors.New("Shipping option titles must be unique")
+			}
+		}
+		shippingTitles = append(shippingTitles, shippingOption.Title)
+		var serviceTitles []string
 		for _, option := range shippingOption.Options {
 			if option.Service == "" {
 				return errors.New("Shipping option service name must not be nil")
@@ -334,6 +348,12 @@ func validate(listing *pb.Listing) error {
 			if len(option.Service) > WordMaxCharacters {
 				return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
 			}
+			for _, t := range serviceTitles {
+				if t == option.Service {
+					return errors.New("Shipping option services names must be unique")
+				}
+			}
+			serviceTitles = append(serviceTitles, option.Service)
 			if option.Price.CurrencyCode == "" {
 				return errors.New("Shipping option price currency code must not be nil")
 			}

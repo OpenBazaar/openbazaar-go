@@ -16,21 +16,29 @@ type option struct {
 	value string
 }
 
+type shippingOption struct {
+	title   string
+	service string
+}
+
 type item struct {
 	listingHash string
 	quantity    int
 	options     []option
+	shipping    shippingOption
+	memo        string
 }
 
 type PurchaseData struct {
-	shipTo      string
-	address     string
-	city        string
-	state       string
-	postalCode  string
-	countryCode string
-	moderator   string
-	items       []item
+	shipTo       string
+	address      string
+	city         string
+	state        string
+	postalCode   string
+	countryCode  string
+	addressNotes string
+	moderator    string
+	items        []item
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
@@ -97,6 +105,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			o.Value = option.value
 			i.Options = append(i.Options, o)
 		}
+		i.ShippingOption.Title = item.shipping.title
+		i.ShippingOption.Service = item.shipping.service
 		order.Items = append(order.Items, i)
 	}
 
