@@ -24,6 +24,7 @@ type ShippingAddress struct {
 	State          string
 	Country        string
 	PostalCode     string
+	AddressNotes   string
 }
 
 type SMTPSettings struct {

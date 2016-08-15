@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 )
+
 const repoRootFolder = "testdata/repo-root"
 
 // we have to use this and cannot pass the real db.Init because it would create a circular import error
