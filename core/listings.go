@@ -127,8 +127,9 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 			return fmt.Errorf("Inventory string in position %d is incorrect value", i+1)
 		}
 		// Put to database
-		n.Datastore.Inventory().Put(inv.Item, inv.Count)
+		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
+	// Clear inventory as we don't need it in the seeded contract
 	listing.Inventory = []*pb.Listing_Inventory{}
 	return nil
 }
