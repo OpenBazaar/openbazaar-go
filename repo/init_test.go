@@ -2,6 +2,7 @@ package repo
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 )
@@ -34,8 +35,32 @@ func TestDoInit(t *testing.T) {
 	if err != nil {
 		t.Error("DoInit threw an unexpected error")
 	}
-
 	TearDown()
+}
+
+func TestMaybeCreateOBDirectories(t *testing.T) {
+	maybeCreateOBDirectories(repoRootFolder)
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "listings"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "feed"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "channel"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "files"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "outbox"))
+	TearDown()
+}
+
+func checkDirectoryCreation(t *testing.T, directory string) {
+	f, err := os.Open(directory)
+	if err != nil {
+		t.Errorf("created directory %s could not be opened", directory)
+	}
+	fi, _ := f.Stat()
+	if fi.IsDir() == false {
+		t.Errorf("maybeCreateOBDirectories did not create the directory %s", directory)
+	}
+	if fi.Mode().String()[1:3] != "rw" {
+		t.Errorf("the created directory %s is not readable and writable for the owner", directory)
+	}
 }
 
 // removes files that are created when tests are executed
