@@ -545,12 +545,6 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	err = i.node.SetListingInventory(l)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
-		return
-	}
 	contract, err := i.node.SignListing(l)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
