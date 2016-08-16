@@ -54,7 +54,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	order.Shipping.PostalCode = data.postalCode
 	order.Shipping.Country = pb.CountryCode(pb.CountryCode_value[data.countryCode])
 
-	// TODO: Add blockchain ID to order
+	profile, err := n.GetProfile()
+	if err != nil {
+		return err
+	}
+	order.BuyerID.BlockchainID = profile.Handle
 	order.BuyerID.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
@@ -81,6 +85,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			return err
 		}
 		// TODO: validate signatures on this contract before we purchase it
+		// TODO: validate the listing is formatted properly
 		contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
 		contract.Signatures = append(contract.Signatures, rc.Signatures[0])
 		ser, err := proto.Marshal(rc.VendorListings[0])
@@ -107,6 +112,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		}
 		i.ShippingOption.Title = item.shipping.title
 		i.ShippingOption.Service = item.shipping.service
+		i.Memo = item.memo
 		order.Items = append(order.Items, i)
 	}
 

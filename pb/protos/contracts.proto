@@ -20,7 +20,7 @@ message Listing {
     Item item                               = 4;
     repeated ShippingOption shippingOptions = 5;
     repeated ShippingRule shippingRules     = 6;
-    repeated Tax tax                        = 7;
+    repeated Tax taxes                      = 7;
     repeated Coupon coupons                 = 8;
     repeated string moderators              = 9;
     string termsAndConditions               = 10;
@@ -29,25 +29,26 @@ message Listing {
     // Only used by the API when posting a new listing.
     // Shouldn't be included in the seeded listing.
     // Negative implies no inventory tracking.
-    int32 inventoryCount                    = 12;
+    repeated Inventory inventory            = 12;
 
     message Metadata {
-        uint32 version          = 1;
-        ItemType itemType       = 2;
-        ListingType listingType = 3;
-        uint64 expiry           = 4; // unix timestamp
+        uint32 version            = 1;
+        ContractType contractType = 2;
+        ListingType listingType   = 3;
+        uint32 expiry             = 4; // unix timestamp
+
+        enum ContractType {
+            UNKNOWN       = 0;
+            PHYSICAL_GOOD = 1;
+            DIGITAL_GOOD  = 2;
+            SERVICE       = 3;
+            CROWD_FUND    = 4;
+        }
 
         enum ListingType {
             NA           = 0;
             FIXED_PRICE  = 1;
             AUCTION      = 2;
-        }
-
-        enum ItemType {
-            UNKNOWN       = 0;
-            PHYSICAL_GOOD = 1;
-            DIGITAL_GOOD  = 2;
-            SERVICE       = 3;
         }
     }
 
@@ -60,13 +61,13 @@ message Listing {
         repeated string tags       = 6;
         repeated Image images      = 7;
         repeated string categories = 8;
-        string SKU                 = 9;
+        string sku                 = 9;
         float weight               = 10; // kilograms
         string condition           = 11;
         repeated Option options    = 12;
 
         message Option {
-            string title               = 1;
+            string name                = 1;
             string description         = 2;
             repeated Variants variants = 3;
 
@@ -74,10 +75,6 @@ message Listing {
                 string name         = 1;
                 Image image         = 2;
                 Price priceModifier = 3;
-
-                // same as the inventory above
-                // only used by the api
-                int32 inventoryCount = 4;
             }
         }
 
@@ -88,7 +85,7 @@ message Listing {
     }
 
     message ShippingOption {
-        string title                 = 1;
+        string name                  = 1;
         ShippingType type            = 2;
         repeated CountryCode regions = 3;
         repeated Option options      = 4;
@@ -136,7 +133,13 @@ message Listing {
 
     message Price {
         string currencyCode = 1;
-        double price        = 2; // bitcoins must be in satoshi
+        uint32 amount       = 2; // bitcoins must be in satoshi
+    }
+
+    message Inventory {
+        // string format is /slug/variant/variant/...
+        string item = 1;
+        int64 count  = 2;
     }
 }
 
@@ -163,6 +166,7 @@ message Order {
         uint32 quantity               = 2;
         repeated Option options       = 3;
         ShippingOption shippingOption = 4;
+        string memo                   = 5;
 
         message Option {
             string name  = 1;

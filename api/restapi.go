@@ -481,7 +481,11 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	var imageHashes []string
+	type retImage struct {
+		Filename string
+		Hash     string
+	}
+	var retData []retImage
 	for _, img := range images {
 		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -512,15 +516,16 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, aerr)
 			return
 		}
-		imageHashes = append(imageHashes, hash+" "+img.Filename)
+		rtimg := retImage{img.Filename, hash}
+		retData = append(retData, rtimg)
 	}
-	jsonHashes, err := json.Marshal(imageHashes)
+	jsonHashes, err := json.Marshal(retData)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"hashes: "%s"}`, string(jsonHashes))
+	fmt.Fprintf(w, `{"images: "%s"}`, string(jsonHashes))
 	return
 }
 

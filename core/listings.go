@@ -78,30 +78,14 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
 
-	// set to zero as the inventory counts shouldn't be seeded with the listing
-	listing.InventoryCount = 0
-	for _, option := range listing.Item.Options {
-		for _, variant := range option.Variants {
-			variant.InventoryCount = 0
-		}
-	}
+	//TODO: set inventory
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
 }
 
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
-	if len(listing.Item.Options) == 0 {
-		return n.Datastore.Inventory().Put(listing.Slug, int(listing.InventoryCount))
-	}
-	for _, option := range listing.Item.Options {
-		for _, variant := range option.Variants {
-			err := n.Datastore.Inventory().Put(path.Join(listing.Slug, option.Title, variant.Name), int(variant.InventoryCount))
-			if err != nil {
-				return err
-			}
-		}
-	}
+	//TODO
 	return nil
 }
 
@@ -109,17 +93,17 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type price struct {
 		CurrencyCode string
-		Price        float64
+		Price        uint32
 	}
 	type listingData struct {
-		Hash      string
-		Slug      string
-		Title     string
-		Category  []string
-		ItemType  string
-		Desc      string
-		Thumbnail string
-		Price     price
+		Hash          string
+		Slug          string
+		Title         string
+		Category      []string
+		ContractType  string
+		Desc          string
+		Thumbnail     string
+		Price         price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
@@ -132,14 +116,14 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 
 	ld := listingData{
-		Hash:      listingHash,
-		Slug:      contract.VendorListings[0].Slug,
-		Title:     contract.VendorListings[0].Item.Title,
-		Category:  contract.VendorListings[0].Item.Categories,
-		ItemType:  contract.VendorListings[0].Metadata.ItemType.String(),
-		Desc:      contract.VendorListings[0].Item.Description[:160],
-		Thumbnail: contract.VendorListings[0].Item.Images[0].Hash,
-		Price:     price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Price},
+		Hash:         listingHash,
+		Slug:         contract.VendorListings[0].Slug,
+		Title:        contract.VendorListings[0].Item.Title,
+		Category:     contract.VendorListings[0].Item.Categories,
+		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
+		Desc:         contract.VendorListings[0].Item.Description[:160],
+		Thumbnail:    contract.VendorListings[0].Item.Images[0].Hash,
+		Price:        price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Amount},
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -192,7 +176,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 func (n *OpenBazaarNode) GetListingCount() int {
 	type price struct {
 		CurrencyCode string
-		Price        float64
+		Price        uint32
 	}
 	type listingData struct {
 		Hash      string
@@ -230,7 +214,7 @@ func validate(listing *pb.Listing) error {
 	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
-	if int(listing.Metadata.ItemType) == 0 || int(listing.Metadata.ItemType) > 3 {
+	if int(listing.Metadata.ContractType) == 0 || int(listing.Metadata.ContractType) > 4 {
 		return errors.New("Invalid item type")
 	}
 	if time.Unix(int64(listing.Metadata.Expiry), 0).Before(time.Now()) {
@@ -282,20 +266,20 @@ func validate(listing *pb.Listing) error {
 	if len(listing.Item.ProcessingTime) > SentanceMaxCharacters {
 		return fmt.Errorf("Processing time length must be less than the max of %d", SentanceMaxCharacters)
 	}
-	if len(listing.Item.SKU) > SentanceMaxCharacters {
+	if len(listing.Item.Sku) > SentanceMaxCharacters {
 		return fmt.Errorf("Sku length must be less than the max of %d", SentanceMaxCharacters)
 	}
 	if len(listing.Item.Condition) > SentanceMaxCharacters {
 		return fmt.Errorf("Condition length must be less than the max of %d", SentanceMaxCharacters)
 	}
 	for _, option := range listing.Item.Options {
-		if option.Title == "" {
+		if option.Name == "" {
 			return errors.New("Options titles must not be nil")
 		}
 		if len(option.Variants) < 2 {
 			return errors.New("Options must have more than one varients")
 		}
-		if len(option.Title) > WordMaxCharacters {
+		if len(option.Name) > WordMaxCharacters {
 			return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
 		}
 		if len(option.Description) > SentanceMaxCharacters {
@@ -308,15 +292,17 @@ func validate(listing *pb.Listing) error {
 			if len(variant.Name) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
-			_, err := mh.FromB58String(variant.Image.Hash)
-			if err != nil {
-				return errors.New("Variant image hashes must be a multihash")
-			}
-			if len(variant.Image.FileName) > SentanceMaxCharacters {
-				return fmt.Errorf("Variant image filename length must be less than the max of %d", SentanceMaxCharacters)
-			}
-			if variant.Image.FileName == "" {
-				return errors.New("Variant image file names must not be nil")
+			if variant.Image != nil {
+				_, err := mh.FromB58String(variant.Image.Hash)
+				if err != nil {
+					return errors.New("Variant image hashes must be a multihash")
+				}
+				if len(variant.Image.FileName) > SentanceMaxCharacters {
+					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentanceMaxCharacters)
+				}
+				if variant.Image.FileName == "" {
+					return errors.New("Variant image file names must not be nil")
+				}
 			}
 			if variant.PriceModifier.CurrencyCode == "" {
 				return errors.New("Variant price modifier currency code must not be nil")
@@ -328,18 +314,18 @@ func validate(listing *pb.Listing) error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
-		if shippingOption.Title == "" {
+		if shippingOption.Name == "" {
 			return errors.New("Shipping option title name must not be nil")
 		}
-		if len(shippingOption.Title) > WordMaxCharacters {
+		if len(shippingOption.Name) > WordMaxCharacters {
 			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
 		}
 		for _, t := range shippingTitles {
-			if t == shippingOption.Title {
+			if t == shippingOption.Name {
 				return errors.New("Shipping option titles must be unique")
 			}
 		}
-		shippingTitles = append(shippingTitles, shippingOption.Title)
+		shippingTitles = append(shippingTitles, shippingOption.Name)
 		var serviceTitles []string
 		for _, option := range shippingOption.Options {
 			if option.Service == "" {
@@ -380,7 +366,7 @@ func validate(listing *pb.Listing) error {
 		}
 		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 	}
-	for _, tax := range listing.Tax {
+	for _, tax := range listing.Taxes {
 		if tax.TaxType == "" {
 			return errors.New("Tax type must be specified")
 		}
