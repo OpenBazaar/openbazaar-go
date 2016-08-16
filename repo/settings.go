@@ -16,22 +16,22 @@ type SettingsData struct {
 }
 
 type ShippingAddress struct {
-	Name           string
-	Company        string
-	AddressLineOne string
-	AddressLineTwo string
-	City           string
-	State          string
-	Country        string
-	PostalCode     string
-	AddressNotes   string
+	Name           string `json:"name"`
+	Company        string `json:"company"`
+	AddressLineOne string `json:"addressLineOne"`
+	AddressLineTwo string `json:"addressLineTwo"`
+	City           string `json:"city"`
+	State          string `json:"state"`
+	Country        string `json:"country"`
+	PostalCode     string `json:"postalCode"`
+	AddressNotes   string `json:"addressNotes"`
 }
 
 type SMTPSettings struct {
-	Notifications  bool
-	ServerAddress  string
-	Username       string
-	Password       string
-	SenderEmail    string
-	RecipientEmail string
+	Notifications  bool   `json:"notifications"`
+	ServerAddress  string `json:"serverAddress"`
+	Username       string `json:"username"`
+	Password       string `json:"password"`
+	SenderEmail    string `json:"senderEmail"`
+	RecipientEmail string `json:"recipientEmail"`
 }
