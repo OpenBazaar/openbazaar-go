@@ -527,10 +527,10 @@ func (m *Listing_ShippingRule) GetPrice() *Listing_Price {
 }
 
 type Listing_Tax struct {
-	TaxType     string                     `protobuf:"bytes,1,opt,name=taxType" json:"taxType,omitempty"`
-	TaxRegions  []CountryCode              `protobuf:"varint,2,rep,name=taxRegions,enum=CountryCode" json:"taxRegions,omitempty"`
-	TaxShipping bool                       `protobuf:"varint,3,opt,name=taxShipping" json:"taxShipping,omitempty"`
-	Percentage  float32                    `protobuf:"fixed32,4,opt,name=percentage" json:"percentage,omitempty"`
+	TaxType     string        `protobuf:"bytes,1,opt,name=taxType" json:"taxType,omitempty"`
+	TaxRegions  []CountryCode `protobuf:"varint,2,rep,name=taxRegions,enum=CountryCode" json:"taxRegions,omitempty"`
+	TaxShipping bool          `protobuf:"varint,3,opt,name=taxShipping" json:"taxShipping,omitempty"`
+	Percentage  float32       `protobuf:"fixed32,4,opt,name=percentage" json:"percentage,omitempty"`
 }
 
 func (m *Listing_Tax) Reset()                    { *m = Listing_Tax{} }
@@ -620,13 +620,13 @@ func (m *Order) GetPayment() *Order_Payment {
 }
 
 type Order_Shipping struct {
-	ShipTo       string                   `protobuf:"bytes,1,opt,name=shipTo" json:"shipTo,omitempty"`
-	Address      string                   `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
-	City         string                   `protobuf:"bytes,3,opt,name=city" json:"city,omitempty"`
-	State        string                   `protobuf:"bytes,4,opt,name=state" json:"state,omitempty"`
-	PostalCode   string                   `protobuf:"bytes,5,opt,name=postalCode" json:"postalCode,omitempty"`
-	Country      CountryCode              `protobuf:"varint,6,opt,name=country,enum=CountryCode" json:"country,omitempty"`
-	AddressNotes string                   `protobuf:"bytes,7,opt,name=addressNotes" json:"addressNotes,omitempty"`
+	ShipTo       string      `protobuf:"bytes,1,opt,name=shipTo" json:"shipTo,omitempty"`
+	Address      string      `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
+	City         string      `protobuf:"bytes,3,opt,name=city" json:"city,omitempty"`
+	State        string      `protobuf:"bytes,4,opt,name=state" json:"state,omitempty"`
+	PostalCode   string      `protobuf:"bytes,5,opt,name=postalCode" json:"postalCode,omitempty"`
+	Country      CountryCode `protobuf:"varint,6,opt,name=country,enum=CountryCode" json:"country,omitempty"`
+	AddressNotes string      `protobuf:"bytes,7,opt,name=addressNotes" json:"addressNotes,omitempty"`
 }
 
 func (m *Order_Shipping) Reset()                    { *m = Order_Shipping{} }

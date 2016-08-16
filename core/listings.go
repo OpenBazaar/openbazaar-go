@@ -96,14 +96,14 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Price        uint32
 	}
 	type listingData struct {
-		Hash          string
-		Slug          string
-		Title         string
-		Category      []string
-		ContractType  string
-		Desc          string
-		Thumbnail     string
-		Price         price
+		Hash         string
+		Slug         string
+		Title        string
+		Category     []string
+		ContractType string
+		Desc         string
+		Thumbnail    string
+		Price        price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
