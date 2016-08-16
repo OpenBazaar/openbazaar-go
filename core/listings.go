@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"time"
+	"strings"
 )
 
 const ListingVersion = 1
@@ -78,14 +79,58 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
 
-	//TODO: set inventory
+	err = n.setListingInventory(listing)
+	if err != nil {
+		return c, err
+	}
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
 }
 
-func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
-	//TODO
+// Sets the inventory for the listing in the database. Does some basic validation
+// to make sure the inventory uses the correct variants.
+func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
+	// Create a list of variants from the contract so we can check correct ordering
+	var variants [][]string = make([][]string, len(listing.Item.Options))
+	for i, option := range listing.Item.Options {
+		var name []string
+		for _, variant := range option.Variants {
+			name = append(name, variant.Name)
+		}
+		variants[i] = name
+	}
+	for _, inv := range listing.Inventory {
+		// format to remove leading and trailing path separator if one exists
+		if string(inv.Item[0]) == "/" {
+			inv.Item = inv.Item[1:]
+		}
+		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
+			inv.Item = inv.Item[:len(inv.Item) - 1]
+		}
+		names := strings.Split(inv.Item, "/")
+		if names[0] != listing.Slug {
+			return errors.New("Slug must be first item in inventory string")
+		}
+		if len(names) != len(variants) + 1 {
+			return errors.New("Incorrect number of variants in inventory string")
+		}
+
+		// Check ordering of inventory string matches options in listing item
+		outer:
+		for i, name := range names[1:] {
+			for _, n := range variants[i] {
+				if n == name {
+					continue outer
+				}
+			}
+			return fmt.Errorf("Inventory string in position %d is incorrect value", i+1)
+		}
+		// Put to database
+		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
+	}
+	// Clear inventory as we don't need it in the seeded contract
+	listing.Inventory = []*pb.Listing_Inventory{}
 	return nil
 }
 
