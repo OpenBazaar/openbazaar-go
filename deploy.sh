@@ -16,10 +16,10 @@ if [ ! -z "$TRAVIS_TAG" ] &&
   sha512sum * > sha512_checksums.txt
 
   # Load signing key
-  cp ../.travis/sign.key.gpg  /tmp
+  cp ../.travis/sign.key.gpg /tmp
   gpg --yes --batch --passphrase=$GPG_PASS /tmp/sign.key.gpg
-  gpg --allow-secret-key-import --import /tmp/sign.key
-  rm /tmp/sign.key
+  gpg --allow-secret-key-import --import /tmp/sign.key.gpg
+  rm /tmp/sign.key.gpg
 
   # Sign binaries
   for f in *
