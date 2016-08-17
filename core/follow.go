@@ -19,7 +19,7 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 	profilePath := path.Join(n.RepoPath, "root", "profile")
 
 	// Update followers file
-	followers, err := n.Datastore.Followers().Get(0, -1)
+	followers, err := n.Datastore.Followers().Get("", -1)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 	}
 
 	// Update following file
-	following, err := n.Datastore.Following().Get(0, -1)
+	following, err := n.Datastore.Following().Get("", -1)
 	if err != nil {
 		return err
 	}

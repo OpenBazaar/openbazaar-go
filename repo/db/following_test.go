@@ -75,7 +75,7 @@ func TestGetFollowing(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		fldb.Put(strconv.Itoa(i))
 	}
-	followers, err := fldb.Get(0, 100)
+	followers, err := fldb.Get("", 100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,21 +86,21 @@ func TestGetFollowing(t *testing.T) {
 		}
 	}
 
-	followers, err = fldb.Get(30, 100)
+	followers, err = fldb.Get(strconv.Itoa(30), 100)
 	if err != nil {
 		t.Error(err)
 	}
-	for i := 0; i < 70; i++ {
+	for i := 0; i < 30; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69-i {
-			t.Errorf("Returned %d expected %d", f, 69-i)
+		if f != 29-i {
+			t.Errorf("Returned %d expected %d", f, 29-i)
 		}
 	}
-	if len(followers) != 70 {
+	if len(followers) != 30 {
 		t.Error("Incorrect number of followers returned")
 	}
 
-	followers, err = fldb.Get(30, 5)
+	followers, err = fldb.Get(strconv.Itoa(30), 5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -109,8 +109,8 @@ func TestGetFollowing(t *testing.T) {
 	}
 	for i := 0; i < 5; i++ {
 		f, _ := strconv.Atoi(followers[i])
-		if f != 69-i {
-			t.Errorf("Returned %d expected %d", f, 69-i)
+		if f != 29-i {
+			t.Errorf("Returned %d expected %d", f, 29-i)
 		}
 	}
 }

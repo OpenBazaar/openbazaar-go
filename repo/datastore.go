@@ -37,7 +37,7 @@ type Followers interface {
 
 	// Get followers from the database.
 	// The offset and limit arguments can be used to for lazy loading.
-	Get(offset int, limit int) ([]string, error)
+	Get(offsetId string, limit int) ([]string, error)
 
 	// Delete a follower from the databse.
 	Delete(follower string) error
@@ -52,7 +52,7 @@ type Following interface {
 
 	// Get a list of following peers from the database.
 	// The offset and limit arguments can be used to for lazy loading.
-	Get(offset int, limit int) ([]string, error)
+	Get(offsetId string, limit int) ([]string, error)
 
 	// Delete a peer from the databse.
 	Delete(peer string) error

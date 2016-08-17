@@ -27,10 +27,15 @@ func (f *FollowerDB) Put(follower string) error {
 	return nil
 }
 
-func (f *FollowerDB) Get(offset int, limit int) ([]string, error) {
+func (f *FollowerDB) Get(offsetId string, limit int) ([]string, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	stm := "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset " + strconv.Itoa(offset)
+	var stm string
+	if offsetId != "" {
+		stm = "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset ((select coalesce(max(rowid)+1, 0) from followers)-(select rowid from followers where peerID='" + offsetId + "'))"
+	} else {
+		stm = "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset 0"
+	}
 	rows, _ := f.db.Query(stm)
 	defer rows.Close()
 	var ret []string

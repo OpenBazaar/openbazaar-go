@@ -5,7 +5,8 @@ import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	key "github.com/ipfs/go-ipfs/blocks/key"
-	peer "github.com/ipfs/go-libp2p-peer"
+	ps "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"sync"
@@ -30,7 +31,7 @@ func init() {
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
 	pointer = ipfs.Pointer{
 		key.B58KeyDecode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"),
-		peer.PeerInfo{
+		ps.PeerInfo{
 			ID:    id,
 			Addrs: []ma.Multiaddr{maAddr},
 		},
