@@ -21,12 +21,10 @@ if [ ! -z "$TRAVIS_TAG" ] &&
   gpg --allow-secret-key-import --import /tmp/sign.key.gpg
   rm /tmp/sign.key.gpg
 
-  # Sign binaries
-  for f in *
-  do
-  	gpg --armor --output $f.asc --detach-sig --passphrase=$GPG_PASS --default-key $GPG_KEYID $f
-  done
+  # Sign hash file
+  gpg --armor --output $f.asc --detach-sig --passphrase=$GPG_PASS --default-key $GPG_KEYID sha512_checksums.txt
 
+  # Upload to GitHub Release page
   ghr --username OpenBazaar -t $GITHUB_TOKEN --replace --prerelease --debug $TRAVIS_TAG .
 else
   echo "This will not deploy!"
