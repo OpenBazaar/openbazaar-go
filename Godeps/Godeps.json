@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/OpenBazaar/openbazaar-go",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v62",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
@@ -152,6 +152,16 @@
 			"Rev": "87d4004f2ab62d0d255e0a38f1680aa534549fe3"
 		},
 		{
+			"ImportPath": "github.com/gogo/protobuf/jsonpb",
+			"Comment": "v0.2-56-ga4cceea",
+			"Rev": "a4cceea7a401a73fefafd1a21fedbd4694124a82"
+		},
+		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Comment": "v0.2-56-ga4cceea",
+			"Rev": "a4cceea7a401a73fefafd1a21fedbd4694124a82"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/jsonpb",
 			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
@@ -161,6 +171,10 @@
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/ptypes/any",
+			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/timestamp",
 			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
 		{

@@ -12,12 +12,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"time"
 	"strings"
+	"time"
 )
 
 const ListingVersion = 1
 const TitleMaxCharacters = 140
+const ShortDescriptionLength = 160
 const DescriptionMaxCharacters = 50000
 const MaxTags = 10
 const WordMaxCharacters = 40
@@ -56,6 +57,12 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.Pubkeys = p
 	listing.VendorID = id
 
+	// Set inventory levels
+	err = n.setListingInventory(listing)
+	if err != nil {
+		return c, err
+	}
+
 	// Sign listing
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING
@@ -79,10 +86,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
 
-	err = n.setListingInventory(listing)
-	if err != nil {
-		return c, err
-	}
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
@@ -90,6 +93,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 // Sets the inventory for the listing in the database. Does some basic validation
 // to make sure the inventory uses the correct variants.
+// TODO: if this is an update to a listing we need to delete any variants that were
+// TODO: removed from the inventory db.
 func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 	// Create a list of variants from the contract so we can check correct ordering
 	var variants [][]string = make([][]string, len(listing.Item.Options))
@@ -106,18 +111,18 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 			inv.Item = inv.Item[1:]
 		}
 		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
-			inv.Item = inv.Item[:len(inv.Item) - 1]
+			inv.Item = inv.Item[:len(inv.Item)-1]
 		}
 		names := strings.Split(inv.Item, "/")
 		if names[0] != listing.Slug {
 			return errors.New("Slug must be first item in inventory string")
 		}
-		if len(names) != len(variants) + 1 {
+		if len(names) != len(variants)+1 {
 			return errors.New("Incorrect number of variants in inventory string")
 		}
 
 		// Check ordering of inventory string matches options in listing item
-		outer:
+	outer:
 		for i, name := range names[1:] {
 			for _, n := range variants[i] {
 				if n == name {
@@ -130,7 +135,7 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
 	// Clear inventory as we don't need it in the seeded contract
-	listing.Inventory = []*pb.Listing_Inventory{}
+	listing.Inventory = nil
 	return nil
 }
 
@@ -138,7 +143,7 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type price struct {
 		CurrencyCode string
-		Price        uint32
+		Amount       uint64
 	}
 	type listingData struct {
 		Hash         string
@@ -160,13 +165,18 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		return err
 	}
 
+	descLen := len(contract.VendorListings[0].Item.Description)
+	if descLen > ShortDescriptionLength {
+		descLen = ShortDescriptionLength
+	}
+
 	ld := listingData{
 		Hash:         listingHash,
 		Slug:         contract.VendorListings[0].Slug,
 		Title:        contract.VendorListings[0].Item.Title,
 		Category:     contract.VendorListings[0].Item.Categories,
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
-		Desc:         contract.VendorListings[0].Item.Description[:160],
+		Desc:         contract.VendorListings[0].Item.Description[:descLen],
 		Thumbnail:    contract.VendorListings[0].Item.Images[0].Hash,
 		Price:        price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Amount},
 	}
@@ -221,7 +231,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 func (n *OpenBazaarNode) GetListingCount() int {
 	type price struct {
 		CurrencyCode string
-		Price        uint32
+		Amount       uint64
 	}
 	type listingData struct {
 		Hash      string
@@ -249,7 +259,12 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
-func validate(listing *pb.Listing) error {
+func validate(listing *pb.Listing) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("Listing missing required field")
+		}
+	}()
 	if listing.Slug == "" {
 		return errors.New("Slug must not be nil")
 	}
@@ -262,11 +277,11 @@ func validate(listing *pb.Listing) error {
 	if int(listing.Metadata.ContractType) == 0 || int(listing.Metadata.ContractType) > 4 {
 		return errors.New("Invalid item type")
 	}
-	if time.Unix(int64(listing.Metadata.Expiry), 0).Before(time.Now()) {
+	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
 		return errors.New("Listing expiration must be in the future")
 	}
-	if listing.Item.Title == "" {
-		return errors.New("Listing must have titles")
+	if listing.Item.Price == nil {
+		return errors.New("Listings must have a price")
 	}
 	if listing.Item.Price.CurrencyCode == "" {
 		return errors.New("Listing price currency code must not be nil")
@@ -349,8 +364,10 @@ func validate(listing *pb.Listing) error {
 					return errors.New("Variant image file names must not be nil")
 				}
 			}
-			if variant.PriceModifier.CurrencyCode == "" {
-				return errors.New("Variant price modifier currency code must not be nil")
+			if variant.PriceModifier != nil {
+				if variant.PriceModifier.CurrencyCode == "" {
+					return errors.New("Variant price modifier currency code must not be nil")
+				}
 			}
 		}
 	}
@@ -397,7 +414,7 @@ func validate(listing *pb.Listing) error {
 		}
 	}
 	for _, shippingRule := range listing.ShippingRules {
-		if int(shippingRule.RuleType) == 2 && listing.Item.Weight == 0 {
+		if int(shippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
 			return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
 		}
 		if len(shippingRule.Regions) == 0 {
@@ -429,11 +446,16 @@ func validate(listing *pb.Listing) error {
 		if coupon.Title == "" {
 			return errors.New("Coupon titles must not be nil")
 		}
+		if int(coupon.DiscountType) == 0 || int(coupon.DiscountType) > 2 {
+			return errors.New("Invalid coupon discount type")
+		}
 		if len(coupon.Title) > SentanceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
-		if coupon.Discount.CurrencyCode == "" {
-			return errors.New("Coupon price currency code must not be nil")
+		if coupon.DiscountType == pb.Listing_Coupon_FIXED_AMOUNT {
+			if coupon.PriceDiscount.CurrencyCode == "" {
+				return errors.New("Coupon price currency code must not be nil")
+			}
 		}
 		_, err := mh.FromB58String(coupon.Hash)
 		if err != nil {
