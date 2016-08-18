@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-type RestAPIConfig struct {
+type JsonAPIConfig struct {
 	Headers       map[string][]string
 	Enabled       bool
 	Cors          bool
@@ -35,12 +35,12 @@ type RestAPIConfig struct {
 	Password      string
 }
 
-type restAPIHandler struct {
-	config RestAPIConfig
+type jsonAPIHandler struct {
+	config JsonAPIConfig
 	node   *core.OpenBazaarNode
 }
 
-func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*restAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*jsonAPIHandler, error) {
 	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
@@ -80,8 +80,8 @@ func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*res
 		authenticated = true
 	}
 
-	i := &restAPIHandler{
-		config: RestAPIConfig{
+	i := &jsonAPIHandler{
+		config: JsonAPIConfig{
 			Enabled:       enabled,
 			Cors:          cors,
 			Headers:       headers,
@@ -96,7 +96,7 @@ func newRestAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*res
 }
 
 // TODO: Build out the api
-func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !i.config.Enabled {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, "403 - Forbidden")
@@ -179,7 +179,7 @@ func (i *restAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	//p := ProfileParam{}
@@ -262,7 +262,7 @@ func (i *restAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 //     Responses:
 //       default: ProfileResponse
 //	 200: ProfileResponse
-func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	//p := ProfileParam{}
@@ -324,7 +324,7 @@ func (i *restAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
 		Avatar string
@@ -395,7 +395,7 @@ func (i *restAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
 		Header string
@@ -466,7 +466,7 @@ func (i *restAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
 		Directory string
@@ -529,7 +529,7 @@ func (i *restAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	l := new(pb.Listing)
@@ -606,7 +606,7 @@ func (i *restAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	decoder := json.NewDecoder(r.Body)
@@ -645,14 +645,14 @@ func (i *restAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 //       default: StatusResponse
 //	 200: StatusResponse
 //
-func (i *restAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_, peerId := path.Split(r.URL.Path)
 	status := i.node.GetPeerStatus(peerId)
 	fmt.Fprintf(w, `{"status": "%s"}`, status)
 }
 
-func (i *restAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	peers, err := ipfs.ConnectedPeers(i.node.Context)
 	if err != nil {
@@ -670,7 +670,7 @@ func (i *restAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(peerJson))
 }
 
-func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type PeerId struct {
 		ID string
@@ -692,7 +692,7 @@ func (i *restAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type PeerId struct {
 		ID string
@@ -714,13 +714,13 @@ func (i *restAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	addr := i.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	fmt.Fprintf(w, `{"address": "%s"}`, addr.EncodeAddress())
 }
 
-func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	mn, err := i.node.Datastore.Config().GetMnemonic()
 	if err != nil {
@@ -731,13 +731,13 @@ func (i *restAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"mnemonic": "%s"}`, mn)
 }
 
-func (i *restAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	fmt.Fprintf(w, `{"confirmed": "%d", "unconfirmed": "%d"}`, int(confirmed), int(unconfirmed))
 }
 
-func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type Send struct {
 		Address  string
@@ -776,12 +776,12 @@ func (i *restAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	return
 }
 
-func (i *restAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"guid": "%s", "cryptoCurrency": "%s"}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode())
 }
 
-func (i *restAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	var settings repo.SettingsData
 	decoder := json.NewDecoder(r.Body)
@@ -807,7 +807,7 @@ func (i *restAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	var settings repo.SettingsData
 	decoder := json.NewDecoder(r.Body)
@@ -833,7 +833,7 @@ func (i *restAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	settings, err := i.node.Datastore.Settings().Get()
 	if err != nil {
@@ -850,7 +850,7 @@ func (i *restAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(settingsJson))
 }
 
-func (i *restAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	var settings repo.SettingsData
 	decoder := json.NewDecoder(r.Body)
@@ -870,7 +870,7 @@ func (i *restAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_, peerId := path.Split(r.URL.Path)
 	var peerIds []string
@@ -887,7 +887,7 @@ func (i *restAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 	fmt.Fprintf(w, string(ret))
 }
 
-func (i *restAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	_, currencyCode := path.Split(r.URL.Path)
 	rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
@@ -899,7 +899,7 @@ func (i *restAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 	fmt.Fprintf(w, `%.2f`, rate)
 }
 
-func (i *restAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	offset := r.URL.Query().Get("offsetId")
 	limit := r.URL.Query().Get("limit")
@@ -925,7 +925,7 @@ func (i *restAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(ret))
 }
 
-func (i *restAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	offset := r.URL.Query().Get("offsetId")
 	limit := r.URL.Query().Get("limit")
@@ -952,7 +952,7 @@ func (i *restAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type Credentials struct {
 		Username string
@@ -982,7 +982,7 @@ func (i *restAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type inv struct {
 		Slug  string `json:"slug"`
@@ -1005,7 +1005,7 @@ func (i *restAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *restAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type inv struct {
 		Slug  string

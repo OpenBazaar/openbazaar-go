@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
 	case "/ob/profile", "/ob/profile/":
 		i.PUTProfile(w, r)
@@ -25,7 +25,7 @@ func put(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
 	case "/ob/listing", "/ob/listing/":
 		i.POSTListing(w, r)
@@ -57,7 +57,7 @@ func post(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	}
 }
 
-func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(path, "/ob/status/") {
 		i.GETStatus(w, r)
 		return
@@ -108,7 +108,7 @@ func get(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func patch(i *restAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
 	case "/ob/settings", "/ob/settings/":
 		i.PATCHSettings(w, r)
