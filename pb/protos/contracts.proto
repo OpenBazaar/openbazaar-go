@@ -2,11 +2,11 @@ syntax = "proto3";
 
 import "countrycodes.proto";
 
-message RicardianContract {
-    repeated Listing vendorListings           = 1;
-    Order buyerOrder                          = 2;
-    OrderConfirmation vendorOrderConfirmation = 3;
-    Rating buyerRating                        = 4;
+message Contract {
+    repeated Listing listings                 = 1;
+    Order order                               = 2;
+    OrderConfirmation orderConfirmation       = 3;
+    Rating rating                             = 4;
     Dispute dispute                           = 5;
     DisputeResolution disputeResolution       = 6;
     Refund refund                             = 7;
