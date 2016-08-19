@@ -21,17 +21,16 @@ message Listing {
     Metadata metadata                       = 3;
     Item item                               = 4;
     repeated ShippingOption shippingOptions = 5;
-    repeated ShippingRule shippingRules     = 6;
-    repeated Tax taxes                      = 7;
-    repeated Coupon coupons                 = 8;
-    repeated string moderators              = 9;
-    string termsAndConditions               = 10;
-    string refundPolicy                     = 11;
+    repeated Tax taxes                      = 6;
+    repeated Coupon coupons                 = 7;
+    repeated string moderators              = 8;
+    string termsAndConditions               = 9;
+    string refundPolicy                     = 10;
 
     // Only used by the API when posting a new listing.
     // Shouldn't be included in the seeded listing.
     // Negative implies no inventory tracking.
-    repeated Inventory inventory            = 12;
+    repeated Inventory inventory            = 11;
 
     message Metadata {
         uint32 version                   = 1;
@@ -87,10 +86,11 @@ message Listing {
     }
 
     message ShippingOption {
-        string name                  = 1;
-        ShippingType type            = 2;
-        repeated CountryCode regions = 3;
-        repeated Option options      = 4;
+        string name                         = 1;
+        ShippingType type                   = 2;
+        repeated CountryCode regions        = 3;
+        repeated ShippingRule shippingRules = 4;
+        repeated Option options             = 5;
 
         enum ShippingType {
             LOCAL_PICKUP = 0;
@@ -102,22 +102,21 @@ message Listing {
             Price price              = 2;
             string estimatedDelivery = 3;
         }
-    }
 
-    message ShippingRule {
-        RuleType ruleType            = 1;
-        repeated CountryCode regions = 2;
-        uint32 minimumRange          = 3;
-        uint32 maxRange              = 4;
-        Price price                  = 5;
+        message ShippingRule {
+                RuleType ruleType            = 1;
+                uint32 minimumRange          = 2;
+                uint32 maxRange              = 3;
+                Price price                  = 4;
 
-        enum RuleType {
-            QUANTITY_DISCOUNT          = 0;
-            FLAT_FEE_QUANTITY_RANGE    = 1;
-            FLAT_FEE_WEIGHT_RANGE      = 2;
-            COMBINED_SHIPPING_ADD      = 3;
-            COMBINED_SHIPPING_SUBTRACT = 4;
-        }
+                enum RuleType {
+                    QUANTITY_DISCOUNT          = 0;
+                    FLAT_FEE_QUANTITY_RANGE    = 1;
+                    FLAT_FEE_WEIGHT_RANGE      = 2;
+                    COMBINED_SHIPPING_ADD      = 3;
+                    COMBINED_SHIPPING_SUBTRACT = 4;
+                }
+            }
     }
 
     message Tax {

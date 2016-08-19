@@ -387,6 +387,18 @@ func validate(listing *pb.Listing) (err error) {
 				return errors.New("Shipping option titles must be unique")
 			}
 		}
+		for _, shippingRule := range shippingOption.ShippingRules {
+			if int(shippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
+				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
+			}
+			if shippingRule.Price.CurrencyCode == "" {
+				return errors.New("Shipping rules price currency code must not be nil")
+			}
+			if (int(shippingRule.RuleType) == 1 || int(shippingRule.RuleType) == 2) && shippingRule.MaxRange <= shippingRule.MinimumRange {
+				return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+			}
+			// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
+		}
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		var serviceTitles []string
 		for _, option := range shippingOption.Options {
@@ -412,21 +424,6 @@ func validate(listing *pb.Listing) (err error) {
 				return fmt.Errorf("Shipping option estimated delivery length must be less than the max of %d", SentanceMaxCharacters)
 			}
 		}
-	}
-	for _, shippingRule := range listing.ShippingRules {
-		if int(shippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
-			return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
-		}
-		if len(shippingRule.Regions) == 0 {
-			return errors.New("Shipping rules must specifiy at least one region")
-		}
-		if shippingRule.Price.CurrencyCode == "" {
-			return errors.New("Shipping rules price currency code must not be nil")
-		}
-		if (int(shippingRule.RuleType) == 1 || int(shippingRule.RuleType) == 2) && shippingRule.MaxRange <= shippingRule.MinimumRange {
-			return errors.New("Shipping rule max range cannot be less than or equal to the min range")
-		}
-		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 	}
 	for _, tax := range listing.Taxes {
 		if tax.TaxType == "" {
