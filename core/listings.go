@@ -262,7 +262,14 @@ func (n *OpenBazaarNode) GetListingCount() int {
 func validate(listing *pb.Listing) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New("Listing missing required field")
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
 		}
 	}()
 	if listing.Slug == "" {
