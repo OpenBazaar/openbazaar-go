@@ -278,11 +278,17 @@ func validate(listing *pb.Listing) (err error) {
 	if len(listing.Slug) > SentanceMaxCharacters {
 		return fmt.Errorf("Slug lenght exceeds max of %d", SentanceMaxCharacters)
 	}
+	if listing.Metadata == nil {
+		return errors.New("Missing required field: Metadata")
+	}
 	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
 	if int(listing.Metadata.ContractType) == 0 || int(listing.Metadata.ContractType) > 4 {
 		return errors.New("Invalid item type")
+	}
+	if listing.Metadata.Expiry == nil {
+		return errors.New("Missing required field: Expiry")
 	}
 	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
 		return errors.New("Listing expiration must be in the future")
