@@ -316,6 +316,9 @@ func validate(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Tags must be less than max of %d", WordMaxCharacters)
 		}
 	}
+	if len(listing.Item.Images) == 0 {
+		return errors.New("Listing must contain at least one image")
+	}
 	for _, img := range listing.Item.Images {
 		_, err := mh.FromB58String(img.Hash)
 		if err != nil {
