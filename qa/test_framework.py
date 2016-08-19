@@ -4,6 +4,7 @@
 import os
 import sys
 import subprocess
+import shutil
 import time
 import json
 import argparse
@@ -67,7 +68,7 @@ class OpenBazaarTestFramework(object):
                     return
 
     def start_node(self, node):
-        args = [self.binary, "start", "-d", node["data_dir"]]
+        args = [self.binary, "start", "-d", node["data_dir"], "--disablewallet"]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_start_success(process)
 
@@ -82,6 +83,9 @@ class OpenBazaarTestFramework(object):
                     print("OpenBazaar node started successfully")
                     return
 
+    def teardown(self):
+        shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
                 description="OpenBazaar Test Framework",
@@ -91,4 +95,6 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--nodes', help="the number of nodes to spin up", default=4)
     parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
     args = parser.parse_args(sys.argv[1:])
-    OpenBazaarTestFramework(args.binary, args.nodes, args.tempdir)
+    ob = OpenBazaarTestFramework(args.binary, int(args.nodes), args.tempdir)
+    ob.teardown()
+
