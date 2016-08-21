@@ -1,16 +1,18 @@
 syntax = "proto3";
 
 import "countrycodes.proto";
+import "google/protobuf/timestamp.proto";
 
 message RicardianContract {
     repeated Listing vendorListings           = 1;
     Order buyerOrder                          = 2;
     OrderConfirmation vendorOrderConfirmation = 3;
-    Rating buyerRating                        = 4;
-    Dispute dispute                           = 5;
-    DisputeResolution disputeResolution       = 6;
-    Refund refund                             = 7;
-    repeated Signatures signatures            = 8;
+    OrderFulfillment vendorOrderFulfillment   = 4;
+    Rating buyerRating                        = 5;
+    Dispute dispute                           = 6;
+    DisputeResolution disputeResolution       = 7;
+    Refund refund                             = 8;
+    repeated Signatures signatures            = 9;
 }
 
 message Listing {
@@ -19,23 +21,22 @@ message Listing {
     Metadata metadata                       = 3;
     Item item                               = 4;
     repeated ShippingOption shippingOptions = 5;
-    repeated ShippingRule shippingRules     = 6;
-    repeated Tax taxes                      = 7;
-    repeated Coupon coupons                 = 8;
-    repeated string moderators              = 9;
-    string termsAndConditions               = 10;
-    string refundPolicy                     = 11;
+    repeated Tax taxes                      = 6;
+    repeated Coupon coupons                 = 7;
+    repeated string moderators              = 8;
+    string termsAndConditions               = 9;
+    string refundPolicy                     = 10;
 
     // Only used by the API when posting a new listing.
     // Shouldn't be included in the seeded listing.
     // Negative implies no inventory tracking.
-    repeated Inventory inventory            = 12;
+    repeated Inventory inventory            = 11;
 
     message Metadata {
-        uint32 version            = 1;
-        ContractType contractType = 2;
-        ListingType listingType   = 3;
-        uint32 expiry             = 4; // unix timestamp
+        uint32 version                   = 1;
+        ContractType contractType        = 2;
+        ListingType listingType          = 3;
+        google.protobuf.Timestamp expiry = 4;
 
         enum ContractType {
             UNKNOWN       = 0;
@@ -62,7 +63,7 @@ message Listing {
         repeated Image images      = 7;
         repeated string categories = 8;
         string sku                 = 9;
-        float weight               = 10; // kilograms
+        float grams                = 10;
         string condition           = 11;
         repeated Option options    = 12;
 
@@ -85,10 +86,11 @@ message Listing {
     }
 
     message ShippingOption {
-        string name                  = 1;
-        ShippingType type            = 2;
-        repeated CountryCode regions = 3;
-        repeated Option options      = 4;
+        string name                         = 1;
+        ShippingType type                   = 2;
+        repeated CountryCode regions        = 3;
+        repeated ShippingRule shippingRules = 4;
+        repeated Option options             = 5;
 
         enum ShippingType {
             LOCAL_PICKUP = 0;
@@ -100,22 +102,21 @@ message Listing {
             Price price              = 2;
             string estimatedDelivery = 3;
         }
-    }
 
-    message ShippingRule {
-        RuleType ruleType            = 1;
-        repeated CountryCode regions = 2;
-        uint32 minimumRange          = 3;
-        uint32 maxRange              = 4;
-        Price price                  = 5;
+        message ShippingRule {
+                RuleType ruleType            = 1;
+                uint32 minimumRange          = 2;
+                uint32 maxRange              = 3;
+                Price price                  = 4;
 
-        enum RuleType {
-            QUANTITY_DISCOUNT          = 0;
-            FLAT_FEE_QUANTITY_RANGE    = 1;
-            FLAT_FEE_WEIGHT_RANGE      = 2;
-            COMBINED_SHIPPING_ADD      = 3;
-            COMBINED_SHIPPING_SUBTRACT = 4;
-        }
+                enum RuleType {
+                    QUANTITY_DISCOUNT          = 0;
+                    FLAT_FEE_QUANTITY_RANGE    = 1;
+                    FLAT_FEE_WEIGHT_RANGE      = 2;
+                    COMBINED_SHIPPING_ADD      = 3;
+                    COMBINED_SHIPPING_SUBTRACT = 4;
+                }
+            }
     }
 
     message Tax {
@@ -126,30 +127,39 @@ message Listing {
     }
 
     message Coupon {
-        string title   = 1;
-        string hash    = 2;
-        Price discount = 3;
+        string title              = 1;
+        string hash               = 2;
+        DiscountType discountType = 3;
+        float percentDiscount     = 4;
+        Price priceDiscount       = 5;
+
+        enum DiscountType {
+            NA           = 0;
+            PERCENTAGE   = 1;
+            FIXED_AMOUNT = 2;
+        }
     }
 
     message Price {
         string currencyCode = 1;
-        uint32 amount       = 2; // bitcoins must be in satoshi
+        uint64 amount       = 2; // bitcoins must be in satoshi
     }
 
     message Inventory {
         // string format is /slug/variant/variant/...
-        string item = 1;
+        string item  = 1;
         int64 count  = 2;
     }
 }
 
 message Order {
-    string refundAddress = 1;
-    Shipping shipping    = 2;
-    ID buyerID           = 3;
-    uint64 timestamp     = 4; // unix timestamp
-    repeated Item items  = 5;
-    Payment payment      = 6;
+    string refundAddress                 = 1;
+    Shipping shipping                    = 2;
+    ID buyerID                           = 3;
+    google.protobuf.Timestamp timestamp  = 4;
+    repeated Item items                  = 5;
+    Payment payment                      = 6;
+    bytes ratingKey                      = 7;
 
     message Shipping {
         string shipTo       = 1;
@@ -182,20 +192,28 @@ message Order {
     message Payment {
         Method method       = 1;
         string moderator    = 2;
-        uint32 amount       = 3; // satoshis
+        uint64 amount       = 3; // satoshis
         string chaincode    = 4; // hex encoded
         string address      = 5; // b58check encoded
         string redeemScript = 6; // hex encoded
 
         enum Method {
-            DIRECT    = 0;
-            MODERATED = 1;
+            ADDRESS_REQUEST = 0;
+            DIRECT          = 1;
+            MODERATED       = 2;
         }
     }
 }
 
+message OrderConfirmation {
+    string orderID         = 1;
+    bytes outputScript     = 2;
+    uint64 requestedAmount = 3;
+    bytes ratingSignature  = 4;
+}
+
 // TODO: complete other messages
-message OrderConfirmation {}
+message OrderFulfillment {}
 message Rating {}
 message Dispute {}
 message DisputeResolution {}
@@ -221,10 +239,11 @@ message Signatures {
         NA                 = 0;
         LISTING            = 1;
         ORDER              = 2;
-        ORDER_CONFIRMATION = 3;
-        RATING             = 4;
-        DISPUTE            = 5;
-        DISPUTE_RESOLUTION = 6;
-        REFUND             = 7;
+        ORDER_ACCEPTANCE   = 3;
+        ORDER_CONFIRMATION = 4;
+        RATING             = 5;
+        DISPUTE            = 6;
+        DISPUTE_RESOLUTION = 7;
+        REFUND             = 8;
     }
 }

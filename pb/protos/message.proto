@@ -12,8 +12,8 @@ message Message {
         FOLLOW                  = 2;
         UNFOLLOW                = 3;
         ORDER                   = 4;
-        ORDER_ACK               = 5;
-        ORDER_CONFIRMATION      = 6;
+        ORDER_CONFIRMATION      = 5;
+        ORDER_FULFILLMENT       = 6;
         RATING                  = 7;
         DISPUTE_OPEN            = 8;
         DISPUTE_CLOSE           = 9;

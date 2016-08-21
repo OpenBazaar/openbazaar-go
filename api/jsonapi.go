@@ -545,12 +545,6 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	err = i.node.SetListingInventory(l)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
-		return
-	}
 	contract, err := i.node.SignListing(l)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -563,7 +557,6 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: false,
@@ -588,7 +581,6 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -596,7 +588,6 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 		return
 	}
-
 	if err := i.node.SeedNode(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
