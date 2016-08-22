@@ -76,6 +76,9 @@ type Pointers interface {
 	// Delete a pointer from the db.
 	Delete(id peer.ID) error
 
+	// Delete all pointers of a given purpose
+	DeleteAll(purpose ipfs.Purpose) error
+
 	// Fetch the entire list of pointers
 	GetAll() ([]ipfs.Pointer, error)
 }

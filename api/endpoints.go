@@ -22,6 +22,9 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	case "/ob/settings", "/ob/settings/":
 		i.PUTSettings(w, r)
 		return
+	case "/ob/moderator", "/ob/moderator/":
+		i.PUTModerator(w, r)
+		return
 	}
 }
 
@@ -50,6 +53,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		return
 	case "/ob/inventory", "/ob/inventory/":
 		i.POSTInventory(w, r)
+		return
+	case "/ob/moderator", "/ob/moderator/":
+		i.POSTModerator(w, r)
 		return
 	case "/ob/login":
 		i.POSTLogin(w, r)
@@ -112,6 +118,14 @@ func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Reques
 	switch path {
 	case "/ob/settings", "/ob/settings/":
 		i.PATCHSettings(w, r)
+		return
+	}
+}
+
+func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
+	switch path {
+	case "/ob/moderator", "/ob/moderator/":
+		i.DELETEModerator(w, r)
 		return
 	}
 }

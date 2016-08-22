@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+message Moderator {
+    string description        = 1;
+    string termsAndConditions = 2;
+    repeated string languages = 3;
+    Fee fee                   = 4;
+    bytes pubKey              = 5;q
+
+    message Fee {
+        Price fixedFee   = 1;
+        float percentage = 2;
+        FeeType feeType  = 3;
+
+        enum FeeType {
+            FIXED                 = 0;
+            PERCENTAGE            = 1;
+            FIXED_PLUS_PERCENTAGE = 2;
+        }
+    }
+
+    message Price {
+            string currencyCode = 1;
+            uint64 amount       = 2; // bitcoins must be in satoshi
+    }
+}

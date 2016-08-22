@@ -171,7 +171,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		put(i, u.String(), w, r)
 		return
 	case "DELETE":
-		// TODO: not yet implemented
+		deleter(i, u.String(), w, r)
 		return
 	case "PATCH":
 		patch(i, u.String(), w, r)
@@ -189,7 +189,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": "Profile already exists. Use PUT."}`)
+		fmt.Fprint(w, `{"success": false, "reason": "Profile already exists. Use PUT."}`)
 		return
 	}
 
@@ -272,7 +272,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, `{"success": false, "reason": "Profile doesn't exist yet. Use POST."}`)
+		fmt.Fprint(w, `{"success": false, "reason": "Profile doesn't exist yet. Use POST."}`)
 		return
 	}
 
@@ -1019,5 +1019,134 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Fprintf(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) POSTModerator(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	// If the moderator is already set tell them to use PUT
+	modPath := path.Join(i.node.RepoPath, "root", "moderation")
+	_, ferr := os.Stat(modPath)
+	if !os.IsNotExist(ferr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "Moderator file already exists. Use PUT."}`)
+		return
+	}
+
+	// Check JSON decoding and add proper indentation
+	moderator := new(pb.Moderator)
+	err := jsonpb.Unmarshal(r.Body, moderator)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Save self as moderator
+	err = i.node.SetSelfAsModerator(moderator)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, "{}")
+	return
+}
+
+func (i *jsonAPIHandler) PUTModerator(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	// If the moderator is already set tell them to use PUT
+	modPath := path.Join(i.node.RepoPath, "root", "moderation")
+	_, ferr := os.Stat(modPath)
+	if os.IsNotExist(ferr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "Moderator file doesn't yet exist. Use POST."}`)
+		return
+	}
+
+	// Check JSON decoding and add proper indentation
+	moderator := new(pb.Moderator)
+	err := jsonpb.Unmarshal(r.Body, moderator)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Save self as moderator
+	err = i.node.SetSelfAsModerator(moderator)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, "{}")
+	return
+}
+
+func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	// If the moderator is already set tell them to use PUT
+	modPath := path.Join(i.node.RepoPath, "root", "moderation")
+	_, ferr := os.Stat(modPath)
+	if os.IsNotExist(ferr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "This node isn't set as a moderator"}`)
+		return
+	}
+
+	// Save self as moderator
+	err := i.node.RemoveSelfAsModerator()
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "IPNS Error: %s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, "{}")
 	return
 }
