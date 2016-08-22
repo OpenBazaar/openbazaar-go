@@ -47,6 +47,16 @@ func (p *PointersDB) Delete(id peer.ID) error {
 	return nil
 }
 
+func (p *PointersDB) DeleteAll(purpose ipfs.Purpose) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	_, err := p.db.Exec("delete from pointers where purpose=?", purpose)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()

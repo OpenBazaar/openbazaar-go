@@ -88,6 +88,28 @@ func TestDeletePointer(t *testing.T) {
 	}
 }
 
+func TestDeleteAllPointers(t *testing.T) {
+	p := pointer
+	p.Purpose = ipfs.MODERATOR
+	pdb.Put(p)
+	err := pdb.DeleteAll(ipfs.MODERATOR)
+	if err != nil {
+		t.Error("Pointer delete failed")
+	}
+	stmt, _ := pdb.db.Prepare("select pointerID, key, address, purpose, timestamp from pointers where purpose=?")
+	defer stmt.Close()
+
+	var pointerID string
+	var key string
+	var address string
+	var purpose int
+	var timestamp int
+	err = stmt.QueryRow(ipfs.MODERATOR).Scan(&pointerID, &key, &address, &purpose, &timestamp)
+	if err == nil {
+		t.Error("Pointer delete all failed")
+	}
+}
+
 func TestGetAllPointers(t *testing.T) {
 	pdb.Put(pointer)
 	pointers, err := pdb.GetAll()

@@ -7,7 +7,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/jsonpb"
 	"golang.org/x/net/context"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"os"
@@ -97,6 +96,10 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		return err
 	}
 	pointer.Purpose = ipfs.MODERATOR
+	err = n.Datastore.Pointers().DeleteAll(pointer.Purpose)
+	if err != nil {
+		return err
+	}
 	err = n.Datastore.Pointers().Put(pointer)
 	if err != nil {
 		return err
@@ -123,11 +126,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 	}
 
 	// Delete pointer from db
-	ID, err := peer.IDFromBytes(ModeratorPointerID)
-	if err != nil {
-		return err
-	}
-	err = n.Datastore.Pointers().Delete(ID)
+	err = n.Datastore.Pointers().DeleteAll(ipfs.MODERATOR)
 	if err != nil {
 		return err
 	}
