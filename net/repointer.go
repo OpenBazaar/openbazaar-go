@@ -34,8 +34,7 @@ func (r *PointerRepublisher) republish() {
 	if err != nil {
 		return
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
 	for _, p := range pointers {
 		if p.Purpose != ipfs.MESSAGE {
 			ipfs.RePublishPointer(r.ipfsNode, ctx, p)
