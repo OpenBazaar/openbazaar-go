@@ -170,7 +170,15 @@
 			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
 		{
+			"ImportPath": "github.com/golang/protobuf/ptypes",
+			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/ptypes/any",
+			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/duration",
 			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
 		{

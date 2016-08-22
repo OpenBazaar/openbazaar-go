@@ -37,7 +37,7 @@ func ResolveThenCat(ctx commands.Context, ipnsPath path.Path) ([]byte, error) {
 	}
 	p := make([]string, len(ipnsPath.Segments()))
 	p[0] = hash
-	for i:=0; i<len(ipnsPath.Segments())-1; i++ {
+	for i := 0; i < len(ipnsPath.Segments())-1; i++ {
 		p[i+1] = ipnsPath.Segments()[i+1]
 	}
 	b, err := Cat(ctx, path.Join(p))

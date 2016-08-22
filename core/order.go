@@ -177,19 +177,21 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	contract.BuyerOrder = order
 
-	// marshal to json
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
+	// Add payment data and send to vendor
+	if data.Moderator != "" {
+
+	} else { // direct payment
+		payment := new(pb.Order_Payment)
+		payment.Method = pb.Order_Payment_ADDRESS_REQUEST
+		contract.BuyerOrder.Payment = payment
+
+		err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
+		if err != nil { // Vendor offline
+			// TODO: generated an address using the master public key, send the payment there, then send
+			// TODO: the order via offline messaging
+			log.Warning("Vendor is offline")
+		}
 	}
-	out, _ := m.MarshalToString(contract)
-
-	fmt.Println(string(out))
-
-	// TODO: create payment obj
-	// TODO: send to vendor
 	return nil
 }
 
