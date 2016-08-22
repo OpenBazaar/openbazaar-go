@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-func MakeMerkleParent(left *wire.ShaHash, right *wire.ShaHash) *wire.ShaHash {
+func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) *chainhash.Hash {
 	// dupes can screw things up; CVE-2012-2459. check for them
 	if left != nil && right != nil && left.IsEqual(right) {
 		fmt.Printf("DUP HASH CRASH")
@@ -26,13 +27,13 @@ func MakeMerkleParent(left *wire.ShaHash, right *wire.ShaHash) *wire.ShaHash {
 	copy(sha[:32], left[:])
 	copy(sha[32:], right[:])
 
-	newSha := wire.DoubleSha256SH(sha[:])
+	newSha := chainhash.DoubleHashH(sha[:])
 	return &newSha
 }
 
 type merkleNode struct {
 	p uint32        // position in the binary tree
-	h *wire.ShaHash // hash
+	h *chainhash.Hash // hash
 }
 
 // given n merkle leaves, how deep is the tree?
@@ -68,7 +69,7 @@ func inDeadZone(pos, size uint32) bool {
 // If there's any problem return an error.  Checks self-consistency only.
 // doing it with a stack instead of recursion.  Because...
 // OK I don't know why I'm just not in to recursion OK?
-func checkMBlock(m *wire.MsgMerkleBlock) ([]*wire.ShaHash, error) {
+func checkMBlock(m *wire.MsgMerkleBlock) ([]*chainhash.Hash, error) {
 	if m.Transactions == 0 {
 		return nil, fmt.Errorf("No transactions in merkleblock")
 	}
@@ -76,7 +77,7 @@ func checkMBlock(m *wire.MsgMerkleBlock) ([]*wire.ShaHash, error) {
 		return nil, fmt.Errorf("No flag bits")
 	}
 	var s []merkleNode    // the stack
-	var r []*wire.ShaHash // slice to return; txids we care about
+	var r []*chainhash.Hash // slice to return; txids we care about
 
 	// set initial position to root of merkle tree
 	msb := nextPowerOfTwo(m.Transactions) // most significant bit possible

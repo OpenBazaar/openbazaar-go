@@ -123,10 +123,10 @@ func (p *Peer) HeaderHandler(m *wire.MsgHeaders) {
 // after an inv message or after a merkle block message.
 func (p *Peer) TxHandler(m *wire.MsgTx) {
 	p.OKMutex.Lock()
-	height, ok := p.OKTxids[m.TxSha()]
+	height, ok := p.OKTxids[m.TxHash()]
 	p.OKMutex.Unlock()
 	if !ok {
-		log.Warningf("Received unknown tx: %s", m.TxSha().String())
+		log.Warningf("Received unknown tx: %s", m.TxHash().String())
 		return
 	}
 
@@ -154,13 +154,13 @@ func (p *Peer) TxHandler(m *wire.MsgTx) {
 	}
 	if hits == 0 {
 		log.Debugf("Tx %s from %s had no hits, filter false positive.",
-			m.TxSha().String(), p.con.RemoteAddr().String())
+			m.TxHash().String(), p.con.RemoteAddr().String())
 		p.fPositives <- 1 // add one false positive to chan
 		return
 	}
 	p.UpdateFilterAndSend()
 	log.Noticef("Tx %s ingested and matches %d utxo/adrs.",
-		m.TxSha().String(), hits)
+		m.TxHash().String(), hits)
 	//TODO: remove txid from map
 }
 
@@ -204,10 +204,10 @@ func (p *Peer) InvHandler(m *wire.MsgInv) {
 		if thing.Type == wire.InvTypeBlock { // new block what to do?
 			switch {
 			case p.TS.chainState == WAITING:
-				// start getting headers
+			// start getting headers
 				p.AskForMerkleBlock(thing.Hash)
 			default:
-				// drop it as if its component particles had high thermal energies
+			// drop it as if its component particles had high thermal energies
 				log.Debug("Received inv block but ignoring; not synched\n")
 			}
 		}

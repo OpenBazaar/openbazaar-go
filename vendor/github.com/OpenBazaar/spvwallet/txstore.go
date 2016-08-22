@@ -2,19 +2,20 @@ package spvwallet
 
 import (
 	"fmt"
+	"sync"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"sync"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type Datastore interface {
 	Utxos() Utxos
 	Stxos() Stxos
-	Txns() Txns
-	Keys() Keys
+	Txns()  Txns
+	Keys()  Keys
 	State() State
 }
 
@@ -46,13 +47,13 @@ type Txns interface {
 	Put(txn *wire.MsgTx) error
 
 	// Fetch a tx given it's hash
-	Get(txid wire.ShaHash) (*wire.MsgTx, error)
+	Get(txid chainhash.Hash) (*wire.MsgTx, error)
 
 	// Fetch all transactions from the db
 	GetAll() ([]*wire.MsgTx, error)
 
 	// Delete a transactions from the db
-	Delete(txid *wire.ShaHash) error
+	Delete(txid *chainhash.Hash) error
 }
 
 // Keys provides a database interface for the wallet to save key material, track
@@ -79,7 +80,7 @@ type Keys interface {
 
 	// Get the number of unused keys following the last used key
 	// for each key purpose.
-	GetLookaheadWindows() map[KeyPurpose]int
+	GetLookaheadWindows() map[KeyPurpose] int
 }
 
 type State interface {
@@ -114,17 +115,17 @@ type Utxo struct { // cash money.
 	Op wire.OutPoint // where
 
 	// all the info needed to spend
-	AtHeight int32 // block height where this tx was confirmed, 0 for unconf
-	Value    int64 // higher is better
+	AtHeight int32  // block height where this tx was confirmed, 0 for unconf
+	Value    int64  // higher is better
 
 	ScriptPubkey []byte
 }
 
 // Stxo is a utxo that has moved on.
 type Stxo struct {
-	Utxo        Utxo         // when it used to be a utxo
+	Utxo        Utxo           // when it used to be a utxo
 	SpendHeight int32        // height at which it met its demise
-	SpendTxid   wire.ShaHash // the tx that consumed it
+	SpendTxid   chainhash.Hash // the tx that consumed it
 }
 
 func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) *TxStore {
@@ -136,6 +137,8 @@ func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey)
 	txs.PopulateAdrs()
 	return txs
 }
+
+
 
 // ... or I'm gonna fade away
 func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
@@ -176,13 +179,13 @@ func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
 // all transactions in the db.  It returns a slice of all txids in the db
 // which are double spent by the received tx.
 func CheckDoubleSpends(
-	argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*wire.ShaHash, error) {
+	argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*chainhash.Hash, error) {
 
-	var dubs []*wire.ShaHash // slice of all double-spent txs
-	argTxid := argTx.TxSha()
+	var dubs []*chainhash.Hash // slice of all double-spent txs
+	argTxid := argTx.TxHash()
 
 	for _, compTx := range txs {
-		compTxid := compTx.TxSha()
+		compTxid := compTx.TxHash()
 		// check if entire tx is dup
 		if argTxid.IsEqual(&compTxid) {
 			return nil, fmt.Errorf("tx %s is dup", argTxid.String())
@@ -211,3 +214,4 @@ func OutPointsEqual(a, b wire.OutPoint) bool {
 	}
 	return a.Index == b.Index
 }
+

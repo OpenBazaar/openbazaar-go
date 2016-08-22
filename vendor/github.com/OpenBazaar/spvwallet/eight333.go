@@ -2,9 +2,10 @@ package spvwallet
 
 import (
 	"fmt"
-	"github.com/btcsuite/btcd/wire"
 	"net"
 	"sync"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 const (
@@ -50,14 +51,14 @@ type Peer struct {
 	userAgent string
 
 	// known good txids and their heights
-	OKTxids map[wire.ShaHash]int32
+	OKTxids map[chainhash.Hash]int32
 	OKMutex sync.Mutex
 }
 
 // AskForTx requests a tx we heard about from an inv message.
 // It's one at a time but should be fast enough.
 // I don't like this function because SPV shouldn't even ask...
-func (p *Peer) AskForTx(txid wire.ShaHash) {
+func (p *Peer) AskForTx(txid chainhash.Hash) {
 	gdata := wire.NewMsgGetData()
 	inv := wire.NewInvVect(wire.InvTypeTx, &txid)
 	gdata.AddInvVect(inv)
@@ -71,25 +72,25 @@ func (p *Peer) AskForTx(txid wire.ShaHash) {
 // Also used when inv messages indicate blocks so we can add the header
 // and parse the txs in one request instead of requesting headers first.
 type HashAndHeight struct {
-	blockhash wire.ShaHash
+	blockhash chainhash.Hash
 	height    int32
 	final     bool // indicates this is the last merkleblock requested
 }
 
 // NewRootAndHeight saves like 2 lines.
-func NewRootAndHeight(b wire.ShaHash, h int32) (hah HashAndHeight) {
+func NewRootAndHeight(b chainhash.Hash, h int32) (hah HashAndHeight) {
 	hah.blockhash = b
 	hah.height = h
 	return
 }
 
-func (p *Peer) AskForMerkleBlock(hash wire.ShaHash) {
+func (p *Peer) AskForMerkleBlock(hash chainhash.Hash){
 	m := wire.NewMsgGetData()
 	m.AddInvVect(wire.NewInvVect(wire.InvTypeFilteredBlock, &hash))
 	p.outMsgQueue <- m
 }
 
-func (p *Peer) IngestBlockAndHeader(m *wire.MsgMerkleBlock) {
+func (p *Peer) IngestBlockAndHeader(m *wire.MsgMerkleBlock){
 	txids, err := checkMBlock(m) // check self-consistency
 	if err != nil {
 		log.Errorf("Merkle block error: %s\n", err.Error())
@@ -117,8 +118,8 @@ func (p *Peer) IngestBlockAndHeader(m *wire.MsgMerkleBlock) {
 			log.Error(err)
 			return
 		}
-		headerHash := m.Header.BlockSha()
-		tipHash := bestSH.header.BlockSha()
+		headerHash := m.Header.BlockHash()
+		tipHash := bestSH.header.BlockHash()
 		if !tipHash.IsEqual(&headerHash) {
 			return
 		}
@@ -128,7 +129,7 @@ func (p *Peer) IngestBlockAndHeader(m *wire.MsgMerkleBlock) {
 		p.OKTxids[*txid] = int32(height)
 	}
 	p.OKMutex.Unlock()
-	log.Debugf("Received Merkle Block %s from %s", m.Header.BlockSha().String(), p.con.RemoteAddr().String())
+	log.Debugf("Received Merkle Block %s from %s", m.Header.BlockHash().String(), p.con.RemoteAddr().String())
 }
 
 func (p *Peer) IngestMerkleBlock(m *wire.MsgMerkleBlock) {
@@ -150,11 +151,11 @@ func (p *Peer) IngestMerkleBlock(m *wire.MsgMerkleBlock) {
 
 	// this verifies order, and also that the returned header fits
 	// into our SPV header file
-	newMerkBlockSha := m.Header.BlockSha()
+	newMerkBlockSha := m.Header.BlockHash()
 	if !hah.blockhash.IsEqual(&newMerkBlockSha) {
 		// This implies we may miss transactions in this block.
 		log.Errorf("merkle block out of order got %s expect %s",
-			m.Header.BlockSha().String(), hah.blockhash.String())
+			m.Header.BlockHash().String(), hah.blockhash.String())
 		return
 	}
 	for _, txid := range txids {
@@ -179,7 +180,7 @@ func (p *Peer) IngestMerkleBlock(m *wire.MsgMerkleBlock) {
 			return
 		}
 	}
-	log.Debugf("Ingested Merkle Block %s at height %d", m.Header.BlockSha().String(), hah.height)
+	log.Debugf("Ingested Merkle Block %s at height %d", m.Header.BlockHash().String(), hah.height)
 	return
 }
 
@@ -193,7 +194,7 @@ func (p *Peer) IngestHeaders(m *wire.MsgHeaders) (bool, error) {
 		log.Debugf("Received %d headers from %s, validating...", gotNum, p.con.RemoteAddr().String())
 	} else {
 		log.Debugf("Received 0 headers from %s, we're probably synced up", p.con.RemoteAddr().String())
-		if p.TS.chainState == SYNCING {
+		if  p.TS.chainState == SYNCING {
 			log.Info("Headers fully synced")
 		}
 		return false, nil
@@ -257,8 +258,8 @@ func (p *Peer) AskForBlocks() error {
 	hashes := p.blockchain.GetNPrevBlockHashes(int(headerTip - uint32(dbTip)))
 
 	// loop through all heights where we want merkleblocks.
-	for i := len(hashes) - 1; i >= 0; i-- {
-		dbTip++
+	for i := len(hashes)-1; i >= 0; i-- {
+		dbTip ++
 		iv1 := wire.NewInvVect(wire.InvTypeFilteredBlock, hashes[i])
 		gdataMsg := wire.NewMsgGetData()
 		// add inventory

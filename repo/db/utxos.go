@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"strconv"
 	"strings"
@@ -51,7 +52,7 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 			continue
 		}
 		s := strings.Split(outpoint, ":")
-		shaHash, err := wire.NewShaHashFromStr(s[0])
+		shaHash, err := chainhash.NewHashFromStr(s[0])
 		if err != nil {
 			continue
 		}

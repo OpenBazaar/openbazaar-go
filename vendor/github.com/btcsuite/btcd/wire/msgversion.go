@@ -15,10 +15,10 @@ import (
 
 // MaxUserAgentLen is the maximum allowed length for the user agent field in a
 // version message (MsgVersion).
-const MaxUserAgentLen = 2000
+const MaxUserAgentLen = 256
 
 // DefaultUserAgent for wire in the stack
-const DefaultUserAgent = "/btcwire:0.4.0/"
+const DefaultUserAgent = "/btcwire:0.4.1/"
 
 // MsgVersion implements the Message interface and represents a bitcoin version
 // message.  It is used for a peer to advertise itself as soon as an outbound
@@ -84,12 +84,11 @@ func (msg *MsgVersion) BtcDecode(r io.Reader, pver uint32) error {
 			"*bytes.Buffer")
 	}
 
-	var sec int64
-	err := readElements(buf, &msg.ProtocolVersion, &msg.Services, &sec)
+	err := readElements(buf, &msg.ProtocolVersion, &msg.Services,
+		(*int64Time)(&msg.Timestamp))
 	if err != nil {
 		return err
 	}
-	msg.Timestamp = time.Unix(sec, 0)
 
 	err = readNetAddress(buf, pver, &msg.AddrYou, false)
 	if err != nil {
