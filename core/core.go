@@ -1,6 +1,9 @@
 package core
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -13,6 +16,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"io"
 	"path"
 )
 
@@ -107,9 +111,34 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 		log.Errorf("Failed to find public key for %s", peerId.Pretty())
 		return nil, err
 	}
-	ciphertext, err := pubKey.Encrypt(message)
+
+	// Encrypt random aes key with RSA pubkey
+	symmetricKey := make([]byte, 32)
+	rand.Read(symmetricKey)
+
+	encKey, err := pubKey.Encrypt(symmetricKey)
 	if err != nil {
 		return nil, err
 	}
+
+	// Encrypt message with aes key
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// The IV needs to be unique, but not secure. Therefore it's common to
+	// include it at the beginning of the ciphertext.
+	ciphertext := make([]byte, aes.BlockSize+len(message))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, err
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], message)
+
+	// Prepend the ciphertext with the encrypted aes key
+	ciphertext = append(encKey, ciphertext...)
 	return ciphertext, nil
 }

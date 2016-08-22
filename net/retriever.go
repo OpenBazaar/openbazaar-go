@@ -17,6 +17,8 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	"crypto/aes"
+	"crypto/cipher"
 )
 
 type MessageRetriever struct {
@@ -105,10 +107,37 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
-	plaintext, err := m.node.PrivateKey.Decrypt(ciphertext)
+	if len(ciphertext) < 512 {
+		return
+	}
+	symmetricKey, err := m.node.PrivateKey.Decrypt(ciphertext[:512])
+	if err != nil {
+		return
+	}
+
+	block, err := aes.NewCipher(symmetricKey)
+	if err != nil {
+		return
+	}
+	ciphertext = ciphertext[512:]
+	if len(ciphertext) < aes.BlockSize {
+		return
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+
+	stream := cipher.NewCFBDecrypter(block, iv)
+
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(ciphertext, ciphertext)
+	plaintext := ciphertext
+
 	if err == nil {
 		env := pb.Envelope{}
-		proto.Unmarshal(plaintext, &env)
+		err := proto.Unmarshal(plaintext, &env)
+		if err != nil {
+			return
+		}
 		id, err := peer.IDB58Decode(env.PeerID)
 		if err != nil {
 			return
