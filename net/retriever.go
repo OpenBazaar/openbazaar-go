@@ -5,6 +5,7 @@ import (
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 
@@ -15,10 +16,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
+	"golang.org/x/crypto/hkdf"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/sha256"
+	"crypto/hmac"
 )
 
 type MessageRetriever struct {
@@ -114,12 +118,33 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	if err != nil {
 		return
 	}
+	hash := sha256.New
 
-	block, err := aes.NewCipher(symmetricKey)
+	hkdf := hkdf.New(hash, symmetricKey, nil, nil)
+
+	aesKey := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, aesKey)
+	if err != nil {
+		return nil, err
+	}
+	macKey := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, macKey)
+	if err != nil {
+		return nil, err
+	}
+
+	mac := hmac.New(sha256.New, macKey)
+	mac.Write(ciphertext[512:len(ciphertext) - 32])
+	messageMac := mac.Sum(nil)
+	if !hmac.Equal(messageMac, ciphertext[len(ciphertext) - 32: ]) {
+		return
+	}
+
+	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return
 	}
-	ciphertext = ciphertext[512:]
+	ciphertext = ciphertext[512:len(ciphertext) - 32]
 	if len(ciphertext) < aes.BlockSize {
 		return
 	}

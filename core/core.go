@@ -15,9 +15,12 @@ import (
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
+	"golang.org/x/crypto/hkdf"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	"io"
 	"path"
+	"crypto/sha256"
+	"crypto/hmac"
 )
 
 var log = logging.MustGetLogger("core")
@@ -121,8 +124,24 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 		return nil, err
 	}
 
+	// Generate mac and encryption keys
+	hash := sha256.New
+
+	hkdf := hkdf.New(hash, symmetricKey, nil, nil)
+
+	aesKey := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, aesKey)
+	if err != nil {
+		return nil, err
+	}
+	macKey := make([]byte, 32)
+	_, err = io.ReadFull(hkdf, macKey)
+	if err != nil {
+		return nil, err
+	}
+
 	// Encrypt message with aes key
-	block, err := aes.NewCipher(symmetricKey)
+	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +157,15 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], message)
 
+	// Create the hmac
+	mac := hmac.New(sha256.New, macKey)
+	mac.Write(ciphertext)
+	messageMac := mac.Sum(nil)
+
 	// Prepend the ciphertext with the encrypted aes key
 	ciphertext = append(encKey, ciphertext...)
+
+	// Append the mac
+	ciphertext = append(ciphertext, messageMac...)
 	return ciphertext, nil
 }
