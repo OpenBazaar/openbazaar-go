@@ -1,4 +1,4 @@
-// Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2014-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -20,7 +20,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 )
@@ -111,7 +111,7 @@ type ExtendedKey struct {
 // newExtendedKey returns a new instance of an extended key with the given
 // fields.  No error checking is performed here as it's only intended to be a
 // convenience method used to create a populated struct.
-func newExtendedKey(version, key, chainCode, parentFP []byte, depth uint16,
+func NewExtendedKey(version, key, chainCode, parentFP []byte, depth uint16,
 	childNum uint32, isPrivate bool) *ExtendedKey {
 
 	// NOTE: The pubKey field is intentionally left nil so it is only
@@ -302,7 +302,7 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 	// The fingerprint of the parent for the derived child is the first 4
 	// bytes of the RIPEMD160(SHA256(parentPubKey)).
 	parentFP := btcutil.Hash160(k.pubKeyBytes())[:4]
-	return newExtendedKey(k.version, childKey, childChainCode, parentFP,
+	return NewExtendedKey(k.version, childKey, childChainCode, parentFP,
 		k.depth+1, i, isPrivate), nil
 }
 
@@ -330,7 +330,7 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 	// key will simply be the pubkey of the current extended private key.
 	//
 	// This is the function N((k,c)) -> (K, c) from [BIP32].
-	return newExtendedKey(version, k.pubKeyBytes(), k.chainCode, k.parentFP,
+	return NewExtendedKey(version, k.pubKeyBytes(), k.chainCode, k.parentFP,
 		k.depth, k.childNum, false), nil
 }
 
@@ -395,7 +395,7 @@ func (k *ExtendedKey) String() string {
 		serializedBytes = append(serializedBytes, k.pubKeyBytes()...)
 	}
 
-	checkSum := wire.DoubleSha256(serializedBytes)[:4]
+	checkSum := chainhash.DoubleHashB(serializedBytes)[:4]
 	serializedBytes = append(serializedBytes, checkSum...)
 	return base58.Encode(serializedBytes)
 }
@@ -475,7 +475,7 @@ func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
 	}
 
 	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-	return newExtendedKey(net.HDPrivateKeyID[:], secretKey, chainCode,
+	return NewExtendedKey(net.HDPrivateKeyID[:], secretKey, chainCode,
 		parentFP, 0, 0, true), nil
 }
 
@@ -496,7 +496,7 @@ func NewKeyFromString(key string) (*ExtendedKey, error) {
 	// Split the payload and checksum up and ensure the checksum matches.
 	payload := decoded[:len(decoded)-4]
 	checkSum := decoded[len(decoded)-4:]
-	expectedCheckSum := wire.DoubleSha256(payload)[:4]
+	expectedCheckSum := chainhash.DoubleHashB(payload)[:4]
 	if !bytes.Equal(checkSum, expectedCheckSum) {
 		return nil, ErrBadChecksum
 	}
@@ -529,7 +529,7 @@ func NewKeyFromString(key string) (*ExtendedKey, error) {
 		}
 	}
 
-	return newExtendedKey(version, keyData, chainCode, parentFP, depth,
+	return NewExtendedKey(version, keyData, chainCode, parentFP, depth,
 		childNum, isPrivate), nil
 }
 

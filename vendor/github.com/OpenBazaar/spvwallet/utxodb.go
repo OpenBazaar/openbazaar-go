@@ -3,6 +3,7 @@ package spvwallet
 import (
 	"bytes"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -34,7 +35,7 @@ func (ts *TxStore) GetDBSyncHeight() (int32, error) {
 // This can be useful on startup or to rebroadcast unconfirmed txs.
 func (ts *TxStore) GetPendingInv() (*wire.MsgInv, error) {
 	// use a map (really a set) do avoid dupes
-	txidMap := make(map[wire.ShaHash]struct{})
+	txidMap := make(map[chainhash.Hash]struct{})
 
 	utxos, err := ts.db.Utxos().GetAll() // get utxos from db
 	if err != nil {
@@ -118,7 +119,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 	}
 	ts.addrMutex.Unlock()
-	cachedSha := tx.TxSha()
+	cachedSha := tx.TxHash()
 	// iterate through all outputs of this tx, see if we gain
 	for i, out := range tx.TxOut {
 		for _, script := range PKscripts {

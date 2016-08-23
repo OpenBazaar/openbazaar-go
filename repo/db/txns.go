@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 )
@@ -27,7 +28,7 @@ func (t *TxnsDB) Put(txn *wire.MsgTx) error {
 	}
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
-	_, err = stmt.Exec(txn.TxSha().String(), buf.Bytes())
+	_, err = stmt.Exec(txn.TxHash().String(), buf.Bytes())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -36,7 +37,7 @@ func (t *TxnsDB) Put(txn *wire.MsgTx) error {
 	return nil
 }
 
-func (t *TxnsDB) Get(txid wire.ShaHash) (*wire.MsgTx, error) {
+func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	stmt, err := t.db.Prepare("select tx from txns where txid=?")
@@ -75,7 +76,7 @@ func (t *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
 	return ret, nil
 }
 
-func (t *TxnsDB) Delete(txid *wire.ShaHash) error {
+func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	_, err := t.db.Exec("delete from txns where txid=?", txid.String())

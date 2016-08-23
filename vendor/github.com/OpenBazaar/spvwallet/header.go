@@ -42,8 +42,8 @@ func checkProofOfWork(header wire.BlockHeader, p *chaincfg.Params) bool {
 		return false
 	}
 	// The header hash must be less than the claimed target in the header.
-	blockHash := header.BlockSha()
-	hashNum := blockchain.ShaHashToBig(&blockHash)
+	blockHash := header.BlockHash()
+	hashNum := blockchain.HashToBig(&blockHash)
 	if hashNum.Cmp(target) > 0 {
 		log.Debugf("block hash %064x is higher than "+
 			"required target of %064x", hashNum, target)
@@ -61,11 +61,11 @@ func calcDiffAdjust(start, end wire.BlockHeader, p *chaincfg.Params) uint32 {
 	duration := end.Timestamp.UnixNano() - start.Timestamp.UnixNano()
 	if duration < minRetargetTimespan {
 		log.Debugf("whoa there, block %s off-scale high 4X diff adjustment!",
-			end.BlockSha().String())
+			end.BlockHash().String())
 		duration = minRetargetTimespan
 	} else if duration > maxRetargetTimespan {
 		log.Debugf("Uh-oh! block %s off-scale low 0.25X diff adjustment!\n",
-			end.BlockSha().String())
+			end.BlockHash().String())
 		duration = maxRetargetTimespan
 	}
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2015 The btcsuite developers
+// Copyright (c) 2015-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 // sigCacheEntry represents an entry in the SigCache. Entries within the
@@ -34,7 +34,7 @@ type sigCacheEntry struct {
 // if they've already been seen and verified within the mempool.
 type SigCache struct {
 	sync.RWMutex
-	validSigs  map[wire.ShaHash]sigCacheEntry
+	validSigs  map[chainhash.Hash]sigCacheEntry
 	maxEntries uint
 }
 
@@ -45,7 +45,7 @@ type SigCache struct {
 // cache to exceed the max.
 func NewSigCache(maxEntries uint) *SigCache {
 	return &SigCache{
-		validSigs:  make(map[wire.ShaHash]sigCacheEntry, maxEntries),
+		validSigs:  make(map[chainhash.Hash]sigCacheEntry, maxEntries),
 		maxEntries: maxEntries,
 	}
 }
@@ -55,7 +55,7 @@ func NewSigCache(maxEntries uint) *SigCache {
 //
 // NOTE: This function is safe for concurrent access. Readers won't be blocked
 // unless there exists a writer, adding an entry to the SigCache.
-func (s *SigCache) Exists(sigHash wire.ShaHash, sig *btcec.Signature, pubKey *btcec.PublicKey) bool {
+func (s *SigCache) Exists(sigHash chainhash.Hash, sig *btcec.Signature, pubKey *btcec.PublicKey) bool {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -73,7 +73,7 @@ func (s *SigCache) Exists(sigHash wire.ShaHash, sig *btcec.Signature, pubKey *bt
 //
 // NOTE: This function is safe for concurrent access. Writers will block
 // simultaneous readers until function execution has concluded.
-func (s *SigCache) Add(sigHash wire.ShaHash, sig *btcec.Signature, pubKey *btcec.PublicKey) {
+func (s *SigCache) Add(sigHash chainhash.Hash, sig *btcec.Signature, pubKey *btcec.PublicKey) {
 	s.Lock()
 	defer s.Unlock()
 
@@ -84,7 +84,7 @@ func (s *SigCache) Add(sigHash wire.ShaHash, sig *btcec.Signature, pubKey *btcec
 	// If adding this new entry will put us over the max number of allowed
 	// entries, then evict an entry.
 	if uint(len(s.validSigs)+1) > s.maxEntries {
-		// Remove a random entry from the map relaying on the random
+		// Remove a random entry from the map. Relying on the random
 		// starting point of Go's map iteration. It's worth noting that
 		// the random iteration starting point is not 100% guaranteed
 		// by the spec, however most Go compilers support it.

@@ -8,6 +8,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"math/big"
 	"path"
@@ -80,8 +81,8 @@ func (h *HeaderDB) Put(sh StoredHeader, newBestHeader bool) error {
 		if err != nil {
 			return err
 		}
-		hash := sh.header.BlockSha()
-		err = hdrs.Put(hash.Bytes(), ser)
+		hash := sh.header.BlockHash()
+		err = hdrs.Put(hash.CloneBytes(), ser)
 		if err != nil {
 			return err
 		}
@@ -124,7 +125,7 @@ func (h *HeaderDB) GetPreviousHeader(header wire.BlockHeader) (sh StoredHeader, 
 	err = h.db.View(func(btx *bolt.Tx) error {
 		hdrs := btx.Bucket(BKTHeaders)
 		hash := header.PrevBlock
-		b := hdrs.Get(hash.Bytes())
+		b := hdrs.Get(hash.CloneBytes())
 		if b == nil {
 			return errors.New("Header does not exist in database")
 		}
@@ -189,7 +190,7 @@ func (h *HeaderDB) Print() {
 		bkt := tx.Bucket(BKTHeaders)
 		bkt.ForEach(func(k, v []byte) error {
 			sh, _ := deserializeHeader(v)
-			m[sh.height] = sh.header.BlockSha().String()
+			m[sh.height] = sh.header.BlockHash().String()
 			return nil
 		})
 
@@ -268,7 +269,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	tipHash := bestHeader.header.BlockSha()
+	tipHash := bestHeader.header.BlockHash()
 	var parentHeader StoredHeader
 
 	// If the tip is also the parent of this header, then we can save a database read by skipping
@@ -286,7 +287,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 		return false, nil
 	}
 	// If this block is already the tip, return
-	headerHash := header.BlockSha()
+	headerHash := header.BlockHash()
 	if tipHash.IsEqual(&headerHash) {
 		return newTip, nil
 	}
@@ -297,7 +298,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 	// then we have a new best header. Update the chain tip and check for a reorg.
 	if cumulativeWork.Cmp(bestHeader.totalWork) == 1 {
 		newTip = true
-		prevHash := parentHeader.header.BlockSha()
+		prevHash := parentHeader.header.BlockHash()
 		// If this header is not extending the previous best header then we have a reorg.
 		if !tipHash.IsEqual(&prevHash) {
 			log.Warning("REORG!!! REORG!!! REORG!!!")
@@ -323,7 +324,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeader) bool {
 
 	// get hash of n-1 header
-	prevHash := prevHeader.header.BlockSha()
+	prevHash := prevHeader.header.BlockHash()
 	height := prevHeader.height
 
 	// check if headers link together.  That whole 'blockchain' thing.
@@ -340,7 +341,7 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 	}
 	if header.Bits != diffTarget {
 		log.Warningf("Block %d %s incorrect difficuly.  Read %d, expect %d\n",
-			height+1, header.BlockSha().String(), header.Bits, diffTarget)
+			height+1, header.BlockHash().String(), header.Bits, diffTarget)
 		return false
 	}
 
@@ -370,7 +371,7 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 	// If this is not a difficulty adjustment period
 	if height%epochLength != 0 {
 		// If we are on testnet
-		if b.params.ResetMinDifficulty {
+		if b.params.ReduceMinDifficulty {
 			// If it's been more than 20 minutes since the last header return the minimum difficulty
 			if header.Timestamp.After(prevHeader.header.Timestamp.Add(targetSpacing * 2)) {
 				return b.params.PowLimitBits, nil
@@ -414,31 +415,31 @@ func (b *Blockchain) GetEpoch() (*wire.BlockHeader, error) {
 			return &sh.header, err
 		}
 	}
-	log.Debug("Epoch", sh.header.BlockSha().String())
+	log.Debug("Epoch", sh.header.BlockHash().String())
 	return &sh.header, nil
 }
 
-func (b *Blockchain) GetNPrevBlockHashes(n int) []*wire.ShaHash {
-	var ret []*wire.ShaHash
+func (b *Blockchain) GetNPrevBlockHashes(n int) []*chainhash.Hash {
+	var ret []*chainhash.Hash
 	hdr, err := b.db.GetBestHeader()
 	if err != nil {
 		return ret
 	}
-	tipSha := hdr.header.BlockSha()
+	tipSha := hdr.header.BlockHash()
 	ret = append(ret, &tipSha)
 	for i := 0; i < n-1; i++ {
 		hdr, err = b.db.GetPreviousHeader(hdr.header)
 		if err != nil {
 			return ret
 		}
-		shaHash := hdr.header.BlockSha()
+		shaHash := hdr.header.BlockHash()
 		ret = append(ret, &shaHash)
 	}
 	return ret
 }
 
-func (b *Blockchain) GetBlockLocatorHashes() []*wire.ShaHash {
-	var ret []*wire.ShaHash
+func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
+	var ret []*chainhash.Hash
 	parent, err := b.db.GetBestHeader()
 	if err != nil {
 		return ret
@@ -461,7 +462,7 @@ func (b *Blockchain) GetBlockLocatorHashes() []*wire.ShaHash {
 			step *= 2
 			start = 0
 		}
-		hash := parent.header.BlockSha()
+		hash := parent.header.BlockHash()
 		ret = append(ret, &hash)
 		if len(ret) == 500 {
 			break
@@ -526,8 +527,8 @@ func deserializeHeader(b []byte) (sh StoredHeader, err error) {
 }
 
 func createCheckpoints() {
-	mainnetPrev, _ := wire.NewShaHashFromStr("0000000000000000045645e2acd740a88d2b3a09369e9f0f80d5376e4b6c5189")
-	mainnetMerk, _ := wire.NewShaHashFromStr("e4b259941d8a8d5f1c5f18a68366ef570c0a7876c1f22a54a4f143215e3f4d9b")
+	mainnetPrev, _ := chainhash.NewHashFromStr("0000000000000000045645e2acd740a88d2b3a09369e9f0f80d5376e4b6c5189")
+	mainnetMerk, _ := chainhash.NewHashFromStr("e4b259941d8a8d5f1c5f18a68366ef570c0a7876c1f22a54a4f143215e3f4d9b")
 	MainnetCheckpoint = wire.BlockHeader{
 		Version:    4,
 		PrevBlock:  *mainnetPrev,
@@ -537,8 +538,8 @@ func createCheckpoints() {
 		Nonce:      3800536668,
 	}
 
-	testnet3Prev, _ := wire.NewShaHashFromStr("00000000000002fb1337228db02ac464565271f22f045c1b6ee5e449f057a829")
-	testnet3Merk, _ := wire.NewShaHashFromStr("dd76d3c93254b05c6316eaf3bdb94ed4bd9dfeb464f8f9487fbd1eca2a12ca6e")
+	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000002fb1337228db02ac464565271f22f045c1b6ee5e449f057a829")
+	testnet3Merk, _ := chainhash.NewHashFromStr("dd76d3c93254b05c6316eaf3bdb94ed4bd9dfeb464f8f9487fbd1eca2a12ca6e")
 	Testnet3Checkpoint = wire.BlockHeader{
 		Version:    536870912,
 		PrevBlock:  *testnet3Prev,
