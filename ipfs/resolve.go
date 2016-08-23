@@ -5,10 +5,12 @@ import (
 	coreCmds "github.com/ipfs/go-ipfs/core/commands"
 )
 
+const ResolveTimeout = 10
+
 // Publish a signed IPNS record to our Peer ID
 func Resolve(ctx commands.Context, hash string) (string, error) {
 	args := []string{"name", "resolve", hash}
-	req, cmd, err := NewRequest(ctx, args)
+	req, cmd, err := NewRequest(ctx, args, ResolveTimeout)
 	if err != nil {
 		return "", err
 	}

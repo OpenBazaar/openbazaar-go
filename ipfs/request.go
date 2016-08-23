@@ -7,6 +7,7 @@ import (
 	cli "github.com/ipfs/go-ipfs/commands/cli"
 	commands "github.com/ipfs/go-ipfs/core/commands"
 	"github.com/op/go-logging"
+	"time"
 )
 
 var log = logging.MustGetLogger("ipfs")
@@ -31,7 +32,7 @@ func init() {
 	}
 }
 
-func NewRequest(ctx cmds.Context, args []string) (cmds.Request, *cmds.Command, error) {
+func NewRequest(ctx cmds.Context, args []string, timeout time.Duration) (cmds.Request, *cmds.Command, error) {
 	Root.Subcommands = localCommands
 	for k, v := range commands.Root.Subcommands {
 		if _, found := Root.Subcommands[k]; !found {
@@ -39,7 +40,7 @@ func NewRequest(ctx cmds.Context, args []string) (cmds.Request, *cmds.Command, e
 		}
 	}
 	req, cmd, _, err := cli.Parse(args, nil, Root)
-	cctx := context.Background()
+	cctx, _ := context.WithTimeout(context.Background(), timeout)
 	rerr := req.SetRootContext(cctx)
 	if rerr != nil {
 		return nil, nil, rerr
