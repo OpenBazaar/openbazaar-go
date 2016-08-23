@@ -6,12 +6,10 @@ import (
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 )
 
-const QueryTimeout = 60
-
 func Query(ctx commands.Context, peerID string) ([]peer.ID, error) {
 	var peers []peer.ID
 	args := []string{"dht", "query", peerID}
-	req, cmd, err := NewRequest(ctx, args, QueryTimeout)
+	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return peers, err
 	}

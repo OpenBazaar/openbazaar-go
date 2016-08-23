@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"strconv"
 	"sync"
@@ -20,8 +21,8 @@ func init() {
 		db:   conn,
 		lock: new(sync.Mutex),
 	}
-	sh1, _ := wire.NewShaHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
-	sh2, _ := wire.NewShaHashFromStr("82998e18760a5f6e5573cd789269e7853e3ebaba07a8df0929badd69dc644c5f")
+	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
+	sh2, _ := chainhash.NewHashFromStr("82998e18760a5f6e5573cd789269e7853e3ebaba07a8df0929badd69dc644c5f")
 	outpoint := wire.NewOutPoint(sh1, 0)
 	utxo := spvwallet.Utxo{
 		Op:           *outpoint,

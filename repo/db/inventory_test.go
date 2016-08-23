@@ -47,13 +47,13 @@ func TestPutReplaceInventory(t *testing.T) {
 	}
 }
 
-func TestGetInventory(t *testing.T) {
+func TestGetSpecificInventory(t *testing.T) {
 	ivdb.Put("abc", 5)
-	count, err := ivdb.Get("abc")
+	count, err := ivdb.GetSpecific("abc")
 	if err != nil || count != 5 {
 		t.Error("Error in inventory get")
 	}
-	count, err = ivdb.Get("xyz")
+	count, err = ivdb.GetSpecific("xyz")
 	if err == nil {
 		t.Error("Error in inventory get")
 	}
@@ -79,6 +79,19 @@ func TestGetAllInventory(t *testing.T) {
 		ivdb.Put(strconv.Itoa(i), i)
 	}
 	inventory, err := ivdb.GetAll()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(inventory) != 100 {
+		t.Error("Failed to get all inventory")
+	}
+}
+
+func TestGetInventory(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		ivdb.Put("inv/"+strconv.Itoa(i), i)
+	}
+	inventory, err := ivdb.Get("inv")
 	if err != nil {
 		t.Error(err)
 	}

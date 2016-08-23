@@ -10,7 +10,7 @@ const ResolveTimeout = 10
 // Publish a signed IPNS record to our Peer ID
 func Resolve(ctx commands.Context, hash string) (string, error) {
 	args := []string{"name", "resolve", hash}
-	req, cmd, err := NewRequest(ctx, args, ResolveTimeout)
+	req, cmd, err := NewRequestWithTimeout(ctx, args, ResolveTimeout)
 	if err != nil {
 		return "", err
 	}

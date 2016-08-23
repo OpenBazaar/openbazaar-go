@@ -34,7 +34,7 @@ func TestTxnsPut(t *testing.T) {
 	stmt, err := txdb.db.Prepare("select tx from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
-	err = stmt.QueryRow(tx.TxSha().String()).Scan(&ret)
+	err = stmt.QueryRow(tx.TxHash().String()).Scan(&ret)
 	if err != nil {
 		t.Error(err)
 	}
@@ -54,11 +54,11 @@ func TestTxnsGet(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tx2, err := txdb.Get(tx.TxSha())
+	tx2, err := txdb.Get(tx.TxHash())
 	if err != nil {
 		t.Error(err)
 	}
-	if tx.TxSha().String() != tx2.TxSha().String() {
+	if tx.TxHash().String() != tx2.TxHash().String() {
 		t.Error("Txn db get failed")
 	}
 }
@@ -94,7 +94,7 @@ func TestDeleteTxns(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	txid := tx.TxSha()
+	txid := tx.TxHash()
 	err = txdb.Delete(&txid)
 	if err != nil {
 		t.Error(err)
@@ -104,7 +104,7 @@ func TestDeleteTxns(t *testing.T) {
 		t.Error(err)
 	}
 	for _, txn := range txns {
-		if txn.TxSha().String() == txid.String() {
+		if txn.TxHash().String() == txid.String() {
 			t.Error("Txns db delete failed")
 		}
 	}

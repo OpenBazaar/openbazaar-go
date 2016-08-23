@@ -13,6 +13,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io"
 	"net/http"
@@ -1148,5 +1149,36 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	fmt.Fprintf(w, "{}")
+	return
+}
+
+func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	contract := new(pb.RicardianContract)
+	_, listingID := path.Split(r.URL.Path)
+	_, err := mh.FromB58String(listingID)
+	if err == nil {
+		contract, err = i.node.GetListingFromHash(listingID)
+	} else {
+		contract, err = i.node.GetListingFromSlug(listingID)
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(contract)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, string(out))
 	return
 }
