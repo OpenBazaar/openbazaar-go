@@ -1,10 +1,10 @@
 package ipfs
 
 import (
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"golang.org/x/crypto/scrypt"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 )
@@ -44,26 +44,15 @@ func IdentityKeyFromSeed(seed []byte, bits int) ([]byte, error) {
 
 type DeterministicReader struct {
 	Seed    []byte
-	Counter int
+	Counter uint64
 }
 
-// TODO: this is a place holder until we settle on a key expansion algorithm
 func (d *DeterministicReader) Read(p []byte) (n int, err error) {
 	l := len(p)
-	deterministcBytes := []byte{}
-	for {
-		bs := make([]byte, 8)
-		binary.BigEndian.PutUint64(bs, uint64(d.Counter))
-		b := append(d.Seed, bs...)
-		out := sha256.Sum256(b)
-		deterministcBytes = append(deterministcBytes, out[:]...)
-		if len(deterministcBytes) >= l {
-			break
-		}
-		d.Counter++
-	}
-	for a := 0; a < l; a++ {
-		p[a] = deterministcBytes[a]
-	}
+	counterBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(counterBytes, d.Counter)
+	dk, err := scrypt.Key(d.Seed, counterBytes, 512, 8, 1, l)
+	copy(p, dk)
+	d.Counter++
 	return l, nil
 }
