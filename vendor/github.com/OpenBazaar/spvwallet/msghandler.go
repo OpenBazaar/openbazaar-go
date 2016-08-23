@@ -204,10 +204,10 @@ func (p *Peer) InvHandler(m *wire.MsgInv) {
 		if thing.Type == wire.InvTypeBlock { // new block what to do?
 			switch {
 			case p.TS.chainState == WAITING:
-			// start getting headers
+				// start getting headers
 				p.AskForMerkleBlock(thing.Hash)
 			default:
-			// drop it as if its component particles had high thermal energies
+				// drop it as if its component particles had high thermal energies
 				log.Debug("Received inv block but ignoring; not synched\n")
 			}
 		}

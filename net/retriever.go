@@ -1,18 +1,6 @@
 package net
 
 import (
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"time"
-
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/hmac"
-	"crypto/sha256"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -21,11 +9,14 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
-	"golang.org/x/crypto/hkdf"
 	"golang.org/x/net/context"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	"io/ioutil"
+	"net/http"
+	"time"
 )
-
-var salt = []byte("salt")
 
 type MessageRetriever struct {
 	db        repo.Datastore
@@ -113,51 +104,8 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
-	if len(ciphertext) < 548 {
-		return
-	}
-	symmetricKey, err := m.node.PrivateKey.Decrypt(ciphertext[4:516])
-	if err != nil {
-		return
-	}
-	hash := sha256.New
 
-	hkdf := hkdf.New(hash, symmetricKey, salt, nil)
-
-	aesKey := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, aesKey)
-	if err != nil {
-		return nil, err
-	}
-	macKey := make([]byte, 32)
-	_, err = io.ReadFull(hkdf, macKey)
-	if err != nil {
-		return nil, err
-	}
-
-	mac := hmac.New(sha256.New, macKey)
-	mac.Write(ciphertext[516 : len(ciphertext)-32])
-	messageMac := mac.Sum(nil)
-	if !hmac.Equal(messageMac, ciphertext[len(ciphertext)-32:]) {
-		return
-	}
-
-	block, err := aes.NewCipher(aesKey)
-	if err != nil {
-		return
-	}
-	ciphertext = ciphertext[516 : len(ciphertext)-32]
-	if len(ciphertext) < aes.BlockSize {
-		return
-	}
-	iv := ciphertext[:aes.BlockSize]
-	ciphertext = ciphertext[aes.BlockSize:]
-
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	// XORKeyStream can work in-place if the two arguments are the same.
-	stream.XORKeyStream(ciphertext, ciphertext)
-	plaintext := ciphertext
+	plaintext, err := Decrypt(m.node.PrivateKey, ciphertext)
 
 	if err == nil {
 		env := pb.Envelope{}

@@ -1,8 +1,8 @@
 package spvwallet
 
 import (
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/txscript"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
 type KeyPurpose int
@@ -19,7 +19,6 @@ type KeyPath struct {
 	Index   int
 }
 
-
 func (t *TxStore) GetCurrentKey(purpose KeyPurpose) *hd.ExtendedKey {
 	i, _ := t.db.Keys().GetUnused(purpose)
 	return t.generateChildKey(purpose, uint32(i))
@@ -31,7 +30,7 @@ func (t *TxStore) GetFreshKey(purpose KeyPurpose) *hd.ExtendedKey {
 	if err != nil {
 		childKey = t.generateChildKey(purpose, 0)
 	} else {
-		childKey = t.generateChildKey(purpose, uint32(index + 1))
+		childKey = t.generateChildKey(purpose, uint32(index+1))
 	}
 	addr, _ := childKey.Address(t.Param)
 	script, _ := txscript.PayToAddrScript(addr)
@@ -71,7 +70,7 @@ func (t *TxStore) lookahead() {
 	lookaheadWindows := t.db.Keys().GetLookaheadWindows()
 	for purpose, size := range lookaheadWindows {
 		if size < LOOKAHEADWINDOW {
-			for i:=0; i<(LOOKAHEADWINDOW-size); i++ {
+			for i := 0; i < (LOOKAHEADWINDOW - size); i++ {
 				t.GetFreshKey(purpose)
 			}
 		}
