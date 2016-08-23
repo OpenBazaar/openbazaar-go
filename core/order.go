@@ -1,15 +1,20 @@
 package core
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
@@ -185,11 +190,63 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 		contract.BuyerOrder.Payment = payment
 
-		err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
+		// Send to order vendor and request a payment address
+		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
 		if err != nil { // Vendor offline
-			// TODO: generated an address using the master public key, send the payment there, then send
-			// TODO: the order via offline messaging
-			log.Warning("Vendor is offline")
+			// Change payment code to direct
+			payment.Method = pb.Order_Payment_DIRECT
+
+			// Generated an payment address using the first child key derived from the vendor's
+			// masterPubKey and a random chaincode.
+			chaincode := make([]byte, 32)
+			_, err := rand.Read(chaincode)
+			if err != nil {
+				return err
+			}
+			parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+			hdKey := hd.NewExtendedKey(
+				n.Wallet.Params().HDPublicKeyID[:],
+				contract.VendorListings[0].VendorID.Pubkeys.Bitcoin,
+				chaincode,
+				parentFP,
+				0,
+				0,
+				false)
+
+			childKey, err := hdKey.Child(1)
+			if err != nil {
+				return err
+			}
+			addr, err := childKey.Address(n.Wallet.Params())
+			if err != nil {
+				return err
+			}
+			// TODO: calculate the amount to be paid
+			payment.Address = addr.EncodeAddress()
+			payment.Chaincode = hex.EncodeToString(chaincode)
+
+			// Send using offline messaging
+			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
+			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.Guid)
+			if err != nil {
+				return err
+			}
+			any, err := ptypes.MarshalAny(contract)
+			if err != nil {
+				return err
+			}
+			m := pb.Message{
+				MessageType: pb.Message_ORDER,
+				Payload:     any,
+			}
+			err = n.SendOfflineMessage(peerId, &m)
+			if err != nil {
+				return err
+			}
+		} else { // Vendor responded
+			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
+				return errors.New("Vendor responded to the order with an incorrect message type")
+			}
 		}
 	}
 	return nil

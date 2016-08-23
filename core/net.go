@@ -121,24 +121,24 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract) (resp *pb.Message, err error) {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
-		return err
+		return resp, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
-		return err
+		return resp, err
 	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER,
 		Payload:     any,
 	}
-	err = n.Service.SendMessage(ctx, p, &m)
+	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
-		return err
+		return resp, err
 	}
-	return nil
+	return resp, nil
 }

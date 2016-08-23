@@ -1,13 +1,6 @@
 package net
 
 import (
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	"io/ioutil"
-	"net/http"
-	"time"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -17,6 +10,12 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	"io/ioutil"
+	"net/http"
+	"time"
 )
 
 type MessageRetriever struct {
@@ -105,10 +104,15 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
-	plaintext, err := m.node.PrivateKey.Decrypt(ciphertext)
+
+	plaintext, err := Decrypt(m.node.PrivateKey, ciphertext)
+
 	if err == nil {
 		env := pb.Envelope{}
-		proto.Unmarshal(plaintext, &env)
+		err := proto.Unmarshal(plaintext, &env)
+		if err != nil {
+			return
+		}
 		id, err := peer.IDB58Decode(env.PeerID)
 		if err != nil {
 			return

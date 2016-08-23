@@ -18,6 +18,9 @@ import (
 
 var log = logging.MustGetLogger("core")
 
+var salt = []byte("salt")
+var encVersion = make([]byte, 4)
+
 var Node *OpenBazaarNode
 
 var inflightPublishRequests int
@@ -107,7 +110,7 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 		log.Errorf("Failed to find public key for %s", peerId.Pretty())
 		return nil, err
 	}
-	ciphertext, err := pubKey.Encrypt(message)
+	ciphertext, err := net.Encrypt(pubKey, message)
 	if err != nil {
 		return nil, err
 	}
