@@ -4,11 +4,15 @@ import (
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"time"
 
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/hmac"
+	"crypto/sha256"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -16,14 +20,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
-	"golang.org/x/crypto/hkdf"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
+	"golang.org/x/crypto/hkdf"
 	"golang.org/x/net/context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/sha256"
-	"crypto/hmac"
 )
+
+var salt = []byte("salt")
 
 type MessageRetriever struct {
 	db        repo.Datastore
@@ -111,16 +113,16 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
-	if len(ciphertext) < 512 {
+	if len(ciphertext) < 548 {
 		return
 	}
-	symmetricKey, err := m.node.PrivateKey.Decrypt(ciphertext[:512])
+	symmetricKey, err := m.node.PrivateKey.Decrypt(ciphertext[4:516])
 	if err != nil {
 		return
 	}
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, symmetricKey, nil, nil)
+	hkdf := hkdf.New(hash, symmetricKey, salt, nil)
 
 	aesKey := make([]byte, 32)
 	_, err = io.ReadFull(hkdf, aesKey)
@@ -134,9 +136,9 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	}
 
 	mac := hmac.New(sha256.New, macKey)
-	mac.Write(ciphertext[512:len(ciphertext) - 32])
+	mac.Write(ciphertext[516 : len(ciphertext)-32])
 	messageMac := mac.Sum(nil)
-	if !hmac.Equal(messageMac, ciphertext[len(ciphertext) - 32: ]) {
+	if !hmac.Equal(messageMac, ciphertext[len(ciphertext)-32:]) {
 		return
 	}
 
@@ -144,7 +146,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	if err != nil {
 		return
 	}
-	ciphertext = ciphertext[512:len(ciphertext) - 32]
+	ciphertext = ciphertext[516 : len(ciphertext)-32]
 	if len(ciphertext) < aes.BlockSize {
 		return
 	}

@@ -3,7 +3,9 @@ package core
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -14,16 +16,17 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
-	"golang.org/x/net/context"
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/net/context"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	"io"
 	"path"
-	"crypto/sha256"
-	"crypto/hmac"
 )
 
 var log = logging.MustGetLogger("core")
+
+var salt = []byte("salt")
+var encVersion = make([]byte, 4)
 
 var Node *OpenBazaarNode
 
@@ -127,7 +130,7 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 	// Generate mac and encryption keys
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, symmetricKey, nil, nil)
+	hkdf := hkdf.New(hash, symmetricKey, salt, nil)
 
 	aesKey := make([]byte, 32)
 	_, err = io.ReadFull(hkdf, aesKey)
@@ -164,6 +167,9 @@ func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []by
 
 	// Prepend the ciphertext with the encrypted aes key
 	ciphertext = append(encKey, ciphertext...)
+
+	// Prepend version
+	ciphertext = append(encVersion, ciphertext...)
 
 	// Append the mac
 	ciphertext = append(ciphertext, messageMac...)
