@@ -475,14 +475,16 @@ func validate(listing *pb.Listing) (err error) {
 				return errors.New("Shipping option titles must be unique")
 			}
 		}
-		if int(shippingOption.ShippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
-			return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
-		}
-		if shippingOption.ShippingRule.Price.CurrencyCode == "" {
-			return errors.New("Shipping rules price currency code must not be nil")
-		}
-		if (int(shippingOption.ShippingRule.RuleType) == 1 || int(shippingOption.ShippingRule.RuleType) == 2) && shippingOption.ShippingRule.MaxRange <= shippingOption.ShippingRule.MinimumRange {
-			return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+		if shippingOption.ShippingRule != nil {
+			if int(shippingOption.ShippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
+				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
+			}
+			if shippingOption.ShippingRule.Price.CurrencyCode == "" {
+				return errors.New("Shipping rules price currency code must not be nil")
+			}
+			if (int(shippingOption.ShippingRule.RuleType) == 1 || int(shippingOption.ShippingRule.RuleType) == 2) && shippingOption.ShippingRule.MaxRange <= shippingOption.ShippingRule.MinimumRange {
+				return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+			}
 		}
 		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 		shippingTitles = append(shippingTitles, shippingOption.Name)

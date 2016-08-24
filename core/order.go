@@ -94,37 +94,66 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	ts.Nanos = 0
 	order.Timestamp = ts
 
+	var addedListings [][]string
 	for _, item := range data.Items {
 		i := new(pb.Order_Item)
 
-		// Let's fetch the listing, should be cached.
-		b, err := ipfs.Cat(n.Context, item.ListingHash)
-		if err != nil {
-			return err
+		// It's possible that multiple items could refer to the same listing if the buyer is ordering
+		// multiple items with different variants. If it's multiple items of the same variant they can just
+		// use the quantity field. But different variants require two separate item entries. However,
+		// in this case we don't need to add the listing to the contract twice. Just once is sufficient.
+		// So let's check to see if that's the case here and handle it.
+		toAdd := true
+		for _, addedListing := range addedListings {
+			if item.ListingHash == addedListing[0] {
+				toAdd = false
+			}
 		}
-		rc := new(pb.RicardianContract)
-		err = jsonpb.UnmarshalString(string(b), rc)
-		if err != nil {
-			return err
-		}
-		if err := validate(rc.VendorListings[0]); err != nil {
-			return fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
-		}
-		if err := verifySignaturesOnListing(rc); err != nil {
-			return err
+		listing := new(pb.Listing)
+		if toAdd {
+			// Let's fetch the listing, should be cached.
+			b, err := ipfs.Cat(n.Context, item.ListingHash)
+			if err != nil {
+				return err
+			}
+			rc := new(pb.RicardianContract)
+			err = jsonpb.UnmarshalString(string(b), rc)
+			if err != nil {
+				return err
+			}
+			if err := validate(rc.VendorListings[0]); err != nil {
+				return fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
+			}
+			if err := verifySignaturesOnListing(rc); err != nil {
+				return err
+			}
+			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
+			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
+			addedListings = append(addedListings, []string{item.ListingHash, rc.VendorListings[0].Slug})
+			listing = rc.VendorListings[0]
+		} else {
+			for _, addedListing := range addedListings {
+				if addedListing[0] == item.ListingHash {
+					for _, l := range contract.VendorListings {
+						if l.Slug == addedListing[1] {
+							listing = l
+						}
+					}
+				}
+			}
 		}
 
 		// validate the selected options
 		var userOptions []option
 		var listingOptions []string
-		for _, opt := range rc.VendorListings[0].Item.Options {
+		for _, opt := range listing.Item.Options {
 			listingOptions = append(listingOptions, opt.Name)
 		}
 		for _, uopt := range item.Options {
 			userOptions = append(userOptions, uopt)
 		}
 		for _, checkOpt := range userOptions {
-			for _, o := range rc.VendorListings[0].Item.Options {
+			for _, o := range listing.Item.Options {
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
@@ -149,9 +178,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			return errors.New("Not all options were selected")
 		}
 
-		contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
-		contract.Signatures = append(contract.Signatures, rc.Signatures[0])
-		ser, err := proto.Marshal(rc.VendorListings[0])
+		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return err
 		}
@@ -176,11 +203,23 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		so := new(pb.Order_Item_ShippingOption)
 		so.Name = item.Shipping.Name
 		so.Service = item.Shipping.Service
+		i.ShippingOption = so
 		i.Memo = item.Memo
 		order.Items = append(order.Items, i)
 	}
 
 	contract.BuyerOrder = order
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, _ := m.MarshalToString(contract)
+	log.Notice(string(out))
+
+	log.Notice(n.CalculateOrderTotal(contract))
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" {
@@ -255,7 +294,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
 	n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
 	var total uint64
-	var physicalGoods map[string]*pb.Listing
+	physicalGoods := make(map[string]*pb.Listing)
 
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
@@ -292,8 +331,11 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		}
 		itemTotal += satoshis
 		for _, option := range item.Options {
+			optionExists := false
 			for _, listingOption := range l.Item.Options {
 				if strings.ToLower(option.Name) == strings.ToLower(listingOption.Name) {
+					optionExists = true
+					variantExists := false
 					for _, variant := range listingOption.Variants {
 						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
 							if variant.PriceModifier != nil {
@@ -303,12 +345,17 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 								}
 								itemTotal += satoshis
 							}
+							variantExists = true
 							break
 						}
+					}
+					if !variantExists {
 						return 0, errors.New("Selected variant not found in listing")
 					}
 					break
 				}
+			}
+			if !optionExists {
 				return 0, errors.New("Selected option not found in listing")
 			}
 		}
@@ -371,60 +418,62 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				itemShipping += shippingPrice
 
 				// Apply shipping rules
-				if int(option.ShippingRule.RuleType) == 0 {
-					if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
-						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-						if err != nil {
-							return 0, err
+				if option.ShippingRule != nil {
+					if int(option.ShippingRule.RuleType) == 0 {
+						if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+							if err != nil {
+								return 0, err
+							}
+							itemShipping -= rulePrice
 						}
-						itemShipping -= rulePrice
-					}
-				} else if int(option.ShippingRule.RuleType) == 1 {
-					if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+					} else if int(option.ShippingRule.RuleType) == 1 {
+						if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+							itemShipping -= shippingPrice
+							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+							if err != nil {
+								return 0, err
+							}
+							itemShipping += rulePrice
+						}
+					} else if int(option.ShippingRule.RuleType) == 2 {
+						weight := listing.Item.Grams * float32(item.Quantity)
+						if uint32(weight) >= option.ShippingRule.MinimumRange && uint32(weight) <= option.ShippingRule.MaxRange {
+							itemShipping -= shippingPrice
+							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+							if err != nil {
+								return 0, err
+							}
+							itemShipping += rulePrice
+						}
+					} else if int(option.ShippingRule.RuleType) == 3 {
 						itemShipping -= shippingPrice
 						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
 						if err != nil {
 							return 0, err
 						}
-						itemShipping += rulePrice
-					}
-				} else if int(option.ShippingRule.RuleType) == 2 {
-					weight := listing.Item.Grams * float32(item.Quantity)
-					if uint32(weight) >= option.ShippingRule.MinimumRange && uint32(weight) <= option.ShippingRule.MaxRange {
-						itemShipping -= shippingPrice
-						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-						if err != nil {
-							return 0, err
+						cs := combinedShipping{
+							quantity: int(item.Quantity),
+							price:    shippingSatoshi,
+							add:      true,
+							modifier: rulePrice,
 						}
-						itemShipping += rulePrice
-					}
-				} else if int(option.ShippingRule.RuleType) == 3 {
-					itemShipping -= shippingPrice
-					rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-					if err != nil {
-						return 0, err
-					}
-					cs := combinedShipping{
-						quantity: int(item.Quantity),
-						price:    shippingSatoshi,
-						add:      true,
-						modifier: rulePrice,
-					}
-					combinedOptions = append(combinedOptions, cs)
+						combinedOptions = append(combinedOptions, cs)
 
-				} else if int(option.ShippingRule.RuleType) == 4 {
-					itemShipping -= shippingPrice
-					rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-					if err != nil {
-						return 0, err
+					} else if int(option.ShippingRule.RuleType) == 4 {
+						itemShipping -= shippingPrice
+						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+						if err != nil {
+							return 0, err
+						}
+						cs := combinedShipping{
+							quantity: int(item.Quantity),
+							price:    shippingSatoshi,
+							add:      false,
+							modifier: rulePrice,
+						}
+						combinedOptions = append(combinedOptions, cs)
 					}
-					cs := combinedShipping{
-						quantity: int(item.Quantity),
-						price:    shippingSatoshi,
-						add:      false,
-						modifier: rulePrice,
-					}
-					combinedOptions = append(combinedOptions, cs)
 				}
 				shippingTotal += itemShipping
 			}
@@ -432,20 +481,22 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	}
 
 	// Process combined shipping rules
-	lowestPrice := uint64(2100000000000000)
-	for _, v := range combinedOptions {
-		if v.price < lowestPrice {
-			lowestPrice = v.price
+	if len(combinedOptions) > 0 {
+		lowestPrice := uint64(2100000000000000)
+		for _, v := range combinedOptions {
+			if v.price < lowestPrice {
+				lowestPrice = v.price
+			}
 		}
-	}
-	shippingTotal += lowestPrice
-	for _, o := range combinedOptions {
-		modifier := o.modifier
-		modifier *= uint64(o.quantity)
-		if o.add {
-			shippingTotal += modifier
-		} else {
-			shippingTotal -= modifier
+		shippingTotal += lowestPrice
+		for _, o := range combinedOptions {
+			modifier := o.modifier
+			modifier *= uint64(o.quantity)
+			if o.add {
+				shippingTotal += modifier
+			} else {
+				shippingTotal -= modifier
+			}
 		}
 	}
 
@@ -454,7 +505,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, error) {
-	if strings.ToLower(price.CurrencyCode) == "btc" {
+	if strings.ToLower(price.CurrencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return price.Amount, nil
 	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(price.CurrencyCode)
