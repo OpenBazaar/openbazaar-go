@@ -32,7 +32,24 @@ func init() {
 	}
 }
 
-func NewRequest(ctx cmds.Context, args []string, timeout time.Duration) (cmds.Request, *cmds.Command, error) {
+func NewRequest(ctx cmds.Context, args []string) (cmds.Request, *cmds.Command, error) {
+	Root.Subcommands = localCommands
+	for k, v := range commands.Root.Subcommands {
+		if _, found := Root.Subcommands[k]; !found {
+			Root.Subcommands[k] = v
+		}
+	}
+	req, cmd, _, err := cli.Parse(args, nil, Root)
+	cctx := context.Background()
+	rerr := req.SetRootContext(cctx)
+	if rerr != nil {
+		return nil, nil, rerr
+	}
+	req.SetInvocContext(ctx)
+	return req, cmd, err
+}
+
+func NewRequestWithTimeout(ctx cmds.Context, args []string, timeout time.Duration) (cmds.Request, *cmds.Command, error) {
 	Root.Subcommands = localCommands
 	for k, v := range commands.Root.Subcommands {
 		if _, found := Root.Subcommands[k]; !found {

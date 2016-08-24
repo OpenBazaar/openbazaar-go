@@ -25,17 +25,36 @@ func (i *InventoryDB) Put(slug string, count int) error {
 	return nil
 }
 
-func (i *InventoryDB) Get(slug string) (int, error) {
+func (i *InventoryDB) GetSpecific(path string) (int, error) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	stmt, err := i.db.Prepare("select count from inventory where slug=?")
 	defer stmt.Close()
 	var count int
-	err = stmt.QueryRow(slug).Scan(&count)
+	err = stmt.QueryRow(path).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
 	return count, nil
+}
+
+func (i *InventoryDB) Get(slug string) (map[string]int, error) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	ret := make(map[string]int)
+	stm := `select * from inventory where slug like "` + slug + `%";`
+	rows, err := i.db.Query(stm)
+	defer rows.Close()
+	if err != nil {
+		return ret, err
+	}
+	for rows.Next() {
+		var slug string
+		var count int
+		rows.Scan(&slug, &count)
+		ret[slug] = count
+	}
+	return ret, nil
 }
 
 func (i *InventoryDB) GetAll() (map[string]int, error) {

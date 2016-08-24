@@ -100,12 +100,15 @@ type Inventory interface {
 	// Override the existing count if it exists
 	Put(slug string, count int) error
 
-	// Return the count for a listing
-	Get(slug string) (int, error)
+	// Return the count for a specific listing including variants
+	GetSpecific(path string) (int, error)
+
+	// Get the count for all variants of a given listing
+	Get(slug string) (map[string]int, error)
 
 	// Fetch all inventory countes
 	GetAll() (map[string]int, error)
 
 	// Delete a listing and related count
-	Delete(slug string) error
+	Delete(path string) error
 }

@@ -2,11 +2,9 @@ package ipfs
 
 import "github.com/ipfs/go-ipfs/commands"
 
-const PeersTimeout = 30
-
 func ConnectedPeers(ctx commands.Context) ([]string, error) {
 	args := []string{"swarm", "peers"}
-	req, cmd, err := NewRequest(ctx, args, PeersTimeout)
+	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return nil, err
 	}

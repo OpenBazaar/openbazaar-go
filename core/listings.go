@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
@@ -16,13 +17,15 @@ import (
 	"time"
 )
 
-const ListingVersion = 1
-const TitleMaxCharacters = 140
-const ShortDescriptionLength = 160
-const DescriptionMaxCharacters = 50000
-const MaxTags = 10
-const WordMaxCharacters = 40
-const SentanceMaxCharacters = 70
+const (
+	ListingVersion           = 1
+	TitleMaxCharacters       = 140
+	ShortDescriptionLength   = 160
+	DescriptionMaxCharacters = 50000
+	MaxTags                  = 10
+	WordMaxCharacters        = 40
+	SentanceMaxCharacters    = 70
+)
 
 // Add our identity to the listings and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
@@ -257,6 +260,75 @@ func (n *OpenBazaarNode) GetListingCount() int {
 		return 0
 	}
 	return len(index)
+}
+
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
+	var contract *pb.RicardianContract
+	type price struct {
+		CurrencyCode string
+		Amount       uint64
+	}
+	type listingData struct {
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
+	}
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	// read existing file
+	file, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return contract, err
+	}
+
+	var index []listingData
+	err = json.Unmarshal(file, &index)
+	if err != nil {
+		return contract, err
+	}
+	var slug string
+	for _, data := range index {
+		if data.Hash == hash {
+			slug = data.Slug
+		}
+	}
+	if slug == "" {
+		return contract, errors.New("Listing does not exist")
+	}
+	return n.GetListingFromSlug(slug)
+}
+
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
+	listingPath := path.Join(n.RepoPath, "root", "listings", slug, "listing.json")
+
+	contract := new(pb.RicardianContract)
+	// read existing file
+	file, err := ioutil.ReadFile(listingPath)
+	if err != nil {
+		return contract, err
+	}
+	err = jsonpb.UnmarshalString(string(file), contract)
+	if err != nil {
+		return contract, err
+	}
+	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug)
+	if err != nil {
+		return contract, err
+	}
+	var invList []*pb.Listing_Inventory
+	for k, v := range inventory {
+		inv := new(pb.Listing_Inventory)
+		inv.Item = k
+		inv.Count = int64(v)
+		invList = append(invList, inv)
+	}
+	contract.VendorListings[0].Inventory = invList
+	return contract, nil
 }
 
 func validate(listing *pb.Listing) (err error) {

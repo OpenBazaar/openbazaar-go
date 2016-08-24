@@ -10,13 +10,11 @@ import (
 
 var addErr = errors.New(`Add directory failed`)
 
-const AddTimeout = 30
-
 // Resursively add a directory to IPFS and return the root hash
 func AddDirectory(ctx commands.Context, fpath string) (string, error) {
 	_, root := path.Split(fpath)
 	args := []string{"add", "-r", fpath}
-	req, cmd, err := NewRequest(ctx, args, AddTimeout)
+	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
 	}
@@ -41,7 +39,7 @@ func AddDirectory(ctx commands.Context, fpath string) (string, error) {
 
 func AddFile(ctx commands.Context, fpath string) (string, error) {
 	args := []string{"add", fpath}
-	req, cmd, err := NewRequest(ctx, args, AddTimeout)
+	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
 	}

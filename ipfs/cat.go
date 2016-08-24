@@ -11,7 +11,7 @@ const CatTimeout = 10
 // Fetch data from IPFS given the hash
 func Cat(ctx commands.Context, hash string) ([]byte, error) {
 	args := []string{"cat", hash}
-	req, cmd, err := NewRequest(ctx, args, CatTimeout)
+	req, cmd, err := NewRequestWithTimeout(ctx, args, CatTimeout)
 	if err != nil {
 		return nil, err
 	}
