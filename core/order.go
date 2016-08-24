@@ -174,7 +174,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			i.Options = append(i.Options, o)
 		}
 		so := new(pb.Order_Item_ShippingOption)
-		so.Title = item.Shipping.Name
+		so.Name = item.Shipping.Name
 		so.Service = item.Shipping.Service
 		i.Memo = item.Memo
 		order.Items = append(order.Items, i)
@@ -250,6 +250,221 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		}
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
+	n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
+	var total uint64
+	var physicalGoods map[string]*pb.Listing
+
+	// Calculate the price of each item
+	for _, item := range contract.BuyerOrder.Items {
+		var itemTotal uint64
+		var l *pb.Listing
+		for _, listing := range contract.VendorListings {
+			ser, err := proto.Marshal(listing)
+			if err != nil {
+				return 0, err
+			}
+			h := sha256.Sum256(ser)
+			encoded, err := mh.Encode(h[:], mh.SHA2_256)
+			if err != nil {
+				return 0, err
+			}
+			listingMH, err := mh.Cast(encoded)
+			if err != nil {
+				return 0, err
+			}
+			if item.ListingHash == listingMH.B58String() {
+				l = listing
+				break
+			}
+		}
+		if l == nil {
+			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
+		}
+		if int(l.Metadata.ContractType) == 1 {
+			physicalGoods[item.ListingHash] = l
+		}
+		satoshis, err := n.getPriceInSatoshi(l.Item.Price)
+		if err != nil {
+			return 0, err
+		}
+		itemTotal += satoshis
+		for _, option := range item.Options {
+			for _, listingOption := range l.Item.Options {
+				if strings.ToLower(option.Name) == strings.ToLower(listingOption.Name) {
+					for _, variant := range listingOption.Variants {
+						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
+							if variant.PriceModifier != nil {
+								satoshis, err := n.getPriceInSatoshi(variant.PriceModifier)
+								if err != nil {
+									return 0, err
+								}
+								itemTotal += satoshis
+							}
+							break
+						}
+						return 0, errors.New("Selected variant not found in listing")
+					}
+					break
+				}
+				return 0, errors.New("Selected option not found in listing")
+			}
+		}
+		itemTotal *= uint64(item.Quantity)
+		total += itemTotal
+	}
+	// Add in shipping costs
+	type combinedShipping struct {
+		quantity int
+		price    uint64
+		add      bool
+		modifier uint64
+	}
+	var combinedOptions []combinedShipping
+
+	var shippingTotal uint64
+	for listingHash, listing := range physicalGoods {
+		for _, item := range contract.BuyerOrder.Items {
+			if item.ListingHash == listingHash {
+				var itemShipping uint64
+				// Check selected option exists
+				var option *pb.Listing_ShippingOption
+				for _, shippingOption := range listing.ShippingOptions {
+					if shippingOption.Name == item.ShippingOption.Name {
+						option = shippingOption
+						break
+					}
+				}
+				if option == nil {
+					return 0, errors.New("Shipping option not found in listing")
+				}
+
+				// Check that this option ships to us
+				shipsToMe := false
+				for _, country := range option.Regions {
+					if country == contract.BuyerOrder.Shipping.Country || country == pb.CountryCode_ALL {
+						shipsToMe = true
+						break
+					}
+				}
+				if !shipsToMe {
+					return 0, errors.New("Listing does ship to selected country")
+				}
+
+				// Check service exists
+				var service *pb.Listing_ShippingOption_Service
+				for _, shippingService := range option.Services {
+					if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
+						service = shippingService
+					}
+				}
+				if service == nil {
+					return 0, errors.New("Shipping service not found in listing")
+				}
+				shippingSatoshi, err := n.getPriceInSatoshi(service.Price)
+				if err != nil {
+					return 0, err
+				}
+				shippingPrice := uint64(item.Quantity) * shippingSatoshi
+				itemShipping += shippingPrice
+
+				// Apply shipping rules
+				if int(option.ShippingRule.RuleType) == 0 {
+					if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping -= rulePrice
+					}
+				} else if int(option.ShippingRule.RuleType) == 1 {
+					if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+						itemShipping -= shippingPrice
+						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping += rulePrice
+					}
+				} else if int(option.ShippingRule.RuleType) == 2 {
+					weight := listing.Item.Grams * float32(item.Quantity)
+					if uint32(weight) >= option.ShippingRule.MinimumRange && uint32(weight) <= option.ShippingRule.MaxRange {
+						itemShipping -= shippingPrice
+						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping += rulePrice
+					}
+				} else if int(option.ShippingRule.RuleType) == 3 {
+					itemShipping -= shippingPrice
+					rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+					if err != nil {
+						return 0, err
+					}
+					cs := combinedShipping{
+						quantity: int(item.Quantity),
+						price:    shippingSatoshi,
+						add:      true,
+						modifier: rulePrice,
+					}
+					combinedOptions = append(combinedOptions, cs)
+
+				} else if int(option.ShippingRule.RuleType) == 4 {
+					itemShipping -= shippingPrice
+					rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+					if err != nil {
+						return 0, err
+					}
+					cs := combinedShipping{
+						quantity: int(item.Quantity),
+						price:    shippingSatoshi,
+						add:      false,
+						modifier: rulePrice,
+					}
+					combinedOptions = append(combinedOptions, cs)
+				}
+				shippingTotal += itemShipping
+			}
+		}
+	}
+
+	// Process combined shipping rules
+	lowestPrice := uint64(2100000000000000)
+	for _, v := range combinedOptions {
+		if v.price < lowestPrice {
+			lowestPrice = v.price
+		}
+	}
+	shippingTotal += lowestPrice
+	for _, o := range combinedOptions {
+		modifier := o.modifier
+		modifier *= uint64(o.quantity)
+		if o.add {
+			shippingTotal += modifier
+		} else {
+			shippingTotal -= modifier
+		}
+	}
+
+	total += shippingTotal
+	return total, nil
+}
+
+func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, error) {
+	if strings.ToLower(price.CurrencyCode) == "btc" {
+		return price.Amount, nil
+	}
+	exchangeRate, err := n.ExchangeRates.GetExchangeRate(price.CurrencyCode)
+	if err != nil {
+		return 0, err
+	}
+	formatedAmount := float64(price.Amount) / 100
+	btc := formatedAmount / exchangeRate
+	satoshis := btc * 100000000
+	return uint64(satoshis), nil
 }
 
 func verifySignaturesOnListing(contract *pb.RicardianContract) error {

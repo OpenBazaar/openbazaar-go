@@ -17,6 +17,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) se
 		return service.handleUnFollow
 	case pb.Message_OFFLINE_ACK:
 		return service.handleOfflineAck
+	case pb.Message_ORDER:
+		return service.handleOrder
 	default:
 		return nil
 	}
@@ -58,4 +60,13 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) 
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received ORDER message from %s", peer.Pretty())
+	log.Notice(pmes)
+	m := pb.Message{
+		MessageType: pb.Message_ORDER_CONFIRMATION,
+	}
+	return &m, nil
 }

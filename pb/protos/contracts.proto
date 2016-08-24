@@ -89,16 +89,16 @@ message Listing {
         string name                         = 1;
         ShippingType type                   = 2;
         repeated CountryCode regions        = 3;
-        repeated ShippingRule shippingRules = 4;
-        repeated Option options             = 5;
+        ShippingRule shippingRule           = 4;
+        repeated Service services           = 5;
 
         enum ShippingType {
             LOCAL_PICKUP = 0;
             FIXED_PRICE  = 1;
         }
 
-        message Option {
-            string service           = 1;
+        message Service {
+            string name              = 1;
             Price price              = 2;
             string estimatedDelivery = 3;
         }
@@ -184,7 +184,7 @@ message Order {
         }
 
         message ShippingOption {
-            string title   = 1;
+            string name    = 1;
             string service = 2;
         }
     }
