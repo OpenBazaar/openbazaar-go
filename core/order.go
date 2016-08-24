@@ -491,7 +491,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		shippingTotal += lowestPrice
 		for _, o := range combinedOptions {
 			modifier := o.modifier
-			modifier *= uint64(o.quantity)
+			modifier *= (uint64(o.quantity) - 1)
 			if o.add {
 				shippingTotal += modifier
 			} else {
