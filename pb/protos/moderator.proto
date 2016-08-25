@@ -5,7 +5,7 @@ message Moderator {
     string termsAndConditions = 2;
     repeated string languages = 3;
     Fee fee                   = 4;
-    bytes pubKey              = 5;q
+    bytes pubKey              = 5;
 
     message Fee {
         Price fixedFee   = 1;
