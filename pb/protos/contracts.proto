@@ -36,7 +36,7 @@ message Listing {
         ContractType contractType = 2;
         ListingType listingType   = 3;
         uint32 expiry             = 4; // unix timestamp
-        string customJSON         = 5; // JSON for extensions and plugins
+        string nonBindingMetadata = 5; // JSON for extensions and plugins
 
         enum ContractType {
             UNKNOWN       = 0;
