@@ -27,11 +27,6 @@ message Listing {
     string termsAndConditions               = 9;
     string refundPolicy                     = 10;
 
-    // Only used by the API when posting a new listing.
-    // Shouldn't be included in the seeded listing.
-    // Negative implies no inventory tracking.
-    repeated Inventory inventory            = 11;
-
     message Metadata {
         uint32 version                   = 1;
         ContractType contractType        = 2;
@@ -89,25 +84,29 @@ message Listing {
         string name                         = 1;
         ShippingType type                   = 2;
         repeated CountryCode regions        = 3;
-        repeated ShippingRule shippingRules = 4;
-        repeated Option options             = 5;
+        ShippingRules shippingRules         = 4;
+        repeated Service services           = 5;
 
         enum ShippingType {
             LOCAL_PICKUP = 0;
             FIXED_PRICE  = 1;
         }
 
-        message Option {
-            string service           = 1;
+        message Service {
+            string name              = 1;
             Price price              = 2;
             string estimatedDelivery = 3;
         }
 
-        message ShippingRule {
+        message ShippingRules {
                 RuleType ruleType            = 1;
-                uint32 minimumRange          = 2;
-                uint32 maxRange              = 3;
-                Price price                  = 4;
+                repeated Rule rules          = 2;
+
+                message Rule {
+                    uint32 minRange              = 1;
+                    uint32 maxRange              = 2;
+                    Price price                  = 3;
+                }
 
                 enum RuleType {
                     QUANTITY_DISCOUNT          = 0;
@@ -129,26 +128,13 @@ message Listing {
     message Coupon {
         string title              = 1;
         string hash               = 2;
-        DiscountType discountType = 3;
-        float percentDiscount     = 4;
-        Price priceDiscount       = 5;
-
-        enum DiscountType {
-            NA           = 0;
-            PERCENTAGE   = 1;
-            FIXED_AMOUNT = 2;
-        }
+        float percentDiscount     = 3;
+        Price priceDiscount       = 4;
     }
 
     message Price {
         string currencyCode = 1;
         uint64 amount       = 2; // bitcoins must be in satoshi
-    }
-
-    message Inventory {
-        // string format is /slug/variant/variant/...
-        string item  = 1;
-        int64 count  = 2;
     }
 }
 
@@ -184,7 +170,7 @@ message Order {
         }
 
         message ShippingOption {
-            string title   = 1;
+            string name    = 1;
             string service = 2;
         }
     }

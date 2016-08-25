@@ -25,6 +25,9 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	case "/ob/moderator", "/ob/moderator/":
 		i.PUTModerator(w, r)
 		return
+	case "/ob/listing", "/ob/listing/":
+		i.PUTListing(w, r)
+		return
 	}
 }
 
@@ -129,6 +132,9 @@ func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Reques
 func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch path {
 	case "/ob/moderator", "/ob/moderator/":
+		i.DELETEModerator(w, r)
+		return
+	case "/ob/listing", "/ob/listing/":
 		i.DELETEModerator(w, r)
 		return
 	}

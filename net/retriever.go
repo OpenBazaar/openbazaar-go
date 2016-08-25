@@ -76,9 +76,8 @@ func (m *MessageRetriever) fetchPointers() {
 				if err != nil {
 					continue
 				}
-				go m.fetchHTTPS(p.ID, string(d.Digest))
+				go m.fetchHTTPS(p.ID, string(d.Digest), p.Addrs[0])
 			}
-			m.db.OfflineMessages().Put(p.Addrs[0].String())
 		}
 	}
 }
@@ -89,9 +88,10 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.
 		return
 	}
 	m.attemptDecrypt(ciphertext, pid)
+	m.db.OfflineMessages().Put(addr.String())
 }
 
-func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
+func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return
@@ -101,6 +101,7 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string) {
 		return
 	}
 	m.attemptDecrypt(ciphertext, pid)
+	m.db.OfflineMessages().Put(addr.String())
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {

@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -60,12 +61,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.Pubkeys = p
 	listing.VendorID = id
 
-	// Set inventory levels
-	err = n.setListingInventory(listing)
-	if err != nil {
-		return c, err
-	}
-
 	// Sign listing
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING
@@ -98,7 +93,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 // to make sure the inventory uses the correct variants.
 // TODO: if this is an update to a listing we need to delete any variants that were
 // TODO: removed from the inventory db.
-func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
+func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
 	// Create a list of variants from the contract so we can check correct ordering
 	var variants [][]string = make([][]string, len(listing.Item.Options))
 	for i, option := range listing.Item.Options {
@@ -108,7 +103,7 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 		}
 		variants[i] = name
 	}
-	for _, inv := range listing.Inventory {
+	for _, inv := range inventory {
 		// format to remove leading and trailing path separator if one exists
 		if string(inv.Item[0]) == "/" {
 			inv.Item = inv.Item[1:]
@@ -137,8 +132,6 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 		// Put to database
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
-	// Clear inventory as we don't need it in the seeded contract
-	listing.Inventory = nil
 	return nil
 }
 
@@ -262,7 +255,114 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
-func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) TransferImages(fromSlug, toSlug string) error {
+	fromPath := path.Join(n.RepoPath, "root", "listings", fromSlug)
+	toPath := path.Join(n.RepoPath, "root", "listings", toSlug)
+
+	directory, err := os.Open(fromPath)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range objects {
+		sourcefilepointer := path.Join(fromPath, obj.Name())
+		destinationfilepointer := path.Join(toPath, obj.Name())
+
+		sourcefile, err := os.Open(sourcefilepointer)
+		if err != nil {
+			return err
+		}
+
+		defer sourcefile.Close()
+
+		destfile, err := os.Create(destinationfilepointer)
+		if err != nil {
+			return err
+		}
+
+		defer destfile.Close()
+
+		_, err = io.Copy(destfile, sourcefile)
+		if err == nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) DeleteListing(slug string) error {
+	toDelete := path.Join(n.RepoPath, "root", "listings", slug)
+	err := os.RemoveAll(toDelete)
+	if err != nil {
+		return err
+	}
+	type price struct {
+		CurrencyCode string
+		Amount       uint64
+	}
+	type listingData struct {
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
+	}
+
+	var index []listingData
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	_, ferr := os.Stat(indexPath)
+	if !os.IsNotExist(ferr) {
+		// read existing file
+		file, err := ioutil.ReadFile(indexPath)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, &index)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check to see if the slug exists in the list. If so delete it.
+	for i, d := range index {
+		if d.Slug != slug {
+			continue
+		}
+
+		if len(index) == 1 {
+			index = []listingData{}
+			break
+		}
+		index = append(index[:i], index[i+1:]...)
+	}
+
+	// write it back to file
+	f, err := os.Create(indexPath)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	j, jerr := json.MarshalIndent(index, "", "    ")
+	if jerr != nil {
+		return jerr
+	}
+	_, werr := f.Write(j)
+	if werr != nil {
+		return werr
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
 	var contract *pb.RicardianContract
 	type price struct {
 		CurrencyCode string
@@ -283,13 +383,13 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	// read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return contract, err
+		return contract, nil, err
 	}
 
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return contract, err
+		return contract, nil, err
 	}
 	var slug string
 	for _, data := range index {
@@ -298,37 +398,36 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 		}
 	}
 	if slug == "" {
-		return contract, errors.New("Listing does not exist")
+		return contract, nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
-func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug, "listing.json")
 
+	var invList []*pb.Inventory
 	contract := new(pb.RicardianContract)
 	// read existing file
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
 	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
-	var invList []*pb.Listing_Inventory
 	for k, v := range inventory {
-		inv := new(pb.Listing_Inventory)
+		inv := new(pb.Inventory)
 		inv.Item = k
-		inv.Count = int64(v)
+		inv.Count = uint64(v)
 		invList = append(invList, inv)
 	}
-	contract.VendorListings[0].Inventory = invList
-	return contract, nil
+	return contract, invList, nil
 }
 
 func validate(listing *pb.Listing) (err error) {
@@ -353,10 +452,10 @@ func validate(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
+	if listing.Metadata.ListingType == pb.Listing_Metadata_NA || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
-	if int(listing.Metadata.ContractType) == 0 || int(listing.Metadata.ContractType) > 4 {
+	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || int(listing.Metadata.ContractType) > 4 {
 		return errors.New("Invalid item type")
 	}
 	if listing.Metadata.Expiry == nil {
@@ -475,33 +574,45 @@ func validate(listing *pb.Listing) (err error) {
 				return errors.New("Shipping option titles must be unique")
 			}
 		}
-		for _, shippingRule := range shippingOption.ShippingRules {
-			if int(shippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
+		if shippingOption.ShippingRules != nil {
+			if len(shippingOption.ShippingRules.Rules) == 0 {
+				return errors.New("At least on rule must be specified if ShippingRules is selected")
+			}
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
 				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
 			}
-			if shippingRule.Price.CurrencyCode == "" {
-				return errors.New("Shipping rules price currency code must not be nil")
+			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
+				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
-			if (int(shippingRule.RuleType) == 1 || int(shippingRule.RuleType) == 2) && shippingRule.MaxRange <= shippingRule.MinimumRange {
-				return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+			for _, rule := range shippingOption.ShippingRules.Rules {
+				if rule.Price == nil {
+					return errors.New("Shipping rules must have a price")
+				}
+				if rule.Price.CurrencyCode == "" {
+					return errors.New("Shipping rules price currency code must not be nil")
+				}
+				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
+					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+				}
 			}
-			// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 		}
+		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		var serviceTitles []string
-		for _, option := range shippingOption.Options {
-			if option.Service == "" {
+		for _, option := range shippingOption.Services {
+
+			if option.Name == "" {
 				return errors.New("Shipping option service name must not be nil")
 			}
-			if len(option.Service) > WordMaxCharacters {
+			if len(option.Name) > WordMaxCharacters {
 				return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
 			}
 			for _, t := range serviceTitles {
-				if t == option.Service {
+				if t == option.Name {
 					return errors.New("Shipping option services names must be unique")
 				}
 			}
-			serviceTitles = append(serviceTitles, option.Service)
+			serviceTitles = append(serviceTitles, option.Name)
 			if option.Price.CurrencyCode == "" {
 				return errors.New("Shipping option price currency code must not be nil")
 			}
@@ -531,16 +642,19 @@ func validate(listing *pb.Listing) (err error) {
 		if coupon.Title == "" {
 			return errors.New("Coupon titles must not be nil")
 		}
-		if int(coupon.DiscountType) == 0 || int(coupon.DiscountType) > 2 {
-			return errors.New("Invalid coupon discount type")
-		}
 		if len(coupon.Title) > SentanceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
-		if coupon.DiscountType == pb.Listing_Coupon_FIXED_AMOUNT {
+
+		if coupon.PriceDiscount != nil {
 			if coupon.PriceDiscount.CurrencyCode == "" {
-				return errors.New("Coupon price currency code must not be nil")
+				return errors.New("Price discount coupon currency code must not be nil")
 			}
+			if coupon.PercentDiscount > 0 {
+				return errors.New("Only one type of coupon discount can be selected")
+			}
+		} else if coupon.PercentDiscount <= 0 {
+			return errors.New("The coupon discount must be selected")
 		}
 		_, err := mh.FromB58String(coupon.Hash)
 		if err != nil {

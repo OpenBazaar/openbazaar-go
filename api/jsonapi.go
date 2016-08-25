@@ -533,20 +533,26 @@ func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
-	l := new(pb.Listing)
-	err := jsonpb.Unmarshal(r.Body, l)
+	ld := new(pb.ListingReqApi)
+	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", l.Slug)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug)
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	contract, err := i.node.SignListing(l)
+	contract, err := i.node.SignListing(ld.Listing)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
@@ -590,6 +596,114 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+
+	ld := new(pb.ListingReqApi)
+	err := jsonpb.Unmarshal(r.Body, ld)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug)
+	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	contract, err := i.node.SignListing(ld.Listing)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	f, err := os.Create(path.Join(listingPath, "listing.json"))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(contract)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	err = i.node.UpdateListingIndex(contract)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	// Delete existing listing if the slug changed
+	if ld.CurrentSlug != "" && ld.CurrentSlug != ld.Listing.Slug {
+		err = i.node.TransferImages(ld.CurrentSlug, ld.Listing.Slug)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+		err = i.node.DeleteListing(ld.CurrentSlug)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+	}
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
+		return
+	}
+	if err := i.node.SeedNode(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	ld := new(pb.ListingReqApi)
+	err := jsonpb.Unmarshal(r.Body, ld)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	err = i.node.DeleteListing(ld.CurrentSlug)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
@@ -1155,12 +1269,13 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	contract := new(pb.RicardianContract)
+	inventory := []*pb.Inventory{}
 	_, listingID := path.Split(r.URL.Path)
 	_, err := mh.FromB58String(listingID)
 	if err == nil {
-		contract, err = i.node.GetListingFromHash(listingID)
+		contract, inventory, err = i.node.GetListingFromHash(listingID)
 	} else {
-		contract, err = i.node.GetListingFromSlug(listingID)
+		contract, inventory, err = i.node.GetListingFromSlug(listingID)
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
@@ -1173,7 +1288,10 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(contract)
+	resp := new(pb.ListingRespApi)
+	resp.Contract = contract
+	resp.Inventory = inventory
+	out, err := m.MarshalToString(resp)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)

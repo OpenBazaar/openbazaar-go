@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-const CatTimeout = 10
+const CatTimeout = 30
 
 // Fetch data from IPFS given the hash
 func Cat(ctx commands.Context, hash string) ([]byte, error) {
