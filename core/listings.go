@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -60,12 +61,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.Pubkeys = p
 	listing.VendorID = id
 
-	// Set inventory levels
-	err = n.setListingInventory(listing)
-	if err != nil {
-		return c, err
-	}
-
 	// Sign listing
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING
@@ -98,7 +93,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 // to make sure the inventory uses the correct variants.
 // TODO: if this is an update to a listing we need to delete any variants that were
 // TODO: removed from the inventory db.
-func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
+func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
 	// Create a list of variants from the contract so we can check correct ordering
 	var variants [][]string = make([][]string, len(listing.Item.Options))
 	for i, option := range listing.Item.Options {
@@ -108,7 +103,7 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 		}
 		variants[i] = name
 	}
-	for _, inv := range listing.Inventory {
+	for _, inv := range inventory {
 		// format to remove leading and trailing path separator if one exists
 		if string(inv.Item[0]) == "/" {
 			inv.Item = inv.Item[1:]
@@ -137,8 +132,6 @@ func (n *OpenBazaarNode) setListingInventory(listing *pb.Listing) error {
 		// Put to database
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
-	// Clear inventory as we don't need it in the seeded contract
-	listing.Inventory = nil
 	return nil
 }
 
@@ -262,7 +255,114 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
-func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) TransferImages(fromSlug, toSlug string) error {
+	fromPath := path.Join(n.RepoPath, "root", "listings", fromSlug)
+	toPath := path.Join(n.RepoPath, "root", "listings", toSlug)
+
+	directory, err := os.Open(fromPath)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range objects {
+		sourcefilepointer := path.Join(fromPath, obj.Name())
+		destinationfilepointer := path.Join(toPath, obj.Name())
+
+		sourcefile, err := os.Open(sourcefilepointer)
+		if err != nil {
+			return err
+		}
+
+		defer sourcefile.Close()
+
+		destfile, err := os.Create(destinationfilepointer)
+		if err != nil {
+			return err
+		}
+
+		defer destfile.Close()
+
+		_, err = io.Copy(destfile, sourcefile)
+		if err == nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) DeleteListing(slug string) error {
+	toDelete := path.Join(n.RepoPath, "root", "listings", slug)
+	err := os.RemoveAll(toDelete)
+	if err != nil {
+		return err
+	}
+	type price struct {
+		CurrencyCode string
+		Amount       uint64
+	}
+	type listingData struct {
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
+	}
+
+	var index []listingData
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	_, ferr := os.Stat(indexPath)
+	if !os.IsNotExist(ferr) {
+		// read existing file
+		file, err := ioutil.ReadFile(indexPath)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, &index)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check to see if the slug exists in the list. If so delete it.
+	for i, d := range index {
+		if d.Slug != slug {
+			continue
+		}
+
+		if len(index) == 1 {
+			index = []listingData{}
+			break
+		}
+		index = append(index[:i], index[i+1:]...)
+	}
+
+	// write it back to file
+	f, err := os.Create(indexPath)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	j, jerr := json.MarshalIndent(index, "", "    ")
+	if jerr != nil {
+		return jerr
+	}
+	_, werr := f.Write(j)
+	if werr != nil {
+		return werr
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
 	var contract *pb.RicardianContract
 	type price struct {
 		CurrencyCode string
@@ -283,13 +383,13 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	// read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return contract, err
+		return contract, nil, err
 	}
 
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return contract, err
+		return contract, nil, err
 	}
 	var slug string
 	for _, data := range index {
@@ -298,37 +398,36 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 		}
 	}
 	if slug == "" {
-		return contract, errors.New("Listing does not exist")
+		return contract, nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
-func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug, "listing.json")
 
+	var invList []*pb.Inventory
 	contract := new(pb.RicardianContract)
 	// read existing file
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
 	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug)
 	if err != nil {
-		return contract, err
+		return nil, nil, err
 	}
-	var invList []*pb.Listing_Inventory
 	for k, v := range inventory {
-		inv := new(pb.Listing_Inventory)
+		inv := new(pb.Inventory)
 		inv.Item = k
-		inv.Count = int64(v)
+		inv.Count = uint64(v)
 		invList = append(invList, inv)
 	}
-	contract.VendorListings[0].Inventory = invList
-	return contract, nil
+	return contract, invList, nil
 }
 
 func validate(listing *pb.Listing) (err error) {

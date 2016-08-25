@@ -27,11 +27,6 @@ message Listing {
     string termsAndConditions               = 9;
     string refundPolicy                     = 10;
 
-    // Only used by the API when posting a new listing.
-    // Shouldn't be included in the seeded listing.
-    // Negative implies no inventory tracking.
-    repeated Inventory inventory            = 11;
-
     message Metadata {
         uint32 version                   = 1;
         ContractType contractType        = 2;
@@ -140,12 +135,6 @@ message Listing {
     message Price {
         string currencyCode = 1;
         uint64 amount       = 2; // bitcoins must be in satoshi
-    }
-
-    message Inventory {
-        // string format is /slug/variant/variant/...
-        string item  = 1;
-        int64 count  = 2;
     }
 }
 
