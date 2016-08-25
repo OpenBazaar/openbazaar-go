@@ -452,10 +452,10 @@ func validate(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if int(listing.Metadata.ListingType) == 0 || int(listing.Metadata.ListingType) > 2 {
+	if listing.Metadata.ListingType == pb.Listing_Metadata_NA || int(listing.Metadata.ListingType) > 2 {
 		return errors.New("Invalid listing type")
 	}
-	if int(listing.Metadata.ContractType) == 0 || int(listing.Metadata.ContractType) > 4 {
+	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || int(listing.Metadata.ContractType) > 4 {
 		return errors.New("Invalid item type")
 	}
 	if listing.Metadata.Expiry == nil {
@@ -578,10 +578,10 @@ func validate(listing *pb.Listing) (err error) {
 			if len(shippingOption.ShippingRules.Rules) == 0 {
 				return errors.New("At least on rule must be specified if ShippingRules is selected")
 			}
-			if int(shippingOption.ShippingRules.RuleType) == 2 && listing.Item.Grams == 0 {
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
 				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
 			}
-			if (int(shippingOption.ShippingRules.RuleType) == 3 || int(shippingOption.ShippingRules.RuleType) == 4) && len(shippingOption.ShippingRules.Rules) > 1 {
+			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
 				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
 			for _, rule := range shippingOption.ShippingRules.Rules {
@@ -591,7 +591,7 @@ func validate(listing *pb.Listing) (err error) {
 				if rule.Price.CurrencyCode == "" {
 					return errors.New("Shipping rules price currency code must not be nil")
 				}
-				if (int(shippingOption.ShippingRules.RuleType) == 1 || int(shippingOption.ShippingRules.RuleType) == 2) && rule.MaxRange <= rule.MinRange {
+				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
 					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
 				}
 			}

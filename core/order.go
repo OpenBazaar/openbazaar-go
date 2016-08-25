@@ -22,6 +22,11 @@ import (
 	"time"
 )
 
+const (
+	MaxCoins      = 2100000000000000
+	SatoshiPerBTC = 100000000
+)
+
 type option struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
@@ -423,7 +428,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				// Apply shipping rules
 				if option.ShippingRules != nil {
 					for _, rule := range option.ShippingRules.Rules {
-						if int(option.ShippingRules.RuleType) == 0 {
+						switch option.ShippingRules.RuleType {
+						case pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT:
 							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
 								rulePrice, err := n.getPriceInSatoshi(rule.Price)
 								if err != nil {
@@ -431,7 +437,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 								}
 								itemShipping -= rulePrice
 							}
-						} else if int(option.ShippingRules.RuleType) == 1 {
+						case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE:
 							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
 								itemShipping -= shippingPrice
 								rulePrice, err := n.getPriceInSatoshi(rule.Price)
@@ -440,7 +446,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 								}
 								itemShipping += rulePrice
 							}
-						} else if int(option.ShippingRules.RuleType) == 2 {
+						case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE:
 							weight := listing.Item.Grams * float32(item.Quantity)
 							if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
 								itemShipping -= shippingPrice
@@ -450,7 +456,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 								}
 								itemShipping += rulePrice
 							}
-						} else if int(option.ShippingRules.RuleType) == 3 {
+						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
 							itemShipping -= shippingPrice
 							rulePrice, err := n.getPriceInSatoshi(rule.Price)
 							if err != nil {
@@ -464,7 +470,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 							}
 							combinedOptions = append(combinedOptions, cs)
 
-						} else if int(option.ShippingRules.RuleType) == 4 {
+						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
 							itemShipping -= shippingPrice
 							rulePrice, err := n.getPriceInSatoshi(rule.Price)
 							if err != nil {
@@ -487,7 +493,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 	// Process combined shipping rules
 	if len(combinedOptions) > 0 {
-		lowestPrice := uint64(2100000000000000)
+		lowestPrice := uint64(MaxCoins)
 		for _, v := range combinedOptions {
 			if v.price < lowestPrice {
 				lowestPrice = v.price
@@ -519,7 +525,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, err
 	}
 	formatedAmount := float64(price.Amount) / 100
 	btc := formatedAmount / exchangeRate
-	satoshis := btc * 100000000
+	satoshis := btc * SatoshiPerBTC
 	return uint64(satoshis), nil
 }
 
