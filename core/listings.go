@@ -546,14 +546,16 @@ func validate(listing *pb.Listing) (err error) {
 		if len(coupon.Title) > SentanceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
-		_, ok := coupon.Discount.(pb.Listing_Coupon_PriceDiscount)
-		if ok {
-			if coupon.Discount.(pb.Listing_Coupon_PriceDiscount).PriceDiscount == nil {
-				return errors.New("Price discount coupon must have a price")
-			}
-			if coupon.Discount.(pb.Listing_Coupon_PriceDiscount).PriceDiscount.CurrencyCode == "" {
+
+		if coupon.PriceDiscount != nil {
+			if coupon.PriceDiscount.CurrencyCode == "" {
 				return errors.New("Price discount coupon currency code must not be nil")
 			}
+			if coupon.PercentDiscount > 0 {
+				return errors.New("Only one type of coupon discount can be selected")
+			}
+		} else if coupon.PercentDiscount <= 0 {
+			return errors.New("The coupon discount must be selected")
 		}
 		_, err := mh.FromB58String(coupon.Hash)
 		if err != nil {

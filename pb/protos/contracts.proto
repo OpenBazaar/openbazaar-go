@@ -133,10 +133,8 @@ message Listing {
     message Coupon {
         string title              = 1;
         string hash               = 2;
-        oneof discount {
-            float percentDiscount = 3;
-            Price priceDiscount   = 4;
-        }
+        float percentDiscount     = 3;
+        Price priceDiscount       = 4;
     }
 
     message Price {

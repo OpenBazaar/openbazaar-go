@@ -38,6 +38,7 @@ type item struct {
 	Options     []option       `json:"options"`
 	Shipping    shippingOption `json:"shipping"`
 	Memo        string         `json:"memo"`
+	Coupons     []string       `json:"coupons"`
 }
 
 type PurchaseData struct {
@@ -359,6 +360,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				return 0, errors.New("Selected option not found in listing")
 			}
 		}
+		//TODO: should apply coupon discounts to itemTotal here
 		itemTotal *= uint64(item.Quantity)
 		total += itemTotal
 	}
@@ -550,7 +552,6 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		if err != nil {
 			return err
 		}
-
 		valid, err := guidPubkey.Verify(ser, guidSig)
 		if err != nil {
 			return err
