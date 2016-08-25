@@ -89,7 +89,7 @@ message Listing {
         string name                         = 1;
         ShippingType type                   = 2;
         repeated CountryCode regions        = 3;
-        ShippingRule shippingRule           = 4;
+        ShippingRules shippingRules         = 4;
         repeated Service services           = 5;
 
         enum ShippingType {
@@ -103,11 +103,15 @@ message Listing {
             string estimatedDelivery = 3;
         }
 
-        message ShippingRule {
+        message ShippingRules {
                 RuleType ruleType            = 1;
-                uint32 minimumRange          = 2;
-                uint32 maxRange              = 3;
-                Price price                  = 4;
+                repeated Rule rules          = 2;
+
+                message Rule {
+                    uint32 minRange              = 1;
+                    uint32 maxRange              = 2;
+                    Price price                  = 3;
+                }
 
                 enum RuleType {
                     QUANTITY_DISCOUNT          = 0;
@@ -129,14 +133,9 @@ message Listing {
     message Coupon {
         string title              = 1;
         string hash               = 2;
-        DiscountType discountType = 3;
-        float percentDiscount     = 4;
-        Price priceDiscount       = 5;
-
-        enum DiscountType {
-            NA           = 0;
-            PERCENTAGE   = 1;
-            FIXED_AMOUNT = 2;
+        oneof discount {
+            float percentDiscount = 3;
+            Price priceDiscount   = 4;
         }
     }
 

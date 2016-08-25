@@ -475,15 +475,26 @@ func validate(listing *pb.Listing) (err error) {
 				return errors.New("Shipping option titles must be unique")
 			}
 		}
-		if shippingOption.ShippingRule != nil {
-			if int(shippingOption.ShippingRule.RuleType) == 2 && listing.Item.Grams == 0 {
+		if shippingOption.ShippingRules != nil {
+			if len(shippingOption.ShippingRules.Rules) == 0 {
+				return errors.New("At least on rule must be specified if ShippingRules is selected")
+			}
+			if int(shippingOption.ShippingRules.RuleType) == 2 && listing.Item.Grams == 0 {
 				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
 			}
-			if shippingOption.ShippingRule.Price.CurrencyCode == "" {
-				return errors.New("Shipping rules price currency code must not be nil")
+			if (int(shippingOption.ShippingRules.RuleType) == 3 || int(shippingOption.ShippingRules.RuleType) == 4) && len(shippingOption.ShippingRules.Rules) > 1 {
+				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
-			if (int(shippingOption.ShippingRule.RuleType) == 1 || int(shippingOption.ShippingRule.RuleType) == 2) && shippingOption.ShippingRule.MaxRange <= shippingOption.ShippingRule.MinimumRange {
-				return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+			for _, rule := range shippingOption.ShippingRules.Rules {
+				if rule.Price == nil {
+					return errors.New("Shipping rules must have a price")
+				}
+				if rule.Price.CurrencyCode == "" {
+					return errors.New("Shipping rules price currency code must not be nil")
+				}
+				if (int(shippingOption.ShippingRules.RuleType) == 1 || int(shippingOption.ShippingRules.RuleType) == 2) && rule.MaxRange <= rule.MinRange {
+					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+				}
 			}
 		}
 		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
@@ -532,15 +543,16 @@ func validate(listing *pb.Listing) (err error) {
 		if coupon.Title == "" {
 			return errors.New("Coupon titles must not be nil")
 		}
-		if int(coupon.DiscountType) == 0 || int(coupon.DiscountType) > 2 {
-			return errors.New("Invalid coupon discount type")
-		}
 		if len(coupon.Title) > SentanceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
-		if coupon.DiscountType == pb.Listing_Coupon_FIXED_AMOUNT {
-			if coupon.PriceDiscount.CurrencyCode == "" {
-				return errors.New("Coupon price currency code must not be nil")
+		_, ok := coupon.Discount.(pb.Listing_Coupon_PriceDiscount)
+		if ok {
+			if coupon.Discount.(pb.Listing_Coupon_PriceDiscount).PriceDiscount == nil {
+				return errors.New("Price discount coupon must have a price")
+			}
+			if coupon.Discount.(pb.Listing_Coupon_PriceDiscount).PriceDiscount.CurrencyCode == "" {
+				return errors.New("Price discount coupon currency code must not be nil")
 			}
 		}
 		_, err := mh.FromB58String(coupon.Hash)

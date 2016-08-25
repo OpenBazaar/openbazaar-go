@@ -362,6 +362,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		itemTotal *= uint64(item.Quantity)
 		total += itemTotal
 	}
+
 	// Add in shipping costs
 	type combinedShipping struct {
 		quantity int
@@ -418,61 +419,63 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				itemShipping += shippingPrice
 
 				// Apply shipping rules
-				if option.ShippingRule != nil {
-					if int(option.ShippingRule.RuleType) == 0 {
-						if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
-							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-							if err != nil {
-								return 0, err
+				if option.ShippingRules != nil {
+					for _, rule := range option.ShippingRules.Rules {
+						if int(option.ShippingRules.RuleType) == 0 {
+							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
+								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								if err != nil {
+									return 0, err
+								}
+								itemShipping -= rulePrice
 							}
-							itemShipping -= rulePrice
-						}
-					} else if int(option.ShippingRule.RuleType) == 1 {
-						if item.Quantity >= option.ShippingRule.MinimumRange && item.Quantity <= option.ShippingRule.MaxRange {
+						} else if int(option.ShippingRules.RuleType) == 1 {
+							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
+								itemShipping -= shippingPrice
+								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								if err != nil {
+									return 0, err
+								}
+								itemShipping += rulePrice
+							}
+						} else if int(option.ShippingRules.RuleType) == 2 {
+							weight := listing.Item.Grams * float32(item.Quantity)
+							if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
+								itemShipping -= shippingPrice
+								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								if err != nil {
+									return 0, err
+								}
+								itemShipping += rulePrice
+							}
+						} else if int(option.ShippingRules.RuleType) == 3 {
 							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
+							rulePrice, err := n.getPriceInSatoshi(rule.Price)
 							if err != nil {
 								return 0, err
 							}
-							itemShipping += rulePrice
-						}
-					} else if int(option.ShippingRule.RuleType) == 2 {
-						weight := listing.Item.Grams * float32(item.Quantity)
-						if uint32(weight) >= option.ShippingRule.MinimumRange && uint32(weight) <= option.ShippingRule.MaxRange {
-							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-							if err != nil {
-								return 0, err
+							cs := combinedShipping{
+								quantity: int(item.Quantity),
+								price:    shippingSatoshi,
+								add:      true,
+								modifier: rulePrice,
 							}
-							itemShipping += rulePrice
-						}
-					} else if int(option.ShippingRule.RuleType) == 3 {
-						itemShipping -= shippingPrice
-						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-						if err != nil {
-							return 0, err
-						}
-						cs := combinedShipping{
-							quantity: int(item.Quantity),
-							price:    shippingSatoshi,
-							add:      true,
-							modifier: rulePrice,
-						}
-						combinedOptions = append(combinedOptions, cs)
+							combinedOptions = append(combinedOptions, cs)
 
-					} else if int(option.ShippingRule.RuleType) == 4 {
-						itemShipping -= shippingPrice
-						rulePrice, err := n.getPriceInSatoshi(option.ShippingRule.Price)
-						if err != nil {
-							return 0, err
+						} else if int(option.ShippingRules.RuleType) == 4 {
+							itemShipping -= shippingPrice
+							rulePrice, err := n.getPriceInSatoshi(rule.Price)
+							if err != nil {
+								return 0, err
+							}
+							cs := combinedShipping{
+								quantity: int(item.Quantity),
+								price:    shippingSatoshi,
+								add:      false,
+								modifier: rulePrice,
+							}
+							combinedOptions = append(combinedOptions, cs)
 						}
-						cs := combinedShipping{
-							quantity: int(item.Quantity),
-							price:    shippingSatoshi,
-							add:      false,
-							modifier: rulePrice,
-						}
-						combinedOptions = append(combinedOptions, cs)
 					}
 				}
 				shippingTotal += itemShipping
