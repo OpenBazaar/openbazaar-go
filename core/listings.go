@@ -359,6 +359,18 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	if werr != nil {
 		return werr
 	}
+
+	// Delete inventory for listing
+	inventory, err := n.Datastore.Inventory().Get(slug)
+	if err != nil {
+		return err
+	}
+	for k, _ := range inventory {
+		err := n.Datastore.Inventory().Delete(k)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
