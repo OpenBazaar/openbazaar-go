@@ -74,6 +74,29 @@ func TestDeleteInventory(t *testing.T) {
 	}
 }
 
+func TestDeleteAllInventory(t *testing.T) {
+	ivdb.Put("abc/1234", 5)
+	ivdb.Put("abc/5678", 5)
+	err := ivdb.DeleteAll("abc")
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := ivdb.db.Prepare("select slug from inventory where slug=?")
+	defer stmt.Close()
+	var slug string
+	stmt.QueryRow("abc/1234").Scan(&slug)
+	if slug != "" {
+		t.Error("Failed to delete follower")
+	}
+	stmt, _ = ivdb.db.Prepare("select slug from inventory where slug=?")
+	defer stmt.Close()
+	slug = ""
+	stmt.QueryRow("abc/5678").Scan(&slug)
+	if slug != "" {
+		t.Error("Failed to delete follower")
+	}
+}
+
 func TestGetAllInventory(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		ivdb.Put(strconv.Itoa(i), i)

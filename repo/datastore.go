@@ -111,4 +111,7 @@ type Inventory interface {
 
 	// Delete a listing and related count
 	Delete(path string) error
+
+	// Delete all variants of a given slug
+	DeleteAll(slug string) error
 }

@@ -28,7 +28,7 @@ const (
 	SentanceMaxCharacters    = 70
 )
 
-// Add our identity to the listings and sign it
+// Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	c := new(pb.RicardianContract)
 	// Check the listing data is correct for continuing
@@ -91,9 +91,21 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 // Sets the inventory for the listing in the database. Does some basic validation
 // to make sure the inventory uses the correct variants.
-// TODO: if this is an update to a listing we need to delete any variants that were
-// TODO: removed from the inventory db.
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
+	// Grap the current inventory for this listing
+	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
+	if err != nil {
+		return err
+	}
+	// Delete from currentInv any variants that are carrying forward.
+	// The remainder should be a map of variants that should be deleted.
+	for _, i := range inventory {
+		for k, _ := range currentInv {
+			if i.Item == k {
+				delete(currentInv, k)
+			}
+		}
+	}
 	// Create a list of variants from the contract so we can check correct ordering
 	var variants [][]string = make([][]string, len(listing.Item.Options))
 	for i, option := range listing.Item.Options {
@@ -131,6 +143,13 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		}
 		// Put to database
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
+	}
+	// Delete any variants that don't carry forward
+	for k, _ := range currentInv {
+		err := n.Datastore.Inventory().Delete(k)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -224,6 +243,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	return nil
 }
 
+// Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
 	type price struct {
 		CurrencyCode string
@@ -255,6 +275,9 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
+// Moves images from one directory to another.
+// This is used when a user changes a slug and we need to copy images into
+// the new listing directory.
 func (n *OpenBazaarNode) TransferImages(fromSlug, toSlug string) error {
 	fromPath := path.Join(n.RepoPath, "root", "listings", fromSlug)
 	toPath := path.Join(n.RepoPath, "root", "listings", toSlug)
@@ -295,6 +318,7 @@ func (n *OpenBazaarNode) TransferImages(fromSlug, toSlug string) error {
 	return nil
 }
 
+// Deletes the listing directory, removes the listing from the index, and deletes the inventory
 func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	toDelete := path.Join(n.RepoPath, "root", "listings", slug)
 	err := os.RemoveAll(toDelete)
@@ -361,15 +385,9 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	}
 
 	// Delete inventory for listing
-	inventory, err := n.Datastore.Inventory().Get(slug)
+	err = n.Datastore.Inventory().DeleteAll(slug)
 	if err != nil {
 		return err
-	}
-	for k, _ := range inventory {
-		err := n.Datastore.Inventory().Delete(k)
-		if err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -442,6 +460,9 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	return contract, invList, nil
 }
 
+// Performs a ton of checks to make sure the listing is formatted correct. We shouldn't allow
+// listings to be saved or purchased if they aren't formatted correctly as it can lead to
+// ambiguity when moderating a dispute.
 func validate(listing *pb.Listing) (err error) {
 	defer func() {
 		if r := recover(); r != nil {

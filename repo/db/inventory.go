@@ -76,9 +76,17 @@ func (i *InventoryDB) GetAll() (map[string]int, error) {
 	return ret, nil
 }
 
-func (i *InventoryDB) Delete(slug string) error {
+func (i *InventoryDB) Delete(path string) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	_, err := i.db.Exec("delete from inventory where slug=?", slug)
+	_, err := i.db.Exec("delete from inventory where slug=?", path)
+	return err
+}
+
+func (i *InventoryDB) DeleteAll(slug string) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	stm := `delete from inventory where slug like "` + slug + `%";`
+	_, err := i.db.Exec(stm)
 	return err
 }
