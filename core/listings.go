@@ -100,7 +100,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 	// Delete from currentInv any variants that are carrying forward.
 	// The remainder should be a map of variants that should be deleted.
 	for _, i := range inventory {
-		for k, _ := range currentInv {
+		for k := range currentInv {
 			if i.Item == k {
 				delete(currentInv, k)
 			}
@@ -145,7 +145,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
 	// Delete any variants that don't carry forward
-	for k, _ := range currentInv {
+	for k := range currentInv {
 		err := n.Datastore.Inventory().Delete(k)
 		if err != nil {
 			return err
