@@ -18,9 +18,6 @@ import (
 
 var log = logging.MustGetLogger("core")
 
-var salt = []byte("salt")
-var encVersion = make([]byte, 4)
-
 var Node *OpenBazaarNode
 
 var inflightPublishRequests int

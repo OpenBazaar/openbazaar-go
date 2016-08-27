@@ -96,7 +96,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	mac.Write(ciphertext)
 	messageMac := mac.Sum(nil)
 
-	// Prepend the ciphertext with the encrypted aes key
+	// Prepend the ciphertext with the encrypted secret key
 	ciphertext = append(encKey, ciphertext...)
 
 	// Prepend version

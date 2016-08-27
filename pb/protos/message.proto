@@ -25,4 +25,5 @@ message Message {
 message Envelope {
     Message message = 1;
     string peerID   = 2;
+    bytes signature = 3;
 }
