@@ -41,7 +41,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	if mnemonic == "" {
-		mnemonic, err = createMnemonic()
+		mnemonic, err = createMnemonic(bip39.NewEntropy, bip39.NewMnemonic)
 		if err != nil {
 			return err
 		}
@@ -209,12 +209,12 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	return nil
 }
 
-func createMnemonic() (string, error) {
-	entropy, err := bip39.NewEntropy(128)
+func createMnemonic(newEntropy func (int) ([]byte, error), newMnemonic func ([]byte) (string, error)) (string, error) {
+	entropy, err := newEntropy(128)
 	if err != nil {
 		return "", err
 	}
-	mnemonic, err := bip39.NewMnemonic(entropy)
+	mnemonic, err := newMnemonic(entropy)
 	if err != nil {
 		return "", err
 	}
