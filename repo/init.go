@@ -209,7 +209,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	return nil
 }
 
-func createMnemonic(newEntropy func (int) ([]byte, error), newMnemonic func ([]byte) (string, error)) (string, error) {
+func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byte) (string, error)) (string, error) {
 	entropy, err := newEntropy(128)
 	if err != nil {
 		return "", err

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -8,10 +9,28 @@ import (
 )
 
 const repoRootFolder = "testdata/repo-root"
+const mnemonicFixture = "fiscal first first inside toe wedding away element response dry attend oxygen"
 
 // we have to use this and cannot pass the real db.Init because it would create a circular import error
 func MockDbInit(mnemonic string, identityKey []byte, password string) error {
 	return nil
+}
+func MockNewEntropy(int) ([]byte, error) {
+	entropy := make([]byte, 32)
+	return entropy, nil
+}
+func MockNewEntropyFail(int) ([]byte, error) {
+	entropy := make([]byte, 32)
+	err := errors.New("")
+	return entropy, err
+}
+func MockNewMnemonic([]byte) (string, error) {
+	return mnemonicFixture, nil
+}
+func MockNewMnemonicFail([]byte) (string, error) {
+	mnemonic := ""
+	err := errors.New("")
+	return mnemonic, err
 }
 
 func TestDoInit(t *testing.T) {
@@ -60,6 +79,29 @@ func checkDirectoryCreation(t *testing.T, directory string) {
 	}
 	if fi.Mode().String()[1:3] != "rw" {
 		t.Errorf("the created directory %s is not readable and writable for the owner", directory)
+	}
+}
+
+func TestCreateMnemonic(t *testing.T) {
+	mnemonic, err := createMnemonic(MockNewEntropyFail, MockNewMnemonicFail)
+	checkCreateMnemonicError(t, mnemonic, err)
+	mnemonic, err = createMnemonic(MockNewEntropy, MockNewMnemonicFail)
+	checkCreateMnemonicError(t, mnemonic, err)
+	mnemonic, err = createMnemonic(MockNewEntropy, MockNewMnemonic)
+	if mnemonic != mnemonicFixture {
+		t.Errorf("The mnemonic should have been %s but it is %s instead", mnemonicFixture, mnemonic)
+	}
+	if err != nil {
+		t.Error("createMnemonic threw an unexpected error")
+	}
+}
+
+func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
+	if mnemonic != "" {
+		t.Errorf("The mnemonic should have been an empty string but it is %s instead", mnemonic)
+	}
+	if err == nil {
+		t.Error("createMnemonic didn't throw an error")
 	}
 }
 
