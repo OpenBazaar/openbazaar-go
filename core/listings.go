@@ -61,6 +61,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.Pubkeys = p
 	listing.VendorID = id
 
+	// Set cryoto currency
+	listing.Metadata.AcceptedCryptoCurrency = n.Wallet.CurrencyCode()
+
 	// Sign listing
 	s := new(pb.Signatures)
 	s.Section = pb.Signatures_LISTING

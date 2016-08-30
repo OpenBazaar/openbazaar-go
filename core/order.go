@@ -150,6 +150,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 		}
 
+		if strings.ToLower(listing.Metadata.AcceptedCryptoCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
+			return fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCryptoCurrency, n.Wallet.CurrencyCode())
+		}
+
 		// validate the selected options
 		var userOptions []option
 		var listingOptions []string

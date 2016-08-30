@@ -858,7 +858,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	addr, err := btc.DecodeAddress("2ND3E7kix3xogR77H8F35zjufXZkHUvWTvA", i.node.Wallet.Params())
+	addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
@@ -878,7 +878,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{}`)
+	fmt.Fprint(w, `{}`)
 	return
 }
 

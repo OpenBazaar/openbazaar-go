@@ -32,6 +32,7 @@ message Listing {
         ContractType contractType        = 2;
         ListingType listingType          = 3;
         google.protobuf.Timestamp expiry = 4;
+        string acceptedCryptoCurrency    = 5;
 
         enum ContractType {
             UNKNOWN       = 0;
