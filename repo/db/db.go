@@ -26,6 +26,8 @@ type SQLiteDatastore struct {
 	utxos           spvwallet.Utxos
 	settings        repo.Settings
 	inventory       repo.Inventory
+	purchases       repo.Purchases
+	sales           repo.Sales
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -97,6 +99,14 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		purchases: &PurchasesDB{
+			db:   conn,
+			lock: l,
+		},
+		sales: &SalesDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -156,6 +166,14 @@ func (d *SQLiteDatastore) Inventory() repo.Inventory {
 	return d.inventory
 }
 
+func (d *SQLiteDatastore) Purchases() repo.Purchases {
+	return d.purchases
+}
+
+func (d *SQLiteDatastore) Sales() repo.Sales {
+	return d.sales
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -212,6 +230,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table txns (txid text primary key not null, tx blob);
 	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
+	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text);
+	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

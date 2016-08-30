@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+enum OrderState {
+    // New order, has not yet been accepted by the vendor
+    PENDING   = 0;
+
+    // Vendor has accepted the order and is awaiting payment
+    CONFIRMED = 1;
+
+    // Buyer has funded the order
+    FUNDED    = 2;
+
+    // Vendor has shipped the item/sent the digitial good
+    FULFILLED = 3;
+
+    // Buyer has completed the order, released the funds, and left a review
+    COMPLETE  = 4;
+
+    // Contract is under active dispute
+    DISPUTED  = 5;
+
+    // The moderator has resolved the dispute and we are waiting for the winning party to
+    // accept the payout. After the payout is accepted the state will be set to COMPLETE
+    RESOLVED  = 6;
+
+    // The vendor refunded the order
+    REFUNDED  = 7;
+}

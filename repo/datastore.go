@@ -2,6 +2,7 @@ package repo
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 )
 
@@ -13,6 +14,8 @@ type Datastore interface {
 	Pointers() Pointers
 	Settings() Settings
 	Inventory() Inventory
+	Purchses() Purchases
+	Sales() Sales
 	Close()
 }
 
@@ -114,4 +117,32 @@ type Inventory interface {
 
 	// Delete all variants of a given slug
 	DeleteAll(slug string) error
+}
+
+type Purchases interface {
+	// Save or update an order
+	Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error
+
+	// Mark an order as read in the database
+	MarkAsRead(orderID string) error
+
+	// Delete an order
+	Delete(orderID string) error
+
+	// Return the Ids for all orders
+	GetAll() ([]string, error)
+}
+
+type Sales interface {
+	// Save or update a sale
+	Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error
+
+	// Mark an order as read in the database
+	MarkAsRead(orderID string) error
+
+	// Delete a sale
+	Delete(orderID string) error
+
+	// Return the Ids for all sales
+	GetAll() ([]string, error)
 }
