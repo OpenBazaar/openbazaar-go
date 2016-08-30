@@ -59,7 +59,6 @@ type PurchaseData struct {
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
-	// TODO: validate the purchase data is formatted properly
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
 	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
@@ -211,21 +210,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		so.Service = item.Shipping.Service
 		i.ShippingOption = so
 		i.Memo = item.Memo
+		i.CouponCodes = item.Coupons
 		order.Items = append(order.Items, i)
 	}
 
 	contract.BuyerOrder = order
-
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, _ := m.MarshalToString(contract)
-	log.Notice(string(out))
-
-	log.Notice(n.CalculateOrderTotal(contract))
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" {
@@ -233,6 +222,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	} else { // direct payment
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_ADDRESS_REQUEST
+		total, err := n.CalculateOrderTotal(contract)
+		if err != nil {
+			return err
+		}
+		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
 
 		// Send to order vendor and request a payment address
@@ -266,7 +260,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			// TODO: calculate the amount to be paid
 			payment.Address = addr.EncodeAddress()
 			payment.Chaincode = hex.EncodeToString(chaincode)
 
@@ -365,7 +358,35 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				return 0, errors.New("Selected option not found in listing")
 			}
 		}
-		//TODO: should apply coupon discounts to itemTotal here
+		// Subtract any coupons
+		for _, couponCode := range item.CouponCodes {
+			for _, vendorCoupon := range l.Coupons {
+				h := sha256.Sum256([]byte(couponCode))
+				encoded, err := mh.Encode(h[:], mh.SHA2_256)
+				if err != nil {
+					return 0, err
+				}
+				multihash, err := mh.Cast(encoded)
+				if err != nil {
+					return 0, err
+				}
+				if multihash.B58String() == vendorCoupon.Hash {
+					if vendorCoupon.PriceDiscount != nil {
+						itemTotal -= itemTotal
+					} else {
+						itemTotal -= uint64((float32(itemTotal) * (vendorCoupon.PercentDiscount / 100)))
+					}
+				}
+			}
+		}
+		// Apply tax
+		for _, tax := range l.Taxes {
+			for _, taxRegion := range tax.TaxRegions {
+				if contract.BuyerOrder.Shipping.Country == taxRegion {
+					itemTotal += uint64((float32(itemTotal) * (tax.Percentage / 100)))
+				}
+			}
+		}
 		itemTotal *= uint64(item.Quantity)
 		total += itemTotal
 	}
@@ -424,6 +445,16 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 				shippingPrice := uint64(item.Quantity) * shippingSatoshi
 				itemShipping += shippingPrice
+				shippingTaxPercentage := float32(0)
+
+				// Calculate tax percentage
+				for _, tax := range listing.Taxes {
+					for _, taxRegion := range tax.TaxRegions {
+						if contract.BuyerOrder.Shipping.Country == taxRegion && tax.TaxShipping {
+							shippingTaxPercentage = tax.Percentage / 100
+						}
+					}
+				}
 
 				// Apply shipping rules
 				if option.ShippingRules != nil {
@@ -459,6 +490,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
 							itemShipping -= shippingPrice
 							rulePrice, err := n.getPriceInSatoshi(rule.Price)
+							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
+							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
 							if err != nil {
 								return 0, err
 							}
@@ -473,6 +506,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
 							itemShipping -= shippingPrice
 							rulePrice, err := n.getPriceInSatoshi(rule.Price)
+							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
+							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
 							if err != nil {
 								return 0, err
 							}
@@ -486,6 +521,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						}
 					}
 				}
+				// Apply tax
+				itemShipping += uint64(float32(itemShipping) * shippingTaxPercentage)
 				shippingTotal += itemShipping
 			}
 		}
