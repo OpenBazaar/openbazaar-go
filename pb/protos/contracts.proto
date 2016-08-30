@@ -146,6 +146,7 @@ message Order {
     repeated Item items                  = 5;
     Payment payment                      = 6;
     bytes ratingKey                      = 7;
+    string alternateContactInfo          = 8;
 
     message Shipping {
         string shipTo       = 1;
