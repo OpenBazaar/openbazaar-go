@@ -22,11 +22,6 @@ import (
 	"time"
 )
 
-const (
-	MaxCoins      = 2100000000000000
-	SatoshiPerBTC = 100000000
-)
-
 type option struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
@@ -536,13 +531,13 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 	// Process combined shipping rules
 	if len(combinedOptions) > 0 {
-		lowestPrice := uint64(MaxCoins)
+		lowestPrice := int64(-1)
 		for _, v := range combinedOptions {
-			if v.price < lowestPrice {
-				lowestPrice = v.price
+			if int64(v.price) < lowestPrice || lowestPrice == -1 {
+				lowestPrice = int64(v.price)
 			}
 		}
-		shippingTotal += lowestPrice
+		shippingTotal += uint64(lowestPrice)
 		for _, o := range combinedOptions {
 			modifier := o.modifier
 			modifier *= (uint64(o.quantity) - 1)
@@ -568,7 +563,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, err
 	}
 	formatedAmount := float64(price.Amount) / 100
 	btc := formatedAmount / exchangeRate
-	satoshis := btc * SatoshiPerBTC
+	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
 	return uint64(satoshis), nil
 }
 

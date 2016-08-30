@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const SatoshiPerBTC = 100000000
+
 var log = logging.MustGetLogger("exchangeRates")
 
 type ExchangeRateProvider interface {
@@ -51,6 +53,10 @@ func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error
 		return 0, errors.New("Currency not tracked")
 	}
 	return price, nil
+}
+
+func (b *BitcoinPriceFetcher) UnitsPerCoin() int {
+	return SatoshiPerBTC
 }
 
 func (b *BitcoinPriceFetcher) run() {
