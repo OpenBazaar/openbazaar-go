@@ -14,7 +14,7 @@ type Datastore interface {
 	Pointers() Pointers
 	Settings() Settings
 	Inventory() Inventory
-	Purchses() Purchases
+	Purchases() Purchases
 	Sales() Sales
 	Close()
 }
