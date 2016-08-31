@@ -2,13 +2,14 @@ package net
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/net/service"
+	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
+	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
@@ -18,16 +19,18 @@ import (
 	"time"
 )
 
+var log = logging.MustGetLogger("retriever")
+
 type MessageRetriever struct {
 	db        repo.Datastore
 	node      *core.IpfsNode
 	ctx       commands.Context
-	service   *service.OpenBazaarService
+	service   net.NetworkService
 	prefixLen int
 	sendAck   func(peerId string, pointerID peer.ID) error
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service *service.OpenBazaarService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
 	return &MessageRetriever{
 		db:        db,
 		node:      node,
@@ -106,7 +109,7 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 
-	plaintext, err := Decrypt(m.node.PrivateKey, ciphertext)
+	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 
 	if err == nil {
 		env := pb.Envelope{}

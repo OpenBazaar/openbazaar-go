@@ -5,9 +5,7 @@ import (
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 )
 
-type serviceHandler func(peer.ID, *pb.Message) (*pb.Message, error)
-
-func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) serviceHandler {
+func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message) (*pb.Message, error) {
 	switch t {
 	case pb.Message_PING:
 		return service.handlePing

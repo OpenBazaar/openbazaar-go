@@ -302,7 +302,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			n.Datastore.Purchses().Put(orderId, *contract, pb.OrderState_PENDING, false)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
 				return fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
@@ -324,7 +324,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			n.Datastore.Purchses().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
 			// TODO: Broadcast payment
 		}
 	}
