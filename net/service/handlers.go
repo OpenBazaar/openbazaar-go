@@ -64,7 +64,8 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) 
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER message from %s", peer.Pretty())
-	log.Notice(pmes)
+	// TODO: build the order confirmation
+	// TODO: save to database
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_CONFIRMATION,
 	}

@@ -19,6 +19,7 @@ message Message {
         DISPUTE_CLOSE           = 9;
         REFUND                  = 10;
         OFFLINE_ACK             = 11;
+        ERROR                   = 500;
     }
 }
 
