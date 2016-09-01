@@ -241,7 +241,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		}
 		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
-		// TODO: sign order
+		contract, err = n.SignOrder(contract)
+		if err != nil {
+			return err
+		}
 
 		// Send to order vendor and request a payment address
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
@@ -278,7 +281,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			payment.Chaincode = hex.EncodeToString(chaincode)
 
 			// TODO: build and append raw tx
-			// TODO: sign order
+			contract, err = n.SignOrder(contract)
+			if err != nil {
+				return err
+			}
 
 			// Send using offline messaging
 			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
@@ -307,19 +313,24 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if resp.MessageType == pb.Message_ERROR {
 				return fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
 			}
-			if resp.MessageType != pb.Message_ORDER_CONFIRMATION || resp.MessageType != pb.Message_ERROR {
+			if resp.MessageType != pb.Message_ORDER_CONFIRMATION && resp.MessageType != pb.Message_ERROR {
 				return errors.New("Vendor responded to the order with an incorrect message type")
 			}
-			orderConf := new(pb.OrderConfirmation)
-			err := proto.Unmarshal(resp.Payload.Value, orderConf)
+			rc := new(pb.RicardianContract)
+			err := proto.Unmarshal(resp.Payload.Value, rc)
 			if err != nil {
 				return errors.New("Error parsing the vendor's response")
 			}
-			err = validateOrderConfirmation(orderConf, contract.BuyerOrder)
+			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
+			for _, sig := range rc.Signatures {
+				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+					contract.Signatures = append(contract.Signatures, sig)
+				}
+			}
+			err = validateOrderConfirmation(contract)
 			if err != nil {
 				return err
 			}
-			contract.VendorOrderConfirmation = orderConf
 			orderId, err := calcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return err
@@ -687,8 +698,8 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) validateOrder(contract *pb.RicardianContract) error {
-	var listingMap map[string]*pb.Listing
+func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
+	listingMap := make(map[string]*pb.Listing)
 
 	// Check order contains all required fields
 	if contract.BuyerOrder.Payment == nil {
@@ -746,16 +757,9 @@ func (n *OpenBazaarNode) validateOrder(contract *pb.RicardianContract) error {
 	}
 
 	// Validate the each item in the order is for sale
-	listingHashes := n.GetListingHashes()
-	for _, item := range contract.BuyerOrder.Items {
-		exists := false
-		for _, listingHash := range listingHashes {
-			if listingHash == item.ListingHash {
-				exists = true
-			}
-		}
-		if !exists {
-			return fmt.Errorf("Item %s is not for sale", item.ListingHash)
+	for _, listing := range contract.VendorListings {
+		if !n.IsItemForSale(listing) {
+			return errors.New("Contract contained item that is not for sale")
 		}
 	}
 
@@ -877,4 +881,34 @@ func (n *OpenBazaarNode) validateOrder(contract *pb.RicardianContract) error {
 		return err
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.RicardianContract, error){
+	serializedOrder, err := proto.Marshal(contract.BuyerOrder)
+	if err != nil {
+		return contract, err
+	}
+	s := new(pb.Signatures)
+	s.Section = pb.Signatures_ORDER
+	if err != nil {
+		return contract, err
+	}
+	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
+	if err != nil {
+		return contract, err
+	}
+	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return contract, err
+	}
+	hashed := sha256.Sum256(serializedOrder)
+	bitcoinSig, err := priv.Sign(hashed[:])
+	if err != nil {
+		return contract, err
+	}
+	s.Guid = guidSig
+	s.Bitcoin = bitcoinSig.Serialize()
+
+	contract.Signatures = append(contract.Signatures, s)
+	return contract, nil
 }

@@ -2,6 +2,7 @@ package core
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -280,8 +281,13 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
-// Return a slice of listing hashes
-func (n *OpenBazaarNode) GetListingHashes() []string {
+// Check to see we are selling the given listing. Used when validating an order.
+// FIXME: this wont scale well. We will need a better way.
+func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
+	serializedListing, err := proto.Marshal(listing)
+	if err != nil {
+		return false
+	}
 	type price struct {
 		CurrencyCode string
 		Amount       uint64
@@ -298,22 +304,41 @@ func (n *OpenBazaarNode) GetListingHashes() []string {
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
-	var hashes []string
 	// read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return hashes
+		log.Error(err)
+		return false
 	}
 
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return hashes
+		log.Error(err)
+		return false
 	}
-	for _, data := range index {
-		hashes = append(hashes, data.Hash)
+	for _, l := range index {
+		b, err := ipfs.Cat(n.Context, l.Hash)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		c := new(pb.RicardianContract)
+		err = jsonpb.UnmarshalString(string(b), c)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		ser, err := proto.Marshal(c.VendorListings[0])
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		if hex.EncodeToString(ser) == hex.EncodeToString(serializedListing) {
+			return true
+		}
 	}
-	return hashes
+	return false
 }
 
 // Moves images from one directory to another.

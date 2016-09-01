@@ -2,7 +2,10 @@ package service
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message) (*pb.Message, error) {
@@ -62,10 +65,36 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) 
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER message from %s", peer.Pretty())
-	// TODO: build the order confirmation
-	// TODO: save to database
+	errorResponse := func(error string) *pb.Message {
+		a := &any.Any{Value: []byte(error)}
+		m := &pb.Message{
+			MessageType: pb.Message_ERROR,
+			Payload:     a,
+		}
+		return m
+	}
+	contract := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, contract)
+	if err != nil {
+		return errorResponse("Could not unmarshal order"), nil
+	}
+	err = service.node.ValidateOrder(contract)
+	if err != nil {
+		return errorResponse(err.Error()), nil
+	}
+
+	contract, err = service.node.NewOrderConfirmation(contract)
+	if err != nil {
+		return errorResponse("Error building order confirmation"), nil
+	}
+	a, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return errorResponse("Error building order confirmation"), nil
+	}
+	service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_CONFIRMATION,
+		Payload:     a,
 	}
 	return &m, nil
 }
