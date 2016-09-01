@@ -196,7 +196,7 @@ message Order {
 
 message OrderConfirmation {
     string orderID         = 1;
-    bytes outputScript     = 2;
+    string paymentAddress  = 2;
     uint64 requestedAmount = 3;
     bytes ratingSignature  = 4;
 }

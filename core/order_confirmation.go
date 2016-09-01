@@ -6,6 +6,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	"gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
@@ -20,7 +21,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 	}
 	oc.OrderID = orderID
 	addr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
-	oc.OutputScript = addr.ScriptAddress()
+	oc.PaymentAddress = addr.EncodeAddress()
 
 	// Sign rating key
 	sig, err := n.IpfsNode.PrivateKey.Sign(contract.BuyerOrder.RatingKey)
@@ -40,7 +41,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 	return contract, nil
 }
 
-func validateOrderConfirmation(contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContract) error {
 	orderID, err := calcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
@@ -58,6 +59,10 @@ func validateOrderConfirmation(contract *pb.RicardianContract) error {
 	valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, contract.VendorOrderConfirmation.RatingSignature)
 	if err != nil || !valid {
 		return errors.New("Failed to verify signature on rating key")
+	}
+	_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+	if err != nil {
+		return err
 	}
 	err = verifySignaturesOnOrderConfirmation(contract)
 	if err != nil {

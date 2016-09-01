@@ -10,6 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
@@ -52,12 +53,23 @@ type PurchaseData struct {
 	Moderator        string `json:"moderator"`
 	Items            []item `json:"items"`
 	AlternateContact string `json:"alternateContactInfo"`
+	FeeLevel         string `json:"fee"`
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
 	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+	var feeLevel spvwallet.FeeLevel
+	switch strings.ToLower(data.FeeLevel) {
+	case "economic":
+		feeLevel = spvwallet.ECONOMIC
+	case "normal":
+		feeLevel = spvwallet.NORMAL
+	case "priority":
+		feeLevel = spvwallet.PRIOIRTY
+	}
 
 	shipping := new(pb.Order_Shipping)
 	shipping.ShipTo = data.ShipTo
@@ -327,7 +339,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
-			err = validateOrderConfirmation(contract)
+			err = n.validateOrderConfirmation(contract)
 			if err != nil {
 				return err
 			}
@@ -336,7 +348,14 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 				return err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
-			// TODO: Broadcast payment
+			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+			if err != nil {
+				return err
+			}
+			err = n.Wallet.Spend(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -787,10 +806,10 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 					}
 				}
 			}
-			check:
+		check:
 			for i, lopt := range listingOptions {
 				if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
-					listingOptions = append(listingOptions[:i], listingOptions[i + 1:]...)
+					listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
 					continue check
 				}
 			}
@@ -883,7 +902,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.RicardianContract, error){
+func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	serializedOrder, err := proto.Marshal(contract.BuyerOrder)
 	if err != nil {
 		return contract, err
