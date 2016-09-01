@@ -3,6 +3,7 @@ package repo
 import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	btc "github.com/btcsuite/btcutil"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 )
 
@@ -142,6 +143,9 @@ type Sales interface {
 
 	// Delete a sale
 	Delete(orderID string) error
+
+	// Return a sale given the payment address
+	GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, error)
 
 	// Return the Ids for all sales
 	GetAll() ([]string, error)

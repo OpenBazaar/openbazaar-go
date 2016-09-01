@@ -29,4 +29,7 @@ type BitcoinWallet interface {
 
 	// Returnt the network parameters
 	Params() *chaincfg.Params
+
+	// Add a callback for incoming transactions
+	AddTransactionListener(func(addr btc.Address, amount int64))
 }

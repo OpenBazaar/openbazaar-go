@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -316,7 +317,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			orderId, err := calcOrderId(contract.BuyerOrder)
+			orderId, err := CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return err
 			}
@@ -343,7 +344,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			orderId, err := calcOrderId(contract.BuyerOrder)
+			orderId, err := CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return err
 			}
@@ -361,7 +362,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	return nil
 }
 
-func calcOrderId(order *pb.Order) (string, error) {
+func CalcOrderId(order *pb.Order) (string, error) {
 	ser, err := proto.Marshal(order)
 	if err != nil {
 		return "", err
@@ -704,10 +705,8 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	if err != nil {
 		return err
 	}
-	for i, b := range []byte(guidMH) {
-		if b != checkKeyHash[i] {
-			return errors.New("Public key in order does not match reported buyer ID")
-		}
+	if !bytes.Equal(guidMH, checkKeyHash) {
+		return errors.New("Public key in order does not match reported buyer ID")
 	}
 	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
 	if !valid {

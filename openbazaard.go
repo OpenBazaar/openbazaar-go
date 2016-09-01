@@ -19,6 +19,7 @@ import (
 	"bufio"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -423,6 +424,10 @@ func (x *Start) Execute(args []string) error {
 			PR := rep.NewPointerRepublisher(nd, sqliteDB)
 			go PR.Run()
 			core.Node.PointerRepublisher = PR
+			if !x.DisableWallet {
+				TL := bitcoin.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+				core.Node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+			}
 			core.Node.SeedNode()
 		}
 		break

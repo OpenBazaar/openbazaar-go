@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -15,7 +16,7 @@ import (
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
-	orderID, err := calcOrderId(contract.BuyerOrder)
+	orderID, err := CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 }
 
 func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContract) error {
-	orderID, err := calcOrderId(contract.BuyerOrder)
+	orderID, err := CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -150,10 +151,8 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	if err != nil {
 		return err
 	}
-	for i, b := range []byte(guidMH) {
-		if b != checkKeyHash[i] {
-			return errors.New("Public key in order does not match reported vendor ID")
-		}
+	if !bytes.Equal(guidMH, checkKeyHash) {
+		return errors.New("Public key in order does not match reported vendor ID")
 	}
 	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
 	if !valid {

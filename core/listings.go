@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -813,10 +814,8 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		if err != nil {
 			return err
 		}
-		for i, b := range []byte(guidMH) {
-			if b != checkKeyHash[i] {
-				return errors.New("Public key in listing does not match reported vendor ID")
-			}
+		if !bytes.Equal(guidMH, checkKeyHash) {
+			return errors.New("Public key in listing does not match reported vendor ID")
 		}
 		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
 		if !valid {

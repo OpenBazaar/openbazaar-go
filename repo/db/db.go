@@ -231,7 +231,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text);
-	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text);
+	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

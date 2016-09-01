@@ -2,13 +2,14 @@ package spvwallet
 
 import (
 	"bytes"
+	"strconv"
 	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"strconv"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
+
 
 // SetDBSyncHeight sets sync height of the db, indicated the latest block
 // of which it has ingested all the transactions.
@@ -106,6 +107,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	// note that you can't check signatures; this is SPV.
 	// 0 conf SPV means pretty much nothing.  Anyone can say anything.
 
+
 	// go through txouts, and then go through addresses to match
 
 	// generate PKscripts for all addresses
@@ -121,6 +123,8 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	ts.addrMutex.Unlock()
 	cachedSha := tx.TxHash()
 	// iterate through all outputs of this tx, see if we gain
+	var value int64
+	fundedAddrs := make(map[btcutil.Address]int64)
 	for i, out := range tx.TxOut {
 		for _, script := range PKscripts {
 			if bytes.Equal(out.PkScript, script) { // new utxo found
@@ -135,11 +139,14 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				newu.Op = newop
 				ts.db.Utxos().Put(newu)
 				hits++
+				// For listener
+				value += out.Value
+				_, addrs, _, _ := txscript.ExtractPkScriptAddrs(out.PkScript, ts.Param)
+				fundedAddrs[addrs[0]] = out.Value
 				break // txos can match only 1 script
 			}
 		}
 	}
-
 	for _, txin := range tx.TxIn {
 		utxos, err := ts.db.Utxos().GetAll()
 		if err != nil {
@@ -148,20 +155,32 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		for _, u := range utxos {
 			if OutPointsEqual(txin.PreviousOutPoint, u.Op) {
 				hits++
-				var st Stxo              // generate spent txo
-				st.Utxo = u              // assign outpoint
-				st.SpendHeight = height  // spent at height
-				st.SpendTxid = cachedSha // spent by txid
+				var st Stxo               // generate spent txo
+				st.Utxo = u         // assign outpoint
+				st.SpendHeight = height   // spent at height
+				st.SpendTxid = cachedSha  // spent by txid
 				ts.db.Stxos().Put(st)
 				ts.db.Utxos().Delete(u)
+				value -= u.Value
 			}
 		}
 	}
 
 	// if hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 {
-		ts.PopulateAdrs()
-		ts.db.Txns().Put(tx)
+		_, err := ts.db.Txns().Get(tx.TxHash())
+		if err != nil {
+			// Callback on listeners
+			if value > 0 {
+				for _, listener := range ts.listeners {
+					for addr, val := range fundedAddrs {
+						listener(addr, val)
+					}
+				}
+			}
+			ts.PopulateAdrs()
+			ts.db.Txns().Put(tx)
+		}
 	}
 	return hits, err
 }
