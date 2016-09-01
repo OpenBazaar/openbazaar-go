@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -36,7 +37,7 @@ func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message) (
 	if err != nil {
 		return nil, err
 	}
-	service.broadcast <- []byte(`{"notification": {"follow":"` + peer.Pretty() + `"}}`)
+	service.broadcast <- notifications.Serialize(notifications.FollowNotification{peer.Pretty()})
 	return nil, nil
 }
 
@@ -46,7 +47,7 @@ func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message)
 	if err != nil {
 		return nil, err
 	}
-	service.broadcast <- []byte(`{"notification": {"unfollow":"` + peer.Pretty() + `"}}`)
+	service.broadcast <- notifications.Serialize(notifications.UnfollowNotification{peer.Pretty()})
 	return nil, nil
 }
 
