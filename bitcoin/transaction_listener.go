@@ -2,12 +2,12 @@ package bitcoin
 
 import (
 	"crypto/sha256"
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 )
 
 type TransactionListener struct {
