@@ -157,7 +157,7 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = saldb.GetByPaymentAddress(addr)
+	_, _, err = saldb.GetByPaymentAddress(addr)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,7 +165,7 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = saldb.GetByPaymentAddress(addr)
+	_, _, err = saldb.GetByPaymentAddress(addr)
 	if err == nil {
 		t.Error("Get by unknown address failed to return error")
 	}

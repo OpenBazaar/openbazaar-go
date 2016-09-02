@@ -877,7 +877,6 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	}
 
 	// Check we have enough inventory
-	log.Notice(inventory)
 	for _, invMap := range inventory {
 		for invString, quantity := range invMap {
 			amt, err := n.Datastore.Inventory().GetSpecific(invString)

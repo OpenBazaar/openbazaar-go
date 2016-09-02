@@ -114,20 +114,21 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	stmt, err := p.db.Prepare("select contract from purchases where paymentAddr=?")
+	stmt, err := p.db.Prepare("select contract, state from purchases where paymentAddr=?")
 	defer stmt.Close()
 	var contract []byte
-	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract)
+	var stateInt int
+	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt)
 	if err != nil {
-		return nil, err
+		return nil, pb.OrderState(0), err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, err
+		return nil, pb.OrderState(0), err
 	}
-	return rc, nil
+	return rc, pb.OrderState(stateInt), nil
 }

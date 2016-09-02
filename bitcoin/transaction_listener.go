@@ -26,8 +26,8 @@ func NewTransactionListener(db repo.Datastore, broadcast chan []byte) *Transacti
 
 func (l *TransactionListener) OnTransactionReceived(addr btcutil.Address, amount int64, incoming bool) {
 	if incoming {
-		contract, err := l.db.Sales().GetByPaymentAddress(addr)
-		if err == nil {
+		contract, state, err := l.db.Sales().GetByPaymentAddress(addr)
+		if err == nil && int(state) < 2 {
 			requestedAmount := contract.VendorOrderConfirmation.RequestedAmount
 			if uint64(amount) >= requestedAmount {
 				orderId, err := calcOrderId(contract.BuyerOrder)
@@ -50,8 +50,8 @@ func (l *TransactionListener) OnTransactionReceived(addr btcutil.Address, amount
 			}
 		}
 	} else {
-		contract, err := l.db.Purchases().GetByPaymentAddress(addr)
-		if err == nil {
+		contract, state, err := l.db.Purchases().GetByPaymentAddress(addr)
+		if err == nil && int(state) < 2 {
 			requestedAmount := contract.BuyerOrder.Payment.Amount
 			if uint64(amount) >= requestedAmount {
 				orderId, err := calcOrderId(contract.BuyerOrder)
