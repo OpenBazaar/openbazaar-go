@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -335,7 +334,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 			log.Error(err)
 			return false
 		}
-		if hex.EncodeToString(ser) == hex.EncodeToString(serializedListing) {
+		if bytes.Equal(ser, serializedListing) {
 			return true
 		}
 	}

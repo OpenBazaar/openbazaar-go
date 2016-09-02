@@ -24,12 +24,22 @@ type BitcoinWallet interface {
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)
 
+	// Check if we have sufficient funds to make a tx
+	CheckSuffientFunds(amount int64, feeLevel spvwallet.FeeLevel) error
+
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
+
+	// Returns the raw bytes for a signed transaction suitable for sending to a peer out of band
+	// The uxtos this transaction spends should be frozen to prevent double spending
+	ExportRawTx(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) ([]byte, error)
+
+	// Broadcast a raw tx
+	BroadcastRawTx(tx []byte) error
 
 	// Returnt the network parameters
 	Params() *chaincfg.Params
 
 	// Add a callback for incoming transactions
-	AddTransactionListener(func(addr btc.Address, amount int64))
+	AddTransactionListener(func(addr btc.Address, amount int64, incoming bool))
 }

@@ -1,20 +1,21 @@
 package spvwallet
 
+
 import (
+	"github.com/btcsuite/btcd/wire"
+	"sync"
+	"errors"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/boltdb/bolt"
+	"path"
 	"bytes"
 	"encoding/binary"
-	"errors"
-	"fmt"
-	"github.com/boltdb/bolt"
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	"math/big"
-	"path"
-	"sort"
-	"sync"
+	"github.com/btcsuite/btcd/blockchain"
 	"time"
+	"fmt"
+	"sort"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type Headers interface {
@@ -106,8 +107,8 @@ func (h *HeaderDB) Prune() error {
 	return h.db.Update(func(btx *bolt.Tx) error {
 		hdrs := btx.Bucket(BKTHeaders)
 		numHeaders := hdrs.Stats().KeyN
-		if numHeaders > MAX_HEADERS {
-			for i := 0; i < numHeaders-MAX_HEADERS; i++ {
+		if  numHeaders > MAX_HEADERS {
+			for i:=0; i < numHeaders - MAX_HEADERS; i++ {
 				k, _ := hdrs.Cursor().First()
 				err := hdrs.Delete(k)
 				if err != nil {
@@ -207,8 +208,8 @@ func (h *HeaderDB) Print() {
 }
 
 const (
-	MAX_HEADERS                = 2000
-	MAINNET_CHECKPOINT_HEIGHT  = 407232
+	MAX_HEADERS = 2000
+	MAINNET_CHECKPOINT_HEIGHT = 407232
 	TESTNET3_CHECKPOINT_HEIGHT = 919296
 )
 
@@ -216,22 +217,22 @@ var MainnetCheckpoint wire.BlockHeader
 var Testnet3Checkpoint wire.BlockHeader
 
 type Blockchain struct {
-	lock   *sync.Mutex
-	params *chaincfg.Params
-	db     Headers
+	lock        *sync.Mutex
+	params      *chaincfg.Params
+	db          Headers
 }
 
 type StoredHeader struct {
-	header    wire.BlockHeader
-	height    uint32
-	totalWork *big.Int
+	header     wire.BlockHeader
+	height     uint32
+	totalWork  *big.Int
 }
 
 func NewBlockchain(filePath string, params *chaincfg.Params) *Blockchain {
 	b := &Blockchain{
-		lock:   new(sync.Mutex),
+		lock: new(sync.Mutex),
 		params: params,
-		db:     NewHeaderDB(filePath),
+		db: NewHeaderDB(filePath),
 	}
 
 	h, err := b.db.Height()
@@ -241,16 +242,16 @@ func NewBlockchain(filePath string, params *chaincfg.Params) *Blockchain {
 		if b.params.Name == chaincfg.MainNetParams.Name {
 			// Put the checkpoint to the db
 			sh := StoredHeader{
-				header:    MainnetCheckpoint,
-				height:    MAINNET_CHECKPOINT_HEIGHT,
+				header: MainnetCheckpoint,
+				height: MAINNET_CHECKPOINT_HEIGHT,
 				totalWork: big.NewInt(0),
 			}
 			b.db.Put(sh, true)
 		} else if b.params.Name == chaincfg.TestNet3Params.Name {
 			// Put the checkpoint to the db
 			sh := StoredHeader{
-				header:    Testnet3Checkpoint,
-				height:    TESTNET3_CHECKPOINT_HEIGHT,
+				header: Testnet3Checkpoint,
+				height: TESTNET3_CHECKPOINT_HEIGHT,
 				totalWork: big.NewInt(0),
 			}
 			// Put to db
@@ -274,7 +275,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 
 	// If the tip is also the parent of this header, then we can save a database read by skipping
 	// the lookup of the parent header. Otherwise (ophan?) we need to fetch the parent.
-	if header.PrevBlock.IsEqual(&tipHash) {
+	if header.PrevBlock.IsEqual(&tipHash){
 		parentHeader = bestHeader
 	} else {
 		parentHeader, err = b.db.GetPreviousHeader(header)
@@ -305,11 +306,11 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 		}
 	}
 	// Put the header to the database
-	err = b.db.Put(StoredHeader{
-		header:    header,
-		height:    parentHeader.height + 1,
-		totalWork: cumulativeWork,
-	}, newTip)
+	err = b.db.Put(StoredHeader {
+			header: header,
+			height: parentHeader.height + 1,
+			totalWork: cumulativeWork,
+		}, newTip)
 	if err != nil {
 		return newTip, err
 	}
@@ -353,14 +354,14 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 
 	// TODO: Check header timestamps: from Core
 	/*
-			 // Check timestamp against prev
-			 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
+	 // Check timestamp against prev
+	 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
+        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
 
-			 // Check timestamp
-			 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
-	*/
+	 // Check timestamp
+	 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
+        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
+	 */
 
 	return true // it must have worked if there's no errors and got to the end.
 }
@@ -369,7 +370,7 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 // or testnet difficulty rules.
 func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, prevHeader StoredHeader) (uint32, error) {
 	// If this is not a difficulty adjustment period
-	if height%epochLength != 0 {
+	if height % epochLength != 0 {
 		// If we are on testnet
 		if b.params.ReduceMinDifficulty {
 			// If it's been more than 20 minutes since the last header return the minimum difficulty
@@ -378,7 +379,7 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 			} else { // Otherwise return the difficulty of the last block not using special difficulty rules
 				for {
 					var err error = nil
-					for err == nil && int32(prevHeader.height)%epochLength != 0 && prevHeader.header.Bits == b.params.PowLimitBits {
+					for err == nil && int32(prevHeader.height) % epochLength != 0 && prevHeader.header.Bits == b.params.PowLimitBits {
 						var sh StoredHeader
 						sh, err = b.db.GetPreviousHeader(prevHeader.header)
 						// Error should only be non-nil if prevHeader is the checkpoint.
@@ -409,7 +410,7 @@ func (b *Blockchain) GetEpoch() (*wire.BlockHeader, error) {
 	if err != nil {
 		return &sh.header, err
 	}
-	for i := 0; i < 2015; i++ {
+	for i:=0; i<2015; i++ {
 		sh, err = b.db.GetPreviousHeader(sh.header)
 		if err != nil {
 			return &sh.header, err
@@ -427,7 +428,7 @@ func (b *Blockchain) GetNPrevBlockHashes(n int) []*chainhash.Hash {
 	}
 	tipSha := hdr.header.BlockHash()
 	ret = append(ret, &tipSha)
-	for i := 0; i < n-1; i++ {
+	for i:=0; i<n-1; i++ {
 		hdr, err = b.db.GetPreviousHeader(hdr.header)
 		if err != nil {
 			return ret
@@ -445,8 +446,8 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 		return ret
 	}
 
-	rollback := func(parent StoredHeader, n int) (StoredHeader, error) {
-		for i := 0; i < n; i++ {
+	rollback := func(parent StoredHeader, n int) (StoredHeader, error){
+		for i:=0; i<n; i++ {
 			parent, err = b.db.GetPreviousHeader(parent.header)
 			if err != nil {
 				return parent, err
@@ -478,9 +479,9 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 
 /*----- header serialization ------- */
 /* byte length   desc            at offset
-   80	 header	             0
-    4	 height             80
-   32	 total work         84
+      80	 header	             0
+       4	 height             80
+      32	 total work         84
 */
 func serializeHeader(sh StoredHeader) ([]byte, error) {
 	var buf bytes.Buffer
@@ -493,7 +494,7 @@ func serializeHeader(sh StoredHeader) ([]byte, error) {
 		return nil, err
 	}
 	biBytes := sh.totalWork.Bytes()
-	pad := make([]byte, 32-len(biBytes))
+	pad := make([]byte, 32 - len(biBytes))
 	serializedBI := append(pad, biBytes...)
 	buf.Write(serializedBI)
 	return buf.Bytes(), nil
@@ -519,8 +520,8 @@ func deserializeHeader(b []byte) (sh StoredHeader, err error) {
 	bi := new(big.Int)
 	bi.SetBytes(biBytes)
 	sh = StoredHeader{
-		header:    *hdr,
-		height:    height,
+		header: *hdr,
+		height: height,
 		totalWork: bi,
 	}
 	return sh, nil
@@ -529,23 +530,23 @@ func deserializeHeader(b []byte) (sh StoredHeader, err error) {
 func createCheckpoints() {
 	mainnetPrev, _ := chainhash.NewHashFromStr("0000000000000000045645e2acd740a88d2b3a09369e9f0f80d5376e4b6c5189")
 	mainnetMerk, _ := chainhash.NewHashFromStr("e4b259941d8a8d5f1c5f18a68366ef570c0a7876c1f22a54a4f143215e3f4d9b")
-	MainnetCheckpoint = wire.BlockHeader{
-		Version:    4,
-		PrevBlock:  *mainnetPrev,
+	MainnetCheckpoint = wire.BlockHeader {
+		Version: 4,
+		PrevBlock: *mainnetPrev,
 		MerkleRoot: *mainnetMerk,
-		Timestamp:  time.Unix(1460622341, 0),
-		Bits:       403056459,
-		Nonce:      3800536668,
+		Timestamp: time.Unix(1460622341, 0),
+		Bits: 403056459,
+		Nonce: 3800536668,
 	}
 
 	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000002fb1337228db02ac464565271f22f045c1b6ee5e449f057a829")
 	testnet3Merk, _ := chainhash.NewHashFromStr("dd76d3c93254b05c6316eaf3bdb94ed4bd9dfeb464f8f9487fbd1eca2a12ca6e")
-	Testnet3Checkpoint = wire.BlockHeader{
-		Version:    536870912,
-		PrevBlock:  *testnet3Prev,
+	Testnet3Checkpoint = wire.BlockHeader {
+		Version: 536870912,
+		PrevBlock: *testnet3Prev,
 		MerkleRoot: *testnet3Merk,
-		Timestamp:  time.Unix(1470087051, 0),
-		Bits:       437256176,
-		Nonce:      2288429377,
+		Timestamp: time.Unix(1470087051, 0),
+		Bits: 437256176,
+		Nonce: 2288429377,
 	}
 }

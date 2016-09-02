@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
@@ -32,7 +33,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress) values(?,?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress, paymentAddr) values(?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -42,6 +43,12 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if contract.BuyerOrder.Shipping != nil {
 		shippingName = contract.BuyerOrder.Shipping.ShipTo
 		shippingAddress = contract.BuyerOrder.Shipping.Address
+	}
+	var paymentAddr string
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		paymentAddr = contract.BuyerOrder.Payment.Address
+	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		paymentAddr = contract.VendorOrderConfirmation.PaymentAddress
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(
@@ -57,6 +64,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		strings.ToLower(contract.VendorListings[0].Item.Title),
 		shippingName,
 		shippingAddress,
+		paymentAddr,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -104,4 +112,22 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 		ret = append(ret, orderID)
 	}
 	return ret, nil
+}
+
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	stmt, err := p.db.Prepare("select contract from purchases where paymentAddr=?")
+	defer stmt.Close()
+	var contract []byte
+	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract)
+	if err != nil {
+		return nil, err
+	}
+	rc := new(pb.RicardianContract)
+	err = jsonpb.UnmarshalString(string(contract), rc)
+	if err != nil {
+		return nil, err
+	}
+	return rc, nil
 }

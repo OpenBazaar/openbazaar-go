@@ -182,9 +182,10 @@ message Order {
         Method method       = 1;
         string moderator    = 2;
         uint64 amount       = 3; // satoshis
-        string chaincode    = 4; // hex encoded
-        string address      = 5; // b58check encoded
-        string redeemScript = 6; // hex encoded
+        bytes tx            = 4;
+        string chaincode    = 5; // hex encoded
+        string address      = 6; // b58check encoded
+        string redeemScript = 7; // hex encoded
 
         enum Method {
             ADDRESS_REQUEST = 0;

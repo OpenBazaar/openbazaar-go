@@ -151,7 +151,7 @@ func TestMarkSaleAsRead(t *testing.T) {
 	}
 }
 
-func TestGetByPaymentAddress(t *testing.T) {
+func TestSalesGetByPaymentAddress(t *testing.T) {
 	saldb.Put("orderID", *contract, 0, false)
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
 	if err != nil {

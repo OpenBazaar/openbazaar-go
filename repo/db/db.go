@@ -225,12 +225,12 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer);
-	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text);
+	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);
 	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
-	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text);
+	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text);
 	`
 	_, err := db.Exec(sqlStmt)

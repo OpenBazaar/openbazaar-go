@@ -20,14 +20,14 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	tx, _ := u.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey, freeze) values(?,?,?,?,?)")
 	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey))
+	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), 0)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -40,7 +40,7 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	var ret []spvwallet.Utxo
-	stm := "select outpoint, value, height, scriptPubKey from utxos"
+	stm := "select outpoint, value, height, scriptPubKey, freeze from utxos"
 	rows, _ := u.db.Query(stm)
 	defer rows.Close()
 	for rows.Next() {
@@ -48,7 +48,8 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 		var value int
 		var height int
 		var scriptPubKey string
-		if err := rows.Scan(&outpoint, &value, &height, &scriptPubKey); err != nil {
+		var freezeInt int
+		if err := rows.Scan(&outpoint, &value, &height, &scriptPubKey, &freezeInt); err != nil {
 			continue
 		}
 		s := strings.Split(outpoint, ":")
@@ -64,14 +65,30 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 		if err != nil {
 			continue
 		}
+		freeze := false
+		if freezeInt == 1 {
+			freeze = true
+		}
 		ret = append(ret, spvwallet.Utxo{
 			Op:           *wire.NewOutPoint(shaHash, uint32(index)),
 			AtHeight:     int32(height),
 			Value:        int64(value),
 			ScriptPubkey: scriptBytes,
+			Freeze:       freeze,
 		})
 	}
 	return ret, nil
+}
+
+func (u *UtxoDB) Freeze(utxo spvwallet.Utxo) error {
+	u.lock.Lock()
+	defer u.lock.Unlock()
+	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
+	_, err := u.db.Exec("update utxos set freeze=? where outpoint=?", 1, outpoint)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (u *UtxoDB) Delete(utxo spvwallet.Utxo) error {

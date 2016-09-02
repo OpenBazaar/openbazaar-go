@@ -130,6 +130,9 @@ type Purchases interface {
 	// Delete an order
 	Delete(orderID string) error
 
+	// Return a purchase given the payment address
+	GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, error)
+
 	// Return the Ids for all orders
 	GetAll() ([]string, error)
 }

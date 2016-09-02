@@ -20,6 +20,7 @@ import (
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"path"
 	"strings"
 	"time"
 )
@@ -258,6 +259,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		if err != nil {
 			return err
 		}
+		// Let's check that we have sufficient funds before we go messaging the vendor
+		err = n.Wallet.CheckSuffientFunds(int64(total), feeLevel)
+		if err != nil {
+			return err
+		}
 
 		// Send to order vendor and request a payment address
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
@@ -292,8 +298,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 			payment.Address = addr.EncodeAddress()
 			payment.Chaincode = hex.EncodeToString(chaincode)
-
-			// TODO: build and append raw tx
+			tx, err := n.Wallet.ExportRawTx(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
+			if err != nil {
+				return err
+			}
+			payment.Tx = tx
 			contract, err = n.SignOrder(contract)
 			if err != nil {
 				return err
@@ -782,6 +791,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	}
 
 	// Validate the selected variants
+	var inventory []map[string]int
 	for _, item := range contract.BuyerOrder.Items {
 		var userOptions []*pb.Order_Item_Option
 		var listingOptions []string
@@ -791,31 +801,37 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 		for _, uopt := range item.Options {
 			userOptions = append(userOptions, uopt)
 		}
-		for _, checkOpt := range userOptions {
-			for _, o := range listingMap[item.ListingHash].Item.Options {
+		inv := make(map[string]int)
+		invPath := listingMap[item.ListingHash].Slug
+		for _, o := range listingMap[item.ListingHash].Item.Options {
+			for _, checkOpt := range userOptions {
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
 						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
 							validVariant = true
+							invPath = path.Join(invPath, v.Name)
 						}
 					}
 					if validVariant == false {
 						return errors.New("Selected vairant not in listing")
 					}
 				}
-			}
-		check:
-			for i, lopt := range listingOptions {
-				if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
-					listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
-					continue check
+			check:
+				for i, lopt := range listingOptions {
+					if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
+						listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
+						continue check
+					}
 				}
 			}
 		}
 		if len(listingOptions) > 0 {
 			return errors.New("Not all options were selected")
 		}
+		// Create inventory paths to check later
+		inv[invPath] = int(item.Quantity)
+		inventory = append(inventory, inv)
 	}
 
 	// Validate the selected shipping options
@@ -859,6 +875,21 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 			}
 		}
 	}
+
+	// Check we have enough inventory
+	log.Notice(inventory)
+	for _, invMap := range inventory {
+		for invString, quantity := range invMap {
+			amt, err := n.Datastore.Inventory().GetSpecific(invString)
+			if err != nil {
+				return errors.New("Vendor has no inventory for the selected variant.")
+			}
+			if amt >= 0 && amt < quantity {
+				return fmt.Errorf("Not enough inventory for item %s, only %d in stock", invString, amt)
+			}
+		}
+	}
+
 	// Validate the payment amount
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
