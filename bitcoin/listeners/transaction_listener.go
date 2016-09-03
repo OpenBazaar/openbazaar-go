@@ -11,7 +11,8 @@ import (
 	"strings"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/spvwallet"
+	"encoding/hex"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -27,45 +28,78 @@ func NewTransactionListener(db repo.Datastore, broadcast chan []byte, params *ch
 	return l
 }
 
-func (l *TransactionListener) OnTransactionReceived(cb bitcoin.TransactionCallback) {
+func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
 	for _, output := range cb.Outputs {
 		if output.IsOurs {
 			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
-			contract, state, err := l.db.Sales().GetByPaymentAddress(addrs[0])
-			if err == nil && int(state) < 2 {
-				requestedAmount := contract.VendorOrderConfirmation.RequestedAmount
-				if uint64(output.Value) >= requestedAmount {
-					orderId, err := calcOrderId(contract.BuyerOrder)
-					if err != nil {
+			contract, _, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+			if err == nil {
+				funding := output.Value
+				for _, r := range records {
+					funding += r.Value
+					// If we've already seen this transaction for some reason, just return
+					if r.Txid == hex.EncodeToString(cb.Txid) {
 						return
 					}
-					l.db.Sales().Put(orderId, *contract, pb.OrderState_FUNDED, false)
-					l.adjustInventory(contract)
+				}
+				orderId, err := calcOrderId(contract.BuyerOrder)
+				if err != nil {
+					return
+				}
+				if !funded {
+					requestedAmount := int64(contract.VendorOrderConfirmation.RequestedAmount)
+					if funding >= requestedAmount {
+						l.db.Sales().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+						l.adjustInventory(contract)
 
-					n := notifications.Serialize(
-						notifications.OrderNotification{
-							contract.VendorListings[0].Item.Title,
-							contract.BuyerOrder.BuyerID.Guid,
-							contract.BuyerOrder.BuyerID.BlockchainID,
-							contract.VendorListings[0].Item.Images[0].Hash,
-							int(contract.BuyerOrder.Timestamp.Seconds),
+						n := notifications.Serialize(
+							notifications.OrderNotification{
+								contract.VendorListings[0].Item.Title,
+								contract.BuyerOrder.BuyerID.Guid,
+								contract.BuyerOrder.BuyerID.BlockchainID,
+								contract.VendorListings[0].Item.Images[0].Hash,
+								int(contract.BuyerOrder.Timestamp.Seconds),
 						})
 
-					l.broadcast <- n
+						l.broadcast <- n
+					}
 				}
+				record := spvwallet.TransactionRecord{
+					Txid: hex.EncodeToString(cb.Txid),
+					Index: output.Index,
+					Value: output.Value,
+				}
+				l.db.Purchases().UpdateFunding(orderId, funded, record)
 			}
 		} else {
 			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
-			contract, state, _, _, err := l.db.Purchases().GetByPaymentAddress(addrs[0])
-			if err == nil && int(state) < 2 {
-				requestedAmount := contract.BuyerOrder.Payment.Amount
-				if uint64(output.Value) >= requestedAmount {
-					orderId, err := calcOrderId(contract.BuyerOrder)
-					if err != nil {
+			contract, _, funded, records, err := l.db.Purchases().GetByPaymentAddress(addrs[0])
+			if err == nil {
+				funding := output.Value
+				for _, r := range records {
+					funding += r.Value
+					// If we've already seen this transaction for some reason, just return
+					if r.Txid == hex.EncodeToString(cb.Txid) {
 						return
 					}
-					l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
 				}
+				orderId, err := calcOrderId(contract.BuyerOrder)
+				if err != nil {
+					return
+				}
+				if !funded {
+					requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
+					if funding >= requestedAmount {
+						funded = true
+						l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
+					}
+				}
+				record := spvwallet.TransactionRecord{
+					Txid: hex.EncodeToString(cb.Txid),
+					Index: output.Index,
+					Value: output.Value,
+				}
+				l.db.Purchases().UpdateFunding(orderId, funded, record)
 			}
 		}
 	}

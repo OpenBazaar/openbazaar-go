@@ -9,7 +9,6 @@ import (
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	btci "github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type Datastore interface {
@@ -127,7 +126,7 @@ type TxStore struct {
 
 	chainState     ChainState
 
-	listeners      []func(btci.TransactionCallback)
+	listeners      []func(TransactionCallback)
 }
 
 type Utxo struct { // cash money.
@@ -150,7 +149,7 @@ type Stxo struct {
 	SpendTxid   chainhash.Hash // the tx that consumed it
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey, listeners []func(btci.TransactionCallback)) *TxStore {
+func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey, listeners []func(TransactionCallback)) *TxStore {
 	txs := new(TxStore)
 	txs.Param = p
 	txs.db = db

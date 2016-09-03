@@ -9,7 +9,6 @@ import (
 	b39 "github.com/tyler-smith/go-bip39"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
-	btci "github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type SPVWallet struct {
@@ -38,7 +37,7 @@ type SPVWallet struct {
 	blockchain        *Blockchain
 	state             *TxStore
 
-	listeners          []func(btci.TransactionCallback)
+	listeners          []func(TransactionCallback)
 }
 
 var log = logging.MustGetLogger("bitcoin")
@@ -194,6 +193,53 @@ func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 // API
 //
 
+// A TransactionCallback which is sent from the wallet implementation to the transaction
+// listener. It contains enough data to tell which part of the transaction affects our
+// wallet and which addresses coins were sent to and from.
+
+type FeeLevel int
+
+const (
+	PRIOIRTY FeeLevel = 0
+	NORMAL   = 1
+	ECONOMIC = 2
+)
+
+type KeyPurpose int
+
+const (
+	EXTERNAL KeyPurpose = 0
+	INTERNAL = 1
+)
+
+type TransactionCallback struct {
+	Txid    []byte
+	Outputs []TransactionOutput
+	Inputs  []TransactionInput
+}
+
+type TransactionOutput struct {
+	ScriptPubKey []byte
+	Value        int64
+	Index        uint32
+	IsOurs       bool
+}
+
+type TransactionInput struct {
+	OutpointHash       []byte
+	OutpointIndex      uint32
+	LinkedScriptPubKey []byte
+	Value              int64
+	IsOurs             bool
+}
+
+// A transaction suitable for saving in the database
+type TransactionRecord struct {
+	Txid  string
+	Index uint32
+	Value int64
+}
+
 func (w *SPVWallet) CurrencyCode() string {
 	return "btc"
 }
@@ -235,7 +281,7 @@ func (w *SPVWallet) Params() *chaincfg.Params {
 	return w.params
 }
 
-func (w *SPVWallet) AddTransactionListener(callback func(btci.TransactionCallback)) {
+func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
 	w.listeners = append(w.listeners, callback)
 }
 

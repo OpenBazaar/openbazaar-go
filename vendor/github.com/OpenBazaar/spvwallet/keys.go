@@ -5,13 +5,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 )
 
-type KeyPurpose int
-
-const (
-	EXTERNAL = 0
-	INTERNAL = 1
-)
-
 const LOOKAHEADWINDOW = 100
 
 type KeyPath struct {

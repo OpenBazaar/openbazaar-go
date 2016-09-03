@@ -8,7 +8,6 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	btci "github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 
@@ -125,9 +124,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	ts.addrMutex.Unlock()
 	cachedSha := tx.TxHash()
 	// iterate through all outputs of this tx, see if we gain
-	cb := btci.TransactionCallback{Txid: cachedSha.CloneBytes()}
+	cb := TransactionCallback{Txid: cachedSha.CloneBytes()}
 	for i, txout := range tx.TxOut {
-		out := btci.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: int32(i)}
+		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
 			if bytes.Equal(txout.PkScript, script) { // new utxo found
 				ts.db.Keys().MarkKeyAsUsed(txout.PkScript)
@@ -185,7 +184,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				if u.Freeze {
 					ours = false
 				}
-				in := btci.TransactionInput{OutpointHash: u.Op.Hash.CloneBytes(), OutpointIndex: u.Op.Index, LinkedScriptPubKey: u.ScriptPubkey, Value: u.Value, IsOurs: ours}
+				in := TransactionInput{OutpointHash: u.Op.Hash.CloneBytes(), OutpointIndex: u.Op.Index, LinkedScriptPubKey: u.ScriptPubkey, Value: u.Value, IsOurs: ours}
 				cb.Inputs = append(cb.Inputs, in)
 				break
 			}

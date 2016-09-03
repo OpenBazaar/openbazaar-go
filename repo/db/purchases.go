@@ -7,8 +7,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"encoding/json"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 type PurchasesDB struct {
@@ -19,6 +19,14 @@ type PurchasesDB struct {
 func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	// Read in the current transactions if they exist
+	stmt, err := p.db.Prepare("select funded, transactions from purchases where orderID=?")
+	var serializedTransactions []byte
+	var fundedInt int
+	stmt.QueryRow(orderID).Scan(&fundedInt, &serializedTransactions)
+	stmt.Close()
+
 	readInt := 0
 	if read {
 		readInt = 1
@@ -35,7 +43,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress, paymentAddr) values(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err = tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -67,6 +75,8 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		shippingName,
 		shippingAddress,
 		paymentAddr,
+		fundedInt,
+		serializedTransactions,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -86,7 +96,7 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record bitcoin.TransactionRecord) error {
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -101,11 +111,11 @@ func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record bitcoin.
 	if err != nil {
 		return err
 	}
-	transactions := []*bitcoin.TransactionRecord{}
+	transactions := []*spvwallet.TransactionRecord{}
 	json.Unmarshal(serializedTransactions, &transactions)
 	transactions = append(transactions, &record)
 	serializedTransactions, err = json.Marshal(transactions)
-	_, err = p.db.Exec("upate purchases set funded=? transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
+	_, err = p.db.Exec("upate purchases set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
 	if err != nil {
 		return err
 	}
@@ -142,7 +152,7 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*bitcoin.TransactionRecord, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
@@ -164,7 +174,7 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	if fundedInt == 1 {
 		funded = true
 	}
-	var records []*bitcoin.TransactionRecord
+	var records []*spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }

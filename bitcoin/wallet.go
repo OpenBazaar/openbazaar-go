@@ -41,36 +41,5 @@ type BitcoinWallet interface {
 	Params() *chaincfg.Params
 
 	// Add a callback for incoming transactions
-	AddTransactionListener(func(TransactionCallback))
-}
-
-// A TransactionCallback which is sent from the wallet implementation to the transaction
-// listener. It contains enough data to tell which part of the transaction affects our
-// wallet and which addresses coins were sent to and from.
-type TransactionCallback struct {
-	Txid    []byte
-	Outputs []TransactionOutput
-	Inputs  []TransactionInput
-}
-
-type TransactionOutput struct {
-	ScriptPubKey []byte
-	Value        int64
-	Index        int32
-	IsOurs       bool
-}
-
-type TransactionInput struct {
-	OutpointHash       []byte
-	OutpointIndex      int32
-	LinkedScriptPubKey []byte
-	Value              int32
-	IsOurs             bool
-}
-
-// A transaction suitable for saving in the database
-type TransactionRecord struct {
-	Txid []byte
-	Index int32
-	Value int64
+	AddTransactionListener(func(spvwallet.TransactionCallback))
 }

@@ -2,7 +2,9 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
@@ -17,6 +19,14 @@ type SalesDB struct {
 func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	// Read in the current transactions if they exist
+	stmt, err := s.db.Prepare("select funded, transactions from sales where orderID=?")
+	var serializedTransactions []byte
+	var fundedInt int
+	stmt.QueryRow(orderID).Scan(&fundedInt, &serializedTransactions)
+	stmt.Close()
+
 	readInt := 0
 	if read {
 		readInt = 1
@@ -33,7 +43,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into sales(orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr) values(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err = tx.Prepare("insert or replace into sales(orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -66,6 +76,8 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		shippingName,
 		shippingAddress,
 		address,
+		fundedInt,
+		serializedTransactions,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -79,6 +91,32 @@ func (s *SalesDB) MarkAsRead(orderID string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	_, err := s.db.Exec("update sales set read=? where orderID=?", 1, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SalesDB) UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	fundedInt := 0
+	if funded {
+		fundedInt = 1
+	}
+	stmt, err := s.db.Prepare("select transactions from sales where orderID=?")
+	defer stmt.Close()
+	var serializedTransactions []byte
+	err = stmt.QueryRow(orderId).Scan(&serializedTransactions)
+	if err != nil {
+		return err
+	}
+	transactions := []*spvwallet.TransactionRecord{}
+	json.Unmarshal(serializedTransactions, &transactions)
+	transactions = append(transactions, &record)
+	serializedTransactions, err = json.Marshal(transactions)
+	_, err = s.db.Exec("upate sales set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
 	if err != nil {
 		return err
 	}
@@ -115,21 +153,29 @@ func (s *SalesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, error) {
+func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	stmt, err := s.db.Prepare("select contract, state from sales where paymentAddr=?")
+	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where paymentAddr=?")
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
-	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt)
+	var fundedInt int
+	var serializedTransactions []byte
+	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
-		return nil, pb.OrderState(0), err
+		return nil, pb.OrderState(0), false, nil, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), err
+		return nil, pb.OrderState(0), false, nil, err
 	}
-	return rc, pb.OrderState(stateInt), nil
+	funded := false
+	if fundedInt == 1 {
+		funded = true
+	}
+	var records []*spvwallet.TransactionRecord
+	json.Unmarshal(serializedTransactions, records)
+	return rc, pb.OrderState(stateInt), funded, records, nil
 }

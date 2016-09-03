@@ -276,14 +276,6 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (
 	return authoredTx.Tx, nil
 }
 
-type FeeLevel int
-
-const (
-	PRIOIRTY = 0
-	NORMAL   = 1
-	ECONOMIC = 2
-)
-
 type feeCache struct {
 	fees        *Fees
 	lastUpdated time.Time

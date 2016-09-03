@@ -24,6 +24,7 @@ type SQLiteDatastore struct {
 	stxos           spvwallet.Stxos
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
+	watchedScripts  spvwallet.WatchedScripts
 	settings        repo.Settings
 	inventory       repo.Inventory
 	purchases       repo.Purchases
@@ -107,6 +108,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		watchedScripts: &WatchedScriptsDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -172,6 +177,10 @@ func (d *SQLiteDatastore) Purchases() repo.Purchases {
 
 func (d *SQLiteDatastore) Sales() repo.Sales {
 	return d.sales
+}
+
+func (d *SQLiteDatastore) WatchedScripts() spvwallet.WatchedScripts {
+	return d.watchedScripts
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
