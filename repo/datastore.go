@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	btc "github.com/btcsuite/btcutil"
@@ -131,7 +132,7 @@ type Purchases interface {
 	Delete(orderID string) error
 
 	// Return a purchase given the payment address
-	GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, error)
+	GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*bitcoin.TransactionRecord, error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)

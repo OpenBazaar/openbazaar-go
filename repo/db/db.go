@@ -230,8 +230,9 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table txns (txid text primary key not null, tx blob);
 	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
-	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text);
-	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text);
+	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
+	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
+	create table if not exists watchedScripts (scriptPubKey text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

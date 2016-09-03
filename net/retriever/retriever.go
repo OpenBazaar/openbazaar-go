@@ -117,6 +117,9 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		if err != nil {
 			return
 		}
+		// TODO: remove peer ID from the envelope and add the public key
+		// we can then generate the peer ID from the public key and verify the signature
+		// at the same time.
 		id, err := peer.IDB58Decode(env.PeerID)
 		if err != nil {
 			return

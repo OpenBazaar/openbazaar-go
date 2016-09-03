@@ -7,6 +7,8 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"encoding/json"
 )
 
 type PurchasesDB struct {
@@ -84,6 +86,32 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record bitcoin.TransactionRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	fundedInt := 0
+	if funded {
+		fundedInt = 1
+	}
+	stmt, err := p.db.Prepare("select transactions from purchases where orderID=?")
+	defer stmt.Close()
+	var serializedTransactions []byte
+	err = stmt.QueryRow(orderId).Scan(&serializedTransactions)
+	if err != nil {
+		return err
+	}
+	transactions := []*bitcoin.TransactionRecord{}
+	json.Unmarshal(serializedTransactions, &transactions)
+	transactions = append(transactions, &record)
+	serializedTransactions, err = json.Marshal(transactions)
+	_, err = p.db.Exec("upate purchases set funded=? transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *PurchasesDB) Delete(orderID string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -114,21 +142,29 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*bitcoin.TransactionRecord, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	stmt, err := p.db.Prepare("select contract, state from purchases where paymentAddr=?")
+	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
-	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt)
+	var fundedInt int
+	var serializedTransactions []byte
+	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
-		return nil, pb.OrderState(0), err
+		return nil, pb.OrderState(0), false, nil, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), err
+		return nil, pb.OrderState(0), false, nil, err
 	}
-	return rc, pb.OrderState(stateInt), nil
+	funded := false
+	if fundedInt == 1 {
+		funded = true
+	}
+	var records []*bitcoin.TransactionRecord
+	json.Unmarshal(serializedTransactions, records)
+	return rc, pb.OrderState(stateInt), funded, records, nil
 }
