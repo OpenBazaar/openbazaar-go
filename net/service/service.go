@@ -10,10 +10,10 @@ import (
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
 )
@@ -30,21 +30,23 @@ type OpenBazaarService struct {
 	ctx       context.Context
 	broadcast chan []byte
 	datastore repo.Datastore
+	node      *core.OpenBazaarNode
 }
 
 var OBService *OpenBazaarService
 
-func SetupOpenBazaarService(node *core.IpfsNode, broadcast chan []byte, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
+func SetupOpenBazaarService(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
 	OBService = &OpenBazaarService{
-		host:      node.PeerHost.(host.Host),
-		self:      node.Identity,
-		peerstore: node.PeerHost.Peerstore(),
+		host:      node.IpfsNode.PeerHost.(host.Host),
+		self:      node.IpfsNode.Identity,
+		peerstore: node.IpfsNode.PeerHost.Peerstore(),
 		cmdCtx:    ctx,
-		ctx:       node.Context(),
-		broadcast: broadcast,
+		ctx:       node.IpfsNode.Context(),
+		broadcast: node.Broadcast,
 		datastore: datastore,
+		node:      node,
 	}
-	node.PeerHost.SetStreamHandler(ProtocolOpenBazaar, OBService.HandleNewStream)
+	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, OBService.HandleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
 	return OBService
 }

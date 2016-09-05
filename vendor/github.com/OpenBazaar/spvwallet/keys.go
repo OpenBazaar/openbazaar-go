@@ -5,13 +5,6 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
-type KeyPurpose int
-
-const (
-	EXTERNAL = 0
-	INTERNAL = 1
-)
-
 const LOOKAHEADWINDOW = 100
 
 type KeyPath struct {
@@ -28,13 +21,14 @@ func (t *TxStore) GetFreshKey(purpose KeyPurpose) *hd.ExtendedKey {
 	index, _, err := t.db.Keys().GetLastKeyIndex(purpose)
 	var childKey *hd.ExtendedKey
 	if err != nil {
-		childKey = t.generateChildKey(purpose, 0)
+		index = 0
 	} else {
-		childKey = t.generateChildKey(purpose, uint32(index+1))
+		index += 1
 	}
+	childKey = t.generateChildKey(purpose, uint32(index))
 	addr, _ := childKey.Address(t.Param)
 	script, _ := txscript.PayToAddrScript(addr)
-	p := KeyPath{KeyPurpose(purpose), index + 1}
+	p := KeyPath{KeyPurpose(purpose), index}
 	t.db.Keys().Put(script, p)
 	return childKey
 }

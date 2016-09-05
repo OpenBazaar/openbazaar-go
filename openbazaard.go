@@ -20,9 +20,12 @@ import (
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
+	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
+	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
@@ -413,14 +416,18 @@ func (x *Start) Execute(args []string) error {
 	// FIXME: There has to be a better way
 	for b := range cb {
 		if b == true {
-			OBService := service.SetupOpenBazaarService(nd, core.Node.Broadcast, ctx, sqliteDB)
+			OBService := service.SetupOpenBazaarService(core.Node, ctx, sqliteDB)
 			core.Node.Service = OBService
-			MR := net.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16, core.Node.SendOfflineAck)
+			MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16, core.Node.SendOfflineAck)
 			go MR.Run()
 			core.Node.MessageRetriever = MR
-			PR := net.NewPointerRepublisher(nd, sqliteDB)
+			PR := rep.NewPointerRepublisher(nd, sqliteDB)
 			go PR.Run()
 			core.Node.PointerRepublisher = PR
+			if !x.DisableWallet {
+				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
+				core.Node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+			}
 			core.Node.SeedNode()
 		}
 		break

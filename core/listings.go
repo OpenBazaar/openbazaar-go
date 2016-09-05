@@ -1,14 +1,17 @@
 package core
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io"
 	"io/ioutil"
@@ -32,7 +35,7 @@ const (
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	c := new(pb.RicardianContract)
 	// Check the listing data is correct for continuing
-	if err := validate(listing); err != nil {
+	if err := validateListing(listing); err != nil {
 		return c, err
 	}
 
@@ -278,6 +281,66 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
+// Check to see we are selling the given listing. Used when validating an order.
+// FIXME: this wont scale well. We will need a better way.
+func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
+	serializedListing, err := proto.Marshal(listing)
+	if err != nil {
+		return false
+	}
+	type price struct {
+		CurrencyCode string
+		Amount       uint64
+	}
+	type listingData struct {
+		Hash      string
+		Slug      string
+		Title     string
+		Category  []string
+		ItemType  string
+		Desc      string
+		Thumbnail string
+		Price     price
+	}
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	// read existing file
+	file, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+
+	var index []listingData
+	err = json.Unmarshal(file, &index)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	for _, l := range index {
+		b, err := ipfs.Cat(n.Context, l.Hash)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		c := new(pb.RicardianContract)
+		err = jsonpb.UnmarshalString(string(b), c)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		ser, err := proto.Marshal(c.VendorListings[0])
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		if bytes.Equal(ser, serializedListing) {
+			return true
+		}
+	}
+	return false
+}
+
 // Moves images from one directory to another.
 // This is used when a user changes a slug and we need to copy images into
 // the new listing directory.
@@ -466,7 +529,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 // Performs a ton of checks to make sure the listing is formatted correct. We shouldn't allow
 // listings to be saved or purchased if they aren't formatted correctly as it can lead to
 // ambiguity when moderating a dispute.
-func validate(listing *pb.Listing) (err error) {
+func validateListing(listing *pb.Listing) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -701,6 +764,61 @@ func validate(listing *pb.Listing) (err error) {
 		_, err := mh.FromB58String(moderator)
 		if err != nil {
 			return errors.New("Moderator IDs must be a multihash")
+		}
+	}
+	return nil
+}
+
+func verifySignaturesOnListing(contract *pb.RicardianContract) error {
+	for n, listing := range contract.VendorListings {
+		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
+		bitcoinPubkeyBytes := listing.VendorID.Pubkeys.Bitcoin
+		guid := listing.VendorID.Guid
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			return err
+		}
+		hash := sha256.Sum256(ser)
+		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
+		if err != nil {
+			return err
+		}
+		bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+		if err != nil {
+			return err
+		}
+		var guidSig []byte
+		var bitcoinSig *btcec.Signature
+		sig := contract.Signatures[n]
+		if sig.Section != pb.Signatures_LISTING {
+			return errors.New("Contract does not contain listing signature")
+		}
+		guidSig = sig.Guid
+		bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
+		if err != nil {
+			return err
+		}
+		valid, err := guidPubkey.Verify(ser, guidSig)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return errors.New("Vendor's guid signature on contact failed to verify")
+		}
+		checkKeyHash, err := guidPubkey.Hash()
+		if err != nil {
+			return err
+		}
+		guidMH, err := mh.FromB58String(guid)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(guidMH, checkKeyHash) {
+			return errors.New("Public key in listing does not match reported vendor ID")
+		}
+		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
+		if !valid {
+			return errors.New("Vendor's bitcoin signature on contact failed to verify")
 		}
 	}
 	return nil

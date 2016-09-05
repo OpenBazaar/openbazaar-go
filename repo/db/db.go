@@ -24,6 +24,7 @@ type SQLiteDatastore struct {
 	stxos           spvwallet.Stxos
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
+	watchedScripts  spvwallet.WatchedScripts
 	settings        repo.Settings
 	inventory       repo.Inventory
 	purchases       repo.Purchases
@@ -107,6 +108,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		watchedScripts: &WatchedScriptsDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -174,6 +179,10 @@ func (d *SQLiteDatastore) Sales() repo.Sales {
 	return d.sales
 }
 
+func (d *SQLiteDatastore) WatchedScripts() spvwallet.WatchedScripts {
+	return d.watchedScripts
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -225,13 +234,14 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer);
-	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text);
+	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);
 	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
-	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text);
-	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text);
+	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
+	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
+	create table if not exists watchedScripts (scriptPubKey text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

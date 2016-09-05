@@ -17,6 +17,7 @@ type Datastore interface {
 	Txns() Txns
 	Keys() Keys
 	State() State
+	WatchedScripts() WatchedScripts
 }
 
 type Utxos interface {
@@ -25,6 +26,9 @@ type Utxos interface {
 
 	// Fetch all utxos from the db
 	GetAll() ([]Utxo, error)
+
+	// Make a utxo unspendable
+	Freeze(utxo Utxo) error
 
 	// Delete a utxo from the db
 	Delete(utxo Utxo) error
@@ -91,6 +95,17 @@ type State interface {
 	Get(key string) (string, error)
 }
 
+type WatchedScripts interface {
+	// Add a script to watch
+	Put(scriptPubKey []byte) error
+
+	// Return all watched scripts
+	GetAll() ([][]byte, error)
+
+	// Delete a watched script
+	Delete(scriptPubKey []byte) error
+}
+
 type ChainState int
 
 const (
@@ -100,15 +115,18 @@ const (
 )
 
 type TxStore struct {
-	Adrs      []btcutil.Address
-	addrMutex *sync.Mutex
-	db        Datastore
+	Adrs           []btcutil.Address
+	WatchedScripts [][]byte
+	addrMutex      *sync.Mutex
+	db             Datastore
 
 	Param *chaincfg.Params
 
 	masterPrivKey *hd.ExtendedKey
 
 	chainState ChainState
+
+	listeners []func(TransactionCallback)
 }
 
 type Utxo struct { // cash money.
@@ -119,6 +137,9 @@ type Utxo struct { // cash money.
 	Value    int64 // higher is better
 
 	ScriptPubkey []byte
+
+	// If true this utxo will not be selected for spending
+	Freeze bool
 }
 
 // Stxo is a utxo that has moved on.
@@ -128,13 +149,14 @@ type Stxo struct {
 	SpendTxid   chainhash.Hash // the tx that consumed it
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) *TxStore {
+func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey, listeners []func(TransactionCallback)) *TxStore {
 	txs := new(TxStore)
 	txs.Param = p
 	txs.db = db
 	txs.masterPrivKey = masterPrivKey
 	txs.addrMutex = new(sync.Mutex)
 	txs.PopulateAdrs()
+	txs.listeners = listeners
 	return txs
 }
 
@@ -169,7 +191,9 @@ func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
 	for _, s := range allStxos {
 		f.AddOutPoint(&s.Utxo.Op)
 	}
-
+	for _, w := range t.WatchedScripts {
+		f.Add(w)
+	}
 	return f, nil
 }
 

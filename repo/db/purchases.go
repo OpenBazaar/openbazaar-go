@@ -2,7 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
+	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
@@ -16,6 +19,14 @@ type PurchasesDB struct {
 func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	// Read in the current transactions if they exist
+	stmt, err := p.db.Prepare("select funded, transactions from purchases where orderID=?")
+	var serializedTransactions []byte
+	var fundedInt int
+	stmt.QueryRow(orderID).Scan(&fundedInt, &serializedTransactions)
+	stmt.Close()
+
 	readInt := 0
 	if read {
 		readInt = 1
@@ -32,7 +43,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress) values(?,?,?,?,?,?,?,?,?,?,?,?)")
+	stmt, err = tx.Prepare("insert or replace into purchases(orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
@@ -42,6 +53,12 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if contract.BuyerOrder.Shipping != nil {
 		shippingName = contract.BuyerOrder.Shipping.ShipTo
 		shippingAddress = contract.BuyerOrder.Shipping.Address
+	}
+	var paymentAddr string
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		paymentAddr = contract.BuyerOrder.Payment.Address
+	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		paymentAddr = contract.VendorOrderConfirmation.PaymentAddress
 	}
 	defer stmt.Close()
 	_, err = stmt.Exec(
@@ -57,6 +74,9 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		strings.ToLower(contract.VendorListings[0].Item.Title),
 		shippingName,
 		shippingAddress,
+		paymentAddr,
+		fundedInt,
+		serializedTransactions,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -70,6 +90,25 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	_, err := p.db.Exec("update purchases set read=? where orderID=?", 1, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	fundedInt := 0
+	if funded {
+		fundedInt = 1
+	}
+	serializedTransactions, err := json.Marshal(records)
+	if err != nil {
+		return err
+	}
+	_, err = p.db.Exec("update purchases set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
 	if err != nil {
 		return err
 	}
@@ -104,4 +143,31 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 		ret = append(ret, orderID)
 	}
 	return ret, nil
+}
+
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
+	defer stmt.Close()
+	var contract []byte
+	var stateInt int
+	var fundedInt int
+	var serializedTransactions []byte
+	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, err
+	}
+	rc := new(pb.RicardianContract)
+	err = jsonpb.UnmarshalString(string(contract), rc)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, err
+	}
+	funded := false
+	if fundedInt == 1 {
+		funded = true
+	}
+	var records []spvwallet.TransactionRecord
+	json.Unmarshal(serializedTransactions, records)
+	return rc, pb.OrderState(stateInt), funded, records, nil
 }

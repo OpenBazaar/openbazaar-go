@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"strings"
 	"sync"
@@ -46,6 +48,8 @@ func init() {
 	order.Timestamp = ts
 	payment := new(pb.Order_Payment)
 	payment.Amount = 10
+	payment.Method = pb.Order_Payment_DIRECT
+	payment.Address = "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms"
 	order.Payment = payment
 	contract.BuyerOrder = order
 }
@@ -145,4 +149,25 @@ func TestMarkSaleAsRead(t *testing.T) {
 	if read != 1 {
 		t.Error("Failed to mark sale as read")
 	}
+}
+
+func TestSalesGetByPaymentAddress(t *testing.T) {
+	saldb.Put("orderID", *contract, 0, false)
+	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
+	if err != nil {
+		t.Error(err)
+	}
+	_, _, err = saldb.GetByPaymentAddress(addr)
+	if err != nil {
+		t.Error(err)
+	}
+	addr, err = btcutil.DecodeAddress("19bsDJeYjH6JX1pvsCcA8Qt5LQmPYt7Mry", &chaincfg.MainNetParams)
+	if err != nil {
+		t.Error(err)
+	}
+	_, _, err = saldb.GetByPaymentAddress(addr)
+	if err == nil {
+		t.Error("Get by unknown address failed to return error")
+	}
+
 }

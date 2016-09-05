@@ -5,6 +5,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
+	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
+	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
@@ -53,10 +55,10 @@ type OpenBazaarNode struct {
 	MessageStorage sto.OfflineMessagingStorage
 
 	// A service that periodically checks the dht for outstanding messages
-	MessageRetriever *net.MessageRetriever
+	MessageRetriever *ret.MessageRetriever
 
 	// A service that periodically republishes active pointers
-	PointerRepublisher *net.PointerRepublisher
+	PointerRepublisher *rep.PointerRepublisher
 
 	// Used to resolve blockchainIDs to OpenBazaar IDs
 	Resolver *bstk.BlockstackClient

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
@@ -97,7 +98,7 @@ func TestStxoGetAll(t *testing.T) {
 	if stxos[0].Utxo.AtHeight != stxo.Utxo.AtHeight {
 		t.Error("Stxo db returned wrong height")
 	}
-	if hex.EncodeToString(stxos[0].Utxo.ScriptPubkey) != hex.EncodeToString(stxo.Utxo.ScriptPubkey) {
+	if bytes.Equal(stxos[0].Utxo.ScriptPubkey, stxo.Utxo.ScriptPubkey) {
 		t.Error("Stxo db returned wrong scriptPubKey")
 	}
 	if stxos[0].SpendHeight != stxo.SpendHeight {

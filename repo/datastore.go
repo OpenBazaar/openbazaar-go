@@ -3,6 +3,8 @@ package repo
 import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
+	btc "github.com/btcsuite/btcutil"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 )
 
@@ -126,8 +128,14 @@ type Purchases interface {
 	// Mark an order as read in the database
 	MarkAsRead(orderID string) error
 
+	// Update the funding level for the contract
+	UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error
+
 	// Delete an order
 	Delete(orderID string) error
+
+	// Return a purchase given the payment address
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)
@@ -137,12 +145,15 @@ type Sales interface {
 	// Save or update a sale
 	Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error
 
-	// Mark an order as read in the database
-	MarkAsRead(orderID string) error
+	// Update the funding level for the contract
+	UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error
 
-	// Delete a sale
+	// Delete an order
 	Delete(orderID string) error
 
-	// Return the Ids for all sales
+	// Return a sale given the payment address
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
+
+	// Return the Ids for all orders
 	GetAll() ([]string, error)
 }

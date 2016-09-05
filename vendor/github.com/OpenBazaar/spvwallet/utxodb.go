@@ -87,6 +87,7 @@ func (ts *TxStore) PopulateAdrs() error {
 		}
 		ts.Adrs = append(ts.Adrs, addr)
 	}
+	ts.WatchedScripts, _ = ts.db.WatchedScripts().GetAll()
 	ts.addrMutex.Unlock()
 	return nil
 }
@@ -121,31 +122,51 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	ts.addrMutex.Unlock()
 	cachedSha := tx.TxHash()
 	// iterate through all outputs of this tx, see if we gain
-	for i, out := range tx.TxOut {
+	cb := TransactionCallback{Txid: cachedSha.CloneBytes()}
+	for i, txout := range tx.TxOut {
+		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
-			if bytes.Equal(out.PkScript, script) { // new utxo found
-				ts.db.Keys().MarkKeyAsUsed(out.PkScript)
+			if bytes.Equal(txout.PkScript, script) { // new utxo found
+				ts.db.Keys().MarkKeyAsUsed(txout.PkScript)
 				var newu Utxo // create new utxo
 				newu.AtHeight = height
-				newu.Value = out.Value
-				newu.ScriptPubkey = out.PkScript
+				newu.Value = txout.Value
+				newu.ScriptPubkey = txout.PkScript
 				var newop wire.OutPoint
 				newop.Hash = cachedSha
 				newop.Index = uint32(i)
 				newu.Op = newop
+				newu.Freeze = false
 				ts.db.Utxos().Put(newu)
 				hits++
+				// For listener
+				out.IsOurs = true
 				break // txos can match only 1 script
 			}
 		}
-	}
-
-	for _, txin := range tx.TxIn {
-		utxos, err := ts.db.Utxos().GetAll()
-		if err != nil {
-			return 0, err
+		// Now check watched scripts
+		for _, script := range ts.WatchedScripts {
+			if bytes.Equal(txout.PkScript, script) {
+				var newu Utxo // create new utxo
+				newu.AtHeight = height
+				newu.Value = txout.Value
+				newu.ScriptPubkey = txout.PkScript
+				var newop wire.OutPoint
+				newop.Hash = cachedSha
+				newop.Index = uint32(i)
+				newu.Op = newop
+				newu.Freeze = true
+				ts.db.Utxos().Put(newu)
+			}
 		}
-		for _, u := range utxos {
+		cb.Outputs = append(cb.Outputs, out)
+	}
+	utxos, err := ts.db.Utxos().GetAll()
+	if err != nil {
+		return 0, err
+	}
+	for _, txin := range tx.TxIn {
+		for i, u := range utxos {
 			if OutPointsEqual(txin.PreviousOutPoint, u.Op) {
 				hits++
 				var st Stxo              // generate spent txo
@@ -154,14 +175,31 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				st.SpendTxid = cachedSha // spent by txid
 				ts.db.Stxos().Put(st)
 				ts.db.Utxos().Delete(u)
+				utxos = append(utxos[:i], utxos[i+1:]...)
+
+				// For listener
+				ours := true
+				if u.Freeze {
+					ours = false
+				}
+				in := TransactionInput{OutpointHash: u.Op.Hash.CloneBytes(), OutpointIndex: u.Op.Index, LinkedScriptPubKey: u.ScriptPubkey, Value: u.Value, IsOurs: ours}
+				cb.Inputs = append(cb.Inputs, in)
+				break
 			}
 		}
 	}
 
 	// if hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 {
-		ts.PopulateAdrs()
-		ts.db.Txns().Put(tx)
+		_, err := ts.db.Txns().Get(tx.TxHash())
+		if err != nil {
+			// Callback on listeners
+			for _, listener := range ts.listeners {
+				listener(cb)
+			}
+			ts.PopulateAdrs()
+			ts.db.Txns().Put(tx)
+		}
 	}
 	return hits, err
 }

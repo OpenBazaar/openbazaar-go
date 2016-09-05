@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
@@ -28,6 +29,7 @@ func init() {
 		AtHeight:     300000,
 		Value:        100000000,
 		ScriptPubkey: []byte("scriptpubkey"),
+		Freeze:       false,
 	}
 }
 
@@ -83,9 +85,33 @@ func TestUtxoGetAll(t *testing.T) {
 	if utxos[0].AtHeight != utxo.AtHeight {
 		t.Error("Utxo db returned wrong height")
 	}
-	if hex.EncodeToString(utxos[0].ScriptPubkey) != hex.EncodeToString(utxo.ScriptPubkey) {
+	if bytes.Equal(utxos[0].ScriptPubkey, utxo.ScriptPubkey) {
 		t.Error("Utxo db returned wrong scriptPubKey")
 	}
+}
+
+func TestFreezeUtxo(t *testing.T) {
+	err := uxdb.Put(utxo)
+	if err != nil {
+		t.Error(err)
+	}
+	err = uxdb.Freeze(utxo)
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := uxdb.db.Prepare("select freeze from utxos where outpoint=?")
+	defer stmt.Close()
+
+	var freeze int
+	o := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
+	err = stmt.QueryRow(o).Scan(&freeze)
+	if err != nil {
+		t.Error(err)
+	}
+	if freeze != 1 {
+		t.Error("Utxo freeze failed")
+	}
+
 }
 
 func TestDeleteUtxo(t *testing.T) {

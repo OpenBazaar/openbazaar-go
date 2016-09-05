@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"github.com/btcsuite/btcd/btcec"
@@ -15,6 +16,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"net/http"
+	"time"
 )
 
 func (p *Peer) PongBack(nonce uint64) {
@@ -111,6 +113,9 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	utxos, _ := w.db.Utxos().GetAll()
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
 	for _, u := range utxos {
+		if u.Freeze {
+			continue
+		}
 		var confirmations int32
 		if u.AtHeight > 0 {
 			confirmations = height - u.AtHeight
@@ -126,10 +131,63 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 }
 
 func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) error {
+	tx, err := w.buildTx(amount, addr, feeLevel)
+	if err != nil {
+		return err
+	}
+	// broadcast
+	for _, peer := range w.peerGroup {
+		peer.NewOutgoingTx(tx)
+	}
+	log.Infof("Broadcasting tx %s to network", tx.TxHash().String())
+	return nil
+}
+
+func (w *SPVWallet) ExportRawTx(amount int64, addr btc.Address, feeLevel FeeLevel) ([]byte, error) {
+	tx, err := w.buildTx(amount, addr, feeLevel)
+	if err != nil {
+		return nil, err
+	}
+	for _, txin := range tx.TxIn {
+		err := w.state.db.Utxos().Freeze(Utxo{Op: txin.PreviousOutPoint})
+		if err != nil {
+			return nil, err
+		}
+	}
+	output := new(bytes.Buffer)
+	err = tx.Serialize(output)
+	if err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
+}
+
+func (w *SPVWallet) BroadcastRawTx(tx []byte) error {
+	msgtx := wire.NewMsgTx()
+	err := msgtx.Deserialize(bytes.NewReader(tx))
+	if err != nil {
+		return err
+	}
+	// broadcast
+	for _, peer := range w.peerGroup {
+		peer.NewOutgoingTx(msgtx)
+	}
+	log.Infof("Broadcasting tx %s to network", msgtx.TxHash().String())
+	return nil
+}
+
+func (w *SPVWallet) CheckSuffientFunds(amount int64, feeLevel FeeLevel) error {
+	// Dummy address for dust check
+	addr, _ := btc.DecodeAddress("1Np27iik7DNATt3aNAHpzBPnhKHymxaQnM", w.params)
+	_, err := w.buildTx(amount, addr, feeLevel)
+	return err
+}
+
+func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
-		return errors.New("Amount is below dust threshold")
+		return nil, errors.New("Amount is below dust threshold")
 	}
 
 	var additionalPrevScripts map[wire.OutPoint][]byte
@@ -189,7 +247,7 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 
 	authoredTx, err := txauthor.NewUnsignedTransaction([]*wire.TxOut{out}, btc.Amount(feePerKB), inputSource, changeSource)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// BIP 69 sorting
@@ -211,26 +269,25 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 			authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, getKey,
 			getScript, txIn.SignatureScript)
 		if err != nil {
-			return errors.New("Failed to sign transaction")
+			return nil, errors.New("Failed to sign transaction")
 		}
 		txIn.SignatureScript = script
 	}
-
-	// broadcast
-	for _, peer := range w.peerGroup {
-		peer.NewOutgoingTx(authoredTx.Tx)
-	}
-	log.Infof("Broadcasting tx %s to network", authoredTx.Tx.TxHash().String())
-	return nil
+	return authoredTx.Tx, nil
 }
 
-type FeeLevel int
+type feeCache struct {
+	fees        *Fees
+	lastUpdated time.Time
+}
 
-const (
-	PRIOIRTY = 0
-	NORMAL   = 1
-	ECONOMIC = 2
-)
+type Fees struct {
+	FastestFee  uint64
+	HalfHourFee uint64
+	HourFee     uint64
+}
+
+var cache *feeCache = &feeCache{}
 
 func (w *SPVWallet) getFeePerByte(feeLevel FeeLevel) uint64 {
 	defaultFee := func() uint64 {
@@ -248,23 +305,24 @@ func (w *SPVWallet) getFeePerByte(feeLevel FeeLevel) uint64 {
 	if w.feeAPI == "" {
 		return defaultFee()
 	}
-
-	resp, err := http.Get(w.feeAPI)
-	if err != nil {
-		return defaultFee()
-	}
-
-	defer resp.Body.Close()
-
-	type Fees struct {
-		FastestFee  uint64
-		HalfHourFee uint64
-		HourFee     uint64
-	}
 	fees := new(Fees)
-	err = json.NewDecoder(resp.Body).Decode(&fees)
-	if err != nil {
-		return defaultFee()
+	if time.Since(cache.lastUpdated) > time.Minute {
+		resp, err := http.Get(w.feeAPI)
+		if err != nil {
+			return defaultFee()
+		}
+
+		defer resp.Body.Close()
+
+		fees := new(Fees)
+		err = json.NewDecoder(resp.Body).Decode(&fees)
+		if err != nil {
+			return defaultFee()
+		}
+		cache.lastUpdated = time.Now()
+		cache.fees = fees
+	} else {
+		fees = cache.fees
 	}
 	switch feeLevel {
 	case PRIOIRTY:

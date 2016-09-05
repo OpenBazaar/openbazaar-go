@@ -36,6 +36,8 @@ type SPVWallet struct {
 	db         Datastore
 	blockchain *Blockchain
 	state      *TxStore
+
+	listeners []func(TransactionCallback)
 }
 
 var log = logging.MustGetLogger("bitcoin")
@@ -75,7 +77,7 @@ func (w *SPVWallet) Start() {
 	w.queryDNSSeeds()
 
 	// setup TxStore first (before spvcon)
-	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey)
+	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey, w.listeners)
 
 	// shuffle addrs
 	for i := range w.addrs {
@@ -190,6 +192,53 @@ func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 // API
 //
 
+// A TransactionCallback which is sent from the wallet implementation to the transaction
+// listener. It contains enough data to tell which part of the transaction affects our
+// wallet and which addresses coins were sent to and from.
+
+type FeeLevel int
+
+const (
+	PRIOIRTY FeeLevel = 0
+	NORMAL            = 1
+	ECONOMIC          = 2
+)
+
+type KeyPurpose int
+
+const (
+	EXTERNAL KeyPurpose = 0
+	INTERNAL            = 1
+)
+
+type TransactionCallback struct {
+	Txid    []byte
+	Outputs []TransactionOutput
+	Inputs  []TransactionInput
+}
+
+type TransactionOutput struct {
+	ScriptPubKey []byte
+	Value        int64
+	Index        uint32
+	IsOurs       bool
+}
+
+type TransactionInput struct {
+	OutpointHash       []byte
+	OutpointIndex      uint32
+	LinkedScriptPubKey []byte
+	Value              int64
+	IsOurs             bool
+}
+
+// A transaction suitable for saving in the database
+type TransactionRecord struct {
+	Txid  string
+	Index uint32
+	Value int64
+}
+
 func (w *SPVWallet) CurrencyCode() string {
 	return "btc"
 }
@@ -212,13 +261,15 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 	utxos, _ := w.db.Utxos().GetAll()
 	stxos, _ := w.db.Stxos().GetAll()
 	for _, utxo := range utxos {
-		if utxo.AtHeight > 0 {
-			confirmed += utxo.Value
-		} else {
-			if w.checkIfStxoIsConfirmed(utxo, stxos) {
+		if !utxo.Freeze {
+			if utxo.AtHeight > 0 {
 				confirmed += utxo.Value
 			} else {
-				unconfirmed += utxo.Value
+				if w.checkIfStxoIsConfirmed(utxo, stxos) {
+					confirmed += utxo.Value
+				} else {
+					unconfirmed += utxo.Value
+				}
 			}
 		}
 	}
@@ -227,4 +278,17 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 
 func (w *SPVWallet) Params() *chaincfg.Params {
 	return w.params
+}
+
+func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
+	w.listeners = append(w.listeners, callback)
+}
+
+func (w *SPVWallet) AddWatchedScript(script []byte) error {
+	err := w.state.db.WatchedScripts().Put(script)
+	w.state.PopulateAdrs()
+	for _, peer := range w.peerGroup {
+		peer.UpdateFilterAndSend()
+	}
+	return err
 }

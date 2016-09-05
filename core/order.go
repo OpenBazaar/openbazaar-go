@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,6 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
@@ -18,6 +20,7 @@ import (
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"path"
 	"strings"
 	"time"
 )
@@ -52,12 +55,23 @@ type PurchaseData struct {
 	Moderator        string `json:"moderator"`
 	Items            []item `json:"items"`
 	AlternateContact string `json:"alternateContactInfo"`
+	FeeLevel         string `json:"fee"`
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
 	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+	var feeLevel spvwallet.FeeLevel
+	switch strings.ToLower(data.FeeLevel) {
+	case "economic":
+		feeLevel = spvwallet.ECONOMIC
+	case "normal":
+		feeLevel = spvwallet.NORMAL
+	case "priority":
+		feeLevel = spvwallet.PRIOIRTY
+	}
 
 	shipping := new(pb.Order_Shipping)
 	shipping.ShipTo = data.ShipTo
@@ -96,6 +110,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	order.Timestamp = ts
 	order.AlternateContactInfo = data.AlternateContact
 
+	ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
+	if err != nil {
+		return err
+	}
+	ecRatingKey, err := ratingKey.ECPubKey()
+	if err != nil {
+		return err
+	}
+	order.RatingKey = ecRatingKey.SerializeCompressed()
+	refundAddr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+	order.RefundAddress = refundAddr.EncodeAddress()
+
 	var addedListings [][]string
 	for _, item := range data.Items {
 		i := new(pb.Order_Item)
@@ -123,7 +149,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			if err := validate(rc.VendorListings[0]); err != nil {
+			if err := validateListing(rc.VendorListings[0]); err != nil {
 				return fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
 			}
 			if err := verifySignaturesOnListing(rc); err != nil {
@@ -229,6 +255,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		}
 		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
+		contract, err = n.SignOrder(contract)
+		if err != nil {
+			return err
+		}
+		// Let's check that we have sufficient funds before we go messaging the vendor
+		err = n.Wallet.CheckSuffientFunds(int64(total), feeLevel)
+		if err != nil {
+			return err
+		}
 
 		// Send to order vendor and request a payment address
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
@@ -263,6 +298,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 			payment.Address = addr.EncodeAddress()
 			payment.Chaincode = hex.EncodeToString(chaincode)
+			tx, err := n.Wallet.ExportRawTx(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
+			if err != nil {
+				return err
+			}
+			payment.Tx = tx
+			contract, err = n.SignOrder(contract)
+			if err != nil {
+				return err
+			}
 
 			// Send using offline messaging
 			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
@@ -282,13 +326,66 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
+			orderId, err := CalcOrderId(contract.BuyerOrder)
+			if err != nil {
+				return err
+			}
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		} else { // Vendor responded
-			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
+			if resp.MessageType == pb.Message_ERROR {
+				return fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+			}
+			if resp.MessageType != pb.Message_ORDER_CONFIRMATION && resp.MessageType != pb.Message_ERROR {
 				return errors.New("Vendor responded to the order with an incorrect message type")
+			}
+			rc := new(pb.RicardianContract)
+			err := proto.Unmarshal(resp.Payload.Value, rc)
+			if err != nil {
+				return errors.New("Error parsing the vendor's response")
+			}
+			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
+			for _, sig := range rc.Signatures {
+				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+					contract.Signatures = append(contract.Signatures, sig)
+				}
+			}
+			err = n.validateOrderConfirmation(contract)
+			if err != nil {
+				return err
+			}
+			orderId, err := CalcOrderId(contract.BuyerOrder)
+			if err != nil {
+				return err
+			}
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
+			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+			if err != nil {
+				return err
+			}
+			err = n.Wallet.Spend(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
+			if err != nil {
+				return err
 			}
 		}
 	}
 	return nil
+}
+
+func CalcOrderId(order *pb.Order) (string, error) {
+	ser, err := proto.Marshal(order)
+	if err != nil {
+		return "", err
+	}
+	orderBytes := sha256.Sum256(ser)
+	encoded, err := mh.Encode(orderBytes[:], mh.SHA2_256)
+	if err != nil {
+		return "", err
+	}
+	multihash, err := mh.Cast(encoded)
+	if err != nil {
+		return "", err
+	}
+	return multihash.B58String(), nil
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
@@ -567,59 +664,298 @@ func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, err
 	return uint64(satoshis), nil
 }
 
-func verifySignaturesOnListing(contract *pb.RicardianContract) error {
-	for n, listing := range contract.VendorListings {
-		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
-		bitcoinPubkeyBytes := listing.VendorID.Pubkeys.Bitcoin
-		guid := listing.VendorID.Guid
+func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
+	guidPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Guid
+	bitcoinPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin
+	guid := contract.BuyerOrder.BuyerID.Guid
+	ser, err := proto.Marshal(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+	hash := sha256.Sum256(ser)
+	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
+	if err != nil {
+		return err
+	}
+	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+	if err != nil {
+		return err
+	}
+	var guidSig []byte
+	var bitcoinSig *btcec.Signature
+	var sig *pb.Signatures
+	sigExists := false
+	for _, s := range contract.Signatures {
+		if s.Section == pb.Signatures_ORDER {
+			sig = s
+			sigExists = true
+		}
+	}
+	if !sigExists {
+		return errors.New("Contract does not contain a signature for the order")
+	}
+	guidSig = sig.Guid
+	bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
+	if err != nil {
+		return err
+	}
+	valid, err := guidPubkey.Verify(ser, guidSig)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return errors.New("Buyers's guid signature on contact failed to verify")
+	}
+	checkKeyHash, err := guidPubkey.Hash()
+	if err != nil {
+		return err
+	}
+	guidMH, err := mh.FromB58String(guid)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(guidMH, checkKeyHash) {
+		return errors.New("Public key in order does not match reported buyer ID")
+	}
+	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
+	if !valid {
+		return errors.New("Buyer's bitcoin signature on contact failed to verify")
+	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
+	listingMap := make(map[string]*pb.Listing)
+
+	// Check order contains all required fields
+	if contract.BuyerOrder.Payment == nil {
+		return errors.New("Order doesn't contain a payment")
+	}
+	if contract.BuyerOrder.BuyerID == nil {
+		return errors.New("Order doesn't contain a buyer ID")
+	}
+	if len(contract.BuyerOrder.Items) == 0 {
+		return errors.New("Order hasn't selected any items")
+	}
+	if len(contract.BuyerOrder.RatingKey) != 33 {
+		return errors.New("Invalid rating key in order")
+	}
+	if contract.BuyerOrder.Timestamp == nil {
+		return errors.New("Order is missing a timestamp")
+	}
+
+	// Validate that the hash of the items in the contract match claimed hash in the order
+	var itemHashes []string
+collectListings:
+	for _, item := range contract.BuyerOrder.Items {
+		for _, hash := range itemHashes {
+			if hash == item.ListingHash {
+				continue collectListings
+			}
+		}
+		itemHashes = append(itemHashes, item.ListingHash)
+	}
+	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return err
 		}
 		hash := sha256.Sum256(ser)
-		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
+		encoded, err := mh.Encode(hash[:], mh.SHA2_256)
 		if err != nil {
 			return err
 		}
-		bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+		multihash, err := mh.Cast(encoded)
 		if err != nil {
 			return err
 		}
-		var guidSig []byte
-		var bitcoinSig *btcec.Signature
-		sig := contract.Signatures[n]
-		if sig.Section != pb.Signatures_LISTING {
-			return errors.New("Contract does not contain listing signature")
-		}
-		guidSig = sig.Guid
-		bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-		if err != nil {
-			return err
-		}
-		valid, err := guidPubkey.Verify(ser, guidSig)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
-		}
-		checkKeyHash, err := guidPubkey.Hash()
-		if err != nil {
-			return err
-		}
-		guidMH, err := mh.FromB58String(guid)
-		if err != nil {
-			return err
-		}
-		for i, b := range []byte(guidMH) {
-			if b != checkKeyHash[i] {
-				return errors.New("Public key in listing does not match reported vendor ID")
+		for i, hash := range itemHashes {
+			if hash == multihash.B58String() {
+				itemHashes = append(itemHashes[:i], itemHashes[i+1:]...)
+				listingMap[hash] = listing
 			}
 		}
-		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
-		if !valid {
-			return errors.New("Vendor's bitcoin signature on contact failed to verify")
+	}
+	if len(itemHashes) > 0 {
+		return errors.New("Item hashes in the order do not match the included listings")
+	}
+
+	// Validate the each item in the order is for sale
+	for _, listing := range contract.VendorListings {
+		if !n.IsItemForSale(listing) {
+			return errors.New("Contract contained item that is not for sale")
 		}
 	}
+
+	// Validate the selected variants
+	var inventory []map[string]int
+	for _, item := range contract.BuyerOrder.Items {
+		var userOptions []*pb.Order_Item_Option
+		var listingOptions []string
+		for _, opt := range listingMap[item.ListingHash].Item.Options {
+			listingOptions = append(listingOptions, opt.Name)
+		}
+		for _, uopt := range item.Options {
+			userOptions = append(userOptions, uopt)
+		}
+		inv := make(map[string]int)
+		invPath := listingMap[item.ListingHash].Slug
+		for _, o := range listingMap[item.ListingHash].Item.Options {
+			for _, checkOpt := range userOptions {
+				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
+					var validVariant bool = false
+					for _, v := range o.Variants {
+						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+							validVariant = true
+							invPath = path.Join(invPath, v.Name)
+						}
+					}
+					if validVariant == false {
+						return errors.New("Selected vairant not in listing")
+					}
+				}
+			check:
+				for i, lopt := range listingOptions {
+					if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
+						listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
+						continue check
+					}
+				}
+			}
+		}
+		if len(listingOptions) > 0 {
+			return errors.New("Not all options were selected")
+		}
+		// Create inventory paths to check later
+		inv[invPath] = int(item.Quantity)
+		inventory = append(inventory, inv)
+	}
+
+	// Validate the selected shipping options
+	for listingHash, listing := range listingMap {
+		for _, item := range contract.BuyerOrder.Items {
+			if item.ListingHash == listingHash {
+				// Check selected option exists
+				var option *pb.Listing_ShippingOption
+				for _, shippingOption := range listing.ShippingOptions {
+					if shippingOption.Name == item.ShippingOption.Name {
+						option = shippingOption
+						break
+					}
+				}
+				if option == nil {
+					return errors.New("Shipping option not found in listing")
+				}
+
+				// Check that this option ships to buyer
+				shipsToMe := false
+				for _, country := range option.Regions {
+					if country == contract.BuyerOrder.Shipping.Country || country == pb.CountryCode_ALL {
+						shipsToMe = true
+						break
+					}
+				}
+				if !shipsToMe {
+					return errors.New("Listing does ship to selected country")
+				}
+
+				// Check service exists
+				var service *pb.Listing_ShippingOption_Service
+				for _, shippingService := range option.Services {
+					if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
+						service = shippingService
+					}
+				}
+				if service == nil {
+					return errors.New("Shipping service not found in listing")
+				}
+			}
+		}
+	}
+
+	// Check we have enough inventory
+	for _, invMap := range inventory {
+		for invString, quantity := range invMap {
+			amt, err := n.Datastore.Inventory().GetSpecific(invString)
+			if err != nil {
+				return errors.New("Vendor has no inventory for the selected variant.")
+			}
+			if amt >= 0 && amt < quantity {
+				return fmt.Errorf("Not enough inventory for item %s, only %d in stock", invString, amt)
+			}
+		}
+	}
+
+	// Validate the payment amount
+	total, err := n.CalculateOrderTotal(contract)
+	if err != nil {
+		return err
+	}
+	if total != contract.BuyerOrder.Payment.Amount {
+		return errors.New("Calculated a different payment amount than the buyer")
+	}
+
+	// Validate shipping
+	containsPhysicalGood := false
+	for _, listing := range listingMap {
+		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+			containsPhysicalGood = true
+			break
+		}
+	}
+	if containsPhysicalGood {
+		if contract.BuyerOrder.Shipping == nil {
+			return errors.New("Order is missing shipping object")
+		}
+		if contract.BuyerOrder.Shipping.Address == "" {
+			return errors.New("Shipping address is empty")
+		}
+		if contract.BuyerOrder.Shipping.City == "" {
+			return errors.New("Shipping city is empty")
+		}
+		if contract.BuyerOrder.Shipping.ShipTo == "" {
+			return errors.New("Ship to name is empty")
+		}
+		if contract.BuyerOrder.Shipping.State == "" {
+			return errors.New("Shipping state is empty")
+		}
+	}
+
+	// Validate the buyers's signature on the order
+	err = verifySignaturesOnOrder(contract)
+	if err != nil {
+		return err
+	}
 	return nil
+}
+
+func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
+	serializedOrder, err := proto.Marshal(contract.BuyerOrder)
+	if err != nil {
+		return contract, err
+	}
+	s := new(pb.Signatures)
+	s.Section = pb.Signatures_ORDER
+	if err != nil {
+		return contract, err
+	}
+	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
+	if err != nil {
+		return contract, err
+	}
+	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return contract, err
+	}
+	hashed := sha256.Sum256(serializedOrder)
+	bitcoinSig, err := priv.Sign(hashed[:])
+	if err != nil {
+		return contract, err
+	}
+	s.Guid = guidSig
+	s.Bitcoin = bitcoinSig.Serialize()
+
+	contract.Signatures = append(contract.Signatures, s)
+	return contract, nil
 }
