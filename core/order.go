@@ -747,16 +747,14 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 
 	// Validate that the hash of the items in the contract match claimed hash in the order
 	var itemHashes []string
+collectListings:
 	for _, item := range contract.BuyerOrder.Items {
-		exists := false
 		for _, hash := range itemHashes {
 			if hash == item.ListingHash {
-				exists = true
+				continue collectListings
 			}
 		}
-		if !exists {
-			itemHashes = append(itemHashes, item.ListingHash)
-		}
+		itemHashes = append(itemHashes, item.ListingHash)
 	}
 	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
@@ -903,6 +901,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	for _, listing := range listingMap {
 		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			containsPhysicalGood = true
+			break
 		}
 	}
 	if containsPhysicalGood {

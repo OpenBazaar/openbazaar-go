@@ -126,6 +126,7 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 		if s.Section == pb.Signatures_ORDER_CONFIRMATION {
 			sig = s
 			sigExists = true
+			break
 		}
 	}
 	if !sigExists {
