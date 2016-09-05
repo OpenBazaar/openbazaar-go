@@ -129,13 +129,13 @@ type Purchases interface {
 	MarkAsRead(orderID string) error
 
 	// Update the funding level for the contract
-	UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error
+	UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error
 
 	// Delete an order
 	Delete(orderID string) error
 
 	// Return a purchase given the payment address
-	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)
@@ -146,13 +146,13 @@ type Sales interface {
 	Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error
 
 	// Update the funding level for the contract
-	UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error
+	UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error
 
 	// Delete an order
 	Delete(orderID string) error
 
 	// Return a sale given the payment address
-	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)

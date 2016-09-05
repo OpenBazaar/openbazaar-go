@@ -2,17 +2,17 @@ package bitcoin
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"strings"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/OpenBazaar/spvwallet"
-	"encoding/hex"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -49,6 +49,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				if !funded {
 					requestedAmount := int64(contract.VendorOrderConfirmation.RequestedAmount)
 					if funding >= requestedAmount {
+						funded = true
 						l.db.Sales().Put(orderId, *contract, pb.OrderState_FUNDED, false)
 						l.adjustInventory(contract)
 
@@ -59,17 +60,18 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 								contract.BuyerOrder.BuyerID.BlockchainID,
 								contract.VendorListings[0].Item.Images[0].Hash,
 								int(contract.BuyerOrder.Timestamp.Seconds),
-						})
+							})
 
 						l.broadcast <- n
 					}
 				}
 				record := spvwallet.TransactionRecord{
-					Txid: hex.EncodeToString(cb.Txid),
+					Txid:  hex.EncodeToString(cb.Txid),
 					Index: output.Index,
 					Value: output.Value,
 				}
-				l.db.Purchases().UpdateFunding(orderId, funded, record)
+				records = append(records, record)
+				log.Notice(l.db.Sales().UpdateFunding(orderId, funded, records))
 			}
 		} else {
 			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
@@ -95,11 +97,12 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					}
 				}
 				record := spvwallet.TransactionRecord{
-					Txid: hex.EncodeToString(cb.Txid),
+					Txid:  hex.EncodeToString(cb.Txid),
 					Index: output.Index,
 					Value: output.Value,
 				}
-				l.db.Purchases().UpdateFunding(orderId, funded, record)
+				records = append(records, record)
+				log.Notice(l.db.Purchases().UpdateFunding(orderId, funded, records))
 			}
 		}
 	}

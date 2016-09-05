@@ -2,13 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
-	"encoding/json"
-	"github.com/OpenBazaar/spvwallet"
 )
 
 type PurchasesDB struct {
@@ -96,7 +96,7 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error {
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -104,18 +104,11 @@ func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, record spvwalle
 	if funded {
 		fundedInt = 1
 	}
-	stmt, err := p.db.Prepare("select transactions from purchases where orderID=?")
-	defer stmt.Close()
-	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&serializedTransactions)
+	serializedTransactions, err := json.Marshal(records)
 	if err != nil {
 		return err
 	}
-	transactions := []*spvwallet.TransactionRecord{}
-	json.Unmarshal(serializedTransactions, &transactions)
-	transactions = append(transactions, &record)
-	serializedTransactions, err = json.Marshal(transactions)
-	_, err = p.db.Exec("upate purchases set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
+	_, err = p.db.Exec("update purchases set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
 	if err != nil {
 		return err
 	}
@@ -152,7 +145,7 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
@@ -174,7 +167,7 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	if fundedInt == 1 {
 		funded = true
 	}
-	var records []*spvwallet.TransactionRecord
+	var records []spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }

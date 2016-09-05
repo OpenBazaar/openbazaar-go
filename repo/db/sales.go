@@ -97,7 +97,7 @@ func (s *SalesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) UpdateFunding(orderId string, funded bool, record spvwallet.TransactionRecord) error {
+func (s *SalesDB) UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -105,18 +105,8 @@ func (s *SalesDB) UpdateFunding(orderId string, funded bool, record spvwallet.Tr
 	if funded {
 		fundedInt = 1
 	}
-	stmt, err := s.db.Prepare("select transactions from sales where orderID=?")
-	defer stmt.Close()
-	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&serializedTransactions)
-	if err != nil {
-		return err
-	}
-	transactions := []*spvwallet.TransactionRecord{}
-	json.Unmarshal(serializedTransactions, &transactions)
-	transactions = append(transactions, &record)
-	serializedTransactions, err = json.Marshal(transactions)
-	_, err = s.db.Exec("upate sales set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
+	serializedTransactions, err := json.Marshal(records)
+	_, err = s.db.Exec("update sales set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
 	if err != nil {
 		return err
 	}
@@ -153,7 +143,7 @@ func (s *SalesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
+func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where paymentAddr=?")
@@ -175,7 +165,7 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 	if fundedInt == 1 {
 		funded = true
 	}
-	var records []*spvwallet.TransactionRecord
+	var records []spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
