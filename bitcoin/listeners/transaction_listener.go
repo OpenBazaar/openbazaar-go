@@ -13,6 +13,7 @@ import (
 	"github.com/op/go-logging"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"strings"
+	"sync"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -21,14 +22,17 @@ type TransactionListener struct {
 	db        repo.Datastore
 	broadcast chan []byte
 	params    *chaincfg.Params
+	*sync.Mutex
 }
 
 func NewTransactionListener(db repo.Datastore, broadcast chan []byte, params *chaincfg.Params) *TransactionListener {
-	l := &TransactionListener{db, broadcast, params}
+	l := &TransactionListener{db, broadcast, params, new(sync.Mutex)}
 	return l
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
+	l.Lock()
+	defer l.Unlock()
 	for _, output := range cb.Outputs {
 		if output.IsOurs {
 			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
@@ -38,6 +42,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				for _, r := range records {
 					funding += r.Value
 					// If we've already seen this transaction for some reason, just return
+					log.Notice(r.Txid, hex.EncodeToString(cb.Txid))
 					if r.Txid == hex.EncodeToString(cb.Txid) {
 						return
 					}
@@ -46,6 +51,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				if err != nil {
 					return
 				}
+				log.Notice(funded)
 				if !funded {
 					requestedAmount := int64(contract.VendorOrderConfirmation.RequestedAmount)
 					if funding >= requestedAmount {
@@ -71,7 +77,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					Value: output.Value,
 				}
 				records = append(records, record)
-				log.Notice(l.db.Sales().UpdateFunding(orderId, funded, records))
+				l.db.Sales().UpdateFunding(orderId, funded, records)
 			}
 		} else {
 			_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
@@ -102,7 +108,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					Value: output.Value,
 				}
 				records = append(records, record)
-				log.Notice(l.db.Purchases().UpdateFunding(orderId, funded, records))
+				l.db.Purchases().UpdateFunding(orderId, funded, records)
 			}
 		}
 	}
