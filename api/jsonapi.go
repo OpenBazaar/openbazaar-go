@@ -540,7 +540,15 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
+
+	// If the listing already exists tell them to use PUT
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug)
+	_, ferr := os.Stat(listingPath)
+	if !os.IsNotExist(ferr) {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "Listing already exists. Use PUT."}`)
+		return
+	}
 	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
