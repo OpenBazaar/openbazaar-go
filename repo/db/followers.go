@@ -62,3 +62,16 @@ func (f *FollowerDB) Count() int {
 	row.Scan(&count)
 	return count
 }
+
+func (f *FollowerDB) FollowsMe(peerId string) bool {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	stmt, err := f.db.Prepare("select peerID from followers where peerID=?")
+	defer stmt.Close()
+	var follower string
+	err = stmt.QueryRow(peerId).Scan(&follower)
+	if err != nil {
+		return false
+	}
+	return true
+}

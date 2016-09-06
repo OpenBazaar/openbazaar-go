@@ -119,6 +119,14 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETListing(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/followsme") {
+		i.GETFollowsMe(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/isfollowing") {
+		i.GETIsFollowing(w, r)
+		return
+	}
 }
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {

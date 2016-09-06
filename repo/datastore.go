@@ -49,6 +49,9 @@ type Followers interface {
 
 	// Return the number of followers in the database.
 	Count() int
+
+	// Are we followed by this peer?
+	FollowsMe(peerId string) bool
 }
 
 type Following interface {
@@ -64,6 +67,9 @@ type Following interface {
 
 	// Return the number of peers in the database.
 	Count() int
+
+	// Am I following this peer?
+	IsFollowing(peerId string) bool
 }
 
 type OfflineMessages interface {

@@ -114,3 +114,10 @@ func TestGetFollowing(t *testing.T) {
 		}
 	}
 }
+
+func TestIFollow(t *testing.T) {
+	fldb.Put("abc")
+	if !fldb.IsFollowing("abc") {
+		t.Error("I follow failed to return correctly")
+	}
+}

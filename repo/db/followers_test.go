@@ -113,5 +113,11 @@ func TestGetFollowers(t *testing.T) {
 			t.Errorf("Returned %d expected %d", f, 29-i)
 		}
 	}
+}
 
+func TestFollowsMe(t *testing.T) {
+	fdb.Put("abc")
+	if !fdb.FollowsMe("abc") {
+		t.Error("Follows Me failed to return correctly")
+	}
 }

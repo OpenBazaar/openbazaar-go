@@ -1322,3 +1322,15 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, string(out))
 	return
 }
+
+func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	_, peerId := path.Split(r.URL.Path)
+	fmt.Fprintf(w, `{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId))
+}
+
+func (i *jsonAPIHandler) GETIsFollowing(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	_, peerId := path.Split(r.URL.Path)
+	fmt.Fprintf(w, `{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId))
+}
