@@ -65,7 +65,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	listing.VendorID = id
 
 	// Set cryoto currency
-	listing.Metadata.AcceptedCryptoCurrency = n.Wallet.CurrencyCode()
+	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
 	s := new(pb.Signatures)
@@ -199,7 +199,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
 		Desc:         contract.VendorListings[0].Item.Description[:descLen],
 		Thumbnail:    contract.VendorListings[0].Item.Images[0].Hash,
-		Price:        price{contract.VendorListings[0].Item.Price.CurrencyCode, contract.VendorListings[0].Item.Price.Amount},
+		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -563,11 +563,8 @@ func validateListing(listing *pb.Listing) (err error) {
 	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
 		return errors.New("Listing expiration must be in the future")
 	}
-	if listing.Item.Price == nil {
-		return errors.New("Listings must have a price")
-	}
-	if listing.Item.Price.CurrencyCode == "" {
-		return errors.New("Listing price currency code must not be nil")
+	if listing.Metadata.PricingCurrency == "" {
+		return errors.New("Listing pricing currency code must not be nil")
 	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
 		return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)
@@ -650,11 +647,6 @@ func validateListing(listing *pb.Listing) (err error) {
 					return errors.New("Variant image file names must not be nil")
 				}
 			}
-			if variant.PriceModifier != nil {
-				if variant.PriceModifier.CurrencyCode == "" {
-					return errors.New("Variant price modifier currency code must not be nil")
-				}
-			}
 		}
 	}
 	var shippingTitles []string
@@ -684,12 +676,6 @@ func validateListing(listing *pb.Listing) (err error) {
 				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
 			for _, rule := range shippingOption.ShippingRules.Rules {
-				if rule.Price == nil {
-					return errors.New("Shipping rules must have a price")
-				}
-				if rule.Price.CurrencyCode == "" {
-					return errors.New("Shipping rules price currency code must not be nil")
-				}
 				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
 					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
 				}
@@ -712,9 +698,6 @@ func validateListing(listing *pb.Listing) (err error) {
 				}
 			}
 			serviceTitles = append(serviceTitles, option.Name)
-			if option.Price.CurrencyCode == "" {
-				return errors.New("Shipping option price currency code must not be nil")
-			}
 			if option.EstimatedDelivery == "" {
 				return errors.New("Shipping option estimated delivery must not be nil")
 			}
@@ -745,15 +728,9 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentanceMaxCharacters)
 		}
 
-		if coupon.PriceDiscount != nil {
-			if coupon.PriceDiscount.CurrencyCode == "" {
-				return errors.New("Price discount coupon currency code must not be nil")
-			}
-			if coupon.PercentDiscount > 0 {
-				return errors.New("Only one type of coupon discount can be selected")
-			}
-		} else if coupon.PercentDiscount <= 0 {
-			return errors.New("The coupon discount must be selected")
+		if coupon.PriceDiscount > 0 && coupon.PercentDiscount > 0 {
+			return errors.New("Only one type of coupon discount can be selected")
+
 		}
 		_, err := mh.FromB58String(coupon.Hash)
 		if err != nil {

@@ -15,7 +15,7 @@ func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	tx, _ := w.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into watchedScripts(scriptPubKey) values(?)")
+	stmt, err := tx.Prepare("insert or replace into watchedscripts(scriptPubKey) values(?)")
 	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
@@ -34,7 +34,7 @@ func (w *WatchedScriptsDB) GetAll() ([][]byte, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	var ret [][]byte
-	stm := "select scriptPubKey from watchedScripts"
+	stm := "select scriptPubKey from watchedscripts"
 	rows, err := w.db.Query(stm)
 	if err != nil {
 		return ret, err
@@ -57,7 +57,7 @@ func (w *WatchedScriptsDB) GetAll() ([][]byte, error) {
 func (w *WatchedScriptsDB) Delete(scriptPubKey []byte) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
-	_, err := w.db.Exec("delete from watchedScripts where scriptPubKey=?", hex.EncodeToString(scriptPubKey))
+	_, err := w.db.Exec("delete from watchedscripts where scriptPubKey=?", hex.EncodeToString(scriptPubKey))
 	if err != nil {
 		return err
 	}

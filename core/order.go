@@ -4,14 +4,12 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
@@ -171,8 +169,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 		}
 
-		if strings.ToLower(listing.Metadata.AcceptedCryptoCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
-			return fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCryptoCurrency, n.Wallet.CurrencyCode())
+		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
+			return fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
 		}
 
 		// validate the selected options
@@ -296,13 +294,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			if err != nil {
 				return err
 			}
-			payment.Address = addr.EncodeAddress()
-			payment.Chaincode = hex.EncodeToString(chaincode)
-			tx, err := n.Wallet.ExportRawTx(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
-			if err != nil {
-				return err
-			}
-			payment.Tx = tx
+			log.Notice(addr)
+			// TODO: derive a child key from our master pubkey
+			// TODO: Add payment info for 1 of 2 multisig
+
 			contract, err = n.SignOrder(contract)
 			if err != nil {
 				return err
@@ -358,14 +353,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 				return err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
-			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
-			if err != nil {
-				return err
-			}
-			err = n.Wallet.Spend(int64(contract.BuyerOrder.Payment.Amount), addr, feeLevel)
-			if err != nil {
-				return err
-			}
+			// TODO: Return address and amount
 		}
 	}
 	return nil
@@ -422,7 +410,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		if int(l.Metadata.ContractType) == 1 {
 			physicalGoods[item.ListingHash] = l
 		}
-		satoshis, err := n.getPriceInSatoshi(l.Item.Price)
+		satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
 		if err != nil {
 			return 0, err
 		}
@@ -435,8 +423,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					variantExists := false
 					for _, variant := range listingOption.Variants {
 						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
-							if variant.PriceModifier != nil {
-								satoshis, err := n.getPriceInSatoshi(variant.PriceModifier)
+							if variant.PriceModifier > 0 {
+								satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, variant.PriceModifier)
 								if err != nil {
 									return 0, err
 								}
@@ -469,7 +457,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					return 0, err
 				}
 				if multihash.B58String() == vendorCoupon.Hash {
-					if vendorCoupon.PriceDiscount != nil {
+					if vendorCoupon.PriceDiscount > 0 {
 						itemTotal -= itemTotal
 					} else {
 						itemTotal -= uint64((float32(itemTotal) * (vendorCoupon.PercentDiscount / 100)))
@@ -537,7 +525,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				if service == nil {
 					return 0, errors.New("Shipping service not found in listing")
 				}
-				shippingSatoshi, err := n.getPriceInSatoshi(service.Price)
+				shippingSatoshi, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
 				if err != nil {
 					return 0, err
 				}
@@ -560,7 +548,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						switch option.ShippingRules.RuleType {
 						case pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT:
 							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
-								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
 								if err != nil {
 									return 0, err
 								}
@@ -569,7 +557,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE:
 							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
 								itemShipping -= shippingPrice
-								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
 								if err != nil {
 									return 0, err
 								}
@@ -579,7 +567,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 							weight := listing.Item.Grams * float32(item.Quantity)
 							if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
 								itemShipping -= shippingPrice
-								rulePrice, err := n.getPriceInSatoshi(rule.Price)
+								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
 								if err != nil {
 									return 0, err
 								}
@@ -587,7 +575,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 							}
 						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
 							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(rule.Price)
+							rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
 							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
 							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
 							if err != nil {
@@ -603,7 +591,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
 							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(rule.Price)
+							rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
 							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
 							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
 							if err != nil {
@@ -650,15 +638,15 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	return total, nil
 }
 
-func (n *OpenBazaarNode) getPriceInSatoshi(price *pb.Listing_Price) (uint64, error) {
-	if strings.ToLower(price.CurrencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
-		return price.Amount, nil
+func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
+	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
+		return amount, nil
 	}
-	exchangeRate, err := n.ExchangeRates.GetExchangeRate(price.CurrencyCode)
+	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
-	formatedAmount := float64(price.Amount) / 100
+	formatedAmount := float64(amount) / 100
 	btc := formatedAmount / exchangeRate
 	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
 	return uint64(satoshis), nil

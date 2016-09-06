@@ -32,7 +32,8 @@ message Listing {
         ContractType contractType        = 2;
         ListingType listingType          = 3;
         google.protobuf.Timestamp expiry = 4;
-        string acceptedCryptoCurrency    = 5;
+        string acceptedCurrency          = 5;
+        string pricingCurrency           = 6;
 
         enum ContractType {
             UNKNOWN       = 0;
@@ -53,7 +54,7 @@ message Listing {
         string title               = 1;
         string description         = 2;
         string processingTime      = 3;
-        Price price                = 4;
+        uint64 price               = 4;
         bool nsfw                  = 5;
         repeated string tags       = 6;
         repeated Image images      = 7;
@@ -69,9 +70,9 @@ message Listing {
             repeated Variants variants = 3;
 
             message Variants {
-                string name         = 1;
-                Image image         = 2;
-                Price priceModifier = 3;
+                string name          = 1;
+                Image image          = 2;
+                uint64 priceModifier = 3;
             }
         }
 
@@ -95,7 +96,7 @@ message Listing {
 
         message Service {
             string name              = 1;
-            Price price              = 2;
+            uint64 price             = 2;
             string estimatedDelivery = 3;
         }
 
@@ -106,7 +107,7 @@ message Listing {
                 message Rule {
                     uint32 minRange              = 1;
                     uint32 maxRange              = 2;
-                    Price price                  = 3;
+                    uint64 price                 = 3;
                 }
 
                 enum RuleType {
@@ -130,12 +131,7 @@ message Listing {
         string title              = 1;
         string hash               = 2;
         float percentDiscount     = 3;
-        Price priceDiscount       = 4;
-    }
-
-    message Price {
-        string currencyCode = 1;
-        uint64 amount       = 2; // bitcoins must be in satoshi
+        uint64 priceDiscount      = 4;
     }
 }
 
@@ -182,10 +178,10 @@ message Order {
         Method method       = 1;
         string moderator    = 2;
         uint64 amount       = 3; // satoshis
-        bytes tx            = 4;
-        string chaincode    = 5; // hex encoded
-        string address      = 6; // b58check encoded
-        string redeemScript = 7; // hex encoded
+        uint64 exchangeRate = 4;
+        string chaincode    = 6; // hex encoded
+        string address      = 7; // b58check encoded
+        string redeemScript = 8; // hex encoded
 
         enum Method {
             ADDRESS_REQUEST = 0;
