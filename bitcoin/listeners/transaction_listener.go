@@ -42,7 +42,6 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				for _, r := range records {
 					funding += r.Value
 					// If we've already seen this transaction for some reason, just return
-					log.Notice(r.Txid, hex.EncodeToString(cb.Txid))
 					if r.Txid == hex.EncodeToString(cb.Txid) {
 						return
 					}
@@ -51,10 +50,10 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				if err != nil {
 					return
 				}
-				log.Notice(funded)
 				if !funded {
 					requestedAmount := int64(contract.VendorOrderConfirmation.RequestedAmount)
 					if funding >= requestedAmount {
+						log.Debugf("Recieved payment for order %s", orderId)
 						funded = true
 						l.db.Sales().Put(orderId, *contract, pb.OrderState_FUNDED, false)
 						l.adjustInventory(contract)
@@ -66,6 +65,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 								contract.BuyerOrder.BuyerID.BlockchainID,
 								contract.VendorListings[0].Item.Images[0].Hash,
 								int(contract.BuyerOrder.Timestamp.Seconds),
+								orderId,
 							})
 
 						l.broadcast <- n
@@ -98,8 +98,16 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 				if !funded {
 					requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
 					if funding >= requestedAmount {
+						log.Debugf("Payment for purchase %s detected", orderId)
 						funded = true
 						l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
+
+						n := notifications.Serialize(
+							notifications.PaymentNotification{
+								orderId,
+							})
+
+						l.broadcast <- n
 					}
 				}
 				record := spvwallet.TransactionRecord{

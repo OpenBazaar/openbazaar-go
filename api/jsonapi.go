@@ -723,12 +723,26 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	if err := i.node.Purchase(&data); err != nil {
+	orderId, paymentAddr, amount, online, err := i.node.Purchase(&data)
+	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{}`)
+	type purchaseReturn struct {
+		PaymentAddress string
+		Amount         uint64
+		VendorOnline   bool
+		OrderId        string
+	}
+	ret := purchaseReturn{paymentAddr, amount, online, orderId}
+	b, err := json.MarshalIndent(ret, "", "    ")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, string(b))
 	return
 }
 
@@ -846,9 +860,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type Send struct {
-		Address  string
-		Amount   int64
-		FeeLevel string
+		Address  string `json:"address"`
+		Amount   int64  `json:"amount"`
+		FeeLevel string `json:"feeLevel"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var snd Send

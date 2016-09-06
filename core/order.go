@@ -53,23 +53,12 @@ type PurchaseData struct {
 	Moderator        string `json:"moderator"`
 	Items            []item `json:"items"`
 	AlternateContact string `json:"alternateContactInfo"`
-	FeeLevel         string `json:"fee"`
 }
 
-func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
+func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
 	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
-
-	var feeLevel spvwallet.FeeLevel
-	switch strings.ToLower(data.FeeLevel) {
-	case "economic":
-		feeLevel = spvwallet.ECONOMIC
-	case "normal":
-		feeLevel = spvwallet.NORMAL
-	case "priority":
-		feeLevel = spvwallet.PRIOIRTY
-	}
 
 	shipping := new(pb.Order_Shipping)
 	shipping.ShipTo = data.ShipTo
@@ -82,7 +71,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	profile, err := n.GetProfile()
 	if err != nil {
-		return err
+		return "", "", 0, false, err
 	}
 
 	id := new(pb.ID)
@@ -90,13 +79,13 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 	id.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
-		return err
+		return "", "", 0, false, err
 	}
 	keys := new(pb.ID_Pubkeys)
 	keys.Guid = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
-		return err
+		return "", "", 0, false, err
 	}
 	keys.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = keys
@@ -110,11 +99,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
 	if err != nil {
-		return err
+		return "", "", 0, false, err
 	}
 	ecRatingKey, err := ratingKey.ECPubKey()
 	if err != nil {
-		return err
+		return "", "", 0, false, err
 	}
 	order.RatingKey = ecRatingKey.SerializeCompressed()
 	refundAddr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
@@ -140,18 +129,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			// Let's fetch the listing, should be cached.
 			b, err := ipfs.Cat(n.Context, item.ListingHash)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			rc := new(pb.RicardianContract)
 			err = jsonpb.UnmarshalString(string(b), rc)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			if err := validateListing(rc.VendorListings[0]); err != nil {
-				return fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
+				return "", "", 0, false, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
 			}
 			if err := verifySignaturesOnListing(rc); err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
 			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
@@ -163,6 +152,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 					for _, l := range contract.VendorListings {
 						if l.Slug == addedListing[1] {
 							listing = l
+							break
 						}
 					}
 				}
@@ -170,7 +160,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 		}
 
 		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
-			return fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
+			return "", "", 0, false, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
 		}
 
 		// validate the selected options
@@ -192,7 +182,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 						}
 					}
 					if validVariant == false {
-						return errors.New("Selected vairant not in listing")
+						return "", "", 0, false, errors.New("Selected vairant not in listing")
 					}
 				}
 			}
@@ -205,21 +195,21 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 		}
 		if len(listingOptions) > 0 {
-			return errors.New("Not all options were selected")
+			return "", "", 0, false, errors.New("Not all options were selected")
 		}
 
 		ser, err := proto.Marshal(listing)
 		if err != nil {
-			return err
+			return "", "", 0, false, err
 		}
 		h := sha256.Sum256(ser)
 		encoded, err := mh.Encode(h[:], mh.SHA2_256)
 		if err != nil {
-			return err
+			return "", "", 0, false, err
 		}
 		listingMH, err := mh.Cast(encoded)
 		if err != nil {
-			return err
+			return "", "", 0, false, err
 		}
 		i.ListingHash = listingMH.B58String()
 		i.Quantity = uint32(item.Quantity)
@@ -243,24 +233,20 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" {
-
+		// TODO: return correct amounts
+		return "", "", 0, false, err
 	} else { // direct payment
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
-			return err
+			return "", "", 0, false, err
 		}
 		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
 		contract, err = n.SignOrder(contract)
 		if err != nil {
-			return err
-		}
-		// Let's check that we have sufficient funds before we go messaging the vendor
-		err = n.Wallet.CheckSuffientFunds(int64(total), feeLevel)
-		if err != nil {
-			return err
+			return "", "", 0, false, err
 		}
 
 		// Send to order vendor and request a payment address
@@ -274,7 +260,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			chaincode := make([]byte, 32)
 			_, err := rand.Read(chaincode)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 			hdKey := hd.NewExtendedKey(
@@ -288,11 +274,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 			childKey, err := hdKey.Child(1)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			addr, err := childKey.Address(n.Wallet.Params())
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			log.Notice(addr)
 			// TODO: derive a child key from our master pubkey
@@ -300,18 +286,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 
 			contract, err = n.SignOrder(contract)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 
 			// Send using offline messaging
 			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
 			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.Guid)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			any, err := ptypes.MarshalAny(contract)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			m := pb.Message{
 				MessageType: pb.Message_ORDER,
@@ -319,24 +305,26 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 			err = n.SendOfflineMessage(peerId, &m)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			orderId, err := CalcOrderId(contract.BuyerOrder)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
+			// TODO: return correct values
+			return "", "", 0, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				return fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION && resp.MessageType != pb.Message_ERROR {
-				return errors.New("Vendor responded to the order with an incorrect message type")
+				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
 			}
 			rc := new(pb.RicardianContract)
 			err := proto.Unmarshal(resp.Payload.Value, rc)
 			if err != nil {
-				return errors.New("Error parsing the vendor's response")
+				return "", "", 0, false, errors.New("Error parsing the vendor's response")
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
 			for _, sig := range rc.Signatures {
@@ -346,17 +334,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) error {
 			}
 			err = n.validateOrderConfirmation(contract)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			orderId, err := CalcOrderId(contract.BuyerOrder)
 			if err != nil {
-				return err
+				return "", "", 0, false, err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
-			// TODO: Return address and amount
+			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
-	return nil
 }
 
 func CalcOrderId(order *pb.Order) (string, error) {

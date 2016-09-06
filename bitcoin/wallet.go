@@ -24,9 +24,6 @@ type BitcoinWallet interface {
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)
 
-	// Check if we have sufficient funds to make a tx
-	CheckSuffientFunds(amount int64, feeLevel spvwallet.FeeLevel) error
-
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
 
