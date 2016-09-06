@@ -35,6 +35,9 @@ type Headers interface {
 	// Get the height of chain
 	Height() (uint32, error)
 
+	// Cleanly close the db
+	Close()
+
 	// Print all headers
 	Print()
 }
@@ -204,6 +207,10 @@ func (h *HeaderDB) Print() {
 	for _, k := range keys {
 		fmt.Println(k, m[uint32(k)])
 	}
+}
+
+func (h *HeaderDB) Close() {
+	h.lock.Lock()
 }
 
 const (
@@ -474,6 +481,11 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 		start += 1
 	}
 	return ret
+}
+
+func (b *Blockchain) Close() {
+	b.lock.Lock()
+	b.db.Close()
 }
 
 /*----- header serialization ------- */

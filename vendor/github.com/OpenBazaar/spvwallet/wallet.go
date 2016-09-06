@@ -284,6 +284,11 @@ func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
 	w.listeners = append(w.listeners, callback)
 }
 
+func (w *SPVWallet) ChainTip() uint32 {
+	height, _ := w.state.GetDBSyncHeight()
+	return uint32(height)
+}
+
 func (w *SPVWallet) AddWatchedScript(script []byte) error {
 	err := w.state.db.WatchedScripts().Put(script)
 	w.state.PopulateAdrs()
@@ -291,4 +296,13 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 		peer.UpdateFilterAndSend()
 	}
 	return err
+}
+
+func (w *SPVWallet) Close() {
+	log.Info("Disconnecting from peers and shutting down")
+	for _, peer := range w.peerGroup {
+		peer.con.Close()
+		log.Debugf("Disconnnected from %s", peer.con.RemoteAddr().String())
+	}
+	w.blockchain.Close()
 }
