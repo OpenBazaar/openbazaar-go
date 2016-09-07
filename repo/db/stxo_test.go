@@ -30,6 +30,7 @@ func init() {
 		AtHeight:     300000,
 		Value:        100000000,
 		ScriptPubkey: []byte("scriptpubkey"),
+		Freeze:       false,
 	}
 	stxo = spvwallet.Stxo{
 		Utxo:        utxo,
@@ -98,7 +99,7 @@ func TestStxoGetAll(t *testing.T) {
 	if stxos[0].Utxo.AtHeight != stxo.Utxo.AtHeight {
 		t.Error("Stxo db returned wrong height")
 	}
-	if bytes.Equal(stxos[0].Utxo.ScriptPubkey, stxo.Utxo.ScriptPubkey) {
+	if !bytes.Equal(stxos[0].Utxo.ScriptPubkey, stxo.Utxo.ScriptPubkey) {
 		t.Error("Stxo db returned wrong scriptPubKey")
 	}
 	if stxos[0].SpendHeight != stxo.SpendHeight {

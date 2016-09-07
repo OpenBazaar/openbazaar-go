@@ -85,7 +85,7 @@ func TestUtxoGetAll(t *testing.T) {
 	if utxos[0].AtHeight != utxo.AtHeight {
 		t.Error("Utxo db returned wrong height")
 	}
-	if bytes.Equal(utxos[0].ScriptPubkey, utxo.ScriptPubkey) {
+	if !bytes.Equal(utxos[0].ScriptPubkey, utxo.ScriptPubkey) {
 		t.Error("Utxo db returned wrong scriptPubKey")
 	}
 }
