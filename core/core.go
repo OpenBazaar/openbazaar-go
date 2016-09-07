@@ -15,6 +15,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"net/url"
 	"path"
 )
 
@@ -65,6 +66,9 @@ type OpenBazaarNode struct {
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates
+
+	// An optional gateway URL where we can crosspost data to ensure persistence
+	CrosspostGateway *url.URL
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns

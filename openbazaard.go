@@ -49,6 +49,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"net/url"
 	"strings"
 )
 
@@ -388,17 +389,33 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	// Crosspost gateway
+	gatewayUrlString, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	var gatewayUrl *url.URL
+	if gatewayUrlString != "" {
+		gatewayUrl, err = url.Parse(gatewayUrlString)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:        ctx,
-		IpfsNode:       nd,
-		RootHash:       ipath.Path(e.Value).String(),
-		RepoPath:       repoPath,
-		Datastore:      sqliteDB,
-		Wallet:         wallet,
-		MessageStorage: storage,
-		Resolver:       bstk.NewBlockStackClient(resolverUrl),
-		ExchangeRates:  exchange.NewBitcoinPriceFetcher(),
+		Context:          ctx,
+		IpfsNode:         nd,
+		RootHash:         ipath.Path(e.Value).String(),
+		RepoPath:         repoPath,
+		Datastore:        sqliteDB,
+		Wallet:           wallet,
+		MessageStorage:   storage,
+		Resolver:         bstk.NewBlockStackClient(resolverUrl),
+		ExchangeRates:    exchange.NewBitcoinPriceFetcher(),
+		CrosspostGateway: gatewayUrl,
 	}
 
 	var gwErrc <-chan error
