@@ -8,19 +8,24 @@ import (
 	"os"
 	"path"
 
+	"bytes"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/commands"
+	"net/http"
+	"net/url"
 )
 
 type SelfHostedStorage struct {
-	repoPath string
-	context  commands.Context
+	repoPath         string
+	context          commands.Context
+	crossPostGateway *url.URL
 }
 
-func NewSelfHostedStorage(repoPath string, context commands.Context) *SelfHostedStorage {
+func NewSelfHostedStorage(repoPath string, context commands.Context, crossPostGateway *url.URL) *SelfHostedStorage {
 	return &SelfHostedStorage{
-		repoPath: repoPath,
-		context:  context,
+		repoPath:         repoPath,
+		context:          context,
+		crossPostGateway: crossPostGateway,
 	}
 }
 
@@ -40,6 +45,9 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	addr, err := ipfs.AddFile(s.context, filePath)
 	if err != nil {
 		return nil, err
+	}
+	if s.crossPostGateway != nil {
+		http.Post(s.crossPostGateway.String()+"ipfs/", "application/x-www-form-urlencoded", bytes.NewReader(ciphertext))
 	}
 	maAddr, err := ma.NewMultiaddr("/ipfs/" + addr + "/")
 	if err != nil {

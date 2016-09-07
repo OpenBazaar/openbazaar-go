@@ -470,9 +470,9 @@ func (i *jsonAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
-		Directory string
-		Filename  string
-		Image     string
+		Slug     string `json:"slug"`
+		Filename string `json:"filename"`
+		Image    string `json:"image"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var images []ImgData
@@ -488,12 +488,12 @@ func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	}
 	var retData []retImage
 	for _, img := range images {
-		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Directory), os.ModePerm); err != nil {
+		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Slug), os.ModePerm); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 			return
 		}
-		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Directory, img.Filename)
+		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Slug, img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

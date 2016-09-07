@@ -357,10 +357,25 @@ func (x *Start) Execute(args []string) error {
 		go wallet.Start()
 	}
 
+	// Crosspost gateway
+	gatewayUrlString, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	var gatewayUrl *url.URL
+	if gatewayUrlString != "" {
+		gatewayUrl, err = url.Parse(gatewayUrlString)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrl)
 	} else if x.Storage == "dropbox" {
 		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
 		if err != nil {
@@ -387,21 +402,6 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error(err)
 		return err
-	}
-
-	// Crosspost gateway
-	gatewayUrlString, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	var gatewayUrl *url.URL
-	if gatewayUrlString != "" {
-		gatewayUrl, err = url.Parse(gatewayUrlString)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
 	}
 
 	// OpenBazaar node setup
