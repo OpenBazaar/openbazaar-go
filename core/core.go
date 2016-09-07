@@ -68,7 +68,7 @@ type OpenBazaarNode struct {
 	ExchangeRates bitcoin.ExchangeRates
 
 	// An optional gateway URL where we can crosspost data to ensure persistence
-	CrosspostGateway *url.URL
+	CrosspostGateways []*url.URL
 }
 
 // Unpin the current node repo, re-add it, then publish to ipns

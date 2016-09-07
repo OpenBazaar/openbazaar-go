@@ -358,24 +358,27 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Crosspost gateway
-	gatewayUrlString, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
+	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	var gatewayUrl *url.URL
-	if gatewayUrlString != "" {
-		gatewayUrl, err = url.Parse(gatewayUrlString)
-		if err != nil {
-			log.Error(err)
-			return err
+	var gatewayUrls []*url.URL
+	for _, gw := range gatewayUrlStrings {
+		if gw != "" {
+			u, err := url.Parse(gw)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			gatewayUrls = append(gatewayUrls, u)
 		}
 	}
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrl)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls)
 	} else if x.Storage == "dropbox" {
 		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
 		if err != nil {
@@ -406,16 +409,16 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:          ctx,
-		IpfsNode:         nd,
-		RootHash:         ipath.Path(e.Value).String(),
-		RepoPath:         repoPath,
-		Datastore:        sqliteDB,
-		Wallet:           wallet,
-		MessageStorage:   storage,
-		Resolver:         bstk.NewBlockStackClient(resolverUrl),
-		ExchangeRates:    exchange.NewBitcoinPriceFetcher(),
-		CrosspostGateway: gatewayUrl,
+		Context:           ctx,
+		IpfsNode:          nd,
+		RootHash:          ipath.Path(e.Value).String(),
+		RepoPath:          repoPath,
+		Datastore:         sqliteDB,
+		Wallet:            wallet,
+		MessageStorage:    storage,
+		Resolver:          bstk.NewBlockStackClient(resolverUrl),
+		ExchangeRates:     exchange.NewBitcoinPriceFetcher(),
+		CrosspostGateways: gatewayUrls,
 	}
 
 	var gwErrc <-chan error

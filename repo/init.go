@@ -200,7 +200,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err := extendConfigFile(r, "Resolver", "https://resolver.onename.com/"); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Crosspost-gateway", "http://gateway.ob1.io/"); err != nil {
+	if err := extendConfigFile(r, "Crosspost-gateways", []string{"http://gateway.ob1.io/"}); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {

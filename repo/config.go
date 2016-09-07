@@ -130,17 +130,22 @@ func GetDropboxApiToken(cfgPath string) (string, error) {
 	return token, nil
 }
 
-func GetCrosspostGateway(cfgPath string) (string, error) {
+func GetCrosspostGateway(cfgPath string) ([]string, error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	token := cfg.(map[string]interface{})["Crosspost-gateway"].(string)
+	gwys := cfg.(map[string]interface{})["Crosspost-gateways"].([]interface{})
 
-	return token, nil
+	var urls []string
+	for _, gw := range gwys {
+		urls = append(urls, gw.(string))
+	}
+
+	return urls, nil
 }
 
 func GetResolverUrl(cfgPath string) (string, error) {

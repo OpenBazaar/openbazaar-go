@@ -16,16 +16,16 @@ import (
 )
 
 type SelfHostedStorage struct {
-	repoPath         string
-	context          commands.Context
-	crossPostGateway *url.URL
+	repoPath          string
+	context           commands.Context
+	crossPostGateways []*url.URL
 }
 
-func NewSelfHostedStorage(repoPath string, context commands.Context, crossPostGateway *url.URL) *SelfHostedStorage {
+func NewSelfHostedStorage(repoPath string, context commands.Context, crossPostGateways []*url.URL) *SelfHostedStorage {
 	return &SelfHostedStorage{
-		repoPath:         repoPath,
-		context:          context,
-		crossPostGateway: crossPostGateway,
+		repoPath:          repoPath,
+		context:           context,
+		crossPostGateways: crossPostGateways,
 	}
 }
 
@@ -46,8 +46,8 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if err != nil {
 		return nil, err
 	}
-	if s.crossPostGateway != nil {
-		http.Post(s.crossPostGateway.String()+"ipfs/", "application/x-www-form-urlencoded", bytes.NewReader(ciphertext))
+	for _, g := range s.crossPostGateways {
+		http.Post(g.String()+"ipfs/", "application/x-www-form-urlencoded", bytes.NewReader(ciphertext))
 	}
 	maAddr, err := ma.NewMultiaddr("/ipfs/" + addr + "/")
 	if err != nil {
