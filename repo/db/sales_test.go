@@ -188,6 +188,45 @@ func TestUpdateSaleFunding(t *testing.T) {
 
 }
 
+func TestSalePutAfterFundingUpdate(t *testing.T) {
+	err := saldb.Put("orderID", *contract, 1, false)
+	if err != nil {
+		t.Error(err)
+	}
+	record := spvwallet.TransactionRecord{
+		Txid: "abc123",
+	}
+	records := []spvwallet.TransactionRecord{record}
+	err = saldb.UpdateFunding("orderID", true, records)
+	if err != nil {
+		t.Error(err)
+	}
+	err = saldb.Put("orderID", *contract, 3, false)
+	if err != nil {
+		t.Error(err)
+	}
+	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
+	if err != nil {
+		t.Error(err)
+	}
+	_, _, funded, rcds, err := saldb.GetByPaymentAddress(addr)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !funded {
+		t.Error("Update funding failed to update the funded bool")
+		return
+	}
+	if len(rcds) == 0 {
+		t.Error("Failed to return transaction records")
+		return
+	}
+	if rcds[0].Txid != "abc123" {
+		t.Error("Failed to return correct txid on record")
+	}
+}
+
 func TestSalesGetByPaymentAddress(t *testing.T) {
 	saldb.Put("orderID", *contract, 0, false)
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
