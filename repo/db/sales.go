@@ -20,13 +20,6 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// Read in the current transactions if they exist
-	stmt, err := s.db.Prepare("select funded, transactions from sales where orderID=?")
-	var serializedTransactions []byte
-	var fundedInt int
-	stmt.QueryRow(orderID).Scan(&fundedInt, &serializedTransactions)
-	stmt.Close()
-
 	readInt := 0
 	if read {
 		readInt = 1
@@ -43,7 +36,8 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("insert or replace into sales(orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+	stm := `insert or replace into sales(orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from sales where orderID="` + orderID + `"),(select transactions from sales where orderID="` + orderID + `"))`
+	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
@@ -76,8 +70,6 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		shippingName,
 		shippingAddress,
 		address,
-		fundedInt,
-		serializedTransactions,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -106,7 +98,10 @@ func (s *SalesDB) UpdateFunding(orderId string, funded bool, records []spvwallet
 		fundedInt = 1
 	}
 	serializedTransactions, err := json.Marshal(records)
-	_, err = s.db.Exec("update sales set funded=?, transactions=? where orderID=?", fundedInt, serializedTransactions, orderId)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec("update sales set funded=?, transactions=? where orderID=?", fundedInt, string(serializedTransactions), orderId)
 	if err != nil {
 		return err
 	}
@@ -166,6 +161,6 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 		funded = true
 	}
 	var records []spvwallet.TransactionRecord
-	json.Unmarshal(serializedTransactions, records)
+	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
