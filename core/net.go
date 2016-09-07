@@ -4,12 +4,14 @@ import (
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 
+	"bytes"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"golang.org/x/net/context"
+	"net/http"
 )
 
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
@@ -26,6 +28,9 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	addr, aerr := n.MessageStorage.Store(p, ciphertext)
 	if aerr != nil {
 		return aerr
+	}
+	if n.CrosspostGateway != nil {
+		http.Post(n.CrosspostGateway.String()+"ipfs/", "application/x-www-form-urlencoded", bytes.NewReader(ciphertext))
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
