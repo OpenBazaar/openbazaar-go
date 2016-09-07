@@ -12,6 +12,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io/ioutil"
@@ -120,10 +121,20 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		if err != nil {
 			return
 		}
-		// TODO: remove peer ID from the envelope and add the public key
-		// we can then generate the peer ID from the public key and verify the signature
-		// at the same time.
-		id, err := peer.IDB58Decode(env.PeerID)
+		ser, err := proto.Marshal(env.Message)
+		if err != nil {
+			return
+		}
+		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
+		if err != nil {
+			return
+		}
+		valid, err := pubkey.Verify(ser, env.Signature)
+		if err != nil || !valid {
+			return
+		}
+
+		id, err := peer.IDFromPublicKey(pubkey)
 		if err != nil {
 			return
 		}

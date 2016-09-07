@@ -14,7 +14,19 @@ import (
 
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
-	env := pb.Envelope{Message: m, PeerID: n.IpfsNode.Identity.Pretty()}
+	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return err
+	}
+	ser, err := proto.Marshal(m)
+	if err != nil {
+		return err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	env := pb.Envelope{Message: m, Pubkey: pubKeyBytes, Signature: sig}
 	messageBytes, merr := proto.Marshal(&env)
 	if merr != nil {
 		return merr
