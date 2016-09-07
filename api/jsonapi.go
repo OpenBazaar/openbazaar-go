@@ -467,10 +467,9 @@ func (i *jsonAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
-		Slug     string `json:"slug"`
 		Filename string `json:"filename"`
 		Image    string `json:"image"`
 	}
@@ -488,12 +487,7 @@ func (i *jsonAPIHandler) PUTImage(w http.ResponseWriter, r *http.Request) {
 	}
 	var retData []retImage
 	for _, img := range images {
-		if err := os.MkdirAll(path.Join(i.node.RepoPath, "root", "listings", img.Slug), os.ModePerm); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
-			return
-		}
-		imgPath := path.Join(i.node.RepoPath, "root", "listings", img.Slug, img.Filename)
+		imgPath := path.Join(i.node.RepoPath, "root", "images", img.Filename)
 		out, err := os.Create(imgPath)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -542,16 +536,11 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the listing already exists tell them to use PUT
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if !os.IsNotExist(ferr) {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, `{"success": false, "reason": "Listing already exists. Use PUT."}`)
-		return
-	}
-	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
@@ -566,7 +555,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	f, err := os.Create(path.Join(listingPath, "listing.json"))
+	f, err := os.Create(listingPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
@@ -622,12 +611,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug)
-	if err := os.MkdirAll(listingPath, os.ModePerm); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
-		return
-	}
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
 	contract, err := i.node.SignListing(ld.Listing)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -640,7 +624,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	f, err := os.Create(path.Join(listingPath, "listing.json"))
+	f, err := os.Create(listingPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
@@ -672,16 +656,10 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 	}
 	// Delete existing listing if the slug changed
 	if ld.CurrentSlug != "" && ld.CurrentSlug != ld.Listing.Slug {
-		err = i.node.TransferImages(ld.CurrentSlug, ld.Listing.Slug)
+		err := i.node.DeleteListing(ld.CurrentSlug)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
-			return
-		}
-		err = i.node.DeleteListing(ld.CurrentSlug)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			fmt.Fprintf(w, `{"success": false, "reason": "File Write Error: %s"}`, err)
 			return
 		}
 	}

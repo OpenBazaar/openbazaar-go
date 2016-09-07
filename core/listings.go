@@ -13,7 +13,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -177,7 +176,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Price        price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug, "listing.json")
+	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 
 	var index []listingData
 
@@ -341,52 +340,9 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	return false
 }
 
-// Moves images from one directory to another.
-// This is used when a user changes a slug and we need to copy images into
-// the new listing directory.
-func (n *OpenBazaarNode) TransferImages(fromSlug, toSlug string) error {
-	fromPath := path.Join(n.RepoPath, "root", "listings", fromSlug)
-	toPath := path.Join(n.RepoPath, "root", "listings", toSlug)
-
-	directory, err := os.Open(fromPath)
-	if err != nil {
-		return err
-	}
-	defer directory.Close()
-	objects, err := directory.Readdir(-1)
-	if err != nil {
-		return err
-	}
-
-	for _, obj := range objects {
-		sourcefilepointer := path.Join(fromPath, obj.Name())
-		destinationfilepointer := path.Join(toPath, obj.Name())
-
-		sourcefile, err := os.Open(sourcefilepointer)
-		if err != nil {
-			return err
-		}
-
-		defer sourcefile.Close()
-
-		destfile, err := os.Create(destinationfilepointer)
-		if err != nil {
-			return err
-		}
-
-		defer destfile.Close()
-
-		_, err = io.Copy(destfile, sourcefile)
-		if err == nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Deletes the listing directory, removes the listing from the index, and deletes the inventory
 func (n *OpenBazaarNode) DeleteListing(slug string) error {
-	toDelete := path.Join(n.RepoPath, "root", "listings", slug)
+	toDelete := path.Join(n.RepoPath, "root", "listings", slug+".json")
 	err := os.RemoveAll(toDelete)
 	if err != nil {
 		return err
@@ -500,7 +456,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 }
 
 func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
-	listingPath := path.Join(n.RepoPath, "root", "listings", slug, "listing.json")
+	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
 
 	var invList []*pb.Inventory
 	contract := new(pb.RicardianContract)

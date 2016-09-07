@@ -16,9 +16,6 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	case "/ob/header", "/ob/header/":
 		i.PUTHeader(w, r)
 		return
-	case "/ob/images", "/ob/images/":
-		i.PUTImage(w, r)
-		return
 	case "/ob/settings", "/ob/settings/":
 		i.PUTSettings(w, r)
 		return
@@ -47,6 +44,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		return
 	case "/ob/profile", "/ob/profile/":
 		i.POSTProfile(w, r)
+		return
+	case "/ob/images", "/ob/images/":
+		i.POSTImage(w, r)
 		return
 	case "/wallet/spend", "/wallet/spend/":
 		i.POSTSpendCoins(w, r)

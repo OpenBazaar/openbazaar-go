@@ -95,10 +95,7 @@ func addPointer(node *core.IpfsNode, ctx context.Context, k key.Key, pi ps.PeerI
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			err := putPointer(ctx, peerHosts.(host.Host), p, pi, string(k))
-			if err != nil {
-				log.Debug(err)
-			}
+			putPointer(ctx, peerHosts.(host.Host), p, pi, string(k))
 		}(p)
 	}
 	wg.Wait()
