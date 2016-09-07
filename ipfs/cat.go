@@ -2,14 +2,12 @@ package ipfs
 
 import (
 	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/core/coreunix"
 	"github.com/ipfs/go-ipfs/path"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	"io"
-	pth "path"
+	"time"
 )
 
-const CatTimeout = 30
+const CatTimeout = 30 * time.Second
 
 // Fetch data from IPFS given the hash
 func Cat(ctx commands.Context, hash string) ([]byte, error) {
@@ -27,24 +25,6 @@ func Cat(ctx commands.Context, hash string) ([]byte, error) {
 	resp := res.Output()
 	reader := resp.(io.Reader)
 	b := make([]byte, res.Length())
-	_, err = reader.Read(b)
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-func Cat2(ctx commands.Context, hash string) ([]byte, error) {
-	cctx, _ := context.WithTimeout(context.Background(), CatTimeout)
-	ipfsNode, err := ctx.GetNode()
-	if err != nil {
-		return nil, err
-	}
-	reader, err := coreunix.Cat(cctx, ipfsNode, pth.Join("ipfs", hash))
-	if err != nil {
-		return nil, err
-	}
-	var b []byte
 	_, err = reader.Read(b)
 	if err != nil {
 		return nil, err
