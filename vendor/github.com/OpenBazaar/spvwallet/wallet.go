@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/op/go-logging"
@@ -74,10 +75,10 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 }
 
 func (w *SPVWallet) Start() {
-	w.queryDNSSeeds()
-
 	// setup TxStore first (before spvcon)
 	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey, w.listeners)
+
+	w.queryDNSSeeds()
 
 	// shuffle addrs
 	for i := range w.addrs {
@@ -296,6 +297,31 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 		peer.UpdateFilterAndSend()
 	}
 	return err
+}
+
+func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error) {
+	var addrPubKeys []*btc.AddressPubKey
+	for _, key := range keys {
+		ecKey, err := key.ECPubKey()
+		if err != nil {
+			return nil, nil, err
+		}
+		k, err := btc.NewAddressPubKey(ecKey.SerializeCompressed(), w.params)
+		if err != nil {
+			return nil, nil, err
+		}
+		addrPubKeys = append(addrPubKeys, k)
+	}
+	redeemScript, err = txscript.MultiSigScript(addrPubKeys, threshold)
+	if err != nil {
+		return nil, nil, err
+	}
+	addr, err = btc.NewAddressScriptHash(redeemScript, w.params)
+	if err != nil {
+		return nil, nil, err
+	}
+	return addr, redeemScript, nil
+
 }
 
 func (w *SPVWallet) Close() {

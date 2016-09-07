@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -272,17 +273,28 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				0,
 				false)
 
-			childKey, err := hdKey.Child(1)
+			vendorKey, err := hdKey.Child(0)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			addr, err := childKey.Address(n.Wallet.Params())
+			hdKey = hd.NewExtendedKey(
+				n.Wallet.Params().HDPublicKeyID[:],
+				contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
+				chaincode,
+				parentFP,
+				0,
+				0,
+				false)
+
+			buyerKey, err := hdKey.Child(0)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			log.Notice(addr)
-			// TODO: derive a child key from our master pubkey
-			// TODO: Add payment info for 1 of 2 multisig
+			addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1)
+			payment.Address = addr.EncodeAddress()
+			payment.RedeemScript = hex.EncodeToString(redeemScript)
+			payment.Chaincode = hex.EncodeToString(chaincode)
+			n.Wallet.AddWatchedScript(addr.ScriptAddress())
 
 			contract, err = n.SignOrder(contract)
 			if err != nil {
@@ -307,13 +319,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
-			// TODO: return correct values
-			return "", "", 0, false, err
+			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
 				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
@@ -336,17 +347,17 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
-			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
+			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, false, nil
 		}
 	}
 }
 
-func CalcOrderId(order *pb.Order) (string, error) {
+func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	ser, err := proto.Marshal(order)
 	if err != nil {
 		return "", err
@@ -704,6 +715,9 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	listingMap := make(map[string]*pb.Listing)
 
 	// Check order contains all required fields
+	if contract.BuyerOrder == nil {
+		return errors.New("Contract doesn't contain an order")
+	}
 	if contract.BuyerOrder.Payment == nil {
 		return errors.New("Order doesn't contain a payment")
 	}
@@ -862,15 +876,6 @@ collectListings:
 		}
 	}
 
-	// Validate the payment amount
-	total, err := n.CalculateOrderTotal(contract)
-	if err != nil {
-		return err
-	}
-	if total != contract.BuyerOrder.Payment.Amount {
-		return errors.New("Calculated a different payment amount than the buyer")
-	}
-
 	// Validate shipping
 	containsPhysicalGood := false
 	for _, listing := range listingMap {
@@ -898,9 +903,55 @@ collectListings:
 	}
 
 	// Validate the buyers's signature on the order
-	err = verifySignaturesOnOrder(contract)
+	err := verifySignaturesOnOrder(contract)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
+	chaincode, err := hex.DecodeString(order.Payment.Chaincode)
+	if err != nil {
+		return err
+	}
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mECKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPublicKeyID[:],
+		mECKey.SerializeCompressed(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		false)
+
+	vendorKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	hdKey = hd.NewExtendedKey(
+		n.Wallet.Params().HDPublicKeyID[:],
+		order.BuyerID.Pubkeys.Bitcoin,
+		chaincode,
+		parentFP,
+		0,
+		0,
+		false)
+
+	buyerKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1)
+	if order.Payment.Address != addr.EncodeAddress() {
+		return errors.New("Invalid payment address")
+	}
+	if order.Payment.RedeemScript != hex.EncodeToString(redeemScript) {
+		return errors.New("Invalid redeem script")
 	}
 	return nil
 }

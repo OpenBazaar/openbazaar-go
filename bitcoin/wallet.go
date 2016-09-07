@@ -36,6 +36,12 @@ type BitcoinWallet interface {
 	// Add a callback for incoming transactions
 	AddTransactionListener(func(spvwallet.TransactionCallback))
 
+	// Generate a multisig script from public keys
+	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error)
+
+	// Add a script to the wallet and get notifications back when coins are received or spent from it
+	AddWatchedScript(script []byte) error
+
 	// Cleanly disconnect from the wallet
 	Close()
 }

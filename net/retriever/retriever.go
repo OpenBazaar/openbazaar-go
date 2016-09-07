@@ -88,6 +88,7 @@ func (m *MessageRetriever) fetchPointers() {
 func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.Multiaddr) {
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
+		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
 	}
 	m.attemptDecrypt(ciphertext, pid)
@@ -97,10 +98,12 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr) {
 	resp, err := http.Get(url)
 	if err != nil {
+		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
 	}
 	ciphertext, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
 	}
 	m.attemptDecrypt(ciphertext, pid)

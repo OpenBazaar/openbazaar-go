@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
@@ -79,23 +80,50 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 	if err != nil {
 		return errorResponse("Could not unmarshal order"), nil
 	}
+
 	err = service.node.ValidateOrder(contract)
 	if err != nil {
 		return errorResponse(err.Error()), nil
 	}
 
-	contract, err = service.node.NewOrderConfirmation(contract)
-	if err != nil {
-		return errorResponse("Error building order confirmation"), nil
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+		total, err := service.node.CalculateOrderTotal(contract)
+		if err != nil {
+			return errorResponse("Error calculating payment amount"), nil
+		}
+		if total != contract.BuyerOrder.Payment.Amount {
+			return errorResponse("Calculated a different payment amount"), nil
+		}
+		contract, err = service.node.NewOrderConfirmation(contract)
+		if err != nil {
+			return errorResponse("Error building order confirmation"), nil
+		}
+		a, err := ptypes.MarshalAny(contract)
+		if err != nil {
+			return errorResponse("Error building order confirmation"), nil
+		}
+		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
+		m := pb.Message{
+			MessageType: pb.Message_ORDER_CONFIRMATION,
+			Payload:     a,
+		}
+		return &m, nil
+	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
+		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Wallet.AddWatchedScript(addr.ScriptAddress())
+		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
+		return nil, nil
 	}
-	a, err := ptypes.MarshalAny(contract)
-	if err != nil {
-		return errorResponse("Error building order confirmation"), nil
-	}
-	service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
-	m := pb.Message{
-		MessageType: pb.Message_ORDER_CONFIRMATION,
-		Payload:     a,
-	}
-	return &m, nil
+	return errorResponse("Unrecognized payment type"), nil
 }

@@ -16,7 +16,7 @@ import (
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
-	orderID, err := CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 }
 
 func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContract) error {
-	orderID, err := CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
