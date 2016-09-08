@@ -60,6 +60,12 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/header", "/ob/header/":
 		i.POSTHeader(w, r)
 		return
+	case "/ob/orderconfirmation", "/ob/orderconfirmation/":
+		i.POSTOrderConfirmation(w, r)
+		return
+	case "/ob/ordercancel", "/ob/ordercancel/":
+		i.POSTOrderCancel(w, r)
+		return
 	case "/ob/login":
 		i.POSTLogin(w, r)
 		return

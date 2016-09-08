@@ -12,13 +12,15 @@ message Message {
         FOLLOW                  = 2;
         UNFOLLOW                = 3;
         ORDER                   = 4;
-        ORDER_CONFIRMATION      = 5;
-        ORDER_FULFILLMENT       = 6;
-        RATING                  = 7;
-        DISPUTE_OPEN            = 8;
-        DISPUTE_CLOSE           = 9;
-        REFUND                  = 10;
-        OFFLINE_ACK             = 11;
+        ORDER_REJECT            = 5;
+        ORDER_CANCEL            = 6;
+        ORDER_CONFIRMATION      = 7;
+        ORDER_FULFILLMENT       = 8;
+        RATING                  = 9;
+        DISPUTE_OPEN            = 10;
+        DISPUTE_CLOSE           = 11;
+        REFUND                  = 12;
+        OFFLINE_ACK             = 13;
         ERROR                   = 500;
     }
 }

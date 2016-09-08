@@ -23,6 +23,12 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOfflineAck
 	case pb.Message_ORDER:
 		return service.handleOrder
+	case pb.Message_ORDER_CONFIRMATION:
+		return service.handleOrderConfirmation
+	case pb.Message_ORDER_CANCEL:
+		return service.handleOrderCancel
+	case pb.Message_ORDER_REJECT:
+		return service.handleReject
 	default:
 		return nil
 	}
@@ -131,4 +137,35 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 		return nil, nil
 	}
 	return errorResponse("Unrecognized payment type"), nil
+}
+
+func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
+	// TODO: get orderId from message
+	// TODO: load the order
+	// TODO: validate the order confirmation
+	// TODO: append the order confirmation
+	// TODO: set message state to accepted
+	// TODO: send notification to websocket
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
+	// TODO: get orderId from message
+	// TODO: set message state to canceled
+	// TODO: send notification to websocket
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("Received REJECT message from %s", p.Pretty())
+	// TODO: get orderId from message
+	// TODO: set message state to rejected
+	// TODO: send notification to websocket
+	// TODO: move funds back into wallet
+
+	return nil, nil
 }

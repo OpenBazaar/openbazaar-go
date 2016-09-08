@@ -366,6 +366,20 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 }
 
+func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract) error {
+	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+	err = n.SendCancel(contract.VendorListings[0].VendorID.Guid, orderId)
+	if err != nil {
+		return err
+	}
+	// TODO: send funds into wallet
+	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, true)
+	return nil
+}
+
 func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	ser, err := proto.Marshal(order)
 	if err != nil {

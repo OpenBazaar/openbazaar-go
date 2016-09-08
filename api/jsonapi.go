@@ -1312,3 +1312,86 @@ func (i *jsonAPIHandler) GETIsFollowing(w http.ResponseWriter, r *http.Request) 
 	_, peerId := path.Split(r.URL.Path)
 	fmt.Fprintf(w, `{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId))
 }
+
+func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type orderConf struct {
+		OrderId string
+		Reject  bool
+	}
+	decoder := json.NewDecoder(r.Body)
+	var conf orderConf
+	err := decoder.Decode(&conf)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	contract, state, funded, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"success": false, "reason": "order not found"}`)
+		return
+	}
+	if state != pb.OrderState_PENDING {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "order has already been confirmed"}`)
+		return
+	}
+	if !funded && !conf.Reject {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "payment address must be funded before confirmation"}`)
+		return
+	}
+	if !conf.Reject {
+		err := i.node.ConfirmOfflineOrder(contract)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+	} else {
+		err := i.node.RejectOfflineOrder(contract)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+			return
+		}
+	}
+	fmt.Fprintf(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	type orderCancel struct {
+		OrderId string
+	}
+	decoder := json.NewDecoder(r.Body)
+	var can orderCancel
+	err := decoder.Decode(&can)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	contract, state, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, `{"success": false, "reason": "order not found"}`)
+		return
+	}
+	if state != pb.OrderState_PENDING {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `{"success": false, "reason": "order has already been confirmed"}`)
+		return
+	}
+	err = i.node.CancelOfflineOrder(contract)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
+		return
+	}
+	fmt.Fprintf(w, `{}`)
+	return
+}
