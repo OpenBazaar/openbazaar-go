@@ -547,10 +547,10 @@ func validateListing(listing *pb.Listing) (err error) {
 		if err != nil {
 			return errors.New("Image hashes must be a multihash")
 		}
-		if img.FileName == "" {
+		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
 		}
-		if len(img.FileName) > SentanceMaxCharacters {
+		if len(img.Filename) > SentanceMaxCharacters {
 			return fmt.Errorf("Image filename length must be less than the max of %d", SentanceMaxCharacters)
 		}
 	}
@@ -596,10 +596,10 @@ func validateListing(listing *pb.Listing) (err error) {
 				if err != nil {
 					return errors.New("Variant image hashes must be a multihash")
 				}
-				if len(variant.Image.FileName) > SentanceMaxCharacters {
+				if len(variant.Image.Filename) > SentanceMaxCharacters {
 					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentanceMaxCharacters)
 				}
-				if variant.Image.FileName == "" {
+				if variant.Image.Filename == "" {
 					return errors.New("Variant image file names must not be nil")
 				}
 			}

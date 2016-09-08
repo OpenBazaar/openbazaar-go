@@ -1,20 +1,20 @@
 package spvwallet
 
 import (
-	"encoding/json"
 	"errors"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	btc "github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/bloom"
-	"github.com/btcsuite/btcutil/coinset"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/btcsuite/btcutil/txsort"
-	"github.com/btcsuite/btcwallet/wallet/txauthor"
-	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"net/http"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil/bloom"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	btc "github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/coinset"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
+	"github.com/btcsuite/btcwallet/wallet/txauthor"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcutil/txsort"
+	"encoding/json"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"time"
 )
 
@@ -88,7 +88,7 @@ type Coin struct {
 	ScriptPubKey []byte
 }
 
-func (c *Coin) Hash() *chainhash.Hash { return c.TxHash }
+func (c *Coin) Hash() *chainhash.Hash   { return c.TxHash }
 func (c *Coin) Index() uint32         { return c.TxIndex }
 func (c *Coin) Value() btc.Amount     { return c.TxValue }
 func (c *Coin) PkScript() []byte      { return c.ScriptPubKey }
@@ -111,7 +111,7 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	height, _ := w.state.GetDBSyncHeight()
 	utxos, _ := w.db.Utxos().GetAll()
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
-	for _, u := range utxos {
+	for _, u := range(utxos) {
 		if u.Freeze {
 			continue
 		}
@@ -166,7 +166,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
-		for _, c := range coins.Coins() {
+		for _, c := range(coins.Coins()) {
 			total += c.Value()
 			outpoint := wire.NewOutPoint(c.Hash(), c.Index())
 			in := wire.NewTxIn(outpoint, []byte{})
@@ -204,7 +204,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (
 		return script, nil
 	}
 
-	authoredTx, err := txauthor.NewUnsignedTransaction([]*wire.TxOut{out}, btc.Amount(feePerKB), inputSource, changeSource)
+	authoredTx, err := txauthor.NewUnsignedTransaction([]*wire.TxOut{out,}, btc.Amount(feePerKB), inputSource, changeSource)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
 	getScript := txscript.ScriptClosure(func(
-		addr btc.Address) ([]byte, error) {
+	addr btc.Address) ([]byte, error) {
 		return []byte{}, nil
 	})
 	for i, txIn := range authoredTx.Tx.TxIn {

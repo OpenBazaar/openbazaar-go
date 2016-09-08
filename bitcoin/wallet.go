@@ -42,6 +42,9 @@ type BitcoinWallet interface {
 	// Add a script to the wallet and get notifications back when coins are received or spent from it
 	AddWatchedScript(script []byte) error
 
+	// Use this to re-download merkle blocks in case of missed transactions
+	ReSyncBlockchain(fromHeight int32)
+
 	// Cleanly disconnect from the wallet
 	Close()
 }

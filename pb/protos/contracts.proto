@@ -78,7 +78,7 @@ message Listing {
 
         message Image {
             string hash     = 1;
-            string fileName = 2;
+            string filename = 2;
         }
     }
 
