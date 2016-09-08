@@ -112,7 +112,6 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
-
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 
 	if err == nil {
