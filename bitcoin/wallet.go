@@ -30,7 +30,7 @@ type BitcoinWallet interface {
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
 
-	// Returnt the network parameters
+	// Return the network parameters
 	Params() *chaincfg.Params
 
 	// Add a callback for incoming transactions
