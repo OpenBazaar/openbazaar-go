@@ -143,7 +143,7 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		i.DELETEModerator(w, r)
 		return
 	case "/ob/listing", "/ob/listing/":
-		i.DELETEModerator(w, r)
+		i.DELETEListing(w, r)
 		return
 	}
 }
