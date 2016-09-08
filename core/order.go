@@ -11,6 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/txscript"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
@@ -291,10 +292,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, err
 			}
 			addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 			payment.Address = addr.EncodeAddress()
 			payment.RedeemScript = hex.EncodeToString(redeemScript)
 			payment.Chaincode = hex.EncodeToString(chaincode)
-			n.Wallet.AddWatchedScript(addr.ScriptAddress())
+
+			script, err := txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			n.Wallet.AddWatchedScript(script)
 
 			contract, err = n.SignOrder(contract)
 			if err != nil {

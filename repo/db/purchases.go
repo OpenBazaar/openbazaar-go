@@ -144,7 +144,7 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
-	var fundedInt int
+	var fundedInt *int
 	var serializedTransactions []byte
 	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
@@ -156,7 +156,7 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 		return nil, pb.OrderState(0), false, nil, err
 	}
 	funded := false
-	if fundedInt == 1 {
+	if fundedInt != nil && *fundedInt == 1 {
 		funded = true
 	}
 	var records []spvwallet.TransactionRecord

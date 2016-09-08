@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -117,7 +118,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 		if err != nil {
 			return errorResponse(err.Error()), nil
 		}
-		service.node.Wallet.AddWatchedScript(addr.ScriptAddress())
+		script, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), nil

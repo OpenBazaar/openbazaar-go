@@ -26,8 +26,12 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 		tx.Rollback()
 		return err
 	}
+	freezeInt := 0
+	if utxo.Freeze {
+		freezeInt = 1
+	}
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), 0)
+	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), freezeInt)
 	if err != nil {
 		tx.Rollback()
 		return err

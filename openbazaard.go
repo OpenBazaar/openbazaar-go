@@ -352,10 +352,6 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", ml)
-	if !x.DisableWallet {
-		log.Info("Starting bitcoin wallet...")
-		go wallet.Start()
-	}
 
 	// Crosspost gateway
 	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
@@ -448,6 +444,8 @@ func (x *Start) Execute(args []string) error {
 			if !x.DisableWallet {
 				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
 				core.Node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+				log.Info("Starting bitcoin wallet...")
+				go wallet.Start()
 			}
 			core.Node.SeedNode()
 		}
