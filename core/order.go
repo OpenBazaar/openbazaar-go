@@ -184,7 +184,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 						}
 					}
 					if validVariant == false {
-						return "", "", 0, false, errors.New("Selected vairant not in listing")
+						return "", "", 0, false, errors.New("Selected variant not in listing")
 					}
 				}
 			}
@@ -810,7 +810,7 @@ collectListings:
 						}
 					}
 					if validVariant == false {
-						return errors.New("Selected vairant not in listing")
+						return errors.New("Selected variant not in listing")
 					}
 				}
 			check:
