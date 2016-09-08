@@ -19,11 +19,11 @@ func init() {
 	modHash := sha256.Sum256([]byte("moderators"))
 	encoded, err := multihash.Encode(modHash[:], multihash.SHA2_256)
 	if err != nil {
-		log.Fatal("Error creating moderator pointer ID")
+		log.Fatal("Error creating moderator pointer ID (multihash encode)")
 	}
 	mh, err := multihash.Cast(encoded)
 	if err != nil {
-		log.Fatal("Error creating moderator pointer ID")
+		log.Fatal("Error creating moderator pointer ID (multihash cast)")
 	}
 	ModeratorPointerID = mh
 }
