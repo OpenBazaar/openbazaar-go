@@ -985,7 +985,7 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 			peerIds = append(peerIds, p.Pretty())
 		}
 	}
-	ret, _ := json.MarshalIndent(peerIds, "", "")
+	ret, _ := json.MarshalIndent(peerIds, "", "    ")
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
@@ -1023,7 +1023,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	ret, _ := json.MarshalIndent(followers, "", "")
+	ret, _ := json.MarshalIndent(followers, "", "    ")
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
@@ -1049,7 +1049,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	ret, _ := json.MarshalIndent(following, "", "")
+	ret, _ := json.MarshalIndent(following, "", "    ")
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
@@ -1102,7 +1102,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 		i := inv{k, v}
 		invList = append(invList, i)
 	}
-	ret, _ := json.MarshalIndent(invList, "", "")
+	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
