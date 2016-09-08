@@ -514,13 +514,13 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 		rtimg := retImage{img.Filename, hash}
 		retData = append(retData, rtimg)
 	}
-	jsonHashes, err := json.Marshal(retData)
+	jsonHashes, err := json.MarshalIndent(retData, "", "    ")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, `{"success": false, "reason": "%s"}`, err)
 		return
 	}
-	fmt.Fprintf(w, `{"images: "%s"}`, string(jsonHashes))
+	fmt.Fprint(w, string(jsonHashes))
 	return
 }
 
