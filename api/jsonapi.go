@@ -470,7 +470,7 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
-		Filename string `json:"fileame"`
+		Filename string `json:"filename"`
 		Image    string `json:"image"`
 	}
 	decoder := json.NewDecoder(r.Body)
