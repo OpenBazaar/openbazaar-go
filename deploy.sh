@@ -22,7 +22,7 @@ if [ ! -z "$TRAVIS_TAG" ] &&
   rm /tmp/sign.key.gpg
 
   # Sign hash file
-  gpg --armor --output $f.asc --detach-sig --passphrase=$GPG_PASS --default-key $GPG_KEYID sha512_checksums.txt
+  gpg --armor --output sha512_checksums.asc --detach-sig --passphrase=$GPG_PASS --default-key $GPG_KEYID sha512_checksums.txt
 
   # Upload to GitHub Release page
   ghr --username OpenBazaar -t $GITHUB_TOKEN --replace --prerelease --debug $TRAVIS_TAG .
