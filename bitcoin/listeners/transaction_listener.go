@@ -116,7 +116,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		n := notifications.Serialize(
 			notifications.PaymentNotification{
 				orderId,
-				funding,
+				uint64(funding),
 			})
 
 		l.broadcast <- n
