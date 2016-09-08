@@ -325,7 +325,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *jsonAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
 		Avatar string
@@ -396,7 +396,7 @@ func (i *jsonAPIHandler) PUTAvatar(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *jsonAPIHandler) PUTHeader(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	type ImgData struct {
 		Header string
