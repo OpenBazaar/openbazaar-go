@@ -112,14 +112,14 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
 			l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
-
-			n := notifications.Serialize(
-				notifications.PaymentNotification{
-					orderId,
-				})
-
-			l.broadcast <- n
 		}
+		n := notifications.Serialize(
+			notifications.PaymentNotification{
+				orderId,
+				funding,
+			})
+
+		l.broadcast <- n
 	}
 	record := spvwallet.TransactionRecord{
 		Txid:  hex.EncodeToString(txid),

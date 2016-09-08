@@ -26,7 +26,8 @@ type OrderNotification struct {
 }
 
 type PaymentNotification struct {
-	OrderId string `json:"orderId"`
+	OrderId      string `json:"orderId"`
+	FundingTotal uint64 `json:"fundingTotal"`
 }
 
 type FollowNotification struct {
