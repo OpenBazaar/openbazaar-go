@@ -226,7 +226,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	if password != "" {
 		sqlStmt = "PRAGMA key = '" + password + "';"
 	}
-	sqlStmt = sqlStmt + `
+	sqlStmt += `
 	PRAGMA user_version = 0;
 	create table config (key text primary key not null, value blob);
 	create table followers (peerID text primary key not null);
