@@ -870,7 +870,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		feeLevel = spvwallet.PRIOIRTY
 	case "NORMAL":
 		feeLevel = spvwallet.NORMAL
-	case "Economic":
+	case "ECONOMIC":
 		feeLevel = spvwallet.ECONOMIC
 	}
 	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
