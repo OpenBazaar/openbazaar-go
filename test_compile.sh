@@ -24,7 +24,9 @@ rm -rf *.cover.out
 cd qa
 for SCRIPT in *
 do
-   if basename $script != "README.md"
+   b=$(basename $SCRIPT)
+   r="README.md"
+   if [ $b != $r ]
    then 
       python3 $SCRIPT -b $GOPATH/bin/openbazaar-go
    fi
