@@ -164,3 +164,30 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
+
+func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where orderID=?")
+	defer stmt.Close()
+	var contract []byte
+	var stateInt int
+	var fundedInt *int
+	var serializedTransactions []byte
+	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, err
+	}
+	rc := new(pb.RicardianContract)
+	err = jsonpb.UnmarshalString(string(contract), rc)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, err
+	}
+	funded := false
+	if fundedInt != nil && *fundedInt == 1 {
+		funded = true
+	}
+	var records []spvwallet.TransactionRecord
+	json.Unmarshal(serializedTransactions, &records)
+	return rc, pb.OrderState(stateInt), funded, records, nil
+}

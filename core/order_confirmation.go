@@ -42,6 +42,33 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 	return contract, nil
 }
 
+func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract) error {
+	contract, err := n.NewOrderConfirmation(contract)
+	if err != nil {
+		return err
+	}
+	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.Guid, contract)
+	if err != nil {
+		return err
+	}
+	// TODO: send funds into wallet
+	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FUNDED, false)
+	return nil
+}
+
+func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract) error {
+	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+	err = n.SendReject(contract.BuyerOrder.BuyerID.Guid, orderId)
+	if err != nil {
+		return err
+	}
+	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_REJECTED, true)
+	return nil
+}
+
 func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContract) error {
 	orderID, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {

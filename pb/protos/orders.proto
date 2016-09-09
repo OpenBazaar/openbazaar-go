@@ -23,6 +23,12 @@ enum OrderState {
     // accept the payout. After the payout is accepted the state will be set to COMPLETE
     RESOLVED  = 6;
 
-    // The vendor refunded the order
+    // Vendor refunded the order
     REFUNDED  = 7;
+
+    // Buyer canceled the order (offline order only)
+    CANCELED  = 8;
+
+    // Vendor declined to confirm the order (offline order only)
+    REJECTED  = 9;
 }
