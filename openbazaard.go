@@ -162,6 +162,9 @@ func (x *Init) Execute(args []string) error {
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
+	if x.Password != "" {
+		x.Password = strings.Replace(x.Password, "'", "''", -1)
+	}
 
 	_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet)
 	if err == repo.ErrRepoExists && x.Force {

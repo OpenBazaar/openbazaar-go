@@ -88,6 +88,7 @@ func Encrypt() error {
 			fmt.Println("Quit effin around. Try again.")
 		}
 	}
+	pw = strings.Replace(pw, "'", "''", -1)
 	tmpPath := path.Join(repoPath, "tmp")
 	sqlliteDB, err := Create(repoPath, "", testnet)
 	if err != nil {
@@ -171,6 +172,7 @@ func Decrypt() error {
 	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	pw := string(bytePassword)
+	pw = strings.Replace(pw, "'", "''", -1)
 	sqlliteDB, err := Create(repoPath, pw, testnet)
 	if err != nil || sqlliteDB.Config().IsEncrypted() {
 		fmt.Println("Invalid password")
