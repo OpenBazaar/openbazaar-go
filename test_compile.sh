@@ -20,3 +20,11 @@ go test -coverprofile=selfhosted.cover.out ./storage/selfhosted
 echo "mode: set" > coverage.out && cat *.cover.out | grep -v mode: | sort -r | \
 awk '{if($1 != last) {print $0;last=$1}}' >> coverage.out
 rm -rf *.cover.out
+
+for SCRIPT in /*
+do
+    if [ -f $SCRIPT -a -x $SCRIPT ]
+    then
+        python3 $SCRIPT -b $GOPATH/bin/openbazaar-go
+    fi
+done
