@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 pwd
 go test -coverprofile=api.cover.out ./api
 go test -coverprofile=api.cover.out ./api/notifications
