@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 pwd
 go test -coverprofile=api.cover.out ./api
 go test -coverprofile=api.cover.out ./api/notifications
@@ -20,3 +21,15 @@ go test -coverprofile=selfhosted.cover.out ./storage/selfhosted
 echo "mode: set" > coverage.out && cat *.cover.out | grep -v mode: | sort -r | \
 awk '{if($1 != last) {print $0;last=$1}}' >> coverage.out
 rm -rf *.cover.out
+
+cd qa
+for SCRIPT in *
+do
+   b=$(basename $SCRIPT)
+   extension="${b##*.}"
+   p="py"
+   if [ $extension = $p ]
+   then
+      python3 $SCRIPT -b $GOPATH/bin/openbazaar-go
+   fi
+done

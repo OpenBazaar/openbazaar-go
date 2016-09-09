@@ -49,10 +49,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		return c, err
 	}
 	profile, err := n.GetProfile()
-	if err != nil {
-		return c, err
+	if err == nil {
+		id.BlockchainID = profile.Handle
 	}
-	id.BlockchainID = profile.Handle
 	p := new(pb.ID_Pubkeys)
 	p.Guid = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
@@ -162,18 +161,18 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 // Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
 	type price struct {
-		CurrencyCode string
-		Amount       uint64
+		CurrencyCode string `json:"currencyCode"`
+		Amount       uint64 `json:"amount"`
 	}
 	type listingData struct {
-		Hash         string
-		Slug         string
-		Title        string
-		Category     []string
-		ContractType string
-		Desc         string
-		Thumbnail    string
-		Price        price
+		Hash         string   `json:"hash"`
+		Slug         string   `json:"slug"`
+		Title        string   `json:"title"`
+		Category     []string `json:"category"`
+		ContractType string   `json:"contractType"`
+		Desc         string   `json:"desc"`
+		Thumbnail    string   `json:"thumbnail"`
+		Price        price    `json:"price"`
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")

@@ -8,15 +8,17 @@ import shutil
 import time
 import json
 import argparse
+import traceback
+from random import randint
 from subprocess import PIPE
 
-TEST_SWARM_PORT = 43210
-TEST_GATEWAY_PORT = 54321
+TEST_SWARM_PORT = randint(1024, 65535)
+TEST_GATEWAY_PORT = randint(1024, 65535)
 
 BOOTSTRAP_NODES = [
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/QmTujop5JvTHv99jG4WB739P6FdWYpA1Yxnv58zUhZ1nqX",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmZHiLDFFCg7f1U65U9icaXvCfmxjZXbjmhai9TtNLPCgH",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/QmfKbCVPt2cHgDuuUUyGkrYYTWge6q97eCiWtX8SYHRSCP"
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/QmVp4tK486CvnamB6K4uhY4vB5sMzEDpCNzeyh9VwBFXhS",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmWPBKm3sLEPMy8EqrR5nHD2KUzh3TEgfquRjuxHM4h3Pv",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/QmPL1X7ZQr2ooQHfuWJwuJndeyaN2DBoYHFg954TUsytvF"
 ]
 
 BOOTSTAP_MNEMONICS = [
@@ -26,15 +28,25 @@ BOOTSTAP_MNEMONICS = [
 ]
 
 
+class TestFailure(Exception):
+    pass
+
+
 class OpenBazaarTestFramework(object):
 
-    def __init__(self, binary, num_nodes=4, temp_dir="/tmp/"):
-        self.binary = binary
-        self.temp_dir = temp_dir
+    def __init__(self):
         self.nodes = []
-        for i in range(num_nodes):
+
+    def setup_nodes(self):
+        for i in range(self.num_nodes):
             self.configure_node(i)
             self.start_node(self.nodes[i])
+
+    def setup_network(self):
+        self.setup_nodes()
+
+    def run_test(self):
+        raise NotImplementedError
 
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
@@ -70,31 +82,49 @@ class OpenBazaarTestFramework(object):
     def start_node(self, node):
         args = [self.binary, "start", "-d", node["data_dir"], "--disablewallet"]
         process = subprocess.Popen(args, stdout=PIPE)
-        self.wait_for_start_success(process)
+        peerId = self.wait_for_start_success(process)
+        node["peerId"] = peerId
 
     @staticmethod
     def wait_for_start_success(process):
+        peerId = ""
         while True:
             if process.poll() is not None:
                 raise Exception("OpenBazaar node failed to start")
             output = process.stdout
             for o in output:
-                if "Swarm listening on" in str(o):
-                    print("OpenBazaar node started successfully")
-                    return
+                if "Peer ID:" in str(o):
+                    peerId = str(o)[str(o).index("Peer ID:") + 10:len(str(o)) - 3]
+                if "Gateway/API server listening" in str(o):
+                    return peerId
 
     def teardown(self):
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-                description="OpenBazaar Test Framework",
-                usage="python3 test_framework.py [options]"
-    )
-    parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
-    parser.add_argument('-n', '--nodes', help="the number of nodes to spin up", default=4)
-    parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
-    args = parser.parse_args(sys.argv[1:])
-    ob = OpenBazaarTestFramework(args.binary, int(args.nodes), args.tempdir)
-    ob.teardown()
+    def main(self):
+        parser = argparse.ArgumentParser(
+                    description="OpenBazaar Test Framework",
+                    usage="python3 test_framework.py [options]"
+        )
+        parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
+        parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
+        args = parser.parse_args(sys.argv[1:])
+        self.binary = args.binary
+        self.temp_dir = args.tempdir
+
+        failure = False
+        try:
+            self.setup_network()
+            self.run_test()
+        except TestFailure as e:
+            print(repr(e))
+            failure = True
+        except Exception as e:
+            print("Unexpected exception caught during testing: " + repr(e))
+            traceback.print_tb(sys.exc_info()[2])
+            failure = True
+
+        self.teardown()
+        if failure:
+            sys.exit(1)
 
