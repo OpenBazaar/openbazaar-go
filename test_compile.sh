@@ -25,8 +25,9 @@ cd qa
 for SCRIPT in *
 do
    b=$(basename $SCRIPT)
-   r="README.md"
-   if [ $b != $r ]
+   extension="${b##*.}"
+   p="py"
+   if [ $extension = $p ]
    then
       python3 $SCRIPT -b $GOPATH/bin/openbazaar-go
    fi
