@@ -14,6 +14,8 @@ before_install:
 script:
   - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
+  - cd qa
+  - cd python3 upload_listing.py -b $GOPATH/bin/openbazaar-go
   - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
   - ./deploy.sh
