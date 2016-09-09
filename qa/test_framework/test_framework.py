@@ -112,6 +112,8 @@ class OpenBazaarTestFramework(object):
         try:
             self.setup_network()
             self.run_test()
+        except TestFailure as e:
+            print("FAIL - " + repr(e))
         except Exception as e:
             print("Unexpected exception caught during testing: " + repr(e))
             traceback.print_tb(sys.exc_info()[2])
