@@ -15,13 +15,14 @@ class UploadListingTest(OpenBazaarTestFramework):
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = self.nodes[0]["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
-        if r.status_code == 200:
+        if r.status_code == 201:
             print("UploadListingTest - PASS")
         elif r.status_code == 404:
             raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
         else:
-            resp = json.loads(r.text)
-            raise TestFailure("UploadListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
+            #resp = json.loads(r.text)
+            #raise TestFailure("UploadListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
 
 if __name__ == '__main__':
     print("Running UploadListingTest")
