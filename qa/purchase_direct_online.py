@@ -34,7 +34,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        listingId = resp[0]["Hash"]
+        listingId = resp[0]["hash"]
 
         # bob send order
         with open('testdata/order_direct.json') as order_file:
