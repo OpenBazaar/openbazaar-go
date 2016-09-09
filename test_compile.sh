@@ -21,7 +21,7 @@ echo "mode: set" > coverage.out && cat *.cover.out | grep -v mode: | sort -r | \
 awk '{if($1 != last) {print $0;last=$1}}' >> coverage.out
 rm -rf *.cover.out
 
-for SCRIPT in ~/qa/*
+for SCRIPT in $GOPATH/src/github.com/OpenBazaar/openbazaar-go/qa/*
 do
    python3 $SCRIPT -b $GOPATH/bin/openbazaar-go
 done
