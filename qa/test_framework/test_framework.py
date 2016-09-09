@@ -92,7 +92,6 @@ class OpenBazaarTestFramework(object):
             output = process.stdout
             for o in output:
                 if "Gateway/API server listening" in str(o):
-                    print("OpenBazaar node started successfully")
                     return
 
     def teardown(self):
@@ -113,7 +112,7 @@ class OpenBazaarTestFramework(object):
             self.setup_network()
             self.run_test()
         except TestFailure as e:
-            print("FAIL - " + repr(e))
+            print(repr(e))
         except Exception as e:
             print("Unexpected exception caught during testing: " + repr(e))
             traceback.print_tb(sys.exc_info()[2])

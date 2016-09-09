@@ -18,10 +18,11 @@ class UploadListingTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             print("UploadListingTest - PASS")
         elif r.status_code == 404:
-            raise TestFailure("Listing post endpoint not found")
+            raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
         else:
             resp = json.loads(r.text)
-            raise TestFailure("Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("UploadListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
 
 if __name__ == '__main__':
+    print("Running UploadListingTest")
     UploadListingTest().main()
