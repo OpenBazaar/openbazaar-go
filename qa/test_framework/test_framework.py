@@ -16,9 +16,9 @@ TEST_SWARM_PORT = randint(1024, 65535)
 TEST_GATEWAY_PORT = randint(1024, 65535)
 
 BOOTSTRAP_NODES = [
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/QmTujop5JvTHv99jG4WB739P6FdWYpA1Yxnv58zUhZ1nqX",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmZHiLDFFCg7f1U65U9icaXvCfmxjZXbjmhai9TtNLPCgH",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/QmfKbCVPt2cHgDuuUUyGkrYYTWge6q97eCiWtX8SYHRSCP"
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/QmVp4tK486CvnamB6K4uhY4vB5sMzEDpCNzeyh9VwBFXhS",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmWPBKm3sLEPMy8EqrR5nHD2KUzh3TEgfquRjuxHM4h3Pv",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/QmPL1X7ZQr2ooQHfuWJwuJndeyaN2DBoYHFg954TUsytvF"
 ]
 
 BOOTSTAP_MNEMONICS = [
@@ -82,17 +82,21 @@ class OpenBazaarTestFramework(object):
     def start_node(self, node):
         args = [self.binary, "start", "-d", node["data_dir"], "--disablewallet"]
         process = subprocess.Popen(args, stdout=PIPE)
-        self.wait_for_start_success(process)
+        peerId = self.wait_for_start_success(process)
+        node["peerId"] = peerId
 
     @staticmethod
     def wait_for_start_success(process):
+        peerId = ""
         while True:
             if process.poll() is not None:
                 raise Exception("OpenBazaar node failed to start")
             output = process.stdout
             for o in output:
+                if "Peer ID:" in str(o):
+                    peerId = str(o)[str(o).index("Peer ID:") + 10:len(str(o)) - 3]
                 if "Gateway/API server listening" in str(o):
-                    return
+                    return peerId
 
     def teardown(self):
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
