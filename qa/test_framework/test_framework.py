@@ -108,14 +108,19 @@ class OpenBazaarTestFramework(object):
         self.binary = args.binary
         self.temp_dir = args.tempdir
 
+        failure = False
         try:
             self.setup_network()
             self.run_test()
         except TestFailure as e:
             print(repr(e))
+            failure = True
         except Exception as e:
             print("Unexpected exception caught during testing: " + repr(e))
             traceback.print_tb(sys.exc_info()[2])
+            failure = True
 
         self.teardown()
+        if failure:
+            sys.exit(1)
 
