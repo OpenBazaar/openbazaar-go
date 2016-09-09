@@ -49,10 +49,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		return c, err
 	}
 	profile, err := n.GetProfile()
-	if err != nil {
-		return c, err
+	if err == nil {
+		id.BlockchainID = profile.Handle
 	}
-	id.BlockchainID = profile.Handle
 	p := new(pb.ID_Pubkeys)
 	p.Guid = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()

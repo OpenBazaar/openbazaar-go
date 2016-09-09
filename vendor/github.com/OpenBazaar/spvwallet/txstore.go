@@ -2,22 +2,22 @@ package spvwallet
 
 import (
 	"fmt"
-	"sync"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
+	"sync"
 )
 
 type Datastore interface {
-	Utxos()          Utxos
-	Stxos()          Stxos
-	Txns()           Txns
-	Keys()           Keys
-	State()          State
+	Utxos() Utxos
+	Stxos() Stxos
+	Txns() Txns
+	Keys() Keys
+	State() State
 	WatchedScripts() WatchedScripts
 }
 
@@ -85,7 +85,7 @@ type Keys interface {
 
 	// Get the number of unused keys following the last used key
 	// for each key purpose.
-	GetLookaheadWindows() map[KeyPurpose] int
+	GetLookaheadWindows() map[KeyPurpose]int
 }
 
 type State interface {
@@ -121,21 +121,21 @@ type TxStore struct {
 	addrMutex      *sync.Mutex
 	db             Datastore
 
-	Param          *chaincfg.Params
+	Param *chaincfg.Params
 
-	masterPrivKey  *hd.ExtendedKey
+	masterPrivKey *hd.ExtendedKey
 
-	chainState     ChainState
+	chainState ChainState
 
-	listeners      []func(TransactionCallback)
+	listeners []func(TransactionCallback)
 }
 
 type Utxo struct { // cash money.
 	Op wire.OutPoint // where
 
 	// all the info needed to spend
-	AtHeight int32  // block height where this tx was confirmed, 0 for unconf
-	Value    int64  // higher is better
+	AtHeight int32 // block height where this tx was confirmed, 0 for unconf
+	Value    int64 // higher is better
 
 	ScriptPubkey []byte
 
@@ -146,7 +146,7 @@ type Utxo struct { // cash money.
 // Stxo is a utxo that has moved on.
 type Stxo struct {
 	Utxo        Utxo           // when it used to be a utxo
-	SpendHeight int32        // height at which it met its demise
+	SpendHeight int32          // height at which it met its demise
 	SpendTxid   chainhash.Hash // the tx that consumed it
 }
 
@@ -241,4 +241,3 @@ func OutPointsEqual(a, b wire.OutPoint) bool {
 	}
 	return a.Index == b.Index
 }
-
