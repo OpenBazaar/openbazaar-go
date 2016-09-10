@@ -111,6 +111,7 @@ class OpenBazaarTestFramework(object):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
+        print(os.path.join(os.getcwd(), "qa", "testdata", "bitcoin.conf"))
         copyfile(os.path.join(os.getcwd(), "qa", "testdata", "bitcoin.conf"), btc_conf_file)
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
         process = subprocess.Popen(args, stdout=PIPE)
