@@ -22,6 +22,7 @@ echo "mode: set" > coverage.out && cat *.cover.out | grep -v mode: | sort -r | \
 awk '{if($1 != last) {print $0;last=$1}}' >> coverage.out
 rm -rf *.cover.out
 
+pwd
 wget https://bitcoin.org/bin/bitcoin-core-0.13.0/bitcoin-0.13.0-x86_64-linux-gnu.tar.gz
 tar -xvzf bitcoin-0.13.0-x86_64-linux-gnu.tar.gz
 
