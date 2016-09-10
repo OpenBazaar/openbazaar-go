@@ -39,6 +39,7 @@ class OpenBazaarTestFramework(object):
 
     def __init__(self):
         self.nodes = []
+        self.bitcoin_api = None
 
     def setup_nodes(self):
         for i in range(self.num_nodes):
