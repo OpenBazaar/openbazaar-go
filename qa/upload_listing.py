@@ -10,6 +10,9 @@ class UploadListingTest(OpenBazaarTestFramework):
         super().__init__()
         self.num_nodes = 1
 
+    def setup_network(self):
+        self.setup_nodes()
+
     def run_test(self):
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)

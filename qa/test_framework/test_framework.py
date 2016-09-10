@@ -133,6 +133,7 @@ class OpenBazaarTestFramework(object):
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")
+        time.sleep(2)
 
     def main(self):
         parser = argparse.ArgumentParser(

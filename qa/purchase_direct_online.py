@@ -11,6 +11,9 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         super().__init__()
         self.num_nodes = 2
 
+    def setup_network(self):
+        self.setup_nodes()
+
     def run_test(self):
         alice = self.nodes[0]
         bob = self.nodes[1]
