@@ -110,6 +110,8 @@ class OpenBazaarTestFramework(object):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", "bitcoin")
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
+        if not os.path.exists(os.path.join(dir_path, "regtest")):
+            os.makedirs(os.path.join(dir_path, "regtest"))
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
         copyfile(os.path.join(os.getcwd(), "testdata", "bitcoin.conf"), btc_conf_file)
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
