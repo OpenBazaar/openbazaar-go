@@ -76,6 +76,7 @@ type Init struct {
 type Start struct {
 	Password      string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet       bool     `short:"t" long:"testnet" description:"use the test network"`
+	Regtest       bool     `short:"r" long:"regtest" description:"run in regression test mode"`
 	LogLevel      string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
 	AllowIP       []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN          bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
@@ -108,7 +109,9 @@ func main() {
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 				os.Remove(repoLockFile)
-				core.Node.Wallet.Close()
+				if core.Node.Wallet != nil {
+					core.Node.Wallet.Close()
+				}
 				core.Node.IpfsNode.Close()
 			}
 			os.Exit(1)
@@ -193,8 +196,17 @@ func (x *Start) Execute(args []string) error {
 	printSplashScreen()
 	var err error
 
+	if x.Testnet && x.Regtest {
+		return errors.New("Invalid combination of testnet and regtest modes")
+	}
+
+	var isTestnet bool
+	if x.Testnet || x.Regtest {
+		isTestnet = true
+	}
+
 	// set repo path
-	repoPath, err := getRepoPath(x.Testnet)
+	repoPath, err := getRepoPath(isTestnet)
 	if err != nil {
 		return err
 	}
@@ -205,7 +217,7 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
 
-	sqliteDB, err := initializeRepo(repoPath, x.Password, "", x.Testnet)
+	sqliteDB, err := initializeRepo(repoPath, x.Password, "", isTestnet)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
@@ -324,10 +336,12 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	var params chaincfg.Params
-	if !x.Testnet {
-		params = chaincfg.MainNetParams
-	} else {
+	if x.Testnet {
 		params = chaincfg.TestNet3Params
+	} else if x.Regtest {
+		params = chaincfg.RegressionNetParams
+	} else {
+		params = chaincfg.MainNetParams
 	}
 	maxFee, err := repo.GetMaxFee(path.Join(repoPath, "config"))
 	if err != nil {
@@ -344,6 +358,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+	trustedPeer, err := repo.GetTrustedBitcoinPeer(path.Join(repoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
 	w3 := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
@@ -354,7 +373,7 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", ml)
+	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", trustedPeer, ml)
 
 	// Crosspost gateway
 	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))

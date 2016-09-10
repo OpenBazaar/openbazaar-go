@@ -217,10 +217,12 @@ const (
 	MAX_HEADERS                = 2000
 	MAINNET_CHECKPOINT_HEIGHT  = 407232
 	TESTNET3_CHECKPOINT_HEIGHT = 919296
+	REGTEST_CHECKPOINT_HEIGHT  = 0
 )
 
 var MainnetCheckpoint wire.BlockHeader
 var Testnet3Checkpoint wire.BlockHeader
+var RegtestCheckpoint wire.BlockHeader
 
 type Blockchain struct {
 	lock   *sync.Mutex
@@ -258,6 +260,15 @@ func NewBlockchain(filePath string, params *chaincfg.Params) *Blockchain {
 			sh := StoredHeader{
 				header:    Testnet3Checkpoint,
 				height:    TESTNET3_CHECKPOINT_HEIGHT,
+				totalWork: big.NewInt(0),
+			}
+			// Put to db
+			b.db.Put(sh, true)
+		} else if b.params.Name == chaincfg.RegressionNetParams.Name {
+			// Put the checkpoint to the db
+			sh := StoredHeader{
+				header:    RegtestCheckpoint,
+				height:    REGTEST_CHECKPOINT_HEIGHT,
 				totalWork: big.NewInt(0),
 			}
 			// Put to db
@@ -560,4 +571,5 @@ func createCheckpoints() {
 		Bits:       437256176,
 		Nonce:      2288429377,
 	}
+	RegtestCheckpoint = chaincfg.RegressionNetParams.GenesisBlock.Header
 }

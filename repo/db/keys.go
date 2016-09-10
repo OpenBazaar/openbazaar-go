@@ -113,10 +113,10 @@ func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
 	var ret []spvwallet.KeyPath
 	stm := "select purpose, keyIndex from keys"
 	rows, err := k.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var purpose int
 		var index int

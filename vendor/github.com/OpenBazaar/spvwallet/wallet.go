@@ -18,6 +18,7 @@ type SPVWallet struct {
 	peerGroup     map[string]*Peer
 	pgMutex       sync.Mutex
 	downloadPeer  *Peer
+	trustedPeer   string
 	diconnectChan chan string
 
 	masterPrivateKey *hd.ExtendedKey
@@ -48,7 +49,7 @@ const WALLET_VERSION = "0.1.0"
 const MAX_PEERS = 10
 
 func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
-	repoPath string, db Datastore, userAgent string, logger logging.LeveledBackend) *SPVWallet {
+	repoPath string, db Datastore, userAgent string, trustedPeer string, logger logging.LeveledBackend) *SPVWallet {
 
 	log.SetBackend(logger)
 
@@ -69,6 +70,7 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	w.repoPath = repoPath
 	w.db = db
 	w.userAgent = userAgent
+	w.trustedPeer = trustedPeer
 	w.diconnectChan = make(chan string)
 	w.peerGroup = make(map[string]*Peer)
 	return w
@@ -102,7 +104,16 @@ func (w *SPVWallet) Start() {
 		}
 	}
 
-	go w.connectToPeers()
+	if w.trustedPeer == "" {
+		go w.connectToPeers()
+	} else {
+		peer, err := NewPeer(w.trustedPeer, w.blockchain, w.state, w.params, w.userAgent, w.diconnectChan, true)
+		if err != nil {
+			log.Fatal("Failed to connect to trusted peer")
+		}
+		w.downloadPeer = peer
+		w.peerGroup[w.trustedPeer] = peer
+	}
 	go w.onPeerDisconnect()
 }
 

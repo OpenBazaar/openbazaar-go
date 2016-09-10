@@ -88,6 +88,19 @@ func GetFeeAPI(cfgPath string) (string, error) {
 	return feeAPI, nil
 }
 
+func GetTrustedBitcoinPeer(cfgPath string) (string, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	wallet := cfg.(map[string]interface{})["Wallet"]
+	feeAPI := wallet.(map[string]interface{})["TrustedPeer"].(string)
+	return feeAPI, nil
+}
+
 func GetDefaultFees(cfgPath string) (Low uint64, Medium uint64, High uint64, err error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	ret := uint64(0)

@@ -59,10 +59,10 @@ func (t *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
 	var ret []*wire.MsgTx
 	stm := "select tx from txns"
 	rows, err := t.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var tx []byte
 		if err := rows.Scan(&tx); err != nil {

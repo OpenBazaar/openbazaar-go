@@ -174,6 +174,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		HighFeeDefault   int
 		MediumFeeDefault int
 		LowFeeDefault    int
+		TrustedPeer      string
 	}
 	var w Wallet = Wallet{
 		MaxFee:           2000,
@@ -181,6 +182,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		HighFeeDefault:   60,
 		MediumFeeDefault: 40,
 		LowFeeDefault:    20,
+		TrustedPeer:      "",
 	}
 	type APIConfig struct {
 		CORS        bool

@@ -45,7 +45,10 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 	defer u.lock.Unlock()
 	var ret []spvwallet.Utxo
 	stm := "select outpoint, value, height, scriptPubKey, freeze from utxos"
-	rows, _ := u.db.Query(stm)
+	rows, err := u.db.Query(stm)
+	if err != nil {
+		return ret, err
+	}
 	defer rows.Close()
 	for rows.Next() {
 		var outpoint string
