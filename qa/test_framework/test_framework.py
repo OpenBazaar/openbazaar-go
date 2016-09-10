@@ -130,15 +130,10 @@ class OpenBazaarTestFramework(object):
                 continue
 
     def teardown(self):
-        f = open('/tmp/openbazaar-go/bitcoin/regtest/debug.log', 'r')
-        file_contents = f.read()
-        print (file_contents)
-        f.close()
-        shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")
-
-        time.sleep(2)
+        time.sleep(3)
+        shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet"]):
         parser = argparse.ArgumentParser(
