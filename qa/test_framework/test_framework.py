@@ -110,8 +110,6 @@ class OpenBazaarTestFramework(object):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", "bitcoin")
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        if not os.path.exists(os.path.join(dir_path, "regtest")):
-            os.makedirs(os.path.join(dir_path, "regtest"))
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
         copyfile(os.path.join(os.getcwd(), "testdata", "bitcoin.conf"), btc_conf_file)
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
@@ -132,9 +130,14 @@ class OpenBazaarTestFramework(object):
                 continue
 
     def teardown(self):
+        f = open('/tmp/openbazaar-go/bitcoin/regtest/debug.log', 'r')
+        file_contents = f.read()
+        print (file_contents)
+        f.close()
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")
+
         time.sleep(2)
 
     def main(self, options=["--disablewallet", "--testnet"]):
