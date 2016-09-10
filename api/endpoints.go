@@ -66,6 +66,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/ordercancel", "/ob/ordercancel/":
 		i.POSTOrderCancel(w, r)
 		return
+	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
+		i.POSTResyncBlockchain(w, r)
+		return
 	case "/ob/login":
 		i.POSTLogin(w, r)
 		return

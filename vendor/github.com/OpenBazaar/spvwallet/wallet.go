@@ -80,8 +80,6 @@ func (w *SPVWallet) Start() {
 	// setup TxStore first (before spvcon)
 	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey, w.listeners)
 
-	w.queryDNSSeeds()
-
 	// shuffle addrs
 	for i := range w.addrs {
 		j := rand.Intn(i + 1)
@@ -105,6 +103,7 @@ func (w *SPVWallet) Start() {
 	}
 
 	if w.trustedPeer == "" {
+		w.queryDNSSeeds()
 		go w.connectToPeers()
 	} else {
 		peer, err := NewPeer(w.trustedPeer, w.blockchain, w.state, w.params, w.userAgent, w.diconnectChan, true)
@@ -120,6 +119,9 @@ func (w *SPVWallet) Start() {
 // Loop through creating new peers until we reach MAX_PEERS
 // If we don't have a download peer set we will set one
 func (w *SPVWallet) connectToPeers() {
+	if len(w.addrs) <= 0 {
+		return
+	}
 	for {
 		if len(w.peerGroup) < MAX_PEERS {
 			var addr string

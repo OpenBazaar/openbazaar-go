@@ -1394,3 +1394,10 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 	fmt.Fprintf(w, `{}`)
 	return
 }
+
+func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	i.node.Wallet.ReSyncBlockchain(0)
+	fmt.Fprintf(w, `{}`)
+	return
+}
