@@ -87,7 +87,7 @@ class OpenBazaarTestFramework(object):
                     return
 
     def start_node(self, node):
-        args = [self.binary, "start", "-d", node["data_dir"], "--regtest"]
+        args = [self.binary, "start", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process)
         node["peerId"] = peerId
@@ -102,7 +102,7 @@ class OpenBazaarTestFramework(object):
             for o in output:
                 if "Peer ID:" in str(o):
                     peerId = str(o)[str(o).index("Peer ID:") + 10:len(str(o)) - 3]
-                if "Starting bitcoin wallet..." in str(o):
+                if "Gateway/API server listening" in str(o):
                     return peerId
 
     def start_bitcoind(self):
@@ -135,7 +135,7 @@ class OpenBazaarTestFramework(object):
             self.bitcoin_api.call("stop")
         time.sleep(2)
 
-    def main(self):
+    def main(self, options=["--disablewallet", "--testnet"]):
         parser = argparse.ArgumentParser(
                     description="OpenBazaar Test Framework",
                     usage="python3 test_framework.py [options]"
@@ -147,6 +147,7 @@ class OpenBazaarTestFramework(object):
         self.binary = args.binary
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
+        self.options = options
 
         failure = False
         try:

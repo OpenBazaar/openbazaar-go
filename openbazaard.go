@@ -109,9 +109,7 @@ func main() {
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 				os.Remove(repoLockFile)
-				if core.Node.Wallet != nil {
-					core.Node.Wallet.Close()
-				}
+				core.Node.Wallet.Close()
 				core.Node.IpfsNode.Close()
 			}
 			os.Exit(1)
@@ -200,7 +198,7 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Invalid combination of testnet and regtest modes")
 	}
 
-	var isTestnet bool
+	isTestnet := false
 	if x.Testnet || x.Regtest {
 		isTestnet = true
 	}

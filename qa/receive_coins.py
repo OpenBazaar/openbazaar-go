@@ -41,4 +41,4 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running ReceiveCoinsTest")
-    ReceiveCoinsTest().main()
+    ReceiveCoinsTest().main(["--regtest"])

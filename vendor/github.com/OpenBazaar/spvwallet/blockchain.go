@@ -242,6 +242,7 @@ func NewBlockchain(filePath string, params *chaincfg.Params) *Blockchain {
 		params: params,
 		db:     NewHeaderDB(filePath),
 	}
+	fmt.Println("here")
 
 	h, err := b.db.Height()
 	if h == 0 || err != nil {
