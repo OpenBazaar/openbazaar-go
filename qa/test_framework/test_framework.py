@@ -11,6 +11,9 @@ import argparse
 import traceback
 from random import randint
 from subprocess import PIPE
+from bitcoin import rpc
+from bitcoin import SelectParams
+from shutil import copyfile
 
 TEST_SWARM_PORT = randint(1024, 65535)
 TEST_GATEWAY_PORT = randint(1024, 65535)
@@ -44,6 +47,8 @@ class OpenBazaarTestFramework(object):
 
     def setup_network(self):
         self.setup_nodes()
+        if self.bitcoind is not None:
+            self.start_bitcoind()
 
     def run_test(self):
         raise NotImplementedError
@@ -98,8 +103,33 @@ class OpenBazaarTestFramework(object):
                 if "Gateway/API server listening" in str(o):
                     return peerId
 
+    def start_bitcoind(self):
+        SelectParams('regtest')
+        dir_path = os.path.join(self.temp_dir, "openbazaar-go", "bitcoin")
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
+        copyfile("testdata/bitcoin.conf", btc_conf_file)
+        args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
+        process = subprocess.Popen(args, stdout=PIPE)
+        self.wait_for_bitcoind_start(process, btc_conf_file)
+
+    def wait_for_bitcoind_start(self, process, btc_conf_file):
+        while True:
+            if process.poll() is not None:
+                raise Exception('bitcoind exited with status %i during initialization' % process.returncode)
+            try:
+                self.bitcoin_api = rpc.Proxy(btc_conf_file=btc_conf_file)
+                blocks = self.bitcoin_api.getblockcount()
+                break # break out of loop on success
+            except Exception:
+                time.sleep(0.25)
+                continue
+
     def teardown(self):
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
+        if self.bitcoin_api is not None:
+            self.bitcoin_api.call("stop")
 
     def main(self):
         parser = argparse.ArgumentParser(
@@ -107,10 +137,12 @@ class OpenBazaarTestFramework(object):
                     usage="python3 test_framework.py [options]"
         )
         parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
+        parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir
+        self.bitcoind = args.bitcoind
 
         failure = False
         try:
