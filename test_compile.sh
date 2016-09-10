@@ -34,6 +34,6 @@ do
    p="py"
    if [ $extension = $p ]
    then
-      python3 $SCRIPT -b $GOPATH/bin/openbazaar-go -d $GOPATH/src/openbazaar-go/bitcoin-0.13.0/bin/bitcoind
+      python3 $SCRIPT -b $GOPATH/bin/openbazaar-go -d $GOPATH/src/github.com/OpenBazaar/openbazaar-go/bitcoin-0.13.0/bin/bitcoind
    fi
 done
