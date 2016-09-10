@@ -11,6 +11,9 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         super().__init__()
         self.num_nodes = 2
 
+    def setup_network(self):
+        self.setup_nodes()
+
     def run_test(self):
         alice = self.nodes[0]
         bob = self.nodes[1]
@@ -26,7 +29,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        time.sleep(3)
+        time.sleep(4)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"

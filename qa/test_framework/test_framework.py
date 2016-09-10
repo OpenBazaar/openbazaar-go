@@ -47,16 +47,16 @@ class OpenBazaarTestFramework(object):
             self.start_node(self.nodes[i])
 
     def setup_network(self):
-        self.setup_nodes()
         if self.bitcoind is not None:
             self.start_bitcoind()
+        self.setup_nodes()
 
     def run_test(self):
         raise NotImplementedError
 
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
-        args = [self.binary, "init", "-d", dir_path]
+        args = [self.binary, "init", "-d", dir_path, "--testnet"]
         if n < 3:
             args.extend(["-m", BOOTSTAP_MNEMONICS[n]])
         process = subprocess.Popen(args, stdout=PIPE)
@@ -66,6 +66,7 @@ class OpenBazaarTestFramework(object):
         config["Addresses"]["Gateway"] = "/ip4/127.0.0.1/tcp/" + str(TEST_GATEWAY_PORT + n)
         config["Addresses"]["Swarm"] = ["/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + n)]
         config["Bootstrap"] = BOOTSTRAP_NODES
+        config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
         node = {
@@ -86,7 +87,7 @@ class OpenBazaarTestFramework(object):
                     return
 
     def start_node(self, node):
-        args = [self.binary, "start", "-d", node["data_dir"], "--disablewallet"]
+        args = [self.binary, "start", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process)
         node["peerId"] = peerId
@@ -110,10 +111,11 @@ class OpenBazaarTestFramework(object):
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
-        copyfile("testdata/bitcoin.conf", btc_conf_file)
+        copyfile(os.path.join(os.getcwd(), "testdata", "bitcoin.conf"), btc_conf_file)
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_bitcoind_start(process, btc_conf_file)
+        self.bitcoin_api.call("generate", 1)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
         while True:
@@ -131,8 +133,9 @@ class OpenBazaarTestFramework(object):
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")
+        time.sleep(2)
 
-    def main(self):
+    def main(self, options=["--disablewallet", "--testnet"]):
         parser = argparse.ArgumentParser(
                     description="OpenBazaar Test Framework",
                     usage="python3 test_framework.py [options]"
@@ -144,6 +147,7 @@ class OpenBazaarTestFramework(object):
         self.binary = args.binary
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
+        self.options = options
 
         failure = False
         try:
