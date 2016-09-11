@@ -338,7 +338,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if resp.MessageType == pb.Message_ERROR {
 				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
 			}
-			if resp.MessageType != pb.Message_ORDER_CONFIRMATION && resp.MessageType != pb.Message_ERROR {
+			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
 			}
 			rc := new(pb.RicardianContract)
