@@ -56,6 +56,8 @@ tags:
     description: API calls for setting mostly UI specific setting variables. 
   - name: Following
     description: All API calls related to following and getting lists of following/followed peers.
+  - name: Wallet
+    description: Bitcoin wallet RPC calls
 securityDefinitions:
   api_key:
     type: apiKey
@@ -454,7 +456,106 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'        
+            $ref: '#/definitions/ErrorResponse'   
+  /wallet/address:
+    get:
+      tags:
+        - Wallet
+      summary: Get a bitcoin address
+      description: Returns an unused bitcoin address. Note the same address is returned until the address is used. 
+      operationId: GetBitcoinAddress
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Address'    
+  /wallet/mnemonic:
+    get:
+      tags:
+        - Wallet
+      summary: Get the mnemonic seed
+      description: Returns the mnemonic seed used to derive all the bitcoin keys. Note this seed should never be disclosed as it will allow someone to drain your wallet and steal your OpenBazaar identity.
+      operationId: GetMnemonic
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Mnemonic'   
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'   
+  /wallet/balance:
+    get:
+      tags:
+        - Wallet
+      summary: Get the wallet's balance
+      description: Returns the unconfirmed and confirmed balances of the wallet in satoshi (1/100000000 of a full bitcoin).
+      operationId: GetBalance
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Balance'    
+  /wallet/spend:
+    post:
+      tags:
+        - Wallet
+      summary: Send bitcoins
+      description: Send bitcoins to someone. Note the feelLevel parameter controls how much of a fee to use. By default the wallet will query a fee api to get the appropriate fee-per-byte for the given level. There is a max fee value in the config file. If the api returns more than the max, then a default fee will be used. The default values, max values, and api can be configured in the config file. If you do not wish to use a fee api, and just want to use the default value, set the fee api to "".
+      operationId: SpendBitcoins
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Spend object
+          required: true
+          schema:
+            $ref: '#/definitions/Spend'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'  
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /wallet/resyncblockchain:
+    post:
+      tags:
+        - Wallet
+      summary: Re-sync blockchain
+      description: RPC call to re-download the blocks in the blockchain. It is theoretically possible that the wallet could fail to hear of a transaction intended for itself if its peers fail to relay a transaction. In such cases the resource is to re-download the historical blocks from a new peer to discover the missing transaction(s).
+      operationId: ResyncBlockchain
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'  
 definitions:
   DefaultResponse:
     type: object
@@ -500,6 +601,47 @@ definitions:
       isFollowing:
         type: boolean
         example: false
+  Address:
+    type: object
+    properties:
+      address:
+        description: "An unused bitcoin address"
+        type: string
+        example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
+  Mnemonic:
+    type: object
+    properties:
+      mnemonic:
+        description: "A twelve-word mnemonic seed"
+        type: string
+        example: "spot piano symbol news risk zero maze exchange repeat matrix whisper learn"
+  Balance:
+    type: object
+    properties:
+      confirmed:
+        description: "The confirmed balance in satoshi"
+        type: integer
+        example: 25000000
+      unconfirmed:
+        description: "The unconfirmed balance in satoshi"
+        type: integer
+        example: 1700000
+  Spend:
+    type: object
+    properties:
+      address:
+        description: "A bitcoin address to send coins to"
+        type: string
+        example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
+      amount:
+        description: "The amount to send in satoshi"
+        type: integer
+        example: 1700000
+      feeLevel:
+        description: "The fee level to use"
+        enum: [ "PRIORITY", "NORMAL", "ECONOMIC" ]
+        type: string
+        example: "NORMAL"
   Profile:
     type: object
     required: ["name"]
