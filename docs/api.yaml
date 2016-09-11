@@ -50,8 +50,12 @@ info:
     name: MIT
     url: 'http://opensource.org/licenses/MIT'
 tags:
+  - name: IPFS
+    description: IPFS gateway API
   - name: Profile
     description: API calls for setting and viewing profile data
+  - name: Images
+    description: Image upload API calls
   - name: Settings
     description: API calls for setting mostly UI specific setting variables. 
   - name: Following
@@ -66,6 +70,72 @@ securityDefinitions:
     name: autoCookie
     in: header
 paths:
+  /ipfs/{hash}/:
+    get:
+      tags:
+          - IPFS
+      summary: Fetch file from IPFS
+      description: "This API call will query the DHT using the given hash to get a list of peers who are seeding the file. Depending on the size of the file it will then download it from one or more of them. 
+        
+        The hash may be a directory. In which case this API returns an HTML directory view. To view the files inside the directory, you can add either their filename or hash to the query. For example:
+        ```
+        ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/some_image.jpg
+        ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr
+        ```
+        And of course nested directories are also supported, referenced again by a name or hash.
+        ```
+        ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/my_directory/some_image.jpg
+        ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/some_image.jpg
+        ```"
+      operationId: IPFS
+      parameters:
+        - name: hash
+          in: path
+          description: A base58 encoded multihash
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/IPFSResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'  
+  /ipns/{peerId}/:
+    get:
+      tags:
+          - IPFS
+      summary: Fetch file from IPNS
+      description: "The IPNS protocol allows for a user to map their peer ID to an IPFS hash in a cryptographically secure manner. When an IPNS query is made, the server first queries the DHT to resolve the peer ID into an IPFS hash, then proceeds to make an IPFS query given the resolved hash. For example, suppose we have the following mapping:
+        ```
+        {peerId} = {hash}
+        ```
+        Then the following API calls are equal:
+        ```
+        ipfs/{hash}/some_image.jpg
+        ipns/{peerId}/some_image.jpg"
+      operationId: IPNS
+      parameters:
+        - name: peerId
+          in: path
+          description: A base58 encoded multihash peer ID or a blockchain ID.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/IPFSResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'  
   /ob/follow:
     post:
       tags:
@@ -626,6 +696,131 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/avatar:
+    post:
+      tags:
+        - Images
+      summary: Set the avatar
+      description: Set the avatar image. This will also update the avatar hash in the profile.
+      operationId: PostAvatar
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Avatar object includes a base64 encoded image
+          required: true
+          schema:
+            $ref: '#/definitions/Avatar'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/avatar:
+    get:
+      tags:
+        - Images
+      summary: Get avatar
+      description: Get the avatar image for a peer. Use own peer ID to get own avatar.
+      operationId: GetAvatar
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+  /ob/header:
+    post:
+      tags:
+        - Images
+      summary: Set the header
+      description: Set the header image. This will also update the header hash in the profile.
+      operationId: PostHeader
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Header object includes a base64 encoded image
+          required: true
+          schema:
+            $ref: '#/definitions/Header'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/header:
+    get:
+      tags:
+        - Images
+      summary: Get header
+      description: Get the header image for a peer. Use own peer ID to get own header.
+      operationId: GetHeader
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+  /ob/images:
+    post:
+      tags:
+        - Images
+      summary: Upload images
+      description: Upload one or more images. Returns the IPFS hash of each image which can be used to fetch the image using the IPFS API call.
+      operationId: PostImage
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: List of image objects which include a base64 encoded image
+          required: true
+          schema:
+            $ref: '#/definitions/Images'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ImageResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
 definitions:
   DefaultResponse:
     type: object
@@ -640,6 +835,46 @@ definitions:
         example: "Error unmarshalling json"
   IPFSResponse:
     type: string
+  ImageResponse:
+    type: array
+    example: [
+        {
+          "filename": "blue_tshirt.jpg",
+          "hash": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+        }
+    ]
+    items:
+      type: object
+      properties:
+        filename:
+          description: The name of this file
+          type: string
+          example: "blue_tshirt.jpg"
+        hash:
+          description: The IPFS hash of the file. Base58 encoded multihash.
+          type: string
+          example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+  Images:
+    description: A list of image objects
+    type: array
+    example: [
+        {
+          "filename": "blue_tshirt.jpg",
+          "image": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
+        }
+    ]
+    items:
+      type: object
+      required: ["filename", "image"]
+      properties:
+        filename:
+          description: Name of the image file. The same name will be used when saving in the repo.
+          type: string
+          example: "blue_shirt.jpg"
+        image:
+          description: A base64 encoded image
+          type: string
+          example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
   Status:
     description: A peer status object
     type: object
@@ -711,6 +946,22 @@ definitions:
         description: "A twelve-word mnemonic seed"
         type: string
         example: "spot piano symbol news risk zero maze exchange repeat matrix whisper learn"
+  Avatar:
+    description: "Avatar image object"
+    type: object
+    properties:
+      avatar:
+        description: "A base64 encoded image"
+        type: string
+        example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
+  Header:
+    description: "Header image object"
+    type: object
+    properties:
+      header:
+        description: "A base64 encoded image"
+        type: string
+        example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
   Balance:
     description: "Wallet balance object"
     type: object
