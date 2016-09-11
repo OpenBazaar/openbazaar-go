@@ -832,7 +832,12 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&settings)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		switch err.Error() {
+		case "Not Found":
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+		default:
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 	err = i.node.Datastore.Settings().Update(settings)

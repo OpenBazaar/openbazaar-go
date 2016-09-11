@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 )
@@ -56,7 +57,7 @@ func (s *SettingsDB) Get() (repo.SettingsData, error) {
 func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	current, err := s.Get()
 	if err != nil {
-		return err
+		return errors.New("Not Found")
 	}
 	if settings.PaymentDataInQR == nil {
 		settings.PaymentDataInQR = current.PaymentDataInQR

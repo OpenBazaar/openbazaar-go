@@ -8,9 +8,9 @@ info:
   description: |
     # Introduction
     The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In documentation you'll find a full list of API calls and example usages.
-
+   
     # Authentication
-    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows:
+    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: 
     ```
      {
         "JSON-API": {
@@ -19,14 +19,14 @@ info:
      }
     ```
     Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
-
+    
     On each startup, OpenBazaar generates a new cookie file and saves it in the datafolder. The cookie is deleted on shutdown. To authenticate an API connection you need to include that cookie in each request header. Example:
     ```
     cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
     ```
     # SSL
     **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here]().
-
+    
     # Cross-Origin Resource Sharing
     CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
      ```
@@ -52,6 +52,8 @@ info:
 tags:
   - name: Profile
     description: API calls for setting and viewing profile data
+  - name: Settings
+    description: API calls for setting mostly UI specific setting variables. 
   - name: Following
     description: All API calls related to following and getting lists of following/followed peers.
 securityDefinitions:
@@ -183,7 +185,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/ErrorResponse' 
   /ob/followsme/{peerId}:
     get:
       tags:
@@ -296,7 +298,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'
+            $ref: '#/definitions/ErrorResponse'  
   /ipns/{peerId}/profile:
     get:
       tags:
@@ -326,7 +328,133 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'
+            $ref: '#/definitions/IPFSResponse'  
+  /ob/settings:
+    post:
+      tags:
+        - Settings
+      summary: Set settings
+      description: Set the settings object in the database
+      operationId: PostSettings
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Settings object
+          required: true
+          schema:
+            $ref: '#/definitions/Settings'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    put:
+      tags:
+        - Settings
+      summary: Update settings
+      description: Update the settings object in the database. Overwrites all fields.
+      operationId: PutSettings
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Settings object
+          required: true
+          schema:
+            $ref: '#/definitions/Settings'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    patch:
+      tags:
+        - Settings
+      summary: Patch settings
+      description: Update individual settings without overwriting the rest. 
+      operationId: PatchSettings
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Settings object with only those fields set which should be updated.
+          required: true
+          schema:
+            $ref: '#/definitions/Settings'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    get:
+      tags:
+        - Settings
+      summary: Get the settings
+      description: Fetch the settings from the database 
+      operationId: GetSettings
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Settings'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'        
 definitions:
   DefaultResponse:
     type: object
@@ -354,7 +482,7 @@ definitions:
     description: A json list of Peer IDs
     type: array
     example: [
-      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
       "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
     ]
@@ -483,3 +611,149 @@ definitions:
         description: "The time this profile was last modified. This field is added automatically by the server."
         type: string
         example: "2016-12-31T15:59:60-08:00"
+  Settings:
+    type: object
+    properties:    
+      paymentDataInQR:
+        description: "Add order metadata into payment QR code. Most wallets typically save the metadata so this is an optional privacy feature."
+        type: boolean
+      showNotifications:
+        description: "Show notifications which come over the websocket"
+        type: boolean
+      showNsfw:
+        description: "Show not safe for work content"
+        type: boolean
+      shippingAddresses:
+        description: "List of shipping addresses saved for this user"
+        type: array
+        example: [
+              {
+               "name": "Seymour Butts",
+               "company": "Globex Corporation",
+               "addressLineOne": "31 Spooner Street",
+               "addressLineTwo": "Apt. 124",
+               "city": "Quahog",
+               "state": "RI",
+               "country": "UNITED_STATES",
+               "addressNotes": "Leave package at back door"
+              }
+          ]
+        items:
+          description: "A shipping address object"
+          type: object
+          properties:
+            name:
+              description: "Name of person to ship to"
+              type: string
+              example: "Seymour Butts"
+            company:
+              description: "Optional company name"
+              type: string
+              example: "Globex Corporation"
+            addressLineOne:
+              description: "Shipping street address"
+              type: string
+              example: "31 Spooner Street"
+            addressLineTwo:
+              description: "Second address line. Sometimes used for apartment numbers."
+              type: string
+              example: "Apt. 124"
+            city:
+              description: "City to ship to"
+              type: string
+              example: "Quahog"
+            state:
+              description: "State or region ship to"
+              type: string
+              example: "RI"
+            country:
+              description: "Country to ship to. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto)."
+              type: string
+              example: "UNITED_STATES"
+            postalCode:
+              description: "Postal code ship to"
+              type: string
+              example: "00093"
+            addressNotes:
+              description: "Additional information about the address"
+              type: string
+              example: "Leave package at back door"
+      localCurrency:
+        description: "The currency to display prices in"
+        type: string
+        example: "USD"
+      country:
+        description: "The location of the user. Used for checking if products ships to them. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto)."
+        type: string
+        example: "UNITED_STATES"
+      language:
+        description: "The languange preference of the user. Used to select the language in the UI."
+        type: string
+        example: "English"
+      termsAndConditions:
+        description: "The saved terms and conditions. Becomes the default text for each listing that is created."
+        type: string
+        example: "By purchasing this item you agree to the following..."
+      refundPolicy:
+        description: "The saved refund policy. Becomes the default text for each listing that is created."
+        type: string
+        example: "All sales are final."
+      blockedNodes:
+        description: "Ids of peers we the user wishes to block"
+        type: array
+        example: [
+          "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+          "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+          "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+        ]
+        items:
+          type: string
+          description: "The peer ID to block"
+      moderators:
+        description: "Saved list of moderator IDs that will be added to each new listing."
+        type: array
+        example: [
+          "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",  
+          "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2"
+        ]
+        items:
+          type: string
+          description: "The moderator peer ID"
+      smtpSettings:
+        description: "Settings for email notifications"
+        type: object
+        example: {
+            "notifications": true,
+            "serverAddress": "smtp.urbanart.com:465",
+            "username": "urbanart",
+            "password": "letmein",
+            "senderEmail": "notifications@urbanart.com",
+            "recipientEmail": "Dave@gmail.com"
+        }
+        properties:
+          notifications:
+            description: "Turn email notifications on and off"
+            type: boolean
+          serverAddress:
+            description: "The outgoing mail server IP address or hostname and port"
+            type: string
+            example: "smtp.urbanart.com:465"
+          username:
+            description: "SMTP username"
+            type: string
+            example: "urbanart"
+          password:
+            description: "SMTP password"
+            type: string
+            example: "letmein"
+          senderEmail:
+            description: "The outgoing email address"
+            type: string 
+            example: "notifications@urbanart.com"
+          recipientEmail:
+            description: "The email to send the notifications to"
+            type: string
+            example: "Dave@gmail.com"
+            
+          
+        
