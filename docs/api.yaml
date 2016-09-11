@@ -8,9 +8,9 @@ info:
   description: |
     # Introduction
     The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In documentation you'll find a full list of API calls and example usages.
-   
+
     # Authentication
-    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: 
+    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows:
     ```
      {
         "JSON-API": {
@@ -19,14 +19,14 @@ info:
      }
     ```
     Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
-    
+
     On each startup, OpenBazaar generates a new cookie file and saves it in the datafolder. The cookie is deleted on shutdown. To authenticate an API connection you need to include that cookie in each request header. Example:
     ```
     cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
     ```
     # SSL
     **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here]().
-    
+
     # Cross-Origin Resource Sharing
     CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
      ```
@@ -50,6 +50,8 @@ info:
     name: MIT
     url: 'http://opensource.org/licenses/MIT'
 tags:
+  - name: Profile
+    description: API calls for setting and viewing profile data
   - name: Following
     description: All API calls related to following and getting lists of following/followed peers.
 securityDefinitions:
@@ -181,7 +183,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse' 
+            $ref: '#/definitions/ErrorResponse'
   /ob/followsme/{peerId}:
     get:
       tags:
@@ -226,6 +228,105 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/IsFollowingResponse'
+  /ob/profile:
+    post:
+      tags:
+        - Profile
+      summary: Set the profile
+      description: Set the profile for this node
+      operationId: PostProfile
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Profile object
+          required: true
+          schema:
+            $ref: '#/definitions/Profile'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Profile'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    put:
+      tags:
+        - Profile
+      summary: Update the profile
+      description: Update the profile for this node
+      operationId: PutProfile
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Profile object
+          required: true
+          schema:
+            $ref: '#/definitions/Profile'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Profile'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/profile:
+    get:
+      tags:
+          - Profile
+      summary: Get a profile
+      description: Get a profile for a node given the peer ID.
+      operationId: GetProfile
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID. Use own peer ID to get own profile.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Profile'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/IPFSResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'
 definitions:
   DefaultResponse:
     type: object
@@ -238,6 +339,8 @@ definitions:
       reason:
         type: string
         example: "Error unmarshalling json"
+  IPFSResponse:
+    type: string
   Follow:
     description: A json object containing a peer ID
     type: object
@@ -251,7 +354,7 @@ definitions:
     description: A json list of Peer IDs
     type: array
     example: [
-      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
       "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
     ]
@@ -269,4 +372,114 @@ definitions:
       isFollowing:
         type: boolean
         example: false
-      
+  Profile:
+    type: object
+    required: ["name"]
+    properties:
+      handle:
+        description: "Optional blockchainID. Profile will be rejected if the handle doesn't validate to this node's peer ID."
+        type: string
+        example: "@UrbanArt"
+      name:
+        description: "User's name"
+        type: string
+        example: "Urban Art"
+      location:
+        description: "Optional location data for this user"
+        type: string
+        example: "Chicago, Illinois"
+      about:
+        description: "About section text"
+        type: string
+        example: "We love spray painting and street art and this is the best way to not get arrested or get any tickets but still be able to paint graffiti. We hope you like it."
+      shortDescription:
+        description: "Short text description used in various parts of the app where the about is otherwise too long"
+        type: string
+        example: "Spray paint artwork on canvas; everything is individually painted and handmade."
+      website:
+        description: "Option website url"
+        type: string
+        example: "http://urbanart.com"
+      email:
+        description: "Optional email address"
+        type: string
+        example: "dave@urbanart.com"
+      phoneNumber:
+        description: "Optional phone number"
+        type: string
+        example: "555-8790"
+      social:
+        description: "Optional social media accounts"
+        type: array
+        example: [
+              {
+                "type": "TWITTER",
+                "username": "@UrbanArtStore",
+                "proof": "https://twitter.com/UrbanArtStore/status/774773006132391936"
+              },
+              {
+                "type": "FACEBOOK",
+                "username": "urbanart"
+              }
+        ]
+        items:
+          type: object
+          required: ["type", "username"]
+          properties:
+            type:
+              description: "The type of social account"
+              type: string
+              example: "TWITTER"
+            username:
+              description: "Account username"
+              type: string
+              example: "@UrbanArtStore"
+            proof:
+              description: "A url link proving ownership of this account. For example, a tweet saying 'My OpenBazaar handle is ...'"
+              type: string
+              example: "https://twitter.com/UrbanArtStore/status/774773006132391936"
+      nsfw:
+        description: "Is this user's page not safe for work?"
+        type: boolean
+      vendor:
+        description: "Is this user a vendor?"
+        type: boolean
+      moderator:
+        description: "Is this user a moderator?"
+        type: boolean
+      primaryColor:
+        description: "Primary RGB profile color in hexadecimal format"
+        type: string
+        example: "#AF854C"
+      secondaryColor:
+        description: "Secondary RGB profile color in hexadecimal format"
+        type: string
+        example: "#E3E3E3"
+      textColor:
+        description: "Text RGB profile color in hexadecimal format"
+        type: string
+        example: "#FFFFFF"
+      avatarHash:
+        description: "The IPFS hash for this node's avatar. This field is added automatically by the server."
+        type: string
+        example: "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+      headerHash:
+        description: "The IPFS hash for this node's header. This field is added automatically by the server."
+        type: string
+        example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+      followerCount:
+        description: "The number of peers following this node. This field is added automatically by the server."
+        type: integer
+        example: 25
+      followingCount:
+        description: "The number of peers this node is following. This field is added automatically by the server."
+        type: integer
+        example: 82
+      listingCount:
+        description: "The number of listings this node has for sale. This field is added automatically by the server."
+        type: integer
+        example: 11
+      lastModified:
+        description: "The time this profile was last modified. This field is added automatically by the server."
+        type: string
+        example: "2016-12-31T15:59:60-08:00"
