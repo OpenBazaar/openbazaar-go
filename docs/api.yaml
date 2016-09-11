@@ -50,8 +50,6 @@ info:
     name: MIT
     url: 'http://opensource.org/licenses/MIT'
 tags:
-  - name: IPFS
-    description: IPFS gateway API
   - name: Profile
     description: API calls for setting and viewing profile data
   - name: Images
@@ -64,6 +62,8 @@ tags:
     description: RPC calls finding other peers
   - name: Wallet
     description: Bitcoin wallet RPC calls
+  - name: IPFS
+    description: IPFS gateway API
 securityDefinitions:
   api_key:
     type: apiKey
@@ -75,9 +75,8 @@ paths:
       tags:
           - IPFS
       summary: Fetch file from IPFS
-      description: "This API call will query the DHT using the given hash to get a list of peers who are seeding the file. Depending on the size of the file it will then download it from one or more of them. 
-        
-        The hash may be a directory. In which case this API returns an HTML directory view. To view the files inside the directory, you can add either their filename or hash to the query. For example:
+      description: This API call will query the DHT using the given hash to get a list of peers who are seeding the file. Depending on the size of the file it will then download it from one or more of them. 
+        The hash may be a directory. In which case this API returns an HTML directory view. To view the files inside the directory, you can add either add their filename or hash to the query. For example...
         ```
         ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/some_image.jpg
         ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr
@@ -86,7 +85,7 @@ paths:
         ```
         ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/my_directory/some_image.jpg
         ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/some_image.jpg
-        ```"
+        ```
       operationId: IPFS
       parameters:
         - name: hash
@@ -110,14 +109,15 @@ paths:
       tags:
           - IPFS
       summary: Fetch file from IPNS
-      description: "The IPNS protocol allows for a user to map their peer ID to an IPFS hash in a cryptographically secure manner. When an IPNS query is made, the server first queries the DHT to resolve the peer ID into an IPFS hash, then proceeds to make an IPFS query given the resolved hash. For example, suppose we have the following mapping:
+      description: The IPNS protocol allows for a user to map their peer ID to an IPFS hash in a cryptographically secure manner. When an IPNS query is made, the server first queries the DHT to resolve the peer ID into an IPFS hash, then proceeds to make an IPFS query given the resolved hash. For example, suppose we have the following mapping..
         ```
         {peerId} = {hash}
         ```
-        Then the following API calls are equal:
+        Then the following API calls are equal...
         ```
         ipfs/{hash}/some_image.jpg
-        ipns/{peerId}/some_image.jpg"
+        ipns/{peerId}/some_image.jpg
+        ```
       operationId: IPNS
       parameters:
         - name: peerId
