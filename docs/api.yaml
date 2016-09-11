@@ -7,7 +7,7 @@ basePath: /
 info:
   description: |
     # Introduction
-    The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In documentation you'll find a full list of API calls and example usages.
+    The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In this documentation you'll find a full list of API calls and example usages.
    
     # Authentication
     When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: 
@@ -56,6 +56,8 @@ tags:
     description: API calls for setting mostly UI specific setting variables. 
   - name: Following
     description: All API calls related to following and getting lists of following/followed peers.
+  - name: Peers
+    description: RPC calls finding other peers
   - name: Wallet
     description: Bitcoin wallet RPC calls
 securityDefinitions:
@@ -545,7 +547,7 @@ paths:
       tags:
         - Wallet
       summary: Re-sync blockchain
-      description: RPC call to re-download the blocks in the blockchain. It is theoretically possible that the wallet could fail to hear of a transaction intended for itself if its peers fail to relay a transaction. In such cases the resource is to re-download the historical blocks from a new peer to discover the missing transaction(s).
+      description: RPC call to re-download the blocks in the blockchain. It is theoretically possible that the wallet could fail to hear of a transaction intended for itself if its peers fail to relay a transaction. In such cases the recourse is to re-download the historical blocks from a new peer to discover the missing transaction(s).
       operationId: ResyncBlockchain
       consumes:
         - application/json
@@ -556,6 +558,74 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/DefaultResponse'  
+  /ob/peers:
+    get:
+      tags:
+        - Peers
+      summary: Get connected peers
+      description: Returns a list of IDs of the peers connected to this node.
+      operationId: GetPeers
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Peers'  
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/status/{peerId}:
+    get:
+      tags:
+        - Peers
+      summary: Get peer online status
+      description: Pings the peer and returns if it is online or not
+      operationId: PeerStatus
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Status'  
+  /ob/closestpeers/{peerId}:
+    get:
+      tags:
+        - Peers
+      summary: Crawl for closest peers
+      description: Crawls the DHT and returns up to 20 of the closest peers to the given ID.
+      operationId: GetClosestPeers
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Peers'  
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
 definitions:
   DefaultResponse:
     type: object
@@ -570,6 +640,16 @@ definitions:
         example: "Error unmarshalling json"
   IPFSResponse:
     type: string
+  Status:
+    description: A peer status object
+    type: object
+    required: ["status"]
+    properties:
+      status:
+        description: Whether the peer is online or offline
+        enum: ["online", "offline"]
+        type: string
+        example: "online"
   Follow:
     description: A json object containing a peer ID
     type: object
@@ -601,7 +681,22 @@ definitions:
       isFollowing:
         type: boolean
         example: false
+  Peers:
+    description: "A list of peer IDs"
+    type: array
+    example: [
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+      "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+    ] 
+    items:
+      properties:
+        peerId:
+          description: "A based58 encoded multihash peer ID"
+          type: string
+          example: "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
   Address:
+    description: "Bitcoin address object"
     type: object
     properties:
       address:
@@ -609,6 +704,7 @@ definitions:
         type: string
         example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
   Mnemonic:
+    description: "Mnemonic seed object"
     type: object
     properties:
       mnemonic:
@@ -616,6 +712,7 @@ definitions:
         type: string
         example: "spot piano symbol news risk zero maze exchange repeat matrix whisper learn"
   Balance:
+    description: "Wallet balance object"
     type: object
     properties:
       confirmed:
@@ -627,10 +724,12 @@ definitions:
         type: integer
         example: 1700000
   Spend:
+    description: "Wallet spend object"
     type: object
+    required: ["address", "amount", "feeLevel"]
     properties:
       address:
-        description: "A bitcoin address to send coins to"
+        description: "A base58check encoded bitcoin address to send coins to"
         type: string
         example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
       amount:
@@ -643,6 +742,7 @@ definitions:
         type: string
         example: "NORMAL"
   Profile:
+    description: "Profile object"
     type: object
     required: ["name"]
     properties:
