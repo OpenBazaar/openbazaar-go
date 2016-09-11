@@ -1,0 +1,272 @@
+swagger: '2.0'
+schemes:
+  - http
+  - https
+host: localhost:8080
+basePath: /
+info:
+  description: |
+    # Introduction
+    The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In documentation you'll find a full list of API calls and example usages.
+   
+    # Authentication
+    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: 
+    ```
+     {
+        "JSON-API": {
+          "Authenticated": true
+          }
+     }
+    ```
+    Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
+    
+    On each startup, OpenBazaar generates a new cookie file and saves it in the datafolder. The cookie is deleted on shutdown. To authenticate an API connection you need to include that cookie in each request header. Example:
+    ```
+    cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
+    ```
+    # SSL
+    **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here]().
+    
+    # Cross-Origin Resource Sharing
+    CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
+     ```
+     {
+        "JSON-API": {
+          "CORS": true
+          }
+     }
+    ```
+    Keep in mind that running the server with CORS enabled is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
+
+  version: 1.0.0
+  title: OpenBazaar JSON API
+  termsOfService: There are no TOS at this moment, use at your own risk we take no responsibility.
+  contact:
+    email: project@openbazaar.org
+    url: https://openbazaar.org
+  x-logo:
+    url: 'https://openbazaar.org/assets/img/icon-large.png'
+  license:
+    name: MIT
+    url: 'http://opensource.org/licenses/MIT'
+tags:
+  - name: Following
+    description: All API calls related to following and getting lists of following/followed peers.
+securityDefinitions:
+  api_key:
+    type: apiKey
+    name: autoCookie
+    in: header
+paths:
+  /ob/follow:
+    post:
+      tags:
+        - Following
+      summary: Follow a peer
+      description: RPC call to follow another peer on the network.
+      operationId: Follow
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Follow object containing a peer ID.
+          required: true
+          schema:
+            $ref: '#/definitions/Follow'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/unfollow:
+    post:
+      tags:
+        - Following
+      summary: Unfollow a peer
+      description: RPC call to unfollow another peer on the network.
+      operationId: Unfollow
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Unfollow object containing a peer ID.
+          required: true
+          schema:
+            $ref: '#/definitions/Follow'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/followers:
+    get:
+      tags:
+        - Following
+      summary: Get a list of your followers
+      description: Returns a list of peers IDs that follow you
+      operationId: GetFollowers
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: offsetId
+          description: Return all peer IDs after this ID
+          required: false
+          type: string
+        - in: query
+          name: limit
+          description: Number of peer IDs to return
+          required: false
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FollowResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/following:
+    get:
+      tags:
+        - Following
+      summary: Get a list of peers you are following.
+      description: Returns a list of peer IDs you are following
+      operationId: GetFollowing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: offsetId
+          description: Return all peer IDs after this ID
+          required: false
+          type: string
+        - in: query
+          name: limit
+          description: Number of peer IDs to return
+          required: false
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FollowResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse' 
+  /ob/followsme/{peerId}:
+    get:
+      tags:
+        - Following
+      summary: Does <peer> follow me?
+      description: Returns true if the given peer follows you
+      operationId: FollowsMe
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/FollowsMeResponse'
+  /ob/isfollowing/{peerId}:
+    get:
+      tags:
+        - Following
+      summary: An I following <peer>?
+      description: Returns true if you're following the given peer
+      operationId: IsFollowing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/IsFollowingResponse'
+definitions:
+  DefaultResponse:
+    type: object
+  ErrorResponse:
+    type: object
+    properties:
+      success:
+        type: boolean
+        example: false
+      reason:
+        type: string
+        example: "Error unmarshalling json"
+  Follow:
+    description: A json object containing a peer ID
+    type: object
+    required: ["id"]
+    properties:
+      id:
+        description: Base58 encoded multihash
+        type: string
+        example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+  FollowResponse:
+    description: A json list of Peer IDs
+    type: array
+    example: [
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+      "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+    ]
+    items:
+      type: string
+  FollowsMeResponse:
+    type: object
+    properties:
+      followsMe:
+        type: boolean
+        example: false
+  IsFollowingResponse:
+    type: object
+    properties:
+      isFollowing:
+        type: boolean
+        example: false
+      
