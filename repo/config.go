@@ -75,6 +75,21 @@ func GetAPICORS(cfgPath string) (bool, error) {
 	return cors, nil
 }
 
+func GetAPISSL(cfgPath string) (enabled bool, certFile, keyFile string, err error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return false, "", "", err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["JSON-API"]
+	enabled = api.(map[string]interface{})["SSL"].(bool)
+	certFile = api.(map[string]interface{})["SSLCert"].(string)
+	keyFile = api.(map[string]interface{})["SSLKey"].(string)
+	return enabled, certFile, keyFile, nil
+}
+
 func GetFeeAPI(cfgPath string) (string, error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
