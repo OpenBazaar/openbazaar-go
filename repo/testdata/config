@@ -54,7 +54,7 @@
     "IPFS": "/ipfs",
     "IPNS": "/ipns"
   },
-  "OB-API": {
+  "JSON-API": {
     "CORS": true,
     "Enabled": true,
     "HTTPHeaders": null,
