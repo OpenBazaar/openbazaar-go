@@ -55,9 +55,11 @@ tags:
   - name: Images
     description: Image upload API calls
   - name: Settings
-    description: API calls for setting mostly UI specific setting variables. 
+    description: API calls for setting mostly UI specific setting variables
   - name: Following
-    description: All API calls related to following and getting lists of following/followed peers.
+    description: All API calls related to following and getting lists of following/followed peers
+  - name: Moderator
+    description: API calls for moderation
   - name: Peers
     description: RPC calls finding other peers
   - name: Wallet
@@ -286,7 +288,7 @@ paths:
     get:
       tags:
         - Following
-      summary: An I following <peer>?
+      summary: AnmI following <peer>?
       description: Returns true if you're following the given peer
       operationId: IsFollowing
       consumes:
@@ -821,11 +823,137 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/moderator:
+    post:
+      tags:
+        - Moderator
+      summary: Set as moderator
+      description: Make this node as a moderator and set the modertor's information.
+      operationId: PostModerator
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Moderator object
+          required: true
+          schema:
+            $ref: '#/definitions/Moderator'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    put:
+      tags:
+        - Moderator
+      summary: Update moderator info
+      description: Update the moderation info for this node
+      operationId: PutModerator
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Moderator object
+          required: true
+          schema:
+            $ref: '#/definitions/Moderator'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - Moderator
+      summary: Unset moderator
+      description: Unset self as moderator and delete moderation info
+      operationId: DeleteModerator
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/moderation:
+    get:
+      tags:
+          - Moderator
+      summary: Get moderator info
+      description: Fetch moderator info from IPFS
+      operationId: GetModerator
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID. Use own peer ID to get own moderation info.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Moderator'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/IPFSResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'  
 definitions:
   DefaultResponse:
     type: object
   ErrorResponse:
     type: object
+    example: {
+        "success": false,
+        "reason": "Error unmarshalling json"
+    }
     properties:
       success:
         type: boolean
@@ -992,6 +1120,72 @@ definitions:
         enum: [ "PRIORITY", "NORMAL", "ECONOMIC" ]
         type: string
         example: "NORMAL"
+  Moderator:
+    description: Moderator object
+    type: object
+    required: ["description", "termsAndConditions", "languages", "fee"]
+    example: {
+        "description": "Long time OpenBazaar moderator located in Chicago",
+        "termsAndConditions": "Will moderate anything and everything",
+        "languages": [
+          "English",
+          "Spanish"
+        ],
+        "fee": {
+            "feeType": "FIXED_PLUS_PERCENTAGE",
+            "fixedFee": {
+                "currencyCode": "USD",
+                "amount": 300
+            },
+            "percentage": 5.0
+        },
+        "pubKey": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+    }
+    properties:
+      description:
+        description: A description of the type of service offered
+        type: string
+        example: "Long time OpenBazaar moderator located in Chicago"
+      termsAndConditions:
+        description: Moderators terms and conditions
+        type: string
+        example: "Will moderate anything and everything"
+      languages:
+        description: A list of languages spoken by this moderator
+        type: array
+        example: ["English", "Spanish"]
+        items:
+          description: Language
+          type: string
+          example: "English"
+      fee:
+        description: The fee charged by the moderator. The fixedFee object is only included in types FIXED FEE and FIXED_PLUS_PERCENTAGE
+        type: object
+        properties:
+          fixedFee:
+            description: Represents a fixed fee price. Should only be included with types FIXED FEE and FIXED_PLUS_PERCENTAGE.
+            type: object
+            properties:
+              currencyCode:
+                description: The currency used for pricing
+                type: string
+                example: "USD"
+              amount:
+                description: The amount. If the currencyCode is bitcoin the amount should be satoshis. If it's fiat currency then the amount should have the decimal place moved two places to the right. For example.. 300 = $3.00
+                type: integer
+                example: 3000
+          percentage: 
+            description: The fee as a percentage. Only include this if the type is PERCENTAGE.
+            type: integer
+            example: 10.00
+          feeType:
+            description: The fee type enum
+            type: string
+            enum: ["FIXED", "PERCENTAGE", "FIXED_PLUS_PERCENTAGE"]
+      pubKey:
+        description: the moderator's bitcoin public key in base64. This field is automatically added by the server.
+        type: string
+        example: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
   Profile:
     description: "Profile object"
     type: object
