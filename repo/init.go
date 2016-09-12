@@ -208,7 +208,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "OB-API", a); err != nil {
+	if err := extendConfigFile(r, "JSON-API", a); err != nil {
 		return err
 	}
 	if err := r.Close(); err != nil {

@@ -22,7 +22,7 @@ func GetAPIUsernameAndPw(cfgPath string) (username, password string, err error) 
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	api := cfg.(map[string]interface{})["OB-API"]
+	api := cfg.(map[string]interface{})["JSON-API"]
 	uname := api.(map[string]interface{})["Username"].(string)
 	pw := api.(map[string]interface{})["Password"].(string)
 
@@ -38,7 +38,7 @@ func GetAPIHeaders(cfgPath string) (map[string][]string, error) {
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	api := cfg.(map[string]interface{})["OB-API"]
+	api := cfg.(map[string]interface{})["JSON-API"]
 	h := api.(map[string]interface{})["HTTPHeaders"]
 	if h == nil {
 		headers = nil
@@ -57,7 +57,7 @@ func GetAPIEnabled(cfgPath string) (bool, error) {
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	api := cfg.(map[string]interface{})["OB-API"]
+	api := cfg.(map[string]interface{})["JSON-API"]
 	enabled := api.(map[string]interface{})["Enabled"].(bool)
 	return enabled, nil
 }
@@ -70,7 +70,7 @@ func GetAPICORS(cfgPath string) (bool, error) {
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
-	api := cfg.(map[string]interface{})["OB-API"]
+	api := cfg.(map[string]interface{})["JSON-API"]
 	cors := api.(map[string]interface{})["CORS"].(bool)
 	return cors, nil
 }
