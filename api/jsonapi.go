@@ -880,8 +880,8 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
-		Slug  string `json:"slug"`
-		Count int    `json:"count"`
+		Slug     string `json:"slug"`
+		Quantity int    `json:"quantity"`
 	}
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
@@ -902,8 +902,8 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
-		Slug  string `json:"slug"`
-		Count int    `json:"count"`
+		Slug     string `json:"slug"`
+		Quantity int    `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var invList []inv
@@ -913,7 +913,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		err := i.node.Datastore.Inventory().Put(in.Slug, in.Count)
+		err := i.node.Datastore.Inventory().Put(in.Slug, in.Quantity)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
