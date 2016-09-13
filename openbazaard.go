@@ -8,6 +8,7 @@ import (
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -23,7 +24,7 @@ import (
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/net"
+	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
@@ -279,7 +280,7 @@ func (x *Start) Execute(args []string) error {
 			m, _ := ma.NewMultiaddr(addr)
 			p := m.Protocols()
 			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
-				port, serr := net.Stun()
+				port, serr := obnet.Stun()
 				if serr != nil {
 					log.Error(serr)
 					return err
@@ -440,8 +441,15 @@ func (x *Start) Execute(args []string) error {
 	var gwErrc <-chan error
 	var cb <-chan bool
 	if len(cfg.Addresses.Gateway) > 0 {
-		var err error
-		err, cb, gwErrc = serveHTTPGateway(core.Node)
+		sslEnabled, certFile, keyFile, err := repo.GetAPISSL(path.Join(repoPath, "config"))
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		if (sslEnabled && certFile == "") || (sslEnabled && keyFile == "") {
+			return errors.New("SSL cert and key files must be set when SSL is enabled")
+		}
+		err, cb, gwErrc = serveHTTPGateway(core.Node, sslEnabled, certFile, keyFile)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -507,22 +515,50 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	}
 }
 
+type DummyListener struct {
+	addr net.Addr
+}
+
+func (d *DummyListener) Addr() net.Addr {
+	return d.addr
+}
+
+func (d *DummyListener) Accept() (net.Conn, error) {
+	conn, _ := net.FileConn(nil)
+	return conn, nil
+}
+
+func (d *DummyListener) Close() error {
+	return nil
+}
+
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
-		return nil, nil, nil
+		return err, nil, nil
 	}
 
 	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
 	if err != nil {
 		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
 	}
-
-	gwLis, err := manet.Listen(gatewayMaddr)
-	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
+	var gwLis manet.Listener
+	if sslEnabled {
+		netAddr, err := manet.ToNetAddr(gatewayMaddr)
+		if err != nil {
+			return err, nil, nil
+		}
+		gwLis, err = manet.WrapNetListener(&DummyListener{netAddr})
+		if err != nil {
+			return err, nil, nil
+		}
+	} else {
+		gwLis, err = manet.Listen(gatewayMaddr)
+		if err != nil {
+			return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
+		}
 	}
 	// we might have listened to /tcp/0 - lets see what we are listing on
 	gatewayMaddr = gwLis.Multiaddr()
@@ -547,7 +583,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode) (error, <-chan bool, <-chan err
 	errc := make(chan error)
 	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(cb, node, node.Context, gwLis.NetListener(), opts...)
+		errc <- api.Serve(cb, node, node.Context, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
 		close(errc)
 	}()
 	return nil, cb, errc

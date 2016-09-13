@@ -43,7 +43,7 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, l net.Listener, o
 	return topMux, nil
 }
 
-func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, lis net.Listener, options ...corehttp.ServeOption) error {
+func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, lis net.Listener, sslEnabled bool, certFile, keyFile string, options ...corehttp.ServeOption) error {
 	handler, err := makeHandler(node, ctx, lis, options...)
 	cb <- true
 	if err != nil {
@@ -60,7 +60,11 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, lis 
 	serverExited := make(chan struct{})
 
 	node.IpfsNode.Process().Go(func(p goprocess.Process) {
-		serverError = http.Serve(lis, handler)
+		if sslEnabled {
+			serverError = http.ListenAndServeTLS(lis.Addr().String(), certFile, keyFile, handler)
+		} else {
+			serverError = http.Serve(lis, handler)
+		}
 		close(serverExited)
 	})
 
@@ -71,8 +75,11 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, lis 
 	// if node being closed before server exits, close server
 	case <-node.IpfsNode.Process().Closing():
 		log.Infof("server at %s terminating...", addr)
-
-		lis.Close()
+		if sslEnabled {
+			close(serverExited)
+		} else {
+			lis.Close()
+		}
 
 	outer:
 		for {

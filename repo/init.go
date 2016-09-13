@@ -190,6 +190,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		HTTPHeaders map[string][]string
 		Username    string
 		Password    string
+		SSL         bool
+		SSLCert     string
+		SSLKey      string
 	}
 	var a APIConfig = APIConfig{
 		Enabled:     true,
