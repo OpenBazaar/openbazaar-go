@@ -60,12 +60,16 @@ tags:
     description: All API calls related to following and getting lists of following/followed peers
   - name: Moderator
     description: API calls for moderation
+  - name: Inventory
+    description: API calls for managing inventory
   - name: Peers
     description: RPC calls finding other peers
   - name: Wallet
     description: Bitcoin wallet RPC calls
   - name: IPFS
     description: IPFS gateway API
+  - name: Misc
+    description: Miscellaneous API calls
 securityDefinitions:
   api_key:
     type: apiKey
@@ -288,7 +292,7 @@ paths:
     get:
       tags:
         - Following
-      summary: AnmI following <peer>?
+      summary: Am I following <peer>?
       description: Returns true if you're following the given peer
       operationId: IsFollowing
       consumes:
@@ -945,6 +949,90 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/IPFSResponse'  
+  /ob/inventory:
+    post:
+      tags:
+        - Inventory
+      summary: Set inventory levels
+      description: Set the inventory for a given item. The item format must be /slug/variant/...
+      operationId: PostInventory
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Inventory object
+          required: true
+          schema:
+            $ref: '#/definitions/Inventory'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    get:
+      tags:
+        - Inventory
+      summary: Get all inventory
+      description: Get a list of all inventory counts
+      operationId: GetInventory
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/InventoryList'
+  /ob/config:          
+    get:
+      tags:
+       - Misc
+      summary: Get node configuration
+      description: Returns the node's own peer ID and the type of cryptocurrency used.
+      operationId: GetConfig
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/Config'
+  /ob/exchangerate/{currencyCode}:          
+    get:
+      tags:
+        - Misc
+      summary: Get exchange rates
+      description: Returns the exchange rate (per BTC) for the given fiat currency
+      operationId: Get
+      consumes:
+        - application/json
+      produces:
+        - text/plain
+      parameters:
+        - name: currencyCode
+          in: path
+          description: The fiat currency code
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ExchangeRate'
 definitions:
   DefaultResponse:
     type: object
@@ -1003,6 +1091,9 @@ definitions:
           description: A base64 encoded image
           type: string
           example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
+  ExchangeRate:
+    type: integer
+    example: 620.54
   Status:
     description: A peer status object
     type: object
@@ -1045,7 +1136,7 @@ definitions:
         type: boolean
         example: false
   Peers:
-    description: "A list of peer IDs"
+    description: A list of peer IDs
     type: array
     example: [
       "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
@@ -1053,70 +1144,114 @@ definitions:
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
     ] 
     items:
-      properties:
-        peerId:
-          description: "A based58 encoded multihash peer ID"
-          type: string
-          example: "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+      type: string
   Address:
-    description: "Bitcoin address object"
+    description: Bitcoin address object
     type: object
     properties:
       address:
-        description: "An unused bitcoin address"
+        description: An unused bitcoin address
         type: string
         example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
   Mnemonic:
-    description: "Mnemonic seed object"
+    description: Mnemonic seed object
     type: object
     properties:
       mnemonic:
-        description: "A twelve-word mnemonic seed"
+        description: A twelve-word mnemonic seed
         type: string
         example: "spot piano symbol news risk zero maze exchange repeat matrix whisper learn"
   Avatar:
-    description: "Avatar image object"
+    description: Avatar image object
     type: object
     properties:
       avatar:
-        description: "A base64 encoded image"
+        description: A base64 encoded image
         type: string
         example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
   Header:
-    description: "Header image object"
+    description: Header image object
     type: object
     properties:
       header:
-        description: "A base64 encoded image"
+        description: A base64 encoded image
         type: string
         example: "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wgARCAFoAeADASIAAhEBAxEB/8QAHAAAAQUBAQEAAAAAAAAAAAAAAwACBAUGBwEI/8QAGQEAAwEBAQAAAAAAAAAAAAAAAAECAwQF/9oADAMBAAIQAxAAAAHYO8XkdIooaxZ26gT3JCAJQdrWot77LakqjbJjJpDdnR/YymZkyBbWvATfKdPDu66YqYo/d8fHFZLA1ldVSDRZdxsa6xppI7gSoE2R4toohwLUlKSMVrFmSXufn1lxFFJG5Cq5LSan+1g13jJDFzrzXRuzs5aWhBHzsjwOFk+jc8696OXG7mqFiSz6cFrFX+M75o/n3ob97S5doMvOyo1jNx2ZNbE0tMWu5j0nJOpMxqNSxw5I7WixnTOd6HtjA6ul899p551/U4NotRmcjaYt+ogylnIo4L6MxkOh6TW67sXGL3EdQyKht7zZPUrQ8+ZdWUC1xVFCvqbsLSFI1WEUFfFmZRN1XJ+u9eoudX9Fm9GcB/PB+esrpzvXuQ9e78OPWdZZtaywr6PVYHvvzr9FB87/AER8+/QUnz=="
   Balance:
-    description: "Wallet balance object"
+    description: Wallet balance object
     type: object
     properties:
       confirmed:
-        description: "The confirmed balance in satoshi"
+        description: The confirmed balance in satoshi
         type: integer
         example: 25000000
       unconfirmed:
-        description: "The unconfirmed balance in satoshi"
+        description: The unconfirmed balance in satoshi
         type: integer
         example: 1700000
+  Inventory:
+    description: Inventory object
+    type: object
+    example: {
+        "slug": "/cool_tshirt/red/xl",
+        "quantity": 17
+    }
+    required: ["slug", "quantity"]
+    properties:
+      slug:
+        description: A full inventory path containing variants
+        type: string
+        example: "/cool_tshirt/red/xl"
+      quantity:
+        description: The amount in stock. Use -1 for unlimited inventory.
+        type: integer
+        example: 17
+  InventoryList:
+    description: A list of inventory objects
+    type: array
+    example: [
+        {
+           "slug": "/cool_tshirt/red/xl",
+           "quantity": 17,
+        },
+        {
+          "slug": "/cool_tshirt/yelow/small",
+           "quantity": 9,
+        }
+    ]
+    items: 
+      $ref: '#/definitions/Inventory'
+  Config:
+    description: Config object
+    type: object
+    example: {
+        "guid": "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B",
+        "cryptoCurrency": "btc"
+    }
+    properties:
+      guid:
+        description: The node's own peer ID
+        type: string
+        example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+      cryptoCurrency:
+        description: The type of cryptocurrency implemented by this node
+        type: string
+        example: "btc"
   Spend:
-    description: "Wallet spend object"
+    description: Wallet spend object
     type: object
     required: ["address", "amount", "feeLevel"]
     properties:
       address:
-        description: "A base58check encoded bitcoin address to send coins to"
+        description: A base58check encoded bitcoin address to send coins to
         type: string
         example: "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ"
       amount:
-        description: "The amount to send in satoshi"
+        description: The amount to send in satoshi
         type: integer
         example: 1700000
       feeLevel:
-        description: "The fee level to use"
+        description: The fee level to use
         enum: [ "PRIORITY", "NORMAL", "ECONOMIC" ]
         type: string
         example: "NORMAL"
