@@ -14,21 +14,6 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmZAZYJ5MvqkdoTuaFaoeyHkHLd8muENfr9JTo7ikQZPSG",   // Johari
 }
 
-func GetAPIUsernameAndPw(cfgPath string) (username, password string, err error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return "", "", err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	api := cfg.(map[string]interface{})["JSON-API"]
-	uname := api.(map[string]interface{})["Username"].(string)
-	pw := api.(map[string]interface{})["Password"].(string)
-
-	return uname, pw, nil
-}
-
 func GetAPIHeaders(cfgPath string) (map[string][]string, error) {
 	headers := make(map[string][]string)
 	file, err := ioutil.ReadFile(cfgPath)
@@ -59,6 +44,19 @@ func GetAPIEnabled(cfgPath string) (bool, error) {
 
 	api := cfg.(map[string]interface{})["JSON-API"]
 	enabled := api.(map[string]interface{})["Enabled"].(bool)
+	return enabled, nil
+}
+
+func GetAPIAuthenticated(cfgPath string) (bool, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return false, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	api := cfg.(map[string]interface{})["JSON-API"]
+	enabled := api.(map[string]interface{})["Authenticated"].(bool)
 	return enabled, nil
 }
 

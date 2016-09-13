@@ -19,13 +19,13 @@ import (
 	chunk "github.com/ipfs/go-ipfs/importer/chunk"
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	dagutils "github.com/ipfs/go-ipfs/merkledag/utils"
-	"github.com/ipfs/go-ipfs/namesys"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/routing"
-	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	uio "github.com/ipfs/go-ipfs/unixfs/io"
+	"github.com/ipfs/go-ipfs/namesys"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
 )
 
 const (
@@ -66,6 +66,20 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			debug.PrintStack()
 		}
 	}()
+
+	if i.config.Authenticated {
+		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+		if i.config.Cookie.Value != cookie.Value {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
 
 	if i.config.Writable {
 		switch r.Method {
@@ -138,6 +152,7 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		}
 		r.URL.Path = strings.Replace(r.URL.Path, paths[2], peerID, 1)
 	}
+
 
 	// If this is an ipns query let's check to see if it's using our own peer ID.
 	// If so let's resolve it locally instead of going out to the network.

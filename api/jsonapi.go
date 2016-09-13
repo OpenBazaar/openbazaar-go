@@ -1,9 +1,7 @@
 package api
 
 import (
-	"crypto/rand"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -14,7 +12,6 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -31,9 +28,7 @@ type JsonAPIConfig struct {
 	Enabled       bool
 	Cors          bool
 	Authenticated bool
-	CookieJar     []http.Cookie
-	Username      string
-	Password      string
+	Cookie        http.Cookie
 }
 
 type jsonAPIHandler struct {
@@ -41,13 +36,8 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie) (*jsonAPIHandler, error) {
 	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	username, password, err := repo.GetAPIUsernameAndPw(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return nil, err
@@ -63,33 +53,13 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, cookieJar []http.Cookie) (*jso
 		return nil, err
 	}
 
-	cfg, err := node.Context.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
-	if err != nil {
-		return nil, err
-	}
-	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
-	if err != nil {
-		return nil, err
-	}
-	var authenticated bool
-	if addr != "127.0.0.1" {
-		authenticated = true
-	}
-
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
 			Enabled:       enabled,
 			Cors:          cors,
 			Headers:       headers,
 			Authenticated: authenticated,
-			CookieJar:     cookieJar,
-			Username:      username,
-			Password:      password,
+			Cookie:        authCookie,
 		},
 		node: node,
 	}
@@ -113,26 +83,13 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if i.config.Authenticated {
-		cookie, err := r.Cookie("OpenBazaarSession")
+		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
 		if err != nil {
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, "403 - Forbidden")
 			return
 		}
-		var auth bool
-		for _, key := range i.config.CookieJar {
-			if key.Value == cookie.Value {
-				auth = true
-				break
-			}
-		}
-		endpoint, err := url.Parse(r.URL.Path)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
-		}
-		if !auth && (endpoint.String() != `/ob/login` || endpoint.String() != `/ob/login/`) {
+		if i.config.Cookie.Value != cookie.Value {
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, "403 - Forbidden")
 			return
@@ -918,33 +875,6 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		ret = []byte("[]")
 	}
 	fmt.Fprint(w, string(ret))
-	return
-}
-
-func (i *jsonAPIHandler) POSTLogin(w http.ResponseWriter, r *http.Request) {
-	type Credentials struct {
-		Username string
-		Password string
-	}
-	decoder := json.NewDecoder(r.Body)
-	var cred Credentials
-	err := decoder.Decode(&cred)
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
-	}
-	if cred.Username == i.config.Username && cred.Password == i.config.Password {
-		var r []byte = make([]byte, 32)
-		_, err := rand.Read(r)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		cookie := &http.Cookie{Name: "OpenBazaarSession", Value: hex.EncodeToString(r)}
-		i.config.CookieJar = append(i.config.CookieJar, *cookie)
-		http.SetCookie(w, cookie)
-	}
-	fmt.Fprint(w, `{}`)
 	return
 }
 

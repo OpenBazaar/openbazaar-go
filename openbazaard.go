@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"bufio"
+	"crypto/rand"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
@@ -35,6 +36,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/fatih/color"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -50,6 +52,8 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"io/ioutil"
+	"net/http"
 	"net/url"
 	"strings"
 )
@@ -248,7 +252,36 @@ func (x *Start) Execute(args []string) error {
 		return encryptedDatabaseError
 	}
 
-	// ipfs node setup
+	// Create authentication cookie
+	var authCookie http.Cookie
+	authCookie.Name = "OpenBazaar_Auth_Cookie"
+	cookiePath := path.Join(repoPath, ".cookie")
+	cookie, err := ioutil.ReadFile(cookiePath)
+	if err != nil {
+		authBytes := make([]byte, 32)
+		rand.Read(authBytes)
+		authCookie.Value = base58.Encode(authBytes)
+		f, err := os.Create(cookiePath)
+		defer f.Close()
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		cookie := "OpenBazaar_Auth_Cookie=" + authCookie.Value
+		_, werr := f.Write([]byte(cookie))
+		if werr != nil {
+			log.Error(werr)
+			return werr
+		}
+	} else {
+		if string(cookie)[:23] != "OpenBazaar_Auth_Cookie=" {
+			return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
+		}
+		split := strings.SplitAfter(string(cookie), "OpenBazaar_Auth_Cookie=")
+		authCookie.Value = split[1]
+	}
+
+	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
 		log.Error(err)
@@ -392,6 +425,27 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
+	// Authenticated Gateway
+	authenticatedGateway, err := repo.GetAPIAuthenticated(path.Join(repoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	// Override config file preference if this is Mainnet and open internet.
+	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name {
+		authenticatedGateway = true
+	}
+
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
@@ -449,7 +503,7 @@ func (x *Start) Execute(args []string) error {
 		if (sslEnabled && certFile == "") || (sslEnabled && keyFile == "") {
 			return errors.New("SSL cert and key files must be set when SSL is enabled")
 		}
-		err, cb, gwErrc = serveHTTPGateway(core.Node, sslEnabled, certFile, keyFile)
+		err, cb, gwErrc = serveHTTPGateway(core.Node, authenticatedGateway, authCookie, sslEnabled, certFile, keyFile)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -533,7 +587,7 @@ func (d *DummyListener) Close() error {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -570,7 +624,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, sslEnabled bool, certFile, keyF
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, authenticated, authCookie, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
@@ -583,7 +637,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, sslEnabled bool, certFile, keyF
 	errc := make(chan error)
 	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(cb, node, node.Context, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
+		errc <- api.Serve(cb, node, node.Context, authenticated, authCookie, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
 		close(errc)
 	}()
 	return nil, cb, errc
