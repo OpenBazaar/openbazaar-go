@@ -11,19 +11,22 @@ const testConfigFolder = "testdata"
 const testConfigPath = "testdata/config"
 const nonexistentTestConfigPath = "testdata/nonexistent"
 
-func TestGetAPIUsernameAndPw(t *testing.T) {
-	username, pw, err := GetAPIUsernameAndPw(testConfigPath)
+func TestGetAuthentication(t *testing.T) {
+	authenticated, username, pw, err := GetAPIAuthentication(testConfigPath)
 	if username != "TestUsername" {
 		t.Error("Expected TestUsername, got ", username)
 	}
 	if pw != "TestPassword" {
 		t.Error("Expected TestPassword, got ", pw)
 	}
+	if !authenticated {
+		t.Error("Expected Authenticated = true")
+	}
 	if err != nil {
-		t.Error("GetAPIUsernameAndPw threw an unexpected error")
+		t.Error("GetAPIAuthentication threw an unexpected error")
 	}
 
-	username, pw, err = GetAPIUsernameAndPw(nonexistentTestConfigPath)
+	authenticated, username, pw, err = GetAPIAuthentication(nonexistentTestConfigPath)
 	if username != "" {
 		t.Error("Expected empty string, got ", username)
 	}
@@ -31,7 +34,7 @@ func TestGetAPIUsernameAndPw(t *testing.T) {
 		t.Error("Expected empty string, got ", pw)
 	}
 	if err == nil {
-		t.Error("GetAPIUsernameAndPw didn`t throw an error")
+		t.Error("GetAPIAuthentication didn`t throw an error")
 	}
 }
 
