@@ -47,17 +47,19 @@ func GetAPIEnabled(cfgPath string) (bool, error) {
 	return enabled, nil
 }
 
-func GetAPIAuthenticated(cfgPath string) (bool, error) {
+func GetAPIAuthentication(cfgPath string) (authenticated bool, username, password string, err error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return false, err
+		return false, "", "", err
 	}
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
 	api := cfg.(map[string]interface{})["JSON-API"]
-	enabled := api.(map[string]interface{})["Authenticated"].(bool)
-	return enabled, nil
+	authenticated = api.(map[string]interface{})["Authenticated"].(bool)
+	username = api.(map[string]interface{})["Username"].(string)
+	password = api.(map[string]interface{})["Password"].(string)
+	return authenticated, username, password, nil
 }
 
 func GetAPICORS(cfgPath string) (bool, error) {

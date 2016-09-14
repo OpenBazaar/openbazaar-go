@@ -426,7 +426,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated Gateway
-	authenticatedGateway, err := repo.GetAPIAuthenticated(path.Join(repoPath, "config"))
+	authenticatedGateway, authUsername, authPassword, err := repo.GetAPIAuthentication(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -503,7 +503,7 @@ func (x *Start) Execute(args []string) error {
 		if (sslEnabled && certFile == "") || (sslEnabled && keyFile == "") {
 			return errors.New("SSL cert and key files must be set when SSL is enabled")
 		}
-		err, cb, gwErrc = serveHTTPGateway(core.Node, authenticatedGateway, authCookie, sslEnabled, certFile, keyFile)
+		err, cb, gwErrc = serveHTTPGateway(core.Node, authenticatedGateway, authCookie, authUsername, authPassword, sslEnabled, certFile, keyFile)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -587,7 +587,7 @@ func (d *DummyListener) Close() error {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, un, pw string, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -624,7 +624,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, authenticated, authCookie, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, authenticated, authCookie, un, pw, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
@@ -637,7 +637,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 	errc := make(chan error)
 	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(cb, node, node.Context, authenticated, authCookie, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
+		errc <- api.Serve(cb, node, node.Context, authenticated, authCookie, un, pw, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
 		close(errc)
 	}()
 	return nil, cb, errc

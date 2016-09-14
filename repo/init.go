@@ -186,6 +186,8 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	}
 	type APIConfig struct {
 		Authenticated bool
+		Username      string
+		Password      string
 		CORS          bool
 		Enabled       bool
 		HTTPHeaders   map[string][]string

@@ -29,6 +29,8 @@ type JsonAPIConfig struct {
 	Cors          bool
 	Authenticated bool
 	Cookie        http.Cookie
+	Username      string
+	Password      string
 }
 
 type jsonAPIHandler struct {
@@ -36,7 +38,7 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, username, password string) (*jsonAPIHandler, error) {
 	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
 	if err != nil {
 		log.Error(err)
@@ -60,6 +62,8 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie
 			Headers:       headers,
 			Authenticated: authenticated,
 			Cookie:        authCookie,
+			Username:      username,
+			Password:      password,
 		},
 		node: node,
 	}
@@ -83,16 +87,25 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if i.config.Authenticated {
-		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
-		if err != nil {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
-		}
-		if i.config.Cookie.Value != cookie.Value {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
+		if i.config.Username == "" || i.config.Password == "" {
+			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+			if i.config.Cookie.Value != cookie.Value {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+		} else {
+			username, password, ok := r.BasicAuth()
+			if !ok || username != i.config.Username || password != i.config.Password {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
 		}
 	}
 

@@ -15,14 +15,14 @@ import (
 
 var log = logging.MustGetLogger("api")
 
-func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
+func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
 
-	restAPI, err := newJsonAPIHandler(n, authenticated, authCookie)
+	restAPI, err := newJsonAPIHandler(n, authenticated, authCookie, username, password)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI, err := newWSAPIHandler(n, ctx, authenticated, authCookie)
+	wsAPI, err := newWSAPIHandler(n, ctx, authenticated, authCookie, username, password)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +43,8 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authenticated boo
 	return topMux, nil
 }
 
-func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, lis net.Listener, sslEnabled bool, certFile, keyFile string, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(node, ctx, authenticated, authCookie, lis, options...)
+func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string, lis net.Listener, sslEnabled bool, certFile, keyFile string, options ...corehttp.ServeOption) error {
+	handler, err := makeHandler(node, ctx, authenticated, authCookie, username, password, lis, options...)
 	cb <- true
 	if err != nil {
 		return err

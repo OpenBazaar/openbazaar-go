@@ -57,9 +57,11 @@ type wsHandler struct {
 	context       commands.Context
 	authenticated bool
 	cookie        http.Cookie
+	username      string
+	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie) (*wsHandler, error) {
+func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string) (*wsHandler, error) {
 	hub := newHub()
 	go hub.run()
 	handler = wsHandler{
@@ -68,6 +70,8 @@ func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authentica
 		context:       ctx,
 		authenticated: authenticated,
 		cookie:        authCookie,
+		username:      username,
+		password:      password,
 	}
 	return &handler, nil
 }
@@ -79,16 +83,25 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if wsh.authenticated {
-		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
-		if err != nil {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
-		}
-		if wsh.cookie.Value != cookie.Value {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
+		if wsh.username == "" || wsh.password == "" {
+			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+			if wsh.cookie.Value != cookie.Value {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+		} else {
+			username, password, ok := r.BasicAuth()
+			if !ok || username != wsh.username || password != wsh.password {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
 		}
 	}
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}

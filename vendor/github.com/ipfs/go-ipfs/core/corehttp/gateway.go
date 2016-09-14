@@ -5,22 +5,24 @@ import (
 	"net"
 	"net/http"
 
+	bc "github.com/OpenBazaar/go-blockstackclient"
 	core "github.com/ipfs/go-ipfs/core"
 	config "github.com/ipfs/go-ipfs/repo/config"
 	id "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/protocol/identify"
-	bc "github.com/OpenBazaar/go-blockstackclient"
 )
 
 type GatewayConfig struct {
-	Headers      map[string][]string
-	Writable     bool
-	PathPrefixes []string
-	Resolver     *bc.BlockstackClient
+	Headers       map[string][]string
+	Writable      bool
+	PathPrefixes  []string
+	Resolver      *bc.BlockstackClient
 	Authenticated bool
 	Cookie        http.Cookie
+	Username      string
+	Password      string
 }
 
-func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, authCookie http.Cookie, paths ...string) ServeOption {
+func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, authCookie http.Cookie, username, password string, paths ...string) ServeOption {
 	return func(n *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		cfg, err := n.Repo.Config()
 		if err != nil {
@@ -34,6 +36,8 @@ func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, authCookie
 			Resolver:      resolver,
 			Authenticated: authenticated,
 			Cookie:        authCookie,
+			Username:      username,
+			Password:      password,
 		})
 
 		for _, p := range paths {
