@@ -20,33 +20,12 @@ info:
     ```
     Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
     
-    There are two ways for a client to authenticate. The default (and preferred) is via an authentication cookie. On start up the server generates a random cookie and saves it in the data directory as a .cookie file. You need to add this cookie to the header of all requests. For example:
+    On each startup, OpenBazaar generates a new cookie file and saves it in the datafolder. The cookie is deleted on shutdown. To authenticate an API connection you need to include that cookie in each request header. Example:
     ```
     cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
     ```
-
-    Alternatively, you can use basic authentication by setting a username and password in the config file:
-    ```
-         {
-            "JSON-API": {
-              "Username": "Aladdin",
-              "Password": "OpenSesame"
-              }
-         }
-    ```
-    The username and password need to be included in the request header following [RFC 2617](https://www.ietf.org/rfc/rfc2617.txt):
-    ```
-    Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==
-    ```
-    Where the username and password are encoded as `base64encode(username + ":" + password)`
-
-    or included in the Url:
-    ```
-    http://username:password@localhost:8080/ob/
-    ```
-
     # SSL
-    **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
+    **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here]().
     
     # Cross-Origin Resource Sharing
     CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
@@ -83,6 +62,8 @@ tags:
     description: API calls for moderation
   - name: Inventory
     description: API calls for managing inventory
+  - name: Listings
+    description: API calls for listings
   - name: Peers
     description: RPC calls finding other peers
   - name: Wallet
@@ -1054,6 +1035,136 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/ExchangeRate'
+  /ob/listing:
+    post:
+      tags:
+        - Listings
+      summary: Create a new listing
+      description: Create a new listing and set its inventory
+      operationId: PostListing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Listing request object
+          required: true
+          schema:
+            $ref: '#/definitions/ListingPost'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    put:
+      tags:
+        - Listings
+      summary: Update a listing
+      description: Update a listing. The currentSlug field is used specify the listing being updated. If the listing contains a new slug, the listing will be renamed using the new slug.
+      operationId: PutListing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Listing request object
+          required: true
+          schema:
+            $ref: '#/definitions/ListingPut'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - Listings
+      summary: Delete a listing
+      description: Delete a listing and associated inventory
+      operationId: DeleteListing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Current slug object
+          required: true
+          schema:
+            $ref: '#/definitions/ListingDelete'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/listings/{slug}:
+    get:
+      tags:
+        - Listings
+      summary: Get a listing
+      description: This returns a listing wrapped in a Ricardian Contract which contains the signatures needed to validate the listing. Alternativey you can fetch a listing using `/ipfs/{listing_hash}`
+      operationId: GetListing
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID. Use your own ID to fetch your own listings.
+          required: true
+          type: string
+        - name: slug
+          in: path
+          description: The listing slug
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ListingGet'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/IPFSResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'  
 definitions:
   DefaultResponse:
     type: object
@@ -1343,44 +1454,44 @@ definitions:
         type: string
         example: "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
   Profile:
-    description: "Profile object"
+    description: Profile object
     type: object
     required: ["name"]
     properties:
       handle:
-        description: "Optional blockchainID. Profile will be rejected if the handle doesn't validate to this node's peer ID."
+        description: Optional blockchainID. Profile will be rejected if the handle doesn't validate to this node's peer ID.
         type: string
         example: "@UrbanArt"
       name:
-        description: "User's name"
+        description: User's name
         type: string
         example: "Urban Art"
       location:
-        description: "Optional location data for this user"
+        description: Optional location data for this user
         type: string
         example: "Chicago, Illinois"
       about:
-        description: "About section text"
+        description: About section text
         type: string
-        example: "We love spray painting and street art and this is the best way to not get arrested or get any tickets but still be able to paint graffiti. We hope you like it."
+        example: We love spray painting and street art and this is the best way to not get arrested or get any tickets but still be able to paint graffiti. We hope you like it.
       shortDescription:
-        description: "Short text description used in various parts of the app where the about is otherwise too long"
+        description: Short text description used in various parts of the app where the about is otherwise too long
         type: string
-        example: "Spray paint artwork on canvas; everything is individually painted and handmade."
+        example: Spray paint artwork on canvas; everything is individually painted and handmade.
       website:
-        description: "Option website url"
+        description: Option website url
         type: string
         example: "http://urbanart.com"
       email:
-        description: "Optional email address"
+        description: Optional email address
         type: string
         example: "dave@urbanart.com"
       phoneNumber:
-        description: "Optional phone number"
+        description: Optional phone number
         type: string
         example: "555-8790"
       social:
-        description: "Optional social media accounts"
+        description: Optional social media accounts
         type: array
         example: [
               {
@@ -1398,76 +1509,76 @@ definitions:
           required: ["type", "username"]
           properties:
             type:
-              description: "The type of social account"
+              description: The type of social account
               type: string
               example: "TWITTER"
             username:
-              description: "Account username"
+              description: Account username
               type: string
               example: "@UrbanArtStore"
             proof:
-              description: "A url link proving ownership of this account. For example, a tweet saying 'My OpenBazaar handle is ...'"
+              description: A url link proving ownership of this account. For example, a tweet saying 'My OpenBazaar handle is ...'
               type: string
               example: "https://twitter.com/UrbanArtStore/status/774773006132391936"
       nsfw:
-        description: "Is this user's page not safe for work?"
+        description: Is this user's page not safe for work?
         type: boolean
       vendor:
-        description: "Is this user a vendor?"
+        description: Is this user a vendor?
         type: boolean
       moderator:
-        description: "Is this user a moderator?"
+        description: Is this user a moderator?
         type: boolean
       primaryColor:
-        description: "Primary RGB profile color in hexadecimal format"
+        description: Primary RGB profile color in hexadecimal format
         type: string
         example: "#AF854C"
       secondaryColor:
-        description: "Secondary RGB profile color in hexadecimal format"
+        description: Secondary RGB profile color in hexadecimal format
         type: string
         example: "#E3E3E3"
       textColor:
-        description: "Text RGB profile color in hexadecimal format"
+        description: Text RGB profile color in hexadecimal format
         type: string
         example: "#FFFFFF"
       avatarHash:
-        description: "The IPFS hash for this node's avatar. This field is added automatically by the server."
+        description: The IPFS hash for this node's avatar. This field is added automatically by the server.
         type: string
         example: "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
       headerHash:
-        description: "The IPFS hash for this node's header. This field is added automatically by the server."
+        description: The IPFS hash for this node's header. This field is added automatically by the server.
         type: string
         example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
       followerCount:
-        description: "The number of peers following this node. This field is added automatically by the server."
+        description: The number of peers following this node. This field is added automatically by the server.
         type: integer
         example: 25
       followingCount:
-        description: "The number of peers this node is following. This field is added automatically by the server."
+        description: The number of peers this node is following. This field is added automatically by the server.
         type: integer
         example: 82
       listingCount:
-        description: "The number of listings this node has for sale. This field is added automatically by the server."
+        description: The number of listings this node has for sale. This field is added automatically by the server.
         type: integer
         example: 11
       lastModified:
-        description: "The time this profile was last modified. This field is added automatically by the server."
+        description: The time this profile was last modified. This field is added automatically by the server.
         type: string
         example: "2016-12-31T15:59:60-08:00"
   Settings:
     type: object
     properties:    
       paymentDataInQR:
-        description: "Add order metadata into payment QR code. Most wallets typically save the metadata so this is an optional privacy feature."
+        description: Add order metadata into payment QR code. Most wallets typically save the metadata so this is an optional privacy feature.
         type: boolean
       showNotifications:
-        description: "Show notifications which come over the websocket"
+        description: Show notifications which come over the websocket"
         type: boolean
       showNsfw:
-        description: "Show not safe for work content"
+        description: Show not safe for work content
         type: boolean
       shippingAddresses:
-        description: "List of shipping addresses saved for this user"
+        description: List of shipping addresses saved for this user
         type: array
         example: [
               {
@@ -1482,39 +1593,39 @@ definitions:
               }
           ]
         items:
-          description: "A shipping address object"
+          description: A shipping address object
           type: object
           properties:
             name:
-              description: "Name of person to ship to"
+              description: Name of person to ship to
               type: string
               example: "Seymour Butts"
             company:
-              description: "Optional company name"
+              description: Optional company name
               type: string
               example: "Globex Corporation"
             addressLineOne:
-              description: "Shipping street address"
+              description: Shipping street address
               type: string
               example: "31 Spooner Street"
             addressLineTwo:
-              description: "Second address line. Sometimes used for apartment numbers."
+              description: Second address line. Sometimes used for apartment numbers.
               type: string
               example: "Apt. 124"
             city:
-              description: "City to ship to"
+              description: City to ship to
               type: string
               example: "Quahog"
             state:
-              description: "State or region ship to"
+              description: State or region ship to
               type: string
               example: "RI"
             country:
-              description: "Country to ship to. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto)."
+              description: Country to ship to. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto).
               type: string
               example: "UNITED_STATES"
             postalCode:
-              description: "Postal code ship to"
+              description: Postal code ship to
               type: string
               example: "00093"
             addressNotes:
@@ -1522,27 +1633,27 @@ definitions:
               type: string
               example: "Leave package at back door"
       localCurrency:
-        description: "The currency to display prices in"
+        description: The currency to display prices in
         type: string
         example: "USD"
       country:
-        description: "The location of the user. Used for checking if products ships to them. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto)."
+        description: The location of the user. Used for checking if products ships to them. Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto).
         type: string
         example: "UNITED_STATES"
       language:
-        description: "The languange preference of the user. Used to select the language in the UI."
+        description: The languange preference of the user. Used to select the language in the UI.
         type: string
         example: "English"
       termsAndConditions:
-        description: "The saved terms and conditions. Becomes the default text for each listing that is created."
+        description: The saved terms and conditions. Becomes the default text for each listing that is created.
         type: string
         example: "By purchasing this item you agree to the following..."
       refundPolicy:
-        description: "The saved refund policy. Becomes the default text for each listing that is created."
+        description: The saved refund policy. Becomes the default text for each listing that is created.
         type: string
         example: "All sales are final."
       blockedNodes:
-        description: "Ids of peers we the user wishes to block"
+        description: Ids of peers we the user wishes to block
         type: array
         example: [
           "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
@@ -1553,7 +1664,7 @@ definitions:
           type: string
           description: "The peer ID to block"
       moderators:
-        description: "Saved list of moderator IDs that will be added to each new listing."
+        description: Saved list of moderator IDs that will be added to each new listing.
         type: array
         example: [
           "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",  
@@ -1563,7 +1674,7 @@ definitions:
           type: string
           description: "The moderator peer ID"
       smtpSettings:
-        description: "Settings for email notifications"
+        description: Settings for email notifications
         type: object
         example: {
             "notifications": true,
@@ -1575,28 +1686,810 @@ definitions:
         }
         properties:
           notifications:
-            description: "Turn email notifications on and off"
+            description: Turn email notifications on and off
             type: boolean
           serverAddress:
-            description: "The outgoing mail server IP address or hostname and port"
+            description: The outgoing mail server IP address or hostname and port
             type: string
             example: "smtp.urbanart.com:465"
           username:
-            description: "SMTP username"
+            description: SMTP username
             type: string
             example: "urbanart"
           password:
-            description: "SMTP password"
+            description: SMTP password
             type: string
             example: "letmein"
           senderEmail:
-            description: "The outgoing email address"
+            description: The outgoing email address
             type: string 
             example: "notifications@urbanart.com"
           recipientEmail:
-            description: "The email to send the notifications to"
+            description: The email to send the notifications to
             type: string
             example: "Dave@gmail.com"
-            
-          
-        
+  ListingPost:
+    description: The listing post API call
+    type: object
+    example: ["listing", "inventory"]
+    properties:
+      listing:
+        $ref: '#/definitions/Listing'
+      inventory:
+        description: Inventory levels to set with the listing
+        type: array
+        example: [
+          		{
+          		    "item": "/ron_swanson_tshirt/Small/Red",
+          		    "count": "12"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+          		    "count": "10"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Large/Red",
+          		    "count": "9"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/XL/Yellow",
+          		    "count": "16"
+          		}
+      	]
+        items:
+          description: An inventory object
+          type: object
+          required: ["item", "count"]
+          properties:
+            item:
+              description: The listing path including variants
+              type: string
+            count:
+              description: The inventory quantity. Use -1 for infinite quantity.
+              type: integer
+  ListingPut:
+    description: The listing put API call
+    type: object
+    example: ["listing", "inventory"]
+    properties:
+      listing:
+        $ref: '#/definitions/Listing'
+      inventory:
+        description: Inventory levels to set with the listing
+        type: array
+        example: [
+          		{
+          		    "item": "/ron_swanson_tshirt/Small/Red",
+          		    "count": "12"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+          		    "count": "10"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Large/Red",
+          		    "count": "9"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/XL/Yellow",
+          		    "count": "16"
+          		}
+      	]
+        items:
+          description: An inventory object
+          type: object
+          required: ["item", "count"]
+          properties:
+            item:
+              description: The listing path including variants
+              type: string
+            count:
+              description: The inventory quantity. Use -1 for infinite quantity.
+              type: integer
+      currentSlug:
+        description: Used in PUT calls to specify the listing being updated. This slug with be renamed to the slug in the listing if it has changed.
+        type: string
+        example: "ron_swanson_tshirt"  
+  ListingDelete:
+    description: A delete object
+    type: object
+    example: {
+      "currentSlug": "ron_swanson_tshirt"
+    }
+    properties:
+      currentSlug:
+        description: The slug to delete
+        type: string
+  ListingGet:
+    description: The response to the listing get
+    type: object
+    example: {
+      "listing": {
+    "vendorListings": [
+        {
+            "slug": "ron_swanson_tshirt",
+            "vendorID": {
+                "guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
+                "pubkeys": {
+                    "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
+                    "bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+                }
+            },
+            "metadata": {
+                "version": 1,
+                "contractType": "PHYSICAL_GOOD",
+                "listingType": "FIXED_PRICE",
+                "expiry": "2017-08-17T04:52:19.000Z",
+                "acceptedCurrency": "btc",
+                "pricingCurrency": "btc"
+            },
+            "item": {
+                "title": "Ron Swanson Tshirt",
+                "description": "Kick ass ron swanson tshirt in yellow",
+                "processingTime": "1 to 2 Business days",
+                "price": 12000000,
+                "tags": [
+                    "tshirts",
+                    "clothing",
+                    "ron swanson"
+                ],
+                "images": [
+                    {
+                        "hash": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+                        "filename": "swanson.jpg"
+                    }
+                ],
+                "categories": [
+                    "clothing"
+                ],
+                "sku": "123-456-789",
+                "grams": 28,
+                "condition": "New",
+                "options": [
+                    {
+                        "name": "Size",
+                        "description": "What size do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Small"
+                            },
+                            {
+                                "name": "Medium"
+                            },
+                            {
+                                "name": "Large",
+                                "priceModifier": 10000
+                            },
+                            {
+                                "name": "XL",
+                                "priceModifier": 10000
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Color",
+                        "description": "What color do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Red"
+                            },
+                            {
+                                "name": "Yellow"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "shippingOptions": [
+                {
+                    "name": "Domestic Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "UNITED_STATES"
+                    ],
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 6000000,
+                            "estimatedDelivery": "4-6 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 12000000,
+                            "estimatedDelivery": "1-3 days"
+                        }
+                    ]
+                },
+                {
+                    "name": "International Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "ALL"
+                    ],
+                    "shippingRules": {
+                        "rules": [
+                            {
+                                "minRange": 5,
+                                "maxRange": 10,
+                                "price": 10000000
+                            },
+                            {
+                                "minRange": 11,
+                                "maxRange": 20,
+                                "price": 200000
+                            }
+                        ]
+                    },
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 8000000,
+                            "estimatedDelivery": "6-8 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 150000000,
+                            "estimatedDelivery": "2-3 days"
+                        }
+                    ]
+                }
+            ],
+            "taxes": [
+                {
+                    "taxType": "Sales tax",
+                    "taxRegions": [
+                        "UNITED_STATES"
+                    ],
+                    "taxShipping": true,
+                    "percentage": 7
+                }
+            ],
+            "coupons": [
+                {
+                    "title": "10% off",
+                    "hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
+                    "percentDiscount": 10
+                }
+            ],
+            "moderators": [
+                "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+            ],
+            "termsAndConditions": "NA",
+            "refundPolicy": "No refuns for you. All sales are final."
+        }
+    ],
+    "signatures": [
+        {
+            "section": "LISTING",
+            "guid": "x7hU0U6w6Ldn68qWGZBQz4ERqW9bCctSlOgpYa6CTc48Vxfyt8FbbFyDgO3Q/ambRyhHftaeciqowPJ8RDZ5zpYP3tkuWx0yKBlyIfxBAwg8/+zMlhCeLQNeXjI2ibzzgGxNxDzUclceu0Xqu/rJxOEQhUEplpU0AvPElXhlv3cCwtCzEFj7fp8GPWwQwFgxg1pdj8PLBeWWBqAlGBMaOplhNKYx6rkEDxpvXCC7wr+n3lUvj5xmaru9a7cCVK5Sw3MUCCgdBzvDnZnQuesKSSoZVlalMhVm7MFwGQVEQmf2nI+3a6ZKLiIiE8D9BvqCNP/4r7cZst+PBqKiFEQg8ilUq0l6vcKxH63/FkRrmIj8XS19Ndybqd1VFXTnU32KZTImlReYprgCRWp63wsHCWxAokxKwDGRxbeOA8+B9H+AnfQ6KkoQcxP2MLNS8r/7ZOmmkR1290d6C4X4qE3FSGRWZ+noreyx+mJVEGhGYnTqu6Ox+mLARSbmUjwxq/xeg5KfCDCdToYOhrcHdDZzOF7zasa1XbBm0EXmpJAF16RM2prIpAgfKKkA0t9CcDJ5OdS5dFghHH2CSgeKhbKNgyGcVMgGTdNgNmVilnrWX7+aTZdb434xv4VzVWP/qmsYgSnn5oa2N6BfS/seX+D9OhduR/yyE/VwDRL5shq1zs4=",
+            "bitcoin": "MEQCIGROsJe+Z/YcJW+DVbgxo3KCXVIpsN2+HIrohEzvIL6WAiAJfNhggC/kgIrJSoJDK64IZEhDmyTLjUhUGQHCNggSpw=="
+        }
+    ]
+}, 
+"inventory": [
+          		{
+          		    "item": "/ron_swanson_tshirt/Small/Red",
+          		    "count": "12"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+          		    "count": "10"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Large/Red",
+          		    "count": "9"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/XL/Yellow",
+          		    "count": "16"
+          		}
+      	]
+    }
+    properties:
+      contract:
+        description: The listing wrapped in a Ricardian Contract complete with signatures
+        type: object
+        properties:
+          vendorListings: 
+            description: A list of listings
+            type: array
+            items:
+              description: The listing object
+              type: object
+              $ref: '#/definitions/Listing'
+          signatures:
+            description: A list of signature objects
+            type: array
+            items:
+              description: A signature object
+              type: object
+              properties:
+                section: 
+                  description: The section this signature covers
+                  type: string
+                  enum: ["LISTING"]
+                guid: 
+                  description: A guid signature covering the listing in base64
+                  type: string
+                bitcoin:
+                  description: A bitcoin signature covering the listing in base64
+                  type: string
+      inventory:
+        description: Inventory levels for the listing
+        type: array
+        example: [
+          		{
+          		    "item": "/ron_swanson_tshirt/Small/Red",
+          		    "count": "12"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+          		    "count": "10"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/Large/Red",
+          		    "count": "9"
+          		},
+          		{
+          		    "item": "/ron_swanson_tshirt/XL/Yellow",
+          		    "count": "16"
+          		}
+      	]
+        items:
+          description: An inventory object
+          type: object
+          required: ["item", "count"]
+          properties:
+            item:
+              description: The listing path including variants
+              type: string
+            count:
+              description: The inventory quantity. -1 implies infinite quantity.
+              type: integer
+  Id:
+    description: And ID object for a node
+    type: object
+    example:  {
+                "guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
+                "blockchainID": "@urbanart", 
+                "pubkeys": {
+                    "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
+                    "bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+                }
+            }
+    required: ["guid", "pubkeys"]
+    properties:
+      guid:
+        description: A node's peer ID as a base58 encoded mutihash
+        type: string
+      blockchainID:
+        description: The node's blockchain ID if it has one
+        type: string
+      pubkeys:
+        description: A pubkey object containing the intentiy and bitcoin public keys
+        type: object
+        properties:
+          guid:
+            description: An indentity public key in base64
+            type: string
+          bitcoin:
+            description: A bitcoin master public key in base64 form
+            type: string
+  Listing:
+    description: A listing object that is used by the listing api and the Ricardian Contract
+    type: object
+    example: {
+            "slug": "ron_swanson_tshirt",
+            "vendorID": {
+                "guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
+                "blockchainID": "@urbanart",
+                "pubkeys": {
+                    "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
+                    "bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+                }
+            },
+            "metadata": {
+                "version": 1,
+                "contractType": "PHYSICAL_GOOD",
+                "listingType": "FIXED_PRICE",
+                "expiry": "2017-08-17T04:52:19.000Z",
+                "acceptedCurrency": "btc",
+                "pricingCurrency": "btc"
+            },
+            "item": {
+                "title": "Ron Swanson Tshirt",
+                "description": "Kick ass ron swanson tshirt in yellow",
+                "processingTime": "1 to 2 Business days",
+                "price": 12000000,
+                "tags": [
+                    "tshirts",
+                    "clothing",
+                    "ron swanson"
+                ],
+                "images": [
+                    {
+                        "hash": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+                        "filename": "swanson.jpg"
+                    }
+                ],
+                "categories": [
+                    "clothing"
+                ],
+                "sku": "123-456-789",
+                "grams": 28,
+                "condition": "New",
+                "options": [
+                    {
+                        "name": "Size",
+                        "description": "What size do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Small"
+                            },
+                            {
+                                "name": "Medium"
+                            },
+                            {
+                                "name": "Large",
+                                "priceModifier": 10000
+                            },
+                            {
+                                "name": "XL",
+                                "priceModifier": 10000
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Color",
+                        "description": "What color do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Red"
+                            },
+                            {
+                                "name": "Yellow"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "shippingOptions": [
+                {
+                    "name": "Domestic Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "UNITED_STATES"
+                    ],
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 6000000,
+                            "estimatedDelivery": "4-6 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 12000000,
+                            "estimatedDelivery": "1-3 days"
+                        }
+                    ]
+                },
+                {
+                    "name": "International Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "ALL"
+                    ],
+                    "shippingRules": {
+                        "rules": [
+                            {
+                                "minRange": 5,
+                                "maxRange": 10,
+                                "price": 10000000
+                            },
+                            {
+                                "minRange": 11,
+                                "maxRange": 20,
+                                "price": 200000
+                            }
+                        ]
+                    },
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 8000000,
+                            "estimatedDelivery": "6-8 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 150000000,
+                            "estimatedDelivery": "2-3 days"
+                        }
+                    ]
+                }
+            ],
+            "taxes": [
+                {
+                    "taxType": "Sales tax",
+                    "taxRegions": [
+                        "UNITED_STATES"
+                    ],
+                    "taxShipping": true,
+                    "percentage": 7
+                }
+            ],
+            "coupons": [
+                {
+                    "title": "10% off",
+                    "hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
+                    "percentDiscount": 10
+                }
+            ],
+            "moderators": [
+                "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+            ],
+            "termsAndConditions": "NA",
+            "refundPolicy": "No refuns for you. All sales are final."
+        }
+    required: ["slug", "vendorID", "metadata", "item"]
+    properties:
+      slug:
+        description: A unique identifier for the listing. It will be part of the IPFS url.
+        type: string
+        maxLength: 70
+      vendorID:
+        description: The vendor's ID object
+        type: object
+        $ref: '#/definitions/Id'
+      metadata:
+        description: Listing metadata object
+        type: object
+        required: ["contractType", "format", "expiry", "pricingCurrency"]
+        properties:
+          version:
+            description: The version of the listing used. This field is automatically added by the server.
+            type: string
+          contractType:
+            description: An enum for the type of contract this represents
+            enum: ["PHSICAL_GOOD", "DIGITAL_GOOD", "SERVICE", "CROWD_FUND"]
+            type: string
+          format:
+            description: An enum for the type of pricing used by the listing
+            enum: ["FIXED_PRICE", "AUCTION"]
+            type: string
+          expiry:
+            description: The expiration date for this contract. Formatted as specified in [RFC 3339](https://www.ietf.org/rfc/rfc3339.txt)
+            type: string
+            example: "2017-08-17T04:52:19.000Z"
+          acceptedCurrency:
+            description: The type of crypto currency accepted for this contract. This field is automatically set by the server depending on what type of wallet is implemented.
+            type: string
+          pricingCurrency:
+            description: The contract can by priced in fiat currency to insulate from exchange rate fluctuations. If this is the case this field should be the three character currency code for that currency. Otherwise it should be the same as acceptedCurrency.
+            type: string
+      item:
+        description: Object containing all item details
+        type: object
+        required: ["title", "price", "nsfw", ]
+        properties:
+          title:
+            description: Listing title
+            type: string
+            maxLength: 140
+          description:
+            description: Listing description
+            type: string
+            maxLength: 50000
+          processingTime:
+            description: How long will it take to process (get it ready for shipping)
+            type: string
+            maxLength: 70
+          price:
+            description: The price of the item in statoshis if bitcoin. If fiat, the decimal place should be shifted two paces to the right.
+            type: integer
+          nsfw:
+            description: Is this listing not safe for work?
+            type: boolean
+          tags:
+            description: Tags are inserted into the DHT and link to your product. DHT search uses these tags to return results.
+            type: array
+            maximum: 10
+            maxLength: 40
+            items:
+              type: string
+          images:
+            description: A list of image objects
+            type: array
+            items:
+              description: An image object
+              type: object
+              required: ["hash", "filename"]
+              properties:
+                hash:
+                  description: The base58 encoded multihash of the image
+                  type: string
+                filename: 
+                  description: The name of the file. Allows images to be queried by name in IPFS.
+                  type: string
+                  maxLength: 70
+          categories:
+            description: Categories are used by the UI to organize listings within a store
+            type: array
+            maxLength: 40
+            items:
+              type: string
+          sku:
+            description: Optional sku for use by the vendor
+            type: string
+          grams:
+            description: Weight in grams. This is a mandatory field if using shipping rules that use weight.
+            type: string
+          condition:
+            description: The condition of the item
+            type: string
+          options:
+            description: Optional variants for the item. The user will be asked to pick one of each when purchasing the listing.
+            type: array
+            items:
+              description: An options object
+              type: object
+              required: ["name", "variants"]
+              properties:
+                name:
+                  description: The name of this option
+                  type: string
+                  maxLength: 40
+                  uniqueItems: true
+                description:
+                  description: A description of this variant
+                  type: string
+                  maxLength: 70
+                variants:
+                  description: A list of variants for this option
+                  type: array
+                  minimum: 2
+                  items:
+                    description: A variant object
+                    type: object
+                    required: ["name"]
+                    properties:
+                      name:
+                        description: The name of this option
+                        type: string
+                        maxLength: 40
+                      image:
+                        description: An image object
+                        type: object
+                        required: ["hash", "filename"]
+                        properties:
+                          hash:
+                            description: The base58 encoded multihash of the image
+                            type: string
+                          filename: 
+                            description: The name of the file. Allows images to be queried by name in IPFS.
+                            type: string
+                            maxLength: 70
+                      priceModifier:
+                        description: Optionally increases or descreases the price of the item
+                        type: integer
+      shippingOptions:
+        description: A list of shipping options
+        type: array
+        items:
+          description: A shipping option object
+          type: object
+          required: ["name", "shippingType", "regions"]
+          properties:
+            name:
+              description: The name of this option.
+              type: string
+              maxLength: 40
+              uniqueItems: true
+            shippingType:
+              description: Type of shipping for this option
+              enum: ["LOCAL_PICKUP", "FIXED_PRICE"]
+              type: string
+            regions:
+              description: A list of shipping regions. Must use the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto).
+              type: array
+              minimum: 1
+              items:
+                type: string
+            shippingRules:
+              description: Rules which apply when purchasing multiple items
+              type: object
+              properties:
+                ruleType:
+                  description: The rule type selection
+                  enum: ["QUANTITY_DISCOUNT", "FLAT_FEE_QUANTITY_RANGE", "FLAT_FEE_WEIGHT_RANGE", "COMBINED_SHIPPING_ADD", "COMBINED_SHIPPING_SUBTRACT"]
+                  type: string
+                rules:
+                  description: A list of rules matching the rule type
+                  type: object
+                  properties:
+                    minRange:
+                      description: Minimum range for rule
+                      type: integer
+                    maxRange:
+                      description: Maximum range for rule
+                      type: integer
+                    price:
+                      description: The price for this rule
+                      type: integer
+            services:
+              description: A list of service objects
+              items:
+                description: A service object
+                required: ["name", "price", "estimatedDelivery"]
+                type: object
+                properties:
+                  name:
+                    description: The name of this service.
+                    type: string
+                    maxLength: 40
+                    uniqueItems: true
+                  price:
+                    description: The price of this service
+                    type: integer
+                  estimatedDelivery:
+                    description: The estimated delivery for this service option
+                    type: string
+                    maxLength: 70
+      taxes:
+        description: A list of taxes to be applied
+        type: array
+        items:
+          description: A tax object
+          type: object
+          required: ["taxType", "taxRegions", "taxShipping", "percentage"]
+          properties:
+            taxType:
+              description: A name for this tax
+              type: string
+              maxLength: 40
+            taxRegions:
+              description: A list of tax regions. Must use the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto).
+              type: array
+              minimum: 1
+              items:
+                type: string
+            taxShipping:
+              description: Should this tax be applied to shipping
+              type: boolean
+            percentage:
+              description: The tax rate
+              type: integer
+      coupons:
+        description: A list of discount coupons
+        type: array
+        items:
+          description: A coupon object
+          type: object
+          required: ["title", "hash"]
+          properties:
+            title:
+              description: A name for this coupon
+              type: string
+              maxLength: 70
+            hash:
+              description: A base58 encoded multihash of the discount code
+              type: string
+            percentDiscount: 
+              description: A percentage discount. Only use if price discount is omitted.
+              type: integer
+            priceDiscount: 
+              description: A price discount. Only use if percent discount is omitted.
+              type: integer
+      moderators:
+        description: A list of moderators acceptable to the vendor
+        type: array
+        items:
+          description: A base58 encoded multihash moderator ID
+          type: string
+      termsAndConditions:
+        description: Optional terms and conditions for this listing
+        type: string
+        maxLength: 10000
+      refundPolicy:
+        description: Optional refund policy
+        type: string
+        maxLength: 10000

@@ -445,7 +445,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					for _, variant := range listingOption.Variants {
 						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
 							if variant.PriceModifier > 0 {
-								satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, variant.PriceModifier)
+								satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(variant.PriceModifier))
+								if variant.PriceModifier < 0 {
+									satoshis = -satoshis
+								}
 								if err != nil {
 									return 0, err
 								}

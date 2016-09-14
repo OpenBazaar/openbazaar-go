@@ -28,6 +28,7 @@ const (
 	MaxTags                  = 10
 	WordMaxCharacters        = 40
 	SentanceMaxCharacters    = 70
+	PolicyMaxCharacters      = 10000
 )
 
 // Add our identity to the listing and sign it
@@ -506,7 +507,7 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if listing.Metadata.ListingType == pb.Listing_Metadata_NA || int(listing.Metadata.ListingType) > 2 {
+	if listing.Metadata.Format == pb.Listing_Metadata_NA || int(listing.Metadata.Format) > 2 {
 		return errors.New("Invalid listing type")
 	}
 	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || int(listing.Metadata.ContractType) > 4 {
@@ -697,6 +698,12 @@ func validateListing(listing *pb.Listing) (err error) {
 		if err != nil {
 			return errors.New("Moderator IDs must be a multihash")
 		}
+	}
+	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
+		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
+	}
+	if len(listing.RefundPolicy) > PolicyMaxCharacters {
+		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
 	}
 	return nil
 }
