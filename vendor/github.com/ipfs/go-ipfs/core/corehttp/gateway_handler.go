@@ -67,6 +67,29 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	if i.config.Authenticated {
+		if i.config.Username == "" || i.config.Password == "" {
+			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+			if i.config.Cookie.Value != cookie.Value {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+		} else {
+			username, password, ok := r.BasicAuth()
+			if !ok || username != i.config.Username || password != i.config.Password {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+		}
+	}
+
 	if i.config.Writable {
 		switch r.Method {
 		case "POST":

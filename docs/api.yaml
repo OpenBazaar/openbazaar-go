@@ -20,12 +20,33 @@ info:
     ```
     Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
     
-    On each startup, OpenBazaar generates a new cookie file and saves it in the datafolder. The cookie is deleted on shutdown. To authenticate an API connection you need to include that cookie in each request header. Example:
+    There are two ways for a client to authenticate. The default (and preferred) is via an authentication cookie. On start up the server generates a random cookie and saves it in the data directory as a .cookie file. You need to add this cookie to the header of all requests. For example:
     ```
     cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
     ```
+
+    Alternatively, you can use basic authentication by setting a username and password in the config file:
+    ```
+         {
+            "JSON-API": {
+              "Username": "Aladdin",
+              "Password": "OpenSesame"
+              }
+         }
+    ```
+    The username and password need to be included in the request header following [RFC 2617](https://www.ietf.org/rfc/rfc2617.txt):
+    ```
+    Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==
+    ```
+    Where the username and password are encoded as `base64encode(username + ":" + password)`
+
+    or included in the Url:
+    ```
+    http://username:password@localhost:8080/ob/
+    ```
+
     # SSL
-    **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here]().
+    **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
     
     # Cross-Origin Resource Sharing
     CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:

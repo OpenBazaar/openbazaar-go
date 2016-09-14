@@ -185,14 +185,15 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		TrustedPeer:      "",
 	}
 	type APIConfig struct {
-		CORS        bool
-		Enabled     bool
-		HTTPHeaders map[string][]string
-		Username    string
-		Password    string
-		SSL         bool
-		SSLCert     string
-		SSLKey      string
+		Authenticated bool
+		Username      string
+		Password      string
+		CORS          bool
+		Enabled       bool
+		HTTPHeaders   map[string][]string
+		SSL           bool
+		SSLCert       string
+		SSLKey        string
 	}
 	var a APIConfig = APIConfig{
 		Enabled:     true,

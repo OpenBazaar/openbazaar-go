@@ -55,6 +55,7 @@
     "IPNS": "/ipns"
   },
   "JSON-API": {
+    "Authenticated": true,
     "CORS": true,
     "Enabled": true,
     "HTTPHeaders": null,

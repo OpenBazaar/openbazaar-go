@@ -12,13 +12,17 @@ import (
 )
 
 type GatewayConfig struct {
-	Headers      map[string][]string
-	Writable     bool
-	PathPrefixes []string
-	Resolver     *bc.BlockstackClient
+	Headers       map[string][]string
+	Writable      bool
+	PathPrefixes  []string
+	Resolver      *bc.BlockstackClient
+	Authenticated bool
+	Cookie        http.Cookie
+	Username      string
+	Password      string
 }
 
-func GatewayOption(resolver *bc.BlockstackClient, paths ...string) ServeOption {
+func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, authCookie http.Cookie, username, password string, paths ...string) ServeOption {
 	return func(n *core.IpfsNode, _ net.Listener, mux *http.ServeMux) (*http.ServeMux, error) {
 		cfg, err := n.Repo.Config()
 		if err != nil {
@@ -26,10 +30,14 @@ func GatewayOption(resolver *bc.BlockstackClient, paths ...string) ServeOption {
 		}
 
 		gateway := newGatewayHandler(n, GatewayConfig{
-			Headers:      cfg.Gateway.HTTPHeaders,
-			Writable:     cfg.Gateway.Writable,
-			PathPrefixes: cfg.Gateway.PathPrefixes,
-			Resolver:     resolver,
+			Headers:       cfg.Gateway.HTTPHeaders,
+			Writable:      cfg.Gateway.Writable,
+			PathPrefixes:  cfg.Gateway.PathPrefixes,
+			Resolver:      resolver,
+			Authenticated: authenticated,
+			Cookie:        authCookie,
+			Username:      username,
+			Password:      password,
 		})
 
 		for _, p := range paths {

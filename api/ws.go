@@ -1,10 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/gorilla/websocket"
 	"github.com/ipfs/go-ipfs/commands"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"net/http"
 )
 
@@ -56,28 +56,12 @@ type wsHandler struct {
 	path          string
 	context       commands.Context
 	authenticated bool
-	cookieJar     []http.Cookie
+	cookie        http.Cookie
+	username      string
+	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, cookieJar []http.Cookie) (*wsHandler, error) {
-	cfg, err := node.Context.GetConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
-	if err != nil {
-		return nil, err
-	}
-	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
-	if err != nil {
-		return nil, err
-	}
-	var authenticated bool
-	if addr != "127.0.0.1" {
-		authenticated = true
-	}
-
+func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string) (*wsHandler, error) {
 	hub := newHub()
 	go hub.run()
 	handler = wsHandler{
@@ -85,7 +69,9 @@ func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, cookieJar 
 		path:          ctx.ConfigRoot,
 		context:       ctx,
 		authenticated: authenticated,
-		cookieJar:     cookieJar,
+		cookie:        authCookie,
+		username:      username,
+		password:      password,
 	}
 	return &handler, nil
 }
@@ -97,21 +83,25 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if wsh.authenticated {
-		cookie, err := r.Cookie("OpenBazaarSession")
-		if err != nil {
-			w.WriteHeader(http.StatusForbidden)
-			return
-		}
-		var auth bool
-		for _, key := range wsh.cookieJar {
-			if key.Value == cookie.Value {
-				auth = true
-				break
+		if wsh.username == "" || wsh.password == "" {
+			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+			if err != nil {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
 			}
-		}
-		if !auth {
-			w.WriteHeader(http.StatusForbidden)
-			return
+			if wsh.cookie.Value != cookie.Value {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
+		} else {
+			username, password, ok := r.BasicAuth()
+			if !ok || username != wsh.username || password != wsh.password {
+				w.WriteHeader(http.StatusForbidden)
+				fmt.Fprint(w, "403 - Forbidden")
+				return
+			}
 		}
 	}
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}
