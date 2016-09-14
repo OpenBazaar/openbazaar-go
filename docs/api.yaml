@@ -1139,7 +1139,7 @@ paths:
       tags:
         - Listings
       summary: Get a listing
-      description: This returns a listing wrapped in a Ricardian Contract which contains the signatures needed to validate the listing. Alternativey you can fetch a listing using `/ipfs/{listing_hash}`
+      description: This returns a listing wrapped in a Ricardian Contract which contains the signatures needed to validate the listing. Alternativley, you can fetch a listing using `/ipfs/{listing_hash}`
       operationId: GetListing
       parameters:
         - name: peerId
@@ -1711,7 +1711,7 @@ definitions:
   ListingPost:
     description: The listing post API call
     type: object
-    example: ["listing", "inventory"]
+    required: ["listing", "inventory"]
     properties:
       listing:
         $ref: '#/definitions/Listing'
@@ -1719,23 +1719,23 @@ definitions:
         description: Inventory levels to set with the listing
         type: array
         example: [
-          		{
-          		    "item": "/ron_swanson_tshirt/Small/Red",
-          		    "count": "12"
-          		},
-          		{
-          		    "item": "/ron_swanson_tshirt/Medium/Yellow",
-          		    "count": "10"
-          		},
-          		{
-          		    "item": "/ron_swanson_tshirt/Large/Red",
-          		    "count": "9"
-          		},
-          		{
-          		    "item": "/ron_swanson_tshirt/XL/Yellow",
-          		    "count": "16"
-          		}
-      	]
+        		{
+        		    "item": "/ron_swanson_tshirt/Small/Red",
+        		    "count": "12"
+        		},
+        		{
+        		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+        		    "count": "10"
+        		},
+        		{
+        		    "item": "/ron_swanson_tshirt/Large/Red",
+        		    "count": "9"
+        		},
+        		{
+        		    "item": "/ron_swanson_tshirt/XL/Yellow",
+        		    "count": "16"
+        		}
+    	 ]
         items:
           description: An inventory object
           type: object
@@ -1750,7 +1750,7 @@ definitions:
   ListingPut:
     description: The listing put API call
     type: object
-    example: ["listing", "inventory"]
+    required: ["listing", "inventory", "currentSlug"]
     properties:
       listing:
         $ref: '#/definitions/Listing'
@@ -1774,7 +1774,7 @@ definitions:
           		    "item": "/ron_swanson_tshirt/XL/Yellow",
           		    "count": "16"
           		}
-      	]
+      	 ]
         items:
           description: An inventory object
           type: object
@@ -1793,6 +1793,7 @@ definitions:
   ListingDelete:
     description: A delete object
     type: object
+    required: ["currentSlug"]
     example: {
       "currentSlug": "ron_swanson_tshirt"
     }
@@ -1818,7 +1819,7 @@ definitions:
             "metadata": {
                 "version": 1,
                 "contractType": "PHYSICAL_GOOD",
-                "listingType": "FIXED_PRICE",
+                "format": "FIXED_PRICE",
                 "expiry": "2017-08-17T04:52:19.000Z",
                 "acceptedCurrency": "btc",
                 "pricingCurrency": "btc"
@@ -2091,7 +2092,7 @@ definitions:
             "metadata": {
                 "version": 1,
                 "contractType": "PHYSICAL_GOOD",
-                "listingType": "FIXED_PRICE",
+                "format": "FIXED_PRICE",
                 "expiry": "2017-08-17T04:52:19.000Z",
                 "acceptedCurrency": "btc",
                 "pricingCurrency": "btc"
