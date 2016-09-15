@@ -81,6 +81,8 @@ tags:
     description: API calls for managing inventory
   - name: Listings
     description: API calls for listings
+  - name: Orders
+    description: API calls for ordering
   - name: Peers
     description: RPC calls finding other peers
   - name: Wallet
@@ -1181,7 +1183,108 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'  
+            $ref: '#/definitions/IPFSResponse' 
+  /ob/purchase:
+    post:
+      tags:
+        - Orders
+      summary: Purchase an item
+      description: Send a purchase message to a vendor for one or more items
+      operationId: PostPurchase
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Purchase object
+          required: true
+          schema:
+            $ref: '#/definitions/PurchaseData'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/PurchaseResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/orderconfirmation:
+    post:
+      tags:
+        - Orders
+      summary: Confirm an offine order
+      description: Online orders are confirmed instantly. This API call is to confirm an order sent to the vendor while he was offline.
+      operationId: PostOrderConfirmation
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Order confirmation object
+          required: true
+          schema:
+            $ref: '#/definitions/OrderConfirmation'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/ordercancel:
+    post:
+      tags:
+        - Orders
+      summary: Cancel an offine order
+      description: Cancel an outstanding offline order. It will move the bitcoins back into your wallet. 
+      operationId: PostCancelConfirmation
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Order cancel object
+          required: true
+          schema:
+            $ref: '#/definitions/OrderCancel'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
 definitions:
   DefaultResponse:
     type: object
@@ -2511,3 +2614,162 @@ definitions:
         description: Optional refund policy
         type: string
         maxLength: 10000
+  PurchaseData:
+    description: Object containing data for a purchase
+    type: object
+    example: {
+      	"shipTo": "Seymour Butts",
+      	"address": "31 Spooner Street",
+      	"city": "Quahog",
+      	"state": "RI",
+      	"postalCode": "00093",
+      	"countryCode": "UNITED_STATES",
+      	"addressNotes": "Leave on front porch",
+      	"moderator": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+      	"items": [
+      		{
+      			"listingHash": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+      			"quantity": 1,
+      			"options": [
+      				{
+      					"name": "Color",
+      					"value": "Red"
+      				},
+      				{
+      					"name": "Size",
+      					"value": "Large"
+      				}
+      			],
+      			"shipping": {
+      					"name": "Domestic Shipping",
+      					"service": "Standard"
+      			},
+      			"memo": "thanks!",
+      			"coupons": ["discount"]
+      		}
+              ]
+      }
+    required: ["items"]
+    properties:
+      shipTo:
+        description: Name of the person to ship to (physical goods only)
+        type: string
+      address:
+        description: Shipping address (physical goods only)
+        type: string
+      city:
+        description: City to ship to (physical goods only)
+        type: string
+      state:
+        description: State to ship to (physical goods only)
+        type: string
+      postalCode:
+        description: Shipping postal code (physical goods only)
+        type: string
+      countryCode:
+        description: Country to ship to (physical goods only). Must be one of the countires listed in [countriescodes.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/countrycodes.proto).
+        type: string
+      addressNotes:
+        description: Optional notes they buyer can leave for this address
+        type: string
+      moderator:
+        description: The base58 encoded multihash peer ID for the selected moderator if one is chosen
+        type: string
+      items:
+        description: A list of items to puchase from the vendor
+        type: array
+        items:
+          description: An items object
+          type: object
+          required: ["listingHash", "quantity"]
+          properties:
+            listingHash:
+              description: The base58 encoded multihash of the listing to purchase
+              type: string
+            quantity:
+              description: The quantity to purchase
+              type: integer
+            options:
+              description: The selected options for this item. This field is mandatory if the listing has options listed.
+              type: array
+              items:
+                description: An option object
+                type: object
+                required: ["name", "value"]
+                properties:
+                  name:
+                    description: The option name
+                    type: string
+                  value:
+                    description: The selected value
+                    type: string
+            shippingOption:
+              description: A shipping option object (physical goods only)
+              type: object
+              properties:
+                name:
+                  description: The name of this option
+                  type: string
+                service:
+                  description: The selected service
+                  type: string
+            memo:
+              description: Optional memo to the vendor about this item
+              type: string
+            coupons:
+              description: A list of discount codes to apply to this order (if valid)
+              type: array
+              items:
+                description: A discount code
+                type: string
+      alternateContactInfo:
+        description: An optional additional contact info
+        type: string
+  PurchaseResponse:
+    description: Response to the purchase API call
+    type: object
+    example: {
+        "paymentAddress": "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+        "amount": 2500000,
+        "vendorOnline": true,
+        "orderId": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+    }
+    properties:
+      paymentAddress:
+        description: The bitcoin address to send the payment to
+        type: string
+      amount: 
+        description: The amount to pay in satoshi
+        type: integer
+      vendorOnline:
+        description: A boolean representing whether the vendor was online or not
+        type: boolean
+      orderId:
+        description: The base58 encoded mutihash order ID
+        type: string
+  OrderConfirmation:
+    description: An order confirmation object
+    type: object
+    required: ["orderId", "reject"]
+    example: {
+      "orderId": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+      "reject": false
+    }
+    properties:
+      orderId: 
+        description: A base58 encoded multihash order ID
+        type: string
+      reject:
+        description: Reject boolean. If true, a reject message will be sent to the buyer. 
+        type: boolean
+  OrderCancel:
+    description: An order cancel object
+    type: object
+    required: ["orderId"]
+    example: {
+      "orderId": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+    }
+    properties:
+      orderId: 
+        description: A base58 encoded multihash order ID
+        type: string

@@ -606,10 +606,10 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type purchaseReturn struct {
-		PaymentAddress string
-		Amount         uint64
-		VendorOnline   bool
-		OrderId        string
+		PaymentAddress string `json:"paymentAddress"`
+		Amount         uint64 `json:"amount"`
+		VendorOnline   bool   `json:"vendorOnline"`
+		OrderId        string `json:"orderId"`
 	}
 	ret := purchaseReturn{paymentAddr, amount, online, orderId}
 	b, err := json.MarshalIndent(ret, "", "    ")
