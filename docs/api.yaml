@@ -1219,7 +1219,7 @@ paths:
     post:
       tags:
         - Orders
-      summary: Confirm an offine order
+      summary: Confirm an offline order
       description: Online orders are confirmed instantly. This API call is to confirm an order sent to the vendor while he was offline.
       operationId: PostOrderConfirmation
       consumes:
@@ -1254,7 +1254,7 @@ paths:
     post:
       tags:
         - Orders
-      summary: Cancel an offine order
+      summary: Cancel an offline order
       description: Cancel an outstanding offline order. It will move the bitcoins back into your wallet. 
       operationId: PostCancelConfirmation
       consumes:
