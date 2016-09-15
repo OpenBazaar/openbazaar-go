@@ -43,7 +43,7 @@ info:
     http://username:password@localhost:8080/ob/
     ```
     # SSL
-     **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled the cookie will be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
+     **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled your authentication information be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
     # Cross-Origin Resource Sharing
     CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
      ```
@@ -754,7 +754,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-  /ipns/{peerId}/avatar:
+  /ipns/{peerId}/images/{size}/avatar:
     get:
       tags:
         - Images
@@ -765,6 +765,11 @@ paths:
         - name: peerId
           in: path
           description: The base58 encoded peer ID.
+          required: true
+          type: string
+        - name: size
+          in: path
+          description: The image size to set [tiny, small, medium, large, huge]
           required: true
           type: string
       responses:
@@ -801,7 +806,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
-  /ipns/{peerId}/header:
+  /ipns/{peerId}/images/{size}/header:
     get:
       tags:
         - Images
@@ -812,6 +817,11 @@ paths:
         - name: peerId
           in: path
           description: The base58 encoded peer ID.
+          required: true
+          type: string
+        - name: size
+          in: path
+          description: The image size to set [tiny, small, medium, large, huge]
           required: true
           type: string
       responses:
@@ -848,6 +858,32 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ipns/{peerId}/images/{size}/{filename}:
+    get:
+      tags:
+        - Images
+      summary: Get image
+      description: Get an image given its filename. Alternatively, you can use /ipfs/{hash}
+      operationId: GetImage
+      parameters:
+        - name: peerId
+          in: path
+          description: The base58 encoded peer ID.
+          required: true
+          type: string
+        - name: size
+          in: path
+          description: The image size to set [tiny, small, medium, large, huge]
+          required: true
+          type: string
+        - name: filename
+          in: path
+          description: The filename of the image to fetch
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
   /ob/moderator:
     post:
       tags:

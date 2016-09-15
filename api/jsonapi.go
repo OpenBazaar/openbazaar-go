@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -12,7 +11,6 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -277,42 +275,12 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
 	err := decoder.Decode(&data)
-
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "root", "avatar")
-	out, err := os.Create(imgPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 
-	dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data.Avatar))
-
-	defer out.Close()
-
-	_, err = io.Copy(out, dec)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Add hash to profile
-	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-	if aerr != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile, err := i.node.GetProfile()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile.AvatarHash = hash
-	err = i.node.UpdateProfile(&profile)
-	if aerr != nil {
+	if err := i.node.SetAvatarImages(data.Avatar); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -344,37 +312,7 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "root", "header")
-	out, err := os.Create(imgPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data.Header))
-
-	defer out.Close()
-
-	_, err = io.Copy(out, dec)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Add hash to profile
-	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-	if aerr != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile, err := i.node.GetProfile()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile.HeaderHash = hash
-	err = i.node.UpdateProfile(&profile)
-	if aerr != nil {
+	if err := i.node.SetHeaderImages(data.Header); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -412,24 +350,8 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 	}
 	var retData []retImage
 	for _, img := range images {
-		imgPath := path.Join(i.node.RepoPath, "root", "images", img.Filename)
-		out, err := os.Create(imgPath)
+		hash, err := i.node.SetProductImages(img.Image, img.Filename)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(img.Image))
-
-		defer out.Close()
-
-		_, err = io.Copy(out, dec)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-		if aerr != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}

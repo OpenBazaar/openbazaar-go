@@ -87,6 +87,21 @@ func maybeCreateOBDirectories(repoRoot string) error {
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "images"), os.ModePerm); err != nil {
 		return err
 	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "tiny"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "small"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "medium"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "large"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "huge"), os.ModePerm); err != nil {
+		return err
+	}
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "feed"), os.ModePerm); err != nil {
 		return err
 	}
