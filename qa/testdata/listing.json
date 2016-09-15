@@ -4,7 +4,7 @@
 	    "metadata": {
 		"version": 1,
 		"contractType": "PHYSICAL_GOOD",
-		"listingType": "FIXED_PRICE",
+		"format": "FIXED_PRICE",
 		"expiry": "2017-08-17T04:52:19.000Z",
 		"pricingCurrency": "btc"
 	    },
