@@ -1,15 +1,15 @@
 package net
 
 import (
-	"github.com/yawning/bulb/utils/pkcs1"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/pem"
+	"errors"
 	"github.com/yawning/bulb"
+	"github.com/yawning/bulb/utils/pkcs1"
 	"os"
 	"path"
-	"crypto/rsa"
-	"crypto/rand"
-	"encoding/pem"
 	"path/filepath"
-	"errors"
 )
 
 // Return the tor control port if tor is running or an error

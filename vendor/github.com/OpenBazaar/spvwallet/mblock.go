@@ -3,8 +3,8 @@ package spvwallet
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) *chainhash.Hash {
@@ -32,7 +32,7 @@ func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) *chainhash.Ha
 }
 
 type merkleNode struct {
-	p uint32        // position in the binary tree
+	p uint32          // position in the binary tree
 	h *chainhash.Hash // hash
 }
 
@@ -76,7 +76,7 @@ func checkMBlock(m *wire.MsgMerkleBlock) ([]*chainhash.Hash, error) {
 	if len(m.Flags) == 0 {
 		return nil, fmt.Errorf("No flag bits")
 	}
-	var s []merkleNode    // the stack
+	var s []merkleNode      // the stack
 	var r []*chainhash.Hash // slice to return; txids we care about
 
 	// set initial position to root of merkle tree

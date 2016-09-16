@@ -42,17 +42,13 @@
     "Writable": false
   },
   "Identity": {
-    "PeerID": ""
+    "PeerID": "testID",
+    "PrivKey": "testKey"
   },
   "Ipns": {
     "RecordLifetime": "7d",
     "RepublishPeriod": "24h",
     "ResolveCacheSize": 128
-  },
-  "Mounts": {
-    "FuseAllowOther": false,
-    "IPFS": "/ipfs",
-    "IPNS": "/ipns"
   },
   "JSON-API": {
     "Authenticated": true,
@@ -61,6 +57,11 @@
     "HTTPHeaders": null,
     "Password": "TestPassword",
     "Username": "TestUsername"
+  },
+  "Mounts": {
+    "FuseAllowOther": false,
+    "IPFS": "/ipfs",
+    "IPNS": "/ipns"
   },
   "Resolver": "https://resolver.onename.com/",
   "SupernodeRouting": {

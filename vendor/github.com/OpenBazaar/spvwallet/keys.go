@@ -1,8 +1,8 @@
 package spvwallet
 
 import (
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/txscript"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
 
 const LOOKAHEADWINDOW = 100
@@ -11,7 +11,6 @@ type KeyPath struct {
 	Purpose KeyPurpose
 	Index   int
 }
-
 
 func (t *TxStore) GetCurrentKey(purpose KeyPurpose) *hd.ExtendedKey {
 	i, _ := t.db.Keys().GetUnused(purpose)
@@ -65,7 +64,7 @@ func (t *TxStore) lookahead() {
 	lookaheadWindows := t.db.Keys().GetLookaheadWindows()
 	for purpose, size := range lookaheadWindows {
 		if size < LOOKAHEADWINDOW {
-			for i:=0; i<(LOOKAHEADWINDOW-size); i++ {
+			for i := 0; i < (LOOKAHEADWINDOW - size); i++ {
 				t.GetFreshKey(purpose)
 			}
 		}

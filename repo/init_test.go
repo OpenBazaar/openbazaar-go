@@ -52,7 +52,7 @@ func TestDoInit(t *testing.T) {
 	os.Chmod(repoRootFolder, 0755)
 	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err != nil {
-		t.Error("DoInit threw an unexpected error")
+		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
 	}
 	TearDown()
 }

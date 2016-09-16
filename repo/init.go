@@ -46,7 +46,6 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 			return err
 		}
 	}
-
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
 	fmt.Printf("generating %d-bit RSA keypair...", nBitsForKeypair)
 	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
@@ -60,11 +59,11 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		return err
 	}
 
+	conf.Identity = identity
 	log.Infof("initializing openbazaar node at %s\n", repoRoot)
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
-	conf.Identity = identity
 
 	if err := addConfigExtensions(repoRoot, testnet); err != nil {
 		return err
