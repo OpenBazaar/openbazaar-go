@@ -307,21 +307,20 @@ func (x *Start) Execute(args []string) error {
 	}
 	cfg.Identity = identity
 
-	// Run stun and set uTP port
-	if x.STUN {
-		for i, addr := range cfg.Addresses.Swarm {
-			m, _ := ma.NewMultiaddr(addr)
-			p := m.Protocols()
-			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
-				port, serr := obnet.Stun()
-				if serr != nil {
-					log.Error(serr)
-					return err
-				}
-				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
-				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
-				break
+	// Iterate over our address and process them as needed
+	for i, addr := range cfg.Addresses.Swarm {
+		m, _ := ma.NewMultiaddr(addr)
+		p := m.Protocols()
+		// If we are using utp and the stun option has been select, run stun and replace the port in the address
+		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
+			port, serr := obnet.Stun()
+			if serr != nil {
+				log.Error(serr)
+				return err
 			}
+			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
+			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
+			break
 		}
 	}
 
