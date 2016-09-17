@@ -49,15 +49,12 @@ func TestDoInit(t *testing.T) {
 		t.Error("DoInit didn't throw an error")
 	}
 	// running DoInit on an empty, writable folder
-	// FIXME: The IPFS code that this function uses was changed to check for the private key in the config file
-	// FIXME: (which we don't put in the config) causing this test to fail.
 	os.Chmod(repoRootFolder, 0755)
-	/*
-		err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
-		if err != nil {
-			t.Errorf("DoInit threw an unexpected error: %s", err.Error())
-		}
-	*/
+	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
+	if err != nil {
+		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
+	}
+
 	TearDown()
 }
 
