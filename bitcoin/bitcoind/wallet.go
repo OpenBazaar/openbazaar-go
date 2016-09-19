@@ -39,10 +39,17 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string) *BitcoindWallet {
+func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string) *BitcoindWallet {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
+
+	if params.Name == chaincfg.TestNet3Params.Name || params.Name == chaincfg.RegressionNetParams.Name {
+		connCfg.Host = "localhost:18332"
+	}
+
+	connCfg.User = username
+	connCfg.Pass = password
 
 	// TODO: need to make a similar script for windows
 	script := []byte("#!/bin/bash\ncurl -d $1 http://localhost:8330/")
@@ -77,11 +84,26 @@ func (w *BitcoindWallet) Start() {
 	}
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-
-	client, err := btcrpcclient.New(connCfg, nil)
-	if err != nil {
-		log.Fatal("Could not connect to bitcoind")
+	var client *btcrpcclient.Client
+	ticker := time.NewTicker(15 * time.Second)
+	go func() {
+		for range ticker.C {
+			log.Fatal("Failed to connect to bitcoind")
+		}
+	}()
+	for {
+		var err error
+		client, err = btcrpcclient.New(connCfg, nil)
+		if err == nil {
+			_, berr := client.GetBlockCount()
+			if berr == nil {
+				break
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
 	}
+	log.Info("Connected to bitcoind")
+	ticker.Stop()
 	w.rpcClient = client
 	startNotificationListener(w.rpcClient, w.listeners)
 }
@@ -120,7 +142,10 @@ func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *BitcoindWallet) ChainTip() uint32 {
-	info, _ := w.rpcClient.GetInfo()
+	info, err := w.rpcClient.GetInfo()
+	if err != nil {
+		return uint32(0)
+	}
 	return uint32(info.Blocks)
 }
 
@@ -166,7 +191,10 @@ func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 }
 
 func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
-	_, addrs, _, _ := txscript.ExtractPkScriptAddrs(script, w.params)
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	if err != nil {
+		return err
+	}
 	return w.rpcClient.ImportAddress(addrs[0].EncodeAddress())
 }
 

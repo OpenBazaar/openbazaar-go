@@ -84,6 +84,8 @@
     "MediumFeeDefault": 40,
     "TrustedPeer": "127.0.0.1:8333",
     "Type": "spvwallet",
-    "Binary": "/path/to/bitcoind"
+    "Binary": "/path/to/bitcoind",
+    "RPCUser": "username",
+    "RPCPassword": "password"
   }
 }

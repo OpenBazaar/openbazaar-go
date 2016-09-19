@@ -398,7 +398,7 @@ func (x *Start) Execute(args []string) error {
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
-		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary)
+		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword)
 	} else {
 		log.Fatal("Unknown wallet type")
 	}

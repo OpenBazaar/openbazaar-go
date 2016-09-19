@@ -35,6 +35,8 @@ type WalletConfig struct {
 	MediumFeeDefault int
 	LowFeeDefault    int
 	TrustedPeer      string
+	RPCUser          string
+	RPCPassword      string
 }
 
 func GetAPIConfig(cfgPath string) (*APIConfig, error) {
@@ -94,6 +96,8 @@ func GetWalletConfig(cfgPath string) (*WalletConfig, error) {
 	maxFee := wallet.(map[string]interface{})["MaxFee"].(float64)
 	walletType := wallet.(map[string]interface{})["Type"].(string)
 	binary := wallet.(map[string]interface{})["Binary"].(string)
+	rpcUser := wallet.(map[string]interface{})["RPCUser"].(string)
+	rpcPassword := wallet.(map[string]interface{})["RPCPassword"].(string)
 	wCfg := &WalletConfig{
 		Type:             walletType,
 		Binary:           binary,
@@ -103,6 +107,8 @@ func GetWalletConfig(cfgPath string) (*WalletConfig, error) {
 		MediumFeeDefault: int(medium),
 		LowFeeDefault:    int(low),
 		TrustedPeer:      trustedPeer,
+		RPCUser:          rpcUser,
+		RPCPassword:      rpcPassword,
 	}
 	return wCfg, nil
 }
