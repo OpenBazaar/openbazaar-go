@@ -10,7 +10,6 @@ before_install:
   - go get github.com/tcnksm/ghr
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
-  - go get -u github.com/whyrusleeping/gx
   - pip3 install requests
   - pip3 install python-bitcoinlib
 script:
