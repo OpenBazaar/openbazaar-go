@@ -56,6 +56,9 @@
     "Enabled": true,
     "HTTPHeaders": null,
     "Password": "TestPassword",
+    "SSL": true,
+    "SSLCert": "/path/to/ssl.cert",
+    "SSLKey": "/path/to/ssl.key",
     "Username": "TestUsername"
   },
   "Mounts": {
@@ -78,6 +81,8 @@
     "HighFeeDefault": 60,
     "LowFeeDefault": 20,
     "MaxFee": 2000,
-    "MediumFeeDefault": 40
+    "MediumFeeDefault": 40,
+    "TrustedPeer": "127.0.0.1:8333",
+    "Type": "spvwallet"
   }
 }

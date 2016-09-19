@@ -374,22 +374,7 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.MainNetParams
 	}
-	maxFee, err := repo.GetMaxFee(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	feeApi, err := repo.GetFeeAPI(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	low, medium, high, err := repo.GetDefaultFees(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	trustedPeer, err := repo.GetTrustedBitcoinPeer(path.Join(repoPath, "config"))
+	walletCfg, err := repo.GetWalletConfig(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -404,7 +389,12 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", trustedPeer, ml)
+	var wallet *spvwallet.SPVWallet
+	if strings.ToLower(walletCfg.Type) == "spvwallet" {
+		wallet = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.HighFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.LowFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
+	} else {
+		log.Fatal("Unknown wallet type")
+	}
 
 	// Crosspost gateway
 	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
@@ -425,7 +415,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated Gateway
-	authenticatedGateway, authUsername, authPassword, err := repo.GetAPIAuthentication(path.Join(repoPath, "config"))
+	apiConfig, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -442,7 +432,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	// Override config file preference if this is Mainnet and open internet.
 	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name {
-		authenticatedGateway = true
+		apiConfig.Authenticated = true
 	}
 
 	// Offline messaging storage
@@ -494,15 +484,10 @@ func (x *Start) Execute(args []string) error {
 	var gwErrc <-chan error
 	var cb <-chan bool
 	if len(cfg.Addresses.Gateway) > 0 {
-		sslEnabled, certFile, keyFile, err := repo.GetAPISSL(path.Join(repoPath, "config"))
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		if (sslEnabled && certFile == "") || (sslEnabled && keyFile == "") {
+		if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
 			return errors.New("SSL cert and key files must be set when SSL is enabled")
 		}
-		err, cb, gwErrc = serveHTTPGateway(core.Node, authenticatedGateway, authCookie, authUsername, authPassword, sslEnabled, certFile, keyFile)
+		err, cb, gwErrc = serveHTTPGateway(core.Node, authCookie, *apiConfig)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -586,7 +571,7 @@ func (d *DummyListener) Close() error {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, un, pw string, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -598,7 +583,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
 	}
 	var gwLis manet.Listener
-	if sslEnabled {
+	if config.SSL {
 		netAddr, err := manet.ToNetAddr(gatewayMaddr)
 		if err != nil {
 			return err, nil, nil
@@ -623,7 +608,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, authenticated, authCookie, un, pw, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
@@ -636,7 +621,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 	errc := make(chan error)
 	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(cb, node, node.Context, authenticated, authCookie, un, pw, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
+		errc <- api.Serve(cb, node, node.Context, authCookie, gwLis.NetListener(), config, opts...)
 		close(errc)
 	}()
 	return nil, cb, errc

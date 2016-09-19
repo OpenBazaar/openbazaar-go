@@ -36,32 +36,17 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, username, password string) (*jsonAPIHandler, error) {
-	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	cors, err := repo.GetAPICORS(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	headers, err := repo.GetAPIHeaders(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
 
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
-			Enabled:       enabled,
-			Cors:          cors,
-			Headers:       headers,
-			Authenticated: authenticated,
+			Enabled:       config.Enabled,
+			Cors:          config.CORS,
+			Headers:       config.HTTPHeaders,
+			Authenticated: config.Authenticated,
 			Cookie:        authCookie,
-			Username:      username,
-			Password:      password,
+			Username:      config.Username,
+			Password:      config.Password,
 		},
 		node: node,
 	}

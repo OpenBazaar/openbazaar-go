@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/op/go-logging"
@@ -15,14 +16,14 @@ import (
 
 var log = logging.MustGetLogger("api")
 
-func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string, l net.Listener, options ...corehttp.ServeOption) (http.Handler, error) {
+func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, l net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) (http.Handler, error) {
 	topMux := http.NewServeMux()
 
-	restAPI, err := newJsonAPIHandler(n, authenticated, authCookie, username, password)
+	restAPI, err := newJsonAPIHandler(n, authCookie, config)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI, err := newWSAPIHandler(n, ctx, authenticated, authCookie, username, password)
+	wsAPI, err := newWSAPIHandler(n, ctx, config.Authenticated, authCookie, config.Username, config.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +44,8 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authenticated boo
 	return topMux, nil
 }
 
-func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string, lis net.Listener, sslEnabled bool, certFile, keyFile string, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(node, ctx, authenticated, authCookie, username, password, lis, options...)
+func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, lis net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) error {
+	handler, err := makeHandler(node, ctx, authCookie, lis, config, options...)
 	cb <- true
 	if err != nil {
 		return err
@@ -60,8 +61,8 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, auth
 	serverExited := make(chan struct{})
 
 	node.IpfsNode.Process().Go(func(p goprocess.Process) {
-		if sslEnabled {
-			serverError = http.ListenAndServeTLS(lis.Addr().String(), certFile, keyFile, handler)
+		if config.SSL {
+			serverError = http.ListenAndServeTLS(lis.Addr().String(), config.SSLCert, config.SSLKey, handler)
 		} else {
 			serverError = http.Serve(lis, handler)
 		}
@@ -75,7 +76,7 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, auth
 	// if node being closed before server exits, close server
 	case <-node.IpfsNode.Process().Closing():
 		log.Infof("server at %s terminating...", addr)
-		if sslEnabled {
+		if config.SSL {
 			close(serverExited)
 		} else {
 			lis.Close()
