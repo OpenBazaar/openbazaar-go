@@ -21,6 +21,8 @@ import (
 	"crypto/rand"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -389,9 +391,14 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	var wallet *spvwallet.SPVWallet
+	var wallet bitcoin.BitcoinWallet
 	if strings.ToLower(walletCfg.Type) == "spvwallet" {
 		wallet = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.HighFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.LowFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
+	} else if strings.ToLower(walletCfg.Type) == "bitcoind" {
+		if walletCfg.Binary == "" {
+			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
+		}
+		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword)
 	} else {
 		log.Fatal("Unknown wallet type")
 	}
