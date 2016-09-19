@@ -28,6 +28,7 @@ type APIConfig struct {
 
 type WalletConfig struct {
 	Type             string
+	Binary           string
 	MaxFee           int
 	FeeAPI           string
 	HighFeeDefault   int
@@ -92,8 +93,10 @@ func GetWalletConfig(cfgPath string) (*WalletConfig, error) {
 	high := wallet.(map[string]interface{})["HighFeeDefault"].(float64)
 	maxFee := wallet.(map[string]interface{})["MaxFee"].(float64)
 	walletType := wallet.(map[string]interface{})["Type"].(string)
+	binary := wallet.(map[string]interface{})["Binary"].(string)
 	wCfg := &WalletConfig{
 		Type:             walletType,
+		Binary:           binary,
 		MaxFee:           int(maxFee),
 		FeeAPI:           feeAPI,
 		HighFeeDefault:   int(high),

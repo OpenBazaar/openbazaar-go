@@ -63,6 +63,9 @@ func TestGetWalletConfig(t *testing.T) {
 	if config.Type != "spvwallet" {
 		t.Error("Type does not equal expected value")
 	}
+	if config.Binary != "/path/to/bitcoind" {
+		t.Error("Binary does not equal expected value")
+	}
 	if config.LowFeeDefault != 20 {
 		t.Error("Expected low to be 20, got ", config.LowFeeDefault)
 	}

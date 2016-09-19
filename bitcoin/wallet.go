@@ -9,6 +9,9 @@ import (
 
 type BitcoinWallet interface {
 
+	// Start the wallet
+	Start()
+
 	// Returns the type of crytocurrency this wallet implements
 	CurrencyCode() string
 
