@@ -88,7 +88,7 @@ func (w *BitcoindWallet) Start() {
 
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(20 * time.Second)
 	go func() {
 		for range ticker.C {
 			log.Fatal("Failed to connect to bitcoind")
@@ -96,7 +96,7 @@ func (w *BitcoindWallet) Start() {
 	}()
 	for {
 		_, err := client.GetBlockCount()
-		if err == nil || !strings.Contains(err.Error(), "connection refused") {
+		if err == nil {
 			break
 		}
 	}
@@ -128,6 +128,7 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 
 func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
 	addr, _ := w.rpcClient.GetAccountAddress(account)
+	log.Notice(addr)
 	return addr
 }
 

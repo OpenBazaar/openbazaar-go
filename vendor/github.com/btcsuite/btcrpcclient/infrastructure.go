@@ -24,13 +24,11 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcjson"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/go-socks/socks"
 	"github.com/btcsuite/websocket"
 )
 
 var (
-	NetworkParams *chaincfg.Params = &chaincfg.MainNetParams
 	// ErrInvalidAuth is an error to describe the condition where the client
 	// is either unable to authenticate or the specified endpoint is
 	// incorrect.
@@ -707,15 +705,15 @@ func (c *Client) handleSendPostMessage(details *sendPostDetails) {
 		return
 	}
 
-	// Handle unsuccessful HTTP responses
-	if httpResponse.StatusCode < 200 || httpResponse.StatusCode >= 300 {
-		jReq.responseChan <- &response{err: errors.New(string(respBytes))}
-		return
-	}
-
+	// Try to unmarshal the response as a regular JSON-RPC response.
 	var resp rawResponse
 	err = json.Unmarshal(respBytes, &resp)
 	if err != nil {
+		// When the response itself isn't a valid JSON-RPC response
+		// return an error which includes the HTTP status code and raw
+		// response bytes.
+		err = fmt.Errorf("status code: %d, response: %q",
+			httpResponse.StatusCode, string(respBytes))
 		jReq.responseChan <- &response{err: err}
 		return
 	}
@@ -1111,9 +1109,6 @@ type ConnConfig struct {
 	// EnableBCInfoHacks is an option provided to enable compatiblity hacks
 	// when connecting to blockchain.info RPC server
 	EnableBCInfoHacks bool
-
-	// Network Parameters
-	Params *chaincfg.Params
 }
 
 // newHTTPClient returns a new http client that is configured according to the
@@ -1248,10 +1243,6 @@ func New(config *ConnConfig, ntfnHandlers *NotificationHandlers) (*Client, error
 			}
 			start = true
 		}
-	}
-
-	if config.Params != nil {
-		NetworkParams = config.Params
 	}
 
 	client := &Client{
