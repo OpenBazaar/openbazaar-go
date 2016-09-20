@@ -96,7 +96,7 @@ func (w *BitcoindWallet) Start() {
 	}()
 	for {
 		_, err := client.GetBlockCount()
-		if err == nil || !strings.Contains(err.Error(), "connection refused"){
+		if err == nil || !strings.Contains(err.Error(), "connection refused") {
 			break
 		}
 	}
@@ -134,7 +134,7 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
 	c, _ := w.rpcClient.GetBalance(account)
-	return int64(u.ToUnit(btc.AmountSatoshi)), int64(c.ToUnit(btc.AmountSatoshi))
+	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
 func (w *BitcoindWallet) ChainTip() uint32 {
