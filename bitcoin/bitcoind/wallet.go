@@ -82,9 +82,12 @@ func (w *BitcoindWallet) Start() {
 	if w.trustedPeer != "" {
 		args = append(args, "-connect="+w.trustedPeer)
 	}
+	client, _ := btcrpcclient.New(connCfg, nil)
+	w.rpcClient = client
+	go startNotificationListener(client, w.listeners)
+
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-	var client *btcrpcclient.Client
 	ticker := time.NewTicker(15 * time.Second)
 	go func() {
 		for range ticker.C {
@@ -92,20 +95,13 @@ func (w *BitcoindWallet) Start() {
 		}
 	}()
 	for {
-		var err error
-		client, err = btcrpcclient.New(connCfg, nil)
-		if err == nil {
-			_, berr := client.GetBlockCount()
-			if berr == nil {
-				break
-			}
+		_, err := client.GetBlockCount()
+		if err == nil || !strings.Contains(err.Error(), "connection refused"){
+			break
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
-	log.Info("Connected to bitcoind")
 	ticker.Stop()
-	w.rpcClient = client
-	startNotificationListener(w.rpcClient, w.listeners)
+	log.Info("Connected to bitcoind")
 }
 
 // If bitcoind is already running let's shut it down so we restart it with our options
