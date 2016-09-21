@@ -22,7 +22,7 @@ if [ ! -z "$TRAVIS_TAG" ] &&
   rm /tmp/sign.key.gpg
 
   # Sign hash file
-  gpg --clearsign --digest-algo SHA256 --armor --output sha512_checksums.asc --passphrase=$GPG_PASS --default-key $GPG_KEYID sha512_checksums.txt
+  gpg --clearsign --digest-algo SHA512 --armor --output sha512_checksums.asc --passphrase=$GPG_PASS --default-key $GPG_KEYID sha512_checksums.txt
 
   rm sha512_checksums.txt
 
