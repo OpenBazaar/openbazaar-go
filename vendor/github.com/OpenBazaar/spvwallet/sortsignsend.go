@@ -273,7 +273,6 @@ func (w *SPVWallet) getFeePerByte(feeLevel FeeLevel) uint64 {
 
 		defer resp.Body.Close()
 
-		fees := new(Fees)
 		err = json.NewDecoder(resp.Body).Decode(&fees)
 		if err != nil {
 			return defaultFee()
@@ -285,19 +284,19 @@ func (w *SPVWallet) getFeePerByte(feeLevel FeeLevel) uint64 {
 	}
 	switch feeLevel {
 	case PRIOIRTY:
-		if fees.FastestFee > w.maxFee {
+		if fees.FastestFee > w.maxFee || fees.FastestFee == 0 {
 			return w.maxFee
 		} else {
 			return fees.FastestFee
 		}
 	case NORMAL:
-		if fees.HalfHourFee > w.maxFee {
+		if fees.HalfHourFee > w.maxFee || fees.HalfHourFee == 0 {
 			return w.maxFee
 		} else {
 			return fees.HalfHourFee
 		}
 	case ECONOMIC:
-		if fees.HourFee > w.maxFee {
+		if fees.HourFee > w.maxFee || fees.HourFee == 0 {
 			return w.maxFee
 		} else {
 			return fees.HourFee

@@ -128,7 +128,6 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 
 func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
 	addr, _ := w.rpcClient.GetAccountAddress(account)
-	log.Notice(addr)
 	return addr
 }
 

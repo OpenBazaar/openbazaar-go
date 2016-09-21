@@ -150,14 +150,13 @@ type Stxo struct {
 	SpendTxid   chainhash.Hash // the tx that consumed it
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey, listeners []func(TransactionCallback)) *TxStore {
+func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) *TxStore {
 	txs := new(TxStore)
 	txs.Param = p
 	txs.db = db
 	txs.masterPrivKey = masterPrivKey
 	txs.addrMutex = new(sync.Mutex)
 	txs.PopulateAdrs()
-	txs.listeners = listeners
 	return txs
 }
 

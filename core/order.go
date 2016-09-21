@@ -71,13 +71,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	shipping.Country = pb.CountryCode(pb.CountryCode_value[data.CountryCode])
 	order.Shipping = shipping
 
+	id := new(pb.ID)
 	profile, err := n.GetProfile()
-	if err != nil {
-		return "", "", 0, false, err
+	if err == nil {
+		id.BlockchainID = profile.Handle
 	}
 
-	id := new(pb.ID)
-	id.BlockchainID = profile.Handle
 	id.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
@@ -361,7 +360,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, err
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
-			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, false, nil
+			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
 }

@@ -165,29 +165,34 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
-func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
+func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, bool, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where orderID=?")
+	stmt, err := s.db.Prepare("select contract, state, funded, transactions, read from sales where orderID=?")
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
 	var fundedInt *int
+	var readInt *int
 	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
+	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, err
+		return nil, pb.OrderState(0), false, nil, false, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, err
+		return nil, pb.OrderState(0), false, nil, false, err
 	}
 	funded := false
 	if fundedInt != nil && *fundedInt == 1 {
 		funded = true
 	}
+	read := false
+	if readInt != nil && *readInt == 1 {
+		read = true
+	}
 	var records []spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, nil
+	return rc, pb.OrderState(stateInt), funded, records, read, nil
 }

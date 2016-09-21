@@ -249,11 +249,11 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 
 func TestSalesGetByOrderId(t *testing.T) {
 	saldb.Put("orderID", *contract, 0, false)
-	_, _, _, _, err := saldb.GetByOrderId("orderID")
+	_, _, _, _, _, err := saldb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, err = saldb.GetByOrderId("adsfads")
+	_, _, _, _, _, err = saldb.GetByOrderId("adsfads")
 	if err == nil {
 		t.Error("Get by unknown orderID failed to return error")
 	}

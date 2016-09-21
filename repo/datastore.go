@@ -144,7 +144,7 @@ type Purchases interface {
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
 
 	// Return a purchase given the order Id
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, read bool, err error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)
@@ -164,7 +164,7 @@ type Sales interface {
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
 
 	// Return a sale given the order Id
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord, read bool, err error)
 
 	// Return the Ids for all orders
 	GetAll() ([]string, error)

@@ -1009,7 +1009,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
+	contract, state, funded, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -1050,7 +1050,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
+	contract, state, _, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1072,4 +1072,50 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 	i.node.Wallet.ReSyncBlockchain(0)
 	fmt.Fprint(w, `{}`)
 	return
+}
+
+func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
+	_, orderId := path.Split(r.URL.Path)
+	var err error
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var funded bool
+	var records []spvwallet.TransactionRecord
+	var read bool
+	contract, state, funded, records, read, err = i.node.Datastore.Purchases().GetByOrderId(orderId)
+	if err != nil {
+		contract, state, funded, records, read, err = i.node.Datastore.Sales().GetByOrderId(orderId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+	}
+	resp := new(pb.OrderRespApi)
+	resp.Contract = contract
+	resp.Funded = funded
+	resp.Read = read
+	resp.State = state
+
+	txs := []*pb.TransactionRecord{}
+	for _, r := range records {
+		tx := new(pb.TransactionRecord)
+		tx.Txid = r.Txid
+		tx.Value = r.Value
+		txs = append(txs, tx)
+	}
+
+	resp.Transactions = txs
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(resp)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, out)
 }

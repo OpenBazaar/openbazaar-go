@@ -393,7 +393,7 @@ func (x *Start) Execute(args []string) error {
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	var wallet bitcoin.BitcoinWallet
 	if strings.ToLower(walletCfg.Type) == "spvwallet" {
-		wallet = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.HighFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.LowFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
+		wallet = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
 	} else if strings.ToLower(walletCfg.Type) == "bitcoind" {
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
@@ -516,7 +516,7 @@ func (x *Start) Execute(args []string) error {
 			core.Node.PointerRepublisher = PR
 			if !x.DisableWallet {
 				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
-				core.Node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+				wallet.AddTransactionListener(TL.OnTransactionReceived)
 				log.Info("Starting bitcoin wallet...")
 				go wallet.Start()
 			}

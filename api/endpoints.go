@@ -133,6 +133,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETIsFollowing(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/order") {
+		i.GETOrder(w, r)
+		return
+	}
 }
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
