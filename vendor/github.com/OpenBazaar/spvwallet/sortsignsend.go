@@ -142,6 +142,76 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 	return nil
 }
 
+func (w *SPVWallet) SweepMultisig(utxos []Utxo, key *hd.ExtendedKey, redeemScript []byte, feeLevel FeeLevel) error {
+	internalAddr := w.CurrentAddress(INTERNAL)
+	script, _ := txscript.PayToAddrScript(internalAddr)
+
+	var val int64
+	var inputs []*wire.TxIn
+	additionalPrevScripts := make(map[wire.OutPoint][]byte)
+	for _, u := range utxos {
+		val += u.Value
+		in := wire.NewTxIn(&u.Op, []byte{})
+		inputs = append(inputs, in)
+		additionalPrevScripts[u.Op] = u.ScriptPubkey
+	}
+	out := wire.NewTxOut(val, script)
+
+	estimatedSize := EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false)
+
+	// Calculate the fee
+	feePerByte := int(w.getFeePerByte(feeLevel))
+	fee := estimatedSize * feePerByte
+
+	outVal := val - int64(fee)
+	if outVal < 0 {
+		outVal = 0
+	}
+	out.Value = outVal
+
+	tx := &wire.MsgTx{
+		Version:  wire.TxVersion,
+		TxIn:     inputs,
+		TxOut:    []*wire.TxOut{out},
+		LockTime: 0,
+	}
+
+	// Sign tx
+	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
+		privKey, err := key.ECPrivKey()
+		if err != nil {
+			return nil, false, err
+		}
+		wif, err := btc.NewWIF(privKey, w.params, true)
+		if err != nil {
+			return nil, false, err
+		}
+		return wif.PrivKey, wif.CompressPubKey, nil
+	})
+	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
+		return redeemScript, nil
+	})
+
+	for i, txIn := range tx.TxIn {
+		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
+		script, err := txscript.SignTxOutput(w.params,
+			tx, i, prevOutScript, txscript.SigHashAll, getKey,
+			getScript, txIn.SignatureScript)
+		if err != nil {
+			return errors.New("Failed to sign transaction")
+		}
+		txIn.SignatureScript = script
+	}
+
+	// broadcast
+	for _, peer := range w.peerGroup {
+		peer.NewOutgoingTx(tx)
+	}
+	log.Infof("Broadcasting tx %s to network", tx.TxHash().String())
+
+	return nil
+}
+
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)

@@ -3,17 +3,21 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	"gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
-func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
 	orderID, err := n.CalcOrderId(contract.BuyerOrder)
@@ -21,8 +25,10 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 		return nil, err
 	}
 	oc.OrderID = orderID
-	addr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
-	oc.PaymentAddress = addr.EncodeAddress()
+	if addressRequest {
+		addr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+		oc.PaymentAddress = addr.EncodeAddress()
+	}
 
 	// Sign rating key
 	sig, err := n.IpfsNode.PrivateKey.Sign(contract.BuyerOrder.RatingKey)
@@ -42,8 +48,54 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract) (*
 	return contract, nil
 }
 
-func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract) error {
-	contract, err := n.NewOrderConfirmation(contract)
+func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []spvwallet.TransactionRecord) error {
+	contract, err := n.NewOrderConfirmation(contract, false)
+	if err != nil {
+		return err
+	}
+	// Sweep the temp address into our wallet
+	var utxos []spvwallet.Utxo
+	for _, r := range records {
+		u := spvwallet.Utxo{}
+		scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+		if err != nil {
+			return err
+		}
+		u.ScriptPubkey = scriptBytes
+		hash, err := chainhash.NewHashFromStr(r.Txid)
+		if err != nil {
+			return err
+		}
+		outpoint := wire.NewOutPoint(hash, r.Index)
+		u.Op = *outpoint
+		u.Value = r.Value
+		utxos = append(utxos, u)
+	}
+
+	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	if err != nil {
+		return err
+	}
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mECKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPublicKeyID[:],
+		mECKey.SerializeCompressed(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		false)
+
+	vendorKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	err = n.Wallet.SweepMultisig(utxos, vendorKey, redeemScript, spvwallet.NORMAL)
 	if err != nil {
 		return err
 	}
@@ -51,7 +103,6 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract) err
 	if err != nil {
 		return err
 	}
-	// TODO: send funds into wallet
 	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FUNDED, false)
 	return nil
 }
@@ -69,7 +120,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract) erro
 	return nil
 }
 
-func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContract, validateAddress bool) error {
 	orderID, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
@@ -88,9 +139,11 @@ func (n *OpenBazaarNode) validateOrderConfirmation(contract *pb.RicardianContrac
 	if err != nil || !valid {
 		return errors.New("Failed to verify signature on rating key")
 	}
-	_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
-	if err != nil {
-		return err
+	if validateAddress {
+		_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+		if err != nil {
+			return err
+		}
 	}
 	err = verifySignaturesOnOrderConfirmation(contract)
 	if err != nil {

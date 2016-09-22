@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/btcd/txscript"
@@ -101,7 +102,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 		if total != contract.BuyerOrder.Payment.Amount {
 			return errorResponse("Calculated a different payment amount"), nil
 		}
-		contract, err = service.node.NewOrderConfirmation(contract)
+		contract, err = service.node.NewOrderConfirmation(contract, true)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), nil
 		}
@@ -141,12 +142,45 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
-	// TODO: get orderId from message
-	// TODO: load the order
-	// TODO: validate the order confirmation
-	// TODO: append the order confirmation
-	// TODO: set message state to accepted
-	// TODO: send notification to websocket
+
+	// Unmarshal payload
+	vendorContract := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, vendorContract)
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
+	}
+
+	// Calc order ID
+	orderId := vendorContract.VendorOrderConfirmation.OrderID
+
+	// Load the order
+	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate the order confirmation
+	err = service.node.ValidateOrderConfirmation(vendorContract, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append the order confirmation
+	contract.VendorOrderConfirmation = vendorContract.VendorOrderConfirmation
+	for _, sig := range vendorContract.Signatures {
+		if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+
+	// Set message state to confirmed
+	service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.OrderConfirmationNotification{orderId})
+	service.broadcast <- n
+
+	// TODO: Detect when payment is released from multisig and set to state FUNDED
 
 	return nil, nil
 }

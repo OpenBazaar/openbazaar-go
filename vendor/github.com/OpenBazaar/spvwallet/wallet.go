@@ -245,9 +245,10 @@ type TransactionInput struct {
 
 // A transaction suitable for saving in the database
 type TransactionRecord struct {
-	Txid  string
-	Index uint32
-	Value int64
+	Txid         string
+	Index        uint32
+	Value        int64
+	ScriptPubKey string
 }
 
 func (w *SPVWallet) CurrencyCode() string {

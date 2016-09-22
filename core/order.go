@@ -351,7 +351,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
-			err = n.validateOrderConfirmation(contract)
+			err = n.ValidateOrderConfirmation(contract, true)
 			if err != nil {
 				return "", "", 0, false, err
 			}

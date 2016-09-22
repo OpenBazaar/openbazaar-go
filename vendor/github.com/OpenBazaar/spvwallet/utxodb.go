@@ -197,7 +197,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		if err != nil {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
-				go listener(cb)
+				listener(cb)
 			}
 			if hits > 0 {
 				ts.PopulateAdrs()
