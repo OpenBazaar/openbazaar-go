@@ -106,7 +106,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         time.sleep(6)
 
         # check bob detected payment
-        api_url = alice["gateway_url"] + "ob/order/" + orderId
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")

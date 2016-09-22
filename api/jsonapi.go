@@ -10,15 +10,18 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type JsonAPIConfig struct {
@@ -1118,4 +1121,21 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, out)
+}
+
+func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
+	shutdown := func() {
+		log.Info("OpenBazaar Server shutting down...")
+		time.Sleep(time.Second)
+		if core.Node != nil {
+			core.Node.Datastore.Close()
+			repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
+			os.Remove(repoLockFile)
+			core.Node.Wallet.Close()
+			core.Node.IpfsNode.Close()
+		}
+		os.Exit(1)
+	}
+	go shutdown()
+	return
 }

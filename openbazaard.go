@@ -515,6 +515,7 @@ func (x *Start) Execute(args []string) error {
 			go PR.Run()
 			core.Node.PointerRepublisher = PR
 			if !x.DisableWallet {
+				MR.Wait()
 				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
 				wallet.AddTransactionListener(TL.OnTransactionReceived)
 				log.Info("Starting bitcoin wallet...")

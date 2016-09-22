@@ -17,6 +17,7 @@ import (
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -29,17 +30,13 @@ type MessageRetriever struct {
 	service   net.NetworkService
 	prefixLen int
 	sendAck   func(peerId string, pointerID peer.ID) error
+	*sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	return &MessageRetriever{
-		db:        db,
-		node:      node,
-		ctx:       ctx,
-		service:   service,
-		prefixLen: prefixLen,
-		sendAck:   sendAck,
-	}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, new(sync.WaitGroup)}
+	mr.Add(1)
+	return &mr
 }
 
 func (m *MessageRetriever) Run() {
@@ -58,12 +55,12 @@ func (m *MessageRetriever) fetchPointers() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
-
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
 			// ipfs
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
+				m.Add(1)
 				go m.fetchIPFS(m.ctx, p.ID, p.Addrs[0])
 			}
 			// https
@@ -80,13 +77,16 @@ func (m *MessageRetriever) fetchPointers() {
 				if err != nil {
 					continue
 				}
+				m.Add(1)
 				go m.fetchHTTPS(p.ID, string(d.Digest), p.Addrs[0])
 			}
 		}
 	}
+	m.Done()
 }
 
 func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.Multiaddr) {
+	defer m.Done()
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
@@ -97,6 +97,7 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.
 }
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr) {
+	defer m.Done()
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
