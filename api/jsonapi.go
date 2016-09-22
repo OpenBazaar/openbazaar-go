@@ -1012,7 +1012,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
+	contract, state, funded, records, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -1026,7 +1026,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if !conf.Reject {
-		err := i.node.ConfirmOfflineOrder(contract)
+		err := i.node.ConfirmOfflineOrder(contract, records)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

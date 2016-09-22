@@ -33,6 +33,9 @@ type BitcoinWallet interface {
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
 
+	// Build and broadcast a transaction that sweeps all coins from this address to an internal address
+	SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedKey, reddemScript []byte, feeLevel spvwallet.FeeLevel) error
+
 	// Return the network parameters
 	Params() *chaincfg.Params
 

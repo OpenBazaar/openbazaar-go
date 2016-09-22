@@ -129,6 +129,15 @@ class OpenBazaarTestFramework(object):
                 time.sleep(0.25)
                 continue
 
+    def print_logs(self, node, log):
+        f = open(os.path.join(node["data_dir"], "logs", log), 'r')
+        file_contents = f.read()
+        print()
+        print("~~~~~~~~~~~~~~~~~~~~~~ " + log + " ~~~~~~~~~~~~~~~~~~~~~~")
+        print (file_contents)
+        print()
+        f.close()
+
     def teardown(self):
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")

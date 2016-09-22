@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
@@ -49,11 +50,15 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 }
 
 func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord) {
+	chainHash, err := chainhash.NewHash(txid)
+	if err != nil {
+		return
+	}
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we've already seen this transaction for some reason, just return
-		if r.Txid == hex.EncodeToString(txid) {
+		if r.Txid == chainHash.String() {
 			return
 		}
 	}
@@ -85,20 +90,25 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 		}
 	}
 	record := spvwallet.TransactionRecord{
-		Txid:  hex.EncodeToString(txid),
-		Index: output.Index,
-		Value: output.Value,
+		Txid:         chainHash.String(),
+		Index:        output.Index,
+		Value:        output.Value,
+		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
 	}
 	records = append(records, record)
 	l.db.Sales().UpdateFunding(orderId, funded, records)
 }
 
 func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []spvwallet.TransactionRecord) {
+	chainHash, err := chainhash.NewHash(txid)
+	if err != nil {
+		return
+	}
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we've already seen this transaction for some reason, just return
-		if r.Txid == hex.EncodeToString(txid) {
+		if r.Txid == chainHash.String() {
 			return
 		}
 	}
@@ -122,9 +132,10 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		l.broadcast <- n
 	}
 	record := spvwallet.TransactionRecord{
-		Txid:  hex.EncodeToString(txid),
-		Index: output.Index,
-		Value: output.Value,
+		Txid:         chainHash.String(),
+		Index:        output.Index,
+		Value:        output.Value,
+		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
 	}
 	records = append(records, record)
 	l.db.Purchases().UpdateFunding(orderId, funded, records)

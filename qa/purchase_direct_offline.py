@@ -98,7 +98,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
@@ -136,6 +136,67 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice incorrectly saved as unfunded")
+
+        # check alice balance is zero
+        api_url = alice["gateway_url"] + "wallet/balance"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
+            if confirmed + unconfirmed > 0:
+                raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice should have zero balance at this point")
+        else:
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Failed to query Alice's balance")
+        time.sleep(1)
+
+        # alice confirm offline order
+        api_url = alice["gateway_url"] + "ob/orderconfirmation"
+        oc = {
+            "orderId": orderId,
+            "reject": False
+        }
+        r = requests.post(api_url, data=json.dumps(oc, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Order confirmation post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+        time.sleep(3)
+
+        # Check the funds moved into alice's wallet
+        api_url = alice["gateway_url"] + "wallet/balance"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
+            if confirmed + unconfirmed <= 0:
+                raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice failed to receive the multisig payout")
+        else:
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Failed to query Alice's balance")
+
+        # check bob detected order confirmation
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text)
+        if resp["state"] != "CONFIRMED":
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to detect his payment")
+        if resp["funded"] == False:
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
+
+        # check alice set state correctly
+        api_url = alice["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Alice")
+        resp = json.loads(r.text)
+        if resp["state"] != "FUNDED":
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice failed to detect payment")
+        if resp["funded"] == False:
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
 
         print("PurchaseDirectOfflineTest - PASS")
 
