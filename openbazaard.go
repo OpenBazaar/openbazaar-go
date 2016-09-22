@@ -81,15 +81,16 @@ type Init struct {
 }
 
 type Start struct {
-	Password      string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	Testnet       bool     `short:"t" long:"testnet" description:"use the test network"`
-	Regtest       bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel      string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
-	AllowIP       []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	STUN          bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
-	DataDir       string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	DisableWallet bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
-	Storage       string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
+	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
+	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
+	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
+	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
+	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
+	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
+	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
+	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
 type Stop struct{}
 type Restart struct{}
@@ -474,6 +475,11 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	var exchangeRates bitcoin.ExchangeRates
+	if !x.DisableExchangeRates {
+		exchangeRates = exchange.NewBitcoinPriceFetcher()
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
@@ -484,7 +490,7 @@ func (x *Start) Execute(args []string) error {
 		Wallet:            wallet,
 		MessageStorage:    storage,
 		Resolver:          bstk.NewBlockStackClient(resolverUrl),
-		ExchangeRates:     exchange.NewBitcoinPriceFetcher(),
+		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 	}
 

@@ -397,7 +397,9 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
-	n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
+	if n.ExchangeRates != nil {
+		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
+	}
 	var total uint64
 	physicalGoods := make(map[string]*pb.Listing)
 

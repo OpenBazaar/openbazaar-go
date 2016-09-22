@@ -131,4 +131,4 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running PurchaseDirectOnlineTest")
-    PurchaseDirectOnlineTest().main(["--regtest"])
+    PurchaseDirectOnlineTest().main(["--regtest", "--disableexchangerates"])

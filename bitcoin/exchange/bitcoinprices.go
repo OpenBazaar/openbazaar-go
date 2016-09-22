@@ -30,7 +30,9 @@ func NewBitcoinPriceFetcher() *BitcoinPriceFetcher {
 		cache: make(map[string]float64),
 	}
 	b.providers = []ExchangeRateProvider{&BitcoinAverage{b.cache}, &BitPay{b.cache}, &BlockchainInfo{b.cache}, &BitcoinCharts{b.cache}}
+
 	go b.run()
+
 	return &b
 }
 

@@ -202,4 +202,4 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running PurchaseDirectOfflineTest")
-    PurchaseDirectOfflineTest().main(["--regtest"])
+    PurchaseDirectOfflineTest().main(["--regtest", "--disableexchangerates"])
