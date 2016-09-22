@@ -144,7 +144,10 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 
 func (w *SPVWallet) SweepMultisig(utxos []Utxo, key *hd.ExtendedKey, redeemScript []byte, feeLevel FeeLevel) error {
 	internalAddr := w.CurrentAddress(INTERNAL)
-	script, _ := txscript.PayToAddrScript(internalAddr)
+	script, err := txscript.PayToAddrScript(internalAddr)
+	if err != nil {
+		return err
+	}
 
 	var val int64
 	var inputs []*wire.TxIn

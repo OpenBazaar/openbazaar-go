@@ -164,6 +164,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         time.sleep(3)
 
+        # Check the funds moved into alice's wallet
         api_url = alice["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
