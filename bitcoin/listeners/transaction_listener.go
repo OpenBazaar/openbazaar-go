@@ -35,7 +35,10 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
-		_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
+		if err != nil {
+			continue
+		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
 		if err == nil {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
@@ -45,6 +48,43 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, funded, records)
 			continue
+		}
+	}
+	for _, input := range cb.Inputs {
+		chainHash, err := chainhash.NewHash(cb.Txid)
+		if err != nil {
+			continue
+		}
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(input.LinkedScriptPubKey, l.params)
+		if err != nil {
+			continue
+		}
+		isForSale := true
+		contract, _, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+		if err != nil {
+			contract, _, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+			if err != nil {
+				continue
+			}
+			isForSale = false
+		}
+
+		orderId, err := calcOrderId(contract.BuyerOrder)
+		if err != nil {
+			continue
+		}
+		record := spvwallet.TransactionRecord{
+			Txid:         chainHash.String(),
+			Index:        input.OutpointIndex,
+			Value:        -input.Value,
+			ScriptPubKey: hex.EncodeToString(input.LinkedScriptPubKey),
+		}
+		records = append(records, record)
+		if isForSale {
+			l.db.Sales().UpdateFunding(orderId, funded, records)
+		} else {
+			l.db.Purchases().UpdateFunding(orderId, funded, records)
+			l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
 		}
 	}
 }

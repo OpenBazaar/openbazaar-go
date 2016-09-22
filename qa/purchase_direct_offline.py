@@ -162,7 +162,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(3)
+        time.sleep(8)
 
         # Check the funds moved into alice's wallet
         api_url = alice["gateway_url"] + "wallet/balance"
@@ -176,14 +176,14 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Failed to query Alice's balance")
 
-        # check bob detected order confirmation
+        # check bob detected order confirmation and outgoing transaction
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to detect his payment")
+        if resp["state"] != "FUNDED":
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to detect outgoing payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
 

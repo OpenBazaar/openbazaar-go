@@ -180,16 +180,23 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, key *hd.ExtendedKey, redeemScrip
 	}
 
 	// Sign tx
+	privKey, err := key.ECPrivKey()
+	if err != nil {
+		return err
+	}
+
+	pk := privKey.PubKey().SerializeCompressed()
+	address, err := btc.NewAddressPubKey(pk, w.params)
+
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
-		privKey, err := key.ECPrivKey()
-		if err != nil {
-			return nil, false, err
+		if address.EncodeAddress() == addr.EncodeAddress() {
+			wif, err := btc.NewWIF(privKey, w.params, true)
+			if err != nil {
+				return nil, false, err
+			}
+			return wif.PrivKey, wif.CompressPubKey, nil
 		}
-		wif, err := btc.NewWIF(privKey, w.params, true)
-		if err != nil {
-			return nil, false, err
-		}
-		return wif.PrivKey, wif.CompressPubKey, nil
+		return nil, false, errors.New("Not found")
 	})
 	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
 		return redeemScript, nil

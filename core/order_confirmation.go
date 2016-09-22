@@ -77,18 +77,19 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		return err
 	}
 	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-	mECKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	mPrivKey := n.Wallet.MasterPrivateKey()
 	if err != nil {
 		return err
 	}
+	mECKey, err := mPrivKey.ECPrivKey()
 	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPublicKeyID[:],
-		mECKey.SerializeCompressed(),
+		n.Wallet.Params().HDPrivateKeyID[:],
+		mECKey.Serialize(),
 		chaincode,
 		parentFP,
 		0,
 		0,
-		false)
+		true)
 
 	vendorKey, err := hdKey.Child(0)
 	if err != nil {
