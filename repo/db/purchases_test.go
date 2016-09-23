@@ -159,10 +159,10 @@ func TestUpdatePurchaseFunding(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	record := spvwallet.TransactionRecord{
+	record := &spvwallet.TransactionRecord{
 		Txid: "abc123",
 	}
-	records := []spvwallet.TransactionRecord{record}
+	records := []*spvwallet.TransactionRecord{record}
 	err = purdb.UpdateFunding("orderID", true, records)
 	if err != nil {
 		t.Error(err)
