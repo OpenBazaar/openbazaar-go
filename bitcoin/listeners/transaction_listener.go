@@ -73,7 +73,19 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		if err != nil {
 			continue
 		}
-		record := spvwallet.TransactionRecord{
+
+		outpointHash, err := chainhash.NewHash(input.OutpointHash)
+		if err != nil {
+			continue
+		}
+
+		for _, r := range records {
+			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
+				r.Spent = true
+			}
+		}
+
+		record := &spvwallet.TransactionRecord{
 			Txid:         chainHash.String(),
 			Index:        input.OutpointIndex,
 			Value:        -input.Value,
@@ -89,7 +101,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 	}
 }
 
-func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord) {
+func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
 	chainHash, err := chainhash.NewHash(txid)
 	if err != nil {
 		return
@@ -129,7 +141,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.broadcast <- n
 		}
 	}
-	record := spvwallet.TransactionRecord{
+	record := &spvwallet.TransactionRecord{
 		Txid:         chainHash.String(),
 		Index:        output.Index,
 		Value:        output.Value,
@@ -139,7 +151,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	l.db.Sales().UpdateFunding(orderId, funded, records)
 }
 
-func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []spvwallet.TransactionRecord) {
+func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []*spvwallet.TransactionRecord) {
 	chainHash, err := chainhash.NewHash(txid)
 	if err != nil {
 		return
@@ -171,7 +183,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 
 		l.broadcast <- n
 	}
-	record := spvwallet.TransactionRecord{
+	record := &spvwallet.TransactionRecord{
 		Txid:         chainHash.String(),
 		Index:        output.Index,
 		Value:        output.Value,

@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "9a94fc9f01cb79e8daef4bc54a6a66ea3ad7dabe"
+			"Rev": "932ddbd39af18bb08bf7fab7549a9b331665427d"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",

@@ -249,6 +249,7 @@ type TransactionRecord struct {
 	Index        uint32
 	Value        int64
 	ScriptPubKey string
+	Spent        bool
 }
 
 func (w *SPVWallet) CurrencyCode() string {

@@ -48,7 +48,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	return contract, nil
 }
 
-func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 	contract, err := n.NewOrderConfirmation(contract, false)
 	if err != nil {
 		return err
@@ -56,20 +56,22 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	// Sweep the temp address into our wallet
 	var utxos []spvwallet.Utxo
 	for _, r := range records {
-		u := spvwallet.Utxo{}
-		scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-		if err != nil {
-			return err
+		if !r.Spent && r.Value > 0 {
+			u := spvwallet.Utxo{}
+			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+			if err != nil {
+				return err
+			}
+			u.ScriptPubkey = scriptBytes
+			hash, err := chainhash.NewHashFromStr(r.Txid)
+			if err != nil {
+				return err
+			}
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			u.Op = *outpoint
+			u.Value = r.Value
+			utxos = append(utxos, u)
 		}
-		u.ScriptPubkey = scriptBytes
-		hash, err := chainhash.NewHashFromStr(r.Txid)
-		if err != nil {
-			return err
-		}
-		outpoint := wire.NewOutPoint(hash, r.Index)
-		u.Op = *outpoint
-		u.Value = r.Value
-		utxos = append(utxos, u)
 	}
 
 	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)

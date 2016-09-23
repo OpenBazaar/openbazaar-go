@@ -1083,7 +1083,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var funded bool
-	var records []spvwallet.TransactionRecord
+	var records []*spvwallet.TransactionRecord
 	var read bool
 	contract, state, funded, records, read, err = i.node.Datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
