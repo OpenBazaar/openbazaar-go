@@ -84,6 +84,9 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		return err
 	}
 	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
 	hdKey := hd.NewExtendedKey(
 		n.Wallet.Params().HDPrivateKeyID[:],
 		mECKey.Serialize(),

@@ -1,11 +1,16 @@
 package service
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
@@ -180,26 +185,95 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	n := notifications.Serialize(notifications.OrderConfirmationNotification{orderId})
 	service.broadcast <- n
 
-	// TODO: Detect when payment is released from multisig and set to state FUNDED
-
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
-	// TODO: get orderId from message
-	// TODO: set message state to canceled
-	// TODO: send notification to websocket
+
+	orderId := string(pmes.Payload.Value)
+
+	// Load the order
+	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set message state to confirmed
+	service.datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, false)
 
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received REJECT message from %s", p.Pretty())
-	// TODO: get orderId from message
-	// TODO: set message state to rejected
-	// TODO: send notification to websocket
-	// TODO: move funds back into wallet
+	orderId := string(pmes.Payload.Value)
+
+	// Load the order
+	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Sweep the temp address into our wallet
+	var utxos []spvwallet.Utxo
+	for _, r := range records {
+		if !r.Spent && r.Value > 0 {
+			u := spvwallet.Utxo{}
+			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+			if err != nil {
+				return err
+			}
+			u.ScriptPubkey = scriptBytes
+			hash, err := chainhash.NewHashFromStr(r.Txid)
+			if err != nil {
+				return err
+			}
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			u.Op = *outpoint
+			u.Value = r.Value
+			utxos = append(utxos, u)
+		}
+	}
+
+	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	if err != nil {
+		return nil, err
+	}
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mPrivKey := service.node.Wallet.MasterPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return nil, err
+	}
+	hdKey := hd.NewExtendedKey(
+		service.node.Wallet.Params().HDPrivateKeyID[:],
+		mECKey.Serialize(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		true)
+
+	buyerKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	err = service.node.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
+	if err != nil {
+		return err
+	}
+
+	// Set message state to confirmed
+	service.datastore.Purchases().Put(orderId, *contract, pb.Message_ORDER_REJECT, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.OrderCancelNotification{orderId})
+	service.broadcast <- n
 
 	return nil, nil
 }

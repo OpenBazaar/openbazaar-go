@@ -11,7 +11,9 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
@@ -365,8 +367,60 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 }
 
-func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+	// Sweep the temp address into our wallet
+	var utxos []spvwallet.Utxo
+	for _, r := range records {
+		if !r.Spent && r.Value > 0 {
+			u := spvwallet.Utxo{}
+			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+			if err != nil {
+				return err
+			}
+			u.ScriptPubkey = scriptBytes
+			hash, err := chainhash.NewHashFromStr(r.Txid)
+			if err != nil {
+				return err
+			}
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			u.Op = *outpoint
+			u.Value = r.Value
+			utxos = append(utxos, u)
+		}
+	}
+
+	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	if err != nil {
+		return err
+	}
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mPrivKey := n.Wallet.MasterPrivateKey()
+	if err != nil {
+		return err
+	}
+	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPrivateKeyID[:],
+		mECKey.Serialize(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		true)
+
+	buyerKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	err = n.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
 	if err != nil {
 		return err
 	}
@@ -374,7 +428,6 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract) erro
 	if err != nil {
 		return err
 	}
-	// TODO: send funds into wallet
 	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, true)
 	return nil
 }

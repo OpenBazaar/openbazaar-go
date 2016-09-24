@@ -1053,7 +1053,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
+	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1062,7 +1062,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, "order has already been confirmed")
 		return
 	}
-	err = i.node.CancelOfflineOrder(contract)
+	err = i.node.CancelOfflineOrder(contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

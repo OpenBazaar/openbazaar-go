@@ -60,7 +60,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 		isForSale := true
-		contract, _, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
 		if err != nil {
 			contract, _, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
 			if err != nil {
@@ -96,7 +96,9 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			l.db.Sales().UpdateFunding(orderId, funded, records)
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
-			l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			if state != pb.OrderState_CANCELED {
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			}
 		}
 	}
 }
