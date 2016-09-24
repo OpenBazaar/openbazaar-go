@@ -60,6 +60,11 @@ import (
 	"strings"
 )
 
+var (
+	VERSION   = "0.2.1"
+	USERAGENT = "/openbazaar-go:" + VERSION + "/"
+)
+
 var log = logging.MustGetLogger("main")
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -283,6 +288,10 @@ func (x *Start) Execute(args []string) error {
 		split := strings.SplitAfter(string(cookie), "OpenBazaar_Auth_Cookie=")
 		authCookie.Value = split[1]
 	}
+
+	// Create user-agent file
+	userAgentBytes := []byte(USERAGENT)
+	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -689,5 +698,5 @@ func printSplashScreen() {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v2.0 starting...")
+	fmt.Println("OpenBazaar Server v" + VERSION + " starting...")
 }
