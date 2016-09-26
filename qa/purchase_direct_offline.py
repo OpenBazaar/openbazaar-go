@@ -110,21 +110,21 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if len(resp["transactions"]) <= 0:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
 
         # FIXME: the remainder of this test fails on travis for some reason. Alice's node fails to fetch the dht pointer.
         print("PurchaseDirectOfflineTest - PARTIAL PASS")
-        return
+        #return
 
         # generate one more block containing this tx
         self.bitcoin_api.call("generate", 1)
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(5)
+        time.sleep(6)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId
@@ -182,9 +182,8 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
-            self.print_logs(bob, "bitcoin.log")
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to detect outgoing payment")
+        if resp["state"] != "FUNDED" and resp["state"] != "CONFIRMED":
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to set state correctly")
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
 

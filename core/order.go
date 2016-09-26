@@ -428,7 +428,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, true)
+	n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CANCELED, true)
 	return nil
 }
 

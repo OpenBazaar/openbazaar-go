@@ -78,7 +78,7 @@ func Serialize(i interface{}) []byte {
 	case OrderCancelNotification:
 		n = notificationWrapper{
 			orderCancelWrapper{
-				OrderCancelNotification: i.(OrderConfirmationNotification),
+				OrderCancelNotification: i.(OrderCancelNotification),
 			},
 		}
 	case FollowNotification:

@@ -24,18 +24,19 @@ import (
 var log = logging.MustGetLogger("retriever")
 
 type MessageRetriever struct {
-	db        repo.Datastore
-	node      *core.IpfsNode
-	ctx       commands.Context
-	service   net.NetworkService
-	prefixLen int
-	sendAck   func(peerId string, pointerID peer.ID) error
+	db           repo.Datastore
+	node         *core.IpfsNode
+	ctx          commands.Context
+	service      net.NetworkService
+	prefixLen    int
+	sendAck      func(peerId string, pointerID peer.ID) error
+	messageQueue []pb.Envelope
 	*sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, new(sync.WaitGroup)}
-	mr.Add(1)
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.WaitGroup)}
+	mr.Add(1) // Add one for initial wait at start up
 	return &mr
 }
 
@@ -54,14 +55,18 @@ func (m *MessageRetriever) Run() {
 func (m *MessageRetriever) fetchPointers() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+
+	// Iterate over the pointers. Add 1 to the waitgroup for each found pointer
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
 			// ipfs
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
-				m.Add(1)
-				go m.fetchIPFS(m.ctx, p.ID, p.Addrs[0])
+				wg.Add(1)
+				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
 			}
 			// https
 			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
@@ -77,16 +82,30 @@ func (m *MessageRetriever) fetchPointers() {
 				if err != nil {
 					continue
 				}
-				m.Add(1)
-				go m.fetchHTTPS(p.ID, string(d.Digest), p.Addrs[0])
+				wg.Add(1)
+				go m.fetchHTTPS(p.ID, string(d.Digest), p.Addrs[0], wg)
 			}
 		}
 	}
-	m.Done()
+	wg.Done() // We've finished fetching pointers from the dht
+
+	// Wait for each goroutine to finish then process any remaining messages that needed
+	// to be processed last
+	wg.Wait()
+	for _, env := range m.messageQueue {
+		m.handleMessage(env, nil)
+	}
+	m.messageQueue = []pb.Envelope{}
+
+	// For initial start up. We can ignore afterwards
+	if m.WaitGroup != nil {
+		m.Done()
+		m.WaitGroup = nil
+	}
 }
 
-func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.Multiaddr) {
-	defer m.Done()
+func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
+	defer wg.Done()
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
@@ -96,8 +115,8 @@ func (m *MessageRetriever) fetchIPFS(ctx commands.Context, pid peer.ID, addr ma.
 	m.db.OfflineMessages().Put(addr.String())
 }
 
-func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr) {
-	defer m.Done()
+func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
+	defer wg.Done()
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
@@ -116,11 +135,15 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 
 	if err == nil {
+
+		// Unmarshal plaintext
 		env := pb.Envelope{}
 		err := proto.Unmarshal(plaintext, &env)
 		if err != nil {
 			return
 		}
+
+		// Validate the signature
 		ser, err := proto.Marshal(env.Message)
 		if err != nil {
 			return
@@ -138,22 +161,46 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		if err != nil {
 			return
 		}
-		// get handler for this msg type.
-		handler := m.service.HandlerForMsgType(env.Message.MessageType)
-		if handler == nil {
-			log.Debug("Got back nil handler from handlerForMsgType")
-			return
-		}
 
-		// dispatch handler.
-		_, err = handler(id, env.Message)
-		if err != nil {
-			log.Debugf("handle message error: %s", err)
-			return
-		}
-
+		// Respond with an ack
 		if env.Message.MessageType != pb.Message_OFFLINE_ACK {
 			m.sendAck(id.Pretty(), pid)
 		}
+
+		// Order messages need to be processed in the correct order, so cancel messages
+		// need to be processed last.
+		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
+			m.messageQueue = append(m.messageQueue, env)
+			return
+		}
+
+		m.handleMessage(env, &id)
+	}
+}
+
+func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
+	if id == nil {
+		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
+		if err != nil {
+			return
+		}
+		i, err := peer.IDFromPublicKey(pubkey)
+		if err != nil {
+			return
+		}
+		id = &i
+	}
+	// get handler for this msg type.
+	handler := m.service.HandlerForMsgType(env.Message.MessageType)
+	if handler == nil {
+		log.Debug("Got back nil handler from handlerForMsgType")
+		return
+	}
+
+	// dispatch handler.
+	_, err := handler(*id, env.Message)
+	if err != nil {
+		log.Debugf("handle message error: %s", err)
+		return
 	}
 }

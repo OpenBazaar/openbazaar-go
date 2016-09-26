@@ -191,10 +191,10 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
 
-	orderId := string(pmes.Payload.Value)
+	orderId := string(pmes.Payload.Value[2:])
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -222,12 +222,12 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message) (*pb
 			u := spvwallet.Utxo{}
 			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			u.ScriptPubkey = scriptBytes
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			outpoint := wire.NewOutPoint(hash, r.Index)
 			u.Op = *outpoint
@@ -260,16 +260,16 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message) (*pb
 
 	buyerKey, err := hdKey.Child(0)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
 	err = service.node.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Set message state to confirmed
-	service.datastore.Purchases().Put(orderId, *contract, pb.Message_ORDER_REJECT, false)
+	service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_REJECTED, false)
 
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.OrderCancelNotification{orderId})

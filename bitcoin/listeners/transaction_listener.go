@@ -96,7 +96,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			l.db.Sales().UpdateFunding(orderId, funded, records)
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
-			if state != pb.OrderState_CANCELED {
+			if state == pb.OrderState_CONFIRMED {
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
 			}
 		}
@@ -175,7 +175,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		if funding >= requestedAmount {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
-			l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
+			//l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
 		}
 		n := notifications.Serialize(
 			notifications.PaymentNotification{
