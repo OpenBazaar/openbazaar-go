@@ -69,6 +69,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
 		i.POSTResyncBlockchain(w, r)
 		return
+	case "/ob/shutdown", "/ob/shutdown/":
+		i.POSTShutdown(w, r)
+		return
 	}
 }
 
@@ -131,6 +134,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 	if strings.Contains(path, "/ob/isfollowing") {
 		i.GETIsFollowing(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/order") {
+		i.GETOrder(w, r)
 		return
 	}
 }

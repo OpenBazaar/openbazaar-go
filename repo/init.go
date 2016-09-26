@@ -46,7 +46,6 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 			return err
 		}
 	}
-
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
 	fmt.Printf("generating %d-bit RSA keypair...", nBitsForKeypair)
 	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
@@ -85,6 +84,21 @@ func maybeCreateOBDirectories(repoRoot string) error {
 		return err
 	}
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "images"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "tiny"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "small"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "medium"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "large"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "huge"), os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "feed"), os.ModePerm); err != nil {
@@ -168,15 +182,8 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
-	type Wallet struct {
-		MaxFee           int
-		FeeAPI           string
-		HighFeeDefault   int
-		MediumFeeDefault int
-		LowFeeDefault    int
-		TrustedPeer      string
-	}
-	var w Wallet = Wallet{
+	var w WalletConfig = WalletConfig{
+		Type:             "spvwallet",
 		MaxFee:           2000,
 		FeeAPI:           "https://bitcoinfees.21.co/api/v1/fees/recommended",
 		HighFeeDefault:   60,
@@ -184,17 +191,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		LowFeeDefault:    20,
 		TrustedPeer:      "",
 	}
-	type APIConfig struct {
-		Authenticated bool
-		Username      string
-		Password      string
-		CORS          bool
-		Enabled       bool
-		HTTPHeaders   map[string][]string
-		SSL           bool
-		SSLCert       string
-		SSLKey        string
-	}
+
 	var a APIConfig = APIConfig{
 		Enabled:     true,
 		CORS:        false,

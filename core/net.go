@@ -187,13 +187,9 @@ func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	a := &any.Any{Value: []byte(orderId)}
-	any, err := ptypes.MarshalAny(a)
-	if err != nil {
-		return err
-	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_CANCEL,
-		Payload:     any,
+		Payload:     a,
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
@@ -212,13 +208,9 @@ func (n *OpenBazaarNode) SendReject(peerId, orderId string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	a := &any.Any{Value: []byte(orderId)}
-	any, err := ptypes.MarshalAny(a)
-	if err != nil {
-		return err
-	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_REJECT,
-		Payload:     any,
+		Payload:     a,
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {

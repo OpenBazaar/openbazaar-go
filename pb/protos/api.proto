@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "contracts.proto";
+import "orders.proto";
 
 // This schema is used for the /ob/listing api call structure
 // We use protobuf for this instead of a basic struct because
@@ -22,4 +23,18 @@ message ListingRespApi {
 message Inventory {
     string item  = 1;
     uint64 count = 2;
+}
+
+message OrderRespApi {
+    RicardianContract contract              = 1;
+    OrderState state                        = 2;
+    bool read                               = 3;
+    bool funded                             = 4;
+    repeated TransactionRecord transactions = 5;
+
+}
+
+message TransactionRecord {
+    string txid = 1;
+    int64 value = 2;
 }

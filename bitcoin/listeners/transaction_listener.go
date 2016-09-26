@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
@@ -34,7 +35,10 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
-		_, addrs, _, _ := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
+		if err != nil {
+			continue
+		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
 		if err == nil {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
@@ -46,14 +50,69 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 	}
+	for _, input := range cb.Inputs {
+		chainHash, err := chainhash.NewHash(cb.Txid)
+		if err != nil {
+			continue
+		}
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(input.LinkedScriptPubKey, l.params)
+		if err != nil {
+			continue
+		}
+		isForSale := true
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+		if err != nil {
+			contract, _, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+			if err != nil {
+				continue
+			}
+			isForSale = false
+		}
+
+		orderId, err := calcOrderId(contract.BuyerOrder)
+		if err != nil {
+			continue
+		}
+
+		outpointHash, err := chainhash.NewHash(input.OutpointHash)
+		if err != nil {
+			continue
+		}
+
+		for _, r := range records {
+			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
+				r.Spent = true
+			}
+		}
+
+		record := &spvwallet.TransactionRecord{
+			Txid:         chainHash.String(),
+			Index:        input.OutpointIndex,
+			Value:        -input.Value,
+			ScriptPubKey: hex.EncodeToString(input.LinkedScriptPubKey),
+		}
+		records = append(records, record)
+		if isForSale {
+			l.db.Sales().UpdateFunding(orderId, funded, records)
+		} else {
+			l.db.Purchases().UpdateFunding(orderId, funded, records)
+			if state == pb.OrderState_CONFIRMED {
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			}
+		}
+	}
 }
 
-func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []spvwallet.TransactionRecord) {
+func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
+	chainHash, err := chainhash.NewHash(txid)
+	if err != nil {
+		return
+	}
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we've already seen this transaction for some reason, just return
-		if r.Txid == hex.EncodeToString(txid) {
+		if r.Txid == chainHash.String() {
 			return
 		}
 	}
@@ -84,21 +143,26 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.broadcast <- n
 		}
 	}
-	record := spvwallet.TransactionRecord{
-		Txid:  hex.EncodeToString(txid),
-		Index: output.Index,
-		Value: output.Value,
+	record := &spvwallet.TransactionRecord{
+		Txid:         chainHash.String(),
+		Index:        output.Index,
+		Value:        output.Value,
+		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
 	}
 	records = append(records, record)
 	l.db.Sales().UpdateFunding(orderId, funded, records)
 }
 
-func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []spvwallet.TransactionRecord) {
+func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []*spvwallet.TransactionRecord) {
+	chainHash, err := chainhash.NewHash(txid)
+	if err != nil {
+		return
+	}
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we've already seen this transaction for some reason, just return
-		if r.Txid == hex.EncodeToString(txid) {
+		if r.Txid == chainHash.String() {
 			return
 		}
 	}
@@ -111,7 +175,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		if funding >= requestedAmount {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
-			l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
+			//l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
 		}
 		n := notifications.Serialize(
 			notifications.PaymentNotification{
@@ -121,10 +185,11 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 
 		l.broadcast <- n
 	}
-	record := spvwallet.TransactionRecord{
-		Txid:  hex.EncodeToString(txid),
-		Index: output.Index,
-		Value: output.Value,
+	record := &spvwallet.TransactionRecord{
+		Txid:         chainHash.String(),
+		Index:        output.Index,
+		Value:        output.Value,
+		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
 	}
 	records = append(records, record)
 	l.db.Purchases().UpdateFunding(orderId, funded, records)

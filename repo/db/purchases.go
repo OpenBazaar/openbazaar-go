@@ -88,7 +88,7 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []spvwallet.TransactionRecord) error {
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -137,7 +137,7 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
@@ -159,34 +159,39 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	if fundedInt != nil && *fundedInt == 1 {
 		funded = true
 	}
-	var records []spvwallet.TransactionRecord
+	var records []*spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
-func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []spvwallet.TransactionRecord, error) {
+func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, bool, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where orderID=?")
+	stmt, err := p.db.Prepare("select contract, state, funded, transactions, read from purchases where orderID=?")
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
 	var fundedInt *int
+	var readInt *int
 	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
+	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, err
+		return nil, pb.OrderState(0), false, nil, false, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, err
+		return nil, pb.OrderState(0), false, nil, false, err
 	}
 	funded := false
 	if fundedInt != nil && *fundedInt == 1 {
 		funded = true
 	}
-	var records []spvwallet.TransactionRecord
+	read := false
+	if readInt != nil && *readInt == 1 {
+		read = true
+	}
+	var records []*spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, nil
+	return rc, pb.OrderState(stateInt), funded, records, read, nil
 }

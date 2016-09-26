@@ -159,10 +159,10 @@ func TestUpdatePurchaseFunding(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	record := spvwallet.TransactionRecord{
+	record := &spvwallet.TransactionRecord{
 		Txid: "abc123",
 	}
-	records := []spvwallet.TransactionRecord{record}
+	records := []*spvwallet.TransactionRecord{record}
 	err = purdb.UpdateFunding("orderID", true, records)
 	if err != nil {
 		t.Error(err)
@@ -194,10 +194,10 @@ func TestPurchasePutAfterFundingUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	record := spvwallet.TransactionRecord{
+	record := &spvwallet.TransactionRecord{
 		Txid: "abc123",
 	}
-	records := []spvwallet.TransactionRecord{record}
+	records := []*spvwallet.TransactionRecord{record}
 	err = purdb.UpdateFunding("orderID", true, records)
 	if err != nil {
 		t.Error(err)
@@ -251,11 +251,11 @@ func TestPurchasesGetByPaymentAddress(t *testing.T) {
 
 func TestPurchasesGetByOrderId(t *testing.T) {
 	purdb.Put("orderID", *contract, 0, false)
-	_, _, _, _, err := purdb.GetByOrderId("orderID")
+	_, _, _, _, _, err := purdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, err = purdb.GetByOrderId("fasdfas")
+	_, _, _, _, _, err = purdb.GetByOrderId("fasdfas")
 	if err == nil {
 		t.Error("Get by unknown orderId failed to return error")
 	}

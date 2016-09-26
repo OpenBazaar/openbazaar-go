@@ -38,8 +38,6 @@ type SPVWallet struct {
 	db         Datastore
 	blockchain *Blockchain
 	state      *TxStore
-
-	listeners []func(TransactionCallback)
 }
 
 var log = logging.MustGetLogger("bitcoin")
@@ -73,12 +71,19 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	w.trustedPeer = trustedPeer
 	w.diconnectChan = make(chan string)
 	w.peerGroup = make(map[string]*Peer)
+	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey)
 	return w
 }
 
 func (w *SPVWallet) Start() {
-	// setup TxStore first (before spvcon)
-	w.state = NewTxStore(w.params, w.db, w.masterPrivateKey, w.listeners)
+
+	w.queryDNSSeeds()
+
+	// shuffle addrs
+	for i := range w.addrs {
+		j := rand.Intn(i + 1)
+		w.addrs[i], w.addrs[j] = w.addrs[j], w.addrs[i]
+	}
 
 	// create header db
 	bc := NewBlockchain(w.repoPath, w.params)
@@ -97,12 +102,6 @@ func (w *SPVWallet) Start() {
 	}
 
 	if w.trustedPeer == "" {
-		w.queryDNSSeeds()
-		// shuffle addrs
-		for i := range w.addrs {
-			j := rand.Intn(i + 1)
-			w.addrs[i], w.addrs[j] = w.addrs[j], w.addrs[i]
-		}
 		go w.connectToPeers()
 	} else {
 		peer, err := NewPeer(w.trustedPeer, w.blockchain, w.state, w.params, w.userAgent, w.diconnectChan, true)
@@ -118,11 +117,8 @@ func (w *SPVWallet) Start() {
 // Loop through creating new peers until we reach MAX_PEERS
 // If we don't have a download peer set we will set one
 func (w *SPVWallet) connectToPeers() {
-	if len(w.addrs) <= 0 {
-		return
-	}
 	for {
-		if len(w.peerGroup) < MAX_PEERS {
+		if len(w.peerGroup) < MAX_PEERS && len(w.addrs) > 0 {
 			var addr string
 			addr, w.addrs = w.addrs[len(w.addrs)-1], w.addrs[:len(w.addrs)-1]
 			var dp bool
@@ -167,7 +163,9 @@ func (w *SPVWallet) onPeerDisconnect() {
 			}
 			w.pgMutex.Unlock()
 			log.Infof("Disconnected from peer %s", addr)
-			w.connectToPeers()
+			if w.trustedPeer == "" {
+				w.connectToPeers()
+			}
 		}
 	}
 }
@@ -247,9 +245,11 @@ type TransactionInput struct {
 
 // A transaction suitable for saving in the database
 type TransactionRecord struct {
-	Txid  string
-	Index uint32
-	Value int64
+	Txid         string
+	Index        uint32
+	Value        int64
+	ScriptPubKey string
+	Spent        bool
 }
 
 func (w *SPVWallet) CurrencyCode() string {
@@ -294,7 +294,7 @@ func (w *SPVWallet) Params() *chaincfg.Params {
 }
 
 func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
-	w.listeners = append(w.listeners, callback)
+	w.state.listeners = append(w.state.listeners, callback)
 }
 
 func (w *SPVWallet) ChainTip() uint32 {
@@ -342,9 +342,7 @@ func (w *SPVWallet) Close() {
 		peer.con.Close()
 		log.Debugf("Disconnnected from %s", peer.con.RemoteAddr().String())
 	}
-	if w.blockchain != nil {
-		w.blockchain.Close()
-	}
+	w.blockchain.Close()
 }
 
 func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {

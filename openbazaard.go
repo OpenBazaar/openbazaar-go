@@ -21,6 +21,8 @@ import (
 	"crypto/rand"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -58,6 +60,11 @@ import (
 	"strings"
 )
 
+var (
+	VERSION   = "0.2.1"
+	USERAGENT = "/openbazaar-go:" + VERSION + "/"
+)
+
 var log = logging.MustGetLogger("main")
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -79,15 +86,16 @@ type Init struct {
 }
 
 type Start struct {
-	Password      string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	Testnet       bool     `short:"t" long:"testnet" description:"use the test network"`
-	Regtest       bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel      string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
-	AllowIP       []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	STUN          bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
-	DataDir       string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	DisableWallet bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
-	Storage       string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
+	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
+	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
+	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
+	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
+	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
+	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
+	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
+	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 }
 type Stop struct{}
 type Restart struct{}
@@ -281,6 +289,10 @@ func (x *Start) Execute(args []string) error {
 		authCookie.Value = split[1]
 	}
 
+	// Create user-agent file
+	userAgentBytes := []byte(USERAGENT)
+	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
@@ -307,21 +319,20 @@ func (x *Start) Execute(args []string) error {
 	}
 	cfg.Identity = identity
 
-	// Run stun and set uTP port
-	if x.STUN {
-		for i, addr := range cfg.Addresses.Swarm {
-			m, _ := ma.NewMultiaddr(addr)
-			p := m.Protocols()
-			if p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
-				port, serr := obnet.Stun()
-				if serr != nil {
-					log.Error(serr)
-					return err
-				}
-				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
-				cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
-				break
+	// Iterate over our address and process them as needed
+	for i, addr := range cfg.Addresses.Swarm {
+		m, _ := ma.NewMultiaddr(addr)
+		p := m.Protocols()
+		// If we are using utp and the stun option has been select, run stun and replace the port in the address
+		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
+			port, serr := obnet.Stun()
+			if serr != nil {
+				log.Error(serr)
+				return err
 			}
+			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
+			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
+			break
 		}
 	}
 
@@ -375,22 +386,7 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.MainNetParams
 	}
-	maxFee, err := repo.GetMaxFee(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	feeApi, err := repo.GetFeeAPI(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	low, medium, high, err := repo.GetDefaultFees(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	trustedPeer, err := repo.GetTrustedBitcoinPeer(path.Join(repoPath, "config"))
+	walletCfg, err := repo.GetWalletConfig(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -405,7 +401,17 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	wallet := spvwallet.NewSPVWallet(mn, &params, maxFee, high, medium, low, feeApi, repoPath, sqliteDB, "OpenBazaar", trustedPeer, ml)
+	var wallet bitcoin.BitcoinWallet
+	if strings.ToLower(walletCfg.Type) == "spvwallet" {
+		wallet = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
+	} else if strings.ToLower(walletCfg.Type) == "bitcoind" {
+		if walletCfg.Binary == "" {
+			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
+		}
+		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword)
+	} else {
+		log.Fatal("Unknown wallet type")
+	}
 
 	// Crosspost gateway
 	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
@@ -426,7 +432,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated Gateway
-	authenticatedGateway, authUsername, authPassword, err := repo.GetAPIAuthentication(path.Join(repoPath, "config"))
+	apiConfig, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
 		return err
@@ -443,7 +449,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	// Override config file preference if this is Mainnet and open internet.
 	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name {
-		authenticatedGateway = true
+		apiConfig.Authenticated = true
 	}
 
 	// Offline messaging storage
@@ -478,6 +484,11 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	var exchangeRates bitcoin.ExchangeRates
+	if !x.DisableExchangeRates {
+		exchangeRates = exchange.NewBitcoinPriceFetcher()
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
@@ -488,22 +499,17 @@ func (x *Start) Execute(args []string) error {
 		Wallet:            wallet,
 		MessageStorage:    storage,
 		Resolver:          bstk.NewBlockStackClient(resolverUrl),
-		ExchangeRates:     exchange.NewBitcoinPriceFetcher(),
+		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 	}
 
 	var gwErrc <-chan error
 	var cb <-chan bool
 	if len(cfg.Addresses.Gateway) > 0 {
-		sslEnabled, certFile, keyFile, err := repo.GetAPISSL(path.Join(repoPath, "config"))
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		if (sslEnabled && certFile == "") || (sslEnabled && keyFile == "") {
+		if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
 			return errors.New("SSL cert and key files must be set when SSL is enabled")
 		}
-		err, cb, gwErrc = serveHTTPGateway(core.Node, authenticatedGateway, authCookie, authUsername, authPassword, sslEnabled, certFile, keyFile)
+		err, cb, gwErrc = serveHTTPGateway(core.Node, authCookie, *apiConfig)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -524,8 +530,9 @@ func (x *Start) Execute(args []string) error {
 			go PR.Run()
 			core.Node.PointerRepublisher = PR
 			if !x.DisableWallet {
+				MR.Wait()
 				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
-				core.Node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+				wallet.AddTransactionListener(TL.OnTransactionReceived)
 				log.Info("Starting bitcoin wallet...")
 				go wallet.Start()
 			}
@@ -587,7 +594,7 @@ func (d *DummyListener) Close() error {
 }
 
 // serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, un, pw string, sslEnabled bool, certFile, keyFile string) (error, <-chan bool, <-chan error) {
+func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (error, <-chan bool, <-chan error) {
 
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -599,7 +606,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
 	}
 	var gwLis manet.Listener
-	if sslEnabled {
+	if config.SSL {
 		netAddr, err := manet.ToNetAddr(gatewayMaddr)
 		if err != nil {
 			return err, nil, nil
@@ -624,7 +631,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, authenticated, authCookie, un, pw, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
@@ -637,7 +644,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authenticated bool, authCookie 
 	errc := make(chan error)
 	cb := make(chan bool)
 	go func() {
-		errc <- api.Serve(cb, node, node.Context, authenticated, authCookie, un, pw, gwLis.NetListener(), sslEnabled, certFile, keyFile, opts...)
+		errc <- api.Serve(cb, node, node.Context, authCookie, gwLis.NetListener(), config, opts...)
 		close(errc)
 	}()
 	return nil, cb, errc
@@ -691,5 +698,5 @@ func printSplashScreen() {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v2.0 starting...")
+	fmt.Println("OpenBazaar Server v" + VERSION + " starting...")
 }

@@ -67,6 +67,7 @@ class OpenBazaarTestFramework(object):
         config["Addresses"]["Swarm"] = ["/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + n)]
         config["Bootstrap"] = BOOTSTRAP_NODES
         config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
+        config["Crosspost-gateways"] = []
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
         node = {
@@ -129,13 +130,22 @@ class OpenBazaarTestFramework(object):
                 time.sleep(0.25)
                 continue
 
+    def print_logs(self, node, log):
+        f = open(os.path.join(node["data_dir"], "logs", log), 'r')
+        file_contents = f.read()
+        print()
+        print("~~~~~~~~~~~~~~~~~~~~~~ " + log + " ~~~~~~~~~~~~~~~~~~~~~~")
+        print (file_contents)
+        print()
+        f.close()
+
     def teardown(self):
         if self.bitcoin_api is not None:
             self.bitcoin_api.call("stop")
         time.sleep(3)
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
-    def main(self, options=["--disablewallet", "--testnet"]):
+    def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
         parser = argparse.ArgumentParser(
                     description="OpenBazaar Test Framework",
                     usage="python3 test_framework.py [options]"

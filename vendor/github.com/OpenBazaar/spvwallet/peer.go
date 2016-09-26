@@ -1,13 +1,13 @@
 package spvwallet
 
 import (
-	"net"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
 	"fmt"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"net"
 	"strings"
 	"time"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type ConnectionState int
@@ -17,7 +17,6 @@ const (
 	CONNECTED  = 1
 	DEAD       = 2
 )
-
 
 // OpenPV starts a
 func NewPeer(remoteNode string, blockchain *Blockchain, inTs *TxStore, params *chaincfg.Params, userAgent string, diconnectChan chan string, downloadPeer bool) (*Peer, error) {
@@ -38,9 +37,9 @@ func NewPeer(remoteNode string, blockchain *Blockchain, inTs *TxStore, params *c
 
 	// format if ipv6 addr
 	ip := net.ParseIP(remoteNode)
-	if ip.To4() == nil && !strings.Contains(remoteNode, "127.0.0.1"){
+	if ip.To4() == nil && !strings.Contains(remoteNode, "127.0.0.1") {
 		li := strings.LastIndex(remoteNode, ":")
-		remoteNode = "[" + remoteNode[:li] +"]" + remoteNode[li: len(remoteNode)]
+		remoteNode = "[" + remoteNode[:li] + "]" + remoteNode[li:len(remoteNode)]
 	}
 
 	// open TCP connection
@@ -125,7 +124,7 @@ func (p *Peer) run() {
 	log.Debugf("Sent filter to %s\n", p.con.RemoteAddr().String())
 
 	p.blockQueue = make(chan HashAndHeight, 32)
-	p.fPositives = make(chan int32, 4000)       // a block full, approx
+	p.fPositives = make(chan int32, 4000) // a block full, approx
 	go p.fPositiveHandler()
 
 	if p.downloadPeer {
@@ -136,6 +135,3 @@ func (p *Peer) run() {
 		}
 	}
 }
-
-
-

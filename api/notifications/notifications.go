@@ -16,6 +16,14 @@ type paymentWrapper struct {
 	PaymentNotification `json:"payment"`
 }
 
+type orderConfirmationWrapper struct {
+	OrderConfirmationNotification `json:"orderConfirmation"`
+}
+
+type orderCancelWrapper struct {
+	OrderCancelNotification `json:"orderConfirmation"`
+}
+
 type OrderNotification struct {
 	Title             string `json:"title"`
 	BuyerGuid         string `json:"buyerGuid"`
@@ -28,6 +36,14 @@ type OrderNotification struct {
 type PaymentNotification struct {
 	OrderId      string `json:"orderId"`
 	FundingTotal uint64 `json:"fundingTotal"`
+}
+
+type OrderConfirmationNotification struct {
+	OrderId string `json:"orderId"`
+}
+
+type OrderCancelNotification struct {
+	OrderId string `json:"orderId"`
 }
 
 type FollowNotification struct {
@@ -51,6 +67,18 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			paymentWrapper{
 				PaymentNotification: i.(PaymentNotification),
+			},
+		}
+	case OrderConfirmationNotification:
+		n = notificationWrapper{
+			orderConfirmationWrapper{
+				OrderConfirmationNotification: i.(OrderConfirmationNotification),
+			},
+		}
+	case OrderCancelNotification:
+		n = notificationWrapper{
+			orderCancelWrapper{
+				OrderCancelNotification: i.(OrderCancelNotification),
 			},
 		}
 	case FollowNotification:

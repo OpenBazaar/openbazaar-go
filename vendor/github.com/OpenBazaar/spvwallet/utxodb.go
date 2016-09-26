@@ -2,14 +2,13 @@ package spvwallet
 
 import (
 	"bytes"
-	"strconv"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"strconv"
 )
-
 
 // SetDBSyncHeight sets sync height of the db, indicated the latest block
 // of which it has ingested all the transactions.
@@ -109,7 +108,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	// note that you can't check signatures; this is SPV.
 	// 0 conf SPV means pretty much nothing.  Anyone can say anything.
 
-
 	// go through txouts, and then go through addresses to match
 
 	// generate PKscripts for all addresses
@@ -173,10 +171,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		for i, u := range utxos {
 			if OutPointsEqual(txin.PreviousOutPoint, u.Op) {
 				hits++
-				var st Stxo               // generate spent txo
-				st.Utxo = u         // assign outpoint
-				st.SpendHeight = height   // spent at height
-				st.SpendTxid = cachedSha  // spent by txid
+				var st Stxo              // generate spent txo
+				st.Utxo = u              // assign outpoint
+				st.SpendHeight = height  // spent at height
+				st.SpendTxid = cachedSha // spent by txid
 				ts.db.Stxos().Put(st)
 				ts.db.Utxos().Delete(u)
 				utxos = append(utxos[:i], utxos[i+1:]...)

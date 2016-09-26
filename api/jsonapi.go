@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -11,16 +10,18 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/jsonpb"
+	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type JsonAPIConfig struct {
@@ -38,32 +39,17 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authenticated bool, authCookie http.Cookie, username, password string) (*jsonAPIHandler, error) {
-	enabled, err := repo.GetAPIEnabled(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	cors, err := repo.GetAPICORS(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
-	headers, err := repo.GetAPIHeaders(path.Join(node.RepoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
 
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
-			Enabled:       enabled,
-			Cors:          cors,
-			Headers:       headers,
-			Authenticated: authenticated,
+			Enabled:       config.Enabled,
+			Cors:          config.CORS,
+			Headers:       config.HTTPHeaders,
+			Authenticated: config.Authenticated,
 			Cookie:        authCookie,
-			Username:      username,
-			Password:      password,
+			Username:      config.Username,
+			Password:      config.Password,
 		},
 		node: node,
 	}
@@ -277,42 +263,12 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
 	err := decoder.Decode(&data)
-
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "root", "avatar")
-	out, err := os.Create(imgPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 
-	dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data.Avatar))
-
-	defer out.Close()
-
-	_, err = io.Copy(out, dec)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Add hash to profile
-	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-	if aerr != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile, err := i.node.GetProfile()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile.AvatarHash = hash
-	err = i.node.UpdateProfile(&profile)
-	if aerr != nil {
+	if err := i.node.SetAvatarImages(data.Avatar); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -344,37 +300,7 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	imgPath := path.Join(i.node.RepoPath, "root", "header")
-	out, err := os.Create(imgPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(data.Header))
-
-	defer out.Close()
-
-	_, err = io.Copy(out, dec)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Add hash to profile
-	hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-	if aerr != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile, err := i.node.GetProfile()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	profile.HeaderHash = hash
-	err = i.node.UpdateProfile(&profile)
-	if aerr != nil {
+	if err := i.node.SetHeaderImages(data.Header); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -412,24 +338,8 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 	}
 	var retData []retImage
 	for _, img := range images {
-		imgPath := path.Join(i.node.RepoPath, "root", "images", img.Filename)
-		out, err := os.Create(imgPath)
+		hash, err := i.node.SetProductImages(img.Image, img.Filename)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		dec := base64.NewDecoder(base64.StdEncoding, strings.NewReader(img.Image))
-
-		defer out.Close()
-
-		_, err = io.Copy(out, dec)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		hash, aerr := ipfs.AddFile(i.node.Context, imgPath)
-		if aerr != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1102,7 +1012,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
+	contract, state, funded, records, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -1116,7 +1026,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if !conf.Reject {
-		err := i.node.ConfirmOfflineOrder(contract)
+		err := i.node.ConfirmOfflineOrder(contract, records)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1143,7 +1053,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
+	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1152,7 +1062,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, "order has already been confirmed")
 		return
 	}
-	err = i.node.CancelOfflineOrder(contract)
+	err = i.node.CancelOfflineOrder(contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1164,5 +1074,68 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Request) {
 	i.node.Wallet.ReSyncBlockchain(0)
 	fmt.Fprint(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
+	_, orderId := path.Split(r.URL.Path)
+	var err error
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var funded bool
+	var records []*spvwallet.TransactionRecord
+	var read bool
+	contract, state, funded, records, read, err = i.node.Datastore.Purchases().GetByOrderId(orderId)
+	if err != nil {
+		contract, state, funded, records, read, err = i.node.Datastore.Sales().GetByOrderId(orderId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+	}
+	resp := new(pb.OrderRespApi)
+	resp.Contract = contract
+	resp.Funded = funded
+	resp.Read = read
+	resp.State = state
+
+	txs := []*pb.TransactionRecord{}
+	for _, r := range records {
+		tx := new(pb.TransactionRecord)
+		tx.Txid = r.Txid
+		tx.Value = r.Value
+		txs = append(txs, tx)
+	}
+
+	resp.Transactions = txs
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(resp)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, out)
+}
+
+func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
+	shutdown := func() {
+		log.Info("OpenBazaar Server shutting down...")
+		time.Sleep(time.Second)
+		if core.Node != nil {
+			core.Node.Datastore.Close()
+			repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
+			os.Remove(repoLockFile)
+			core.Node.Wallet.Close()
+			core.Node.IpfsNode.Close()
+		}
+		os.Exit(1)
+	}
+	go shutdown()
 	return
 }

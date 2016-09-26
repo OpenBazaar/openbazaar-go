@@ -19,7 +19,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             address = resp["address"]
         elif r.status_code == 404:
-            raise TestFailure("ReceiveCoinsTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("ReceiveCoinsTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
         r = self.bitcoin_api.call("generatetoaddress", 1, address)
@@ -41,4 +41,4 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running ReceiveCoinsTest")
-    ReceiveCoinsTest().main(["--regtest"])
+    ReceiveCoinsTest().main(["--regtest", "--disableexchangerates"])

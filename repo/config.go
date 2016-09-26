@@ -14,135 +14,103 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmZAZYJ5MvqkdoTuaFaoeyHkHLd8muENfr9JTo7ikQZPSG",   // Johari
 }
 
-func GetAPIHeaders(cfgPath string) (map[string][]string, error) {
-	headers := make(map[string][]string)
+type APIConfig struct {
+	Authenticated bool
+	Username      string
+	Password      string
+	CORS          bool
+	Enabled       bool
+	HTTPHeaders   map[string][]string
+	SSL           bool
+	SSLCert       string
+	SSLKey        string
+}
+
+type WalletConfig struct {
+	Type             string
+	Binary           string
+	MaxFee           int
+	FeeAPI           string
+	HighFeeDefault   int
+	MediumFeeDefault int
+	LowFeeDefault    int
+	TrustedPeer      string
+	RPCUser          string
+	RPCPassword      string
+}
+
+func GetAPIConfig(cfgPath string) (*APIConfig, error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return headers, err
+		return nil, err
 	}
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
 	api := cfg.(map[string]interface{})["JSON-API"]
+	headers := make(map[string][]string)
 	h := api.(map[string]interface{})["HTTPHeaders"]
 	if h == nil {
 		headers = nil
 	} else {
 		headers = h.(map[string][]string)
 	}
-
-	return headers, nil
-}
-
-func GetAPIEnabled(cfgPath string) (bool, error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return false, err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	api := cfg.(map[string]interface{})["JSON-API"]
 	enabled := api.(map[string]interface{})["Enabled"].(bool)
-	return enabled, nil
-}
-
-func GetAPIAuthentication(cfgPath string) (authenticated bool, username, password string, err error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return false, "", "", err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	api := cfg.(map[string]interface{})["JSON-API"]
-	authenticated = api.(map[string]interface{})["Authenticated"].(bool)
-	username = api.(map[string]interface{})["Username"].(string)
-	password = api.(map[string]interface{})["Password"].(string)
-	return authenticated, username, password, nil
-}
-
-func GetAPICORS(cfgPath string) (bool, error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return false, err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	api := cfg.(map[string]interface{})["JSON-API"]
+	authenticated := api.(map[string]interface{})["Authenticated"].(bool)
+	username := api.(map[string]interface{})["Username"].(string)
+	password := api.(map[string]interface{})["Password"].(string)
 	cors := api.(map[string]interface{})["CORS"].(bool)
-	return cors, nil
-}
+	sslEnabled := api.(map[string]interface{})["SSL"].(bool)
+	certFile := api.(map[string]interface{})["SSLCert"].(string)
+	keyFile := api.(map[string]interface{})["SSLKey"].(string)
 
-func GetAPISSL(cfgPath string) (enabled bool, certFile, keyFile string, err error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return false, "", "", err
+	apiConfig := &APIConfig{
+		Authenticated: authenticated,
+		Username:      username,
+		Password:      password,
+		CORS:          cors,
+		Enabled:       enabled,
+		HTTPHeaders:   headers,
+		SSL:           sslEnabled,
+		SSLCert:       certFile,
+		SSLKey:        keyFile,
 	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
 
-	api := cfg.(map[string]interface{})["JSON-API"]
-	enabled = api.(map[string]interface{})["SSL"].(bool)
-	certFile = api.(map[string]interface{})["SSLCert"].(string)
-	keyFile = api.(map[string]interface{})["SSLKey"].(string)
-	return enabled, certFile, keyFile, nil
+	return apiConfig, nil
 }
 
-func GetFeeAPI(cfgPath string) (string, error) {
+func GetWalletConfig(cfgPath string) (*WalletConfig, error) {
 	file, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var cfg interface{}
 	json.Unmarshal(file, &cfg)
 
 	wallet := cfg.(map[string]interface{})["Wallet"]
 	feeAPI := wallet.(map[string]interface{})["FeeAPI"].(string)
-	return feeAPI, nil
-}
-
-func GetTrustedBitcoinPeer(cfgPath string) (string, error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return "", err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	wallet := cfg.(map[string]interface{})["Wallet"]
-	feeAPI := wallet.(map[string]interface{})["TrustedPeer"].(string)
-	return feeAPI, nil
-}
-
-func GetDefaultFees(cfgPath string) (Low uint64, Medium uint64, High uint64, err error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	ret := uint64(0)
-	if err != nil {
-		return ret, ret, ret, err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	wallet := cfg.(map[string]interface{})["Wallet"]
+	trustedPeer := wallet.(map[string]interface{})["TrustedPeer"].(string)
 	low := wallet.(map[string]interface{})["LowFeeDefault"].(float64)
 	medium := wallet.(map[string]interface{})["MediumFeeDefault"].(float64)
 	high := wallet.(map[string]interface{})["HighFeeDefault"].(float64)
-	return uint64(low), uint64(medium), uint64(high), nil
-}
-
-func GetMaxFee(cfgPath string) (uint64, error) {
-	file, err := ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return 0, err
-	}
-	var cfg interface{}
-	json.Unmarshal(file, &cfg)
-
-	wallet := cfg.(map[string]interface{})["Wallet"]
 	maxFee := wallet.(map[string]interface{})["MaxFee"].(float64)
-	return uint64(maxFee), nil
+	walletType := wallet.(map[string]interface{})["Type"].(string)
+	binary := wallet.(map[string]interface{})["Binary"].(string)
+	rpcUser := wallet.(map[string]interface{})["RPCUser"].(string)
+	rpcPassword := wallet.(map[string]interface{})["RPCPassword"].(string)
+	wCfg := &WalletConfig{
+		Type:             walletType,
+		Binary:           binary,
+		MaxFee:           int(maxFee),
+		FeeAPI:           feeAPI,
+		HighFeeDefault:   int(high),
+		MediumFeeDefault: int(medium),
+		LowFeeDefault:    int(low),
+		TrustedPeer:      trustedPeer,
+		RPCUser:          rpcUser,
+		RPCPassword:      rpcPassword,
+	}
+	return wCfg, nil
 }
 
 func GetDropboxApiToken(cfgPath string) (string, error) {

@@ -52,8 +52,9 @@ func TestDoInit(t *testing.T) {
 	os.Chmod(repoRootFolder, 0755)
 	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err != nil {
-		t.Error("DoInit threw an unexpected error")
+		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
 	}
+
 	TearDown()
 }
 
@@ -64,6 +65,12 @@ func TestMaybeCreateOBDirectories(t *testing.T) {
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "feed"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "channel"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "files"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "tiny"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "small"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "medium"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "large"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "huge"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "outbox"))
 	TearDown()
 }
