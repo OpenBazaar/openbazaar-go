@@ -191,7 +191,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
 
-	orderId := string(pmes.Payload.Value[2:])
+	orderId := string(pmes.Payload.Value)
 
 	// Load the order
 	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
