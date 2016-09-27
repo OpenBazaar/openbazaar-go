@@ -59,19 +59,23 @@ Usage:
 The start command starts the OpenBazaar-Server
 
 Help Options:
-  -h, --help               Show this help message
+  -h, --help                      Show this help message
 
 [start command options]
-      -p, --password=      the encryption password if the database is encrypted
-      -t, --testnet        use the test network
-      -l, --loglevel=      set the logging level [debug, info, notice, warning,
-                           error, critical]
-      -a, --allowip=       only allow API connections from these IPs
-      -s, --stun           use stun on µTP IPv4
-      -d, --datadir=       specify the data directory to be used
-          --disablewallet  disable the wallet functionality of the node
-          --storage=       set the outgoing message storage option
-                           [self-hosted, dropbox] default=self-hosted
+      -p, --password=             the encryption password if the database is
+                                  encrypted
+      -t, --testnet               use the test network
+      -r, --regtest               run in regression test mode
+      -l, --loglevel=             set the logging level [debug, info, notice,
+                                  warning, error, critical]
+      -a, --allowip=              only allow API connections from these IPs
+      -s, --stun                  use stun on µTP IPv4
+      -d, --datadir=              specify the data directory to be used
+          --disablewallet         disable the wallet functionality of the node
+          --disableexchangerates  disable the exchange rate service to prevent
+                                  api queries
+          --storage=              set the outgoing message storage option
+                                  [self-hosted, dropbox] default=self-hosted
 ```
 
 ## Documentation
