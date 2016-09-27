@@ -30,12 +30,8 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
 
-	// Sign rating key
-	sig, err := n.IpfsNode.PrivateKey.Sign(contract.BuyerOrder.RatingKey)
-	if err != nil {
-		return nil, err
-	}
-	oc.RatingSignature = sig
+	// TODO: sign rating key if this is a moderated
+
 	oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
 	if err != nil {
 		return nil, err
@@ -137,14 +133,17 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
-	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
-	if err != nil {
-		return err
-	}
-	valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, contract.VendorOrderConfirmation.RatingSignature)
-	if err != nil || !valid {
-		return errors.New("Failed to verify signature on rating key")
-	}
+	// TODO: validating rating signature if moderated
+	/*
+		pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
+		valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, contract.VendorOrderConfirmation.RatingSignature)
+		if err != nil || !valid {
+			return errors.New("Failed to verify signature on rating key")
+		}
+	*/
 	if validateAddress {
 		_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
 		if err != nil {
