@@ -32,11 +32,11 @@ type MessageRetriever struct {
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
 	messageQueue chan pb.Envelope
-	*sync.WaitGroup
+	sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, make(chan pb.Envelope, 128), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, make(chan pb.Envelope, 128)}
 	mr.Add(1) // Add one for initial wait at start up
 	return &mr
 }
