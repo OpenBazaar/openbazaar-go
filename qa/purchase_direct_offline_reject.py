@@ -55,10 +55,6 @@ class PurchaseDirectOfflineRejectTest(OpenBazaarTestFramework):
         self.bitcoin_api.call("generate", 125)
         time.sleep(3)
 
-        # FIXME: the remainder of this test fails on travis for some reason. Alice's node fails to fetch the dht pointer.
-        print("PurchaseDirectOfflineRejectTest - PARTIAL PASS")
-        return
-
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")

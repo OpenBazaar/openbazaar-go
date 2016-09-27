@@ -371,13 +371,13 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 
 	// TODO: Check header timestamps: from Core
 	/*
-		 // Check timestamp against prev
-		 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-	        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
+			 // Check timestamp against prev
+			 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
+		        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
 
-		 // Check timestamp
-		 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
-	        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
+			 // Check timestamp
+			 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
+		        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
 	*/
 
 	return true // it must have worked if there's no errors and got to the end.

@@ -44,9 +44,9 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
-		contract, _, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
 		if err == nil {
-			l.processPurchasePayment(cb.Txid, output, contract, funded, records)
+			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
 	}
@@ -153,7 +153,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	l.db.Sales().UpdateFunding(orderId, funded, records)
 }
 
-func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, funded bool, records []*spvwallet.TransactionRecord) {
+func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
 	chainHash, err := chainhash.NewHash(txid)
 	if err != nil {
 		return
@@ -175,14 +175,16 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		if funding >= requestedAmount {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
-			//l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, true)
+			if state == pb.OrderState_CONFIRMED {
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			}
 		}
 		n := notifications.Serialize(
 			notifications.PaymentNotification{
 				orderId,
 				uint64(funding),
 			})
-
+		log.Notice(state)
 		l.broadcast <- n
 	}
 	record := &spvwallet.TransactionRecord{

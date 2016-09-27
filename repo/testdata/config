@@ -77,15 +77,15 @@
     "Last": ""
   },
   "Wallet": {
+    "Binary": "/path/to/bitcoind",
     "FeeAPI": "https://bitcoinfees.21.co/api/v1/fees/recommended",
     "HighFeeDefault": 60,
     "LowFeeDefault": 20,
     "MaxFee": 2000,
     "MediumFeeDefault": 40,
-    "TrustedPeer": "127.0.0.1:8333",
-    "Type": "spvwallet",
-    "Binary": "/path/to/bitcoind",
+    "RPCPassword": "password",
     "RPCUser": "username",
-    "RPCPassword": "password"
+    "TrustedPeer": "127.0.0.1:8333",
+    "Type": "spvwallet"
   }
 }

@@ -145,7 +145,7 @@ class OpenBazaarTestFramework(object):
                 self.bitcoin_api.call("stop")
             except BrokenPipeError:
                 pass
-        time.sleep(3)
+        time.sleep(5)
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):

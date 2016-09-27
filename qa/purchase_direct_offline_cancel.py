@@ -137,10 +137,6 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         if len(resp["transactions"]) != 2:
             raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob failed to detect outgoing payment")
 
-        # FIXME: the remainder of this test fails on travis for some reason. Alice's node fails to fetch the dht pointer.
-        print("PurchaseDirectOfflineTest - PARTIAL PASS")
-        return
-
         # startup alice again
         self.start_node(alice)
         time.sleep(5)
