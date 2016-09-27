@@ -126,6 +126,8 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
+        resp = json.loads(r.text, object_pairs_hook=OrderedDict)
+        print(json.dumps(resp, indent=4))
 
         print("PurchaseDirectOnlineTest - PASS")
 
