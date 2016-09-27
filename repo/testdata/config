@@ -52,7 +52,7 @@
   },
   "JSON-API": {
     "Authenticated": true,
-    "CORS": true,
+    "CORS": "ob.example.com",
     "Enabled": true,
     "HTTPHeaders": null,
     "Password": "TestPassword",

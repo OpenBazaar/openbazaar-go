@@ -1,6 +1,15 @@
 package net
 
 import (
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	"io/ioutil"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -11,14 +20,6 @@ import (
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
-	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
-	"io/ioutil"
-	"net/http"
-	"sync"
-	"time"
 )
 
 var log = logging.MustGetLogger("retriever")
@@ -30,12 +31,12 @@ type MessageRetriever struct {
 	service      net.NetworkService
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue []pb.Envelope
-	*sync.WaitGroup
+	messageQueue chan pb.Envelope
+	sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, make(chan pb.Envelope, 128)}
 	mr.Add(1) // Add one for initial wait at start up
 	return &mr
 }
@@ -92,10 +93,16 @@ func (m *MessageRetriever) fetchPointers() {
 	// Wait for each goroutine to finish then process any remaining messages that needed
 	// to be processed last
 	wg.Wait()
-	for _, env := range m.messageQueue {
-		m.handleMessage(env, nil)
+
+DRAIN_LOOP:
+	for {
+		select {
+		case env := <-m.messageQueue:
+			m.handleMessage(env, nil)
+		default:
+			break DRAIN_LOOP
+		}
 	}
-	m.messageQueue = []pb.Envelope{}
 
 	// For initial start up. We can ignore afterwards
 	if m.WaitGroup != nil {
@@ -170,7 +177,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		// Order messages need to be processed in the correct order, so cancel messages
 		// need to be processed last.
 		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
-			m.messageQueue = append(m.messageQueue, env)
+			m.messageQueue <- env
 			return
 		}
 
