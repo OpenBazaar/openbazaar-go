@@ -18,7 +18,7 @@ type APIConfig struct {
 	Authenticated bool
 	Username      string
 	Password      string
-	CORS          bool
+	CORS          *string
 	Enabled       bool
 	HTTPHeaders   map[string][]string
 	SSL           bool
@@ -59,7 +59,14 @@ func GetAPIConfig(cfgPath string) (*APIConfig, error) {
 	authenticated := api.(map[string]interface{})["Authenticated"].(bool)
 	username := api.(map[string]interface{})["Username"].(string)
 	password := api.(map[string]interface{})["Password"].(string)
-	cors := api.(map[string]interface{})["CORS"].(bool)
+	c := api.(map[string]interface{})["CORS"]
+	var cors *string
+	if c == nil {
+		cors = nil
+	} else {
+		crs := c.(string)
+		cors = &crs
+	}
 	sslEnabled := api.(map[string]interface{})["SSL"].(bool)
 	certFile := api.(map[string]interface{})["SSLCert"].(string)
 	keyFile := api.(map[string]interface{})["SSLKey"].(string)

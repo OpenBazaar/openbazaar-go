@@ -194,7 +194,6 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 
 	var a APIConfig = APIConfig{
 		Enabled:     true,
-		CORS:        false,
 		HTTPHeaders: nil,
 	}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {

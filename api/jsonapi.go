@@ -27,7 +27,7 @@ import (
 type JsonAPIConfig struct {
 	Headers       map[string][]string
 	Enabled       bool
-	Cors          bool
+	Cors          *string
 	Authenticated bool
 	Cookie        http.Cookie
 	Username      string
@@ -62,8 +62,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
-	if i.config.Cors {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	if i.config.Cors != nil {
+		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
 		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}

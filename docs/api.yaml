@@ -45,15 +45,15 @@ info:
     # SSL
      **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled your authentication information be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
     # Cross-Origin Resource Sharing
-    CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
+    CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on for a specific domain by setting an origin in the config file as follows:
      ```
      {
         "JSON-API": {
-          "CORS": true
+          "CORS": "https://opeenbazaar.org"
           }
      }
     ```
-    Keep in mind that running the server with CORS enabled is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
+    Use "*" to allow all domains. Keep in mind that running the server with CORS enabled for all domains is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
 
   version: 1.0.0
   title: OpenBazaar JSON API
