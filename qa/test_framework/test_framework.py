@@ -141,7 +141,10 @@ class OpenBazaarTestFramework(object):
 
     def teardown(self):
         if self.bitcoin_api is not None:
-            self.bitcoin_api.call("stop")
+            try:
+                self.bitcoin_api.call("stop")
+            except BrokenPipeError:
+                pass
         time.sleep(3)
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 

@@ -200,10 +200,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				listener(cb)
 			}
 			if hits > 0 {
-				ts.PopulateAdrs()
 				ts.db.Txns().Put(tx)
 			}
+			ts.PopulateAdrs()
 		}
 	}
-	return hits, err
+	return hits + watchedHits, err
 }

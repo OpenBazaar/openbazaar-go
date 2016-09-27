@@ -117,7 +117,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # FIXME: the remainder of this test fails on travis for some reason. Alice's node fails to fetch the dht pointer.
         print("PurchaseDirectOfflineTest - PARTIAL PASS")
-        #return
+        return
 
         # generate one more block containing this tx
         self.bitcoin_api.call("generate", 1)
