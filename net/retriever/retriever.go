@@ -31,12 +31,12 @@ type MessageRetriever struct {
 	service      net.NetworkService
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue []pb.Envelope
+	messageQueue chan pb.Envelope
 	*sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, make(chan pb.Envelope, 128), new(sync.WaitGroup)}
 	mr.Add(1) // Add one for initial wait at start up
 	return &mr
 }
@@ -93,10 +93,16 @@ func (m *MessageRetriever) fetchPointers() {
 	// Wait for each goroutine to finish then process any remaining messages that needed
 	// to be processed last
 	wg.Wait()
-	for _, env := range m.messageQueue {
-		m.handleMessage(env, nil)
+
+DRAIN_LOOP:
+	for {
+		select {
+		case env := <-m.messageQueue:
+			m.handleMessage(env, nil)
+		default:
+			break DRAIN_LOOP
+		}
 	}
-	m.messageQueue = []pb.Envelope{}
 
 	// For initial start up. We can ignore afterwards
 	if m.WaitGroup != nil {
@@ -171,7 +177,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		// Order messages need to be processed in the correct order, so cancel messages
 		// need to be processed last.
 		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
-			m.messageQueue = append(m.messageQueue, env)
+			m.messageQueue <- env
 			return
 		}
 
