@@ -24,8 +24,8 @@ func TestGetApiConfig(t *testing.T) {
 	if !config.Authenticated {
 		t.Error("Expected Authenticated = true")
 	}
-	if config.CORS != true {
-		t.Error("Cors is not true")
+	if config.CORS == nil {
+		t.Error("Cors is not set")
 	}
 	if reflect.ValueOf(config.HTTPHeaders).Kind() != reflect.Map {
 		t.Error("Headers is not a map")
