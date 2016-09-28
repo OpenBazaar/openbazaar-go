@@ -15,10 +15,25 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         alice = self.nodes[0]
         bob = self.nodes[1]
 
+        # generate some coins and send them to bob
+        time.sleep(4)
+        api_url = bob["gateway_url"] + "wallet/address"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            address = resp["address"]
+        elif r.status_code == 404:
+            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Address endpoint not found")
+        else:
+            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Unknown response")
+        self.bitcoin_api.call("generatetoaddress", 1, address)
+        time.sleep(2)
+        self.bitcoin_api.call("generate", 125)
+        time.sleep(3)
+
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -39,21 +54,6 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         # bob fetch listing to cache
         api_url = bob["gateway_url"] + "ipfs/" + listingId
         requests.get(api_url)
-
-        # generate some coins and send them to bob
-        api_url = bob["gateway_url"] + "wallet/address"
-        r = requests.get(api_url)
-        if r.status_code == 200:
-            resp = json.loads(r.text)
-            address = resp["address"]
-        elif r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Address endpoint not found")
-        else:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
-        time.sleep(3)
 
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"

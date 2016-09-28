@@ -256,7 +256,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		payment.Amount = total
 
-		// Generated an payment address using the first child key derived from the buyers's,
+		// Generate a payment address using the first child key derived from the buyers's,
 		// vendors's and moderator's masterPubKey and a random chaincode.
 		chaincode := make([]byte, 32)
 		_, err = rand.Read(chaincode)
@@ -324,7 +324,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 
-		// Send to order vendor and request a payment address
+		// Send to order vendor
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
 		if err != nil { // vendor offline
 			// Send using offline messaging
@@ -403,7 +403,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			// Change payment code to direct
 			payment.Method = pb.Order_Payment_DIRECT
 
-			// Generated an payment address using the first child key derived from the buyer's
+			// Generate a payment address using the first child key derived from the buyer's
 			// and vendors's masterPubKeys and a random chaincode.
 			chaincode := make([]byte, 32)
 			_, err := rand.Read(chaincode)

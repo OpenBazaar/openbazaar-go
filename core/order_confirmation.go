@@ -61,57 +61,59 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	if err != nil {
 		return err
 	}
-	// Sweep the temp address into our wallet
-	var utxos []spvwallet.Utxo
-	for _, r := range records {
-		if !r.Spent && r.Value > 0 {
-			u := spvwallet.Utxo{}
-			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-			if err != nil {
-				return err
+	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		// Sweep the temp address into our wallet
+		var utxos []spvwallet.Utxo
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				u := spvwallet.Utxo{}
+				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+				if err != nil {
+					return err
+				}
+				u.ScriptPubkey = scriptBytes
+				hash, err := chainhash.NewHashFromStr(r.Txid)
+				if err != nil {
+					return err
+				}
+				outpoint := wire.NewOutPoint(hash, r.Index)
+				u.Op = *outpoint
+				u.Value = r.Value
+				utxos = append(utxos, u)
 			}
-			u.ScriptPubkey = scriptBytes
-			hash, err := chainhash.NewHashFromStr(r.Txid)
-			if err != nil {
-				return err
-			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
-			u.Op = *outpoint
-			u.Value = r.Value
-			utxos = append(utxos, u)
 		}
-	}
 
-	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
-	if err != nil {
-		return err
-	}
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-	mPrivKey := n.Wallet.MasterPrivateKey()
-	if err != nil {
-		return err
-	}
-	mECKey, err := mPrivKey.ECPrivKey()
-	if err != nil {
-		return err
-	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincode,
-		parentFP,
-		0,
-		0,
-		true)
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return err
+		}
+		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		mPrivKey := n.Wallet.MasterPrivateKey()
+		if err != nil {
+			return err
+		}
+		mECKey, err := mPrivKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		hdKey := hd.NewExtendedKey(
+			n.Wallet.Params().HDPrivateKeyID[:],
+			mECKey.Serialize(),
+			chaincode,
+			parentFP,
+			0,
+			0,
+			true)
 
-	vendorKey, err := hdKey.Child(0)
-	if err != nil {
-		return err
-	}
-	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-	err = n.Wallet.SweepMultisig(utxos, vendorKey, redeemScript, spvwallet.NORMAL)
-	if err != nil {
-		return err
+		vendorKey, err := hdKey.Child(0)
+		if err != nil {
+			return err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		err = n.Wallet.SweepMultisig(utxos, vendorKey, redeemScript, spvwallet.NORMAL)
+		if err != nil {
+			return err
+		}
 	}
 	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.Guid, contract)
 	if err != nil {
