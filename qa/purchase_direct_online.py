@@ -99,10 +99,10 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
         time.sleep(6)
 
         # check bob detected payment

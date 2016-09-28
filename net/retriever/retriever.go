@@ -198,7 +198,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 	}
 
 	// dispatch handler.
-	_, err := handler(*id, env.Message)
+	_, err := handler(*id, env.Message, true)
 	if err != nil {
 		log.Debugf("handle message error: %s", err)
 		return

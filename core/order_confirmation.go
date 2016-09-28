@@ -30,7 +30,19 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
 
-	// TODO: sign rating key if this is a moderated
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		buyerKey := contract.BuyerOrder.RatingKey
+		moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
+		if err != nil {
+			return nil, err
+		}
+		sig, err := n.IpfsNode.PrivateKey.Sign(append(buyerKey, moderatorKey...))
+		if err != nil {
+			return nil, err
+		}
+		oc.RatingSignature = sig
+		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
+	}
 
 	oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
 	if err != nil {
@@ -246,4 +258,8 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	}
 
 	return nil
+}
+
+func ExtraModeratorKeyFromReddemScript(redeemScript string) string {
+	return redeemScript[134:200]
 }

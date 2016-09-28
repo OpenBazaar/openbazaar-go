@@ -17,7 +17,7 @@ import (
 	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
-func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
 	switch t {
 	case pb.Message_PING:
 		return service.handlePing
@@ -40,12 +40,12 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 	}
 }
 
-func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received PING message from %s", peer.Pretty())
 	return pmes, nil
 }
 
-func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received FOLLOW message from %s", peer.Pretty())
 	err := service.datastore.Followers().Put(peer.Pretty())
 	if err != nil {
@@ -55,7 +55,7 @@ func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message) (
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received UNFOLLOW message from %s", peer.Pretty())
 	err := service.datastore.Followers().Delete(peer.Pretty())
 	if err != nil {
@@ -65,7 +65,7 @@ func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message)
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
 	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
 	if err != nil {
@@ -78,8 +78,9 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message) 
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received ORDER message from %s", peer.Pretty())
+	offline, _ := options.(bool)
 	errorResponse := func(error string) *pb.Message {
 		a := &any.Any{Value: []byte(error)}
 		m := &pb.Message{
@@ -141,11 +142,66 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message) (*
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		return nil, nil
+	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
+		total, err := service.node.CalculateOrderTotal(contract)
+		if err != nil {
+			return errorResponse("Error calculating payment amount"), nil
+		}
+		if total != contract.BuyerOrder.Payment.Amount {
+			return errorResponse("Calculated a different payment amount"), nil
+		}
+		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		script, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Wallet.AddWatchedScript(script)
+		contract, err = service.node.NewOrderConfirmation(contract, false)
+		if err != nil {
+			return errorResponse("Error building order confirmation"), nil
+		}
+		a, err := ptypes.MarshalAny(contract)
+		if err != nil {
+			return errorResponse("Error building order confirmation"), nil
+		}
+		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
+		m := pb.Message{
+			MessageType: pb.Message_ORDER_CONFIRMATION,
+			Payload:     a,
+		}
+		return &m, nil
+	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
+		err := service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		script, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Wallet.AddWatchedScript(script)
+		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		if err != nil {
+			return errorResponse(err.Error()), nil
+		}
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
+		return nil, nil
 	}
 	return errorResponse("Unrecognized payment type"), nil
 }
 
-func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
 
 	// Unmarshal payload
@@ -188,7 +244,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
 
 	orderId := string(pmes.Payload.Value)
@@ -205,7 +261,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message)
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received REJECT message from %s", p.Pretty())
 	orderId := string(pmes.Payload.Value)
 
