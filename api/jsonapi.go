@@ -27,7 +27,7 @@ import (
 type JsonAPIConfig struct {
 	Headers       map[string][]string
 	Enabled       bool
-	Cors          bool
+	Cors          *string
 	Authenticated bool
 	Cookie        http.Cookie
 	Username      string
@@ -62,8 +62,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
-	if i.config.Cors {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	if i.config.Cors != nil {
+		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
 		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
@@ -268,7 +268,8 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := i.node.SetAvatarImages(data.Avatar); err != nil {
+	hash, err := i.node.SetAvatarImages(data.Avatar)
+	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -284,7 +285,7 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	fmt.Fprintf(w, `{"hash": "%s"}`, hash)
 	return
 }
 
@@ -300,7 +301,8 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := i.node.SetHeaderImages(data.Header); err != nil {
+	hash, err := i.node.SetHeaderImages(data.Header)
+	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -316,7 +318,8 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+
+	fmt.Fprintf(w, `{"hash": "%s"}`, hash)
 	return
 }
 

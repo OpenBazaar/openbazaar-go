@@ -45,15 +45,15 @@ info:
     # SSL
      **NEVER** open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled your authentication information be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).
     # Cross-Origin Resource Sharing
-    CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on by setting the config file as follows:
+    CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on for a specific domain by setting an origin in the config file as follows:
      ```
      {
         "JSON-API": {
-          "CORS": true
+          "CORS": "https://opeenbazaar.org"
           }
      }
     ```
-    Keep in mind that running the server with CORS enabled is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
+    Use "*" to allow all domains. Keep in mind that running the server with CORS enabled for all domains is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
 
   version: 1.0.0
   title: OpenBazaar JSON API
@@ -745,7 +745,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/DefaultResponse'
+            $ref: '#/definitions/ImageHash'
         '400':
           description: Bad Request
           schema:
@@ -792,7 +792,7 @@ paths:
           description: Header object includes a base64 encoded image
           required: true
           schema:
-            $ref: '#/definitions/Header'
+            $ref: '#/definitions/ImageHash'
       responses:
         '200':
           description: OK
@@ -1321,6 +1321,36 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/order/{orderId}:
+    post:
+      tags:
+        - Orders
+      summary: Get an order
+      description: Get an order by ID
+      operationId: GetOrder
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: orderId
+          in: path
+          description: The base58 encoded order ID. Can be a sale or purchase.
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/OrderResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
 definitions:
   DefaultResponse:
     type: object
@@ -1423,6 +1453,13 @@ definitions:
       isFollowing:
         type: boolean
         example: false
+  ImageHash:
+    description: An image hash object
+    type: object
+    example: {"hash": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"}
+    properties:
+      hash:
+        type: string
   Peers:
     description: A list of peer IDs
     type: array
@@ -2809,3 +2846,318 @@ definitions:
       orderId: 
         description: A base58 encoded multihash order ID
         type: string
+  OrderResponse:
+    description: The response to the orders get
+    type: object
+    example: {
+    "contract": {
+        "vendorListings": [
+            {
+                "slug": "ron_swanson_tshirt",
+                "vendorID": {
+                    "guid": "QmVp4tK486CvnamB6K4uhY4vB5sMzEDpCNzeyh9VwBFXhS",
+                    "blockchainID": "",
+                    "pubkeys": {
+                        "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCtwBrbXYzgBUObY+Ai4Y89YniKjKsLpVgKDcqXcQ15H7taX0qnkxdQFkHemiJfgYHfdl/hQsJpn74DkXJ+QTfKysblH8cvdl7wDZFtPSKPHayN+bRorJvg7Nyv+3LEhQYs9ZbnKgv9VqvotjwaDZpnNl4we1VMWMzWjpOaPoY0Gw970mfI4X1vcOVTP2y5mkP/yodOrf6Q5w9bh1SGNqz7G7jXcVbkB/TdmVdxAZw/Zm+aIjuzd/nxxzMzLobMI/eTpIP13mKFjsx9eapj7IUe7M1E+0P8KDKHz7XrrCamUDh33rjcS120jYh0AFJFUa5xZ3SpUpZ6Y+2jfVRpoN+EjVMYlLQ74XRcwco5q9O4ndR5P9o3YmDkpd5WAP1wMYbwsSy+T9ThiWhiyTjpHRVac+FlUYqAI1Sv6L1D1+qsBDV0jbuyDdva1hdiuuYK/QMaqLIwzQ0hQZF0V8lU26HHN4fYXsTahQR7x7wip6K9CrfMIstMFXN9/eOvZGUWq2RyCPosCkn3FEQy0WOQBz0uCHnOYt+IOt34xV9s5LFNAKOjG7J7wXX6Ine7AMs0akvVHdR38Xaa1+0oAIOGwXBoJlqAv+W/o7/pyN/TK8KY+xPNwuwGUPcCpFaOU+TxMvhO39qgHIjxymNbaxp+HBpxL8hRYxAQqV416r7jmjlIwQIDAQAB",
+                        "bitcoin": "Atx0O4v2e1auDHHk+Anjp6qeceim8nV00FB3vVwwp7AK"
+                    }
+                },
+                "metadata": {
+                    "version": 1,
+                    "contractType": "PHYSICAL_GOOD",
+                    "format": "FIXED_PRICE",
+                    "expiry": "2017-08-17T04:52:19.000Z",
+                    "acceptedCurrency": "btc",
+                    "pricingCurrency": "btc"
+                },
+                "item": {
+                    "title": "Ron Swanson Tshirt",
+                    "description": "Kick ass ron swanson tshirt in yellow",
+                    "processingTime": "1 to 2 Business days",
+                    "price": 12000000,
+                    "nsfw": false,
+                    "tags": [
+                        "tshirts",
+                        "clothing",
+                        "ron swanson"
+                    ],
+                    "images": [
+                        {
+                            "hash": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+                            "filename": "swanson.jpg"
+                        }
+                    ],
+                    "categories": [
+                        "clothing"
+                    ],
+                    "sku": "123-456-789",
+                    "grams": 28,
+                    "condition": "New",
+                    "options": [
+                        {
+                            "name": "Size",
+                            "description": "What size do you want your shirt?",
+                            "variants": [
+                                {
+                                    "name": "Small",
+                                    "priceModifier": 0
+                                },
+                                {
+                                    "name": "Medium",
+                                    "priceModifier": 0
+                                },
+                                {
+                                    "name": "Large",
+                                    "priceModifier": 10000
+                                },
+                                {
+                                    "name": "XL",
+                                    "priceModifier": 10000
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Color",
+                            "description": "What color do you want your shirt?",
+                            "variants": [
+                                {
+                                    "name": "Red",
+                                    "priceModifier": 0
+                                },
+                                {
+                                    "name": "Yellow",
+                                    "priceModifier": 0
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "shippingOptions": [
+                    {
+                        "name": "Domestic Shipping",
+                        "type": "FIXED_PRICE",
+                        "regions": [
+                            "UNITED_STATES"
+                        ],
+                        "services": [
+                            {
+                                "name": "Standard",
+                                "price": 6000000,
+                                "estimatedDelivery": "4-6 days"
+                            },
+                            {
+                                "name": "Express",
+                                "price": 12000000,
+                                "estimatedDelivery": "1-3 days"
+                            }
+                        ]
+                    },
+                    {
+                        "name": "International Shipping",
+                        "type": "FIXED_PRICE",
+                        "regions": [
+                            "ALL"
+                        ],
+                        "shippingRules": {
+                            "ruleType": "QUANTITY_DISCOUNT",
+                            "rules": [
+                                {
+                                    "minRange": 5,
+                                    "maxRange": 10,
+                                    "price": 10000000
+                                },
+                                {
+                                    "minRange": 11,
+                                    "maxRange": 20,
+                                    "price": 200000
+                                }
+                            ]
+                        },
+                        "services": [
+                            {
+                                "name": "Standard",
+                                "price": 8000000,
+                                "estimatedDelivery": "6-8 days"
+                            },
+                            {
+                                "name": "Express",
+                                "price": 150000000,
+                                "estimatedDelivery": "2-3 days"
+                            }
+                        ]
+                    }
+                ],
+                "taxes": [
+                    {
+                        "taxType": "Sales tax",
+                        "taxRegions": [
+                            "UNITED_STATES"
+                        ],
+                        "taxShipping": true,
+                        "percentage": 7
+                    }
+                ],
+                "coupons": [
+                    {
+                        "title": "10% off",
+                        "hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
+                        "percentDiscount": 10,
+                        "priceDiscount": 0
+                    }
+                ],
+                "moderators": [
+                    "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+                ],
+                "termsAndConditions": "NA",
+                "refundPolicy": "No refuns for you. All sales are final."
+            }
+        ],
+        "buyerOrder": {
+            "refundAddress": "mmLqH6LfgWFcNJr3sNsw9gD9QWG1XcPzE8",
+            "shipping": {
+                "shipTo": "Seymour Butts",
+                "address": "31 Spooner Street",
+                "city": "Quahog",
+                "state": "RI",
+                "postalCode": "00093",
+                "country": "UNITED_STATES",
+                "addressNotes": ""
+            },
+            "buyerID": {
+                "guid": "QmWPBKm3sLEPMy8EqrR5nHD2KUzh3TEgfquRjuxHM4h3Pv",
+                "blockchainID": "",
+                "pubkeys": {
+                    "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCzxzLJK8BWN45zq4pS4/zOXywD/2COSkKJn3cECB+mc8zwQU7cb3WP9a6IsqLBWySpg6jdkyX/0f7izPUI3E3g2BuFmVZggjKHM0kRCYVQLUsa5ntbjOquQaZJoVV4cLXrYQwtcEDhohfvTn1698vVbPFDBkuu6QXEtNLXsBEshzebORKI/XmnQEYs/M81JSYe0E8My1yKumhln8JnwhDK+YESESaXjGr1PwPJw3pb/PTvQ2JTWe5nWw9ZL9DTlGkM9NYkdJPCdNQjUT4iDvPKuqxsmWRcayYSpeJ5FYplg+WK0B2PgFpGq5AOWnm/DebnVvscN6fqjVd1s6m6OPgnYOOBoyUQ/LkWHjWjIbYct8fHLmY9BZM9L7xcDVmhdYNzpvXgOPwbqUTy0uZqZ13Gq7uORumvVMcNRHN4X12kAvLiaLYqYXDMPw1WcoD/y7dfLckTuDlX+HXkgIE1JyKq1AwbJvdRJ0ItrUHL8zwYrCdPRnTb4LwCEgufl1QGnVfEschqPOPtRmSAKvOvlkFM91nJbMZG0hvRU5udeZywpF8fKYcOe8nmZgI2HwGZSwqqHlmKnDP4K5Ayl/bMNnoDCkNugeg7jOsNEylQzM6h1HgtJ5Cqwe10k+HNtLBfHPzFXJ5J8n7/0Z6tZuO0gKiE+EFfi+JdzKR4mfGP3/7WrwIDAQAB",
+                    "bitcoin": "Ap2xPg69EbCmLZupP3jJKmBRM9d59WamiBB6G9UkJ/8m"
+                }
+            },
+            "timestamp": "2016-09-27T20:41:36.000Z",
+            "items": [
+                {
+                    "listingHash": "QmcasKpK3ShAr4uL9Mq3tPy4TyRkSZUzuUF7AuJ6Sj7ije",
+                    "quantity": 1,
+                    "options": [
+                        {
+                            "name": "Color",
+                            "value": "Red"
+                        },
+                        {
+                            "name": "Size",
+                            "value": "Large"
+                        }
+                    ],
+                    "shippingOption": {
+                        "name": "Domestic Shipping",
+                        "service": "Standard"
+                    },
+                    "memo": "thanks!",
+                    "couponCodes": [
+                        "discount"
+                    ]
+                }
+            ],
+            "payment": {
+                "method": "ADDRESS_REQUEST",
+                "moderator": "",
+                "amount": 17985630,
+                "exchangeRate": 0,
+                "chaincode": "",
+                "address": "",
+                "redeemScript": ""
+            },
+            "ratingKey": "AmjOlQmR5JnQAYWvj9v1YJq24knjFjLUxHilYaavhxcI",
+            "alternateContactInfo": ""
+        },
+        "vendorOrderConfirmation": {
+            "orderID": "QmSqbppyuehdRT9kGjEEcTv17mAYTYC1kddDC1XKULpSnL",
+            "paymentAddress": "mqecHvWgXmT55HBd4vke7C8PWUCHgV37p4",
+            "requestedAmount": 17985630
+        },
+        "signatures": [
+            {
+                "section": "LISTING",
+                "guid": "O8Wo1aX9HgvRY+ekI8j1sFOudV9nLhKleqrTeCLjCKQhtx5+u/mDTSvRvLJodUeaJe5VfMu2EuSKQMDwng9J2xNkJ9jZOO63tVRZLSKwS9PxAmWoU1fu2Gg6DxzaL6SAcSH491oBlNSKuSzCbRPGh3vNo1FuJB5rb4bIfw+p+Re2taGbZGxcB0Psq4RhblkDlTkm07CzkbCBMOH1+rCtJmbeP1OtxzbYVQB6agiS3/TKQ7gBIckJNUurMESnphEWKuk2uEdD003tsoFFdyD9ikpw5Om5ubzP6GFjy34ynhz1S+YQQfV+B2YsVPq6KcUle9iZWDuWIF5yFWDcUN7kdqTmEsIDo/gs7iCYZt45IyWyGpkA274LXYgtgs1Q5Bo9sns5UwdFKq70zXUODOWx2zzH+4KJEF9GzoyXys5P/e1LvliaYpWtblNaW/sgwYp10OnxfsIUb92YiXOjNHJ0K23N+MEEsoHMgeX5WG9o3wVRt6t/4znZT31sXRTewpy/ubYQ9yhpMB0VtoNYZg6zxrgiGCmgHMRhY+2cwbCvXo5gMHaqELZFlPVNcL6+HBm4pRIbvmNZi5hEj8ghRuJP3Jl1935EktoYLi7bSdAk2VyC7hR9mFXD1vKATlWoE0b+LFq65UYMBAG8hj4N6rXkANWriNfNNFhqd+BIHZA21Jk=",
+                "bitcoin": "MEQCIHhOSsmpICe2Y2zCw5kof0GtvFnM4LOb7QjwIIzWDxCAAiBIZhZ70RxF9Eq+GhjZ0Y8mL1MmJtC8Jh7xp26xhl4a4Q=="
+            },
+            {
+                "section": "ORDER",
+                "guid": "lPLlVKJ6V0wC4WkT+z4Fj3N7KhqI0h7J24OvAZdMp+iGt3c1lN2yTZFfuEdtRnjtnSRn2NhQTkbEWpA1YOR6Zv2kshioiNDclVg3NQ/K0iRs1ZkehCMMM7aSK8Pbu89EmFKyMpQdW+J+uJ909rFEhpj1LTmAXlMPIPEnAUjc+2F6DIKuiBB159KqlzBCDNMmgYTyaCKKOx0DXLq90FNy89BriOKk19IWfqgbeT84OuoPqgboqRJifpjftNhUW4J/NRw7KyQaupNkSz9QjMwSG4MEaAx45d+bfVsYfuAkMFbx1f1/tPpy+pxp/42E7d22atUcb6ZeBanuDPwPsNuXZdvLiKq2ZteDDN9yqxzwnFNd+Rrbere83VfQc2NbOgxn8RM2bumSi0ndxmnMqSjmdB/Cbrv3Pc5vkoN0WP2izKv85TfOpgTowW9L7+AfmdI1E+cIDxtjgReDjJfpJQVKMkvgVvBudKBXxKcebWXqJRNcXpsFxs94ZefRLa3hQGKr7xarjezliT78vvhT41bhBiTov3g6+z7qmvXSUq+nNjP390kl5FJPLPMllkeqnXNHg4st2tXhFX6xuEcRE7p3oZPO9hjJKIBU4aLs9pCKg5Z78D+aGyZj1NyW7TJiQZRgdOD7p4lvNg53cT331QeS8KboZZY+ogIFY5YrNv7Zu2o=",
+                "bitcoin": "MEQCIHMd5Dhh2hXtg2bpzjLj8vVgjfWVv4htuLO4hbIvOa0zAiB6GiUDL/CfHl7/xaXxuSsJ6bXx/rw0TP2kOrwATcxuoQ=="
+            },
+            {
+                "section": "ORDER_CONFIRMATION",
+                "guid": "eyNEvSTqt6GDec2siykC1V9rKNTlvmFbDyncSPSGSW1d7SA10PzpZS/z3Rg1V093wvoZHdFJHxJUVe38IPst2b3VeVtTh+VuuDUvbZtha4k1F9SckZRkOb2GarH/hQdsQLTTiSl9OV6blohy+OjSyPBlEI13GJ6cQkwwXudgal6QPi6xQxc6lVq9g1Zaj95S2sQm4f5mael27orlYudJSRadFk5/n3J6XmwofTHlE9iFXm7+hzhu1V9fPqCEZ065Bn5OCyFeb6KG38+WB2bUSWQH1XgfAVHiU/91aoA5quISvFK7SYbi6W7uhntczQCT5QmnxOzMaFfvpDf5ChkFO6HxW2V9mp4VZHGra9Uq14NeawtRWxT+Q5VFrwbhwBIvoXU6OClEWMq2fGHAZ/39bNL8QiklW5H7YIJZashqjgp6prSHF4LvdGZv63T2zuP/5HFlOqVzk5fGWBxIr3tmmPkM3SVnQGSVS3i5mkPq+LU9wdtp/bFTYOKhd1hrp4G1THWGgXoV+0HPutgqxWPnQmiaoeY+OTSZjb73kBDA4tBrxkFVkYe868pOl+Brt1MrYOL7EhbGQmLg1MWTGUAk0lBXL/67D6qc9e1jwM24p7b7bsZlkEsJHhrjLlPe+8JlDpv50BxftZLx+ikLQBw01ZlFxc5We9HS+szbAF3Qh4c=",
+                "bitcoin": "MEUCIQD4EIZsTkZVZTY4qmsJwEN10uq+H6gHQGx42Tgw4TX0OwIgSs0achRVhRvQsao12qhlUsolkePWdlxiRopAY8jreBQ="
+            }
+        ]
+    },
+    "state": "FUNDED",
+    "read": false,
+    "funded": true,
+    "transactions": [
+        {
+            "txid": "36195f28f26699fc04b699d0df2ece312e1c173006bcc99e07baee9dbe291aae",
+            "value": 17985630
+        }
+    ]
+}
+    properties:
+      contract:
+        description: The Ricardian Contract in it's current state. The body of this field will contain the appropriate combination of sections from [contracts.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/contracts.proto)
+        type: object
+        properties:
+          vendorListings: 
+            description: A list of listings
+            type: array
+            items:
+              description: The listing object
+              type: object
+              $ref: '#/definitions/Listing'
+          signatures:
+            description: A list of signature objects
+            type: array
+            items:
+              description: A signature object
+              type: object
+              properties:
+                section: 
+                  description: The section this signature covers
+                  type: string
+                  enum: ["LISTING"]
+                guid: 
+                  description: A guid signature covering the listing in base64
+                  type: string
+                bitcoin:
+                  description: A bitcoin signature covering the listing in base64
+                  type: string
+      transactionRecord:
+        description: A list of bitcoin transactions for this order
+        type: array
+        example: [
+          		{
+                "value": 17985630,
+                "txid": "36195f28f26699fc04b699d0df2ece312e1c173006bcc99e07baee9dbe291aae"
+              }
+      	]
+        items:
+          description: A transaction record
+          type: object
+          required: ["value", "txid"]
+          properties:
+            value:
+              description: The amount of the transaction
+              type: integer
+            txid:
+              description: The transaction ID in hex
+              type: string
+      read:
+        description: Has this order been view by the user
+        type: boolean
+      funded:
+        description: Has this order been fully funded. Partial funding returns false.
+        type: boolean
+      state:
+        description: The state this order is in
+        type: string
+        enum: ["PENDING", "CONFIRMED", "FUNDED", "FULFILLED", "COMPLETE", "DISPUTED", "RESOLVED", "REFUNDED", "CANCELED", "REJECTED"]
+      

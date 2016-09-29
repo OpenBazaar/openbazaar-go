@@ -115,10 +115,6 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         if resp["funded"] == False:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
 
-        # FIXME: the remainder of this test fails on travis for some reason. Alice's node fails to fetch the dht pointer.
-        print("PurchaseDirectOfflineTest - PARTIAL PASS")
-        #return
-
         # generate one more block containing this tx
         self.bitcoin_api.call("generate", 1)
 

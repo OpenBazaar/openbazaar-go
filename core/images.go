@@ -12,16 +12,16 @@ import (
 	"strings"
 )
 
-func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) error {
+func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (string, error) {
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	img, _, err := image.Decode(reader)
 	if err != nil {
-		return err
+		return "", err
 	}
 	reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	imgCfg, _, err := image.DecodeConfig(reader)
 	if err != nil {
-		return err
+		return "", err
 	}
 	w := imgCfg.Width
 	h := imgCfg.Height
@@ -36,7 +36,7 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) error {
 		Mode:   cutter.Centered,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	ty := resize.Resize(50, 50, img, resize.Lanczos3)
 	sm := resize.Resize(100, 100, img, resize.Lanczos3)
@@ -48,62 +48,62 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) error {
 
 	out, err := os.Create(path.Join(imgPath, "tiny", "avatar"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer out.Close()
 	jpeg.Encode(out, ty, nil)
 
 	out, err = os.Create(path.Join(imgPath, "small", "avatar"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, sm, nil)
 
 	out, err = os.Create(path.Join(imgPath, "medium", "avatar"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, md, nil)
 
 	out, err = os.Create(path.Join(imgPath, "large", "avatar"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, lg, nil)
 
 	out, err = os.Create(path.Join(imgPath, "huge", "avatar"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, hg, nil)
 
 	// Add hash to profile
-	hash, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "large", "avatar"))
+	hash, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "huge", "avatar"))
 	if aerr != nil {
-		return err
+		return "", err
 	}
 	profile, err := n.GetProfile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	profile.AvatarHash = hash
 	err = n.UpdateProfile(&profile)
 	if aerr != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return hash, nil
 }
 
-func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) error {
+func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (string, error) {
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	img, _, err := image.Decode(reader)
 	if err != nil {
-		return err
+		return "", err
 	}
 	reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	imgCfg, _, err := image.DecodeConfig(reader)
 	if err != nil {
-		return err
+		return "", err
 	}
 	w := float64(imgCfg.Width)
 	h := float64(imgCfg.Height)
@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) error {
 		Mode:   cutter.Centered,
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	ty := resize.Resize(304, 101, img, resize.Lanczos3)
 	sm := resize.Resize(608, 202, img, resize.Lanczos3)
@@ -130,50 +130,50 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) error {
 
 	out, err := os.Create(path.Join(imgPath, "tiny", "header"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer out.Close()
 	jpeg.Encode(out, ty, nil)
 
 	out, err = os.Create(path.Join(imgPath, "small", "header"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, sm, nil)
 
 	out, err = os.Create(path.Join(imgPath, "medium", "header"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, md, nil)
 
 	out, err = os.Create(path.Join(imgPath, "large", "header"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, lg, nil)
 
 	out, err = os.Create(path.Join(imgPath, "huge", "header"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	jpeg.Encode(out, hg, nil)
 
 	// Add hash to profile
 	hash, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "large", "header"))
 	if aerr != nil {
-		return err
+		return "", err
 	}
 	profile, err := n.GetProfile()
 	if err != nil {
-		return err
+		return "", err
 	}
 	profile.HeaderHash = hash
 	err = n.UpdateProfile(&profile)
 	if aerr != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return hash, nil
 }
 
 func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (string, error) {
