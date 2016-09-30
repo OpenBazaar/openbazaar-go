@@ -263,72 +263,146 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received REJECT message from %s", p.Pretty())
-	orderId := string(pmes.Payload.Value)
-
-	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	rejectMsg := new(pb.OrderReject)
+	err := proto.Unmarshal(pmes.Payload.Value, rejectMsg)
 	if err != nil {
 		return nil, err
 	}
 
-	// Sweep the temp address into our wallet
-	var utxos []spvwallet.Utxo
-	for _, r := range records {
-		if !r.Spent && r.Value > 0 {
-			u := spvwallet.Utxo{}
-			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-			if err != nil {
-				return nil, err
+	// Load the order
+	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		// Sweep the address into our wallet
+		var utxos []spvwallet.Utxo
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				u := spvwallet.Utxo{}
+				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+				if err != nil {
+					return nil, err
+				}
+				u.ScriptPubkey = scriptBytes
+				hash, err := chainhash.NewHashFromStr(r.Txid)
+				if err != nil {
+					return nil, err
+				}
+				outpoint := wire.NewOutPoint(hash, r.Index)
+				u.Op = *outpoint
+				u.Value = r.Value
+				utxos = append(utxos, u)
 			}
-			u.ScriptPubkey = scriptBytes
-			hash, err := chainhash.NewHashFromStr(r.Txid)
-			if err != nil {
-				return nil, err
+		}
+
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return nil, err
+		}
+		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+		mECKey, err := mPrivKey.ECPrivKey()
+		if err != nil {
+			return nil, err
+		}
+		hdKey := hd.NewExtendedKey(
+			service.node.Wallet.Params().HDPrivateKeyID[:],
+			mECKey.Serialize(),
+			chaincode,
+			parentFP,
+			0,
+			0,
+			true)
+
+		buyerKey, err := hdKey.Child(0)
+		if err != nil {
+			return nil, err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		err = service.node.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var ins []spvwallet.TransactionInput
+		var outValue int64
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return nil, err
+				}
+				outValue += r.Value
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				ins = append(ins, in)
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
-			u.Op = *outpoint
-			u.Value = r.Value
-			utxos = append(utxos, u)
+		}
+
+		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		if err != nil {
+			return nil, err
+		}
+		var output spvwallet.TransactionOutput
+		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		if err != nil {
+			return nil, err
+		}
+		output.ScriptPubKey = outputScript
+		output.Value = outValue
+
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return nil, err
+		}
+		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+		mECKey, err := mPrivKey.ECPrivKey()
+		if err != nil {
+			return nil, err
+		}
+		hdKey := hd.NewExtendedKey(
+			service.node.Wallet.Params().HDPrivateKeyID[:],
+			mECKey.Serialize(),
+			chaincode,
+			parentFP,
+			0,
+			0,
+			true)
+
+		buyerKey, err := hdKey.Child(0)
+		if err != nil {
+			return nil, err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+
+		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		if err != nil {
+			return nil, err
+		}
+		var vendorSignatures []spvwallet.Signature
+		for _, s := range rejectMsg.Sigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			vendorSignatures = append(vendorSignatures, sig)
+		}
+		err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
-	if err != nil {
-		return nil, err
-	}
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-	mPrivKey := service.node.Wallet.MasterPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	mECKey, err := mPrivKey.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	hdKey := hd.NewExtendedKey(
-		service.node.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincode,
-		parentFP,
-		0,
-		0,
-		true)
-
-	buyerKey, err := hdKey.Child(0)
-	if err != nil {
-		return nil, err
-	}
-	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-	err = service.node.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
-	if err != nil {
-		return nil, err
-	}
-
 	// Set message state to confirmed
-	service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_REJECTED, false)
+	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_REJECTED, false)
 
 	// Send notification to websocket
-	n := notifications.Serialize(notifications.OrderCancelNotification{orderId})
+	n := notifications.Serialize(notifications.OrderCancelNotification{rejectMsg.OrderID})
 	service.broadcast <- n
 
 	return nil, nil

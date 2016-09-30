@@ -96,7 +96,6 @@ func (ts *TxStore) PopulateAdrs() error {
 // gain, a loss, or no result.  Gain or loss in satoshis is returned.
 func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	var hits uint32
-	var watchedHits uint32
 	var err error
 	// tx has been OK'd by SPV; check tx sanity
 	utilTx := btcutil.NewTx(tx) // convert for validation
@@ -140,8 +139,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				newu.Freeze = false
 				ts.db.Utxos().Put(newu)
 				hits++
-				// For listener
-				out.IsOurs = true
 				break // txos can match only 1 script
 			}
 		}
@@ -158,7 +155,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				newu.Op = newop
 				newu.Freeze = true
 				ts.db.Utxos().Put(newu)
-				watchedHits++
+				hits++
 			}
 		}
 		cb.Outputs = append(cb.Outputs, out)
@@ -179,12 +176,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				ts.db.Utxos().Delete(u)
 				utxos = append(utxos[:i], utxos[i+1:]...)
 
-				// For listener
-				ours := true
-				if u.Freeze {
-					ours = false
-				}
-				in := TransactionInput{OutpointHash: u.Op.Hash.CloneBytes(), OutpointIndex: u.Op.Index, LinkedScriptPubKey: u.ScriptPubkey, Value: u.Value, IsOurs: ours}
+				in := TransactionInput{OutpointHash: u.Op.Hash.CloneBytes(), OutpointIndex: u.Op.Index, LinkedScriptPubKey: u.ScriptPubkey, Value: u.Value}
 				cb.Inputs = append(cb.Inputs, in)
 				break
 			}
@@ -192,18 +184,16 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	}
 
 	// if hits is nonzero it's a relevant tx and we should store it
-	if hits > 0 || watchedHits > 0 {
+	if hits > 0 {
 		_, err := ts.db.Txns().Get(tx.TxHash())
 		if err != nil {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
 				listener(cb)
 			}
-			if hits > 0 {
-				ts.db.Txns().Put(tx)
-			}
+			ts.db.Txns().Put(tx)
 			ts.PopulateAdrs()
 		}
 	}
-	return hits + watchedHits, err
+	return hits, err
 }

@@ -1035,7 +1035,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 			return
 		}
 	} else {
-		err := i.node.RejectOfflineOrder(contract)
+		err := i.node.RejectOfflineOrder(contract, records)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

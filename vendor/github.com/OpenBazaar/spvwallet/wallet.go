@@ -232,7 +232,6 @@ type TransactionOutput struct {
 	ScriptPubKey []byte
 	Value        int64
 	Index        uint32
-	IsOurs       bool
 }
 
 type TransactionInput struct {
@@ -240,7 +239,6 @@ type TransactionInput struct {
 	OutpointIndex      uint32
 	LinkedScriptPubKey []byte
 	Value              int64
-	IsOurs             bool
 }
 
 // A transaction suitable for saving in the database
@@ -250,6 +248,11 @@ type TransactionRecord struct {
 	Value        int64
 	ScriptPubKey string
 	Spent        bool
+}
+
+type Signature struct {
+	InputIndex uint32
+	Signature  []byte
 }
 
 func (w *SPVWallet) CurrencyCode() string {
@@ -333,7 +336,6 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int)
 		return nil, nil, err
 	}
 	return addr, redeemScript, nil
-
 }
 
 func (w *SPVWallet) Close() {

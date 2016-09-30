@@ -312,6 +312,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 		contract.BuyerOrder.Payment = payment
+		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
