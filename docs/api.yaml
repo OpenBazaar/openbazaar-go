@@ -1321,6 +1321,41 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/refund:
+    post:
+      tags:
+        - Orders
+      summary: Refund an order
+      description: Refund the order. If it's a moderated order, it will release the funds back to the buyer. If it's direct it will send the coins from your wallet.
+      operationId: PostRefund
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Refund object
+          required: true
+          schema:
+            $ref: '#/definitions/Refund'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'      
   /ob/order/{orderId}:
     post:
       tags:
@@ -1514,6 +1549,14 @@ definitions:
         description: The unconfirmed balance in satoshi
         type: integer
         example: 1700000
+  Refund:
+    description: A refund object
+    type: object
+    properties:
+      orderId:
+        description: The base58 multihash encoded order ID to refund 
+        type: string
+        example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
   Inventory:
     description: Inventory object
     type: object
