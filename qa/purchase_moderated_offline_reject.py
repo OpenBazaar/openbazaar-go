@@ -159,7 +159,7 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Order confirmation post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         # alice check order rejected correctly

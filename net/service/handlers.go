@@ -35,6 +35,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOrderCancel
 	case pb.Message_ORDER_REJECT:
 		return service.handleReject
+	case pb.Message_REFUND:
+		return service.handleRefund
 	default:
 		return nil
 	}
@@ -255,7 +257,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 		return nil, err
 	}
 
-	// Set message state to confirmed
+	// Set message state to canceled
 	service.datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, false)
 
 	return nil, nil
@@ -398,11 +400,105 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		}
 	}
 
-	// Set message state to confirmed
+	// Set message state to rejected
 	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_REJECTED, false)
 
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.OrderCancelNotification{rejectMsg.OrderID})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received REFUND message from %s", p.Pretty())
+	refundMsg := new(pb.Refund)
+	err := proto.Unmarshal(pmes.Payload.Value, refundMsg)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(refundMsg.OrderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		var ins []spvwallet.TransactionInput
+		var outValue int64
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return nil, err
+				}
+				outValue += r.Value
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				ins = append(ins, in)
+			}
+		}
+
+		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		if err != nil {
+			return nil, err
+		}
+		var output spvwallet.TransactionOutput
+		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		if err != nil {
+			return nil, err
+		}
+		output.ScriptPubKey = outputScript
+		output.Value = outValue
+
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return nil, err
+		}
+		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+		mECKey, err := mPrivKey.ECPrivKey()
+		if err != nil {
+			return nil, err
+		}
+		hdKey := hd.NewExtendedKey(
+			service.node.Wallet.Params().HDPrivateKeyID[:],
+			mECKey.Serialize(),
+			chaincode,
+			parentFP,
+			0,
+			0,
+			true)
+
+		buyerKey, err := hdKey.Child(0)
+		if err != nil {
+			return nil, err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+
+		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		if err != nil {
+			return nil, err
+		}
+		var vendorSignatures []spvwallet.Signature
+		for _, s := range refundMsg.Sigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			vendorSignatures = append(vendorSignatures, sig)
+		}
+		err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Set message state to refunded
+	service.datastore.Purchases().Put(refundMsg.OrderID, *contract, pb.OrderState_REFUNDED, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.RefundNotification{refundMsg.OrderID})
 	service.broadcast <- n
 
 	return nil, nil

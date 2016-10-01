@@ -1142,3 +1142,32 @@ func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
 	go shutdown()
 	return
 }
+
+func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
+	type orderCancel struct {
+		OrderId string `json:"orderId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var can orderCancel
+	err := decoder.Decode(&can)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
+	if state != pb.OrderState_FUNDED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be funded before refunding")
+		return
+	}
+	err = i.node.RefundOrder(contract, records)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}

@@ -215,7 +215,12 @@ message OrderFulfillment {}
 message Rating {}
 message Dispute {}
 message DisputeResolution {}
-message Refund {}
+
+message Refund {
+    string orderID                 = 1;
+    repeated BitcoinSignature sigs = 2;
+    string memo                    = 3;
+}
 
 message ID {
     string guid         = 1;
