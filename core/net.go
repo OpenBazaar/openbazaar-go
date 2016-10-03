@@ -224,7 +224,7 @@ func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject
 	return nil
 }
 
-func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.Refund) error {
+func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianContract) error {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err

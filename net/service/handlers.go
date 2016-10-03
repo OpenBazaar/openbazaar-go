@@ -412,14 +412,18 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received REFUND message from %s", p.Pretty())
-	refundMsg := new(pb.Refund)
-	err := proto.Unmarshal(pmes.Payload.Value, refundMsg)
+	rc := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, rc)
 	if err != nil {
 		return nil, err
 	}
 
+	if err := service.node.VerifySignaturesOnRefund(rc); err != nil {
+		return nil, err
+	}
+
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(refundMsg.OrderID)
+	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -484,7 +488,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		var vendorSignatures []spvwallet.Signature
-		for _, s := range refundMsg.Sigs {
+		for _, s := range rc.Refund.Sigs {
 			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
@@ -493,12 +497,18 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 	}
-	// TODO: add reund obj to contract before saving
+	contract.Refund = rc.Refund
+	for _, sig := range contract.Signatures {
+		if sig.Section == pb.Signatures_REFUND {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+
 	// Set message state to refunded
-	service.datastore.Purchases().Put(refundMsg.OrderID, *contract, pb.OrderState_REFUNDED, false)
+	service.datastore.Purchases().Put(contract.Refund.OrderID, *contract, pb.OrderState_REFUNDED, false)
 
 	// Send notification to websocket
-	n := notifications.Serialize(notifications.RefundNotification{refundMsg.OrderID})
+	n := notifications.Serialize(notifications.RefundNotification{contract.Refund.OrderID})
 	service.broadcast <- n
 
 	return nil, nil
