@@ -194,9 +194,11 @@ message Order {
 
 message OrderConfirmation {
     string orderID         = 1;
+    // Direct payments only
     string paymentAddress  = 2;
     uint64 requestedAmount = 3;
     uint64 payoutFee       = 4;
+
     bytes ratingSignature  = 5;
 }
 
@@ -210,8 +212,38 @@ message BitcoinSignature {
     bytes signature   = 2;
 }
 
+message OrderFulfillment {
+    string orderId                    = 1;
+
+    // Physical goods only
+    PhysicalDelivery physicalDelivery = 2;
+
+    //Digital goods only
+    DigitalDelivery digitalDelivery   = 3;
+
+    // Moderated payments only
+    Payout payout                     = 4;
+
+    bytes ratingSignature             = 5;
+
+    message PhysicalDelivery {
+        string shipper            = 1;
+        string trackingNumber     = 2;
+    }
+
+    message DigitalDelivery {
+        string url                = 1;
+        string password           = 2;
+    }
+
+    message Payout {
+        repeated BitcoinSignature sigs = 1;
+        string payoutAddress           = 2;
+        uint64 payoutFee               = 3;
+    }
+}
+
 // TODO: complete other messages
-message OrderFulfillment {}
 message Rating {}
 message Dispute {}
 message DisputeResolution {}

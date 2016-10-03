@@ -447,8 +447,8 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	// Override config file preference if this is Mainnet and open internet.
-	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name {
+	// Override config file preference if this is Mainnet, open internet and api enabled
+	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
 

@@ -493,7 +493,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 	}
-
+	// TODO: add reund obj to contract before saving
 	// Set message state to refunded
 	service.datastore.Purchases().Put(refundMsg.OrderID, *contract, pb.OrderState_REFUNDED, false)
 
