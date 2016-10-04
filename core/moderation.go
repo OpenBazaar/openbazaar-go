@@ -78,7 +78,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	// Publish pointer
 	ctx := context.Background()
 
-	b, err := multihash.Encode([]byte("/ipns/"+n.IpfsNode.Identity.Pretty()+"/moderation"), multihash.SHA1)
+	b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)
 	if err != nil {
 		return err
 	}

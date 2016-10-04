@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -9,8 +10,13 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/jsonpb"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	routing "github.com/ipfs/go-ipfs/routing/dht"
+	"github.com/jbenet/go-multiaddr"
+	"github.com/jbenet/go-multihash"
+	"golang.org/x/net/context"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"net/http"
 	"net/http/httputil"
@@ -1170,4 +1176,85 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, `{}`)
 	return
+}
+
+func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("async")
+	async, _ := strconv.ParseBool(query)
+
+	ctx := context.Background()
+	if !async {
+		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		var mods []string
+		for _, p := range peerInfoList {
+			addr := p.Addrs[0]
+			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
+				continue
+			}
+			val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
+			if err != nil {
+				continue
+			}
+			mh, err := multihash.FromB58String(val)
+			if err != nil {
+				continue
+			}
+			d, err := multihash.Decode(mh)
+			if err != nil {
+				continue
+			}
+			mods = append(mods, string(d.Digest))
+		}
+		resp, err := json.MarshalIndent(mods, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(resp))
+	} else {
+		idBytes := make([]byte, 16)
+		rand.Read(idBytes)
+		id := base58.Encode(idBytes)
+
+		type resp struct {
+			Id string `json:"id"`
+		}
+		response := resp{id}
+		respJson, _ := json.MarshalIndent(response, "", "    ")
+		fmt.Fprint(w, string(respJson))
+		peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
+
+		type wsResp struct {
+			Id        string `json:"id"`
+			Moderator string `json:"moderator"`
+		}
+		for p := range peerChan {
+			addr := p.Addrs[0]
+			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
+				continue
+			}
+			val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
+			if err != nil {
+				continue
+			}
+			mh, err := multihash.FromB58String(val)
+			if err != nil {
+				continue
+			}
+			d, err := multihash.Decode(mh)
+			if err != nil {
+				continue
+			}
+			resp := wsResp{id, string(d.Digest)}
+			respJson, err := json.MarshalIndent(resp, "", "    ")
+			if err != nil {
+				continue
+			}
+			i.node.Broadcast <- respJson
+		}
+	}
 }

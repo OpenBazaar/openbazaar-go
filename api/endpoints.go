@@ -143,6 +143,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETOrder(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/moderators") {
+		i.GETModerators(w, r)
+		return
+	}
 }
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
