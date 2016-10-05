@@ -54,6 +54,13 @@ class OpenBazaarTestFramework(object):
     def run_test(self):
         raise NotImplementedError
 
+    def send_bitcoin_cmd(self, *args):
+        try:
+            self.bitcoin_api.call(*args)
+        except BrokenPipeError:
+            self.bitcoin_api = rpc.Proxy(btc_conf_file=self.btc_config)
+            self.send_bitcoin_cmd(*args)
+
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
         args = [self.binary, "init", "-d", dir_path, "--testnet"]
@@ -113,6 +120,7 @@ class OpenBazaarTestFramework(object):
             os.makedirs(dir_path)
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
         copyfile(os.path.join(os.getcwd(), "testdata", "bitcoin.conf"), btc_conf_file)
+        self.btc_config = btc_conf_file
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_bitcoind_start(process, btc_conf_file)

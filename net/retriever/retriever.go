@@ -64,13 +64,13 @@ func (m *MessageRetriever) fetchPointers() {
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
 			// ipfs
-			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == 421 {
+			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS {
 				wg.Add(1)
 				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
 			}
 			// https
-			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == 421 && p.Addrs[0].Protocols()[1].Code == 443 {
-				enc, err := p.Addrs[0].ValueForProtocol(421)
+			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS && p.Addrs[0].Protocols()[1].Code == ma.P_HTTPS {
+				enc, err := p.Addrs[0].ValueForProtocol(ma.P_IPFS)
 				if err != nil {
 					continue
 				}
@@ -198,7 +198,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 	}
 
 	// dispatch handler.
-	_, err := handler(*id, env.Message)
+	_, err := handler(*id, env.Message, true)
 	if err != nil {
 		log.Debugf("handle message error: %s", err)
 		return

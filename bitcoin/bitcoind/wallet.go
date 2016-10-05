@@ -1,16 +1,19 @@
 package bitcoind
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcrpcclient"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcutil/txsort"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"io/ioutil"
@@ -159,6 +162,127 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 	return err
 }
 
+func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
+	b := json.RawMessage([]byte(`1`))
+	defautlFee := uint64(50)
+	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{b})
+	if err != nil {
+		return defautlFee
+	}
+	feePerKb, err := strconv.Atoi(string(resp))
+	if err != nil {
+		return defautlFee
+	}
+	if feePerKb <= 0 {
+		return defautlFee
+	}
+	fee := feePerKb / 1000
+	return uint64(fee)
+}
+
+func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error) {
+	var sigs []spvwallet.Signature
+	tx := new(wire.MsgTx)
+	for _, in := range ins {
+		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
+		if err != nil {
+			return sigs, err
+		}
+		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
+		input := wire.NewTxIn(outpoint, []byte{})
+		tx.TxIn = append(tx.TxIn, input)
+	}
+	for _, out := range outs {
+		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		tx.TxOut = append(tx.TxOut, output)
+	}
+
+	// Subtract fee
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	fee := estimatedSize * int(feePerByte)
+	feePerOutput := fee / len(tx.TxOut)
+	for _, output := range tx.TxOut {
+		output.Value -= int64(feePerOutput)
+	}
+
+	// BIP 69 sorting
+	txsort.InPlaceSort(tx)
+
+	signingKey, err := key.ECPrivKey()
+	if err != nil {
+		return sigs, err
+	}
+
+	for i := range tx.TxIn {
+		sig, err := txscript.RawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey)
+		if err != nil {
+			continue
+		}
+		bs := spvwallet.Signature{InputIndex: uint32(i), Signature: sig}
+		sigs = append(sigs, bs)
+	}
+	return sigs, nil
+}
+
+func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64) error {
+	tx := new(wire.MsgTx)
+	for _, in := range ins {
+		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
+		if err != nil {
+			return err
+		}
+		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
+		input := wire.NewTxIn(outpoint, []byte{})
+		tx.TxIn = append(tx.TxIn, input)
+	}
+	for _, out := range outs {
+		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		tx.TxOut = append(tx.TxOut, output)
+	}
+
+	// Subtract fee
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	fee := estimatedSize * int(feePerByte)
+	feePerOutput := fee / len(tx.TxOut)
+	for _, output := range tx.TxOut {
+		output.Value -= int64(feePerOutput)
+	}
+
+	// BIP 69 sorting
+	txsort.InPlaceSort(tx)
+
+	for i, input := range tx.TxIn {
+		var sig1 []byte
+		var sig2 []byte
+		for _, sig := range sigs1 {
+			if int(sig.InputIndex) == i {
+				sig1 = sig.Signature
+			}
+		}
+		for _, sig := range sigs2 {
+			if int(sig.InputIndex) == i {
+				sig2 = sig.Signature
+			}
+		}
+		builder := txscript.NewScriptBuilder()
+		builder.AddOp(txscript.OP_0)
+		builder.AddData(sig1)
+		builder.AddData(sig2)
+		builder.AddData(redeemScript)
+		scriptSig, err := builder.Script()
+		if err != nil {
+			return err
+		}
+		input.SignatureScript = scriptSig
+	}
+	// Broadcast
+	_, err := w.rpcClient.SendRawTransaction(tx, false)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedKey, redeemScript []byte, feeLevel spvwallet.FeeLevel) error {
 	internalAddr := w.CurrentAddress(spvwallet.INTERNAL)
 	script, err := txscript.PayToAddrScript(internalAddr)
@@ -190,7 +314,7 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedK
 		return err
 	}
 	if feePerKb <= 0 {
-		feePerKb = 20000
+		feePerKb = 50000
 	}
 	fee := estimatedSize * (feePerKb / 1000)
 
@@ -206,6 +330,9 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedK
 		TxOut:    []*wire.TxOut{out},
 		LockTime: 0,
 	}
+
+	// BIP 69 sorting
+	txsort.InPlaceSort(tx)
 
 	// Sign tx
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
@@ -239,7 +366,6 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedK
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

@@ -66,6 +66,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/ordercancel", "/ob/ordercancel/":
 		i.POSTOrderCancel(w, r)
 		return
+	case "/ob/refund", "/ob/refund/":
+		i.POSTRefund(w, r)
+		return
 	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
 		i.POSTResyncBlockchain(w, r)
 		return
@@ -138,6 +141,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 	if strings.Contains(path, "/ob/order") {
 		i.GETOrder(w, r)
+		return
+	}
+	if strings.Contains(path, "/ob/moderators") {
+		i.GETModerators(w, r)
 		return
 	}
 }

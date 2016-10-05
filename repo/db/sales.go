@@ -50,7 +50,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		shippingAddress = strings.ToLower(contract.BuyerOrder.Shipping.Address)
 	}
 	var address string
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		address = contract.BuyerOrder.Payment.Address
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		address = contract.VendorOrderConfirmation.PaymentAddress

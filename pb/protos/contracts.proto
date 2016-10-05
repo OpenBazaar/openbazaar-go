@@ -137,13 +137,14 @@ message Listing {
 
 message Order {
     string refundAddress                 = 1;
-    Shipping shipping                    = 2;
-    ID buyerID                           = 3;
-    google.protobuf.Timestamp timestamp  = 4;
-    repeated Item items                  = 5;
-    Payment payment                      = 6;
-    bytes ratingKey                      = 7;
-    string alternateContactInfo          = 8;
+    uint64 refundFee                     = 2;
+    Shipping shipping                    = 3;
+    ID buyerID                           = 4;
+    google.protobuf.Timestamp timestamp  = 5;
+    repeated Item items                  = 6;
+    Payment payment                      = 7;
+    bytes ratingKey                      = 8;
+    string alternateContactInfo          = 9;
 
     message Shipping {
         string shipTo       = 1;
@@ -193,17 +194,65 @@ message Order {
 
 message OrderConfirmation {
     string orderID         = 1;
+    // Direct payments only
     string paymentAddress  = 2;
     uint64 requestedAmount = 3;
-    bytes ratingSignature  = 4;
+    uint64 payoutFee       = 4;
+
+    bytes ratingSignature  = 5;
+}
+
+message OrderReject {
+    string orderID                 = 1;
+    repeated BitcoinSignature sigs = 2;
+}
+
+message BitcoinSignature {
+    uint32 inputIndex = 1;
+    bytes signature   = 2;
+}
+
+message OrderFulfillment {
+    string orderId                    = 1;
+
+    // Physical goods only
+    PhysicalDelivery physicalDelivery = 2;
+
+    //Digital goods only
+    DigitalDelivery digitalDelivery   = 3;
+
+    // Moderated payments only
+    Payout payout                     = 4;
+
+    bytes ratingSignature             = 5;
+
+    message PhysicalDelivery {
+        string shipper            = 1;
+        string trackingNumber     = 2;
+    }
+
+    message DigitalDelivery {
+        string url                = 1;
+        string password           = 2;
+    }
+
+    message Payout {
+        repeated BitcoinSignature sigs = 1;
+        string payoutAddress           = 2;
+        uint64 payoutFee               = 3;
+    }
 }
 
 // TODO: complete other messages
-message OrderFulfillment {}
 message Rating {}
 message Dispute {}
 message DisputeResolution {}
-message Refund {}
+
+message Refund {
+    string orderID                 = 1;
+    repeated BitcoinSignature sigs = 2;
+    string memo                    = 3;
+}
 
 message ID {
     string guid         = 1;
