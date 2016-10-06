@@ -213,18 +213,18 @@ message BitcoinSignature {
 }
 
 message OrderFulfillment {
-    string orderId                    = 1;
+    string orderId                             = 1;
 
     // Physical goods only
-    PhysicalDelivery physicalDelivery = 2;
+    repeated PhysicalDelivery physicalDelivery = 2;
 
     //Digital goods only
-    DigitalDelivery digitalDelivery   = 3;
+    repeated DigitalDelivery digitalDelivery   = 3;
 
     // Moderated payments only
-    Payout payout                     = 4;
+    Payout payout                              = 4;
 
-    bytes ratingSignature             = 5;
+    bytes ratingSignature                      = 5;
 
     message PhysicalDelivery {
         string shipper            = 1;
@@ -239,7 +239,7 @@ message OrderFulfillment {
     message Payout {
         repeated BitcoinSignature sigs = 1;
         string payoutAddress           = 2;
-        uint64 payoutFee               = 3;
+        uint64 payoutFeePerByte        = 3;
     }
 }
 
@@ -274,8 +274,8 @@ message Signatures {
         NA                 = 0;
         LISTING            = 1;
         ORDER              = 2;
-        ORDER_ACCEPTANCE   = 3;
-        ORDER_CONFIRMATION = 4;
+        ORDER_CONFIRMATION = 3;
+        ORDER_FULFILLMENT  = 4;
         RATING             = 5;
         DISPUTE            = 6;
         DISPUTE_RESOLUTION = 7;

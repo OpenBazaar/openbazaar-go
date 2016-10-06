@@ -513,3 +513,39 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 
 	return nil, nil
 }
+
+func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
+
+	rc := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment.OrderId)
+	if err != nil {
+		return nil, err
+	}
+
+	contract.VendorOrderFulfillment = rc.VendorOrderFulfillment
+	for _, sig := range contract.Signatures {
+		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+
+	if err := service.node.ValidateOrderFulfillment(contract); err != nil {
+		return nil, err
+	}
+
+	// Set message state to fulfilled
+	service.datastore.Purchases().Put(rc.VendorOrderFulfillment.OrderId, *contract, pb.OrderState_FULFILLED, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.RefundNotification{rc.VendorOrderFulfillment.OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
