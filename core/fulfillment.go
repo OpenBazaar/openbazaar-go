@@ -17,6 +17,7 @@ import (
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
 		payout.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
@@ -93,21 +94,29 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		return err
 	}
 	fulfillment.RatingSignature = sig
-	contract.VendorOrderFulfillment = fulfillment
-	contract, err = n.SignOrderFulfillment(contract)
+	fulfils := []*pb.OrderFulfillment{}
+
+	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
+	rc, err = n.SignOrderFulfillment(rc)
 	if err != nil {
 		return err
 	}
-	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.Guid, contract)
+	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.Guid, rc)
 	if err != nil {
 		return err
+	}
+	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, fulfillment)
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
 	}
 	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
 	return nil
 }
 
 func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
-	serializedOrderFulfil, err := proto.Marshal(contract.VendorOrderFulfillment)
+	serializedOrderFulfil, err := proto.Marshal(contract.VendorOrderFulfillment[0])
 	if err != nil {
 		return contract, err
 	}
@@ -135,41 +144,24 @@ func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*
 	return contract, nil
 }
 
-func (n *OpenBazaarNode) ValidateOrderFulfillment(contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract) error {
 	if err := verifySignaturesOnOrderFulfilment(contract); err != nil {
 		return err
-	}
-	var physicalOrders int
-	var digitalOrders int
-
-	for _, l := range contract.VendorListings {
-		if l.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD {
-			digitalOrders++
-		} else if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
-			physicalOrders++
-		}
-	}
-
-	if physicalOrders > 0 && len(contract.VendorOrderFulfillment.PhysicalDelivery) == 0 {
-		return errors.New("Fulfillment message doesn't contain digitial delivery info")
-	}
-	if digitalOrders > 0 && len(contract.VendorOrderFulfillment.DigitalDelivery) == 0 {
-		return errors.New("Fulfillment message doesn't contain physical delivery info")
 	}
 
 	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
 	if err != nil {
 		return err
 	}
-	valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, contract.VendorOrderConfirmation.RatingSignature)
+	valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, fulfillment.RatingSignature)
 	if err != nil || !valid {
 		return errors.New("Failed to verify signature on rating keys")
 	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		if contract.VendorOrderFulfillment.Payout == nil {
+		if fulfillment.Payout == nil {
 			return errors.New("Payout object for multisig is nil")
 		}
-		_, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment.Payout.PayoutAddress, n.Wallet.Params())
+		_, err := btcutil.DecodeAddress(fulfillment.Payout.PayoutAddress, n.Wallet.Params())
 		if err != nil {
 			return errors.New("Invalid payout address")
 		}
@@ -178,62 +170,75 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(contract *pb.RicardianContract
 }
 
 func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
-	guidPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Guid
-	bitcoinPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Bitcoin
-	guid := contract.VendorListings[0].VendorID.Guid
-	ser, err := proto.Marshal(contract.VendorOrderFulfillment)
-	if err != nil {
-		return err
-	}
-	hash := sha256.Sum256(ser)
-	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-	if err != nil {
-		return err
-	}
-	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
-	if err != nil {
-		return err
-	}
-	var guidSig []byte
-	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
-	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER_FULFILLMENT {
-			sig = s
-			sigExists = true
-			break
+	for i, fulfil := range contract.VendorOrderFulfillment {
+		guidPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Guid
+		bitcoinPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Bitcoin
+		guid := contract.VendorListings[0].VendorID.Guid
+		ser, err := proto.Marshal(fulfil)
+		if err != nil {
+			return err
+		}
+		hash := sha256.Sum256(ser)
+		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
+		if err != nil {
+			return err
+		}
+		bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+		if err != nil {
+			return err
+		}
+		var guidSig []byte
+		var bitcoinSig *btcec.Signature
+		var sig *pb.Signatures
+		sigExists := false
+		a := 0
+		for _, s := range contract.Signatures {
+			if s.Section == pb.Signatures_ORDER_FULFILLMENT {
+				if a == i {
+					sig = s
+					sigExists = true
+				}
+				a++
+				break
+			}
+		}
+		if !sigExists {
+			return errors.New("Contract does not contain a signature for the order fulfilment")
+		}
+		guidSig = sig.Guid
+		bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
+		if err != nil {
+			return err
+		}
+		valid, err := guidPubkey.Verify(ser, guidSig)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return errors.New("Vendor's guid signature on contact failed to verify")
+		}
+		checkKeyHash, err := guidPubkey.Hash()
+		if err != nil {
+			return err
+		}
+		guidMH, err := multihash.FromB58String(guid)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(guidMH, checkKeyHash) {
+			return errors.New("Public key in order does not match reported vendor ID")
+		}
+		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
+		if !valid {
+			return errors.New("Vendors's bitcoin signature on contact failed to verify")
 		}
 	}
-	if !sigExists {
-		return errors.New("Contract does not contain a signature for the order fulfilment")
-	}
-	guidSig = sig.Guid
-	bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-	if err != nil {
-		return err
-	}
-	valid, err := guidPubkey.Verify(ser, guidSig)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return errors.New("Vendor's guid signature on contact failed to verify")
-	}
-	checkKeyHash, err := guidPubkey.Hash()
-	if err != nil {
-		return err
-	}
-	guidMH, err := multihash.FromB58String(guid)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(guidMH, checkKeyHash) {
-		return errors.New("Public key in order does not match reported vendor ID")
-	}
-	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
-	if !valid {
-		return errors.New("Vendors's bitcoin signature on contact failed to verify")
-	}
 	return nil
+}
+
+func (n *OpenBazaarNode) IsFulfilled(contract *pb.RicardianContract) bool {
+	if len(contract.VendorOrderFulfillment) < len(contract.VendorListings) {
+		return false
+	}
+	return true
 }

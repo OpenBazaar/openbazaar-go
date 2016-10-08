@@ -37,6 +37,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleReject
 	case pb.Message_REFUND:
 		return service.handleRefund
+	case pb.Message_ORDER_FULFILLMENT:
+		return service.handleOrderFulfillment
 	default:
 		return nil
 	}
@@ -524,27 +526,29 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment.OrderId)
+	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
 		return nil, err
 	}
 
-	contract.VendorOrderFulfillment = rc.VendorOrderFulfillment
-	for _, sig := range contract.Signatures {
+	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
+	for _, sig := range rc.Signatures {
 		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
 
-	if err := service.node.ValidateOrderFulfillment(contract); err != nil {
+	if err := service.node.ValidateOrderFulfillment(rc.VendorOrderFulfillment[0], contract); err != nil {
 		return nil, err
 	}
 
-	// Set message state to fulfilled
-	service.datastore.Purchases().Put(rc.VendorOrderFulfillment.OrderId, *contract, pb.OrderState_FULFILLED, false)
+	// Set message state to fulfilled if all listings have a matching fulfillment message
+	if service.node.IsFulfilled(contract) {
+		service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_FULFILLED, false)
+	}
 
 	// Send notification to websocket
-	n := notifications.Serialize(notifications.RefundNotification{rc.VendorOrderFulfillment.OrderId})
+	n := notifications.Serialize(notifications.RefundNotification{rc.VendorOrderFulfillment[0].OrderId})
 	service.broadcast <- n
 
 	return nil, nil
