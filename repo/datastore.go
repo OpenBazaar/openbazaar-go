@@ -154,6 +154,9 @@ type Sales interface {
 	// Save or update a sale
 	Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error
 
+	// Mark an order as read in the database
+	MarkAsRead(orderID string) error
+
 	// Update the funding level for the contract
 	UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error
 

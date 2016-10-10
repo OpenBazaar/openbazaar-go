@@ -5,7 +5,7 @@ from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
 
-class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
+class RejectModeratedOffline(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
@@ -24,9 +24,9 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             address = resp["address"]
         elif r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Address endpoint not found")
+            raise TestFailure("RejectModeratedOffline - FAIL: Address endpoint not found")
         else:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Unknown response")
+            raise TestFailure("RejectModeratedOffline - FAIL: Unknown response")
         self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
         self.send_bitcoin_cmd("generate", 125)
@@ -62,17 +62,17 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("RejectModeratedOffline - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("RejectModeratedOffline - FAIL: Listing POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Couldn't get listing index")
+            raise TestFailure("RejectModeratedOffline - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -93,27 +93,27 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("RejectModeratedOffline - FAIL: Purchase post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("RejectModeratedOffline - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
         if resp["vendorOnline"] == True:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Purchase returned vendor is online")
+            raise TestFailure("RejectModeratedOffline - FAIL: Purchase returned vendor is online")
 
         # check the purchase saved correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Bob purchase saved in incorrect state")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Bob incorrectly saved as funded")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as funded")
 
         # fund order
         spend = {
@@ -124,22 +124,22 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Spend post endpoint not found")
+            raise TestFailure("RejectModeratedOffline - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("RejectModeratedOffline - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         time.sleep(5)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if len(resp["transactions"]) <= 0:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Bob failed to detect his payment")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Bob incorrectly saved as unfunded")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as unfunded")
 
         # generate one more block containing this tx
         self.send_bitcoin_cmd("generate", 1)
@@ -156,10 +156,10 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
         }
         r = requests.post(api_url, data=json.dumps(oc, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: Order confirmation post endpoint not found")
+            raise TestFailure("RejectModeratedOffline - FAIL: Order confirmation post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineRejectTest - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("RejectModeratedOffline - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         # alice check order rejected correctly
@@ -196,8 +196,8 @@ class PurchaseModeratedOfflineRejectTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Failed to query Bob's balance")
 
-        print("PurchaseModeratedOfflineRejectTest - PASS")
+        print("RejectModeratedOffline - PASS")
 
 if __name__ == '__main__':
-    print("Running PurchaseModeratedOfflineRejectTest")
-    PurchaseModeratedOfflineRejectTest().main(["--regtest", "--disableexchangerates"])
+    print("Running RejectModeratedOffline")
+    RejectModeratedOffline().main(["--regtest", "--disableexchangerates"])

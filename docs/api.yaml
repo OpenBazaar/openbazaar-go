@@ -1006,6 +1006,36 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/IPFSResponse'  
+  /ob/moderators:
+    get:
+      tags:
+          - Moderator
+      summary: Get a list of moderators
+      description: Returns a list of moderator peer IDs. Since the server must do a network crawl to find the IDs, there are two ways make this query. The default is a simple long polling GET which returns after the crawl completes. If you want to receive the peer IDs asynchronously, add the async parameter to the request and it will return a random ID which can be used to receive the results over the websocket.
+      operationId: GetModerators
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - name: async
+          in: query
+          description: Set this query parameter to true to receive the results over websockets.
+          required: true
+          type: boolean
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ModeratorList'
+        '202':
+          description: OK
+          schema:
+            $ref: '#/definitions/AsyncId'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/IPFSResponse'            
   /ob/inventory:
     post:
       tags:
@@ -1505,6 +1535,26 @@ definitions:
     ] 
     items:
       type: string
+  ModeratorList:
+    description: A list of moderators peer IDs
+    type: array
+    example: [
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+      "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+    ] 
+    items:
+      type: string   
+  AsyncId:
+    description: ID object returned for async moderator requests
+    type: object
+    example: {
+        "id": "XQCy9Mx7yAhxbxJRiVAknR"
+    }
+    properties:
+      id:
+        description: A random ID
+        type: string
   Address:
     description: Bitcoin address object
     type: object

@@ -218,17 +218,20 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
-	// TODO: validating rating signature if moderated
-	/*
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
 		if err != nil {
 			return err
 		}
-		valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, contract.VendorOrderConfirmation.RatingSignature)
-		if err != nil || !valid {
-			return errors.New("Failed to verify signature on rating key")
+		moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
+		if err != nil {
+			return err
 		}
-	*/
+		valid, err := pubkey.Verify(append(contract.BuyerOrder.RatingKey, moderatorKey...), contract.VendorOrderConfirmation.RatingSignature)
+		if err != nil || !valid {
+			return errors.New("Failed to verify signature on rating keys")
+		}
+	}
 	if validateAddress {
 		_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
 		if err != nil {
