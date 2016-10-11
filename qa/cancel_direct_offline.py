@@ -5,7 +5,7 @@ from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
 
-class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
+class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
@@ -23,9 +23,9 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             address = resp["address"]
         elif r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Address endpoint not found")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Address endpoint not found")
         else:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Unknown response")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Unknown response")
         self.bitcoin_api.call("generatetoaddress", 1, address)
         time.sleep(2)
         self.bitcoin_api.call("generate", 125)
@@ -37,17 +37,17 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Couldn't get listing index")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -67,27 +67,27 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
         if resp["vendorOnline"] == True:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Purchase returned vendor is online")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase returned vendor is online")
 
         # check the purchase saved correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob purchase saved in incorrect state")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob incorrectly saved as funded")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
 
         # fund order
         spend = {
@@ -98,44 +98,44 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Spend post endpoint not found")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         time.sleep(5)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if len(resp["transactions"]) <= 0:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob failed to detect his payment")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob incorrectly saved as unfunded")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
 
         # bob cancel order
         api_url = bob["gateway_url"] + "ob/ordercancel"
         cancel = {"orderId": orderId}
         r = requests.post(api_url, data=json.dumps(cancel, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Spend post endpoint not found")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Cancel POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Cancel POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         # bob check order canceled correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "CANCELED":
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob failed to save as canceled")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to save as canceled")
         if len(resp["transactions"]) != 2:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob failed to detect outgoing payment")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
         # startup alice again
         self.start_node(alice)
@@ -145,10 +145,10 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "CANCELED":
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Alice failed to detect order cancellation")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Alice failed to detect order cancellation")
 
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"
@@ -158,12 +158,12 @@ class PurchaseDirectOfflineCancelTest(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed <= 50 - payment_amount:
-                raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Bob failed to receive the multisig payout")
+                raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
-            raise TestFailure("PurchaseDirectOfflineCancelTest - FAIL: Failed to query Bob's balance")
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Failed to query Bob's balance")
 
-        print("PurchaseDirectOfflineCancelTest - PASS")
+        print("CancelDirectOfflineTest - PASS")
 
 if __name__ == '__main__':
-    print("Running PurchaseDirectOfflineCancelTest")
-    PurchaseDirectOfflineCancelTest().main(["--regtest", "--disableexchangerates"])
+    print("Running CancelDirectOfflineTest")
+    CancelDirectOfflineTest().main(["--regtest", "--disableexchangerates"])

@@ -1089,6 +1089,7 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
 	var err error
+	var isSale bool
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var funded bool
@@ -1101,6 +1102,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
+		isSale = true
 	}
 	resp := new(pb.OrderRespApi)
 	resp.Contract = contract
@@ -1128,6 +1130,11 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	if isSale {
+		i.node.Datastore.Sales().MarkAsRead(orderId)
+	} else {
+		i.node.Datastore.Purchases().MarkAsRead(orderId)
 	}
 	fmt.Fprint(w, out)
 }
@@ -1225,6 +1232,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		response := resp{id}
 		respJson, _ := json.MarshalIndent(response, "", "    ")
+		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, string(respJson))
 		peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
@@ -1257,4 +1265,30 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			i.node.Broadcast <- respJson
 		}
 	}
+}
+
+func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var fulfill pb.OrderFulfillment
+	err := decoder.Decode(&fulfill)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
+	if state != pb.OrderState_FUNDED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be funded before fulfilling")
+		return
+	}
+	err = i.node.FulfillOrder(&fulfill, contract, records)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
 }

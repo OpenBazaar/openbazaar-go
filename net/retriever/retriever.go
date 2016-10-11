@@ -31,11 +31,12 @@ type MessageRetriever struct {
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
 	messageQueue []pb.Envelope
+	queLock      *sync.Mutex
 	*sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.Mutex), new(sync.WaitGroup)}
 	mr.Add(1) // Add one for initial wait at start up
 	return &mr
 }
@@ -170,7 +171,9 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		// Order messages need to be processed in the correct order, so cancel messages
 		// need to be processed last.
 		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
+			m.queLock.Lock()
 			m.messageQueue = append(m.messageQueue, env)
+			m.queLock.Unlock()
 			return
 		}
 
