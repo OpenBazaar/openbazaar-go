@@ -23,8 +23,8 @@ message Profile {
     // automatically by the server and may be omitted
     // when setting the profile via api.
 
-    string avatarHash             = 16;
-    string headerHash             = 17;
+    Image avatarHashes            = 16;
+    Image headerHashes            = 17;
 
     uint32 followerCount          = 18;
     uint32 followingCount         = 19;
@@ -36,5 +36,13 @@ message Profile {
         string type     = 1;
         string username = 2;
         string proof    = 3;
+    }
+
+    message Image {
+        string tiny     = 1;
+        string small    = 2;
+        string medium   = 3;
+        string large    = 4;
+        string original = 5;
     }
 }
