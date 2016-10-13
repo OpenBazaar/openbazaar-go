@@ -264,7 +264,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 	type ImgData struct {
-		Avatar string
+		Avatar string `json:"avatar"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
@@ -274,7 +274,7 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hash, err := i.node.SetAvatarImages(data.Avatar)
+	hashes, err := i.node.SetAvatarImages(data.Avatar)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -291,13 +291,18 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, `{"hash": "%s"}`, hash)
+	jsonHashes, err := json.MarshalIndent(hashes, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, string(jsonHashes))
 	return
 }
 
 func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 	type ImgData struct {
-		Header string
+		Header string `json:"header"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	data := new(ImgData)
@@ -307,7 +312,7 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	hash, err := i.node.SetHeaderImages(data.Header)
+	hashes, err := i.node.SetHeaderImages(data.Header)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -324,8 +329,12 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	fmt.Fprintf(w, `{"hash": "%s"}`, hash)
+	jsonHashes, err := json.MarshalIndent(hashes, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, string(jsonHashes))
 	return
 }
 
@@ -342,17 +351,17 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type retImage struct {
-		Filename string `json:"filename"`
-		Hash     string `json:"hash"`
+		Filename string      `json:"filename"`
+		Hashes   core.Images `json:"hashes"`
 	}
 	var retData []retImage
 	for _, img := range images {
-		hash, err := i.node.SetProductImages(img.Image, img.Filename)
+		hashes, err := i.node.SetProductImages(img.Image, img.Filename)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		rtimg := retImage{img.Filename, hash}
+		rtimg := retImage{img.Filename, *hashes}
 		retData = append(retData, rtimg)
 	}
 	jsonHashes, err := json.MarshalIndent(retData, "", "    ")

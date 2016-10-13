@@ -77,8 +77,12 @@ message Listing {
         }
 
         message Image {
-            string hash     = 1;
-            string filename = 2;
+            string filename = 1;
+            string original = 2;
+            string large    = 3;
+            string medium   = 4;
+            string small    = 5;
+            string tiny     = 6;
         }
     }
 

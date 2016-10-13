@@ -31,6 +31,26 @@ const (
 	PolicyMaxCharacters      = 10000
 )
 
+type price struct {
+	CurrencyCode string `json:"currencyCode"`
+	Amount       uint64 `json:"amount"`
+}
+type thumbnail struct {
+	Tiny   string `json:"tiny"`
+	Small  string `json:"small"`
+	Medium string `json:"medium"`
+}
+type listingData struct {
+	Hash         string    `json:"hash"`
+	Slug         string    `json:"slug"`
+	Title        string    `json:"title"`
+	Category     []string  `json:"category"`
+	ContractType string    `json:"contractType"`
+	Desc         string    `json:"desc"`
+	Thumbnail    thumbnail `json:"thumbnail"`
+	Price        price     `json:"price"`
+}
+
 // Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	c := new(pb.RicardianContract)
@@ -161,20 +181,6 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 
 // Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
-	type price struct {
-		CurrencyCode string `json:"currencyCode"`
-		Amount       uint64 `json:"amount"`
-	}
-	type listingData struct {
-		Hash         string   `json:"hash"`
-		Slug         string   `json:"slug"`
-		Title        string   `json:"title"`
-		Category     []string `json:"category"`
-		ContractType string   `json:"contractType"`
-		Desc         string   `json:"desc"`
-		Thumbnail    string   `json:"thumbnail"`
-		Price        price    `json:"price"`
-	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 
@@ -197,7 +203,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Category:     contract.VendorListings[0].Item.Categories,
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
 		Desc:         contract.VendorListings[0].Item.Description[:descLen],
-		Thumbnail:    contract.VendorListings[0].Item.Images[0].Hash,
+		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 	}
 
@@ -250,20 +256,6 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 // Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
-	type price struct {
-		CurrencyCode string
-		Amount       uint64
-	}
-	type listingData struct {
-		Hash      string
-		Slug      string
-		Title     string
-		Category  []string
-		ItemType  string
-		Desc      string
-		Thumbnail string
-		Price     price
-	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
 	// read existing file
@@ -286,20 +278,6 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		return false
-	}
-	type price struct {
-		CurrencyCode string
-		Amount       uint64
-	}
-	type listingData struct {
-		Hash      string
-		Slug      string
-		Title     string
-		Category  []string
-		ItemType  string
-		Desc      string
-		Thumbnail string
-		Price     price
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
@@ -347,21 +325,6 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	if err != nil {
 		return err
 	}
-	type price struct {
-		CurrencyCode string
-		Amount       uint64
-	}
-	type listingData struct {
-		Hash      string
-		Slug      string
-		Title     string
-		Category  []string
-		ItemType  string
-		Desc      string
-		Thumbnail string
-		Price     price
-	}
-
 	var index []listingData
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
@@ -416,20 +379,6 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
 	var contract *pb.RicardianContract
-	type price struct {
-		CurrencyCode string
-		Amount       uint64
-	}
-	type listingData struct {
-		Hash      string
-		Slug      string
-		Title     string
-		Category  []string
-		ItemType  string
-		Desc      string
-		Thumbnail string
-		Price     price
-	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
 	// read existing file
@@ -543,9 +492,25 @@ func validateListing(listing *pb.Listing) (err error) {
 		return errors.New("Listing must contain at least one image")
 	}
 	for _, img := range listing.Item.Images {
-		_, err := mh.FromB58String(img.Hash)
+		_, err := mh.FromB58String(img.Tiny)
 		if err != nil {
-			return errors.New("Image hashes must be a multihash")
+			return errors.New("Tiny image hashes must be a multihash")
+		}
+		_, err = mh.FromB58String(img.Small)
+		if err != nil {
+			return errors.New("Small image hashes must be a multihash")
+		}
+		_, err = mh.FromB58String(img.Medium)
+		if err != nil {
+			return errors.New("Medium image hashes must be a multihash")
+		}
+		_, err = mh.FromB58String(img.Large)
+		if err != nil {
+			return errors.New("Large image hashes must be a multihash")
+		}
+		_, err = mh.FromB58String(img.Original)
+		if err != nil {
+			return errors.New("Original image hashes must be a multihash")
 		}
 		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
@@ -592,9 +557,25 @@ func validateListing(listing *pb.Listing) (err error) {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
 			if variant.Image != nil {
-				_, err := mh.FromB58String(variant.Image.Hash)
+				_, err := mh.FromB58String(variant.Image.Tiny)
 				if err != nil {
-					return errors.New("Variant image hashes must be a multihash")
+					return errors.New("Tiny image hashes must be a multihash")
+				}
+				_, err = mh.FromB58String(variant.Image.Small)
+				if err != nil {
+					return errors.New("Small image hashes must be a multihash")
+				}
+				_, err = mh.FromB58String(variant.Image.Medium)
+				if err != nil {
+					return errors.New("Medium image hashes must be a multihash")
+				}
+				_, err = mh.FromB58String(variant.Image.Large)
+				if err != nil {
+					return errors.New("Large image hashes must be a multihash")
+				}
+				_, err = mh.FromB58String(variant.Image.Original)
+				if err != nil {
+					return errors.New("Original image hashes must be a multihash")
 				}
 				if len(variant.Image.Filename) > SentanceMaxCharacters {
 					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentanceMaxCharacters)
