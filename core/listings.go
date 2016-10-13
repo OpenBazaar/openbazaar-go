@@ -594,6 +594,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if shippingOption.Name == "" {
 			return errors.New("Shipping option title name must not be nil")
 		}
+		if shippingOption.Type == pb.Listing_ShippingOption_NA {
+			return errors.New("Shipping option type must be specified")
+		}
 		if len(shippingOption.Name) > WordMaxCharacters {
 			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
 		}
@@ -605,6 +608,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if shippingOption.ShippingRules != nil {
 			if len(shippingOption.ShippingRules.Rules) == 0 {
 				return errors.New("At least on rule must be specified if ShippingRules is selected")
+			}
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
+				return errors.New("Shipping rule type must be specified")
 			}
 			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
 				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
