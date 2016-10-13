@@ -446,6 +446,13 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
+	if ld.CurrentSlug != ld.Listing.Slug {
+		_, ferr := os.Stat(listingPath)
+		if !os.IsNotExist(ferr) {
+			ErrorResponse(w, http.StatusConflict, "Cannot rename listing. One already exists with the same slug")
+			return
+		}
+	}
 	contract, err := i.node.SignListing(ld.Listing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
