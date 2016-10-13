@@ -626,6 +626,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		}
 		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
 		shippingTitles = append(shippingTitles, shippingOption.Name)
+		if len(shippingOption.Services) == 0 {
+			return errors.New("At least one service must be specified for a shipping option")
+		}
 		var serviceTitles []string
 		for _, option := range shippingOption.Services {
 
