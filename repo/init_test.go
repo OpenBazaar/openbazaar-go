@@ -70,7 +70,7 @@ func TestMaybeCreateOBDirectories(t *testing.T) {
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "small"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "medium"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "large"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "huge"))
+	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "original"))
 	checkDirectoryCreation(t, path.Join(repoRootFolder, "outbox"))
 	TearDown()
 }
