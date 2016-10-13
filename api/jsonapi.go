@@ -342,17 +342,17 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type retImage struct {
-		Filename string `json:"filename"`
-		Hash     string `json:"hash"`
+		Filename string      `json:"filename"`
+		Hashes   core.Images `json:"hashes"`
 	}
 	var retData []retImage
 	for _, img := range images {
-		hash, err := i.node.SetProductImages(img.Image, img.Filename)
+		hashes, err := i.node.SetProductImages(img.Image, img.Filename)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		rtimg := retImage{img.Filename, hash}
+		rtimg := retImage{img.Filename, *hashes}
 		retData = append(retData, rtimg)
 	}
 	jsonHashes, err := json.MarshalIndent(retData, "", "    ")

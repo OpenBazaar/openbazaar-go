@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/nfnt/resize"
 	"github.com/oliamb/cutter"
@@ -11,6 +12,14 @@ import (
 	"path"
 	"strings"
 )
+
+type Images struct {
+	Tiny     string `json:"tiny"`
+	Small    string `json:"small"`
+	Medium   string `json:"medium"`
+	Large    string `json:"large"`
+	Original string `json:"original"`
+}
 
 func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (string, error) {
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
@@ -176,76 +185,90 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (string, error)
 	return hash, nil
 }
 
-func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (string, error) {
+func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Images, error) {
+	// Decode base64 image data
 	reader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	img, _, err := image.Decode(reader)
 	if err != nil {
-		return "", err
+		fmt.Println(1)
+		return nil, err
 	}
+
+	// Get the image config
 	reader = base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64ImageData))
 	imgCfg, _, err := image.DecodeConfig(reader)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	w := imgCfg.Width
-	h := imgCfg.Height
+	w := uint(imgCfg.Width)
+	h := uint(imgCfg.Height)
 	if w > h {
-		w = h
+		w = w / h
+		h = uint(1)
 	} else if h > h {
-		h = w
+		h = h / w
+		w = uint(1)
 	}
-	img, err = cutter.Crop(img, cutter.Config{
-		Width:  w,
-		Height: h,
-		Mode:   cutter.Centered,
-	})
-	if err != nil {
-		return "", err
-	}
-	ty := resize.Resize(60, 60, img, resize.Lanczos3)
-	sm := resize.Resize(228, 228, img, resize.Lanczos3)
-	md := resize.Resize(500, 500, img, resize.Lanczos3)
-	lg := resize.Resize(1000, 1000, img, resize.Lanczos3)
-	hg := resize.Resize(2000, 2000, img, resize.Lanczos3)
+
+	ty := resize.Resize(w*60, h*60, img, resize.Lanczos3)
+	sm := resize.Resize(w*228, h*228, img, resize.Lanczos3)
+	md := resize.Resize(w*500, h*500, img, resize.Lanczos3)
+	lg := resize.Resize(w*1000, h*1000, img, resize.Lanczos3)
 
 	imgPath := path.Join(n.RepoPath, "root", "images")
 
 	out, err := os.Create(path.Join(imgPath, "tiny", filename))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer out.Close()
 	jpeg.Encode(out, ty, nil)
 
 	out, err = os.Create(path.Join(imgPath, "small", filename))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	jpeg.Encode(out, sm, nil)
 
 	out, err = os.Create(path.Join(imgPath, "medium", filename))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	jpeg.Encode(out, md, nil)
 
 	out, err = os.Create(path.Join(imgPath, "large", filename))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	jpeg.Encode(out, lg, nil)
 
-	out, err = os.Create(path.Join(imgPath, "huge", filename))
+	out, err = os.Create(path.Join(imgPath, "original", filename))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	jpeg.Encode(out, hg, nil)
+	jpeg.Encode(out, img, nil)
 
-	// Get the image hash
-	hash, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "medium", filename))
+	// Get the image hashes
+	t, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "tiny", filename))
 	if aerr != nil {
-		return "", err
+		return nil, err
 	}
-
-	return hash, nil
+	s, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "small", filename))
+	if aerr != nil {
+		return nil, err
+	}
+	m, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "medium", filename))
+	if aerr != nil {
+		return nil, err
+	}
+	l, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "large", filename))
+	if aerr != nil {
+		return nil, err
+	}
+	o, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "original", filename))
+	if aerr != nil {
+		return nil, err
+	}
+	ret := &Images{t, s, m, l, o}
+	return ret, nil
 }
