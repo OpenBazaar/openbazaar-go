@@ -87,7 +87,7 @@ When ready we will put up a full documentation of the OpenBazaar protocol and th
 The server is currently under heavy development. Most of the underlying networking is complete and what remains is to build out the order/purchase flow. We expect to have a development release which will be capable of browsing the network in a few weeks.
 
 ## Contributing
-Contributions are welcome. // TODO: make contribute.md guidlines
+Contributions are definitely welcome! Please read the contributing [guidlines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTE.md) before starting.
 
 ## License
 MIT
