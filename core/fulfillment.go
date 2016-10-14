@@ -89,15 +89,29 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		payout.Sigs = sigs
 	}
 
-	sig, err := n.IpfsNode.PrivateKey.Sign(contract.BuyerOrder.RatingKey)
-	if err != nil {
-		return err
+	var sigs []*pb.RatingSignature
+	for _, listing := range contract.VendorListings {
+		rs := new(pb.RatingSignature)
+		metadata := new(pb.RatingSignature_TransactionMetadata)
+		metadata.RatingKey = contract.BuyerOrder.RatingKey
+		metadata.ListingSlug = listing.Slug
+		ser, err := proto.Marshal(metadata)
+		if err != nil {
+			return err
+		}
+		signature, err := n.IpfsNode.PrivateKey.Sign(ser)
+		if err != nil {
+			return err
+		}
+		rs.Metadata = metadata
+		rs.Signature = signature
+		sigs = append(sigs, rs)
 	}
-	fulfillment.RatingSignature = sig
+	fulfillment.RatingSignatures = sigs
 	fulfils := []*pb.OrderFulfillment{}
 
 	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
-	rc, err = n.SignOrderFulfillment(rc)
+	rc, err := n.SignOrderFulfillment(rc)
 	if err != nil {
 		return err
 	}
@@ -149,14 +163,41 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return err
 	}
 
+	var slugs []string
+	for _, listing := range contract.VendorListings {
+		slugs = append(slugs, listing.Slug)
+	}
+	matches := 0
+outer:
+	for _, slug := range slugs {
+		for _, l := range fulfillment.RatingSignatures {
+			if l.Metadata.ListingSlug == slug {
+				matches++
+				continue outer
+			}
+		}
+	}
+	if matches != len(slugs) {
+		return errors.New("Rating signatures do not cover all listings")
+	}
 	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
 	if err != nil {
 		return err
 	}
-	valid, err := pubkey.Verify(contract.BuyerOrder.RatingKey, fulfillment.RatingSignature)
-	if err != nil || !valid {
-		return errors.New("Failed to verify signature on rating keys")
+	for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
+		if !bytes.Equal(sig.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
+			return errors.New("Rating signature does not contian rating key")
+		}
+		ser, err := proto.Marshal(sig.Metadata)
+		if err != nil {
+			return err
+		}
+		valid, err := pubkey.Verify(ser, sig.Signature)
+		if err != nil || !valid {
+			return errors.New("Failed to verify signature on rating keys")
+		}
 	}
+
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		if fulfillment.Payout == nil {
 			return errors.New("Payout object for multisig is nil")

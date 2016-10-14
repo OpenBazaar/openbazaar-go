@@ -26,9 +26,9 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # post listing to alice
@@ -147,7 +147,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to order fulfillment")
+            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to detect order fulfillment")
 
         # check alice set fulfillment correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId

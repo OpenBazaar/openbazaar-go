@@ -26,9 +26,9 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # post listing to alice
