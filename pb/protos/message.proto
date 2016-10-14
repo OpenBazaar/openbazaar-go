@@ -16,7 +16,7 @@ message Message {
         ORDER_CANCEL            = 6;
         ORDER_CONFIRMATION      = 7;
         ORDER_FULFILLMENT       = 8;
-        RATING                  = 9;
+        ORDER_COMPLETION        = 9;
         DISPUTE_OPEN            = 10;
         DISPUTE_CLOSE           = 11;
         REFUND                  = 12;
