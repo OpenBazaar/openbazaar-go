@@ -40,6 +40,9 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error
 	} else if h > h {
 		h = h / w
 		w = uint(1)
+	} else {
+		w = uint(1)
+		h = uint(1)
 	}
 
 	ty := resize.Resize(w*50, h*50, img, resize.Lanczos3)
@@ -138,6 +141,9 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*Images, error
 	} else if h > h {
 
 		w = w / h
+		h = uint(1)
+	} else {
+		w = uint(1)
 		h = uint(1)
 	}
 
@@ -241,6 +247,9 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 	} else if h > h {
 		h = h / w
 		w = uint(1)
+	} else {
+		w = uint(1)
+		h = uint(1)
 	}
 
 	ty := resize.Resize(w*60, h*60, img, resize.Lanczos3)
