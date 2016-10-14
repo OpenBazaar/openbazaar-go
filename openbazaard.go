@@ -61,7 +61,7 @@ import (
 )
 
 var (
-	VERSION   = "0.2.1"
+	VERSION   = "0.2.2"
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
 
@@ -84,7 +84,6 @@ type Init struct {
 	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
 	Force    bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
 }
-
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
