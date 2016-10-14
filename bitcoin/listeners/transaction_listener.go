@@ -135,7 +135,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 					contract.VendorListings[0].Item.Title,
 					contract.BuyerOrder.BuyerID.Guid,
 					contract.BuyerOrder.BuyerID.BlockchainID,
-					contract.VendorListings[0].Item.Images[0].Hash,
+					contract.VendorListings[0].Item.Images[0].Tiny,
 					int(contract.BuyerOrder.Timestamp.Seconds),
 					orderId,
 				})

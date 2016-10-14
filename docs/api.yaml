@@ -745,7 +745,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/ImageHash'
+            $ref: '#/definitions/ImageHashes'
         '400':
           description: Bad Request
           schema:
@@ -792,7 +792,7 @@ paths:
           description: Header object includes a base64 encoded image
           required: true
           schema:
-            $ref: '#/definitions/ImageHash'
+            $ref: '#/definitions/ImageHashes'
       responses:
         '200':
           description: OK
@@ -1185,6 +1185,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: Conflict
+          schema:
+            $ref: '#/definitions/ErrorResponse'
         '500':
           description: Internal Server Error
           schema:
@@ -1438,9 +1442,13 @@ definitions:
     type: array
     example: [
         {
-          "filename": "blue_tshirt.jpg",
-          "hash": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
-        }
+				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"filename": "blue_tshirt.jpg"
+			}
     ]
     items:
       type: object
@@ -1449,7 +1457,23 @@ definitions:
           description: The name of this file
           type: string
           example: "blue_tshirt.jpg"
-        hash:
+        tiny:
+          description: The IPFS hash of the file. Base58 encoded multihash.
+          type: string
+          example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+        small:
+          description: The IPFS hash of the file. Base58 encoded multihash.
+          type: string
+          example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+        medium:
+          description: The IPFS hash of the file. Base58 encoded multihash.
+          type: string
+          example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+        large:
+          description: The IPFS hash of the file. Base58 encoded multihash.
+          type: string
+          example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
+        original:
           description: The IPFS hash of the file. Base58 encoded multihash.
           type: string
           example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
@@ -1518,12 +1542,26 @@ definitions:
       isFollowing:
         type: boolean
         example: false
-  ImageHash:
-    description: An image hash object
+  ImageHashes:
+    description: An image hashes object
     type: object
-    example: {"hash": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"}
+    example: {
+				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+			}
     properties:
-      hash:
+      tiny:
+        type: string
+      small:
+        type: string
+      medium:
+        type: string
+      large: 
+        type: string
+      original:
         type: string
   Peers:
     description: A list of peer IDs
@@ -1827,14 +1865,48 @@ definitions:
         description: Text RGB profile color in hexadecimal format
         type: string
         example: "#FFFFFF"
-      avatarHash:
-        description: The IPFS hash for this node's avatar. This field is added automatically by the server.
-        type: string
-        example: "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
-      headerHash:
-        description: The IPFS hash for this node's header. This field is added automatically by the server.
-        type: string
-        example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+      avatarHashes:
+        description: The IPFS hashes for this node's avatar. This field is added automatically by the server.
+        type: object
+        example: {
+    				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+    				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+    				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+    				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+    				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+    			}
+        properties:
+          tiny:
+            type: string
+          small:
+            type: string
+          medium:
+            type: string
+          large: 
+            type: string
+          original:
+            type: string
+      headerHashes:
+        description: The IPFS hasesh for this node's header. This field is added automatically by the server.
+        type: object
+        example: {
+    				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+    				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+    				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+    				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+    				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+    			}
+        properties:
+          tiny:
+            type: string
+          small:
+            type: string
+          medium:
+            type: string
+          large: 
+            type: string
+          original:
+            type: string
       followerCount:
         description: The number of peers following this node. This field is added automatically by the server.
         type: integer

@@ -33,7 +33,7 @@ func init() {
 	vendorID.BlockchainID = "@testvendor"
 	listing.VendorID = vendorID
 	image := new(pb.Listing_Item_Image)
-	image.Hash = "test image hash"
+	image.Tiny = "test image hash"
 	listing.Item.Images = []*pb.Listing_Item_Image{image}
 	contract.VendorListings = []*pb.Listing{listing}
 	order := new(pb.Order)
@@ -95,8 +95,8 @@ func TestPutPurchase(t *testing.T) {
 	if total != int(contract.BuyerOrder.Payment.Amount) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Payment.Amount), total)
 	}
-	if thumbnail != contract.VendorListings[0].Item.Images[0].Hash {
-		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Hash, thumbnail)
+	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
+		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
 	}
 	if vendorID != contract.VendorListings[0].VendorID.Guid {
 		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.Guid, vendorID)
