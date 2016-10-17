@@ -1308,3 +1308,45 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	fmt.Fprint(w, `{}`)
 	return
 }
+
+func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Request) {
+	checkRatingValue := func(val int) {
+		if val < core.RatingMin || val > core.RatingMax {
+			ErrorResponse(w, http.StatusBadRequest, "rating values must be between 1 and 5")
+			return
+		}
+	}
+	decoder := json.NewDecoder(r.Body)
+	var rd core.RatingData
+	err := decoder.Decode(&rd)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(rd.OrderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "order not found")
+		return
+	}
+	checkRatingValue(rd.Quality)
+	checkRatingValue(rd.Description)
+	checkRatingValue(rd.DeliverySpeed)
+	checkRatingValue(rd.CustomerService)
+	if len(rd.Review) > core.ReviewMaxCharacters {
+		ErrorResponse(w, http.StatusBadRequest, "too many characters in review")
+		return
+	}
+
+	if state != pb.OrderState_FULFILLED || state != pb.OrderState_RESOLVED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be either fulfilled or in closed dispute state to leave the rating")
+		return
+	}
+
+	err = i.node.CompleteOrder(&rd, contract, records)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
