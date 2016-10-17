@@ -266,8 +266,8 @@ message OrderCompletion {
     Rating rating                        = 3;
 
     message Rating {
-        bytes ratingData = 1;
-        bytes signature  = 2;
+        RatingData ratingData = 1;
+        bytes signature       = 2;
 
         message RatingData {
             bytes ratingKey                     = 1;
@@ -321,7 +321,7 @@ message Signatures {
         ORDER              = 2;
         ORDER_CONFIRMATION = 3;
         ORDER_FULFILLMENT  = 4;
-        RATING             = 5;
+        ORDER_COMPLETION   = 5;
         DISPUTE            = 6;
         DISPUTE_RESOLUTION = 7;
         REFUND             = 8;

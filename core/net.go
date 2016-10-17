@@ -271,3 +271,27 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage 
 	}
 	return nil
 }
+
+func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *pb.RicardianContract) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(completionMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_ORDER_COMPLETION,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}

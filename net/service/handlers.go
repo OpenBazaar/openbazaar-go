@@ -39,6 +39,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleRefund
 	case pb.Message_ORDER_FULFILLMENT:
 		return service.handleOrderFulfillment
+	case pb.Message_ORDER_COMPLETION:
+		return service.handleOrderCompletion
 	default:
 		return nil
 	}
@@ -548,7 +550,43 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Send notification to websocket
-	n := notifications.Serialize(notifications.RefundNotification{rc.VendorOrderFulfillment[0].OrderId})
+	n := notifications.Serialize(notifications.FulfillmentNotification{rc.VendorOrderFulfillment[0].OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
+
+	rc := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
+	if err != nil {
+		return nil, err
+	}
+
+	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signatures_ORDER_COMPLETION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+
+	if err := service.node.ValidateOrderCompletion(contract); err != nil {
+		return nil, err
+	}
+
+	// Set message state to complete
+	service.datastore.Sales().Put(rc.BuyerOrderCompletion.OrderId, *contract, pb.OrderState_COMPLETE, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId})
 	service.broadcast <- n
 
 	return nil, nil
