@@ -89,29 +89,30 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		payout.Sigs = sigs
 	}
 
-	var sigs []*pb.RatingSignature
+	var slugs []string
 	for _, listing := range contract.VendorListings {
-		rs := new(pb.RatingSignature)
-		metadata := new(pb.RatingSignature_TransactionMetadata)
-		metadata.RatingKey = contract.BuyerOrder.RatingKey
-		metadata.ListingSlug = listing.Slug
-		ser, err := proto.Marshal(metadata)
-		if err != nil {
-			return err
-		}
-		signature, err := n.IpfsNode.PrivateKey.Sign(ser)
-		if err != nil {
-			return err
-		}
-		rs.Metadata = metadata
-		rs.Signature = signature
-		sigs = append(sigs, rs)
+		slugs = append(slugs, listing.Slug)
 	}
-	fulfillment.RatingSignatures = sigs
+	rs := new(pb.RatingSignature)
+	metadata := new(pb.RatingSignature_TransactionMetadata)
+	metadata.RatingKey = contract.BuyerOrder.RatingKey
+	metadata.ListingSlugs = slugs
+	ser, err := proto.Marshal(metadata)
+	if err != nil {
+		return err
+	}
+	signature, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	rs.Metadata = metadata
+	rs.Signature = signature
+
+	fulfillment.RatingSignature = rs
 	fulfils := []*pb.OrderFulfillment{}
 
 	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
-	rc, err := n.SignOrderFulfillment(rc)
+	rc, err = n.SignOrderFulfillment(rc)
 	if err != nil {
 		return err
 	}
@@ -170,8 +171,8 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	matches := 0
 outer:
 	for _, slug := range slugs {
-		for _, l := range fulfillment.RatingSignatures {
-			if l.Metadata.ListingSlug == slug {
+		for _, mSlug := range fulfillment.RatingSignature.Metadata.ListingSlugs {
+			if mSlug == slug {
 				matches++
 				continue outer
 			}
@@ -184,18 +185,17 @@ outer:
 	if err != nil {
 		return err
 	}
-	for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
-		if !bytes.Equal(sig.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
-			return errors.New("Rating signature does not contian rating key")
-		}
-		ser, err := proto.Marshal(sig.Metadata)
-		if err != nil {
-			return err
-		}
-		valid, err := pubkey.Verify(ser, sig.Signature)
-		if err != nil || !valid {
-			return errors.New("Failed to verify signature on rating keys")
-		}
+
+	if !bytes.Equal(fulfillment.RatingSignature.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
+		return errors.New("Rating signature does not contian rating key")
+	}
+	ser, err := proto.Marshal(fulfillment.RatingSignature.Metadata)
+	if err != nil {
+		return err
+	}
+	valid, err := pubkey.Verify(ser, fulfillment.RatingSignature.Signature)
+	if err != nil || !valid {
+		return errors.New("Failed to verify signature on rating keys")
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {

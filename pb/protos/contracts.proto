@@ -199,13 +199,13 @@ message Order {
 }
 
 message OrderConfirmation {
-    string orderID                            = 1;
+    string orderID                  = 1;
     // Direct payments only
-    string paymentAddress                     = 2;
-    uint64 requestedAmount                    = 3;
-    uint64 payoutFee                          = 4;
+    string paymentAddress           = 2;
+    uint64 requestedAmount          = 3;
+    uint64 payoutFee                = 4;
 
-    repeated RatingSignature ratingSignatures = 5;
+    RatingSignature ratingSignature = 5;
 }
 
 message OrderReject {
@@ -218,9 +218,9 @@ message RatingSignature {
     bytes signature              = 2;
 
     message TransactionMetadata {
-        string listingSlug  = 1;
-        bytes  ratingKey    = 2;
-        bytes  moderatorKey = 3; // Only if moderated
+        repeated string listingSlugs  = 1;
+        bytes  ratingKey              = 2;
+        bytes  moderatorKey           = 3; // Only if moderated
     }
 }
 
@@ -230,18 +230,18 @@ message BitcoinSignature {
 }
 
 message OrderFulfillment {
-    string orderId                              = 1;
+    string orderId                             = 1;
 
     // Physical goods only
-    repeated PhysicalDelivery physicalDelivery  = 2;
+    repeated PhysicalDelivery physicalDelivery = 2;
 
     //Digital goods only
-    repeated DigitalDelivery digitalDelivery    = 3;
+    repeated DigitalDelivery digitalDelivery   = 3;
 
     // Moderated payments only
-    Payout payout                               = 4;
+    Payout payout                              = 4;
 
-    repeated RatingSignature ratingSignatures   = 5;
+    RatingSignature ratingSignature            = 5;
 
     message PhysicalDelivery {
         string shipper            = 1;
@@ -263,7 +263,7 @@ message OrderFulfillment {
 message OrderCompletion {
     string orderId                       = 1;
     repeated BitcoinSignature payoutSigs = 2;
-    repeated Rating ratings              = 3;
+    Rating rating                        = 3;
 
     message Rating {
         bytes ratingData = 1;
@@ -278,14 +278,13 @@ message OrderCompletion {
             bytes moderatorSig                  = 6; // only if a dispute was won
 
             google.protobuf.Timestamp timestamp = 7;
-            string itemSlug                     = 8;
 
-            uint32 overall                      = 9;
-            uint32 quality                      = 10;
-            uint32 description                  = 11;
-            uint32 deliverySpeed                = 12;
-            uint32 customerService              = 13;
-            string review                       = 14;
+            uint32 overall                      = 8;
+            uint32 quality                      = 9;
+            uint32 description                  = 10;
+            uint32 deliverySpeed                = 11;
+            uint32 customerService              = 12;
+            string review                       = 13;
         }
     }
 }

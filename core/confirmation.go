@@ -32,32 +32,34 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		oc.RatingSignatures = []*pb.RatingSignature{}
+		var slugs []string
 		for _, listing := range contract.VendorListings {
-			buyerKey := contract.BuyerOrder.RatingKey
-			moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
-			if err != nil {
-				return nil, err
-			}
-			metadata := new(pb.RatingSignature_TransactionMetadata)
-			metadata.ListingSlug = listing.Slug
-			metadata.ModeratorKey = moderatorKey
-			metadata.RatingKey = buyerKey
-
-			ser, err := proto.Marshal(metadata)
-			if err != nil {
-				return nil, err
-			}
-			sig, err := n.IpfsNode.PrivateKey.Sign(ser)
-			if err != nil {
-				return nil, err
-			}
-
-			rs := new(pb.RatingSignature)
-			rs.Metadata = metadata
-			rs.Signature = sig
-			oc.RatingSignatures = append(oc.RatingSignatures, rs)
+			slugs = append(slugs, listing.Slug)
 		}
+		buyerKey := contract.BuyerOrder.RatingKey
+		moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
+		if err != nil {
+			return nil, err
+		}
+		metadata := new(pb.RatingSignature_TransactionMetadata)
+		metadata.ListingSlugs = slugs
+		metadata.ModeratorKey = moderatorKey
+		metadata.RatingKey = buyerKey
+
+		ser, err := proto.Marshal(metadata)
+		if err != nil {
+			return nil, err
+		}
+		sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+		if err != nil {
+			return nil, err
+		}
+
+		rs := new(pb.RatingSignature)
+		rs.Metadata = metadata
+		rs.Signature = sig
+
+		oc.RatingSignature = rs
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
 		oc.PayoutFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 	}
@@ -242,8 +244,8 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		matches := 0
 	outer:
 		for _, slug := range slugs {
-			for _, l := range contract.VendorOrderConfirmation.RatingSignatures {
-				if l.Metadata.ListingSlug == slug {
+			for _, mSlug := range contract.VendorOrderConfirmation.RatingSignature.Metadata.ListingSlugs {
+				if mSlug == slug {
 					matches++
 					continue outer
 				}
@@ -260,21 +262,19 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		if err != nil {
 			return err
 		}
-		for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
-			if !bytes.Equal(sig.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
-				return errors.New("Rating signature does not contian rating key")
-			}
-			if !bytes.Equal(sig.Metadata.ModeratorKey, moderatorKey) {
-				return errors.New("Rating signature does not contain moderatory key")
-			}
-			ser, err := proto.Marshal(sig.Metadata)
-			if err != nil {
-				return err
-			}
-			valid, err := pubkey.Verify(ser, sig.Signature)
-			if err != nil || !valid {
-				return errors.New("Failed to verify signature on rating keys")
-			}
+		if !bytes.Equal(contract.VendorOrderConfirmation.RatingSignature.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
+			return errors.New("Rating signature does not contian rating key")
+		}
+		if !bytes.Equal(contract.VendorOrderConfirmation.RatingSignature.Metadata.ModeratorKey, moderatorKey) {
+			return errors.New("Rating signature does not contain moderatory key")
+		}
+		ser, err := proto.Marshal(contract.VendorOrderConfirmation.RatingSignature.Metadata)
+		if err != nil {
+			return err
+		}
+		valid, err := pubkey.Verify(ser, contract.VendorOrderConfirmation.RatingSignature.Signature)
+		if err != nil || !valid {
+			return errors.New("Failed to verify signature on rating keys")
 		}
 	}
 	if validateAddress {
