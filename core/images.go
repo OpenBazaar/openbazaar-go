@@ -37,7 +37,7 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error
 	if w > h {
 		w = w / h
 		h = uint(1)
-	} else if h > h {
+	} else if h > w {
 		h = h / w
 		w = uint(1)
 	} else {
@@ -133,13 +133,12 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*Images, error
 	if err != nil {
 		return nil, err
 	}
-	w := uint(float64(imgCfg.Width))
-	h := uint(float64(imgCfg.Height))
+	w := uint(imgCfg.Width)
+	h := uint(imgCfg.Height)
 	if w > h {
 		h = h / w
 		w = uint(1)
-	} else if h > h {
-
+	} else if h > w {
 		w = w / h
 		h = uint(1)
 	} else {
@@ -244,7 +243,7 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 	if w > h {
 		w = w / h
 		h = uint(1)
-	} else if h > h {
+	} else if h > w {
 		h = h / w
 		w = uint(1)
 	} else {
