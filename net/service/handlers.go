@@ -486,6 +486,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
 
 		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
@@ -566,7 +569,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
+	contract, _, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -580,6 +583,55 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
+	}
+
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		var ins []spvwallet.TransactionInput
+		var outValue int64
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return nil, err
+				}
+				outValue += r.Value
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				ins = append(ins, in)
+			}
+		}
+
+		payoutAddress, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress, service.node.Wallet.Params())
+		if err != nil {
+			return nil, err
+		}
+		var output spvwallet.TransactionOutput
+		outputScript, err := txscript.PayToAddrScript(payoutAddress)
+		if err != nil {
+			return nil, err
+		}
+		output.ScriptPubKey = outputScript
+		output.Value = outValue
+
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
+
+		var vendorSignatures []spvwallet.Signature
+		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			vendorSignatures = append(vendorSignatures, sig)
+		}
+		var buyerSignatures []spvwallet.Signature
+		for _, s := range contract.BuyerOrderCompletion.PayoutSigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			buyerSignatures = append(buyerSignatures, sig)
+		}
+
+		err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// TODO: Validate rating an commit to repo if valid

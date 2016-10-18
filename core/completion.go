@@ -3,10 +3,14 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
@@ -86,6 +90,88 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 	}
 	rating.Signature = sig.Serialize()
 	oc.Rating = rating
+
+	// Payout order if moderated
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		var ins []spvwallet.TransactionInput
+		var outValue int64
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return err
+				}
+				outValue += r.Value
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				ins = append(ins, in)
+			}
+		}
+
+		payoutAddress, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress, n.Wallet.Params())
+		if err != nil {
+			return err
+		}
+		var output spvwallet.TransactionOutput
+		outputScript, err := txscript.PayToAddrScript(payoutAddress)
+		if err != nil {
+			return err
+		}
+		output.ScriptPubKey = outputScript
+		output.Value = outValue
+
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			return err
+		}
+		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		mPrivKey := n.Wallet.MasterPrivateKey()
+		if err != nil {
+			return err
+		}
+		mECKey, err := mPrivKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		hdKey := hd.NewExtendedKey(
+			n.Wallet.Params().HDPrivateKeyID[:],
+			mECKey.Serialize(),
+			chaincode,
+			parentFP,
+			0,
+			0,
+			true)
+
+		buyerKey, err := hdKey.Child(0)
+		if err != nil {
+			return err
+		}
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
+
+		buyerSignatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		if err != nil {
+			return err
+		}
+		var pbSigs []*pb.BitcoinSignature
+		for _, s := range buyerSignatures {
+			sig := new(pb.BitcoinSignature)
+			sig.InputIndex = s.InputIndex
+			sig.Signature = s.Signature
+			pbSigs = append(pbSigs, sig)
+		}
+		oc.PayoutSigs = pbSigs
+		var vendorSignatures []spvwallet.Signature
+		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			vendorSignatures = append(vendorSignatures, sig)
+		}
+		err = n.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		if err != nil {
+			return err
+		}
+	}
 
 	rc := new(pb.RicardianContract)
 	rc.BuyerOrderCompletion = oc
