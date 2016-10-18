@@ -87,6 +87,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			sigs = append(sigs, pbSig)
 		}
 		payout.Sigs = sigs
+		fulfillment.Payout = payout
 	}
 
 	var slugs []string
