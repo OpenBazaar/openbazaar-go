@@ -5,7 +5,7 @@ from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
 
-class FulfillDirectOnlineTest(OpenBazaarTestFramework):
+class CompleteDirectOnlineTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
@@ -23,9 +23,9 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             address = resp["address"]
         elif r.status_code == 404:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Address endpoint not found")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Address endpoint not found")
         else:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Unknown response")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
         self.send_bitcoin_cmd("generate", 125)
@@ -38,17 +38,17 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Listing post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't get listing index")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -59,10 +59,10 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Purchase post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
@@ -72,23 +72,23 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob purchase saved in incorrect state")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob incorrectly saved as funded")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob incorrectly saved as funded")
 
         # check the sale saved correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice purchase saved in incorrect state")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice incorrectly saved as funded")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice incorrectly saved as funded")
 
         # fund order
         spend = {
@@ -99,33 +99,33 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Spend post endpoint not found")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to detect his payment")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
 
         # check alice detected payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to detect payment")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
         
         # alice send order fulfillment
         with open('testdata/fulfillment.json') as fulfillment_file:
@@ -134,32 +134,68 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/orderfulfillment"
         r = requests.post(api_url, data=json.dumps(fulfillment_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Fulfillment post endpoint not found")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Fulfillment post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Fulfillment POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Fulfillment POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # check bob received fulfillment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to detect order fulfillment")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to detect order fulfillment")
 
         # check alice set fulfillment correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to order fulfillment")
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to order fulfillment")
 
-        print("FulfillDirectOnlineTest - PASS")
+        # bob send order completion
+        oc = {
+            "orderId": orderId,
+            "overall": 4,
+            "quality": 5,
+            "description": 5,
+            "customerService": 4,
+            "deliverySpeed": 3,
+            "Review": "I love it!"
+        }
+        api_url = bob["gateway_url"] + "ob/ordercompletion"
+        r = requests.post(api_url, data=json.dumps(oc, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Completion post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Completion POST failed. Reason: %s", resp["reason"])
+        time.sleep(4)
+
+        # check alice received fulfillment
+        api_url = alice["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Alice")
+        resp = json.loads(r.text)
+        if resp["state"] != "COMPLETE":
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect order completion")
+
+        # check bob set fulfillment correctly
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text)
+        if resp["state"] != "COMPLETE":
+            raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to order completion")
+        print("CompleteDirectOnlineTest - PASS")
 
 if __name__ == '__main__':
-    print("Running FulfillDirectOnlineTest")
-    FulfillDirectOnlineTest().main(["--regtest", "--disableexchangerates"])
+    print("Running CompleteDirectOnlineTest")
+    CompleteDirectOnlineTest().main(["--regtest", "--disableexchangerates"])

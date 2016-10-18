@@ -582,6 +582,8 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	// TODO: Validate rating an commit to repo if valid
+
 	// Set message state to complete
 	service.datastore.Sales().Put(rc.BuyerOrderCompletion.OrderId, *contract, pb.OrderState_COMPLETE, false)
 

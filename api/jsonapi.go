@@ -1323,11 +1323,12 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(rd.OrderId)
+	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(rd.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+	checkRatingValue(rd.Overall)
 	checkRatingValue(rd.Quality)
 	checkRatingValue(rd.Description)
 	checkRatingValue(rd.DeliverySpeed)
@@ -1337,7 +1338,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if state != pb.OrderState_FULFILLED || state != pb.OrderState_RESOLVED {
+	if state != pb.OrderState_FULFILLED && state != pb.OrderState_RESOLVED {
 		ErrorResponse(w, http.StatusBadRequest, "order must be either fulfilled or in closed dispute state to leave the rating")
 		return
 	}

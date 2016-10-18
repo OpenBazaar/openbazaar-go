@@ -72,7 +72,6 @@ func (b *BitcoinPriceFetcher) run() {
 func (b *BitcoinPriceFetcher) fetchCurrentRates() error {
 	b.Lock()
 	defer b.Unlock()
-	log.Infof("Fetching bitcoin exchange rates")
 	for _, provider := range b.providers {
 		err := provider.fetch()
 		if err == nil {

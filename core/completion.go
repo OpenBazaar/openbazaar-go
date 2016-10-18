@@ -22,11 +22,13 @@ const (
 
 type RatingData struct {
 	OrderId         string `json:"orderId"`
+	Overall         int    `json:"overall"`
 	Quality         int    `json:"quality"`
 	Description     int    `json:"description"`
 	DeliverySpeed   int    `json:"deliverySpeed"`
 	CustomerService int    `json:"customerService"`
 	Review          string `json:"rewview"`
+	Anonymous       bool   `json:"anonymous"`
 }
 
 func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
@@ -43,12 +45,21 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 
 	rd := new(pb.OrderCompletion_Rating_RatingData)
 	rd.RatingKey = contract.BuyerOrder.RatingKey
-	rd.BuyerID = contract.BuyerOrder.BuyerID
+	if !ratingData.Anonymous {
+		rd.BuyerID = contract.BuyerOrder.BuyerID
+	}
 	rd.VendorID = contract.VendorListings[0].VendorID
 
 	// TODO: when this is a closing of a disputed order we need to use the rating signature
 	// from the order confirmation and add the moderators signature
 	rd.VendorSig = contract.VendorOrderFulfillment[0].RatingSignature
+
+	rd.Overall = uint32(ratingData.Overall)
+	rd.Quality = uint32(ratingData.Quality)
+	rd.Description = uint32(ratingData.Description)
+	rd.CustomerService = uint32(ratingData.CustomerService)
+	rd.DeliverySpeed = uint32(ratingData.DeliverySpeed)
+	rd.Review = ratingData.Review
 
 	ts := new(timestamp.Timestamp)
 	ts.Seconds = time.Now().Unix()
@@ -60,11 +71,20 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 	if err != nil {
 		return err
 	}
-	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+
+	ratingKey, err := n.Wallet.MasterPrivateKey().Child(uint32(contract.BuyerOrder.Timestamp.Seconds))
 	if err != nil {
 		return err
 	}
-	rating.Signature = sig
+	ecRatingKey, err := ratingKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
+	sig, err := ecRatingKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	rating.Signature = sig.Serialize()
 	oc.Rating = rating
 
 	rc := new(pb.RicardianContract)
@@ -80,13 +100,15 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 		return err
 	}
 
+	// TODO: commit rating to ipfs
+
 	contract.BuyerOrderCompletion = oc
 	for _, sig := range rc.Signatures {
 		if sig.Section == pb.Signatures_ORDER_COMPLETION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
-	err = n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_COMPLETE, true)
+	err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_COMPLETE, true)
 	if err != nil {
 		return err
 	}
