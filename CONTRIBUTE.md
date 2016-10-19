@@ -33,3 +33,5 @@ Also, be sure to follow the [seven rules of a great git commit message](http://c
 6. Wrap the body at 72 characters
 7. Use the body to explain what and why vs. how
 ```
+
+Finally, please [sign](https://help.github.com/articles/signing-commits-using-gpg/) your commits. 
