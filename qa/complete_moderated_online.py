@@ -235,7 +235,6 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Bob's balance")
 
-        self.print_logs(alice, "ob.log")
         print("CompleteModeratedOnlineTest - PASS")
 
 if __name__ == '__main__':
