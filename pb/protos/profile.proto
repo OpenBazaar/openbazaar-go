@@ -11,26 +11,29 @@ message Profile {
     string phoneNumber            = 8;
     repeated SocialAccount social = 9;
 
-    bool nsfw                     = 10;
-    bool vendor                   = 11;
-    bool moderator                = 12;
+    uint32 avgRating              = 10;
+    uint32 numRatings             = 11;
 
-    string primaryColor           = 13;
-    string secondaryColor         = 14;
-    string textColor              = 15;
+    bool nsfw                     = 12;
+    bool vendor                   = 13;
+    bool moderator                = 14;
+
+    string primaryColor           = 15;
+    string secondaryColor         = 16;
+    string textColor              = 17;
 
     // The following data is added to the profile
     // automatically by the server and may be omitted
     // when setting the profile via api.
 
-    Image avatarHashes            = 16;
-    Image headerHashes            = 17;
+    Image avatarHashes            = 18;
+    Image headerHashes            = 19;
 
-    uint32 followerCount          = 18;
-    uint32 followingCount         = 19;
-    uint32 listingCount           = 20;
+    uint32 followerCount          = 20;
+    uint32 followingCount         = 21;
+    uint32 listingCount           = 22;
 
-    uint32 lastModified           = 21;
+    uint32 lastModified           = 23;
 
     message SocialAccount {
         string type     = 1;

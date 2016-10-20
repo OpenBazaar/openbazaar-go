@@ -4,17 +4,23 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/gogo/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	"gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"io/ioutil"
+	"os"
+	"path"
 	"time"
 )
 
@@ -84,7 +90,8 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 	if err != nil {
 		return err
 	}
-	sig, err := ecRatingKey.Sign(ser)
+	hashed := sha256.Sum256(ser)
+	sig, err := ecRatingKey.Sign(hashed[:])
 	if err != nil {
 		return err
 	}
@@ -186,8 +193,6 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 		return err
 	}
 
-	// TODO: commit rating to ipfs
-
 	contract.BuyerOrderCompletion = oc
 	for _, sig := range rc.Signatures {
 		if sig.Section == pb.Signatures_ORDER_COMPLETION {
@@ -198,6 +203,7 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -237,6 +243,175 @@ func (n *OpenBazaarNode) ValidateOrderCompletion(contract *pb.RicardianContract)
 
 	// TODO: validate bitcoin signatures of moderated
 
+	return nil
+}
+
+func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) error {
+	rating := contract.BuyerOrderCompletion.Rating
+
+	pubkey, err := btcec.ParsePubKey(rating.RatingData.RatingKey, btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	signature, err := btcec.ParseSignature(rating.Signature, btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	ser, err := proto.Marshal(rating.RatingData)
+	if err != nil {
+		return err
+	}
+	hashed := sha256.Sum256(ser)
+	verified := signature.Verify(hashed[:], pubkey)
+
+	if !verified {
+		return errors.New("Invalid rating signature on rating")
+	}
+
+	ratingSigData, err := proto.Marshal(rating.RatingData.VendorSig.Metadata)
+	if err != nil {
+		return err
+	}
+	valid, err := n.IpfsNode.PrivateKey.GetPublic().Verify(ratingSigData, rating.RatingData.VendorSig.Signature)
+	if !valid {
+		return errors.New("Invalid vendor signature on rating")
+	}
+
+	if rating.RatingData.Overall < RatingMin || rating.RatingData.Overall > RatingMax {
+		return errors.New("Rating not within valid range")
+	}
+	if rating.RatingData.Quality < RatingMin || rating.RatingData.Quality > RatingMax {
+		return errors.New("Rating not within valid range")
+	}
+	if rating.RatingData.Description < RatingMin || rating.RatingData.Description > RatingMax {
+		return errors.New("Rating not within valid range")
+	}
+	if rating.RatingData.DeliverySpeed < RatingMin || rating.RatingData.DeliverySpeed > RatingMax {
+		return errors.New("Rating not within valid range")
+	}
+	if rating.RatingData.CustomerService < RatingMin || rating.RatingData.CustomerService > RatingMax {
+		return errors.New("Rating not within valid range")
+	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	ratingJson, err := m.MarshalToString(rating)
+	if err != nil {
+		return err
+	}
+
+	sha := sha256.Sum256([]byte(ratingJson))
+	h, err := multihash.Encode(sha[:], multihash.SHA2_256)
+	if err != nil {
+		return err
+	}
+
+	mh, err := multihash.Cast(h)
+	if err != nil {
+		return err
+	}
+
+	ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
+	f, err := os.Create(ratingPath)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	_, werr := f.Write([]byte(ratingJson))
+	if werr != nil {
+		return werr
+	}
+
+	profile, err := n.GetProfile()
+	if err != nil {
+		return err
+	}
+	totalRatingVal := profile.AvgRating * profile.NumRatings
+	totalRatingVal += rating.RatingData.Overall
+	newAvg := totalRatingVal / (profile.NumRatings + 1)
+	profile.AvgRating = newAvg
+	profile.NumRatings = profile.NumRatings + 1
+	err = n.UpdateProfile(&profile)
+	if err != nil {
+		return err
+	}
+	err = n.updateRatingIndex(rating, ratingPath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ratingPath string) error {
+	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
+
+	type ratingShort struct {
+		Hash  string   `json:"hash"`
+		Slugs []string `json:"slugs"`
+	}
+
+	var index []ratingShort
+
+	ratingHash, err := ipfs.AddFile(n.Context, ratingPath)
+	if err != nil {
+		return err
+	}
+
+	rs := ratingShort{
+		Hash:  ratingHash,
+		Slugs: rating.RatingData.VendorSig.Metadata.ListingSlugs,
+	}
+
+	_, ferr := os.Stat(indexPath)
+	if !os.IsNotExist(ferr) {
+		// Read existing file
+		file, err := ioutil.ReadFile(indexPath)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, &index)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Check to see if the rating we are adding already exists in the list. If so delete it.
+	for i, d := range index {
+		if d.Hash != rs.Hash {
+			continue
+		}
+
+		if len(index) == 1 {
+			index = []ratingShort{}
+			break
+		}
+		index = append(index[:i], index[i+1:]...)
+	}
+
+	// Append our rating with the new hash to the list
+	index = append(index, rs)
+
+	// Write it back to file
+	f, err := os.Create(indexPath)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	j, jerr := json.MarshalIndent(index, "", "    ")
+	if jerr != nil {
+		return jerr
+	}
+	_, werr := f.Write(j)
+	if werr != nil {
+		return werr
+	}
 	return nil
 }
 

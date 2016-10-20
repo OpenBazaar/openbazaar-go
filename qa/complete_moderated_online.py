@@ -193,7 +193,8 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             "description": 5,
             "customerService": 4,
             "deliverySpeed": 3,
-            "Review": "I love it!"
+            "review": "I love it!",
+            "anonymous": True
         }
         api_url = bob["gateway_url"] + "ob/ordercompletion"
         r = requests.post(api_url, data=json.dumps(oc, indent=4))
@@ -234,6 +235,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Bob's balance")
 
+        self.print_logs(alice, "ob.log")
         print("CompleteModeratedOnlineTest - PASS")
 
 if __name__ == '__main__':
