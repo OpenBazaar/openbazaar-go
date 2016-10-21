@@ -12,7 +12,6 @@ import "orders.proto";
 message ListingReqApi {
     Listing listing              = 1;
     repeated Inventory inventory = 2;
-    string currentSlug           = 3;
 }
 
 message ListingRespApi {

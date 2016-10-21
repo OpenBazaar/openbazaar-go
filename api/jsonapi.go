@@ -446,12 +446,10 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
-	if ld.CurrentSlug != ld.Listing.Slug {
-		_, ferr := os.Stat(listingPath)
-		if !os.IsNotExist(ferr) {
-			ErrorResponse(w, http.StatusConflict, "Cannot rename listing. One already exists with the same slug")
-			return
-		}
+	_, ferr := os.Stat(listingPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Listing not found. Use POST to create a new listing.")
+		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
 	if err != nil {
@@ -489,14 +487,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// Delete existing listing if the slug changed
-	if ld.CurrentSlug != "" && ld.CurrentSlug != ld.Listing.Slug {
-		err := i.node.DeleteListing(ld.CurrentSlug)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
-			return
-		}
-	}
+
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -512,13 +503,23 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
-	err := jsonpb.Unmarshal(r.Body, ld)
+	type deleteReq struct {
+		Slug string `json:"slug"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var req deleteReq
+	err := decoder.Decode(&req)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	err = i.node.DeleteListing(ld.CurrentSlug)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
+	_, ferr := os.Stat(listingPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Listing not found")
+		return
+	}
+	err = i.node.DeleteListing(req.Slug)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

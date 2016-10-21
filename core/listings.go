@@ -18,6 +18,10 @@ import (
 	"path"
 	"strings"
 	"time"
+	"strconv"
+	"github.com/kennygrant/sanitize"
+	"crypto/rand"
+	"github.com/btcsuite/btcutil/base58"
 )
 
 const (
@@ -56,7 +60,37 @@ type listingData struct {
 
 // Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
+	slugFromTitle := func(title string) string {
+		l := TitleMaxCharacters
+		if len(title) < TitleMaxCharacters {
+			l = len(title)
+		}
+		ret := sanitize.Path(strings.ToLower(title[:l]))
+		if len(ret) == 0 {
+			r := make([]byte, 10)
+			rand.Read(r)
+			ret = base58.Encode(r)
+		}
+		return ret
+	}
+
 	c := new(pb.RicardianContract)
+	// If the slug is empty, create one from the title
+	if listing.Slug == "" {
+		counter := 1
+		slugBase := slugFromTitle(listing.Item.Title)
+		slugToTry := slugBase
+		for {
+			_, _, err := n.GetListingFromSlug(slugToTry)
+			if err == nil {
+				listing.Slug = slugToTry
+				break
+			}
+			slugToTry = slugBase + strconv.Itoa(counter)
+			counter++
+		}
+	}
+
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
 		return c, err
