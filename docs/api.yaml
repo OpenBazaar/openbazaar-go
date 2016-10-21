@@ -1320,6 +1320,41 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/orderfulfillment:
+    post:
+      tags:
+        - Orders
+      summary: Fulfill an order
+      description: Send an order fulfillment message to the buyer. Typically used to tell the buyer an item has been shipped.
+      operationId: PostOrderFulfillment
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Order fulfillment object
+          required: true
+          schema:
+            $ref: '#/definitions/OrderFulfillment'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
   /ob/ordercompletion:
     post:
       tags:
@@ -1712,12 +1747,48 @@ definitions:
     ]
     items: 
       $ref: '#/definitions/Inventory'
+  OrderFulfillment:
+    description: Order fulfillment object
+    type: object
+    properties:
+      slug:
+        description: The slug this fulfillment message pertains to
+        type: string
+        example: "cool_tshirt"
+      physicalDelivery:
+        description: An object containing the shipping and tracking number. Only use if this is a fulfillment for a physical good. You can use more than one object if the item has multiple tracking numbers.
+        type: array
+        items:
+          type: object
+          properties:
+            shipper:
+              description: The postal carrier for the shipment
+              type: string
+              example: "UPS"
+            trackingNumber:
+              description: The tracking number
+              type: string
+              example: "1Z204E380338943508"
+      digitalDelivery:
+        description: An object containing a url and password for a digital good. This field is not used for automated delivery. You can use more than one field if necessary.
+        type: array
+        items:
+          type: object
+          properties:
+            url:
+              description: The download url
+              type: string
+              example: "http://example.com/download.mp3"
+            password:
+              description: An optional password to access the file
+              type: string
+              example: "letmein"
   OrderCompletion:
     description: Order completion object
     type: object
     properties:
       orderId:
-        description: The base58 encoded multihash order ID.
+        description: The base58 encoded multihash order ID
         type: string
         example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
       ratings:
