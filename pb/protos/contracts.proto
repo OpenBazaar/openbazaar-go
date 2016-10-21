@@ -149,7 +149,7 @@ message Order {
     google.protobuf.Timestamp timestamp  = 5;
     repeated Item items                  = 6;
     Payment payment                      = 7;
-    bytes ratingKey                      = 8;
+    repeated bytes ratingKeys            = 8;
     string alternateContactInfo          = 9;
 
     message Shipping {
@@ -199,13 +199,13 @@ message Order {
 }
 
 message OrderConfirmation {
-    string orderID                  = 1;
+    string orderID                            = 1;
     // Direct payments only
-    string paymentAddress           = 2;
-    uint64 requestedAmount          = 3;
-    uint64 payoutFee                = 4;
+    string paymentAddress                     = 2;
+    uint64 requestedAmount                    = 3;
+    uint64 payoutFee                          = 4;
 
-    RatingSignature ratingSignature = 5;
+    repeated RatingSignature ratingSignatures = 5;
 }
 
 message OrderReject {
@@ -218,9 +218,9 @@ message RatingSignature {
     bytes signature              = 2;
 
     message TransactionMetadata {
-        repeated string listingSlugs  = 1;
-        bytes  ratingKey              = 2;
-        bytes  moderatorKey           = 3; // Only if moderated
+        string listingSlug   = 1;
+        bytes  ratingKey     = 2;
+        bytes  moderatorKey  = 3; // Only if moderated
     }
 }
 
@@ -232,16 +232,18 @@ message BitcoinSignature {
 message OrderFulfillment {
     string orderId                             = 1;
 
+    string slug                                = 2;
+
     // Physical goods only
-    repeated PhysicalDelivery physicalDelivery = 2;
+    repeated PhysicalDelivery physicalDelivery = 3;
 
     //Digital goods only
-    repeated DigitalDelivery digitalDelivery   = 3;
+    repeated DigitalDelivery digitalDelivery   = 4;
 
     // Moderated payments only
-    Payout payout                              = 4;
+    Payout payout                              = 5;
 
-    RatingSignature ratingSignature            = 5;
+    RatingSignature ratingSignature            = 6;
 
     message PhysicalDelivery {
         string shipper            = 1;
@@ -263,7 +265,7 @@ message OrderFulfillment {
 message OrderCompletion {
     string orderId                       = 1;
     repeated BitcoinSignature payoutSigs = 2;
-    Rating rating                        = 3;
+    repeated Rating ratings              = 3;
 
     message Rating {
         RatingData ratingData = 1;

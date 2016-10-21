@@ -101,15 +101,19 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	order.Timestamp = ts
 	order.AlternateContactInfo = data.AlternateContact
 
-	ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
-	if err != nil {
-		return "", "", 0, false, err
+	var ratingKeys [][]byte
+	for range data.Items {
+		ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
+		if err != nil {
+			return "", "", 0, false, err
+		}
+		ecRatingKey, err := ratingKey.ECPubKey()
+		if err != nil {
+			return "", "", 0, false, err
+		}
+		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
 	}
-	ecRatingKey, err := ratingKey.ECPubKey()
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	order.RatingKey = ecRatingKey.SerializeCompressed()
+	order.RatingKeys = ratingKeys
 	refundAddr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	order.RefundAddress = refundAddr.EncodeAddress()
 
@@ -953,8 +957,13 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	if len(contract.BuyerOrder.Items) == 0 {
 		return errors.New("Order hasn't selected any items")
 	}
-	if len(contract.BuyerOrder.RatingKey) != 33 {
-		return errors.New("Invalid rating key in order")
+	if len(contract.BuyerOrder.RatingKeys) != len(contract.BuyerOrder.Items) {
+		return errors.New("Number of rating keys do not match number of items")
+	}
+	for _, ratingKey := range contract.BuyerOrder.RatingKeys {
+		if len(ratingKey) != 33 {
+			return errors.New("Invalid rating key in order")
+		}
 	}
 	if contract.BuyerOrder.Timestamp == nil {
 		return errors.New("Order is missing a timestamp")

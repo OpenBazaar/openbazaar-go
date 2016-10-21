@@ -30,8 +30,13 @@ const (
 	ReviewMaxCharacters = 3000
 )
 
+type OrderRatings struct {
+	OrderId string       `json:"orderId"`
+	Ratings []RatingData `json:"ratings"`
+}
+
 type RatingData struct {
-	OrderId         string `json:"orderId"`
+	Slug            string `json:"slug"`
 	Overall         int    `json:"overall"`
 	Quality         int    `json:"quality"`
 	Description     int    `json:"description"`
@@ -41,7 +46,7 @@ type RatingData struct {
 	Anonymous       bool   `json:"anonymous"`
 }
 
-func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
@@ -50,53 +55,63 @@ func (n *OpenBazaarNode) CompleteOrder(ratingData *RatingData, contract *pb.Rica
 
 	oc := new(pb.OrderCompletion)
 	oc.OrderId = orderId
+	oc.Ratings = []*pb.OrderCompletion_Rating{}
 
-	rating := new(pb.OrderCompletion_Rating)
+	for _, r := range orderRatings.Ratings {
+		rating := new(pb.OrderCompletion_Rating)
+		rd := new(pb.OrderCompletion_Rating_RatingData)
 
-	rd := new(pb.OrderCompletion_Rating_RatingData)
-	rd.RatingKey = contract.BuyerOrder.RatingKey
-	if !ratingData.Anonymous {
-		rd.BuyerID = contract.BuyerOrder.BuyerID
+		// TODO: when this is a closing of a disputed order we need to use the rating signature
+		// from the order confirmation and add the moderators signature
+		var rs *pb.RatingSignature
+		for _, fulfillment := range contract.VendorOrderFulfillment {
+			if fulfillment.RatingSignature.Metadata.ListingSlug == r.Slug {
+				rs = fulfillment.RatingSignature
+				break
+			}
+		}
+
+		rd.RatingKey = rs.Metadata.RatingKey
+		if !r.Anonymous {
+			rd.BuyerID = contract.BuyerOrder.BuyerID
+		}
+		rd.VendorID = contract.VendorListings[0].VendorID
+		rd.VendorSig = rs
+
+		rd.Overall = uint32(r.Overall)
+		rd.Quality = uint32(r.Quality)
+		rd.Description = uint32(r.Description)
+		rd.CustomerService = uint32(r.CustomerService)
+		rd.DeliverySpeed = uint32(r.DeliverySpeed)
+		rd.Review = r.Review
+
+		ts := new(timestamp.Timestamp)
+		ts.Seconds = time.Now().Unix()
+		ts.Nanos = 0
+		rd.Timestamp = ts
+		rating.RatingData = rd
+
+		ser, err := proto.Marshal(rating.RatingData)
+		if err != nil {
+			return err
+		}
+
+		ratingKey, err := n.Wallet.MasterPrivateKey().Child(uint32(contract.BuyerOrder.Timestamp.Seconds))
+		if err != nil {
+			return err
+		}
+		ecRatingKey, err := ratingKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		hashed := sha256.Sum256(ser)
+		sig, err := ecRatingKey.Sign(hashed[:])
+		if err != nil {
+			return err
+		}
+		rating.Signature = sig.Serialize()
+		oc.Ratings = append(oc.Ratings, rating)
 	}
-	rd.VendorID = contract.VendorListings[0].VendorID
-
-	// TODO: when this is a closing of a disputed order we need to use the rating signature
-	// from the order confirmation and add the moderators signature
-	rd.VendorSig = contract.VendorOrderFulfillment[0].RatingSignature
-
-	rd.Overall = uint32(ratingData.Overall)
-	rd.Quality = uint32(ratingData.Quality)
-	rd.Description = uint32(ratingData.Description)
-	rd.CustomerService = uint32(ratingData.CustomerService)
-	rd.DeliverySpeed = uint32(ratingData.DeliverySpeed)
-	rd.Review = ratingData.Review
-
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
-	rd.Timestamp = ts
-	rating.RatingData = rd
-
-	ser, err := proto.Marshal(rating.RatingData)
-	if err != nil {
-		return err
-	}
-
-	ratingKey, err := n.Wallet.MasterPrivateKey().Child(uint32(contract.BuyerOrder.Timestamp.Seconds))
-	if err != nil {
-		return err
-	}
-	ecRatingKey, err := ratingKey.ECPrivKey()
-	if err != nil {
-		return err
-	}
-	hashed := sha256.Sum256(ser)
-	sig, err := ecRatingKey.Sign(hashed[:])
-	if err != nil {
-		return err
-	}
-	rating.Signature = sig.Serialize()
-	oc.Rating = rating
 
 	// Payout order if moderated
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -247,104 +262,104 @@ func (n *OpenBazaarNode) ValidateOrderCompletion(contract *pb.RicardianContract)
 }
 
 func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) error {
-	rating := contract.BuyerOrderCompletion.Rating
+	for _, rating := range contract.BuyerOrderCompletion.Ratings {
+		pubkey, err := btcec.ParsePubKey(rating.RatingData.RatingKey, btcec.S256())
+		if err != nil {
+			return err
+		}
 
-	pubkey, err := btcec.ParsePubKey(rating.RatingData.RatingKey, btcec.S256())
-	if err != nil {
-		return err
-	}
+		signature, err := btcec.ParseSignature(rating.Signature, btcec.S256())
+		if err != nil {
+			return err
+		}
 
-	signature, err := btcec.ParseSignature(rating.Signature, btcec.S256())
-	if err != nil {
-		return err
-	}
+		ser, err := proto.Marshal(rating.RatingData)
+		if err != nil {
+			return err
+		}
+		hashed := sha256.Sum256(ser)
+		verified := signature.Verify(hashed[:], pubkey)
 
-	ser, err := proto.Marshal(rating.RatingData)
-	if err != nil {
-		return err
-	}
-	hashed := sha256.Sum256(ser)
-	verified := signature.Verify(hashed[:], pubkey)
+		if !verified {
+			return errors.New("Invalid rating signature on rating")
+		}
 
-	if !verified {
-		return errors.New("Invalid rating signature on rating")
-	}
+		ratingSigData, err := proto.Marshal(rating.RatingData.VendorSig.Metadata)
+		if err != nil {
+			return err
+		}
+		valid, err := n.IpfsNode.PrivateKey.GetPublic().Verify(ratingSigData, rating.RatingData.VendorSig.Signature)
+		if !valid {
+			return errors.New("Invalid vendor signature on rating")
+		}
 
-	ratingSigData, err := proto.Marshal(rating.RatingData.VendorSig.Metadata)
-	if err != nil {
-		return err
-	}
-	valid, err := n.IpfsNode.PrivateKey.GetPublic().Verify(ratingSigData, rating.RatingData.VendorSig.Signature)
-	if !valid {
-		return errors.New("Invalid vendor signature on rating")
-	}
+		if rating.RatingData.Overall < RatingMin || rating.RatingData.Overall > RatingMax {
+			return errors.New("Rating not within valid range")
+		}
+		if rating.RatingData.Quality < RatingMin || rating.RatingData.Quality > RatingMax {
+			return errors.New("Rating not within valid range")
+		}
+		if rating.RatingData.Description < RatingMin || rating.RatingData.Description > RatingMax {
+			return errors.New("Rating not within valid range")
+		}
+		if rating.RatingData.DeliverySpeed < RatingMin || rating.RatingData.DeliverySpeed > RatingMax {
+			return errors.New("Rating not within valid range")
+		}
+		if rating.RatingData.CustomerService < RatingMin || rating.RatingData.CustomerService > RatingMax {
+			return errors.New("Rating not within valid range")
+		}
 
-	if rating.RatingData.Overall < RatingMin || rating.RatingData.Overall > RatingMax {
-		return errors.New("Rating not within valid range")
-	}
-	if rating.RatingData.Quality < RatingMin || rating.RatingData.Quality > RatingMax {
-		return errors.New("Rating not within valid range")
-	}
-	if rating.RatingData.Description < RatingMin || rating.RatingData.Description > RatingMax {
-		return errors.New("Rating not within valid range")
-	}
-	if rating.RatingData.DeliverySpeed < RatingMin || rating.RatingData.DeliverySpeed > RatingMax {
-		return errors.New("Rating not within valid range")
-	}
-	if rating.RatingData.CustomerService < RatingMin || rating.RatingData.CustomerService > RatingMax {
-		return errors.New("Rating not within valid range")
-	}
+		m := jsonpb.Marshaler{
+			EnumsAsInts:  false,
+			EmitDefaults: false,
+			Indent:       "    ",
+			OrigName:     false,
+		}
+		ratingJson, err := m.MarshalToString(rating)
+		if err != nil {
+			return err
+		}
 
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	ratingJson, err := m.MarshalToString(rating)
-	if err != nil {
-		return err
-	}
+		sha := sha256.Sum256([]byte(ratingJson))
+		h, err := multihash.Encode(sha[:], multihash.SHA2_256)
+		if err != nil {
+			return err
+		}
 
-	sha := sha256.Sum256([]byte(ratingJson))
-	h, err := multihash.Encode(sha[:], multihash.SHA2_256)
-	if err != nil {
-		return err
-	}
+		mh, err := multihash.Cast(h)
+		if err != nil {
+			return err
+		}
 
-	mh, err := multihash.Cast(h)
-	if err != nil {
-		return err
-	}
+		ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
+		f, err := os.Create(ratingPath)
+		defer f.Close()
+		if err != nil {
+			return err
+		}
 
-	ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
-	f, err := os.Create(ratingPath)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
+		_, werr := f.Write([]byte(ratingJson))
+		if werr != nil {
+			return werr
+		}
 
-	_, werr := f.Write([]byte(ratingJson))
-	if werr != nil {
-		return werr
-	}
-
-	profile, err := n.GetProfile()
-	if err != nil {
-		return err
-	}
-	totalRatingVal := profile.AvgRating * profile.NumRatings
-	totalRatingVal += rating.RatingData.Overall
-	newAvg := totalRatingVal / (profile.NumRatings + 1)
-	profile.AvgRating = newAvg
-	profile.NumRatings = profile.NumRatings + 1
-	err = n.UpdateProfile(&profile)
-	if err != nil {
-		return err
-	}
-	err = n.updateRatingIndex(rating, ratingPath)
-	if err != nil {
-		return err
+		profile, err := n.GetProfile()
+		if err != nil {
+			return err
+		}
+		totalRatingVal := profile.AvgRating * profile.NumRatings
+		totalRatingVal += rating.RatingData.Overall
+		newAvg := totalRatingVal / (profile.NumRatings + 1)
+		profile.AvgRating = newAvg
+		profile.NumRatings = profile.NumRatings + 1
+		err = n.UpdateProfile(&profile)
+		if err != nil {
+			return err
+		}
+		err = n.updateRatingIndex(rating, ratingPath)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -353,8 +368,8 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ra
 	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
 
 	type ratingShort struct {
-		Hash  string   `json:"hash"`
-		Slugs []string `json:"slugs"`
+		Hash string `json:"hash"`
+		Slug string `json:"slug"`
 	}
 
 	var index []ratingShort
@@ -365,8 +380,8 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ra
 	}
 
 	rs := ratingShort{
-		Hash:  ratingHash,
-		Slugs: rating.RatingData.VendorSig.Metadata.ListingSlugs,
+		Hash: ratingHash,
+		Slug: rating.RatingData.VendorSig.Metadata.ListingSlug,
 	}
 
 	_, ferr := os.Stat(indexPath)

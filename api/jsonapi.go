@@ -1317,25 +1317,31 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		}
 	}
 	decoder := json.NewDecoder(r.Body)
-	var rd core.RatingData
-	err := decoder.Decode(&rd)
+	var or core.OrderRatings
+	err := decoder.Decode(&or)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(rd.OrderId)
+	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	checkRatingValue(rd.Overall)
-	checkRatingValue(rd.Quality)
-	checkRatingValue(rd.Description)
-	checkRatingValue(rd.DeliverySpeed)
-	checkRatingValue(rd.CustomerService)
-	if len(rd.Review) > core.ReviewMaxCharacters {
-		ErrorResponse(w, http.StatusBadRequest, "too many characters in review")
-		return
+	for _, rd := range or.Ratings {
+		if rd.Slug == "" {
+			ErrorResponse(w, http.StatusBadRequest, "rating must contain the slug")
+			return
+		}
+		checkRatingValue(rd.Overall)
+		checkRatingValue(rd.Quality)
+		checkRatingValue(rd.Description)
+		checkRatingValue(rd.DeliverySpeed)
+		checkRatingValue(rd.CustomerService)
+		if len(rd.Review) > core.ReviewMaxCharacters {
+			ErrorResponse(w, http.StatusBadRequest, "too many characters in review")
+			return
+		}
 	}
 
 	if state != pb.OrderState_FULFILLED && state != pb.OrderState_RESOLVED {
@@ -1343,7 +1349,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = i.node.CompleteOrder(&rd, contract, records)
+	err = i.node.CompleteOrder(&or, contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

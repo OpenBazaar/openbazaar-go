@@ -89,15 +89,18 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		payout.Sigs = sigs
 		fulfillment.Payout = payout
 	}
-
-	var slugs []string
-	for _, listing := range contract.VendorListings {
-		slugs = append(slugs, listing.Slug)
+	var keyIndex int
+	for i, listing := range contract.VendorListings {
+		if listing.Slug == fulfillment.Slug {
+			keyIndex = i
+			break
+		}
 	}
+
 	rs := new(pb.RatingSignature)
 	metadata := new(pb.RatingSignature_TransactionMetadata)
-	metadata.RatingKey = contract.BuyerOrder.RatingKey
-	metadata.ListingSlugs = slugs
+	metadata.RatingKey = contract.BuyerOrder.RatingKeys[keyIndex]
+	metadata.ListingSlug = fulfillment.Slug
 	ser, err := proto.Marshal(metadata)
 	if err != nil {
 		return err
@@ -110,6 +113,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rs.Signature = signature
 
 	fulfillment.RatingSignature = rs
+
 	fulfils := []*pb.OrderFulfillment{}
 
 	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
@@ -165,31 +169,40 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return err
 	}
 
-	var slugs []string
-	for _, listing := range contract.VendorListings {
-		slugs = append(slugs, listing.Slug)
-	}
-	matches := 0
-outer:
-	for _, slug := range slugs {
-		for _, mSlug := range fulfillment.RatingSignature.Metadata.ListingSlugs {
-			if mSlug == slug {
-				matches++
-				continue outer
+	slugExists := func(a string, list []string) bool {
+		for _, b := range list {
+			if b == a {
+				return true
 			}
 		}
+		return false
 	}
-	if matches != len(slugs) {
-		return errors.New("Rating signatures do not cover all listings")
+	keyExists := func(a []byte, list [][]byte) bool {
+		for _, b := range list {
+			if bytes.Equal(b, a) {
+				return true
+			}
+		}
+		return false
 	}
+
+	var listingSlugs []string
+	for _, listing := range contract.VendorListings {
+		listingSlugs = append(listingSlugs, listing.Slug)
+	}
+	log.Notice(fulfillment.Slug, listingSlugs)
+	if !slugExists(fulfillment.Slug, listingSlugs) {
+		return errors.New("Slug in rating signature does not exist in order")
+	}
+	if !keyExists(fulfillment.RatingSignature.Metadata.RatingKey, contract.BuyerOrder.RatingKeys) {
+		return errors.New("Rating key in vendor's rating signature is invalid")
+	}
+
 	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
 	if err != nil {
 		return err
 	}
 
-	if !bytes.Equal(fulfillment.RatingSignature.Metadata.RatingKey, contract.BuyerOrder.RatingKey) {
-		return errors.New("Rating signature does not contian rating key")
-	}
 	ser, err := proto.Marshal(fulfillment.RatingSignature.Metadata)
 	if err != nil {
 		return err
@@ -206,6 +219,30 @@ outer:
 		_, err := btcutil.DecodeAddress(fulfillment.Payout.PayoutAddress, n.Wallet.Params())
 		if err != nil {
 			return errors.New("Invalid payout address")
+		}
+	}
+	if n.IsFulfilled(contract) {
+		var listingSlugs []string
+		for _, listing := range contract.VendorListings {
+			listingSlugs = append(listingSlugs, listing.Slug)
+		}
+		var ratingSlugs []string
+		for _, fulfil := range contract.VendorOrderFulfillment {
+			ratingSlugs = append(ratingSlugs, fulfil.RatingSignature.Metadata.ListingSlug)
+		}
+		for _, ls := range listingSlugs {
+			if !slugExists(ls, ratingSlugs) {
+				return errors.New("Vendor failed to send rating signatures covering all purchased listings")
+			}
+		}
+		var vendorSignedKeys [][]byte
+		for _, fulfil := range contract.VendorOrderFulfillment {
+			vendorSignedKeys = append(vendorSignedKeys, fulfil.RatingSignature.Metadata.RatingKey)
+		}
+		for _, bk := range contract.BuyerOrder.RatingKeys {
+			if !keyExists(bk, vendorSignedKeys) {
+				return errors.New("Vendor failed to send rating signatures covering all ratingKeys")
+			}
 		}
 	}
 	return nil

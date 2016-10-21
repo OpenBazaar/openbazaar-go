@@ -59,7 +59,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-
+        slug = listing_json["listing"]["slug"]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
@@ -157,6 +157,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         # alice send order fulfillment
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
+        fulfillment_json["slug"] = slug
         fulfillment_json["orderId"] = orderId
         api_url = alice["gateway_url"] + "ob/orderfulfillment"
         r = requests.post(api_url, data=json.dumps(fulfillment_json, indent=4))
@@ -186,18 +187,12 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to order fulfillment")
 
         # bob send order completion
-        oc = {
-            "orderId": orderId,
-            "overall": 4,
-            "quality": 5,
-            "description": 5,
-            "customerService": 4,
-            "deliverySpeed": 3,
-            "review": "I love it!",
-            "anonymous": True
-        }
+        with open('testdata/completion.json') as completion_file:
+            completion_json = json.load(completion_file, object_pairs_hook=OrderedDict)
+        completion_json["orderId"] = orderId
+        completion_json["ratings"][0]["slug"] = slug
         api_url = bob["gateway_url"] + "ob/ordercompletion"
-        r = requests.post(api_url, data=json.dumps(oc, indent=4))
+        r = requests.post(api_url, data=json.dumps(completion_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Completion post endpoint not found")
         elif r.status_code != 200:
@@ -231,9 +226,9 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed <= 0:
-                raise TestFailure("RefundDirectTest - FAIL: Bob failed to receive the multisig payout")
+                raise TestFailure("RefundDirectTest - FAIL: Alice failed to receive the multisig payout")
         else:
-            raise TestFailure("RefundDirectTest - FAIL: Failed to query Bob's balance")
+            raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
 
         print("CompleteModeratedOnlineTest - PASS")
 
