@@ -27,6 +27,7 @@ const (
 	DescriptionMaxCharacters = 50000
 	MaxTags                  = 10
 	MaxCategories            = 10
+	FilenameMaxCharacters    = 255
 	WordMaxCharacters        = 40
 	SentanceMaxCharacters    = 70
 	PolicyMaxCharacters      = 10000
@@ -517,8 +518,8 @@ func validateListing(listing *pb.Listing) (err error) {
 		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
 		}
-		if len(img.Filename) > SentanceMaxCharacters {
-			return fmt.Errorf("Image filename length must be less than the max of %d", SentanceMaxCharacters)
+		if len(img.Filename) > FilenameMaxCharacters {
+			return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
 		}
 	}
 	if len(listing.Item.Categories) > MaxCategories {
