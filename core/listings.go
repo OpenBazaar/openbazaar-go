@@ -82,7 +82,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		slugToTry := slugBase
 		for {
 			_, _, err := n.GetListingFromSlug(slugToTry)
-			if err == nil {
+			if err != nil {
 				listing.Slug = slugToTry
 				break
 			}
@@ -155,6 +155,22 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
    to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
 	// Grap the current inventory for this listing
+	log.Notice(inventory)
+	// Format to remove leading and trailing path separator if one exists
+	for _, inv := range inventory {
+		if string(inv.Item[0]) == "/" {
+			inv.Item = inv.Item[1:]
+		}
+		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
+			inv.Item = inv.Item[:len(inv.Item)-1]
+		}
+		s := strings.Split(inv.Item, "/")
+		if s[0] != listing.Slug {
+			inv.Item = path.Join(listing.Slug, inv.Item)
+			log.Notice(inv.Item)
+		}
+	}
+	log.Notice(inventory)
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
 		return err
@@ -178,13 +194,6 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		variants[i] = name
 	}
 	for _, inv := range inventory {
-		// Format to remove leading and trailing path separator if one exists
-		if string(inv.Item[0]) == "/" {
-			inv.Item = inv.Item[1:]
-		}
-		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
-			inv.Item = inv.Item[:len(inv.Item)-1]
-		}
 		names := strings.Split(inv.Item, "/")
 		if names[0] != listing.Slug {
 			return errors.New("Slug must be first item in inventory string")
