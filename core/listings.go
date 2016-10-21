@@ -26,6 +26,7 @@ const (
 	ShortDescriptionLength   = 160
 	DescriptionMaxCharacters = 50000
 	MaxTags                  = 10
+	MaxCategories            = 10
 	WordMaxCharacters        = 40
 	SentanceMaxCharacters    = 70
 	PolicyMaxCharacters      = 10000
@@ -447,6 +448,7 @@ func validateListing(listing *pb.Listing) (err error) {
 			}
 		}
 	}()
+
 	if listing.Slug == "" {
 		return errors.New("Slug must not be nil")
 	}
@@ -518,6 +520,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(img.Filename) > SentanceMaxCharacters {
 			return fmt.Errorf("Image filename length must be less than the max of %d", SentanceMaxCharacters)
 		}
+	}
+	if len(listing.Item.Categories) > MaxCategories {
+		return fmt.Errorf("Number of categories must be less than max of %d", MaxCategories)
 	}
 	for _, category := range listing.Item.Categories {
 		if category == "" {
