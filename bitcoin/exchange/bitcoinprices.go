@@ -57,6 +57,12 @@ func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error
 	return price, nil
 }
 
+func (b *BitcoinPriceFetcher) GetAllRates() (map[string]float64, error) {
+	b.Lock()
+	defer b.Unlock()
+	return b.cache, nil
+}
+
 func (b *BitcoinPriceFetcher) UnitsPerCoin() int {
 	return SatoshiPerBTC
 }

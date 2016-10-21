@@ -47,6 +47,27 @@ func TestGetLastRate(t *testing.T) {
 	}
 }
 
+func TestGetAllRates(t *testing.T) {
+	b := BitcoinPriceFetcher{
+		cache: make(map[string]float64),
+	}
+	b.providers = []ExchangeRateProvider{&testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}}
+	b.cache["USD"] = 650.00
+	b.cache["EUR"] = 600.00
+	priceMap, err := b.GetAllRates()
+	if err != nil {
+		t.Error(err)
+	}
+	usd, ok := priceMap["USD"]
+	if !ok || usd != 650.00 {
+		t.Error("Failed to fetch exchange rates from cache")
+	}
+	eur, ok := priceMap["EUR"]
+	if !ok || eur != 600.00 {
+		t.Error("Failed to fetch exchange rates from cache")
+	}
+}
+
 func TestGetExchangeRate(t *testing.T) {
 	b := BitcoinPriceFetcher{
 		cache: make(map[string]float64),
