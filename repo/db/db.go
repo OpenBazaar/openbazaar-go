@@ -314,7 +314,7 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 
 func (c *ConfigDB) IsEncrypted() bool {
 	pwdCheck := "select count(*) from sqlite_master;"
-	_, err := c.db.Exec(pwdCheck) // fails is wrong pw entered
+	_, err := c.db.Exec(pwdCheck) // Fails if wrong password is entered
 	if err != nil {
 		return true
 	}

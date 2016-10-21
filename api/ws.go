@@ -9,13 +9,13 @@ import (
 )
 
 type connection struct {
-	// The websocket connection.
+	// The websocket connection
 	ws *websocket.Conn
 
-	// Buffered channel of outbound messages.
+	// Buffered channel of outbound messages
 	send chan []byte
 
-	// The hub.
+	// The hub
 	h *hub
 }
 
@@ -27,7 +27,7 @@ func (c *connection) reader() {
 		}
 		log.Debugf("Incoming websocket message: %s", string(message))
 
-		// Just echo for now until we set up the api
+		// Just echo for now until we set up the API
 		c.h.Broadcast <- message
 	}
 	c.ws.Close()

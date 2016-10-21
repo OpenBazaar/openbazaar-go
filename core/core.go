@@ -32,12 +32,12 @@ type OpenBazaarNode struct {
 	// IPFS node object
 	IpfsNode *core.IpfsNode
 
-	// The roothash of the node directory inside the openbazaar repo.
-	// This directory hash is published on IPNS at our peer ID making
-	// the directory publicly viewable on the network.
+	/* The roothash of the node directory inside the openbazaar repo.
+	   This directory hash is published on IPNS at our peer ID making
+	   the directory publicly viewable on the network. */
 	RootHash string
 
-	// The path to the openbazaar repo in the file system.
+	// The path to the openbazaar repo in the file system
 	RepoPath string
 
 	// The OpenBazaar network service for direct communication between peers
@@ -46,7 +46,7 @@ type OpenBazaarNode struct {
 	// Database for storing node specific data
 	Datastore repo.Datastore
 
-	// Websocket channel used for pushing data to the UI.
+	// Websocket channel used for pushing data to the UI
 	Broadcast chan []byte
 
 	// Bitcoin wallet implementation
@@ -71,7 +71,7 @@ type OpenBazaarNode struct {
 	CrosspostGateways []*url.URL
 }
 
-// Unpin the current node repo, re-add it, then publish to ipns
+// Unpin the current node repo, re-add it, then publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
 	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
@@ -103,8 +103,8 @@ func (n *OpenBazaarNode) publish(hash string) {
 	}
 }
 
-// This is a placeholder until the libsignal is operational
-// For now we will just encrypt outgoing offline messages with the long lived identity key.
+/* This is a placeholder until the libsignal is operational.
+   For now we will just encrypt outgoing offline messages with the long lived identity key. */
 func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []byte, rerr error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

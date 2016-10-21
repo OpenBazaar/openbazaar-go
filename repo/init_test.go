@@ -11,7 +11,7 @@ import (
 const repoRootFolder = "testdata/repo-root"
 const mnemonicFixture = "fiscal first first inside toe wedding away element response dry attend oxygen"
 
-// we have to use this and cannot pass the real db.Init because it would create a circular import error
+// We have to use this and cannot pass the real db.Init because it would create a circular import error
 func MockDbInit(mnemonic string, identityKey []byte, password string) error {
 	return nil
 }
@@ -37,18 +37,18 @@ func TestDoInit(t *testing.T) {
 	password := "password"
 	mnemonic := ""
 	testnet := true
-	// running DoInit on a folder that already contains a config file
+	// Running DoInit on a folder that already contains a config file
 	err := DoInit(testConfigFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err != ErrRepoExists {
 		t.Error("DoInit didn't throw expected error")
 	}
-	// running DoInit on an empty, not-writable folder
+	// Running DoInit on an empty, not-writable folder
 	os.Chmod(repoRootFolder, 0444)
 	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err == nil {
 		t.Error("DoInit didn't throw an error")
 	}
-	// running DoInit on an empty, writable folder
+	// Running DoInit on an empty, writable folder
 	os.Chmod(repoRootFolder, 0755)
 	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err != nil {
@@ -112,7 +112,7 @@ func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
 	}
 }
 
-// removes files that are created when tests are executed
+// Removes files that are created when tests are executed
 func TearDown() {
 	os.RemoveAll(filepath.Join(testConfigFolder, "outbox"))
 	os.RemoveAll(filepath.Join(testConfigFolder, "root"))
