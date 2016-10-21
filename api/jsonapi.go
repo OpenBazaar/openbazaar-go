@@ -192,7 +192,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write profile back out as json
+	// Write profile back out as JSON
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -210,7 +210,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
-	// If profile isn't set tell them to use POST
+	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
@@ -246,7 +246,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return the profile in json format
+	// Return the profile in JSON format
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,

@@ -143,7 +143,7 @@ func TestDecodeBitcoinAverage(t *testing.T) {
 	"volume_percent": 0.0
 	}}`
 
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -158,7 +158,7 @@ func TestDecodeBitcoinAverage(t *testing.T) {
 	"volume_percent": 0.0
 	}`
 
-	// Test invalid json
+	// Test invalid JSON
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -190,14 +190,14 @@ func TestDecodeBitPay(t *testing.T) {
 	}
 
 	resp := `[{"code":"BTC","name":"Bitcoin"},{"code":"USD","name":"US Dollar","rate":611.02},{"code":"EUR","name":"Eurozone Euro","rate":546.740696},{"code":"GBP","name":"Pound Sterling","rate":462.982074},{"code":"JPY","name":"Japanese Yen","rate":62479.23908}]`
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
 		t.Error(err)
 	}
 	resp = `[{"name":"Bitcoin","rate":611.02},{"code":"USD","name":"US Dollar","rate":611.02},{"code":"EUR","name":"Eurozone Euro","rate":546.740696},{"code":"GBP","name":"Pound Sterling","rate":462.982074},{"code":"JPY","name":"Japanese Yen","rate":62479.23908}]`
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -233,7 +233,7 @@ func TestDecodeBlockChainInfo(t *testing.T) {
 	resp := `{"USD" : [{"15m" : 612.73, "last" : 612.73, "buy" : 611.1, "sell" : 612.72,  "symbol" : "$"}],
   "ISK" : {"15m" : 74706.49, "last" : 74706.49, "buy" : 74507.76, "sell" : 74705.27,  "symbol" : "kr"},
   "HKD" : {"15m" : 4752.76, "last" : 4752.76, "buy" : 4740.11, "sell" : 4752.68,  "symbol" : "$"}}`
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -242,7 +242,7 @@ func TestDecodeBlockChainInfo(t *testing.T) {
 	resp = `{"USD" : {"15m" : 612.73, "buy" : 611.1, "sell" : 612.72,  "symbol" : "$"},
   "ISK" : {"15m" : 74706.49, "last" : 74706.49, "buy" : 74507.76, "sell" : 74705.27,  "symbol" : "kr"},
   "HKD" : {"15m" : 4752.76, "last" : 4752.76, "buy" : 4740.11, "sell" : 4752.68,  "symbol" : "$"}}`
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -274,14 +274,14 @@ func TestDecodeBitcoinCharts(t *testing.T) {
 	}
 
 	resp := `{"USD": {"7d": "642.47", "30d": "656.26"}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
-	// Test missing json element
+	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err != nil {
 		t.Error(err)
 	}
 	resp = `{"USD": {"7d": "642.47", "30d": "656.26", "24h": 618.68}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
-	// Test malformatted json
+	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -289,7 +289,7 @@ func TestDecodeBitcoinCharts(t *testing.T) {
 	}
 
 	resp = `{"USD": {"7d": "642.47", "30d": "656.26", "24h": "asdf"}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
-	// Test malformatted json
+	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {
@@ -297,7 +297,7 @@ func TestDecodeBitcoinCharts(t *testing.T) {
 	}
 
 	resp = `{"USD": [{"7d": "642.47", "30d": "656.26", "24h": "615.00"}], "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
-	// Test malformatted json
+	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
 	err = b.decode(r)
 	if err == nil {

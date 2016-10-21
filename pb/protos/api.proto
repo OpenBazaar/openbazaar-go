@@ -31,7 +31,6 @@ message OrderRespApi {
     bool read                               = 3;
     bool funded                             = 4;
     repeated TransactionRecord transactions = 5;
-
 }
 
 message TransactionRecord {

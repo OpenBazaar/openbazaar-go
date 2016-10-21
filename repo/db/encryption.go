@@ -17,7 +17,7 @@ import (
 // FIXME: the encrypt and decrypt functions here should probably be added to the DB interface
 // FIXME: and the stdin stuff should be moved somewhere outside of this package.
 
-// Create a temp encrypted database, read the unencrypted db into it then replace the unencrypted db
+// Create a temp encrypted database, read the unencrypted database into it then replace the unencrypted database
 func Encrypt() error {
 	reader := bufio.NewReader(os.Stdin)
 	var repoPath string
@@ -123,7 +123,7 @@ func Encrypt() error {
 	return nil
 }
 
-// Create a temp database, read the encrypted db into it then replace the encrypted db
+// Create a temp database, read the encrypted database into it then replace the encrypted database
 func Decrypt() error {
 	reader := bufio.NewReader(os.Stdin)
 	var repoPath string

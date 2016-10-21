@@ -124,7 +124,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 		return err
 	}
 
-	// Delete pointer from db
+	// Delete pointer from database
 	err = n.Datastore.Pointers().DeleteAll(ipfs.MODERATOR)
 	if err != nil {
 		return err
