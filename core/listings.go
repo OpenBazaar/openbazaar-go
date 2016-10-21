@@ -11,17 +11,16 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"github.com/kennygrant/sanitize"
-	"crypto/rand"
-	"github.com/btcsuite/btcutil/base58"
 )
 
 const (
@@ -65,13 +64,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		if len(title) < TitleMaxCharacters {
 			l = len(title)
 		}
-		ret := sanitize.Path(strings.ToLower(title[:l]))
-		if len(ret) == 0 {
-			r := make([]byte, 10)
-			rand.Read(r)
-			ret = base58.Encode(r)
-		}
-		return ret
+		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
 	}
 
 	c := new(pb.RicardianContract)
@@ -154,8 +147,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
-	// Grap the current inventory for this listing
-	log.Notice(inventory)
 	// Format to remove leading and trailing path separator if one exists
 	for _, inv := range inventory {
 		if string(inv.Item[0]) == "/" {
@@ -167,10 +158,9 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		s := strings.Split(inv.Item, "/")
 		if s[0] != listing.Slug {
 			inv.Item = path.Join(listing.Slug, inv.Item)
-			log.Notice(inv.Item)
 		}
 	}
-	log.Notice(inventory)
+	// Grab the current inventory for this listing
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
 		return err
