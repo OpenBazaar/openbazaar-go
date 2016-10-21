@@ -1720,44 +1720,54 @@ definitions:
         description: The base58 encoded multihash order ID.
         type: string
         example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
-      overall:
-        description: The overall rating
-        type: integer
-        minimum: 1
-        maximum: 5
-        example: 3
-      quality:
-        description: The quality rating
-        type: integer
-        minimum: 1
-        maximum: 5
-        example: 4
-      description:
-        description: The description rating
-        type: integer
-        minimum: 1
-        maximum: 5
-        example: 5
-      deliverySpeed:
-        description: The delivery speed rating
-        type: integer
-        minimum: 1
-        maximum: 5
-        example: 5
-      customerService:
-        description: The customer service rating
-        type: integer
-        minimum: 1
-        maximum: 5
-        example: 3
-      review:
-        description: The buyer's text review
-        type: string
-        example: "This rocks!"
-      anonymous:
-        description: Don't include the buyer's ID in the rating
-        type: boolean
-        example: True
+      ratings:
+        description: An array of rating objects
+        type: array
+        items:
+          type: object
+          properties:
+            slug:
+              description: The slug this rating is for
+              type: string
+              example: "cool_tshirt"
+            overall:
+              description: The overall rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 3
+            quality:
+              description: The quality rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 4
+            description:
+              description: The description rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            deliverySpeed:
+              description: The delivery speed rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            customerService:
+              description: The customer service rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 3
+            review:
+              description: The buyer's text review
+              type: string
+              example: "This rocks!"
+            anonymous:
+              description: Don't include the buyer's ID in the rating
+              type: boolean
+              example: True
   Config:
     description: Config object
     type: object
