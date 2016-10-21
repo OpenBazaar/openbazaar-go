@@ -116,16 +116,16 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	return c, nil
 }
 
-// Sets the inventory for the listing in the database. Does some basic validation
-// to make sure the inventory uses the correct variants.
+/* Sets the inventory for the listing in the database. Does some basic validation
+   to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
 	// Grap the current inventory for this listing
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
 		return err
 	}
-	// Delete from currentInv any variants that are carrying forward.
-	// The remainder should be a map of variants that should be deleted.
+	/* Delete from currentInv any variants that are carrying forward.
+	   The remainder should be a map of variants that should be deleted. */
 	for _, i := range inventory {
 		for k := range currentInv {
 			if i.Item == k {
@@ -143,7 +143,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		variants[i] = name
 	}
 	for _, inv := range inventory {
-		// format to remove leading and trailing path separator if one exists
+		// Format to remove leading and trailing path separator if one exists
 		if string(inv.Item[0]) == "/" {
 			inv.Item = inv.Item[1:]
 		}
@@ -171,7 +171,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 		// Put to database
 		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
 	}
-	// Delete any variants that don't carry forward
+	// Delete any variants that do not carry forward
 	for k := range currentInv {
 		err := n.Datastore.Inventory().Delete(k)
 		if err != nil {
@@ -211,7 +211,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
-		// read existing file
+		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
 			return err
@@ -238,7 +238,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	// Append our listing with the new hash to the list
 	index = append(index, ld)
 
-	// write it back to file
+	// Write it back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
@@ -260,7 +260,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 func (n *OpenBazaarNode) GetListingCount() int {
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
-	// read existing file
+	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return 0
@@ -283,7 +283,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
-	// read existing file
+	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		log.Error(err)
@@ -331,7 +331,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
-		// read existing file
+		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
 			return err
@@ -355,7 +355,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		index = append(index[:i], index[i+1:]...)
 	}
 
-	// write it back to file
+	// Write it back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
@@ -383,7 +383,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	var contract *pb.RicardianContract
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 
-	// read existing file
+	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return contract, nil, err
@@ -411,7 +411,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 
 	var invList []*pb.Inventory
 	contract := new(pb.RicardianContract)
-	// read existing file
+	// Read existing file
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
 		return nil, nil, err
@@ -433,9 +433,9 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	return contract, invList, nil
 }
 
-// Performs a ton of checks to make sure the listing is formatted correct. We shouldn't allow
-// listings to be saved or purchased if they aren't formatted correctly as it can lead to
-// ambiguity when moderating a dispute.
+/* Performs a ton of checks to make sure the listing is formatted correct. We should not allow
+   listings to be saved or purchased if they are not formatted correctly as it can lead to
+   ambiguity when moderating a dispute. */
 func validateListing(listing *pb.Listing) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -630,7 +630,7 @@ func validateListing(listing *pb.Listing) (err error) {
 				}
 			}
 		}
-		// TODO: For types 1 and 2 we should probably validate that the ranges used don't overlap
+		// TODO: For types 1 and 2 we should probably validate that the ranges used do not overlap
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
 			return errors.New("At least one service must be specified for a shipping option when not local pickup")

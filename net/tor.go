@@ -57,7 +57,7 @@ func CreateHiddenServiceKey(repoPath string) error {
 	return nil
 }
 
-// Generate a new key pair if one doesn't already exist
+// Generate a new key pair if one does not already exist
 func MaybeCreateHiddenServiceKey(repoPath string) error {
 	d, err := os.Open(repoPath)
 	if err != nil {

@@ -61,15 +61,15 @@ func (m *MessageRetriever) fetchPointers() {
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 
-	// Iterate over the pointers. Add 1 to the waitgroup for each found pointer
+	// Iterate over the pointers. Add 1 to the waitgroup for each found pointer.
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
-			// ipfs
+			// IPFS
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS {
 				wg.Add(1)
 				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
 			}
-			// https
+			// HTTPS
 			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS && p.Addrs[0].Protocols()[1].Code == ma.P_HTTPS {
 				enc, err := p.Addrs[0].ValueForProtocol(ma.P_IPFS)
 				if err != nil {
@@ -88,17 +88,16 @@ func (m *MessageRetriever) fetchPointers() {
 			}
 		}
 	}
-	wg.Done() // We've finished fetching pointers from the dht
+	wg.Done() // We have finished fetching pointers from the DHT
 
-	// Wait for each goroutine to finish then process any remaining messages that needed
-	// to be processed last
+	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
 	for _, env := range m.messageQueue {
 		m.handleMessage(env, nil)
 	}
 	m.messageQueue = []pb.Envelope{}
 
-	// For initial start up. We can ignore afterwards
+	// For initial start up. We can ignore afterwards.
 	if m.WaitGroup != nil {
 		m.Done()
 		m.WaitGroup = nil
@@ -163,13 +162,13 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 			return
 		}
 
-		// Respond with an ack
+		// Respond with an ACK
 		if env.Message.MessageType != pb.Message_OFFLINE_ACK {
 			m.sendAck(id.Pretty(), pid)
 		}
 
-		// Order messages need to be processed in the correct order, so cancel messages
-		// need to be processed last.
+		/* Order messages need to be processed in the correct order, so cancel messages
+		   need to be processed last. */
 		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
 			m.queLock.Lock()
 			m.messageQueue = append(m.messageQueue, env)
@@ -193,14 +192,14 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 		}
 		id = &i
 	}
-	// get handler for this msg type.
+	// Get handler for this msg type
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
 		log.Debug("Got back nil handler from handlerForMsgType")
 		return
 	}
 
-	// dispatch handler.
+	// Dispatch handler
 	_, err := handler(*id, env.Message, true)
 	if err != nil {
 		log.Debugf("handle message error: %s", err)

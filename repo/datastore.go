@@ -22,8 +22,8 @@ type Datastore interface {
 }
 
 type Config interface {
-	// Initialize the database with the node's mnemonic seed and
-	// identity key. This will be called during repo init
+	/* Initialize the database with the node's mnemonic seed and
+	   identity key. This will be called during repo init. */
 	Init(mnemonic string, identityKey []byte, password string) error
 
 	// Return the mnemonic string
@@ -32,7 +32,7 @@ type Config interface {
 	// Return the identity key
 	GetIdentityKey() ([]byte, error)
 
-	// Returns true if the db has failed to decrypt properly ex) wrong pw
+	// Returns true if the database has failed to decrypt properly ex) wrong pw
 	IsEncrypted() bool
 }
 
@@ -40,14 +40,14 @@ type Followers interface {
 	// Put a B58 encoded follower ID to the database
 	Put(follower string) error
 
-	// Get followers from the database.
-	// The offset and limit arguments can be used to for lazy loading.
+	/* Get followers from the database.
+	   The offset and limit arguments can be used to for lazy loading. */
 	Get(offsetId string, limit int) ([]string, error)
 
-	// Delete a follower from the databse.
+	// Delete a follower from the databse
 	Delete(follower string) error
 
-	// Return the number of followers in the database.
+	// Return the number of followers in the database
 	Count() int
 
 	// Are we followed by this peer?
@@ -58,14 +58,14 @@ type Following interface {
 	// Put a B58 encoded peer ID to the database
 	Put(peer string) error
 
-	// Get a list of following peers from the database.
-	// The offset and limit arguments can be used to for lazy loading.
+	/* Get a list of following peers from the database.
+	   The offset and limit arguments can be used to for lazy loading. */
 	Get(offsetId string, limit int) ([]string, error)
 
-	// Delete a peer from the databse.
+	// Delete a peer from the database
 	Delete(peer string) error
 
-	// Return the number of peers in the database.
+	// Return the number of peers in the database
 	Count() int
 
 	// Am I following this peer?
@@ -73,18 +73,18 @@ type Following interface {
 }
 
 type OfflineMessages interface {
-	// Put a url from a retrieved message
+	// Put a URL from a retrieved message
 	Put(url string) error
 
-	// Does the given url exist in the db?
+	// Does the given URL exist in the database?
 	Has(url string) bool
 }
 
 type Pointers interface {
-	// Put a pointer to the database.
+	// Put a pointer to the database
 	Put(p ipfs.Pointer) error
 
-	// Delete a pointer from the db.
+	// Delete a pointer from the database
 	Delete(id peer.ID) error
 
 	// Delete all pointers of a given purpose
@@ -95,8 +95,7 @@ type Pointers interface {
 }
 
 type Settings interface {
-	// Put settings to the database
-	// Override all fields
+	// Put settings to the database, overriding all fields
 	Put(settings SettingsData) error
 
 	// Update all non-nil fields
@@ -107,8 +106,8 @@ type Settings interface {
 }
 
 type Inventory interface {
-	// Put an inventory count for a listing
-	// Override the existing count if it exists
+	/* Put an inventory count for a listing
+	   Override the existing count if it exists */
 	Put(slug string, count int) error
 
 	// Return the count for a specific listing including variants
@@ -143,10 +142,10 @@ type Purchases interface {
 	// Return a purchase given the payment address
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
 
-	// Return a purchase given the order Id
+	// Return a purchase given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the Ids for all orders
+	// Return the IDs for all orders
 	GetAll() ([]string, error)
 }
 
@@ -166,9 +165,9 @@ type Sales interface {
 	// Return a sale given the payment address
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
 
-	// Return a sale given the order Id
+	// Return a sale given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the Ids for all orders
+	// Return the IDs for all orders
 	GetAll() ([]string, error)
 }

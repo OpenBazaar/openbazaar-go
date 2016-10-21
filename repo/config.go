@@ -172,7 +172,6 @@ func extendConfigFile(r repo.Repo, key string, value interface{}) error {
 }
 
 func InitConfig(repoRoot string) (*config.Config, error) {
-
 	bootstrapPeers, err := config.ParseBootstrapPeers(DefaultBootstrapAddresses)
 	if err != nil {
 		return nil, err
@@ -182,8 +181,8 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 
 	conf := &config.Config{
 
-		// setup the node's default addresses.
-		// NOTE: two swarm listen addrs, one tcp, one utp.
+		// Setup the node's default addresses.
+		// NOTE: two swarm listen addrs, one TCP, one UTP.
 		Addresses: config.Addresses{
 			Swarm: []string{
 				"/ip4/0.0.0.0/tcp/4001",
@@ -200,7 +199,7 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 			Interval: 10,
 		}},
 
-		// setup the node mount points.
+		// Setup the node mount points
 		Mounts: config.Mounts{
 			IPFS: "/ipfs",
 			IPNS: "/ipns",

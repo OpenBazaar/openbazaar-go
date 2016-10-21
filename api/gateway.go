@@ -56,7 +56,7 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, auth
 		return err
 	}
 
-	// if the server exits beforehand
+	// If the server exits beforehand
 	var serverError error
 	serverExited := make(chan struct{})
 
@@ -69,11 +69,11 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, auth
 		close(serverExited)
 	})
 
-	// wait for server to exit.
+	// Wait for server to exit
 	select {
 	case <-serverExited:
 
-	// if node being closed before server exits, close server
+	// If node being closed before server exits, close server
 	case <-node.IpfsNode.Process().Closing():
 		log.Infof("server at %s terminating...", addr)
 		if config.SSL {
@@ -84,10 +84,10 @@ func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, auth
 
 	outer:
 		for {
-			// wait until server exits
+			// Wait until server exits
 			select {
 			case <-serverExited:
-				// if the server exited as we are closing, we really dont care about errors
+				// If the server exited as we are closing, we really do not care about errors
 				serverError = nil
 				break outer
 			case <-time.After(5 * time.Second):

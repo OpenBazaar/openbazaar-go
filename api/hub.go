@@ -1,16 +1,16 @@
 package api
 
 type hub struct {
-	// Registered connections.
+	// Registered connections
 	connections map[*connection]bool
 
-	// Inbound messages from the connections.
+	// Inbound messages from the connections
 	Broadcast chan []byte
 
-	// Register requests from the connections.
+	// Register requests from the connections
 	register chan *connection
 
-	// Unregister requests from connections.
+	// Unregister requests from connections
 	unregister chan *connection
 }
 

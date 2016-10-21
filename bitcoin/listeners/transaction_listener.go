@@ -111,7 +111,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
-		// If we've already seen this transaction for some reason, just return
+		// If we have already seen this transaction for some reason, just return
 		if r.Txid == chainHash.String() {
 			return
 		}
@@ -161,7 +161,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
-		// If we've already seen this transaction for some reason, just return
+		// If we have already seen this transaction for some reason, just return
 		if r.Txid == chainHash.String() {
 			return
 		}

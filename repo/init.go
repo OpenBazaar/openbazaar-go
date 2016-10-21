@@ -119,7 +119,7 @@ func maybeCreateOBDirectories(repoRoot string) error {
 func checkWriteable(dir string) error {
 	_, err := os.Stat(dir)
 	if err == nil {
-		// dir exists, make sure we can write to it
+		// Directory exists, make sure we can write to it
 		testfile := path.Join(dir, "test")
 		fi, err := os.Create(testfile)
 		if err != nil {
@@ -133,7 +133,7 @@ func checkWriteable(dir string) error {
 	}
 
 	if os.IsNotExist(err) {
-		// dir does not exist, check that we can create it
+		// Directory does not exist, check that we can create it
 		return os.Mkdir(dir, 0775)
 	}
 
