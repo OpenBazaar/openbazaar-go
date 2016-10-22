@@ -471,386 +471,386 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
 func validateListing(listing *pb.Listing) (err error) {
-    defer func() {
-        if r := recover(); r != nil {
-            switch x := r.(type) {
-            case string:
-                err = errors.New(x)
-            case error:
-                err = x
-            default:
-                err = errors.New("Unknown panic")
-            }
-        }
-    }()
+	defer func() {
+		if r := recover(); r != nil {
+			switch x := r.(type) {
+			case string:
+				err = errors.New(x)
+			case error:
+				err = x
+			default:
+				err = errors.New("Unknown panic")
+			}
+		}
+	}()
 
-    // Slug
-    if listing.Slug == "" {
-        return errors.New("Slug must not be empty")
-    }
-    if len(listing.Slug) > SentenceMaxCharacters {
-        return fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
-    }
-    if strings.Contains(listing.Slug, " ") {
-        return errors.New("Slugs cannot contain spaces")
-    }
+	// Slug
+	if listing.Slug == "" {
+		return errors.New("Slug must not be empty")
+	}
+	if len(listing.Slug) > SentenceMaxCharacters {
+		return fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+	}
+	if strings.Contains(listing.Slug, " ") {
+		return errors.New("Slugs cannot contain spaces")
+	}
 
-    // Metadata
-    if listing.Metadata == nil {
-        return errors.New("Missing required field: Metadata")
-    }
-    if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
-        return errors.New("Invalid contract type")
-    }
-    if listing.Metadata.Format == pb.Listing_Metadata_NA || listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
-        return errors.New("Invalid listing format")
-    }
-    if listing.Metadata.Expiry == nil {
-        return errors.New("Missing required field: Expiry")
-    }
-    if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
-        return errors.New("Listing expiration must be in the future")
-    }
-    if listing.Metadata.PricingCurrency == "" {
-        return errors.New("Listing pricing currency code must not be empty")
-    }
+	// Metadata
+	if listing.Metadata == nil {
+		return errors.New("Missing required field: Metadata")
+	}
+	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
+		return errors.New("Invalid contract type")
+	}
+	if listing.Metadata.Format == pb.Listing_Metadata_NA || listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
+		return errors.New("Invalid listing format")
+	}
+	if listing.Metadata.Expiry == nil {
+		return errors.New("Missing required field: Expiry")
+	}
+	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
+		return errors.New("Listing expiration must be in the future")
+	}
+	if listing.Metadata.PricingCurrency == "" {
+		return errors.New("Listing pricing currency code must not be empty")
+	}
 
-    // Item
-    if listing.Item.Title == "" {
-        return errors.New("Listing must have a title")
-    }
-    if len(listing.Item.Title) > TitleMaxCharacters {
-        return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)
-    }
-    if len(listing.Item.Description) > DescriptionMaxCharacters {
-        return fmt.Errorf("Description is longer than the max of %d characters", DescriptionMaxCharacters)
-    }
-    if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
-        return fmt.Errorf("Processing time length must be less than the max of %d", SentenceMaxCharacters)
-    }
-    if len(listing.Item.Tags) > MaxTags {
-        return fmt.Errorf("Number of tags exceeds the max of %d", MaxTags)
-    }
-    for _, tag := range listing.Item.Tags {
-        if tag == "" {
-            return errors.New("Tags must not be empty")
-        }
-        if len(tag) > WordMaxCharacters {
-            return fmt.Errorf("Tags must be less than max of %d", WordMaxCharacters)
-        }
-    }
-    if len(listing.Item.Images) == 0 {
-        return errors.New("Listing must contain at least one image")
-    }
-    if len(listing.Item.Images) > MaxListItems {
-        return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
-    }
-    for _, img := range listing.Item.Images {
-        _, err := mh.FromB58String(img.Tiny)
-        if err != nil {
-            return errors.New("Tiny image hashes must be multihashes")
-        }
-        _, err = mh.FromB58String(img.Small)
-        if err != nil {
-            return errors.New("Small image hashes must be multihashes")
-        }
-        _, err = mh.FromB58String(img.Medium)
-        if err != nil {
-            return errors.New("Medium image hashes must be multihashes")
-        }
-        _, err = mh.FromB58String(img.Large)
-        if err != nil {
-            return errors.New("Large image hashes must be multihashes")
-        }
-        _, err = mh.FromB58String(img.Original)
-        if err != nil {
-            return errors.New("Original image hashes must be multihashes")
-        }
-        if img.Filename == "" {
-            return errors.New("Image file names must not be nil")
-        }
-        if len(img.Filename) > FilenameMaxCharacters {
-            return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
-        }
-    }
-    if len(listing.Item.Categories) > MaxCategories {
-        return fmt.Errorf("Number of categories must be less than max of %d", MaxCategories)
-    }
-    for _, category := range listing.Item.Categories {
-        if category == "" {
-            return errors.New("Categories must not be nil")
-        }
-        if len(category) > WordMaxCharacters {
-            return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
-        }
-    }
-    if len(listing.Item.Sku) > WordMaxCharacters {
-        return fmt.Errorf("Sku length must be less than the max of %d", WordMaxCharacters)
-    }
-    if len(listing.Item.Condition) > SentenceMaxCharacters {
-        return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
-    }
-    if len(listing.Item.Options) > MaxListItems {
-        return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
-    }
-    for _, option := range listing.Item.Options {
-        if option.Name == "" {
-            return errors.New("Options titles must not be empty")
-        }
-        if len(option.Variants) < 2 {
-            return errors.New("Options must have more than one variants")
-        }
-        if len(option.Name) > WordMaxCharacters {
-            return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
-        }
-        if len(option.Description) > SentenceMaxCharacters {
-            return fmt.Errorf("Option description length must be less than the max of %d", SentenceMaxCharacters)
-        }
-        if len(option.Variants) > MaxListItems {
-            return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
-        }
-        for _, variant := range option.Variants {
-            if variant.Name == "" {
-                return errors.New("Variant names must not be empty")
-            }
-            if len(variant.Name) > WordMaxCharacters {
-                return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
-            }
-            if variant.Image != nil {
-                _, err := mh.FromB58String(variant.Image.Tiny)
-                if err != nil {
-                    return errors.New("Tiny image hashes must be multihashes")
-                }
-                _, err = mh.FromB58String(variant.Image.Small)
-                if err != nil {
-                    return errors.New("Small image hashes must be multihashes")
-                }
-                _, err = mh.FromB58String(variant.Image.Medium)
-                if err != nil {
-                    return errors.New("Medium image hashes must be multihashes")
-                }
-                _, err = mh.FromB58String(variant.Image.Large)
-                if err != nil {
-                    return errors.New("Large image hashes must be multihashes")
-                }
-                _, err = mh.FromB58String(variant.Image.Original)
-                if err != nil {
-                    return errors.New("Original image hashes must be multihashes")
-                }
-                if variant.Image.Filename == "" {
-                    return errors.New("Variant image file names must not be empty")
-                }
-                if len(variant.Image.Filename) > SentenceMaxCharacters {
-                    return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
-                }
-            }
-        }
-    }
+	// Item
+	if listing.Item.Title == "" {
+		return errors.New("Listing must have a title")
+	}
+	if len(listing.Item.Title) > TitleMaxCharacters {
+		return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)
+	}
+	if len(listing.Item.Description) > DescriptionMaxCharacters {
+		return fmt.Errorf("Description is longer than the max of %d characters", DescriptionMaxCharacters)
+	}
+	if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
+		return fmt.Errorf("Processing time length must be less than the max of %d", SentenceMaxCharacters)
+	}
+	if len(listing.Item.Tags) > MaxTags {
+		return fmt.Errorf("Number of tags exceeds the max of %d", MaxTags)
+	}
+	for _, tag := range listing.Item.Tags {
+		if tag == "" {
+			return errors.New("Tags must not be empty")
+		}
+		if len(tag) > WordMaxCharacters {
+			return fmt.Errorf("Tags must be less than max of %d", WordMaxCharacters)
+		}
+	}
+	if len(listing.Item.Images) == 0 {
+		return errors.New("Listing must contain at least one image")
+	}
+	if len(listing.Item.Images) > MaxListItems {
+		return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
+	}
+	for _, img := range listing.Item.Images {
+		_, err := mh.FromB58String(img.Tiny)
+		if err != nil {
+			return errors.New("Tiny image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(img.Small)
+		if err != nil {
+			return errors.New("Small image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(img.Medium)
+		if err != nil {
+			return errors.New("Medium image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(img.Large)
+		if err != nil {
+			return errors.New("Large image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(img.Original)
+		if err != nil {
+			return errors.New("Original image hashes must be multihashes")
+		}
+		if img.Filename == "" {
+			return errors.New("Image file names must not be nil")
+		}
+		if len(img.Filename) > FilenameMaxCharacters {
+			return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+		}
+	}
+	if len(listing.Item.Categories) > MaxCategories {
+		return fmt.Errorf("Number of categories must be less than max of %d", MaxCategories)
+	}
+	for _, category := range listing.Item.Categories {
+		if category == "" {
+			return errors.New("Categories must not be nil")
+		}
+		if len(category) > WordMaxCharacters {
+			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
+		}
+	}
+	if len(listing.Item.Sku) > WordMaxCharacters {
+		return fmt.Errorf("Sku length must be less than the max of %d", WordMaxCharacters)
+	}
+	if len(listing.Item.Condition) > SentenceMaxCharacters {
+		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
+	}
+	if len(listing.Item.Options) > MaxListItems {
+		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
+	}
+	for _, option := range listing.Item.Options {
+		if option.Name == "" {
+			return errors.New("Options titles must not be empty")
+		}
+		if len(option.Variants) < 2 {
+			return errors.New("Options must have more than one variants")
+		}
+		if len(option.Name) > WordMaxCharacters {
+			return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
+		}
+		if len(option.Description) > SentenceMaxCharacters {
+			return fmt.Errorf("Option description length must be less than the max of %d", SentenceMaxCharacters)
+		}
+		if len(option.Variants) > MaxListItems {
+			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
+		}
+		for _, variant := range option.Variants {
+			if variant.Name == "" {
+				return errors.New("Variant names must not be empty")
+			}
+			if len(variant.Name) > WordMaxCharacters {
+				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
+			}
+			if variant.Image != nil {
+				_, err := mh.FromB58String(variant.Image.Tiny)
+				if err != nil {
+					return errors.New("Tiny image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Small)
+				if err != nil {
+					return errors.New("Small image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Medium)
+				if err != nil {
+					return errors.New("Medium image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Large)
+				if err != nil {
+					return errors.New("Large image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Original)
+				if err != nil {
+					return errors.New("Original image hashes must be multihashes")
+				}
+				if variant.Image.Filename == "" {
+					return errors.New("Variant image file names must not be empty")
+				}
+				if len(variant.Image.Filename) > SentenceMaxCharacters {
+					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
+				}
+			}
+		}
+	}
 
-    // ShippingOptions
-    if len(listing.ShippingOptions) > MaxListItems {
-        return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
-    }
-    var shippingTitles []string
-    for _, shippingOption := range listing.ShippingOptions {
-        if shippingOption.Name == "" {
-            return errors.New("Shipping option title name must not be empty")
-        }
-        if len(shippingOption.Name) > WordMaxCharacters {
-            return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
-        }
-        for _, t := range shippingTitles {
-            if t == shippingOption.Name {
-                return errors.New("Shipping option titles must be unique")
-            }
-        }
-        shippingTitles = append(shippingTitles, shippingOption.Name)
-        if shippingOption.Type == pb.Listing_ShippingOption_NA {
-            return errors.New("Shipping option type must be specified")
-        }
-        if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
-            return errors.New("Unkown shipping option type")
-        }
-        if len(shippingOption.Regions) == 0 {
-            return errors.New("Shipping options must specify at least one region")
-        }
-        if shippingOption.ShippingRules != nil {
-            if len(shippingOption.ShippingRules.Rules) == 0 {
-                return errors.New("At least on rule must be specified if ShippingRules is selected")
-            }
-            if len(shippingOption.ShippingRules.Rules) > MaxListItems {
-                return fmt.Errorf("Number of shipping rules is greater than the max of %d", MaxListItems)
-            }
-            if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
-                return errors.New("Shipping rule type must be specified")
-            }
-            if shippingOption.ShippingRules.RuleType > pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT {
-                return errors.New("Unknown shipping rule")
-            }
-            if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
-                return errors.New("Shipping rule type must be specified")
-            }
-            if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
-                return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
-            }
-            if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
-                return errors.New("Selected shipping rule type can only have a maximum of one rule")
-            }
-            for _, rule := range shippingOption.ShippingRules.Rules {
-                if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
-                    return errors.New("Shipping rule max range cannot be less than or equal to the min range")
-                }
-            }
-        }
-        if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
-            return errors.New("At least one service must be specified for a shipping option when not local pickup")
-        }
-        if len(shippingOption.Services) > MaxListItems {
-            return fmt.Errorf("Number of shipping services is greater than the max of %d", MaxListItems)
-        }
-        var serviceTitles []string
-        for _, option := range shippingOption.Services {
-            if option.Name == "" {
-                return errors.New("Shipping option service name must not be empty")
-            }
-            if len(option.Name) > WordMaxCharacters {
-                return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
-            }
-            for _, t := range serviceTitles {
-                if t == option.Name {
-                    return errors.New("Shipping option services names must be unique")
-                }
-            }
-            serviceTitles = append(serviceTitles, option.Name)
-            if option.EstimatedDelivery == "" {
-                return errors.New("Shipping option estimated delivery must not be empty")
-            }
-            if len(option.EstimatedDelivery) > SentenceMaxCharacters {
-                return fmt.Errorf("Shipping option estimated delivery length must be less than the max of %d", SentenceMaxCharacters)
-            }
-        }
-    }
+	// ShippingOptions
+	if len(listing.ShippingOptions) > MaxListItems {
+		return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
+	}
+	var shippingTitles []string
+	for _, shippingOption := range listing.ShippingOptions {
+		if shippingOption.Name == "" {
+			return errors.New("Shipping option title name must not be empty")
+		}
+		if len(shippingOption.Name) > WordMaxCharacters {
+			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+		}
+		for _, t := range shippingTitles {
+			if t == shippingOption.Name {
+				return errors.New("Shipping option titles must be unique")
+			}
+		}
+		shippingTitles = append(shippingTitles, shippingOption.Name)
+		if shippingOption.Type == pb.Listing_ShippingOption_NA {
+			return errors.New("Shipping option type must be specified")
+		}
+		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
+			return errors.New("Unkown shipping option type")
+		}
+		if len(shippingOption.Regions) == 0 {
+			return errors.New("Shipping options must specify at least one region")
+		}
+		if shippingOption.ShippingRules != nil {
+			if len(shippingOption.ShippingRules.Rules) == 0 {
+				return errors.New("At least on rule must be specified if ShippingRules is selected")
+			}
+			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
+				return fmt.Errorf("Number of shipping rules is greater than the max of %d", MaxListItems)
+			}
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
+				return errors.New("Shipping rule type must be specified")
+			}
+			if shippingOption.ShippingRules.RuleType > pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT {
+				return errors.New("Unknown shipping rule")
+			}
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
+				return errors.New("Shipping rule type must be specified")
+			}
+			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
+				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
+			}
+			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
+				return errors.New("Selected shipping rule type can only have a maximum of one rule")
+			}
+			for _, rule := range shippingOption.ShippingRules.Rules {
+				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
+					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+				}
+			}
+		}
+		if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
+			return errors.New("At least one service must be specified for a shipping option when not local pickup")
+		}
+		if len(shippingOption.Services) > MaxListItems {
+			return fmt.Errorf("Number of shipping services is greater than the max of %d", MaxListItems)
+		}
+		var serviceTitles []string
+		for _, option := range shippingOption.Services {
+			if option.Name == "" {
+				return errors.New("Shipping option service name must not be empty")
+			}
+			if len(option.Name) > WordMaxCharacters {
+				return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
+			}
+			for _, t := range serviceTitles {
+				if t == option.Name {
+					return errors.New("Shipping option services names must be unique")
+				}
+			}
+			serviceTitles = append(serviceTitles, option.Name)
+			if option.EstimatedDelivery == "" {
+				return errors.New("Shipping option estimated delivery must not be empty")
+			}
+			if len(option.EstimatedDelivery) > SentenceMaxCharacters {
+				return fmt.Errorf("Shipping option estimated delivery length must be less than the max of %d", SentenceMaxCharacters)
+			}
+		}
+	}
 
-    // Taxes
-    if len(listing.Taxes) > MaxListItems {
-        return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
-    }
-    for _, tax := range listing.Taxes {
-        if tax.TaxType == "" {
-            return errors.New("Tax type must be specified")
-        }
-        if len(tax.TaxType) > WordMaxCharacters {
-            return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
-        }
-        if len(tax.TaxRegions) == 0 {
-            return errors.New("Tax must specifiy at least one region")
-        }
-        if tax.Percentage == 0 {
-            return errors.New("No need to specify a tax if the rate is zero")
-        }
-    }
+	// Taxes
+	if len(listing.Taxes) > MaxListItems {
+		return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
+	}
+	for _, tax := range listing.Taxes {
+		if tax.TaxType == "" {
+			return errors.New("Tax type must be specified")
+		}
+		if len(tax.TaxType) > WordMaxCharacters {
+			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
+		}
+		if len(tax.TaxRegions) == 0 {
+			return errors.New("Tax must specifiy at least one region")
+		}
+		if tax.Percentage == 0 {
+			return errors.New("No need to specify a tax if the rate is zero")
+		}
+	}
 
-    // Coupons
-    if len(listing.Coupons) > MaxListItems {
-        return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
-    }
-    for _, coupon := range listing.Coupons {
-        if coupon.Title == "" {
-            return errors.New("Coupon titles must not be empty")
-        }
-        if len(coupon.Title) > SentenceMaxCharacters {
-            return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
-        }
-        _, err := mh.FromB58String(coupon.Hash)
-        if err != nil {
-            return errors.New("Coupon hashes must be multihashes")
-        }
-        if coupon.PercentDiscount > 100 {
-            return errors.New("Percent discount cannot be over 100 percent")
-        }
-        if coupon.PriceDiscount > listing.Item.Price {
-            return errors.New("Price discount cannot be greater than the item price")
-        }
-        if coupon.PercentDiscount > 0 && coupon.PriceDiscount > 0 {
-            return errors.New("Only one type of coupon discount can be selected")
-        }
-        if coupon.PercentDiscount == 0 && coupon.PriceDiscount == 0 {
-            return errors.New("Coupons must have at least one positive discount value")
-        }
-    }
+	// Coupons
+	if len(listing.Coupons) > MaxListItems {
+		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
+	}
+	for _, coupon := range listing.Coupons {
+		if coupon.Title == "" {
+			return errors.New("Coupon titles must not be empty")
+		}
+		if len(coupon.Title) > SentenceMaxCharacters {
+			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
+		}
+		_, err := mh.FromB58String(coupon.Hash)
+		if err != nil {
+			return errors.New("Coupon hashes must be multihashes")
+		}
+		if coupon.PercentDiscount > 100 {
+			return errors.New("Percent discount cannot be over 100 percent")
+		}
+		if coupon.PriceDiscount > listing.Item.Price {
+			return errors.New("Price discount cannot be greater than the item price")
+		}
+		if coupon.PercentDiscount > 0 && coupon.PriceDiscount > 0 {
+			return errors.New("Only one type of coupon discount can be selected")
+		}
+		if coupon.PercentDiscount == 0 && coupon.PriceDiscount == 0 {
+			return errors.New("Coupons must have at least one positive discount value")
+		}
+	}
 
-    // Moderators
-    for _, moderator := range listing.Moderators {
-        _, err := mh.FromB58String(moderator)
-        if err != nil {
-            return errors.New("Moderator IDs must be multihashes")
-        }
-    }
+	// Moderators
+	for _, moderator := range listing.Moderators {
+		_, err := mh.FromB58String(moderator)
+		if err != nil {
+			return errors.New("Moderator IDs must be multihashes")
+		}
+	}
 
-    // TermsAndConditions
-    if len(listing.TermsAndConditions) > PolicyMaxCharacters {
-        return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
-    }
+	// TermsAndConditions
+	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
+		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
+	}
 
-    // RefundPolicy
-    if len(listing.RefundPolicy) > PolicyMaxCharacters {
-        return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
-    }
+	// RefundPolicy
+	if len(listing.RefundPolicy) > PolicyMaxCharacters {
+		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
+	}
 
-    return nil
+	return nil
 }
 
 func verifySignaturesOnListing(contract *pb.RicardianContract) error {
-    for n, listing := range contract.VendorListings {
-        guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
-        bitcoinPubkeyBytes := listing.VendorID.Pubkeys.Bitcoin
-        guid := listing.VendorID.Guid
-        ser, err := proto.Marshal(listing)
-        if err != nil {
-            return err
-        }
-        hash := sha256.Sum256(ser)
-        guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-        if err != nil {
-            return err
-        }
-        bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
-        if err != nil {
-            return err
-        }
-        var guidSig []byte
-        var bitcoinSig *btcec.Signature
-        sig := contract.Signatures[n]
-        if sig.Section != pb.Signatures_LISTING {
-            return errors.New("Contract does not contain listing signature")
-        }
-        guidSig = sig.Guid
-        bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-        if err != nil {
-            return err
-        }
-        valid, err := guidPubkey.Verify(ser, guidSig)
-        if err != nil {
-            return err
-        }
-        if !valid {
-            return errors.New("Vendor's guid signature on contact failed to verify")
-        }
-        checkKeyHash, err := guidPubkey.Hash()
-        if err != nil {
-            return err
-        }
-        guidMH, err := mh.FromB58String(guid)
-        if err != nil {
-            return err
-        }
-        if !bytes.Equal(guidMH, checkKeyHash) {
-            return errors.New("Public key in listing does not match reported vendor ID")
-        }
-        valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
-        if !valid {
-            return errors.New("Vendor's bitcoin signature on contact failed to verify")
-        }
-    }
-    return nil
+	for n, listing := range contract.VendorListings {
+		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
+		bitcoinPubkeyBytes := listing.VendorID.Pubkeys.Bitcoin
+		guid := listing.VendorID.Guid
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			return err
+		}
+		hash := sha256.Sum256(ser)
+		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
+		if err != nil {
+			return err
+		}
+		bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+		if err != nil {
+			return err
+		}
+		var guidSig []byte
+		var bitcoinSig *btcec.Signature
+		sig := contract.Signatures[n]
+		if sig.Section != pb.Signatures_LISTING {
+			return errors.New("Contract does not contain listing signature")
+		}
+		guidSig = sig.Guid
+		bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
+		if err != nil {
+			return err
+		}
+		valid, err := guidPubkey.Verify(ser, guidSig)
+		if err != nil {
+			return err
+		}
+		if !valid {
+			return errors.New("Vendor's guid signature on contact failed to verify")
+		}
+		checkKeyHash, err := guidPubkey.Hash()
+		if err != nil {
+			return err
+		}
+		guidMH, err := mh.FromB58String(guid)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(guidMH, checkKeyHash) {
+			return errors.New("Public key in listing does not match reported vendor ID")
+		}
+		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
+		if !valid {
+			return errors.New("Vendor's bitcoin signature on contact failed to verify")
+		}
+	}
+	return nil
 }
