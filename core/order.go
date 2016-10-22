@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		i := new(pb.Order_Item)
 
 		/* It is possible that multiple items could refer to the same listing if the buyer is ordering
-		   multiple items with different variants. If its multiple items of the same variant they can just
+		   multiple items with different variants. If it is multiple items of the same variant they can just
 		   use the quantity field. But different variants require two separate item entries. However,
 		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
 		   So let's check to see if that's the case here and handle it. */
