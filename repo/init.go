@@ -17,18 +17,13 @@ import (
 
 var log = logging.MustGetLogger("repo")
 
-var ErrRepoExists = errors.New(`ipfs configuration file already exists!
-Reinitializing would overwrite your keys.
-(use -f to force overwrite)
-`)
-
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
 
 	if fsrepo.IsInitialized(repoRoot) {
-		return ErrRepoExists
+		return errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 	}
 
 	if err := checkWriteable(repoRoot); err != nil {
@@ -47,19 +42,19 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		}
 	}
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
-	fmt.Printf("generating %d-bit RSA keypair...", nBitsForKeypair)
+	fmt.Printf("Generating %d-bit RSA keypair...", nBitsForKeypair)
 	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("done\n")
+	fmt.Printf("Done\n")
 
 	identity, err := ipfs.IdentityFromKey(identityKey)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("initializing openbazaar node at %s\n", repoRoot)
+	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
@@ -126,7 +121,7 @@ func checkWriteable(dir string) error {
 			if os.IsPermission(err) {
 				return fmt.Errorf("%s is not writeable by the current user", dir)
 			}
-			return fmt.Errorf("unexpected error while checking writeablility of repo root: %s", err)
+			return fmt.Errorf("Unexpected error while checking writeablility of repo root: %s", err)
 		}
 		fi.Close()
 		return os.Remove(testfile)
@@ -138,7 +133,7 @@ func checkWriteable(dir string) error {
 	}
 
 	if os.IsPermission(err) {
-		return fmt.Errorf("cannot write to %s, incorrect permissions", err)
+		return fmt.Errorf("Cannot write to %s, incorrect permissions", err)
 	}
 
 	return err
