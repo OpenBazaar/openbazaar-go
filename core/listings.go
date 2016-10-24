@@ -467,9 +467,9 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	return contract, invList, nil
 }
 
-/* Performs a ton of checks to make sure the listing is formatted correct. We should not allow
-   listings to be saved or purchased if they are not formatted correctly as it can lead to
-   ambiguity when moderating a dispute or possible attacks. */
+/* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
+   invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
+   or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
 func validateListing(listing *pb.Listing) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -484,6 +484,7 @@ func validateListing(listing *pb.Listing) (err error) {
 		}
 	}()
 
+	// Slug
 	if listing.Slug == "" {
 		return errors.New("Slug must not be empty")
 	}
@@ -493,17 +494,16 @@ func validateListing(listing *pb.Listing) (err error) {
 	if strings.Contains(listing.Slug, " ") {
 		return errors.New("Slugs cannot contain spaces")
 	}
-	if len(listing.Slug) > SentenceMaxCharacters {
-		return fmt.Errorf("Slug lenght exceeds max of %d", SentenceMaxCharacters)
-	}
+
+	// Metadata
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if listing.Metadata.Format == pb.Listing_Metadata_NA || listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
-		return errors.New("Invalid listing format")
-	}
 	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
 		return errors.New("Invalid contract type")
+	}
+	if listing.Metadata.Format == pb.Listing_Metadata_NA || listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
+		return errors.New("Invalid listing format")
 	}
 	if listing.Metadata.Expiry == nil {
 		return errors.New("Missing required field: Expiry")
@@ -514,6 +514,8 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Metadata.PricingCurrency == "" {
 		return errors.New("Listing pricing currency code must not be empty")
 	}
+
+	// Item
 	if listing.Item.Title == "" {
 		return errors.New("Listing must have a title")
 	}
@@ -522,6 +524,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if len(listing.Item.Description) > DescriptionMaxCharacters {
 		return fmt.Errorf("Description is longer than the max of %d characters", DescriptionMaxCharacters)
+	}
+	if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
+		return fmt.Errorf("Processing time length must be less than the max of %d", SentenceMaxCharacters)
 	}
 	if len(listing.Item.Tags) > MaxTags {
 		return fmt.Errorf("Number of tags exceeds the max of %d", MaxTags)
@@ -538,28 +543,28 @@ func validateListing(listing *pb.Listing) (err error) {
 		return errors.New("Listing must contain at least one image")
 	}
 	if len(listing.Item.Images) > MaxListItems {
-		return fmt.Errorf("Listing contains more than %d images", MaxListItems)
+		return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
 	}
 	for _, img := range listing.Item.Images {
 		_, err := mh.FromB58String(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be a multihash")
+			return errors.New("Tiny image hashes must be multihashes")
 		}
 		_, err = mh.FromB58String(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be a multihash")
+			return errors.New("Small image hashes must be multihashes")
 		}
 		_, err = mh.FromB58String(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be a multihash")
+			return errors.New("Medium image hashes must be multihashes")
 		}
 		_, err = mh.FromB58String(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be a multihash")
+			return errors.New("Large image hashes must be multihashes")
 		}
 		_, err = mh.FromB58String(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be a multihash")
+			return errors.New("Original image hashes must be multihashes")
 		}
 		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
@@ -579,9 +584,6 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
 		}
 	}
-	if len(listing.Item.ProcessingTime) > SentenceMaxCharacters {
-		return fmt.Errorf("Processing time length must be less than the max of %d", SentenceMaxCharacters)
-	}
 	if len(listing.Item.Sku) > WordMaxCharacters {
 		return fmt.Errorf("Sku length must be less than the max of %d", WordMaxCharacters)
 	}
@@ -589,14 +591,14 @@ func validateListing(listing *pb.Listing) (err error) {
 		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
 	}
 	if len(listing.Item.Options) > MaxListItems {
-		return fmt.Errorf("Number of options are greater than the max of %d", MaxListItems)
+		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
 	}
 	for _, option := range listing.Item.Options {
 		if option.Name == "" {
 			return errors.New("Options titles must not be empty")
 		}
 		if len(option.Variants) < 2 {
-			return errors.New("Options must have more than one varients")
+			return errors.New("Options must have more than one variants")
 		}
 		if len(option.Name) > WordMaxCharacters {
 			return fmt.Errorf("Option title length must be less than the max of %d", WordMaxCharacters)
@@ -605,7 +607,7 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Option description length must be less than the max of %d", SentenceMaxCharacters)
 		}
 		if len(option.Variants) > MaxListItems {
-			return fmt.Errorf("Number of variants are greater than the max of %d", MaxListItems)
+			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
 		}
 		for _, variant := range option.Variants {
 			if variant.Name == "" {
@@ -617,49 +619,42 @@ func validateListing(listing *pb.Listing) (err error) {
 			if variant.Image != nil {
 				_, err := mh.FromB58String(variant.Image.Tiny)
 				if err != nil {
-					return errors.New("Tiny image hashes must be a multihash")
+					return errors.New("Tiny image hashes must be multihashes")
 				}
 				_, err = mh.FromB58String(variant.Image.Small)
 				if err != nil {
-					return errors.New("Small image hashes must be a multihash")
+					return errors.New("Small image hashes must be multihashes")
 				}
 				_, err = mh.FromB58String(variant.Image.Medium)
 				if err != nil {
-					return errors.New("Medium image hashes must be a multihash")
+					return errors.New("Medium image hashes must be multihashes")
 				}
 				_, err = mh.FromB58String(variant.Image.Large)
 				if err != nil {
-					return errors.New("Large image hashes must be a multihash")
+					return errors.New("Large image hashes must be multihashes")
 				}
 				_, err = mh.FromB58String(variant.Image.Original)
 				if err != nil {
-					return errors.New("Original image hashes must be a multihash")
-				}
-				if len(variant.Image.Filename) > SentenceMaxCharacters {
-					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
+					return errors.New("Original image hashes must be multihashes")
 				}
 				if variant.Image.Filename == "" {
 					return errors.New("Variant image file names must not be empty")
 				}
+				if len(variant.Image.Filename) > SentenceMaxCharacters {
+					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
+				}
 			}
 		}
 	}
+
+	// ShippingOptions
 	if len(listing.ShippingOptions) > MaxListItems {
 		return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
 	}
 	var shippingTitles []string
 	for _, shippingOption := range listing.ShippingOptions {
-		if len(shippingOption.Regions) == 0 {
-			return errors.New("Shipping options must specify at least one region")
-		}
 		if shippingOption.Name == "" {
 			return errors.New("Shipping option title name must not be empty")
-		}
-		if shippingOption.Type == pb.Listing_ShippingOption_NA {
-			return errors.New("Shipping option type must be specified")
-		}
-		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
-			return errors.New("Unkown shipping option type")
 		}
 		if len(shippingOption.Name) > WordMaxCharacters {
 			return fmt.Errorf("Shipping option service length must be less than the max of %d", WordMaxCharacters)
@@ -668,6 +663,16 @@ func validateListing(listing *pb.Listing) (err error) {
 			if t == shippingOption.Name {
 				return errors.New("Shipping option titles must be unique")
 			}
+		}
+		shippingTitles = append(shippingTitles, shippingOption.Name)
+		if shippingOption.Type == pb.Listing_ShippingOption_NA {
+			return errors.New("Shipping option type must be specified")
+		}
+		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
+			return errors.New("Unkown shipping option type")
+		}
+		if len(shippingOption.Regions) == 0 {
+			return errors.New("Shipping options must specify at least one region")
 		}
 		if shippingOption.ShippingRules != nil {
 			if len(shippingOption.ShippingRules.Rules) == 0 {
@@ -697,7 +702,6 @@ func validateListing(listing *pb.Listing) (err error) {
 				}
 			}
 		}
-		shippingTitles = append(shippingTitles, shippingOption.Name)
 		if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
 			return errors.New("At least one service must be specified for a shipping option when not local pickup")
 		}
@@ -706,7 +710,6 @@ func validateListing(listing *pb.Listing) (err error) {
 		}
 		var serviceTitles []string
 		for _, option := range shippingOption.Services {
-
 			if option.Name == "" {
 				return errors.New("Shipping option service name must not be empty")
 			}
@@ -727,6 +730,8 @@ func validateListing(listing *pb.Listing) (err error) {
 			}
 		}
 	}
+
+	// Taxes
 	if len(listing.Taxes) > MaxListItems {
 		return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
 	}
@@ -744,6 +749,8 @@ func validateListing(listing *pb.Listing) (err error) {
 			return errors.New("No need to specify a tax if the rate is zero")
 		}
 	}
+
+	// Coupons
 	if len(listing.Coupons) > MaxListItems {
 		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
 	}
@@ -754,13 +761,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(coupon.Title) > SentenceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
 		}
-
-		if coupon.PriceDiscount > 0 && coupon.PercentDiscount > 0 {
-			return errors.New("Only one type of coupon discount can be selected")
-
-		}
-		if coupon.PercentDiscount == 0 && coupon.PriceDiscount == 0 {
-			return errors.New("Coupons must have at least one positive discount value")
+		_, err := mh.FromB58String(coupon.Hash)
+		if err != nil {
+			return errors.New("Coupon hashes must be multihashes")
 		}
 		if coupon.PercentDiscount > 100 {
 			return errors.New("Percent discount cannot be over 100 percent")
@@ -768,23 +771,32 @@ func validateListing(listing *pb.Listing) (err error) {
 		if coupon.PriceDiscount > listing.Item.Price {
 			return errors.New("Price discount cannot be greater than the item price")
 		}
-		_, err := mh.FromB58String(coupon.Hash)
-		if err != nil {
-			return errors.New("Coupon hashes must be a multihash")
+		if coupon.PercentDiscount > 0 && coupon.PriceDiscount > 0 {
+			return errors.New("Only one type of coupon discount can be selected")
+		}
+		if coupon.PercentDiscount == 0 && coupon.PriceDiscount == 0 {
+			return errors.New("Coupons must have at least one positive discount value")
 		}
 	}
+
+	// Moderators
 	for _, moderator := range listing.Moderators {
 		_, err := mh.FromB58String(moderator)
 		if err != nil {
-			return errors.New("Moderator IDs must be a multihash")
+			return errors.New("Moderator IDs must be multihashes")
 		}
 	}
+
+	// TermsAndConditions
 	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
 		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
 	}
+
+	// RefundPolicy
 	if len(listing.RefundPolicy) > PolicyMaxCharacters {
 		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
 	}
+
 	return nil
 }
 
