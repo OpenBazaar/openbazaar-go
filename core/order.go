@@ -140,6 +140,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
+			// Validate vendor ID
+			vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			if !vendorId.MatchesPublicKey(vendorPubKey) {
+				return "", "", 0, false, errors.New("Invalid vendor ID")
+			}
 			if err := validateListing(rc.VendorListings[0]); err != nil {
 				return "", "", 0, false, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
 			}

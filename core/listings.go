@@ -35,6 +35,7 @@ const (
 	WordMaxCharacters        = 40
 	SentenceMaxCharacters    = 70
 	PolicyMaxCharacters      = 10000
+	MaxCountryCodes          = 255
 )
 
 type price struct {
@@ -674,6 +675,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
+		if len(shippingOption.Regions) > MaxCountryCodes {
+			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
+		}
 		if shippingOption.ShippingRules != nil {
 			if len(shippingOption.ShippingRules.Rules) == 0 {
 				return errors.New("At least on rule must be specified if ShippingRules is selected")
@@ -745,8 +749,11 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(tax.TaxRegions) == 0 {
 			return errors.New("Tax must specifiy at least one region")
 		}
-		if tax.Percentage == 0 {
-			return errors.New("No need to specify a tax if the rate is zero")
+		if len(tax.TaxRegions) > MaxCountryCodes {
+			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)
+		}
+		if tax.Percentage == 0 || tax.Percentage > 100 {
+			return errors.New("Tax percentage must be between 0 and 100")
 		}
 	}
 
@@ -780,6 +787,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 
 	// Moderators
+	if len(listing.Moderators) > MaxListItems {
+		return fmt.Errorf("Number of moderators is greater than the max of %d", MaxListItems)
+	}
 	for _, moderator := range listing.Moderators {
 		_, err := mh.FromB58String(moderator)
 		if err != nil {
