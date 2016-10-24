@@ -56,6 +56,8 @@ type listingData struct {
 	Desc         string    `json:"desc"`
 	Thumbnail    thumbnail `json:"thumbnail"`
 	Price        price     `json:"price"`
+	ShipsTo      []string  `json:"shipsTo"`
+	FreeShipping []string  `json:"freeShipping"`
 }
 
 // Add our identity to the listing and sign it
@@ -233,6 +235,30 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		descLen = ShortDescriptionLength
 	}
 
+	contains := func(s []string, e string) bool {
+		for _, a := range s {
+			if a == e {
+				return true
+			}
+		}
+		return false
+	}
+
+	shipsTo := []string{}
+	freeShipping := []string{}
+	for _, shippingOption := range contract.VendorListings[0].ShippingOptions {
+		for _, region := range shippingOption.Regions {
+			if !contains(shipsTo, region.String()) {
+				shipsTo = append(shipsTo, region.String())
+			}
+			for _, service := range shippingOption.Services {
+				if service.Price == 0 && !contains(freeShipping, region.String()) {
+					freeShipping = append(freeShipping, region.String())
+				}
+			}
+		}
+	}
+
 	ld := listingData{
 		Hash:         listingHash,
 		Slug:         contract.VendorListings[0].Slug,
@@ -242,6 +268,8 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Desc:         contract.VendorListings[0].Item.Description[:descLen],
 		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
+		ShipsTo:      shipsTo,
+		FreeShipping: freeShipping,
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -310,7 +338,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 }
 
 // Check to see we are selling the given listing. Used when validating an order.
-// FIXME: this wont scale well. We will need a better way.
+// FIXME: This wont scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
