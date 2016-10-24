@@ -262,6 +262,7 @@ func (x *Start) Execute(args []string) error {
 	// Create authentication cookie
 	var authCookie http.Cookie
 	authCookie.Name = "OpenBazaar_Auth_Cookie"
+	cookiePrefix := authCookie.Name + "="
 	cookiePath := path.Join(repoPath, ".cookie")
 	cookie, err := ioutil.ReadFile(cookiePath)
 	if err != nil {
@@ -274,17 +275,17 @@ func (x *Start) Execute(args []string) error {
 			log.Error(err)
 			return err
 		}
-		cookie := "OpenBazaar_Auth_Cookie=" + authCookie.Value
+		cookie := cookiePrefix + authCookie.Value
 		_, werr := f.Write([]byte(cookie))
 		if werr != nil {
 			log.Error(werr)
 			return werr
 		}
 	} else {
-		if string(cookie)[:23] != "OpenBazaar_Auth_Cookie=" {
+		if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
 			return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
 		}
-		split := strings.SplitAfter(string(cookie), "OpenBazaar_Auth_Cookie=")
+		split := strings.SplitAfter(string(cookie), cookiePrefix)
 		authCookie.Value = split[1]
 	}
 
