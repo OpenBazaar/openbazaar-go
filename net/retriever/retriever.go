@@ -31,13 +31,14 @@ type MessageRetriever struct {
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
 	messageQueue []pb.Envelope
-	queLock      *sync.Mutex
+	queueLock    *sync.Mutex
 	*sync.WaitGroup
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
 	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.Mutex), new(sync.WaitGroup)}
-	mr.Add(1) // Add one for initial wait at start up
+	// Add one for initial wait at start up
+	mr.Add(1)
 	return &mr
 }
 
@@ -61,7 +62,7 @@ func (m *MessageRetriever) fetchPointers() {
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 
-	// Iterate over the pointers. Add 1 to the waitgroup for each found pointer.
+	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
 			// IPFS
@@ -69,6 +70,7 @@ func (m *MessageRetriever) fetchPointers() {
 				wg.Add(1)
 				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
 			}
+
 			// HTTPS
 			if len(p.Addrs[0].Protocols()) == 2 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS && p.Addrs[0].Protocols()[1].Code == ma.P_HTTPS {
 				enc, err := p.Addrs[0].ValueForProtocol(ma.P_IPFS)
@@ -88,7 +90,8 @@ func (m *MessageRetriever) fetchPointers() {
 			}
 		}
 	}
-	wg.Done() // We have finished fetching pointers from the DHT
+	// We have finished fetching pointers from the DHT
+	wg.Done()
 
 	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
@@ -97,7 +100,7 @@ func (m *MessageRetriever) fetchPointers() {
 	}
 	m.messageQueue = []pb.Envelope{}
 
-	// For initial start up. We can ignore afterwards.
+	// For initial start up only
 	if m.WaitGroup != nil {
 		m.Done()
 		m.WaitGroup = nil
@@ -132,56 +135,58 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
+	// Decript and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
-
-	if err == nil {
-
-		// Unmarshal plaintext
-		env := pb.Envelope{}
-		err := proto.Unmarshal(plaintext, &env)
-		if err != nil {
-			return
-		}
-
-		// Validate the signature
-		ser, err := proto.Marshal(env.Message)
-		if err != nil {
-			return
-		}
-		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
-		if err != nil {
-			return
-		}
-		valid, err := pubkey.Verify(ser, env.Signature)
-		if err != nil || !valid {
-			return
-		}
-
-		id, err := peer.IDFromPublicKey(pubkey)
-		if err != nil {
-			return
-		}
-
-		// Respond with an ACK
-		if env.Message.MessageType != pb.Message_OFFLINE_ACK {
-			m.sendAck(id.Pretty(), pid)
-		}
-
-		/* Order messages need to be processed in the correct order, so cancel messages
-		   need to be processed last. */
-		if env.Message.MessageType == pb.Message_ORDER_CANCEL {
-			m.queLock.Lock()
-			m.messageQueue = append(m.messageQueue, env)
-			m.queLock.Unlock()
-			return
-		}
-
-		m.handleMessage(env, &id)
+	if err != nil {
+		return
 	}
+
+	// Unmarshal plaintext
+	env := pb.Envelope{}
+	err := proto.Unmarshal(plaintext, &env)
+	if err != nil {
+		return
+	}
+
+	// Validate the signature
+	ser, err := proto.Marshal(env.Message)
+	if err != nil {
+		return
+	}
+	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
+	if err != nil {
+		return
+	}
+	valid, err := pubkey.Verify(ser, env.Signature)
+	if err != nil || !valid {
+		return
+	}
+
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return
+	}
+
+	// Respond with an ACK
+	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
+		m.sendAck(id.Pretty(), pid)
+	}
+
+	/* Order messages need to be processed in the correct order, so cancel messages
+	   need to be processed last. */
+	if env.Message.MessageType == pb.Message_ORDER_CANCEL {
+		m.queueLock.Lock()
+		m.messageQueue = append(m.messageQueue, env)
+		m.queueLock.Unlock()
+		return
+	}
+
+	m.handleMessage(env, &id)
 }
 
 func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 	if id == nil {
+		// Get the peer ID from the public key
 		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 		if err != nil {
 			return
@@ -192,17 +197,18 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 		}
 		id = &i
 	}
-	// Get handler for this msg type
+
+	// Get handler for this message type
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
-		log.Debug("Got back nil handler from handlerForMsgType")
+		log.Debug("Got back nil handler from HandlerForMsgType")
 		return
 	}
 
 	// Dispatch handler
 	_, err := handler(*id, env.Message, true)
 	if err != nil {
-		log.Debugf("handle message error: %s", err)
+		log.Debugf("Handle message error: %s", err)
 		return
 	}
 }
