@@ -594,7 +594,6 @@ func (d *DummyListener) Close() error {
 
 // Collects options, creates listener, prints status message and starts serving requests
 func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (error, <-chan bool, <-chan error) {
-
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
 		return err, nil, nil
@@ -666,13 +665,13 @@ func getRepoPath(isTestnet bool) (string, error) {
 
 	// Append testnet flag if on testnet
 	if isTestnet {
-		directoryName = directoryName + "-testnet"
+		directoryName += "-testnet"
 	}
 
 	// Join the path and directory name, then expand the home path
 	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	// Return the shortest lexical representation of the path
