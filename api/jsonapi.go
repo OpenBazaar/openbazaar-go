@@ -437,7 +437,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	fmt.Fprintf(w, `{"slug": "%s"}`, contract.VendorListings[0].Slug)
 	return
 }
 

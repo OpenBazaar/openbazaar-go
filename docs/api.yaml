@@ -1146,7 +1146,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/DefaultResponse'
+            $ref: '#/definitions/SlugResponse'
         '400':
           description: Bad Request
           schema:
@@ -1542,6 +1542,14 @@ definitions:
         example: "Error unmarshalling json"
   IPFSResponse:
     type: string
+  SlugResponse:
+    description: The slug returned from the post listing call
+    example: {"slug": "blue-tshirt"}
+    type: object
+    properties:
+      slug: 
+        type: string
+        example: "blue-tshirt"
   ImageResponse:
     type: array
     example: [
