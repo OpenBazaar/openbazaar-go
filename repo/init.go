@@ -16,6 +16,7 @@ import (
 )
 
 var log = logging.MustGetLogger("repo")
+var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
@@ -23,7 +24,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	if fsrepo.IsInitialized(repoRoot) {
-		return errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
+		return ErrRepoExists
 	}
 
 	if err := checkWriteable(repoRoot); err != nil {
