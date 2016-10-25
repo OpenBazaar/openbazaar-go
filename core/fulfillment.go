@@ -190,7 +190,6 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	for _, listing := range contract.VendorListings {
 		listingSlugs = append(listingSlugs, listing.Slug)
 	}
-	log.Notice(fulfillment.Slug, listingSlugs)
 	if !slugExists(fulfillment.Slug, listingSlugs) {
 		return errors.New("Slug in rating signature does not exist in order")
 	}

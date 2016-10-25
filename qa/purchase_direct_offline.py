@@ -120,7 +120,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(6)
+        time.sleep(10)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

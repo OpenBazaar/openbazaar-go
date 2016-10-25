@@ -42,6 +42,8 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+        resp = json.loads(r.text)
+        slug = resp["slug"]
         time.sleep(4)
 
         # get listing hash
@@ -131,6 +133,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["orderId"] = orderId
+        fulfillment_json["slug"] = slug
         api_url = alice["gateway_url"] + "ob/orderfulfillment"
         r = requests.post(api_url, data=json.dumps(fulfillment_json, indent=4))
         if r.status_code == 404:

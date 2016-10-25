@@ -67,6 +67,8 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+        resp = json.loads(r.text)
+        slug = resp["slug"]
         time.sleep(4)
 
         # get listing hash
