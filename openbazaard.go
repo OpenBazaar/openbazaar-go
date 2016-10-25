@@ -167,7 +167,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 }
 
 func (x *Init) Execute(args []string) error {
-	// set repo path
+	// Set repo path
 	repoPath, err := getRepoPath(x.Testnet)
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func (x *Start) Execute(args []string) error {
 		isTestnet = true
 	}
 
-	// set repo path
+	// Set repo path
 	repoPath, err := getRepoPath(isTestnet)
 	if err != nil {
 		return err
@@ -232,12 +232,12 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	// logging
+	// Logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "ob.log"),
-		MaxSize:    10, // megabytes
+		MaxSize:    10, // Megabytes
 		MaxBackups: 3,
-		MaxAge:     30, //days
+		MaxAge:     30, // Days
 	}
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
 	backendFile := logging.NewLogBackend(w, "", 0)
@@ -248,13 +248,13 @@ func (x *Start) Execute(args []string) error {
 	ipfslogging.LdJSONFormatter()
 	w2 := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "ipfs.log"),
-		MaxSize:    10, // megabytes
+		MaxSize:    10, // Megabytes
 		MaxBackups: 3,
-		MaxAge:     30, //days
+		MaxAge:     30, // Days
 	}
 	ipfslogging.Output(w2)()
 
-	// if the db can't be decrypted, exit
+	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
 		return encryptedDatabaseError
 	}
@@ -262,6 +262,7 @@ func (x *Start) Execute(args []string) error {
 	// Create authentication cookie
 	var authCookie http.Cookie
 	authCookie.Name = "OpenBazaar_Auth_Cookie"
+	cookiePrefix := authCookie.Name + "="
 	cookiePath := path.Join(repoPath, ".cookie")
 	cookie, err := ioutil.ReadFile(cookiePath)
 	if err != nil {
@@ -274,17 +275,17 @@ func (x *Start) Execute(args []string) error {
 			log.Error(err)
 			return err
 		}
-		cookie := "OpenBazaar_Auth_Cookie=" + authCookie.Value
+		cookie := cookiePrefix + authCookie.Value
 		_, werr := f.Write([]byte(cookie))
 		if werr != nil {
 			log.Error(werr)
 			return werr
 		}
 	} else {
-		if string(cookie)[:23] != "OpenBazaar_Auth_Cookie=" {
+		if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
 			return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
 		}
-		split := strings.SplitAfter(string(cookie), "OpenBazaar_Auth_Cookie=")
+		split := strings.SplitAfter(string(cookie), cookiePrefix)
 		authCookie.Value = split[1]
 	}
 
@@ -322,7 +323,7 @@ func (x *Start) Execute(args []string) error {
 	for i, addr := range cfg.Addresses.Swarm {
 		m, _ := ma.NewMultiaddr(addr)
 		p := m.Protocols()
-		// If we are using utp and the stun option has been select, run stun and replace the port in the address
+		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
 		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
 			port, serr := obnet.Stun()
 			if serr != nil {
@@ -393,9 +394,9 @@ func (x *Start) Execute(args []string) error {
 
 	w3 := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
-		MaxSize:    10, // megabytes
+		MaxSize:    10, // Megabytes
 		MaxBackups: 3,
-		MaxAge:     30, //days
+		MaxAge:     30, // Days
 	}
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
@@ -430,7 +431,7 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	// Authenticated Gateway
+	// Authenticated gateway
 	apiConfig, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error(err)
@@ -446,7 +447,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	// Override config file preference if this is Mainnet, open internet and api enabled
+	// Override config file preference if this is Mainnet, open internet and API enabled
 	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
@@ -515,9 +516,9 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	// Wait for gateway to start before starting the network service.
-	// This way the websocket channel we pass into the service gets created first.
-	// FIXME: There has to be a better way
+	/* Wait for gateway to start before starting the network service.
+	   This way the websocket channel we pass into the service gets created first.
+	   FIXME: There has to be a better way */
 	for b := range cb {
 		if b == true {
 			OBService := service.SetupOpenBazaarService(core.Node, ctx, sqliteDB)
@@ -554,7 +555,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLit
 		return sqliteDB, err
 	}
 
-	// initialize the ipfs repo if it doesn't already exist
+	// Initialize the IPFS repo if it does not already exist
 	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, sqliteDB.Config().Init)
 	if err != nil {
 		return sqliteDB, err
@@ -562,7 +563,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLit
 	return sqliteDB, nil
 }
 
-// printSwarmAddrs prints the addresses of the host
+// Prints the addresses of the host
 func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	var addrs []string
 	for _, addr := range node.PeerHost.Addrs() {
@@ -592,9 +593,8 @@ func (d *DummyListener) Close() error {
 	return nil
 }
 
-// serveHTTPGateway collects options, creates listener, prints status message and starts serving requests
+// Collects options, creates listener, prints status message and starts serving requests
 func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (error, <-chan bool, <-chan error) {
-
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
 		return err, nil, nil
@@ -620,7 +620,7 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config 
 			return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
 		}
 	}
-	// we might have listened to /tcp/0 - lets see what we are listing on
+	// We might have listened to /tcp/0 - let's see what we are listing on
 	gatewayMaddr = gwLis.Multiaddr()
 
 	log.Infof("Gateway/API server listening on %s\n", gatewayMaddr)
@@ -649,8 +649,8 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config 
 	return nil, cb, errc
 }
 
-// getRepoPath returns the directory to store repo data in. It depends on the
-// operating system and whether or not we're on testnet.
+/* Returns the directory to store repo data in.
+   It depends on the OS and whether or not we are on testnet. */
 func getRepoPath(isTestnet bool) (string, error) {
 	// Set default base path and directory name
 	path := "~"
@@ -666,13 +666,13 @@ func getRepoPath(isTestnet bool) (string, error) {
 
 	// Append testnet flag if on testnet
 	if isTestnet {
-		directoryName = directoryName + "-testnet"
+		directoryName += "-testnet"
 	}
 
 	// Join the path and directory name, then expand the home path
 	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	// Return the shortest lexical representation of the path

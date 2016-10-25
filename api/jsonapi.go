@@ -192,7 +192,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Write profile back out as json
+	// Write profile back out as JSON
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -210,7 +210,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
-	// If profile isn't set tell them to use POST
+	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
@@ -246,7 +246,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return the profile in json format
+	// Return the profile in JSON format
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -383,16 +383,19 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 
 	// If the listing already exists tell them to use PUT
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
-	_, ferr := os.Stat(listingPath)
-	if !os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
-		return
+	if ld.Listing.Slug != "" {
+		_, ferr := os.Stat(listingPath)
+		if !os.IsNotExist(ferr) {
+			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
+			return
+		}
 	}
 	contract, err := i.node.SignListing(ld.Listing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -446,12 +449,10 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
-	if ld.CurrentSlug != ld.Listing.Slug {
-		_, ferr := os.Stat(listingPath)
-		if !os.IsNotExist(ferr) {
-			ErrorResponse(w, http.StatusConflict, "Cannot rename listing. One already exists with the same slug")
-			return
-		}
+	_, ferr := os.Stat(listingPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Listing not found. Use POST to create a new listing.")
+		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
 	if err != nil {
@@ -489,14 +490,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// Delete existing listing if the slug changed
-	if ld.CurrentSlug != "" && ld.CurrentSlug != ld.Listing.Slug {
-		err := i.node.DeleteListing(ld.CurrentSlug)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
-			return
-		}
-	}
+
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -512,13 +506,23 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
-	err := jsonpb.Unmarshal(r.Body, ld)
+	type deleteReq struct {
+		Slug string `json:"slug"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var req deleteReq
+	err := decoder.Decode(&req)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	err = i.node.DeleteListing(ld.CurrentSlug)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
+	_, ferr := os.Stat(listingPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Listing not found")
+		return
+	}
+	err = i.node.DeleteListing(req.Slug)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -771,12 +775,27 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
 	_, currencyCode := path.Split(r.URL.Path)
-	rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+	if currencyCode == "" || strings.ToLower(currencyCode) == "exchangerate" {
+		currencyMap, err := i.node.ExchangeRates.GetAllRates()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		exchangeRateJson, err := json.MarshalIndent(currencyMap, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(exchangeRateJson))
+
+	} else {
+		rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprintf(w, `%.2f`, rate)
 	}
-	fmt.Fprintf(w, `%.2f`, rate)
 }
 
 func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {

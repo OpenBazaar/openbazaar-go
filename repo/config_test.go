@@ -145,10 +145,10 @@ func TestExtendConfigFile(t *testing.T) {
 	if config.MaxFee != newMaxFee {
 		t.Errorf("Expected maxFee to be %v, got %v", newMaxFee, config.MaxFee)
 	}
-	// reset maxFee to original value
+	// Reset maxFee to original value
 	extendConfigFile(r, "Wallet.MaxFee", originalMaxFee)
 
-	//Teardown
+	// Teardown
 	os.RemoveAll(filepath.Join(testConfigFolder, "datastore"))
 	os.RemoveAll(filepath.Join(testConfigFolder, "repo.lock"))
 }

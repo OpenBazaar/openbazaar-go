@@ -48,16 +48,16 @@ type item struct {
 }
 
 type PurchaseData struct {
-	ShipTo           string `json:"shipTo"`
-	Address          string `json:"address"`
-	City             string `json:"city"`
-	State            string `json:"state"`
-	PostalCode       string `json:"postalCode"`
-	CountryCode      string `json:"countryCode"`
-	AddressNotes     string `json:"addressNotes"`
-	Moderator        string `json:"moderator"`
-	Items            []item `json:"items"`
-	AlternateContact string `json:"alternateContactInfo"`
+	ShipTo               string `json:"shipTo"`
+	Address              string `json:"address"`
+	City                 string `json:"city"`
+	State                string `json:"state"`
+	PostalCode           string `json:"postalCode"`
+	CountryCode          string `json:"countryCode"`
+	AddressNotes         string `json:"addressNotes"`
+	Moderator            string `json:"moderator"`
+	Items                []item `json:"items"`
+	AlternateContactInfo string `json:"alternateContactInfo"`
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
@@ -99,7 +99,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	ts.Seconds = time.Now().Unix()
 	ts.Nanos = 0
 	order.Timestamp = ts
-	order.AlternateContactInfo = data.AlternateContact
+	order.AlternateContactInfo = data.AlternateContactInfo
 
 	var ratingKeys [][]byte
 	for range data.Items {
@@ -121,11 +121,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	for _, item := range data.Items {
 		i := new(pb.Order_Item)
 
-		// It's possible that multiple items could refer to the same listing if the buyer is ordering
-		// multiple items with different variants. If it's multiple items of the same variant they can just
-		// use the quantity field. But different variants require two separate item entries. However,
-		// in this case we don't need to add the listing to the contract twice. Just once is sufficient.
-		// So let's check to see if that's the case here and handle it.
+		/* It is possible that multiple items could refer to the same listing if the buyer is ordering
+		   multiple items with different variants. If it is multiple items of the same variant they can just
+		   use the quantity field. But different variants require two separate item entries. However,
+		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
+		   So let's check to see if that's the case here and handle it. */
 		toAdd := true
 		for _, addedListing := range addedListings {
 			if item.ListingHash == addedListing[0] {
@@ -134,7 +134,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		listing := new(pb.Listing)
 		if toAdd {
-			// Let's fetch the listing, should be cached.
+			// Let's fetch the listing, should be cached
 			b, err := ipfs.Cat(n.Context, item.ListingHash)
 			if err != nil {
 				return "", "", 0, false, err
@@ -143,6 +143,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			err = jsonpb.UnmarshalString(string(b), rc)
 			if err != nil {
 				return "", "", 0, false, err
+			}
+			// Validate vendor ID
+			vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			if !vendorId.MatchesPublicKey(vendorPubKey) {
+				return "", "", 0, false, errors.New("Invalid vendor ID")
 			}
 			if err := validateListing(rc.VendorListings[0]); err != nil {
 				return "", "", 0, false, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
@@ -171,7 +183,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
 		}
 
-		// validate the selected options
+		// Validate the selected options
 		var userOptions []option
 		var listingOptions []string
 		for _, opt := range listing.Item.Options {
@@ -240,7 +252,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	contract.BuyerOrder = order
 
 	// Add payment data and send to vendor
-	if data.Moderator != "" { // moderated payment
+	if data.Moderator != "" { // Moderated payment
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
@@ -260,8 +272,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		payment.Amount = total
 
-		// Generate a payment address using the first child key derived from the buyers's,
-		// vendors's and moderator's masterPubKey and a random chaincode.
+		/* Generate a payment address using the first child key derived from the buyers's,
+		   vendors's and moderator's masterPubKey and a random chaincode. */
 		chaincode := make([]byte, 32)
 		_, err = rand.Read(chaincode)
 		if err != nil {
@@ -331,7 +343,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 
 		// Send to order vendor
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
-		if err != nil { // vendor offline
+		if err != nil { // Vendor offline
 			// Send using offline messaging
 			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
 			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.Guid)
@@ -356,7 +368,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
-		} else { // vendor responded
+		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
 				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
 			}
@@ -388,7 +400,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, true)
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
-	} else { // direct payment
+	} else { // Direct payment
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 		total, err := n.CalculateOrderTotal(contract)
@@ -408,8 +420,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			// Change payment code to direct
 			payment.Method = pb.Order_Payment_DIRECT
 
-			// Generate a payment address using the first child key derived from the buyer's
-			// and vendors's masterPubKeys and a random chaincode.
+			/* Generate a payment address using the first child key derived from the buyer's
+			   and vendors's masterPubKeys and a random chaincode. */
 			chaincode := make([]byte, 32)
 			_, err := rand.Read(chaincode)
 			if err != nil {

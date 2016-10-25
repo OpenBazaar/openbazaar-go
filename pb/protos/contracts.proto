@@ -184,11 +184,11 @@ message Order {
     message Payment {
         Method method       = 1;
         string moderator    = 2;
-        uint64 amount       = 3; // satoshis
+        uint64 amount       = 3; // Satoshis
         uint64 exchangeRate = 4;
-        string chaincode    = 6; // hex encoded
-        string address      = 7; // b58check encoded
-        string redeemScript = 8; // hex encoded
+        string chaincode    = 6; // Hex encoded
+        string address      = 7; // B58check encoded
+        string redeemScript = 8; // Hex encoded
 
         enum Method {
             ADDRESS_REQUEST = 0;

@@ -45,8 +45,8 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	if mherr != nil {
 		return mherr
 	}
-	// TODO: We're just using a default prefix length for now. Eventually we will want to customize this,
-	// but we will need some way to get the recipient's desired prefix length. Likely will be in profile.
+	/* TODO: We are just using a default prefix length for now. Eventually we will want to customize this,
+	   but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
 	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, 16, addr)
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error 
 		MessageType: pb.Message_OFFLINE_ACK,
 		Payload:     a}
 	err = n.Service.SendMessage(ctx, p, &m)
-	if err != nil { // Couldn't connect directly to peer. Likely offline.
+	if err != nil { // Could not connect directly to peer. Likely offline.
 		if err := n.SendOfflineMessage(p, &m); err != nil {
 			return err
 		}
@@ -106,7 +106,7 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 	defer cancel()
 	m := pb.Message{MessageType: pb.Message_FOLLOW}
 	err = n.Service.SendMessage(ctx, p, &m)
-	if err != nil { // Couldn't connect directly to peer. Likely offline.
+	if err != nil { // Could not connect directly to peer. Likely offline.
 		if err := n.SendOfflineMessage(p, &m); err != nil {
 			return err
 		}

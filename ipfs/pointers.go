@@ -36,11 +36,11 @@ const (
 	CHANNEL   Purpose = 4
 )
 
-// A pointer is a custom provider inserted into the dht which points to a location of a file.
-// For offline messaging purposes we use a hash of the recipient's ID as the key and set the
-// provider to the location of the ciphertext. We set the Peer ID of the provider object to
-// a magic number so we distinguish it from regular providers and use a longer ttl.
-// Note this will only be compatible with the OpenBazaar/go-ipfs fork.
+/* A pointer is a custom provider inserted into the DHT which points to a location of a file.
+   For offline messaging purposes we use a hash of the recipient's ID as the key and set the
+   provider to the location of the ciphertext. We set the Peer ID of the provider object to
+   a magic number so we distinguish it from regular providers and use a longer ttl.
+   Note this will only be compatible with the OpenBazaar/go-ipfs fork. */
 type Pointer struct {
 	Key       key.Key
 	Value     ps.PeerInfo
@@ -74,7 +74,7 @@ func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihas
 	return peerout
 }
 
-// Fetch pointers from the dht.
+// Fetch pointers from the dht
 func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) ([]ps.PeerInfo, error) {
 	var providers []ps.PeerInfo
 	for p := range FindPointersAsync(dht, ctx, mhKey, prefixLen) {

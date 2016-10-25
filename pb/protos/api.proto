@@ -12,7 +12,6 @@ import "orders.proto";
 message ListingReqApi {
     Listing listing              = 1;
     repeated Inventory inventory = 2;
-    string currentSlug           = 3;
 }
 
 message ListingRespApi {
@@ -31,7 +30,6 @@ message OrderRespApi {
     bool read                               = 3;
     bool funded                             = 4;
     repeated TransactionRecord transactions = 5;
-
 }
 
 message TransactionRecord {

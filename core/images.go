@@ -37,7 +37,7 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error
 	if w > h {
 		w = w / h
 		h = uint(1)
-	} else if h > h {
+	} else if h > w {
 		h = h / w
 		w = uint(1)
 	} else {
@@ -133,24 +133,17 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*Images, error
 	if err != nil {
 		return nil, err
 	}
-	w := uint(float64(imgCfg.Width))
-	h := uint(float64(imgCfg.Height))
-	if w > h {
-		h = h / w
-		w = uint(1)
-	} else if h > h {
+	imgWidth := uint(imgCfg.Width)
+	imgHeight := uint(imgCfg.Height)
 
-		w = w / h
-		h = uint(1)
-	} else {
-		w = uint(1)
-		h = uint(1)
-	}
-
-	ty := resize.Resize(w*304, h*101, img, resize.Lanczos3)
-	sm := resize.Resize(w*608, h*202, img, resize.Lanczos3)
-	md := resize.Resize(w*1225, h*350, img, resize.Lanczos3)
-	lg := resize.Resize(w*2450, h*700, img, resize.Lanczos3)
+	w, h := getImageAttributes(304, 101, imgWidth, imgHeight)
+	ty := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(608, 202, imgWidth, imgHeight)
+	sm := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(1225, 350, imgWidth, imgHeight)
+	md := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(2450, 700, imgWidth, imgHeight)
+	lg := resize.Resize(w, h, img, resize.Lanczos3)
 
 	imgPath := path.Join(n.RepoPath, "root", "images")
 
@@ -239,23 +232,17 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 	if err != nil {
 		return nil, err
 	}
-	w := uint(imgCfg.Width)
-	h := uint(imgCfg.Height)
-	if w > h {
-		w = w / h
-		h = uint(1)
-	} else if h > h {
-		h = h / w
-		w = uint(1)
-	} else {
-		w = uint(1)
-		h = uint(1)
-	}
+	imgWidth := uint(imgCfg.Width)
+	imgHeight := uint(imgCfg.Height)
 
-	ty := resize.Resize(w*60, h*60, img, resize.Lanczos3)
-	sm := resize.Resize(w*228, h*228, img, resize.Lanczos3)
-	md := resize.Resize(w*500, h*500, img, resize.Lanczos3)
-	lg := resize.Resize(w*1000, h*1000, img, resize.Lanczos3)
+	w, h := getImageAttributes(60, 60, imgWidth, imgHeight)
+	ty := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(228, 228, imgWidth, imgHeight)
+	sm := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(500, 500, imgWidth, imgHeight)
+	md := resize.Resize(w, h, img, resize.Lanczos3)
+	w, h = getImageAttributes(1000, 1000, imgWidth, imgHeight)
+	lg := resize.Resize(w, h, img, resize.Lanczos3)
 
 	imgPath := path.Join(n.RepoPath, "root", "images")
 
@@ -313,4 +300,17 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 	}
 	ret := &Images{t, s, m, l, o}
 	return ret, nil
+}
+
+func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (width, height uint) {
+	targetRatio := targetWidth / targetHeight
+	imageRatio := imgWidth / imgHeight
+	if imageRatio > targetRatio {
+		height = targetHeight
+		width = targetHeight * imageRatio
+	} else {
+		width = targetWidth
+		height = targetWidth * (imgHeight / imgWidth)
+	}
+	return height, width
 }

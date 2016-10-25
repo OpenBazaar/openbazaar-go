@@ -25,7 +25,7 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 
 ## Install
 
-A typical install of OpenBazaar contains a bundle of the server deamon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you're looking to run the server daemon by itself or to contribute to developement see below for instructions.
+A typical install of OpenBazaar contains a bundle of the server deamon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you are looking to run the server daemon by itself or to contribute to developement see below for instructions.
 
 ### Install prebuilt packages
 
@@ -33,7 +33,7 @@ The easiest way to run the server is to download a pre-built binary. You can fin
 
 ### Build from Source
 
-To build from source you will need to have Go installed and properly configured. Detailed instructs for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs). 
+To build from source you will need to have Go installed and properly configured. Detailed instructs for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs).
 
 ## Dependency Management
 
@@ -87,7 +87,7 @@ When ready we will put up a full documentation of the OpenBazaar protocol and th
 The server is currently under heavy development. Most of the underlying networking is complete and what remains is to build out the order/purchase flow. We expect to have a development release which will be capable of browsing the network in a few weeks.
 
 ## Contributing
-Contributions are welcome. // TODO: make contribute.md guidlines
+Contributions are definitely welcome! Please read the contributing [guidlines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTE.md) before starting.
 
 ## License
 MIT
