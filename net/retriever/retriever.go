@@ -143,7 +143,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 
 	// Unmarshal plaintext
 	env := pb.Envelope{}
-	err := proto.Unmarshal(plaintext, &env)
+	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
 		return
 	}
