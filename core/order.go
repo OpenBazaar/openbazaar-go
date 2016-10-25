@@ -48,16 +48,16 @@ type item struct {
 }
 
 type PurchaseData struct {
-	ShipTo           string `json:"shipTo"`
-	Address          string `json:"address"`
-	City             string `json:"city"`
-	State            string `json:"state"`
-	PostalCode       string `json:"postalCode"`
-	CountryCode      string `json:"countryCode"`
-	AddressNotes     string `json:"addressNotes"`
-	Moderator        string `json:"moderator"`
-	Items            []item `json:"items"`
-	AlternateContact string `json:"alternateContactInfo"`
+	ShipTo               string `json:"shipTo"`
+	Address              string `json:"address"`
+	City                 string `json:"city"`
+	State                string `json:"state"`
+	PostalCode           string `json:"postalCode"`
+	CountryCode          string `json:"countryCode"`
+	AddressNotes         string `json:"addressNotes"`
+	Moderator            string `json:"moderator"`
+	Items                []item `json:"items"`
+	AlternateContactInfo string `json:"alternateContactInfo"`
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
@@ -99,7 +99,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	ts.Seconds = time.Now().Unix()
 	ts.Nanos = 0
 	order.Timestamp = ts
-	order.AlternateContactInfo = data.AlternateContact
+	order.AlternateContactInfo = data.AlternateContactInfo
 
 	ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
 	if err != nil {
