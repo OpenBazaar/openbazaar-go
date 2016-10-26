@@ -144,17 +144,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			// Validate vendor ID
-			vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Guid)
-			if err != nil {
+			if err := validateVersionNumber(rc); err != nil {
 				return "", "", 0, false, err
 			}
-			vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.Guid)
-			if err != nil {
+			if err := validateVendorID(rc); err != nil {
 				return "", "", 0, false, err
-			}
-			if !vendorId.MatchesPublicKey(vendorPubKey) {
-				return "", "", 0, false, errors.New("Invalid vendor ID")
 			}
 			if err := validateListing(rc.VendorListings[0]); err != nil {
 				return "", "", 0, false, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
@@ -1307,4 +1301,42 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 
 	contract.Signatures = append(contract.Signatures, s)
 	return contract, nil
+}
+
+func validateVendorID(rc *pb.RicardianContract) error {
+
+	if len(rc.VendorListings) == 0 {
+		return errors.New("Contract does not contain a listing")
+	}
+	if rc.VendorListings[0].VendorID == nil {
+		return errors.New("VendorID is nil")
+	}
+	if rc.VendorListings[0].VendorID.Pubkeys == nil {
+		return errors.New("Vendor pubkeys is nil")
+	}
+	vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Guid)
+	if err != nil {
+		return err
+	}
+	vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.Guid)
+	if err != nil {
+		return err
+	}
+	if !vendorId.MatchesPublicKey(vendorPubKey) {
+		return errors.New("Invalid vendor ID")
+	}
+	return nil
+}
+
+func validateVersionNumber(rc *pb.RicardianContract) error {
+	if len(rc.VendorListings) == 0 {
+		return errors.New("Contract does not contain a listing")
+	}
+	if rc.VendorListings[0].Metadata == nil {
+		return errors.New("Contract does not contain listing metadata")
+	}
+	if rc.VendorListings[0].Metadata.Version > ListingVersion {
+		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
+	}
+	return nil
 }
