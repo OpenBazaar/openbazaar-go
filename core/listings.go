@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
@@ -528,10 +528,10 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if listing.Metadata.ContractType == pb.Listing_Metadata_UNKNOWN || listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
+	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
 		return errors.New("Invalid contract type")
 	}
-	if listing.Metadata.Format == pb.Listing_Metadata_NA || listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
+	if listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
 		return errors.New("Invalid listing format")
 	}
 	if listing.Metadata.Expiry == nil {
@@ -694,9 +694,6 @@ func validateListing(listing *pb.Listing) (err error) {
 			}
 		}
 		shippingTitles = append(shippingTitles, shippingOption.Name)
-		if shippingOption.Type == pb.Listing_ShippingOption_NA {
-			return errors.New("Shipping option type must be specified")
-		}
 		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
 			return errors.New("Unkown shipping option type")
 		}
@@ -713,14 +710,8 @@ func validateListing(listing *pb.Listing) (err error) {
 			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
 				return fmt.Errorf("Number of shipping rules is greater than the max of %d", MaxListItems)
 			}
-			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
-				return errors.New("Shipping rule type must be specified")
-			}
 			if shippingOption.ShippingRules.RuleType > pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT {
 				return errors.New("Unknown shipping rule")
-			}
-			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_NA {
-				return errors.New("Shipping rule type must be specified")
 			}
 			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
 				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")

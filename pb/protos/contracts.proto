@@ -36,17 +36,15 @@ message Listing {
         string pricingCurrency           = 6;
 
         enum ContractType {
-            UNKNOWN       = 0;
-            PHYSICAL_GOOD = 1;
-            DIGITAL_GOOD  = 2;
-            SERVICE       = 3;
-            CROWD_FUND    = 4;
+            PHYSICAL_GOOD = 0;
+            DIGITAL_GOOD  = 1;
+            SERVICE       = 2;
+            CROWD_FUND    = 3;
         }
 
         enum Format {
-            NA           = 0;
-            FIXED_PRICE  = 1;
-            AUCTION      = 2;
+            FIXED_PRICE  = 0;
+            AUCTION      = 1;
         }
     }
 
@@ -94,9 +92,8 @@ message Listing {
         repeated Service services           = 5;
 
         enum ShippingType {
-            NA           = 0;
-            LOCAL_PICKUP = 1;
-            FIXED_PRICE  = 2;
+            LOCAL_PICKUP = 0;
+            FIXED_PRICE  = 1;
         }
 
         message Service {
@@ -116,12 +113,11 @@ message Listing {
                 }
 
                 enum RuleType {
-                    NA                         = 0;
-                    QUANTITY_DISCOUNT          = 1;
-                    FLAT_FEE_QUANTITY_RANGE    = 2;
-                    FLAT_FEE_WEIGHT_RANGE      = 3;
-                    COMBINED_SHIPPING_ADD      = 4;
-                    COMBINED_SHIPPING_SUBTRACT = 5;
+                    QUANTITY_DISCOUNT          = 0;
+                    FLAT_FEE_QUANTITY_RANGE    = 1;
+                    FLAT_FEE_WEIGHT_RANGE      = 2;
+                    COMBINED_SHIPPING_ADD      = 3;
+                    COMBINED_SHIPPING_SUBTRACT = 4;
                 }
             }
     }
@@ -318,14 +314,13 @@ message Signatures {
     bytes bitcoin   = 3;
 
     enum Section {
-        NA                 = 0;
-        LISTING            = 1;
-        ORDER              = 2;
-        ORDER_CONFIRMATION = 3;
-        ORDER_FULFILLMENT  = 4;
-        ORDER_COMPLETION   = 5;
-        DISPUTE            = 6;
-        DISPUTE_RESOLUTION = 7;
-        REFUND             = 8;
+        LISTING            = 0;
+        ORDER              = 1;
+        ORDER_CONFIRMATION = 2;
+        ORDER_FULFILLMENT  = 3;
+        ORDER_COMPLETION   = 4;
+        DISPUTE            = 5;
+        DISPUTE_RESOLUTION = 6;
+        REFUND             = 7;
     }
 }

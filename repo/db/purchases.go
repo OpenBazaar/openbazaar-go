@@ -3,10 +3,10 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
-	"github.com/golang/protobuf/jsonpb"
 	"strings"
 	"sync"
 )

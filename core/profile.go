@@ -1,8 +1,8 @@
 package core
 
 import (
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/gogo/protobuf/jsonpb"
 	"os"
 	"path"
 	"time"

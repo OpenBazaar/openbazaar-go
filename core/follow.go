@@ -2,8 +2,8 @@ package core
 
 import (
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/jsonpb"
 	"io/ioutil"
 	"os"
 	"path"

@@ -8,6 +8,10 @@
 			"Rev": "0754dfcca172cfc4c07a61c123b23e5127d26760"
 		},
 		{
+			"ImportPath": "github.com/OpenBazaar/jsonpb",
+			"Rev": "6cc5aef0b5f18cef3e4cd0eb2b506de416f00bb1"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
 			"Rev": "ce8d7ee0f9ce92a3fa311023fa76d744c16d4544"
 		},
@@ -172,20 +176,6 @@
 			"ImportPath": "github.com/fatih/color",
 			"Comment": "v0.2.0",
 			"Rev": "87d4004f2ab62d0d255e0a38f1680aa534549fe3"
-		},
-		{
-			"ImportPath": "github.com/gogo/protobuf/jsonpb",
-			"Comment": "v0.2-56-ga4cceea",
-			"Rev": "a4cceea7a401a73fefafd1a21fedbd4694124a82"
-		},
-		{
-			"ImportPath": "github.com/gogo/protobuf/proto",
-			"Comment": "v0.2-56-ga4cceea",
-			"Rev": "a4cceea7a401a73fefafd1a21fedbd4694124a82"
-		},
-		{
-			"ImportPath": "github.com/golang/protobuf/jsonpb",
-			"Rev": "7cc19b78d562895b13596ddce7aafb59dd789318"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
@@ -720,6 +710,11 @@
 			"Rev": "d14ea06fba99483203c19d92cfcd13ebe73135f4"
 		},
 		{
+			"ImportPath": "github.com/jbenet/go-multiaddr",
+			"Comment": "0.1.2-59-g1dd0034",
+			"Rev": "1dd0034f7fe862dd8dc86a02602ff6f9e546f5fe"
+		},
+		{
 			"ImportPath": "github.com/jbenet/go-multihash",
 			"Comment": "0.1.0-39-ge8d2374",
 			"Rev": "e8d2374934f16a971d1e94a864514a21ac74bf7f"
@@ -728,6 +723,11 @@
 			"ImportPath": "github.com/jessevdk/go-flags",
 			"Comment": "v1-334-g6b9493b",
 			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
+		},
+		{
+			"ImportPath": "github.com/kennygrant/sanitize",
+			"Comment": "v1.1",
+			"Rev": "7fdd72ab580907c39c5f0b8b98b8d89e5476f424"
 		},
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
@@ -754,11 +754,6 @@
 		{
 			"ImportPath": "github.com/nfnt/resize",
 			"Rev": "891127d8d1b52734debe1b3c3d7e747502b6c366"
-		},
-		{
-			"ImportPath": "github.com/oliamb/cutter",
-			"Comment": "v0.2.0-7-g6bb2691",
-			"Rev": "6bb26911f52436bb5c63667f9aaa2d1826b2df9e"
 		},
 		{
 			"ImportPath": "github.com/op/go-logging",
@@ -799,6 +794,14 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
+			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
 			"Rev": "35ec611a141ee705590b9eb64d673f9e6dfeb1ac"
 		},
 		{
