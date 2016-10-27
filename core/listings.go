@@ -791,16 +791,13 @@ func validateListing(listing *pb.Listing) (err error) {
 		if err != nil {
 			return errors.New("Coupon hashes must be multihashes")
 		}
-		if coupon.PercentDiscount > 100 {
+		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("Percent discount cannot be over 100 percent")
 		}
-		if coupon.PriceDiscount > listing.Item.Price {
+		if coupon.GetPriceDiscount() > listing.Item.Price {
 			return errors.New("Price discount cannot be greater than the item price")
 		}
-		if coupon.PercentDiscount > 0 && coupon.PriceDiscount > 0 {
-			return errors.New("Only one type of coupon discount can be selected")
-		}
-		if coupon.PercentDiscount == 0 && coupon.PriceDiscount == 0 {
+		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
 			return errors.New("Coupons must have at least one positive discount value")
 		}
 	}

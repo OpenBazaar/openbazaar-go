@@ -130,10 +130,12 @@ message Listing {
     }
 
     message Coupon {
-        string title              = 1;
-        string hash               = 2;
-        float percentDiscount     = 3;
-        uint64 priceDiscount      = 4;
+        string title = 1;
+        string hash  = 2;
+        oneof discount {
+            float percentDiscount = 3;
+            uint64 priceDiscount  = 4;
+        }
     }
 }
 
