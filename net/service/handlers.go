@@ -235,7 +235,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Append the order confirmation
 	contract.VendorOrderConfirmation = vendorContract.VendorOrderConfirmation
 	for _, sig := range vendorContract.Signatures {
-		if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+		if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -506,7 +506,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 	contract.Refund = rc.Refund
 	for _, sig := range contract.Signatures {
-		if sig.Section == pb.Signatures_REFUND {
+		if sig.Section == pb.Signature_REFUND {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -538,7 +538,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
 	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
+		if sig.Section == pb.Signature_ORDER_FULFILLMENT {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -576,7 +576,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
 	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_COMPLETION {
+		if sig.Section == pb.Signature_ORDER_COMPLETION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}

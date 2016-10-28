@@ -297,8 +297,8 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER_CONFIRMATION
+	s := new(pb.Signature)
+	s.Section = pb.Signature_ORDER_CONFIRMATION
 	if err != nil {
 		return contract, err
 	}
@@ -340,10 +340,10 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER_CONFIRMATION {
+		if s.Section == pb.Signature_ORDER_CONFIRMATION {
 			sig = s
 			sigExists = true
 			break

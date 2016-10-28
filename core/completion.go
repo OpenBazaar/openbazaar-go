@@ -210,7 +210,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 	contract.BuyerOrderCompletion = oc
 	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_COMPLETION {
+		if sig.Section == pb.Signature_ORDER_COMPLETION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -227,8 +227,8 @@ func (n *OpenBazaarNode) SignOrderCompletion(contract *pb.RicardianContract) (*p
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER_COMPLETION
+	s := new(pb.Signature)
+	s.Section = pb.Signature_ORDER_COMPLETION
 	if err != nil {
 		return contract, err
 	}
@@ -449,10 +449,10 @@ func verifySignaturesOnOrderCompletion(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER_COMPLETION {
+		if s.Section == pb.Signature_ORDER_COMPLETION {
 			sig = s
 			sigExists = true
 			break
