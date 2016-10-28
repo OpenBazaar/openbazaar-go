@@ -289,9 +289,34 @@ message OrderCompletion {
     }
 }
 
-// TODO: complete other messages
-message Dispute {}
-message DisputeResolution {}
+message Dispute {
+    google.protobuf.Timestamp timestamp = 1;
+    string claim                        = 2;
+    repeated Outpoint outpoints         = 3;
+    bytes serializedContract            = 4;
+
+    message Outpoint {
+        string hash  = 1; // Hex encoded
+        uint32 index = 2;
+    }
+}
+
+message DisputeResolution {
+    google.protobuf.Timestamp timestamp = 1;
+    string proposedBy                   = 2;
+    string resolution                   = 3;
+    Payout payout                       = 4;
+
+    message Payout {
+            repeated BitcoinSignature sigs = 1;
+            bytes unsignedTx               = 2;
+            string moderatorAddress        = 3;
+            uint64 buyerAmount             = 4;
+            uint64 vendorAmount            = 5;
+            uint64 moderatorAmount         = 6;
+            uint64 fee                     = 7;
+    }
+}
 
 message Refund {
     string orderID                 = 1;
