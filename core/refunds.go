@@ -121,8 +121,8 @@ func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.Ricardi
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_REFUND
+	s := new(pb.Signature)
+	s.Section = pb.Signature_REFUND
 	if err != nil {
 		return contract, err
 	}
@@ -164,10 +164,10 @@ func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_REFUND {
+		if s.Section == pb.Signature_REFUND {
 			sig = s
 			sigExists = true
 			break

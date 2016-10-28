@@ -376,7 +376,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
 			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+				if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
@@ -505,7 +505,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
 			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+				if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
@@ -905,10 +905,10 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER {
+		if s.Section == pb.Signature_ORDER {
 			sig = s
 			sigExists = true
 		}
@@ -1278,8 +1278,8 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER
+	s := new(pb.Signature)
+	s.Section = pb.Signature_ORDER
 	if err != nil {
 		return contract, err
 	}
