@@ -362,7 +362,7 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 		return err
 	}
 	if !valid {
-		return errors.New("Vendor's guid signature on contact failed to verify")
+		return errors.New("Vendor's GUID signature on contact failed to verify")
 	}
 	checkKeyHash, err := guidPubkey.Hash()
 	if err != nil {

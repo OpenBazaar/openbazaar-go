@@ -2552,7 +2552,7 @@ definitions:
                   type: string
                   enum: ["LISTING"]
                 guid:
-                  description: A guid signature covering the listing in base64
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64
@@ -2766,7 +2766,7 @@ definitions:
                   type: string
                   enum: ["LISTING"]
                 guid:
-                  description: A guid signature covering the listing in base64
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64
@@ -3688,7 +3688,7 @@ definitions:
                   type: string
                   enum: ["LISTING"]
                 guid:
-                  description: A guid signature covering the listing in base64
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64

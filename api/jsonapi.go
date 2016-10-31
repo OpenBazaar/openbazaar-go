@@ -100,7 +100,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Stop here if its Preflighted OPTIONS request
+	// Stop here if it is a preflighted OPTIONS request
 	if r.Method == "OPTIONS" {
 		return
 	}
