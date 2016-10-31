@@ -7,6 +7,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -23,9 +27,6 @@ import (
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"path"
-	"strings"
-	"time"
 )
 
 type option struct {
@@ -125,7 +126,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		   multiple items with different variants. If it is multiple items of the same variant they can just
 		   use the quantity field. But different variants require two separate item entries. However,
 		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
-		   So let's check to see if that's the case here and handle it. */
+		   So let's check to see if that is the case here and handle it. */
 		toAdd := true
 		for _, addedListing := range addedListings {
 			if item.ListingHash == addedListing[0] {
@@ -144,8 +145,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			if err := validateVersionNumber(rc); err != nil {
-				return "", "", 0, false, err
+			if len(rc.VendorListings) == 0 {
+				return "", "", 0, false, errors.New("Contract does not contain a listing")
 			}
 			if err := validateVendorID(rc); err != nil {
 				return "", "", 0, false, err
@@ -335,7 +336,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 
-		// Send to order vendor
+		// Send order to vendor
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
 		if err != nil { // Vendor offline
 			// Send using offline messaging
@@ -1304,7 +1305,6 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 }
 
 func validateVendorID(rc *pb.RicardianContract) error {
-
 	if len(rc.VendorListings) == 0 {
 		return errors.New("Contract does not contain a listing")
 	}
@@ -1324,19 +1324,6 @@ func validateVendorID(rc *pb.RicardianContract) error {
 	}
 	if !vendorId.MatchesPublicKey(vendorPubKey) {
 		return errors.New("Invalid vendor ID")
-	}
-	return nil
-}
-
-func validateVersionNumber(rc *pb.RicardianContract) error {
-	if len(rc.VendorListings) == 0 {
-		return errors.New("Contract does not contain a listing")
-	}
-	if rc.VendorListings[0].Metadata == nil {
-		return errors.New("Contract does not contain listing metadata")
-	}
-	if rc.VendorListings[0].Metadata.Version > ListingVersion {
-		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
 	}
 	return nil
 }

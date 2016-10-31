@@ -528,6 +528,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
+	if listing.Metadata.Version > ListingVersion {
+		return errors.New("Unsupported listing version; please upgrade")
+	}
 	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
 		return errors.New("Invalid contract type")
 	}
