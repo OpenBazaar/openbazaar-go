@@ -73,7 +73,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't get listing index")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -99,7 +99,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("RefundModeratedTest - FAIL: Bob purchase saved in incorrect state")
@@ -110,7 +110,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("RefundModeratedTest - FAIL: Alice purchase saved in incorrect state")
@@ -136,7 +136,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Bob failed to detect his payment")
@@ -147,13 +147,13 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("RefundModeratedTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice refund order
         api_url = alice["gateway_url"] + "ob/refund"
         refund = {"orderId": orderId}
@@ -164,12 +164,12 @@ class RefundModeratedTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("RefundModeratedTest - FAIL: Refund POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
-        
+
         # alice check order refunded correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Alice failed to save as rejected")
@@ -180,7 +180,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundModeratedTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundModeratedTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Bob failed to save as rejected")

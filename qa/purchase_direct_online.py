@@ -48,7 +48,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't get listing index")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Could not get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -72,7 +72,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob purchase saved in incorrect state")
@@ -83,7 +83,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice purchase saved in incorrect state")
@@ -109,7 +109,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to detect his payment")
@@ -120,7 +120,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice failed to detect payment")

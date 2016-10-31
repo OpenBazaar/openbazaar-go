@@ -62,7 +62,7 @@ func TestInvalidSettingsGet(t *testing.T) {
 	tx.Commit()
 	_, err = sdb.Get()
 	if err == nil {
-		t.Error("settings get didn't error with invalid data")
+		t.Error("settings get did not error with invalid data")
 	}
 }
 

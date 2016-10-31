@@ -953,16 +953,16 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 
 	// Check order contains all required fields
 	if contract.BuyerOrder == nil {
-		return errors.New("Contract doesn't contain an order")
+		return errors.New("Contract does not contain an order")
 	}
 	if contract.BuyerOrder.Payment == nil {
-		return errors.New("Order doesn't contain a payment")
+		return errors.New("Order does not contain a payment")
 	}
 	if contract.BuyerOrder.BuyerID == nil {
-		return errors.New("Order doesn't contain a buyer ID")
+		return errors.New("Order does not contain a buyer ID")
 	}
 	if len(contract.BuyerOrder.Items) == 0 {
-		return errors.New("Order hasn't selected any items")
+		return errors.New("Order has not selected any items")
 	}
 	if len(contract.BuyerOrder.RatingKeys) != len(contract.BuyerOrder.Items) {
 		return errors.New("Number of rating keys do not match number of items")

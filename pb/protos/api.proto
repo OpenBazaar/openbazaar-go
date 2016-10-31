@@ -5,7 +5,7 @@ import "orders.proto";
 
 // This schema is used for the /ob/listing api call structure
 // We use protobuf for this instead of a basic struct because
-// the listing object is in protobuf and we can't mix types. Also
+// the listing object is in protobuf and we cannot mix types. Also
 // we want to avoid putting fields in the contract that are only
 // used by the api.
 

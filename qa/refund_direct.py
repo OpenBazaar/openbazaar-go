@@ -62,7 +62,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't get listing index")
+            raise TestFailure("RefundDirectTest - FAIL: Could not get listing index")
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
@@ -86,7 +86,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("RefundDirectTest - FAIL: Bob purchase saved in incorrect state")
@@ -97,7 +97,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "CONFIRMED":
             raise TestFailure("RefundDirectTest - FAIL: Alice purchase saved in incorrect state")
@@ -123,7 +123,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Bob failed to detect his payment")
@@ -134,7 +134,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "FUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Alice failed to detect payment")
@@ -156,7 +156,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Alice failed to save as rejected")
@@ -165,7 +165,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("RefundDirectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RefundDirectTest - FAIL: Could not load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Bob failed to save as rejected")

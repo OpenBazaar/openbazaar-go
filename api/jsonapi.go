@@ -211,7 +211,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
+		ErrorResponse(w, http.StatusNotFound, "Profile does not exist yet. Use POST.")
 		return
 	}
 
@@ -932,7 +932,7 @@ func (i *jsonAPIHandler) PUTModerator(w http.ResponseWriter, r *http.Request) {
 	modPath := path.Join(i.node.RepoPath, "root", "moderation")
 	_, ferr := os.Stat(modPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Moderator file doesn't yet exist. Use POST.")
+		ErrorResponse(w, http.StatusNotFound, "Moderator file does not yet exist. Use POST.")
 		return
 	}
 
@@ -972,7 +972,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 	modPath := path.Join(i.node.RepoPath, "root", "moderation")
 	_, ferr := os.Stat(modPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "This node isn't set as a moderator")
+		ErrorResponse(w, http.StatusNotFound, "This node is not set as a moderator")
 		return
 	}
 
