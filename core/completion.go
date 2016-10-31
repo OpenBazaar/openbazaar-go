@@ -47,7 +47,6 @@ type RatingData struct {
 }
 
 func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
-
 	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err

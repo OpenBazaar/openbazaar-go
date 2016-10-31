@@ -46,7 +46,6 @@ type jsonAPIHandler struct {
 }
 
 func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
-
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
 			Enabled:       config.Enabled,
@@ -155,7 +154,6 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
-
 	// If the profile is already set tell them to use PUT
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 	_, ferr := os.Stat(profilePath)
@@ -209,7 +207,6 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
-
 	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile")
 	_, ferr := os.Stat(profilePath)

@@ -41,7 +41,6 @@ func init() {
 }
 
 func TestPointersPut(t *testing.T) {
-
 	err := pdb.Put(pointer)
 	if err != nil {
 		t.Error(err)
