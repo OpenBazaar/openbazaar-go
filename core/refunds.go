@@ -18,7 +18,7 @@ import (
 
 func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 	refundMsg := new(pb.Refund)
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}

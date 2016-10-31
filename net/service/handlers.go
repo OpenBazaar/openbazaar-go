@@ -142,7 +142,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), nil
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		orderId, err := service.node.CalculateOrderId(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), nil
 		}
@@ -197,7 +197,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), nil
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		orderId, err := service.node.CalculateOrderId(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), nil
 		}
@@ -217,7 +217,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
 	}
 
-	// Calc order ID
+	// Calculate order ID
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order

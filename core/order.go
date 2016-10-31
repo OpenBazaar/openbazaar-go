@@ -356,7 +356,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -387,7 +387,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if contract.VendorOrderConfirmation.PaymentAddress != contract.BuyerOrder.Payment.Address {
 				return "", "", 0, false, errors.New("Vendor responded with incorrect multisig address")
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -485,7 +485,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -513,7 +513,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -524,7 +524,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 }
 
 func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -588,7 +588,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	return nil
 }
 
-func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
+func (n *OpenBazaarNode) CalculateOrderId(order *pb.Order) (string, error) {
 	ser, err := proto.Marshal(order)
 	if err != nil {
 		return "", err
