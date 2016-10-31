@@ -638,7 +638,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		if l == nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
 		}
-		if int(l.Metadata.ContractType) == 1 {
+		if int(l.Metadata.ContractType) == Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
 		}
 		satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
