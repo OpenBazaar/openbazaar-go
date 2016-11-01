@@ -747,7 +747,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					}
 				}
 				if !shipsToMe {
-					return 0, errors.New("Listing does ship to selected country")
+					return 0, errors.New("Listing does not ship to selected country")
 				}
 
 				// Check service exists
