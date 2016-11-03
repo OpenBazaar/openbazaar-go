@@ -120,8 +120,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_LISTING
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_LISTING
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		return c, err
@@ -143,7 +143,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	s.Bitcoin = bitcoinSig.Serialize()
 
 	c.VendorListings = append(c.VendorListings, listing)
-	c.Signatures = append(c.Signatures, s)
+	c.SignaturePairs = append(c.SignaturePairs, s)
 	return c, nil
 }
 
@@ -846,8 +846,8 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		}
 		var guidSig []byte
 		var bitcoinSig *btcec.Signature
-		sig := contract.Signatures[n]
-		if sig.Section != pb.Signatures_LISTING {
+		sig := contract.SignaturePairs[n]
+		if sig.Section != pb.SignaturePair_LISTING {
 			return errors.New("Contract does not contain listing signature")
 		}
 		guidSig = sig.Guid

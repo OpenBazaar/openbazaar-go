@@ -157,7 +157,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, err
 			}
 			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
-			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
+			contract.SignaturePairs = append(contract.SignaturePairs, rc.SignaturePairs[0])
 			addedListings = append(addedListings, []string{item.ListingHash, rc.VendorListings[0].Slug})
 			listing = rc.VendorListings[0]
 		} else {
@@ -375,9 +375,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, errors.New("Error parsing the vendor's response")
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
-			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
-					contract.Signatures = append(contract.Signatures, sig)
+			for _, sig := range rc.SignaturePairs {
+				if sig.Section == pb.SignaturePair_ORDER_CONFIRMATION {
+					contract.SignaturePairs = append(contract.SignaturePairs, sig)
 				}
 			}
 			err = n.ValidateOrderConfirmation(contract, true)
@@ -504,9 +504,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, errors.New("Error parsing the vendor's response")
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
-			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
-					contract.Signatures = append(contract.Signatures, sig)
+			for _, sig := range rc.SignaturePairs {
+				if sig.Section == pb.SignaturePair_ORDER_CONFIRMATION {
+					contract.SignaturePairs = append(contract.SignaturePairs, sig)
 				}
 			}
 			err = n.ValidateOrderConfirmation(contract, true)
@@ -905,10 +905,10 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.SignaturePair
 	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER {
+	for _, s := range contract.SignaturePairs {
+		if s.Section == pb.SignaturePair_ORDER {
 			sig = s
 			sigExists = true
 		}
@@ -1278,8 +1278,8 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_ORDER
 	if err != nil {
 		return contract, err
 	}
@@ -1299,7 +1299,7 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
 
-	contract.Signatures = append(contract.Signatures, s)
+	contract.SignaturePairs = append(contract.SignaturePairs, s)
 	return contract, nil
 }
 
