@@ -8,7 +8,7 @@ message RicardianContract {
     Order buyerOrder                                   = 2;
     OrderConfirmation vendorOrderConfirmation          = 3;
     repeated OrderFulfillment vendorOrderFulfillment   = 4;
-    Rating buyerRating                                 = 5;
+    OrderCompletion buyerOrderCompletion               = 5;
     Dispute dispute                                    = 6;
     DisputeResolution disputeResolution                = 7;
     Refund refund                                      = 8;
@@ -36,17 +36,15 @@ message Listing {
         string pricingCurrency           = 6;
 
         enum ContractType {
-            UNKNOWN       = 0;
-            PHYSICAL_GOOD = 1;
-            DIGITAL_GOOD  = 2;
-            SERVICE       = 3;
-            CROWD_FUND    = 4;
+            PHYSICAL_GOOD = 0;
+            DIGITAL_GOOD  = 1;
+            SERVICE       = 2;
+            CROWD_FUND    = 3;
         }
 
         enum Format {
-            NA           = 0;
-            FIXED_PRICE  = 1;
-            AUCTION      = 2;
+            FIXED_PRICE  = 0;
+            AUCTION      = 1;
         }
     }
 
@@ -94,9 +92,8 @@ message Listing {
         repeated Service services           = 5;
 
         enum ShippingType {
-            NA           = 0;
-            LOCAL_PICKUP = 1;
-            FIXED_PRICE  = 2;
+            LOCAL_PICKUP = 0;
+            FIXED_PRICE  = 1;
         }
 
         message Service {
@@ -116,12 +113,11 @@ message Listing {
                 }
 
                 enum RuleType {
-                    NA                         = 0;
-                    QUANTITY_DISCOUNT          = 1;
-                    FLAT_FEE_QUANTITY_RANGE    = 2;
-                    FLAT_FEE_WEIGHT_RANGE      = 3;
-                    COMBINED_SHIPPING_ADD      = 4;
-                    COMBINED_SHIPPING_SUBTRACT = 5;
+                    QUANTITY_DISCOUNT          = 0;
+                    FLAT_FEE_QUANTITY_RANGE    = 1;
+                    FLAT_FEE_WEIGHT_RANGE      = 2;
+                    COMBINED_SHIPPING_ADD      = 3;
+                    COMBINED_SHIPPING_SUBTRACT = 4;
                 }
             }
     }
@@ -134,10 +130,12 @@ message Listing {
     }
 
     message Coupon {
-        string title              = 1;
-        string hash               = 2;
-        float percentDiscount     = 3;
-        uint64 priceDiscount      = 4;
+        string title = 1;
+        string hash  = 2;
+        oneof discount {
+            float percentDiscount = 3;
+            uint64 priceDiscount  = 4;
+        }
     }
 }
 
@@ -149,7 +147,7 @@ message Order {
     google.protobuf.Timestamp timestamp  = 5;
     repeated Item items                  = 6;
     Payment payment                      = 7;
-    bytes ratingKey                      = 8;
+    repeated bytes ratingKeys            = 8;
     string alternateContactInfo          = 9;
 
     message Shipping {
@@ -184,11 +182,11 @@ message Order {
     message Payment {
         Method method       = 1;
         string moderator    = 2;
-        uint64 amount       = 3; // satoshis
+        uint64 amount       = 3; // Satoshis
         uint64 exchangeRate = 4;
-        string chaincode    = 6; // hex encoded
-        string address      = 7; // b58check encoded
-        string redeemScript = 8; // hex encoded
+        string chaincode    = 6; // Hex encoded
+        string address      = 7; // B58check encoded
+        string redeemScript = 8; // Hex encoded
 
         enum Method {
             ADDRESS_REQUEST = 0;
@@ -199,18 +197,29 @@ message Order {
 }
 
 message OrderConfirmation {
-    string orderID         = 1;
+    string orderID                            = 1;
     // Direct payments only
-    string paymentAddress  = 2;
-    uint64 requestedAmount = 3;
-    uint64 payoutFee       = 4;
+    string paymentAddress                     = 2;
+    uint64 requestedAmount                    = 3;
+    uint64 payoutFee                          = 4;
 
-    bytes ratingSignature  = 5;
+    repeated RatingSignature ratingSignatures = 5;
 }
 
 message OrderReject {
     string orderID                 = 1;
     repeated BitcoinSignature sigs = 2;
+}
+
+message RatingSignature {
+    TransactionMetadata metadata = 1;
+    bytes signature              = 2;
+
+    message TransactionMetadata {
+        string listingSlug   = 1;
+        bytes  ratingKey     = 2;
+        bytes  moderatorKey  = 3; // Only if moderated
+    }
 }
 
 message BitcoinSignature {
@@ -221,16 +230,18 @@ message BitcoinSignature {
 message OrderFulfillment {
     string orderId                             = 1;
 
+    string slug                                = 2;
+
     // Physical goods only
-    repeated PhysicalDelivery physicalDelivery = 2;
+    repeated PhysicalDelivery physicalDelivery = 3;
 
     //Digital goods only
-    repeated DigitalDelivery digitalDelivery   = 3;
+    repeated DigitalDelivery digitalDelivery   = 4;
 
     // Moderated payments only
-    Payout payout                              = 4;
+    Payout payout                              = 5;
 
-    bytes ratingSignature                      = 5;
+    RatingSignature ratingSignature            = 6;
 
     message PhysicalDelivery {
         string shipper            = 1;
@@ -249,8 +260,36 @@ message OrderFulfillment {
     }
 }
 
+message OrderCompletion {
+    string orderId                       = 1;
+    repeated BitcoinSignature payoutSigs = 2;
+    repeated Rating ratings              = 3;
+
+    message Rating {
+        RatingData ratingData = 1;
+        bytes signature       = 2;
+
+        message RatingData {
+            bytes ratingKey                     = 1;
+            ID vendorID                         = 2;
+            ID buyerID                          = 3; // optional
+            ID moderatorID                      = 4; // only if a dispute was won
+            RatingSignature vendorSig           = 5;
+            bytes moderatorSig                  = 6; // only if a dispute was won
+
+            google.protobuf.Timestamp timestamp = 7;
+
+            uint32 overall                      = 8;
+            uint32 quality                      = 9;
+            uint32 description                  = 10;
+            uint32 deliverySpeed                = 11;
+            uint32 customerService              = 12;
+            string review                       = 13;
+        }
+    }
+}
+
 // TODO: complete other messages
-message Rating {}
 message Dispute {}
 message DisputeResolution {}
 
@@ -277,14 +316,13 @@ message Signatures {
     bytes bitcoin   = 3;
 
     enum Section {
-        NA                 = 0;
-        LISTING            = 1;
-        ORDER              = 2;
-        ORDER_CONFIRMATION = 3;
-        ORDER_FULFILLMENT  = 4;
-        RATING             = 5;
-        DISPUTE            = 6;
-        DISPUTE_RESOLUTION = 7;
-        REFUND             = 8;
+        LISTING            = 0;
+        ORDER              = 1;
+        ORDER_CONFIRMATION = 2;
+        ORDER_FULFILLMENT  = 3;
+        ORDER_COMPLETION   = 4;
+        DISPUTE            = 5;
+        DISPUTE_RESOLUTION = 6;
+        REFUND             = 7;
     }
 }

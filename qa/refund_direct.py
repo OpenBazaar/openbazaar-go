@@ -26,7 +26,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
 
         # generate some coins and send them to alice
@@ -40,9 +40,9 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # post listing to alice

@@ -69,6 +69,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/orderfulfillment", "/ob/orderfulfillment/":
 		i.POSTOrderFulfill(w, r)
 		return
+	case "/ob/ordercompletion", "/ob/ordercompletion/":
+		i.POSTOrderComplete(w, r)
+		return
 	case "/ob/refund", "/ob/refund/":
 		i.POSTRefund(w, r)
 		return

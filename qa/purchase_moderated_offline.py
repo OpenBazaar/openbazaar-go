@@ -27,9 +27,9 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # post listing to alice
@@ -143,11 +143,11 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Bob incorrectly saved as unfunded")
 
         # generate one more block containing this tx
-        self.bitcoin_api.call("generate", 1)
+        self.send_bitcoin_cmd("generate", 1)
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(6)
+        time.sleep(10)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

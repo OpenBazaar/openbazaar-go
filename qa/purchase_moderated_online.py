@@ -27,9 +27,9 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # create a profile for charlie
@@ -130,7 +130,7 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(6)
+        time.sleep(10)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

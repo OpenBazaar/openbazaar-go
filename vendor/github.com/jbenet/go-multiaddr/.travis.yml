@@ -1,0 +1,8 @@
+language: go
+
+go:
+  - tip
+  - 1.6.1
+
+script:
+  - go test -race -cpu=5 -v ./...

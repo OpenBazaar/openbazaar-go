@@ -40,7 +40,7 @@ var (
 	// The ciphertext cannot be shorter than CiphertextVersionBytes + EncryptedSecretKeyBytes + aes.BlockSize + MacKeyBytes
 	ErrShortCiphertext = errors.New("Ciphertext is too short")
 
-	// The Hmac included in the ciphertext is invalid
+	// The HMAC included in the ciphertext is invalid
 	ErrInvalidHmac = errors.New("Invalid Hmac")
 
 	// Satic salt used in the hdkf
@@ -58,7 +58,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Derive mac and aes keys from the secret key using hkdf
+	// Derive MAC and AES keys from the secret key using hkdf
 	hash := sha256.New
 
 	hkdf := hkdf.New(hash, secretKey, Salt, nil)
@@ -74,14 +74,14 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Encrypt message with the aes key
+	// Encrypt message with the AES key
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return nil, err
 	}
 
-	// The IV needs to be unique, but not secure. Therefore it's common to
-	// include it at the beginning of the ciphertext.
+	/* The IV needs to be unique, but not secure. Therefore it is common to
+	   include it at the beginning of the ciphertext. */
 	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
@@ -91,7 +91,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
-	// Create the hmac
+	// Create the HMAC
 	mac := hmac.New(sha256.New, macKey)
 	mac.Write(ciphertext)
 	messageMac := mac.Sum(nil)
@@ -104,7 +104,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	binary.BigEndian.PutUint32(version, uint32(CiphertextVersion))
 	ciphertext = append(version, ciphertext...)
 
-	// Append the mac
+	// Append the MAC
 	ciphertext = append(ciphertext, messageMac...)
 	return ciphertext, nil
 }
@@ -129,7 +129,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Derive the aes and mac keys from the secret key using hdkf
+	// Derive the AES and MAC keys from the secret key using hdkf
 	hash := sha256.New
 
 	hkdf := hkdf.New(hash, secretKey, Salt, nil)
@@ -145,7 +145,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Calculate the hmac and verify it's correct
+	// Calculate the HMAC and verify it is correct
 	mac := hmac.New(sha256.New, macKey)
 	mac.Write(ciphertext[CiphertextVersionBytes+EncryptedSecretKeyBytes : len(ciphertext)-MacBytes])
 	messageMac := mac.Sum(nil)
@@ -153,7 +153,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 		return nil, ErrInvalidHmac
 	}
 
-	// Decrypt the aes ciphertext
+	// Decrypt the AES ciphertext
 	block, err := aes.NewCipher(aesKey)
 	if err != nil {
 		return nil, err
@@ -167,7 +167,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 
 	stream := cipher.NewCFBDecrypter(block, iv)
 
-	// XORKeyStream can work in-place if the two arguments are the same.
+	// XORKeyStream can work in-place if the two arguments are the same
 	stream.XORKeyStream(ciphertext, ciphertext)
 	plaintext := ciphertext
 	return plaintext, nil

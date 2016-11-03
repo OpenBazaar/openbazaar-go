@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 )
 
-// Return the tor control port if tor is running or an error
+// Return the Tor control port if Tor is running or an error
 func GetTorControlPort() (int, error) {
 	conn, err := bulb.Dial("tcp4", "127.0.0.1:9151")
 	if err == nil {
@@ -22,7 +22,7 @@ func GetTorControlPort() (int, error) {
 	conn, err = bulb.Dial("tcp4", "127.0.0.1:9051")
 	if err == nil {
 		conn.Close()
-		return 9151, nil
+		return 9051, nil
 	}
 	return 0, errors.New("Tor control unavailable")
 }
@@ -57,7 +57,7 @@ func CreateHiddenServiceKey(repoPath string) error {
 	return nil
 }
 
-// Generate a new key pair if one doesn't already exist
+// Generate a new key pair if one does not already exist
 func MaybeCreateHiddenServiceKey(repoPath string) error {
 	d, err := os.Open(repoPath)
 	if err != nil {

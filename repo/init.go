@@ -16,11 +16,7 @@ import (
 )
 
 var log = logging.MustGetLogger("repo")
-
-var ErrRepoExists = errors.New(`ipfs configuration file already exists!
-Reinitializing would overwrite your keys.
-(use -f to force overwrite)
-`)
+var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, dbInit func(string, []byte, string) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
@@ -47,19 +43,19 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		}
 	}
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
-	fmt.Printf("generating %d-bit RSA keypair...", nBitsForKeypair)
+	fmt.Printf("Generating %d-bit RSA keypair...", nBitsForKeypair)
 	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("done\n")
+	fmt.Printf("Done\n")
 
 	identity, err := ipfs.IdentityFromKey(identityKey)
 	if err != nil {
 		return err
 	}
 
-	log.Infof("initializing openbazaar node at %s\n", repoRoot)
+	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
@@ -81,6 +77,9 @@ func maybeCreateOBDirectories(repoRoot string) error {
 		return err
 	}
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "listings"), os.ModePerm); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(path.Join(repoRoot, "root", "ratings"), os.ModePerm); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(path.Join(repoRoot, "root", "images"), os.ModePerm); err != nil {
@@ -119,26 +118,26 @@ func maybeCreateOBDirectories(repoRoot string) error {
 func checkWriteable(dir string) error {
 	_, err := os.Stat(dir)
 	if err == nil {
-		// dir exists, make sure we can write to it
+		// Directory exists, make sure we can write to it
 		testfile := path.Join(dir, "test")
 		fi, err := os.Create(testfile)
 		if err != nil {
 			if os.IsPermission(err) {
 				return fmt.Errorf("%s is not writeable by the current user", dir)
 			}
-			return fmt.Errorf("unexpected error while checking writeablility of repo root: %s", err)
+			return fmt.Errorf("Unexpected error while checking writeablility of repo root: %s", err)
 		}
 		fi.Close()
 		return os.Remove(testfile)
 	}
 
 	if os.IsNotExist(err) {
-		// dir does not exist, check that we can create it
+		// Directory does not exist, check that we can create it
 		return os.Mkdir(dir, 0775)
 	}
 
 	if os.IsPermission(err) {
-		return fmt.Errorf("cannot write to %s, incorrect permissions", err)
+		return fmt.Errorf("Cannot write to %s, incorrect permissions", err)
 	}
 
 	return err

@@ -22,7 +22,7 @@ import (
 func NewMockNode() (*core.IpfsNode, error) {
 	ctx := context.Background()
 
-	// effectively offline, only peer in its network
+	// Effectively offline, only peer in its network
 	return core.NewNode(ctx, &core.BuildCfg{
 		Online: true,
 		Host:   MockHostOption(mocknet.New(ctx)),

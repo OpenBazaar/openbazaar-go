@@ -62,33 +62,33 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	w := ggio.NewDelimitedWriter(cw)
 	mPeer := s.Conn().RemotePeer()
 
-	// receive msg
+	// Receive msg
 	defer s.Close()
 	pmes := new(pb.Message)
 	if err := r.ReadMsg(pmes); err != nil {
 		log.Errorf("Error unmarshaling data: %s", err)
 	}
 
-	// get handler for this msg type.
+	// Get handler for this msg type
 	handler := service.HandlerForMsgType(pmes.MessageType)
 	if handler == nil {
 		log.Debug("Got back nil handler from handlerForMsgType")
 		return
 	}
 
-	// dispatch handler.
+	// Dispatch handler
 	rpmes, err := handler(mPeer, pmes, nil)
 	if err != nil {
 		log.Debugf("handle message error: %s", err)
 		return
 	}
 
-	// if nil response, return it before serializing
+	// If nil response, return it before serializing
 	if rpmes == nil {
 		return
 	}
 
-	// send out response msg
+	// Send out response msg
 	if err := w.WriteMsg(rpmes); err != nil {
 		log.Debugf("send response error: %s", err)
 		return
@@ -103,8 +103,8 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 	}
 	defer s.Close()
 
-	cr := ctxio.NewReader(ctx, s) // ok to use. we defer close stream in this func
-	cw := ctxio.NewWriter(ctx, s) // ok to use. we defer close stream in this func
+	cr := ctxio.NewReader(ctx, s) // Ok to use. We defer close stream in this func.
+	cw := ctxio.NewWriter(ctx, s) // Ok to use. We defer close stream in this func.
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	w := ggio.NewDelimitedWriter(cw)
 
@@ -134,7 +134,7 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	}
 	defer s.Close()
 
-	cw := ctxio.NewWriter(ctx, s) // ok to use. we defer close stream in this func
+	cw := ctxio.NewWriter(ctx, s) // Ok to use. We defer close stream in this func.
 	w := ggio.NewDelimitedWriter(cw)
 
 	if err := w.WriteMsg(pmes); err != nil {

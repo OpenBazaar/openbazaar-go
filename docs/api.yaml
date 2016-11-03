@@ -1103,7 +1103,7 @@ paths:
       tags:
         - Misc
       summary: Get exchange rates
-      description: Returns the exchange rate (per BTC) for the given fiat currency
+      description: Returns either the exchange rate (per BTC) for the given fiat currency or all rates.
       operationId: Get
       consumes:
         - application/json
@@ -1112,14 +1112,18 @@ paths:
       parameters:
         - name: currencyCode
           in: path
-          description: The fiat currency code
-          required: true
+          description: The fiat currency code. This field may be omitted if you want to receive all exchange rates.
           type: string
+          required: true
       responses:
         '200':
           description: OK
           schema:
             $ref: '#/definitions/ExchangeRate'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
   /ob/listing:
     post:
       tags:
@@ -1142,7 +1146,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/DefaultResponse'
+            $ref: '#/definitions/SlugResponse'
         '400':
           description: Bad Request
           schema:
@@ -1223,6 +1227,36 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
+  /ob/listing/{id}:
+    get:
+      tags:
+        - Listings
+      summary: Get own listing
+      description: Returns this node's own listing with the inventory attached to the return.
+      operationId: GetOwnListing
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          description: A slug or listing hash
+          required: true
+          type: string
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/ListingGet'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
   /ipns/{peerId}/listings/{slug}:
     get:
       tags:
@@ -1245,7 +1279,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/ListingGet'
+            $ref: '#/definitions/RawListingGet'
         '400':
           description: Bad Request
           schema:
@@ -1303,6 +1337,76 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/OrderConfirmation'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/orderfulfillment:
+    post:
+      tags:
+        - Orders
+      summary: Fulfill an order
+      description: Send an order fulfillment message to the buyer. Typically used to tell the buyer an item has been shipped.
+      operationId: PostOrderFulfillment
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Order fulfillment object
+          required: true
+          schema:
+            $ref: '#/definitions/OrderFulfillment'
+      responses:
+        '200':
+          description: OK
+          schema:
+            $ref: '#/definitions/DefaultResponse'
+        '400':
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /ob/ordercompletion:
+    post:
+      tags:
+        - Orders
+      summary: Complete an order
+      description: Send the order complete message (including the rating) to the vendor. If this is a moderated order, it will sign and release the funds to the vendor.
+      operationId: PostOrderCompletion
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          description: Order completion object
+          required: true
+          schema:
+            $ref: '#/definitions/OrderCompletion'
       responses:
         '200':
           description: OK
@@ -1438,6 +1542,14 @@ definitions:
         example: "Error unmarshalling json"
   IPFSResponse:
     type: string
+  SlugResponse:
+    description: The slug returned from the post listing call
+    example: {"slug": "blue-tshirt"}
+    type: object
+    properties:
+      slug: 
+        type: string
+        example: "blue-tshirt"
   ImageResponse:
     type: array
     example: [
@@ -1677,6 +1789,98 @@ definitions:
     ]
     items: 
       $ref: '#/definitions/Inventory'
+  OrderFulfillment:
+    description: Order fulfillment object
+    type: object
+    properties:
+      slug:
+        description: The slug this fulfillment message pertains to
+        type: string
+        example: "cool_tshirt"
+      physicalDelivery:
+        description: An object containing the shipping and tracking number. Only use if this is a fulfillment for a physical good. You can use more than one object if the item has multiple tracking numbers.
+        type: array
+        items:
+          type: object
+          properties:
+            shipper:
+              description: The postal carrier for the shipment
+              type: string
+              example: "UPS"
+            trackingNumber:
+              description: The tracking number
+              type: string
+              example: "1Z204E380338943508"
+      digitalDelivery:
+        description: An object containing a url and password for a digital good. This field is not used for automated delivery. You can use more than one field if necessary.
+        type: array
+        items:
+          type: object
+          properties:
+            url:
+              description: The download url
+              type: string
+              example: "http://example.com/download.mp3"
+            password:
+              description: An optional password to access the file
+              type: string
+              example: "letmein"
+  OrderCompletion:
+    description: Order completion object
+    type: object
+    properties:
+      orderId:
+        description: The base58 encoded multihash order ID
+        type: string
+        example: "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+      ratings:
+        description: An array of rating objects
+        type: array
+        items:
+          type: object
+          properties:
+            slug:
+              description: The slug this rating is for
+              type: string
+              example: "cool_tshirt"
+            overall:
+              description: The overall rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 3
+            quality:
+              description: The quality rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 4
+            description:
+              description: The description rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            deliverySpeed:
+              description: The delivery speed rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 5
+            customerService:
+              description: The customer service rating
+              type: integer
+              minimum: 1
+              maximum: 5
+              example: 3
+            review:
+              description: The buyer's text review
+              type: string
+              example: "This rocks!"
+            anonymous:
+              description: Don't include the buyer's ID in the rating
+              type: boolean
+              example: True
   Config:
     description: Config object
     type: object
@@ -2159,6 +2363,200 @@ definitions:
       currentSlug:
         description: The slug to delete
         type: string
+  RawListingGet:
+    description: The response to the listing get
+    type: object
+    example: {
+    "vendorListings": [
+        {
+            "slug": "ron_swanson_tshirt",
+            "vendorID": {
+                "guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
+                "pubkeys": {
+                    "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
+                    "bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+                }
+            },
+            "metadata": {
+                "version": 1,
+                "contractType": "PHYSICAL_GOOD",
+                "format": "FIXED_PRICE",
+                "expiry": "2017-08-17T04:52:19.000Z",
+                "acceptedCurrency": "btc",
+                "pricingCurrency": "btc"
+            },
+            "item": {
+                "title": "Ron Swanson Tshirt",
+                "description": "Kick ass ron swanson tshirt in yellow",
+                "processingTime": "1 to 2 Business days",
+                "price": 12000000,
+                "tags": [
+                    "tshirts",
+                    "clothing",
+                    "ron swanson"
+                ],
+                "images": [
+                    {
+                        "hash": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+                        "filename": "swanson.jpg"
+                    }
+                ],
+                "categories": [
+                    "clothing"
+                ],
+                "sku": "123-456-789",
+                "grams": 28,
+                "condition": "New",
+                "options": [
+                    {
+                        "name": "Size",
+                        "description": "What size do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Small"
+                            },
+                            {
+                                "name": "Medium"
+                            },
+                            {
+                                "name": "Large",
+                                "priceModifier": 10000
+                            },
+                            {
+                                "name": "XL",
+                                "priceModifier": 10000
+                            }
+                        ]
+                    },
+                    {
+                        "name": "Color",
+                        "description": "What color do you want your shirt?",
+                        "variants": [
+                            {
+                                "name": "Red"
+                            },
+                            {
+                                "name": "Yellow"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "shippingOptions": [
+                {
+                    "name": "Domestic Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "UNITED_STATES"
+                    ],
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 6000000,
+                            "estimatedDelivery": "4-6 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 12000000,
+                            "estimatedDelivery": "1-3 days"
+                        }
+                    ]
+                },
+                {
+                    "name": "International Shipping",
+                    "type": "FIXED_PRICE",
+                    "regions": [
+                        "ALL"
+                    ],
+                    "shippingRules": {
+                        "rules": [
+                            {
+                                "minRange": 5,
+                                "maxRange": 10,
+                                "price": 10000000
+                            },
+                            {
+                                "minRange": 11,
+                                "maxRange": 20,
+                                "price": 200000
+                            }
+                        ]
+                    },
+                    "services": [
+                        {
+                            "name": "Standard",
+                            "price": 8000000,
+                            "estimatedDelivery": "6-8 days"
+                        },
+                        {
+                            "name": "Express",
+                            "price": 150000000,
+                            "estimatedDelivery": "2-3 days"
+                        }
+                    ]
+                }
+            ],
+            "taxes": [
+                {
+                    "taxType": "Sales tax",
+                    "taxRegions": [
+                        "UNITED_STATES"
+                    ],
+                    "taxShipping": true,
+                    "percentage": 7
+                }
+            ],
+            "coupons": [
+                {
+                    "title": "10% off",
+                    "hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
+                    "percentDiscount": 10
+                }
+            ],
+            "moderators": [
+                "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"
+            ],
+            "termsAndConditions": "NA",
+            "refundPolicy": "No refuns for you. All sales are final."
+        }
+    ],
+    "signatures": [
+        {
+            "section": "LISTING",
+            "guid": "x7hU0U6w6Ldn68qWGZBQz4ERqW9bCctSlOgpYa6CTc48Vxfyt8FbbFyDgO3Q/ambRyhHftaeciqowPJ8RDZ5zpYP3tkuWx0yKBlyIfxBAwg8/+zMlhCeLQNeXjI2ibzzgGxNxDzUclceu0Xqu/rJxOEQhUEplpU0AvPElXhlv3cCwtCzEFj7fp8GPWwQwFgxg1pdj8PLBeWWBqAlGBMaOplhNKYx6rkEDxpvXCC7wr+n3lUvj5xmaru9a7cCVK5Sw3MUCCgdBzvDnZnQuesKSSoZVlalMhVm7MFwGQVEQmf2nI+3a6ZKLiIiE8D9BvqCNP/4r7cZst+PBqKiFEQg8ilUq0l6vcKxH63/FkRrmIj8XS19Ndybqd1VFXTnU32KZTImlReYprgCRWp63wsHCWxAokxKwDGRxbeOA8+B9H+AnfQ6KkoQcxP2MLNS8r/7ZOmmkR1290d6C4X4qE3FSGRWZ+noreyx+mJVEGhGYnTqu6Ox+mLARSbmUjwxq/xeg5KfCDCdToYOhrcHdDZzOF7zasa1XbBm0EXmpJAF16RM2prIpAgfKKkA0t9CcDJ5OdS5dFghHH2CSgeKhbKNgyGcVMgGTdNgNmVilnrWX7+aTZdb434xv4VzVWP/qmsYgSnn5oa2N6BfS/seX+D9OhduR/yyE/VwDRL5shq1zs4=",
+            "bitcoin": "MEQCIGROsJe+Z/YcJW+DVbgxo3KCXVIpsN2+HIrohEzvIL6WAiAJfNhggC/kgIrJSoJDK64IZEhDmyTLjUhUGQHCNggSpw=="
+        }
+    ]
+    }
+    properties:
+      contract:
+        description: The listing wrapped in a Ricardian Contract complete with signatures
+        type: object
+        properties:
+          vendorListings: 
+            description: A list of listings
+            type: array
+            items:
+              description: The listing object
+              type: object
+              $ref: '#/definitions/Listing'
+          signatures:
+            description: A list of signature objects
+            type: array
+            items:
+              description: A signature object
+              type: object
+              properties:
+                section: 
+                  description: The section this signature covers
+                  type: string
+                  enum: ["LISTING"]
+                guid: 
+                  description: A guid signature covering the listing in base64
+                  type: string
+                bitcoin:
+                  description: A bitcoin signature covering the listing in base64
+                  type: string
   ListingGet:
     description: The response to the listing get
     type: object

@@ -22,7 +22,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             raise TestFailure("ReceiveCoinsTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
-        r = self.bitcoin_api.call("generatetoaddress", 1, address)
+        r = self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(1)
         api_url = self.nodes[0]["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)

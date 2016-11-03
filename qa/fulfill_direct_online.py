@@ -26,9 +26,9 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Unknown response")
-        self.bitcoin_api.call("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("generatetoaddress", 1, address)
         time.sleep(2)
-        self.bitcoin_api.call("generate", 125)
+        self.send_bitcoin_cmd("generate", 125)
         time.sleep(3)
 
         # post listing to alice
@@ -42,6 +42,8 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+        resp = json.loads(r.text)
+        slug = resp["slug"]
         time.sleep(4)
 
         # get listing hash
@@ -131,6 +133,7 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
         fulfillment_json["orderId"] = orderId
+        fulfillment_json["slug"] = slug
         api_url = alice["gateway_url"] + "ob/orderfulfillment"
         r = requests.post(api_url, data=json.dumps(fulfillment_json, indent=4))
         if r.status_code == 404:
@@ -147,16 +150,16 @@ class FulfillDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to order fulfillment")
+            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to detect order fulfillment")
 
         # check alice set fulfillment correctly
-        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("FulfillDirectOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
-            raise TestFailure("FulfillDirectOnlineTest - FAIL: Bob failed to order fulfillment")
+            raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to order fulfillment")
 
         print("FulfillDirectOnlineTest - PASS")
 

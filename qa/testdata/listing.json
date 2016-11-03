@@ -1,6 +1,6 @@
 {
 	"listing": {
-	    "slug": "ron_swanson_tshirt",
+	    "slug": "",
 	    "metadata": {
 		"version": 1,
 		"contractType": "PHYSICAL_GOOD",
@@ -149,21 +149,20 @@
 	},
 	"inventory": [
 		{
-		    "item": "/ron_swanson_tshirt/Small/Red",
+		    "item": "/Small/Red",
 		    "count": "12"
 		},
 		{
-		    "item": "/ron_swanson_tshirt/Medium/Yellow",
+		    "item": "/Medium/Yellow",
 		    "count": "10"
 		},
 		{
-		    "item": "/ron_swanson_tshirt/Large/Red",
+		    "item": "/Large/Red",
 		    "count": "9"
 		},
 		{
-		    "item": "/ron_swanson_tshirt/XL/Yellow",
+		    "item": "/XL/Yellow",
 		    "count": "16"
 		}
-	 ],
-	"currentSlug": "ron_swanson_tshirt4"
+	 ]
 }

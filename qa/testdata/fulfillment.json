@@ -1,5 +1,6 @@
 {
     "orderId": "",
+    "slug": "",
     "physicalDelivery": [
         {
 	    "shipper": "UPS",

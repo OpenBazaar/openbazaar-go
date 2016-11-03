@@ -39,6 +39,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleRefund
 	case pb.Message_ORDER_FULFILLMENT:
 		return service.handleOrderFulfillment
+	case pb.Message_ORDER_COMPLETION:
+		return service.handleOrderCompletion
 	default:
 		return nil
 	}
@@ -484,6 +486,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
 
 		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
@@ -548,7 +553,97 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Send notification to websocket
-	n := notifications.Serialize(notifications.RefundNotification{rc.VendorOrderFulfillment[0].OrderId})
+	n := notifications.Serialize(notifications.FulfillmentNotification{rc.VendorOrderFulfillment[0].OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
+
+	rc := new(pb.RicardianContract)
+	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	contract, _, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
+	if err != nil {
+		return nil, err
+	}
+
+	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signatures_ORDER_COMPLETION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+
+	if err := service.node.ValidateOrderCompletion(contract); err != nil {
+		return nil, err
+	}
+
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		var ins []spvwallet.TransactionInput
+		var outValue int64
+		for _, r := range records {
+			if !r.Spent && r.Value > 0 {
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return nil, err
+				}
+				outValue += r.Value
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				ins = append(ins, in)
+			}
+		}
+
+		payoutAddress, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress, service.node.Wallet.Params())
+		if err != nil {
+			return nil, err
+		}
+		var output spvwallet.TransactionOutput
+		outputScript, err := txscript.PayToAddrScript(payoutAddress)
+		if err != nil {
+			return nil, err
+		}
+		output.ScriptPubKey = outputScript
+		output.Value = outValue
+
+		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
+
+		var vendorSignatures []spvwallet.Signature
+		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			vendorSignatures = append(vendorSignatures, sig)
+		}
+		var buyerSignatures []spvwallet.Signature
+		for _, s := range contract.BuyerOrderCompletion.PayoutSigs {
+			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			buyerSignatures = append(buyerSignatures, sig)
+		}
+
+		err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = service.node.ValidateAndSaveRating(contract)
+	if err != nil {
+		log.Error(err)
+	}
+
+	// Set message state to complete
+	service.datastore.Sales().Put(rc.BuyerOrderCompletion.OrderId, *contract, pb.OrderState_COMPLETE, false)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId})
 	service.broadcast <- n
 
 	return nil, nil

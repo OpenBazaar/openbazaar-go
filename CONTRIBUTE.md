@@ -19,6 +19,9 @@ If your PR isn't ready to merge make sure you specify this somehow. For example 
 
 The PR must be approved by more than one member of the team with write access prior to merging. 
 
+## Comments
+To keep things consistent comment fragments should start with a capital letter and end with no period. If the comment is one or more full sentences (a sentence has at least a subject and a verb) then the sentences should end with a period.
+
 ## Commits
 Please keep all of your commits [atomic](https://www.freshconsulting.com/atomic-commits/).
 
