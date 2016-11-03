@@ -18,6 +18,7 @@ type Datastore interface {
 	Inventory() Inventory
 	Purchases() Purchases
 	Sales() Sales
+	Cases() Cases
 	Close()
 }
 
@@ -169,5 +170,22 @@ type Sales interface {
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
 	// Return the IDs for all orders
+	GetAll() ([]string, error)
+}
+
+type Cases interface {
+	// Save or update a sale
+	Put(orderID string, buyerContract, vendorContract pb.RicardianContract, state pb.OrderState, read bool) error
+
+	// Mark a case as read in the database
+	MarkAsRead(orderID string) error
+
+	// Delete a case
+	Delete(orderID string) error
+
+	// Return a sale given the order ID
+	GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, err error)
+
+	// Return the IDs for all cases
 	GetAll() ([]string, error)
 }

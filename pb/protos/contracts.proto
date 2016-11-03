@@ -119,7 +119,7 @@ message Listing {
                     COMBINED_SHIPPING_ADD      = 3;
                     COMBINED_SHIPPING_SUBTRACT = 4;
                 }
-            }
+        }
     }
 
     message Tax {
