@@ -14,7 +14,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -96,31 +95,32 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return m
 	}
 	contract := new(pb.RicardianContract)
-	err := proto.Unmarshal(pmes.Payload.Value, contract)
+	err := ptypes.UnmarshalAny(pmes.Payload, contract)
 	if err != nil {
-		return errorResponse("Could not unmarshal order"), nil
+		return errorResponse("Could not unmarshal order"), err
 	}
+	log.Notice(contract.VendorListings[0].Coupons[0].GetPercentDiscount())
 
 	err = service.node.ValidateOrder(contract)
 	if err != nil {
-		return errorResponse(err.Error()), nil
+		return errorResponse(err.Error()), err
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
-			return errorResponse("Error calculating payment amount"), nil
+			return errorResponse("Error calculating payment amount"), err
 		}
 		if total != contract.BuyerOrder.Payment.Amount {
-			return errorResponse("Calculated a different payment amount"), nil
+			return errorResponse("Calculated a different payment amount"), err
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true)
 		if err != nil {
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
 		m := pb.Message{
@@ -131,51 +131,51 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
 		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
-			return errorResponse("Error calculating payment amount"), nil
+			return errorResponse("Error calculating payment amount"), err
 		}
 		if total != contract.BuyerOrder.Payment.Amount {
-			return errorResponse("Calculated a different payment amount"), nil
+			return errorResponse("Calculated a different payment amount"), err
 		}
 		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		contract, err = service.node.NewOrderConfirmation(contract, false)
 		if err != nil {
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
 		m := pb.Message{
@@ -186,20 +186,20 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
 		err := service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
-			return errorResponse(err.Error()), nil
+			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		return nil, nil
@@ -212,7 +212,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	// Unmarshal payload
 	vendorContract := new(pb.RicardianContract)
-	err := proto.Unmarshal(pmes.Payload.Value, vendorContract)
+	err := ptypes.UnmarshalAny(pmes.Payload, vendorContract)
 	if err != nil {
 		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
 	}
@@ -235,7 +235,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Append the order confirmation
 	contract.VendorOrderConfirmation = vendorContract.VendorOrderConfirmation
 	for _, sig := range vendorContract.Signatures {
-		if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+		if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -270,7 +270,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received REJECT message from %s", p.Pretty())
 	rejectMsg := new(pb.OrderReject)
-	err := proto.Unmarshal(pmes.Payload.Value, rejectMsg)
+	err := ptypes.UnmarshalAny(pmes.Payload, rejectMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +417,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received REFUND message from %s", p.Pretty())
 	rc := new(pb.RicardianContract)
-	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
 		return nil, err
 	}
@@ -506,7 +506,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 	contract.Refund = rc.Refund
 	for _, sig := range contract.Signatures {
-		if sig.Section == pb.Signatures_REFUND {
+		if sig.Section == pb.Signature_REFUND {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -525,7 +525,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	rc := new(pb.RicardianContract)
-	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +538,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
 	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
+		if sig.Section == pb.Signature_ORDER_FULFILLMENT {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
@@ -563,7 +563,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
 
 	rc := new(pb.RicardianContract)
-	err := proto.Unmarshal(pmes.Payload.Value, rc)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
 		return nil, err
 	}
@@ -576,7 +576,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
 	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_COMPLETION {
+		if sig.Section == pb.Signature_ORDER_COMPLETION {
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -93,6 +92,13 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 	keys.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = keys
+	// Sign the GUID with the Bitcoin key
+	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	sig, err := ecPrivKey.Sign([]byte(id.Guid))
+	id.BitcoinSig = sig.Serialize()
 	order.BuyerID = id
 
 	ts := new(timestamp.Timestamp)
@@ -376,7 +382,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
 			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+				if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
@@ -505,7 +511,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
 			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
+				if sig.Section == pb.Signature_ORDER_CONFIRMATION {
 					contract.Signatures = append(contract.Signatures, sig)
 				}
 			}
@@ -889,26 +895,19 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	guidPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Guid
 	bitcoinPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin
-	guid := contract.BuyerOrder.BuyerID.Guid
 	ser, err := proto.Marshal(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
-	hash := sha256.Sum256(ser)
 	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
 	if err != nil {
 		return err
 	}
-	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
-	if err != nil {
-		return err
-	}
-	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER {
+		if s.Section == pb.Signature_ORDER {
 			sig = s
 			sigExists = true
 		}
@@ -916,34 +915,30 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	if !sigExists {
 		return errors.New("Contract does not contain a signature for the order")
 	}
-	guidSig = sig.Guid
-	bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-	if err != nil {
-		return err
-	}
-	valid, err := guidPubkey.Verify(ser, guidSig)
+	valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
 	if err != nil {
 		return err
 	}
 	if !valid {
 		return errors.New("Buyers's guid signature on contact failed to verify")
 	}
-	checkKeyHash, err := guidPubkey.Hash()
-	if err != nil {
-		return err
-	}
-	guidMH, err := mh.FromB58String(guid)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(guidMH, checkKeyHash) {
+	pid, err := peer.IDB58Decode(contract.BuyerOrder.BuyerID.Guid)
+	if !pid.MatchesPublicKey(guidPubkey) {
 		return errors.New("Public key in order does not match reported buyer ID")
 	}
-	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
-	if !valid {
-		return errors.New("Buyer's bitcoin signature on contact failed to verify")
+	// Verify bitcoin signature in buyer ID
+	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+	if err != nil {
+		return err
 	}
-
+	bitcoinSig, err = btcec.ParseSignature(contract.BuyerOrder.BuyerID.BitcoinSig, btcec.S256())
+	if err != nil {
+		return err
+	}
+	valid = bitcoinSig.Verify([]byte(contract.BuyerOrder.BuyerID.Guid), bitcoinPubkey)
+	if !valid {
+		return errors.New("Buyer's bitcoin signature on GUID failed to verify")
+	}
 	return nil
 }
 
@@ -1278,8 +1273,8 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER
+	s := new(pb.Signature)
+	s.Section = pb.Signature_ORDER
 	if err != nil {
 		return contract, err
 	}
@@ -1287,18 +1282,7 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
-	if err != nil {
-		return contract, err
-	}
-	hashed := sha256.Sum256(serializedOrder)
-	bitcoinSig, err := priv.Sign(hashed[:])
-	if err != nil {
-		return contract, err
-	}
-	s.Guid = guidSig
-	s.Bitcoin = bitcoinSig.Serialize()
-
+	s.SignatureBytes = guidSig
 	contract.Signatures = append(contract.Signatures, s)
 	return contract, nil
 }

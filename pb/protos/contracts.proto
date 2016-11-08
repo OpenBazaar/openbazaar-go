@@ -12,7 +12,7 @@ message RicardianContract {
     Dispute dispute                                    = 6;
     DisputeResolution disputeResolution                = 7;
     Refund refund                                      = 8;
-    repeated Signatures signatures                     = 9;
+    repeated Signature signatures                      = 9;
 }
 
 message Listing {
@@ -303,17 +303,17 @@ message ID {
     string guid         = 1;
     string blockchainID = 2;
     Pubkeys pubkeys     = 3;
+    bytes bitcoinSig    = 4; // Bitcoin signature covering GUID
 
     message Pubkeys {
-        bytes guid    = 1;
-        bytes bitcoin = 2;
+        bytes guid    = 1; // IPFS public key
+        bytes bitcoin = 2; // Bitcoin public key
     }
 }
 
-message Signatures {
-    Section section = 1;
-    bytes guid      = 2;
-    bytes bitcoin   = 3;
+message Signature {
+    Section section      = 1;
+    bytes signatureBytes = 2;
 
     enum Section {
         LISTING            = 0;
