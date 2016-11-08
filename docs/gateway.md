@@ -16,10 +16,10 @@ Next, set the gateway address to:
 
 (Note the use of port 80. You could use any port you want but if you use port 80 people may omit typing the port in the url.)
 
-It is highly recommended you don't use your public gateway as your personal OpenBazaar node (for example to buy or sell things). So let's do a couple more things to lock it down.
+It is highly recommended you do not use your public gateway as your personal OpenBazaar node (for example to buy or sell things). So let's do a couple more things to lock it down.
 
 
-Next turn off OpenBazaar API as you don't want to give public access to this:
+Next turn off OpenBazaar API as you do not want to give public access to this:
 
 ```
 "OB-API": {

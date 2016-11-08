@@ -43,12 +43,11 @@ var (
 	// The HMAC included in the ciphertext is invalid
 	ErrInvalidHmac = errors.New("Invalid Hmac")
 
-	// Satic salt used in the hdkf
+	// Satic salt used in the HKDF
 	Salt = []byte("OpenBazaar Encryption Algorithm")
 )
 
 func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
-
 	// Encrypt random secret key with RSA pubkey
 	secretKey := make([]byte, SecretKeyBytes)
 	rand.Read(secretKey)
@@ -58,7 +57,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Derive MAC and AES keys from the secret key using hkdf
+	// Derive MAC and AES keys from the secret key using HKDF
 	hash := sha256.New
 
 	hkdf := hkdf.New(hash, secretKey, Salt, nil)
@@ -129,7 +128,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Derive the AES and MAC keys from the secret key using hdkf
+	// Derive the AES and MAC keys from the secret key using HKDF
 	hash := sha256.New
 
 	hkdf := hkdf.New(hash, secretKey, Salt, nil)

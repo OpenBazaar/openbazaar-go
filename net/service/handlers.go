@@ -142,7 +142,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), nil
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		orderId, err := service.node.CalculateOrderId(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), nil
 		}
@@ -197,7 +197,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), nil
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
+		orderId, err := service.node.CalculateOrderId(contract.BuyerOrder)
 		if err != nil {
 			return errorResponse(err.Error()), nil
 		}
@@ -217,7 +217,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
 	}
 
-	// Calc order ID
+	// Calculate order ID
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
@@ -234,9 +234,9 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 	// Append the order confirmation
 	contract.VendorOrderConfirmation = vendorContract.VendorOrderConfirmation
-	for _, sig := range vendorContract.Signatures {
-		if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
-			contract.Signatures = append(contract.Signatures, sig)
+	for _, sig := range vendorContract.SignaturePairs {
+		if sig.Section == pb.SignaturePair_ORDER_CONFIRMATION {
+			contract.SignaturePairs = append(contract.SignaturePairs, sig)
 		}
 	}
 
@@ -505,9 +505,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		}
 	}
 	contract.Refund = rc.Refund
-	for _, sig := range contract.Signatures {
-		if sig.Section == pb.Signatures_REFUND {
-			contract.Signatures = append(contract.Signatures, sig)
+	for _, sig := range contract.SignaturePairs {
+		if sig.Section == pb.SignaturePair_REFUND {
+			contract.SignaturePairs = append(contract.SignaturePairs, sig)
 		}
 	}
 
@@ -537,9 +537,9 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
-	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
-			contract.Signatures = append(contract.Signatures, sig)
+	for _, sig := range rc.SignaturePairs {
+		if sig.Section == pb.SignaturePair_ORDER_FULFILLMENT {
+			contract.SignaturePairs = append(contract.SignaturePairs, sig)
 		}
 	}
 
@@ -575,9 +575,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
-	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_COMPLETION {
-			contract.Signatures = append(contract.Signatures, sig)
+	for _, sig := range rc.SignaturePairs {
+		if sig.Section == pb.SignaturePair_ORDER_COMPLETION {
+			contract.SignaturePairs = append(contract.SignaturePairs, sig)
 		}
 	}
 

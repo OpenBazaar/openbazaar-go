@@ -90,7 +90,7 @@ func TestGetWalletConfig(t *testing.T) {
 
 	_, err = GetWalletConfig(nonexistentTestConfigPath)
 	if err == nil {
-		t.Error("GetFeeAPI didn't throw an error")
+		t.Error("GetFeeAPI did not throw an error")
 	}
 }
 
@@ -108,7 +108,7 @@ func TestGetDropboxApiToken(t *testing.T) {
 		t.Error("Expected empty string, got ", dropboxApiToken)
 	}
 	if err == nil {
-		t.Error("GetDropboxApiToken didn't throw an error")
+		t.Error("GetDropboxApiToken did not throw an error")
 	}
 }
 
@@ -126,7 +126,7 @@ func TestGetResolverUrl(t *testing.T) {
 		t.Error("Expected empty string, got ", resolverUrl)
 	}
 	if err == nil {
-		t.Error("GetResolverUrl didn't throw an error")
+		t.Error("GetResolverUrl did not throw an error")
 	}
 }
 

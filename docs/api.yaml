@@ -8,9 +8,9 @@ info:
   description: |
     # Introduction
     The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In this documentation you'll find a full list of API calls and example usages.
-   
+
     # Authentication
-    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: 
+    When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows:
     ```
      {
         "JSON-API": {
@@ -19,7 +19,7 @@ info:
      }
     ```
     Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.
-    
+
     There are two ways for a client to authenticate. The default (and preferred) is via an authentication cookie. On start up the server generates a random cookie and saves it in the data directory as a .cookie file. You need to add this cookie to the header of all requests. For example:
     ```
     cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI
@@ -102,7 +102,7 @@ paths:
       tags:
           - IPFS
       summary: Fetch file from IPFS
-      description: This API call will query the DHT using the given hash to get a list of peers who are seeding the file. Depending on the size of the file it will then download it from one or more of them. 
+      description: This API call will query the DHT using the given hash to get a list of peers who are seeding the file. Depending on the size of the file it will then download it from one or more of them.
         The hash may be a directory. In which case this API returns an HTML directory view. To view the files inside the directory, you can add either add their filename or hash to the query. For example...
         ```
         ipfs/QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG/some_image.jpg
@@ -130,7 +130,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'  
+            $ref: '#/definitions/IPFSResponse'
   /ipns/{peerId}/:
     get:
       tags:
@@ -162,7 +162,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'  
+            $ref: '#/definitions/IPFSResponse'
   /ob/follow:
     post:
       tags:
@@ -286,7 +286,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse' 
+            $ref: '#/definitions/ErrorResponse'
   /ob/followsme/{peerId}:
     get:
       tags:
@@ -399,7 +399,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'  
+            $ref: '#/definitions/ErrorResponse'
   /ipns/{peerId}/profile:
     get:
       tags:
@@ -429,7 +429,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'  
+            $ref: '#/definitions/IPFSResponse'
   /ob/settings:
     post:
       tags:
@@ -503,7 +503,7 @@ paths:
       tags:
         - Settings
       summary: Patch settings
-      description: Update individual settings without overwriting the rest. 
+      description: Update individual settings without overwriting the rest.
       operationId: PatchSettings
       consumes:
         - application/json
@@ -537,7 +537,7 @@ paths:
       tags:
         - Settings
       summary: Get the settings
-      description: Fetch the settings from the database 
+      description: Fetch the settings from the database
       operationId: GetSettings
       consumes:
         - application/json
@@ -555,13 +555,13 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'   
+            $ref: '#/definitions/ErrorResponse'
   /wallet/address:
     get:
       tags:
         - Wallet
       summary: Get a bitcoin address
-      description: Returns an unused bitcoin address. Note the same address is returned until the address is used. 
+      description: Returns an unused bitcoin address. Note the same address is returned until the address is used.
       operationId: GetBitcoinAddress
       consumes:
         - application/json
@@ -571,7 +571,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Address'    
+            $ref: '#/definitions/Address'
   /wallet/mnemonic:
     get:
       tags:
@@ -587,11 +587,11 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Mnemonic'   
+            $ref: '#/definitions/Mnemonic'
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'   
+            $ref: '#/definitions/ErrorResponse'
   /wallet/balance:
     get:
       tags:
@@ -607,7 +607,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Balance'    
+            $ref: '#/definitions/Balance'
   /wallet/spend:
     post:
       tags:
@@ -630,7 +630,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/DefaultResponse'  
+            $ref: '#/definitions/DefaultResponse'
         '400':
           description: Bad Request
           schema:
@@ -654,7 +654,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/DefaultResponse'  
+            $ref: '#/definitions/DefaultResponse'
   /ob/peers:
     get:
       tags:
@@ -670,7 +670,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Peers'  
+            $ref: '#/definitions/Peers'
         '500':
           description: Internal Server Error
           schema:
@@ -696,7 +696,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Status'  
+            $ref: '#/definitions/Status'
   /ob/closestpeers/{peerId}:
     get:
       tags:
@@ -718,7 +718,7 @@ paths:
         '200':
           description: OK
           schema:
-            $ref: '#/definitions/Peers'  
+            $ref: '#/definitions/Peers'
         '500':
           description: Internal Server Error
           schema:
@@ -1005,7 +1005,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'  
+            $ref: '#/definitions/IPFSResponse'
   /ob/moderators:
     get:
       tags:
@@ -1035,7 +1035,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse'            
+            $ref: '#/definitions/IPFSResponse'
   /ob/inventory:
     post:
       tags:
@@ -1082,7 +1082,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/InventoryList'
-  /ob/config:          
+  /ob/config:
     get:
       tags:
        - Misc
@@ -1098,7 +1098,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/Config'
-  /ob/exchangerate/{currencyCode}:          
+  /ob/exchangerate/{currencyCode}:
     get:
       tags:
         - Misc
@@ -1287,7 +1287,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/IPFSResponse' 
+            $ref: '#/definitions/IPFSResponse'
   /ob/purchase:
     post:
       tags:
@@ -1429,7 +1429,7 @@ paths:
       tags:
         - Orders
       summary: Cancel an offline order
-      description: Cancel an outstanding offline order. It will move the bitcoins back into your wallet. 
+      description: Cancel an outstanding offline order. It will move the bitcoins back into your wallet.
       operationId: PostCancelConfirmation
       consumes:
         - application/json
@@ -1493,7 +1493,7 @@ paths:
         '500':
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/ErrorResponse'      
+            $ref: '#/definitions/ErrorResponse'
   /ob/order/{orderId}:
     post:
       tags:
@@ -1547,7 +1547,7 @@ definitions:
     example: {"slug": "blue-tshirt"}
     type: object
     properties:
-      slug: 
+      slug:
         type: string
         example: "blue-tshirt"
   ImageResponse:
@@ -1636,7 +1636,7 @@ definitions:
     description: A json list of Peer IDs
     type: array
     example: [
-      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
       "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
     ]
@@ -1671,7 +1671,7 @@ definitions:
         type: string
       medium:
         type: string
-      large: 
+      large:
         type: string
       original:
         type: string
@@ -1679,22 +1679,22 @@ definitions:
     description: A list of peer IDs
     type: array
     example: [
-      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
       "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
-    ] 
+    ]
     items:
       type: string
   ModeratorList:
     description: A list of moderators peer IDs
     type: array
     example: [
-      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+      "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
       "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
       "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
-    ] 
+    ]
     items:
-      type: string   
+      type: string
   AsyncId:
     description: ID object returned for async moderator requests
     type: object
@@ -1754,7 +1754,7 @@ definitions:
     type: object
     properties:
       orderId:
-        description: The base58 multihash encoded order ID to refund 
+        description: The base58 multihash encoded order ID to refund
         type: string
         example: "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
   Inventory:
@@ -1787,7 +1787,7 @@ definitions:
            "quantity": 9,
         }
     ]
-    items: 
+    items:
       $ref: '#/definitions/Inventory'
   OrderFulfillment:
     description: Order fulfillment object
@@ -1878,7 +1878,7 @@ definitions:
               type: string
               example: "This rocks!"
             anonymous:
-              description: Don't include the buyer's ID in the rating
+              description: Do not include the buyer's ID in the rating
               type: boolean
               example: True
   Config:
@@ -1969,7 +1969,7 @@ definitions:
                 description: The amount. If the currencyCode is bitcoin the amount should be satoshis. If it's fiat currency then the amount should have the decimal place moved two places to the right. For example.. 300 = $3.00
                 type: integer
                 example: 3000
-          percentage: 
+          percentage:
             description: The fee as a percentage. Only include this if the type is PERCENTAGE.
             type: integer
             example: 10.00
@@ -1987,7 +1987,7 @@ definitions:
     required: ["name"]
     properties:
       handle:
-        description: Optional blockchainID. Profile will be rejected if the handle doesn't validate to this node's peer ID.
+        description: Optional blockchainID. Profile will be rejected if the handle does not validate to this node's peer ID.
         type: string
         example: "@UrbanArt"
       name:
@@ -2086,7 +2086,7 @@ definitions:
             type: string
           medium:
             type: string
-          large: 
+          large:
             type: string
           original:
             type: string
@@ -2107,7 +2107,7 @@ definitions:
             type: string
           medium:
             type: string
-          large: 
+          large:
             type: string
           original:
             type: string
@@ -2129,7 +2129,7 @@ definitions:
         example: "2016-12-31T15:59:60-08:00"
   Settings:
     type: object
-    properties:    
+    properties:
       paymentDataInQR:
         description: Add order metadata into payment QR code. Most wallets typically save the metadata so this is an optional privacy feature.
         type: boolean
@@ -2218,7 +2218,7 @@ definitions:
         description: Ids of peers we the user wishes to block
         type: array
         example: [
-          "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",  
+          "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
           "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
           "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
         ]
@@ -2229,7 +2229,7 @@ definitions:
         description: Saved list of moderator IDs that will be added to each new listing.
         type: array
         example: [
-          "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",  
+          "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
           "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2"
         ]
         items:
@@ -2264,7 +2264,7 @@ definitions:
             example: "letmein"
           senderEmail:
             description: The outgoing email address
-            type: string 
+            type: string
             example: "notifications@urbanart.com"
           recipientEmail:
             description: The email to send the notifications to
@@ -2351,7 +2351,7 @@ definitions:
       currentSlug:
         description: Used in PUT calls to specify the listing being updated. This slug with be renamed to the slug in the listing if it has changed.
         type: string
-        example: "ron_swanson_tshirt"  
+        example: "ron_swanson_tshirt"
   ListingDelete:
     description: A delete object
     type: object
@@ -2533,7 +2533,7 @@ definitions:
         description: The listing wrapped in a Ricardian Contract complete with signatures
         type: object
         properties:
-          vendorListings: 
+          vendorListings:
             description: A list of listings
             type: array
             items:
@@ -2547,12 +2547,12 @@ definitions:
               description: A signature object
               type: object
               properties:
-                section: 
+                section:
                   description: The section this signature covers
                   type: string
                   enum: ["LISTING"]
-                guid: 
-                  description: A guid signature covering the listing in base64
+                guid:
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64
@@ -2722,7 +2722,7 @@ definitions:
             "bitcoin": "MEQCIGROsJe+Z/YcJW+DVbgxo3KCXVIpsN2+HIrohEzvIL6WAiAJfNhggC/kgIrJSoJDK64IZEhDmyTLjUhUGQHCNggSpw=="
         }
     ]
-}, 
+},
 "inventory": [
           		{
           		    "item": "/ron_swanson_tshirt/Small/Red",
@@ -2747,7 +2747,7 @@ definitions:
         description: The listing wrapped in a Ricardian Contract complete with signatures
         type: object
         properties:
-          vendorListings: 
+          vendorListings:
             description: A list of listings
             type: array
             items:
@@ -2761,12 +2761,12 @@ definitions:
               description: A signature object
               type: object
               properties:
-                section: 
+                section:
                   description: The section this signature covers
                   type: string
                   enum: ["LISTING"]
-                guid: 
-                  description: A guid signature covering the listing in base64
+                guid:
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64
@@ -2808,7 +2808,7 @@ definitions:
     type: object
     example:  {
                 "guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
-                "blockchainID": "@urbanart", 
+                "blockchainID": "@urbanart",
                 "pubkeys": {
                     "guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
                     "bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
@@ -3064,7 +3064,7 @@ definitions:
                 hash:
                   description: The base58 encoded multihash of the image
                   type: string
-                filename: 
+                filename:
                   description: The name of the file. Allows images to be queried by name in IPFS.
                   type: string
                   maxLength: 70
@@ -3121,7 +3121,7 @@ definitions:
                           hash:
                             description: The base58 encoded multihash of the image
                             type: string
-                          filename: 
+                          filename:
                             description: The name of the file. Allows images to be queried by name in IPFS.
                             type: string
                             maxLength: 70
@@ -3230,10 +3230,10 @@ definitions:
             hash:
               description: A base58 encoded multihash of the discount code
               type: string
-            percentDiscount: 
+            percentDiscount:
               description: A percentage discount. Only use if price discount is omitted.
               type: integer
-            priceDiscount: 
+            priceDiscount:
               description: A price discount. Only use if percent discount is omitted.
               type: integer
       moderators:
@@ -3374,7 +3374,7 @@ definitions:
       paymentAddress:
         description: The bitcoin address to send the payment to
         type: string
-      amount: 
+      amount:
         description: The amount to pay in satoshi
         type: integer
       vendorOnline:
@@ -3392,11 +3392,11 @@ definitions:
       "reject": false
     }
     properties:
-      orderId: 
+      orderId:
         description: A base58 encoded multihash order ID
         type: string
       reject:
-        description: Reject boolean. If true, a reject message will be sent to the buyer. 
+        description: Reject boolean. If true, a reject message will be sent to the buyer.
         type: boolean
   OrderCancel:
     description: An order cancel object
@@ -3406,7 +3406,7 @@ definitions:
       "orderId": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"
     }
     properties:
-      orderId: 
+      orderId:
         description: A base58 encoded multihash order ID
         type: string
   OrderResponse:
@@ -3669,7 +3669,7 @@ definitions:
         description: The Ricardian Contract in it's current state. The body of this field will contain the appropriate combination of sections from [contracts.proto](https://github.com/OpenBazaar/openbazaar-go/blob/master/pb/protos/contracts.proto)
         type: object
         properties:
-          vendorListings: 
+          vendorListings:
             description: A list of listings
             type: array
             items:
@@ -3683,12 +3683,12 @@ definitions:
               description: A signature object
               type: object
               properties:
-                section: 
+                section:
                   description: The section this signature covers
                   type: string
                   enum: ["LISTING"]
-                guid: 
-                  description: A guid signature covering the listing in base64
+                guid:
+                  description: A GUID signature covering the listing in base64
                   type: string
                 bitcoin:
                   description: A bitcoin signature covering the listing in base64
@@ -3723,4 +3723,4 @@ definitions:
         description: The state this order is in
         type: string
         enum: ["PENDING", "CONFIRMED", "FUNDED", "FULFILLED", "COMPLETE", "DISPUTED", "RESOLVED", "REFUNDED", "CANCELED", "REJECTED"]
-      
+

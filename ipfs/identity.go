@@ -10,7 +10,6 @@ import (
 )
 
 func IdentityFromKey(privkey []byte) (config.Identity, error) {
-
 	ident := config.Identity{}
 	sk, err := libp2p.UnmarshalPrivateKey(privkey)
 	if err != nil {

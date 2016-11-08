@@ -7,6 +7,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -23,9 +27,6 @@ import (
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"path"
-	"strings"
-	"time"
 )
 
 type option struct {
@@ -125,7 +126,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		   multiple items with different variants. If it is multiple items of the same variant they can just
 		   use the quantity field. But different variants require two separate item entries. However,
 		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
-		   So let's check to see if that's the case here and handle it. */
+		   So let's check to see if that is the case here and handle it. */
 		toAdd := true
 		for _, addedListing := range addedListings {
 			if item.ListingHash == addedListing[0] {
@@ -144,8 +145,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			if err := validateVersionNumber(rc); err != nil {
-				return "", "", 0, false, err
+			if len(rc.VendorListings) == 0 {
+				return "", "", 0, false, errors.New("Contract does not contain a listing")
 			}
 			if err := validateVendorID(rc); err != nil {
 				return "", "", 0, false, err
@@ -157,7 +158,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, err
 			}
 			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
-			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
+			contract.SignaturePairs = append(contract.SignaturePairs, rc.SignaturePairs[0])
 			addedListings = append(addedListings, []string{item.ListingHash, rc.VendorListings[0].Slug})
 			listing = rc.VendorListings[0]
 		} else {
@@ -335,7 +336,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 
-		// Send to order vendor
+		// Send order to vendor
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
 		if err != nil { // Vendor offline
 			// Send using offline messaging
@@ -356,7 +357,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -375,9 +376,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, errors.New("Error parsing the vendor's response")
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
-			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
-					contract.Signatures = append(contract.Signatures, sig)
+			for _, sig := range rc.SignaturePairs {
+				if sig.Section == pb.SignaturePair_ORDER_CONFIRMATION {
+					contract.SignaturePairs = append(contract.SignaturePairs, sig)
 				}
 			}
 			err = n.ValidateOrderConfirmation(contract, true)
@@ -387,7 +388,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if contract.VendorOrderConfirmation.PaymentAddress != contract.BuyerOrder.Payment.Address {
 				return "", "", 0, false, errors.New("Vendor responded with incorrect multisig address")
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -485,7 +486,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -504,16 +505,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				return "", "", 0, false, errors.New("Error parsing the vendor's response")
 			}
 			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
-			for _, sig := range rc.Signatures {
-				if sig.Section == pb.Signatures_ORDER_CONFIRMATION {
-					contract.Signatures = append(contract.Signatures, sig)
+			for _, sig := range rc.SignaturePairs {
+				if sig.Section == pb.SignaturePair_ORDER_CONFIRMATION {
+					contract.SignaturePairs = append(contract.SignaturePairs, sig)
 				}
 			}
 			err = n.ValidateOrderConfirmation(contract, true)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -524,7 +525,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 }
 
 func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -588,7 +589,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	return nil
 }
 
-func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
+func (n *OpenBazaarNode) CalculateOrderId(order *pb.Order) (string, error) {
 	ser, err := proto.Marshal(order)
 	if err != nil {
 		return "", err
@@ -746,7 +747,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					}
 				}
 				if !shipsToMe {
-					return 0, errors.New("Listing does ship to selected country")
+					return 0, errors.New("Listing does not ship to selected country")
 				}
 
 				// Check service exists
@@ -905,10 +906,10 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.SignaturePair
 	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER {
+	for _, s := range contract.SignaturePairs {
+		if s.Section == pb.SignaturePair_ORDER {
 			sig = s
 			sigExists = true
 		}
@@ -926,7 +927,7 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 		return err
 	}
 	if !valid {
-		return errors.New("Buyers's guid signature on contact failed to verify")
+		return errors.New("Buyers's GUID signature on contact failed to verify")
 	}
 	checkKeyHash, err := guidPubkey.Hash()
 	if err != nil {
@@ -952,16 +953,16 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 
 	// Check order contains all required fields
 	if contract.BuyerOrder == nil {
-		return errors.New("Contract doesn't contain an order")
+		return errors.New("Contract does not contain an order")
 	}
 	if contract.BuyerOrder.Payment == nil {
-		return errors.New("Order doesn't contain a payment")
+		return errors.New("Order does not contain a payment")
 	}
 	if contract.BuyerOrder.BuyerID == nil {
-		return errors.New("Order doesn't contain a buyer ID")
+		return errors.New("Order does not contain a buyer ID")
 	}
 	if len(contract.BuyerOrder.Items) == 0 {
-		return errors.New("Order hasn't selected any items")
+		return errors.New("Order has not selected any items")
 	}
 	if len(contract.BuyerOrder.RatingKeys) != len(contract.BuyerOrder.Items) {
 		return errors.New("Number of rating keys do not match number of items")
@@ -1278,8 +1279,8 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_ORDER
 	if err != nil {
 		return contract, err
 	}
@@ -1299,12 +1300,11 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
 
-	contract.Signatures = append(contract.Signatures, s)
+	contract.SignaturePairs = append(contract.SignaturePairs, s)
 	return contract, nil
 }
 
 func validateVendorID(rc *pb.RicardianContract) error {
-
 	if len(rc.VendorListings) == 0 {
 		return errors.New("Contract does not contain a listing")
 	}
@@ -1324,19 +1324,6 @@ func validateVendorID(rc *pb.RicardianContract) error {
 	}
 	if !vendorId.MatchesPublicKey(vendorPubKey) {
 		return errors.New("Invalid vendor ID")
-	}
-	return nil
-}
-
-func validateVersionNumber(rc *pb.RicardianContract) error {
-	if len(rc.VendorListings) == 0 {
-		return errors.New("Contract does not contain a listing")
-	}
-	if rc.VendorListings[0].Metadata == nil {
-		return errors.New("Contract does not contain listing metadata")
-	}
-	if rc.VendorListings[0].Metadata.Version > ListingVersion {
-		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
 	}
 	return nil
 }

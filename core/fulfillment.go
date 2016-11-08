@@ -126,9 +126,9 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		return err
 	}
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, fulfillment)
-	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signatures_ORDER_FULFILLMENT {
-			contract.Signatures = append(contract.Signatures, sig)
+	for _, sig := range rc.SignaturePairs {
+		if sig.Section == pb.SignaturePair_ORDER_FULFILLMENT {
+			contract.SignaturePairs = append(contract.SignaturePairs, sig)
 		}
 	}
 	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FULFILLED, false)
@@ -140,8 +140,8 @@ func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER_FULFILLMENT
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_ORDER_FULFILLMENT
 	if err != nil {
 		return contract, err
 	}
@@ -160,7 +160,7 @@ func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
-	contract.Signatures = append(contract.Signatures, s)
+	contract.SignaturePairs = append(contract.SignaturePairs, s)
 	return contract, nil
 }
 
@@ -267,11 +267,11 @@ func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
 		}
 		var guidSig []byte
 		var bitcoinSig *btcec.Signature
-		var sig *pb.Signatures
+		var sig *pb.SignaturePair
 		sigExists := false
 		a := 0
-		for _, s := range contract.Signatures {
-			if s.Section == pb.Signatures_ORDER_FULFILLMENT {
+		for _, s := range contract.SignaturePairs {
+			if s.Section == pb.SignaturePair_ORDER_FULFILLMENT {
 				if a == i {
 					sig = s
 					sigExists = true
@@ -293,7 +293,7 @@ func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
 			return err
 		}
 		if !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
+			return errors.New("Vendor's GUID signature on contact failed to verify")
 		}
 		checkKeyHash, err := guidPubkey.Hash()
 		if err != nil {

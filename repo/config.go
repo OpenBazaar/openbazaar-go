@@ -180,9 +180,8 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 	datastore := datastoreConfig(repoRoot)
 
 	conf := &config.Config{
-
-		// Setup the node's default addresses.
-		// NOTE: two swarm listen addrs, one TCP, one UTP.
+		/* Setup the node's default addresses.
+		   There are two swarm listen addresses, one TCP, one UTP. */
 		Addresses: config.Addresses{
 			Swarm: []string{
 				"/ip4/0.0.0.0/tcp/4001",

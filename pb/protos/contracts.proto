@@ -12,7 +12,7 @@ message RicardianContract {
     Dispute dispute                                    = 6;
     DisputeResolution disputeResolution                = 7;
     Refund refund                                      = 8;
-    repeated Signatures signatures                     = 9;
+    repeated SignaturePair signaturePairs              = 9;
 }
 
 message Listing {
@@ -235,7 +235,7 @@ message OrderFulfillment {
     // Physical goods only
     repeated PhysicalDelivery physicalDelivery = 3;
 
-    //Digital goods only
+    // Digital goods only
     repeated DigitalDelivery digitalDelivery   = 4;
 
     // Moderated payments only
@@ -272,10 +272,10 @@ message OrderCompletion {
         message RatingData {
             bytes ratingKey                     = 1;
             ID vendorID                         = 2;
-            ID buyerID                          = 3; // optional
-            ID moderatorID                      = 4; // only if a dispute was won
+            ID buyerID                          = 3; // Optional
+            ID moderatorID                      = 4; // Only if a dispute was won
             RatingSignature vendorSig           = 5;
-            bytes moderatorSig                  = 6; // only if a dispute was won
+            bytes moderatorSig                  = 6; // Only if a dispute was won
 
             google.protobuf.Timestamp timestamp = 7;
 
@@ -310,7 +310,7 @@ message ID {
     }
 }
 
-message Signatures {
+message SignaturePair {
     Section section = 1;
     bytes guid      = 2;
     bytes bitcoin   = 3;

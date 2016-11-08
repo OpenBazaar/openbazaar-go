@@ -4,7 +4,7 @@ OpenBazaar is an open source project. We love contributions! This document outli
 
 ## Issues
 
-Issues should be used primarily for bug reports and directly actionable features. It's OK if you open an issue to ask a question or to start a discussion, however don't take offense if the issue is closed after a few days. General discussion of the protocol is probably better fleshed out in [slack](https://openbazaar-slackin-drwasho.herokuapp.com/).
+Issues should be used primarily for bug reports and directly actionable features. It is OK if you open an issue to ask a question or to start a discussion, however do not take offense if the issue is closed after a few days. General discussion of the protocol is probably better fleshed out in [slack](https://openbazaar-slackin-drwasho.herokuapp.com/).
 
 ## Go Guidelines
 You must run `gofmt` before each commit. Travis will fail if you do not run it. Most IDEs have the ability to set `gofmt` to run on save or at specified times.
@@ -15,9 +15,9 @@ Additionally, we like to keep the [Go Report Card](https://goreportcard.com/repo
 If you add new code, please submit a unit test with it. We might not accept the PR without it. Additionally, you are expected to make the appropriate changes to existing tests if they are affected by your commits. This also includes the integration tests in the [qa package](https://github.com/OpenBazaar/openbazaar-go/tree/master/qa).
 
 ## Pull Requests
-If your PR isn't ready to merge make sure you specify this somehow. For example by placing [WIP] in the PR title. Ideally you should include a `task list` in the PR message to track the progress of the PR.
+If your PR is not ready to merge make sure you specify this somehow. For example by placing [WIP] in the PR title. Ideally you should include a `task list` in the PR message to track the progress of the PR.
 
-The PR must be approved by more than one member of the team with write access prior to merging. 
+The PR must be approved by more than one member of the team with write access prior to merging.
 
 ## Comments
 To keep things consistent comment fragments should start with a capital letter and end with no period. If the comment is one or more full sentences (a sentence has at least a subject and a verb) then the sentences should end with a period.
@@ -37,4 +37,4 @@ Also, be sure to follow the [seven rules of a great git commit message](http://c
 7. Use the body to explain what and why vs. how
 ```
 
-Finally, please [sign](https://help.github.com/articles/signing-commits-using-gpg/) your commits. 
+Finally, please [sign](https://help.github.com/articles/signing-commits-using-gpg/) your commits.

@@ -8,7 +8,6 @@ import (
 )
 
 type BitcoinWallet interface {
-
 	// Start the wallet
 	Start()
 

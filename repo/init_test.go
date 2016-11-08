@@ -40,13 +40,13 @@ func TestDoInit(t *testing.T) {
 	// Running DoInit on a folder that already contains a config file
 	err := DoInit(testConfigFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err != ErrRepoExists {
-		t.Error("DoInit didn't throw expected error")
+		t.Error("DoInit did not throw expected error")
 	}
 	// Running DoInit on an empty, not-writable folder
 	os.Chmod(repoRootFolder, 0444)
 	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
 	if err == nil {
-		t.Error("DoInit didn't throw an error")
+		t.Error("DoInit did not throw an error")
 	}
 	// Running DoInit on an empty, writable folder
 	os.Chmod(repoRootFolder, 0755)
@@ -108,7 +108,7 @@ func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
 		t.Errorf("The mnemonic should have been an empty string but it is %s instead", mnemonic)
 	}
 	if err == nil {
-		t.Error("createMnemonic didn't throw an error")
+		t.Error("createMnemonic did not throw an error")
 	}
 }
 

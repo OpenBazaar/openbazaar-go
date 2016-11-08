@@ -18,7 +18,7 @@ import (
 
 func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 	refundMsg := new(pb.Refund)
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -121,8 +121,8 @@ func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.Ricardi
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_REFUND
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_REFUND
 	if err != nil {
 		return contract, err
 	}
@@ -141,7 +141,7 @@ func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.Ricardi
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
-	contract.Signatures = append(contract.Signatures, s)
+	contract.SignaturePairs = append(contract.SignaturePairs, s)
 	return contract, nil
 }
 
@@ -164,10 +164,10 @@ func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.SignaturePair
 	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_REFUND {
+	for _, s := range contract.SignaturePairs {
+		if s.Section == pb.SignaturePair_REFUND {
 			sig = s
 			sigExists = true
 			break
@@ -186,7 +186,7 @@ func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract
 		return err
 	}
 	if !valid {
-		return errors.New("Vendor's guid signature on contact failed to verify")
+		return errors.New("Vendor's GUID signature on contact failed to verify")
 	}
 	checkKeyHash, err := guidPubkey.Hash()
 	if err != nil {

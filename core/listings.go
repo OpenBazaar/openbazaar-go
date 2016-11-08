@@ -120,8 +120,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_LISTING
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_LISTING
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		return c, err
@@ -143,7 +143,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	s.Bitcoin = bitcoinSig.Serialize()
 
 	c.VendorListings = append(c.VendorListings, listing)
-	c.Signatures = append(c.Signatures, s)
+	c.SignaturePairs = append(c.SignaturePairs, s)
 	return c, nil
 }
 
@@ -528,6 +528,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
+	if listing.Metadata.Version > ListingVersion {
+		return errors.New("Unsupported listing version; please upgrade")
+	}
 	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
 		return errors.New("Invalid contract type")
 	}
@@ -846,8 +849,8 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		}
 		var guidSig []byte
 		var bitcoinSig *btcec.Signature
-		sig := contract.Signatures[n]
-		if sig.Section != pb.Signatures_LISTING {
+		sig := contract.SignaturePairs[n]
+		if sig.Section != pb.SignaturePair_LISTING {
 			return errors.New("Contract does not contain listing signature")
 		}
 		guidSig = sig.Guid
@@ -860,7 +863,7 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 			return err
 		}
 		if !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
+			return errors.New("Vendor's GUID signature on contact failed to verify")
 		}
 		checkKeyHash, err := guidPubkey.Hash()
 		if err != nil {

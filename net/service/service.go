@@ -62,14 +62,14 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	w := ggio.NewDelimitedWriter(cw)
 	mPeer := s.Conn().RemotePeer()
 
-	// Receive msg
+	// Receive message
 	defer s.Close()
 	pmes := new(pb.Message)
 	if err := r.ReadMsg(pmes); err != nil {
 		log.Errorf("Error unmarshaling data: %s", err)
 	}
 
-	// Get handler for this msg type
+	// Get handler for this message type
 	handler := service.HandlerForMsgType(pmes.MessageType)
 	if handler == nil {
 		log.Debug("Got back nil handler from handlerForMsgType")
@@ -88,7 +88,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		return
 	}
 
-	// Send out response msg
+	// Send out response message
 	if err := w.WriteMsg(rpmes); err != nil {
 		log.Debugf("send response error: %s", err)
 		return

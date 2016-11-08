@@ -144,7 +144,7 @@ func TestKeyNotFound(t *testing.T) {
 	rand.Read(b)
 	_, err := kdb.GetPathForScript(b)
 	if err == nil {
-		t.Error("Return key when it shouldn't have")
+		t.Error("Return key when it should not have")
 	}
 }
 

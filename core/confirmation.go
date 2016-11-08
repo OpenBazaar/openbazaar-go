@@ -21,7 +21,7 @@ import (
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
-	orderID, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 }
 
 func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 }
 
 func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContract, validateAddress bool) error {
-	orderID, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalculateOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -297,8 +297,8 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER_CONFIRMATION
+	s := new(pb.SignaturePair)
+	s.Section = pb.SignaturePair_ORDER_CONFIRMATION
 	if err != nil {
 		return contract, err
 	}
@@ -317,7 +317,7 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	}
 	s.Guid = guidSig
 	s.Bitcoin = bitcoinSig.Serialize()
-	contract.Signatures = append(contract.Signatures, s)
+	contract.SignaturePairs = append(contract.SignaturePairs, s)
 	return contract, nil
 }
 
@@ -340,10 +340,10 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	}
 	var guidSig []byte
 	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.SignaturePair
 	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER_CONFIRMATION {
+	for _, s := range contract.SignaturePairs {
+		if s.Section == pb.SignaturePair_ORDER_CONFIRMATION {
 			sig = s
 			sigExists = true
 			break
@@ -362,7 +362,7 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 		return err
 	}
 	if !valid {
-		return errors.New("Vendor's guid signature on contact failed to verify")
+		return errors.New("Vendor's GUID signature on contact failed to verify")
 	}
 	checkKeyHash, err := guidPubkey.Hash()
 	if err != nil {
