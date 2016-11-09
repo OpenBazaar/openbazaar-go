@@ -2,19 +2,17 @@ package core
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
-	"gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
 
@@ -297,8 +295,8 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	if err != nil {
 		return contract, err
 	}
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_ORDER_CONFIRMATION
+	s := new(pb.Signature)
+	s.Section = pb.Signature_ORDER_CONFIRMATION
 	if err != nil {
 		return contract, err
 	}
@@ -306,44 +304,26 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 	if err != nil {
 		return contract, err
 	}
-	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
-	if err != nil {
-		return contract, err
-	}
-	hashed := sha256.Sum256(serializedOrderConf)
-	bitcoinSig, err := priv.Sign(hashed[:])
-	if err != nil {
-		return contract, err
-	}
-	s.Guid = guidSig
-	s.Bitcoin = bitcoinSig.Serialize()
+	s.SignatureBytes = guidSig
 	contract.Signatures = append(contract.Signatures, s)
 	return contract, nil
 }
 
 func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	guidPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Guid
-	bitcoinPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Bitcoin
 	guid := contract.VendorListings[0].VendorID.Guid
 	ser, err := proto.Marshal(contract.VendorOrderConfirmation)
 	if err != nil {
 		return err
 	}
-	hash := sha256.Sum256(ser)
 	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
 	if err != nil {
 		return err
 	}
-	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
-	if err != nil {
-		return err
-	}
-	var guidSig []byte
-	var bitcoinSig *btcec.Signature
-	var sig *pb.Signatures
+	var sig *pb.Signature
 	sigExists := false
 	for _, s := range contract.Signatures {
-		if s.Section == pb.Signatures_ORDER_CONFIRMATION {
+		if s.Section == pb.Signature_ORDER_CONFIRMATION {
 			sig = s
 			sigExists = true
 			break
@@ -352,34 +332,17 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	if !sigExists {
 		return errors.New("Contract does not contain a signature for the order confirmation")
 	}
-	guidSig = sig.Guid
-	bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-	if err != nil {
-		return err
-	}
-	valid, err := guidPubkey.Verify(ser, guidSig)
+	valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
 	if err != nil {
 		return err
 	}
 	if !valid {
 		return errors.New("Vendor's guid signature on contact failed to verify")
 	}
-	checkKeyHash, err := guidPubkey.Hash()
-	if err != nil {
-		return err
+	pid, err := peer.IDB58Decode(guid)
+	if !pid.MatchesPublicKey(guidPubkey) {
+		return errors.New("Public key in order confirmation does not match reported vendor ID")
 	}
-	guidMH, err := multihash.FromB58String(guid)
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(guidMH, checkKeyHash) {
-		return errors.New("Public key in order does not match reported vendor ID")
-	}
-	valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
-	if !valid {
-		return errors.New("Vendors's bitcoin signature on contact failed to verify")
-	}
-
 	return nil
 }
 

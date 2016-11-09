@@ -2,7 +2,6 @@ package core
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
@@ -116,12 +116,20 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.Pubkeys = p
 	listing.VendorID = id
 
+	// Sign the GUID with the Bitcoin key
+	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return c, err
+	}
+	sig, err := ecPrivKey.Sign([]byte(id.Guid))
+	id.BitcoinSig = sig.Serialize()
+
 	// Set cryoto currency
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
-	s := new(pb.Signatures)
-	s.Section = pb.Signatures_LISTING
+	s := new(pb.Signature)
+	s.Section = pb.Signature_LISTING
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		return c, err
@@ -130,18 +138,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	if err != nil {
 		return c, err
 	}
-	priv, err := n.Wallet.MasterPrivateKey().ECPrivKey()
-	if err != nil {
-		return c, err
-	}
-	hashed := sha256.Sum256(serializedListing)
-	bitcoinSig, err := priv.Sign(hashed[:])
-	if err != nil {
-		return c, err
-	}
-	s.Guid = guidSig
-	s.Bitcoin = bitcoinSig.Serialize()
-
+	s.SignatureBytes = guidSig
 	c.VendorListings = append(c.VendorListings, listing)
 	c.Signatures = append(c.Signatures, s)
 	return c, nil
@@ -342,6 +339,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
+		log.Error(err)
 		return false
 	}
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
@@ -828,54 +826,43 @@ func validateListing(listing *pb.Listing) (err error) {
 
 func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 	for n, listing := range contract.VendorListings {
+		// Verify identity signature on listing
 		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
-		bitcoinPubkeyBytes := listing.VendorID.Pubkeys.Bitcoin
-		guid := listing.VendorID.Guid
-		ser, err := proto.Marshal(listing)
-		if err != nil {
-			return err
-		}
-		hash := sha256.Sum256(ser)
 		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
 		if err != nil {
 			return err
 		}
-		bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
+		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return err
 		}
-		var guidSig []byte
-		var bitcoinSig *btcec.Signature
 		sig := contract.Signatures[n]
-		if sig.Section != pb.Signatures_LISTING {
+		if sig.Section != pb.Signature_LISTING {
 			return errors.New("Contract does not contain listing signature")
 		}
-		guidSig = sig.Guid
-		bitcoinSig, err = btcec.ParseSignature(sig.Bitcoin, btcec.S256())
-		if err != nil {
-			return err
-		}
-		valid, err := guidPubkey.Verify(ser, guidSig)
-		if err != nil {
-			return err
-		}
-		if !valid {
+		valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
+		if err != nil || !valid {
 			return errors.New("Vendor's guid signature on contact failed to verify")
 		}
-		checkKeyHash, err := guidPubkey.Hash()
+		pid, err := peer.IDB58Decode(listing.VendorID.Guid)
 		if err != nil {
 			return err
 		}
-		guidMH, err := mh.FromB58String(guid)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(guidMH, checkKeyHash) {
+		if !pid.MatchesPublicKey(guidPubkey) {
 			return errors.New("Public key in listing does not match reported vendor ID")
 		}
-		valid = bitcoinSig.Verify(hash[:], bitcoinPubkey)
+		// Verify the bitcoin signature in the ID
+		bitcoinPubkey, err := btcec.ParsePubKey(listing.VendorID.Pubkeys.Bitcoin, btcec.S256())
+		if err != nil {
+			return err
+		}
+		bitcoinSig, err := btcec.ParseSignature(listing.VendorID.BitcoinSig, btcec.S256())
+		if err != nil {
+			return err
+		}
+		valid = bitcoinSig.Verify([]byte(listing.VendorID.Guid), bitcoinPubkey)
 		if !valid {
-			return errors.New("Vendor's bitcoin signature on contact failed to verify")
+			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
 		}
 	}
 	return nil
