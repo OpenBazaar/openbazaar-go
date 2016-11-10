@@ -124,7 +124,7 @@ class OpenBazaarTestFramework(object):
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_bitcoind_start(process, btc_conf_file)
-        self.bitcoin_api.call("generate", 1)
+        self.send_bitcoin_cmd("generate", 1)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
         while True:
@@ -150,10 +150,10 @@ class OpenBazaarTestFramework(object):
     def teardown(self):
         if self.bitcoin_api is not None:
             try:
-                self.bitcoin_api.call("stop")
+                self.send_bitcoin_cmd("stop")
             except BrokenPipeError:
                 pass
-        time.sleep(5)
+        time.sleep(12)
         shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
