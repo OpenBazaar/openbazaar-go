@@ -138,6 +138,7 @@ func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract
 	if err != nil {
 		return resp, err
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	any, err := ptypes.MarshalAny(contract)
@@ -148,6 +149,7 @@ func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract
 		MessageType: pb.Message_ORDER,
 		Payload:     any,
 	}
+
 	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
 		return resp, err
