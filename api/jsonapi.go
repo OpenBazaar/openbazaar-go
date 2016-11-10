@@ -527,6 +527,10 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	fmt.Fprint(w, `{}`)
 	return
 }
