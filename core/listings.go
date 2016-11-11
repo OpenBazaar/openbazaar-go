@@ -53,7 +53,7 @@ type listingData struct {
 	Title        string    `json:"title"`
 	Category     []string  `json:"category"`
 	ContractType string    `json:"contractType"`
-	Desc         string    `json:"desc"`
+	Description  string    `json:"description"`
 	Thumbnail    thumbnail `json:"thumbnail"`
 	Price        price     `json:"price"`
 	ShipsTo      []string  `json:"shipsTo"`
@@ -95,7 +95,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	// Set listing version
 	listing.Metadata.Version = ListingVersion
 
-	// Add the vendor id to the listing
+	// Add the vendor ID to the listing
 	id := new(pb.ID)
 	id.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
@@ -124,7 +124,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	sig, err := ecPrivKey.Sign([]byte(id.Guid))
 	id.BitcoinSig = sig.Serialize()
 
-	// Set cryoto currency
+	// Set crypto currency
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
@@ -227,9 +227,9 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		return err
 	}
 
-	descLen := len(contract.VendorListings[0].Item.Description)
-	if descLen > ShortDescriptionLength {
-		descLen = ShortDescriptionLength
+	descriptionLength := len(contract.VendorListings[0].Item.Description)
+	if descriptionLength > ShortDescriptionLength {
+		descriptionLength = ShortDescriptionLength
 	}
 
 	contains := func(s []string, e string) bool {
@@ -262,7 +262,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Title:        contract.VendorListings[0].Item.Title,
 		Category:     contract.VendorListings[0].Item.Categories,
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
-		Desc:         contract.VendorListings[0].Item.Description[:descLen],
+		Description:  contract.VendorListings[0].Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 		ShipsTo:      shipsTo,
@@ -384,14 +384,14 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 // Deletes the listing directory, removes the listing from the index, and deletes the inventory
 func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	toDelete := path.Join(n.RepoPath, "root", "listings", slug+".json")
-	err := os.RemoveAll(toDelete)
+	err := os.Remove(toDelete)
 	if err != nil {
 		return err
 	}
 	var index []listingData
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
-	if !os.IsNotExist(ferr) {
+	if !os.IsNotExist(ferr) { // FIXME: What if there is an error other than NotExist?
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
@@ -416,7 +416,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		index = append(index[:i], index[i+1:]...)
 	}
 
-	// Write it back to file
+	// Write the index back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
@@ -441,50 +441,58 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
-	var contract *pb.RicardianContract
+	// Read index.json
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-
-	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return contract, nil, err
+		return nil, nil, err
 	}
 
+	// Unmarshal the index
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return contract, nil, err
+		return nil, nil, err
 	}
+
+	// Extract slug that matches hash
 	var slug string
 	for _, data := range index {
 		if data.Hash == hash {
 			slug = data.Slug
+			break
 		}
 	}
+
 	if slug == "" {
-		return contract, nil, errors.New("Listing does not exist")
+		return nil, nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
 func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
+	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
-
-	var invList []*pb.Inventory
-	contract := new(pb.RicardianContract)
-	// Read existing file
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Unmarshal listing
+	contract := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
 		return nil, nil, err
 	}
-	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug)
+
+	// Get the listing inventory
+	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug) // FIXME: Can this be simplified to Get(slug)?
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Build the inventory list
+	var invList []*pb.Inventory
 	for k, v := range inventory {
 		inv := new(pb.Inventory)
 		inv.Item = k
