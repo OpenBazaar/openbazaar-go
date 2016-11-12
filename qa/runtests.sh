@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+for SCRIPT in *
+do
+   b=$(basename $SCRIPT)
+   extension="${b##*.}"
+   p="py"
+   if [ $extension = $p ]
+   then
+      python3 $SCRIPT -b $1 -d $2
+   fi
+done
