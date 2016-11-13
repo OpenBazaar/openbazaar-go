@@ -109,6 +109,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 
 	var ratingKeys [][]byte
 	for range data.Items {
+		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
+		// Also the fix for this will also need to be included in the rating signing code.
 		ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
 		if err != nil {
 			return "", "", 0, false, err

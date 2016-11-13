@@ -124,7 +124,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CancelDirectOfflineTest - FAIL: Cancel POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(12)
 
         # bob check order canceled correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -139,7 +139,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(5)
+        time.sleep(12)
 
         # check alice detected order
         api_url = alice["gateway_url"] + "ob/order/" + orderId

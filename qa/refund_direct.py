@@ -117,7 +117,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundDirectTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(12)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

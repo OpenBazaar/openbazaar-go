@@ -1380,3 +1380,51 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	fmt.Fprint(w, `{}`)
 	return
 }
+
+func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request) {
+	type dispute struct {
+		OrderID string `json:"orderID"`
+		Claim   string `json:"claim"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var d dispute
+	err := decoder.Decode(&d)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var isSale bool
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var records []*spvwallet.TransactionRecord
+	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	if err != nil {
+		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+		isSale = true
+	}
+	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "Only moderated orders can be disputed")
+		return
+	}
+
+	if isSale && (state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either funded or fulfilled to start a dispute")
+		return
+	}
+	if !isSale && (state != pb.OrderState_CONFIRMED && state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either confirmed, funded, or fulfilled to start a dispute")
+		return
+	}
+
+	err = i.node.OpenDispute(d.OrderID, contract, records, d.Claim)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}

@@ -134,7 +134,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RejectDirectOfflineTest - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(12)
 
         # alice check order rejected correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

@@ -293,7 +293,8 @@ message Dispute {
     google.protobuf.Timestamp timestamp = 1;
     string claim                        = 2;
     repeated Outpoint outpoints         = 3;
-    bytes serializedContract            = 4;
+    repeated bytes ratingKeys           = 4; // buyer dispute only
+    bytes serializedContract            = 5;
 
     message Outpoint {
         string hash  = 1; // Hex encoded
