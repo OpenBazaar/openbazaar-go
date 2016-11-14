@@ -5,14 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
 	"net/url"
@@ -21,6 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
 )
 
 const (
@@ -833,44 +831,39 @@ func validateListing(listing *pb.Listing) (err error) {
 }
 
 func verifySignaturesOnListing(contract *pb.RicardianContract) error {
-	for n, listing := range contract.VendorListings {
+	for _, listing := range contract.VendorListings {
 		// Verify identity signature on listing
-		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
-		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-		if err != nil {
-			return err
+		if err := verifyMessageSignature(
+			listing,
+			listing.VendorID.Pubkeys.Guid,
+			contract.Signatures,
+			pb.Signature_LISTING,
+			listing.VendorID.Guid,
+		); err != nil {
+			switch err.(type) {
+			case noSigError:
+				return errors.New("Contract does not contain listing signature")
+			case invalidSigError:
+				return errors.New("Buyer's guid signature on contact failed to verify")
+			case matchKeyError:
+				return errors.New("Public key in order does not match reported buyer ID")
+			default:
+				return err
+			}
 		}
-		ser, err := proto.Marshal(listing)
-		if err != nil {
-			return err
-		}
-		sig := contract.Signatures[n]
-		if sig.Section != pb.Signature_LISTING {
-			return errors.New("Contract does not contain listing signature")
-		}
-		valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
-		if err != nil || !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
-		}
-		pid, err := peer.IDB58Decode(listing.VendorID.Guid)
-		if err != nil {
-			return err
-		}
-		if !pid.MatchesPublicKey(guidPubkey) {
-			return errors.New("Public key in listing does not match reported vendor ID")
-		}
+
 		// Verify the bitcoin signature in the ID
-		bitcoinPubkey, err := btcec.ParsePubKey(listing.VendorID.Pubkeys.Bitcoin, btcec.S256())
-		if err != nil {
-			return err
-		}
-		bitcoinSig, err := btcec.ParseSignature(listing.VendorID.BitcoinSig, btcec.S256())
-		if err != nil {
-			return err
-		}
-		valid = bitcoinSig.Verify([]byte(listing.VendorID.Guid), bitcoinPubkey)
-		if !valid {
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+		if err := verifyBitcoinSignature(
+			listing.VendorID.Pubkeys.Bitcoin,
+			listing.VendorID.BitcoinSig,
+			listing.VendorID.Guid,
+		); err != nil {
+			switch err.(type) {
+			case invalidSigError:
+				return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			default:
+				return err
+			}
 		}
 	}
 	return nil
