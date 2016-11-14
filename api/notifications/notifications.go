@@ -36,6 +36,10 @@ type completionWrapper struct {
 	CompletionNotification `json:"orderCompletion"`
 }
 
+type disputeOpenWrapper struct {
+	DisputeOpenNotification `json:"disputeOpen"`
+}
+
 type OrderNotification struct {
 	Title             string `json:"title"`
 	BuyerGuid         string `json:"buyerGuid"`
@@ -67,6 +71,10 @@ type FulfillmentNotification struct {
 }
 
 type CompletionNotification struct {
+	OrderId string `json:"orderId"`
+}
+
+type DisputeOpenNotification struct {
 	OrderId string `json:"orderId"`
 }
 
@@ -121,6 +129,12 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			completionWrapper{
 				CompletionNotification: i.(CompletionNotification),
+			},
+		}
+	case DisputeOpenNotification:
+		n = notificationWrapper{
+			disputeOpenWrapper{
+				DisputeOpenNotification: i.(DisputeOpenNotification),
 			},
 		}
 	case FollowNotification:

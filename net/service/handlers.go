@@ -40,6 +40,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOrderFulfillment
 	case pb.Message_ORDER_COMPLETION:
 		return service.handleOrderCompletion
+	case pb.Message_DISPUTE_OPEN:
+		return service.handleDisputeOpen
 	default:
 		return nil
 	}
@@ -645,6 +647,31 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId})
 	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_OPEN message from %s", p.Pretty())
+
+	// Unmarshall
+	rc := new(pb.RicardianContract)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify signature
+	err = service.node.VerifySignatureOnDisputeOpen(rc, p.Pretty())
+	if err != nil {
+		return nil, err
+	}
+
+	// Process message
+	err = service.node.ProcessDisputeOpen(rc, p.Pretty())
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
