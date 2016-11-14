@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -11,9 +13,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
-	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
@@ -310,38 +310,23 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 }
 
 func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
-	guidPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Guid
-	guid := contract.VendorListings[0].VendorID.Guid
-	ser, err := proto.Marshal(contract.VendorOrderConfirmation)
-	if err != nil {
-		return err
-	}
-	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-	if err != nil {
-		return err
-	}
-	var sig *pb.Signature
-	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signature_ORDER_CONFIRMATION {
-			sig = s
-			sigExists = true
-			break
+	if err := verifyMessageSignature(
+		contract.VendorOrderConfirmation,
+		contract.VendorListings[0].VendorID.Pubkeys.Guid,
+		contract.Signatures,
+		pb.Signature_ORDER_CONFIRMATION,
+		contract.VendorListings[0].VendorID.Guid,
+	); err != nil {
+		switch err.(type) {
+		case noSigError:
+			return errors.New("Contract does not contain a signature for the order confirmation")
+		case invalidSigError:
+			return errors.New("Vendor's guid signature on contact failed to verify")
+		case matchKeyError:
+			return errors.New("Public key in order confirmation does not match reported vendor ID")
+		default:
+			return err
 		}
-	}
-	if !sigExists {
-		return errors.New("Contract does not contain a signature for the order confirmation")
-	}
-	valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return errors.New("Vendor's guid signature on contact failed to verify")
-	}
-	pid, err := peer.IDB58Decode(guid)
-	if !pid.MatchesPublicKey(guidPubkey) {
-		return errors.New("Public key in order confirmation does not match reported vendor ID")
 	}
 	return nil
 }

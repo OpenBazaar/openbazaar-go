@@ -25,15 +25,6 @@ rm -rf *.cover.out
 wget https://bitcoin.org/bin/bitcoin-core-0.13.0/bitcoin-0.13.0-x86_64-linux-gnu.tar.gz
 tar -xvzf bitcoin-0.13.0-x86_64-linux-gnu.tar.gz -C /tmp
 
-cd qa
-for SCRIPT in *
-do
-   b=$(basename $SCRIPT)
-   extension="${b##*.}"
-   p="py"
-   if [ $extension = $p ]
-   then
-      echo "TODO: run test scripts"
-      #python3 $SCRIPT -b $GOPATH/bin/openbazaar-go -d /tmp/bitcoin-0.13.0/bin/bitcoind
-   fi
-done
+#cd qa
+#chmod a+x runtests.sh
+#./runtests.sh $GOPATH/bin/openbazaar-go /tmp/bitcoin-0.13.0/bin/bitcoind

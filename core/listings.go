@@ -5,14 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
 	"net/url"
@@ -21,6 +13,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
 )
 
 const (
@@ -53,7 +51,7 @@ type listingData struct {
 	Title        string    `json:"title"`
 	Category     []string  `json:"category"`
 	ContractType string    `json:"contractType"`
-	Desc         string    `json:"desc"`
+	Description  string    `json:"description"`
 	Thumbnail    thumbnail `json:"thumbnail"`
 	Price        price     `json:"price"`
 	ShipsTo      []string  `json:"shipsTo"`
@@ -95,7 +93,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	// Set listing version
 	listing.Metadata.Version = ListingVersion
 
-	// Add the vendor id to the listing
+	// Add the vendor ID to the listing
 	id := new(pb.ID)
 	id.Guid = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
@@ -124,7 +122,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	sig, err := ecPrivKey.Sign([]byte(id.Guid))
 	id.BitcoinSig = sig.Serialize()
 
-	// Set cryoto currency
+	// Set crypto currency
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
 
 	// Sign listing
@@ -227,9 +225,9 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		return err
 	}
 
-	descLen := len(contract.VendorListings[0].Item.Description)
-	if descLen > ShortDescriptionLength {
-		descLen = ShortDescriptionLength
+	descriptionLength := len(contract.VendorListings[0].Item.Description)
+	if descriptionLength > ShortDescriptionLength {
+		descriptionLength = ShortDescriptionLength
 	}
 
 	contains := func(s []string, e string) bool {
@@ -262,7 +260,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Title:        contract.VendorListings[0].Item.Title,
 		Category:     contract.VendorListings[0].Item.Categories,
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
-		Desc:         contract.VendorListings[0].Item.Description[:descLen],
+		Description:  contract.VendorListings[0].Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 		ShipsTo:      shipsTo,
@@ -384,14 +382,14 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 // Deletes the listing directory, removes the listing from the index, and deletes the inventory
 func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	toDelete := path.Join(n.RepoPath, "root", "listings", slug+".json")
-	err := os.RemoveAll(toDelete)
+	err := os.Remove(toDelete)
 	if err != nil {
 		return err
 	}
 	var index []listingData
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
-	if !os.IsNotExist(ferr) {
+	if !os.IsNotExist(ferr) { // FIXME: What if there is an error other than NotExist?
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
@@ -416,7 +414,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		index = append(index[:i], index[i+1:]...)
 	}
 
-	// Write it back to file
+	// Write the index back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
@@ -441,50 +439,58 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
-	var contract *pb.RicardianContract
+	// Read index.json
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-
-	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return contract, nil, err
+		return nil, nil, err
 	}
 
+	// Unmarshal the index
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return contract, nil, err
+		return nil, nil, err
 	}
+
+	// Extract slug that matches hash
 	var slug string
 	for _, data := range index {
 		if data.Hash == hash {
 			slug = data.Slug
+			break
 		}
 	}
+
 	if slug == "" {
-		return contract, nil, errors.New("Listing does not exist")
+		return nil, nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
 func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
+	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
-
-	var invList []*pb.Inventory
-	contract := new(pb.RicardianContract)
-	// Read existing file
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Unmarshal listing
+	contract := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
 		return nil, nil, err
 	}
-	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug)
+
+	// Get the listing inventory
+	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug) // FIXME: Can this be simplified to Get(slug)?
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// Build the inventory list
+	var invList []*pb.Inventory
 	for k, v := range inventory {
 		inv := new(pb.Inventory)
 		inv.Item = k
@@ -825,44 +831,39 @@ func validateListing(listing *pb.Listing) (err error) {
 }
 
 func verifySignaturesOnListing(contract *pb.RicardianContract) error {
-	for n, listing := range contract.VendorListings {
+	for _, listing := range contract.VendorListings {
 		// Verify identity signature on listing
-		guidPubkeyBytes := listing.VendorID.Pubkeys.Guid
-		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-		if err != nil {
-			return err
+		if err := verifyMessageSignature(
+			listing,
+			listing.VendorID.Pubkeys.Guid,
+			contract.Signatures,
+			pb.Signature_LISTING,
+			listing.VendorID.Guid,
+		); err != nil {
+			switch err.(type) {
+			case noSigError:
+				return errors.New("Contract does not contain listing signature")
+			case invalidSigError:
+				return errors.New("Buyer's guid signature on contact failed to verify")
+			case matchKeyError:
+				return errors.New("Public key in order does not match reported buyer ID")
+			default:
+				return err
+			}
 		}
-		ser, err := proto.Marshal(listing)
-		if err != nil {
-			return err
-		}
-		sig := contract.Signatures[n]
-		if sig.Section != pb.Signature_LISTING {
-			return errors.New("Contract does not contain listing signature")
-		}
-		valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
-		if err != nil || !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
-		}
-		pid, err := peer.IDB58Decode(listing.VendorID.Guid)
-		if err != nil {
-			return err
-		}
-		if !pid.MatchesPublicKey(guidPubkey) {
-			return errors.New("Public key in listing does not match reported vendor ID")
-		}
+
 		// Verify the bitcoin signature in the ID
-		bitcoinPubkey, err := btcec.ParsePubKey(listing.VendorID.Pubkeys.Bitcoin, btcec.S256())
-		if err != nil {
-			return err
-		}
-		bitcoinSig, err := btcec.ParseSignature(listing.VendorID.BitcoinSig, btcec.S256())
-		if err != nil {
-			return err
-		}
-		valid = bitcoinSig.Verify([]byte(listing.VendorID.Guid), bitcoinPubkey)
-		if !valid {
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+		if err := verifyBitcoinSignature(
+			listing.VendorID.Pubkeys.Bitcoin,
+			listing.VendorID.BitcoinSig,
+			listing.VendorID.Guid,
+		); err != nil {
+			switch err.(type) {
+			case invalidSigError:
+				return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+			default:
+				return err
+			}
 		}
 	}
 	return nil

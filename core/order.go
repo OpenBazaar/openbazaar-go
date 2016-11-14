@@ -6,18 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	ipfspath "github.com/ipfs/go-ipfs/path"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
@@ -25,6 +13,18 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	ipfspath "github.com/ipfs/go-ipfs/path"
 )
 
 type option struct {
@@ -893,51 +893,36 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
-	guidPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Guid
-	bitcoinPubkeyBytes := contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin
-	ser, err := proto.Marshal(contract.BuyerOrder)
-	if err != nil {
-		return err
-	}
-	guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-	if err != nil {
-		return err
-	}
-	var bitcoinSig *btcec.Signature
-	var sig *pb.Signature
-	sigExists := false
-	for _, s := range contract.Signatures {
-		if s.Section == pb.Signature_ORDER {
-			sig = s
-			sigExists = true
+	if err := verifyMessageSignature(
+		contract.BuyerOrder,
+		contract.BuyerOrder.BuyerID.Pubkeys.Guid,
+		contract.Signatures,
+		pb.Signature_ORDER,
+		contract.BuyerOrder.BuyerID.Guid,
+	); err != nil {
+		switch err.(type) {
+		case noSigError:
+			return errors.New("Contract does not contain a signature for the order")
+		case invalidSigError:
+			return errors.New("Buyer's guid signature on contact failed to verify")
+		case matchKeyError:
+			return errors.New("Public key in order does not match reported buyer ID")
+		default:
+			return err
 		}
 	}
-	if !sigExists {
-		return errors.New("Contract does not contain a signature for the order")
-	}
-	valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return errors.New("Buyers's guid signature on contact failed to verify")
-	}
-	pid, err := peer.IDB58Decode(contract.BuyerOrder.BuyerID.Guid)
-	if !pid.MatchesPublicKey(guidPubkey) {
-		return errors.New("Public key in order does not match reported buyer ID")
-	}
-	// Verify bitcoin signature in buyer ID
-	bitcoinPubkey, err := btcec.ParsePubKey(bitcoinPubkeyBytes, btcec.S256())
-	if err != nil {
-		return err
-	}
-	bitcoinSig, err = btcec.ParseSignature(contract.BuyerOrder.BuyerID.BitcoinSig, btcec.S256())
-	if err != nil {
-		return err
-	}
-	valid = bitcoinSig.Verify([]byte(contract.BuyerOrder.BuyerID.Guid), bitcoinPubkey)
-	if !valid {
-		return errors.New("Buyer's bitcoin signature on GUID failed to verify")
+
+	if err := verifyBitcoinSignature(
+		contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
+		contract.BuyerOrder.BuyerID.BitcoinSig,
+		contract.BuyerOrder.BuyerID.Guid,
+	); err != nil {
+		switch err.(type) {
+		case invalidSigError:
+			return errors.New("Buyer's bitcoin signature on GUID failed to verify")
+		default:
+			return err
+		}
 	}
 	return nil
 }
