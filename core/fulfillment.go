@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
@@ -236,43 +236,24 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 }
 
 func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
-	for i, fulfil := range contract.VendorOrderFulfillment {
-		guidPubkeyBytes := contract.VendorListings[0].VendorID.Pubkeys.Guid
-		guid := contract.VendorListings[0].VendorID.Guid
-		ser, err := proto.Marshal(fulfil)
-		if err != nil {
-			return err
-		}
-		guidPubkey, err := crypto.UnmarshalPublicKey(guidPubkeyBytes)
-		if err != nil {
-			return err
-		}
-		var sig *pb.Signature
-		sigExists := false
-		a := 0
-		for _, s := range contract.Signatures {
-			if s.Section == pb.Signature_ORDER_FULFILLMENT {
-				if a == i {
-					sig = s
-					sigExists = true
-				}
-				a++
-				break
+	for _, fulfil := range contract.VendorOrderFulfillment {
+		if err := verifyMessageSignature(
+			fulfil,
+			contract.VendorListings[0].VendorID.Pubkeys.Guid,
+			contract.Signatures,
+			pb.Signature_ORDER_FULFILLMENT,
+			contract.VendorListings[0].VendorID.Guid,
+		); err != nil {
+			switch err.(type) {
+			case noSigError:
+				return errors.New("Contract does not contain a signature for the order fulfilment")
+			case invalidSigError:
+				return errors.New("Vendor's guid signature on contact failed to verify")
+			case matchKeyError:
+				return errors.New("Public key in order does not match reported vendor ID")
+			default:
+				return err
 			}
-		}
-		if !sigExists {
-			return errors.New("Contract does not contain a signature for the order fulfilment")
-		}
-		valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
-		if err != nil {
-			return err
-		}
-		if !valid {
-			return errors.New("Vendor's guid signature on contact failed to verify")
-		}
-		pid, err := peer.IDB58Decode(guid)
-		if !pid.MatchesPublicKey(guidPubkey) {
-			return errors.New("Public key in order does not match reported vendor ID")
 		}
 	}
 	return nil
