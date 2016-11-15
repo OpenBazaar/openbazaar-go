@@ -14,13 +14,17 @@ type CasesDB struct {
 	lock *sync.Mutex
 }
 
-func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool) error {
+func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, buyerOpened bool, claim string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	readInt := 0
 	if read {
 		readInt = 1
+	}
+	buyerOpenedInt := 0
+	if read {
+		buyerOpenedInt = 1
 	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -47,7 +51,7 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.Ricardia
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into cases(orderID, buyerContract, vendorContract, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title) values(?,?,?,?,?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into cases(orderID, buyerContract, vendorContract, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -75,6 +79,8 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.Ricardia
 		contract.VendorListings[0].VendorID.Guid,
 		contract.VendorListings[0].VendorID.BlockchainID,
 		strings.ToLower(contract.VendorListings[0].Item.Title),
+		buyerOpenedInt,
+		claim,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -124,24 +130,25 @@ func (c *CasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, err error) {
+func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, buyerOpened bool, claim string, err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stmt, err := c.db.Prepare("select buyerContract, vendorContract, state, read from cases where orderID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, state, read, buyerOpened, claim from cases where orderID=?")
 	defer stmt.Close()
 	var buyerCon []byte
 	var vendorCon []byte
 	var stateInt int
 	var readInt *int
-	err = stmt.QueryRow(orderId).Scan(&buyerCon, &vendorCon, &stateInt, &readInt)
+	var buyerOpenedInt int
+	err = stmt.QueryRow(orderId).Scan(&buyerCon, &vendorCon, &stateInt, &readInt, &buyerOpenedInt, &claim)
 	if err != nil {
-		return nil, nil, pb.OrderState(0), false, err
+		return nil, nil, pb.OrderState(0), false, false, "", err
 	}
 	brc := new(pb.RicardianContract)
 	if string(buyerCon) != "" {
 		err = jsonpb.UnmarshalString(string(buyerCon), brc)
 		if err != nil {
-			return nil, nil, pb.OrderState(0), false, err
+			return nil, nil, pb.OrderState(0), false, false, "", err
 		}
 	} else {
 		brc = nil
@@ -150,7 +157,7 @@ func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *p
 	if string(vendorCon) != "" {
 		err = jsonpb.UnmarshalString(string(vendorCon), vrc)
 		if err != nil {
-			return nil, nil, pb.OrderState(0), false, err
+			return nil, nil, pb.OrderState(0), false, false, "", err
 		}
 	} else {
 		vrc = nil
@@ -159,5 +166,9 @@ func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *p
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
-	return brc, vrc, pb.OrderState(stateInt), read, nil
+
+	if buyerOpenedInt == 1 {
+		buyerOpened = true
+	}
+	return brc, vrc, pb.OrderState(stateInt), read, buyerOpened, claim, nil
 }

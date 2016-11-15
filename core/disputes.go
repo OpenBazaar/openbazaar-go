@@ -172,9 +172,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
 		var err error
 		if contract.VendorListings[0].VendorID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, nil, contract, pb.OrderState_DISPUTED, false)
+			err = n.Datastore.Cases().Put(orderId, nil, contract, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
 		} else if contract.BuyerOrder.BuyerID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, contract, nil, pb.OrderState_DISPUTED, false)
+			err = n.Datastore.Cases().Put(orderId, contract, nil, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
 		} else {
 			return errors.New("Peer ID doesn't match either buyer or vendor")
 		}

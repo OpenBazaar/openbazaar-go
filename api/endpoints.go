@@ -156,6 +156,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETModerators(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/case") {
+		i.GETCase(w, r)
+		return
+	}
 }
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {

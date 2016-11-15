@@ -1428,3 +1428,36 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	fmt.Fprint(w, `{}`)
 	return
 }
+
+func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
+	_, orderId := path.Split(r.URL.Path)
+
+	buyerContract, vendorContract, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := new(pb.CaseRespApi)
+	resp.BuyerContract = buyerContract
+	resp.VendorContract = vendorContract
+	resp.BuyerOpened = buyerOpened
+	resp.Read = read
+	resp.State = state
+	resp.Claim = claim
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(resp)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	i.node.Datastore.Cases().MarkAsRead(orderId)
+	fmt.Fprint(w, out)
+}

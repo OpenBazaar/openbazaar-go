@@ -690,7 +690,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 		return nil, err
 	}
 
-	buyerContract, vendorContract, state, read, err := service.datastore.Cases().GetByOrderId(update.OrderId)
+	buyerContract, vendorContract, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -706,7 +706,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	} else {
 		return nil, errors.New("All contracts have already been received")
 	}
-	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, state, read)
+	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, state, read, buyerOpened, claim)
 
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})

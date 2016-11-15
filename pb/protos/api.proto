@@ -32,6 +32,15 @@ message OrderRespApi {
     repeated TransactionRecord transactions = 5;
 }
 
+message CaseRespApi {
+    RicardianContract buyerContract         = 1;
+    RicardianContract vendorContract        = 2;
+    OrderState state                        = 3;
+    bool read                               = 4;
+    bool buyerOpened                        = 5;
+    string claim                            = 6;
+}
+
 message TransactionRecord {
     string txid = 1;
     int64 value = 2;
