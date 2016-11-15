@@ -24,3 +24,9 @@ message Moderator {
         uint64 amount       = 2; // Bitcoins must be in satoshi
     }
 }
+
+message DisputeUpdate {
+    string orderId           = 1;
+    string payoutAddress     = 2;
+    bytes serializedContract = 3;
+}

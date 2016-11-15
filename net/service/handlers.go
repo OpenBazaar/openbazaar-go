@@ -2,6 +2,7 @@ package service
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -11,6 +12,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
@@ -42,6 +44,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleOrderCompletion
 	case pb.Message_DISPUTE_OPEN:
 		return service.handleDisputeOpen
+	case pb.Message_DISPUTE_UPDATE:
+		return service.handleDisputeUpdate
 	default:
 		return nil
 	}
@@ -672,6 +676,41 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 	if err != nil {
 		return nil, err
 	}
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
+
+	// Unmarshall
+	update := new(pb.DisputeUpdate)
+	err := ptypes.UnmarshalAny(pmes.Payload, update)
+	if err != nil {
+		return nil, err
+	}
+
+	buyerContract, vendorContract, state, read, err := service.datastore.Cases().GetByOrderId(update.OrderId)
+	if err != nil {
+		return nil, err
+	}
+	rc := new(pb.RicardianContract)
+	err = proto.Unmarshal(update.SerializedContract, rc)
+	if err != nil {
+		return nil, err
+	}
+	if buyerContract == nil {
+		buyerContract = rc
+	} else if vendorContract == nil {
+		vendorContract = rc
+	} else {
+		return nil, errors.New("All contracts have already been received")
+	}
+	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, state, read)
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})
+	service.broadcast <- n
 
 	return nil, nil
 }

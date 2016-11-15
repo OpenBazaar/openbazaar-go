@@ -172,9 +172,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
 		var err error
 		if contract.VendorListings[0].VendorID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, pb.RicardianContract{}, *contract, pb.OrderState_DISPUTED, false)
+			err = n.Datastore.Cases().Put(orderId, nil, contract, pb.OrderState_DISPUTED, false)
 		} else if contract.BuyerOrder.BuyerID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, *contract, pb.RicardianContract{}, pb.OrderState_DISPUTED, false)
+			err = n.Datastore.Cases().Put(orderId, contract, nil, pb.OrderState_DISPUTED, false)
 		} else {
 			return errors.New("Peer ID doesn't match either buyer or vendor")
 		}
@@ -191,10 +191,27 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
 			return errors.New("Contact can no longer be disputed")
 		}
+
+		// Build dispute update message
+		update := new(pb.DisputeUpdate)
+		ser, err := proto.Marshal(myContract)
+		if err != nil {
+			return err
+		}
+		update.SerializedContract = ser
+		update.OrderId = orderId
+		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+		// Send the message
+		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)
+		if err != nil {
+			return err
+		}
+
 		// Append the dispute and signature
 		myContract.Dispute = rc.Dispute
 		for _, sig := range rc.Signatures {
-			if sig.Section == pb.Signature_ORDER_COMPLETION {
+			if sig.Section == pb.Signature_DISPUTE {
 				myContract.Signatures = append(myContract.Signatures, sig)
 			}
 		}
@@ -203,7 +220,6 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if err != nil {
 			return err
 		}
-		//TODO: Send our copy of contract to moderator
 	} else if contract.BuyerOrder.BuyerID.Guid == n.IpfsNode.Identity.Pretty() { // Buyer
 		// Load out version of the contract from the db
 		myContract, state, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
@@ -214,10 +230,27 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
 			return errors.New("Contact can no longer be disputed")
 		}
+
+		// Build dispute update message
+		update := new(pb.DisputeUpdate)
+		ser, err := proto.Marshal(myContract)
+		if err != nil {
+			return err
+		}
+		update.SerializedContract = ser
+		update.OrderId = orderId
+		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+		// Send the message
+		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)
+		if err != nil {
+			return err
+		}
+
 		// Append the dispute and signature
 		myContract.Dispute = rc.Dispute
 		for _, sig := range rc.Signatures {
-			if sig.Section == pb.Signature_ORDER_COMPLETION {
+			if sig.Section == pb.Signature_DISPUTE {
 				myContract.Signatures = append(myContract.Signatures, sig)
 			}
 		}
@@ -226,7 +259,6 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if err != nil {
 			return err
 		}
-		//TODO: Send our copy of contract to moderator
 	} else {
 		return errors.New("We are not involved in this dispute")
 	}

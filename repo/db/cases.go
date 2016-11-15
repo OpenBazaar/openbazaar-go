@@ -14,7 +14,7 @@ type CasesDB struct {
 	lock *sync.Mutex
 }
 
-func (c *CasesDB) Put(orderID string, buyerContract, vendorContract pb.RicardianContract, state pb.OrderState, read bool) error {
+func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -28,13 +28,20 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract pb.Ricardian
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	buyerOut, err := m.MarshalToString(&buyerContract)
-	if err != nil {
-		return err
+	var buyerOut string
+	var vendorOut string
+	var err error
+	if buyerContract != nil {
+		buyerOut, err = m.MarshalToString(buyerContract)
+		if err != nil {
+			return err
+		}
 	}
-	vendorOut, err := m.MarshalToString(&vendorContract)
-	if err != nil {
-		return err
+	if vendorContract != nil {
+		vendorOut, err = m.MarshalToString(vendorContract)
+		if err != nil {
+			return err
+		}
 	}
 	tx, err := c.db.Begin()
 	if err != nil {
@@ -45,10 +52,10 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract pb.Ricardian
 	if err != nil {
 		return err
 	}
-	var contract pb.RicardianContract
-	if &buyerContract != nil {
+	var contract *pb.RicardianContract
+	if buyerContract != nil {
 		contract = buyerContract
-	} else if &vendorContract != nil {
+	} else if vendorContract != nil {
 		contract = vendorContract
 	} else {
 		return errors.New("Both contracts cannot be nil")
@@ -131,14 +138,22 @@ func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *p
 		return nil, nil, pb.OrderState(0), false, err
 	}
 	brc := new(pb.RicardianContract)
-	err = jsonpb.UnmarshalString(string(buyerCon), brc)
-	if err != nil {
-		return nil, nil, pb.OrderState(0), false, err
+	if string(buyerCon) != "" {
+		err = jsonpb.UnmarshalString(string(buyerCon), brc)
+		if err != nil {
+			return nil, nil, pb.OrderState(0), false, err
+		}
+	} else {
+		brc = nil
 	}
 	vrc := new(pb.RicardianContract)
-	err = jsonpb.UnmarshalString(string(vendorCon), vrc)
-	if err != nil {
-		return nil, nil, pb.OrderState(0), false, err
+	if string(vendorCon) != "" {
+		err = jsonpb.UnmarshalString(string(vendorCon), vrc)
+		if err != nil {
+			return nil, nil, pb.OrderState(0), false, err
+		}
+	} else {
+		vrc = nil
 	}
 	read = false
 	if readInt != nil && *readInt == 1 {

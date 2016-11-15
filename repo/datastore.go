@@ -175,7 +175,7 @@ type Sales interface {
 
 type Cases interface {
 	// Save or update a sale
-	Put(orderID string, buyerContract, vendorContract pb.RicardianContract, state pb.OrderState, read bool) error
+	Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool) error
 
 	// Mark a case as read in the database
 	MarkAsRead(orderID string) error

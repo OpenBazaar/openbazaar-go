@@ -18,9 +18,10 @@ message Message {
         ORDER_FULFILLMENT       = 8;
         ORDER_COMPLETION        = 9;
         DISPUTE_OPEN            = 10;
-        DISPUTE_CLOSE           = 11;
-        REFUND                  = 12;
-        OFFLINE_ACK             = 13;
+        DISPUTE_UPDATE          = 11;
+        DISPUTE_CLOSE           = 12;
+        REFUND                  = 13;
+        OFFLINE_ACK             = 14;
         ERROR                   = 500;
     }
 }

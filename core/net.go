@@ -321,3 +321,27 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.Ricar
 	}
 	return nil
 }
+
+func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.DisputeUpdate) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(updateMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_DISPUTE_UPDATE,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}

@@ -53,7 +53,7 @@ func init() {
 }
 
 func TestPutCase(t *testing.T) {
-	err := casesdb.Put("orderID", *contract, *contract, 0, false)
+	err := casesdb.Put("orderID", contract, contract, 0, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,8 +108,22 @@ func TestPutCase(t *testing.T) {
 	}
 }
 
+func TestPutNil(t *testing.T) {
+	err := casesdb.Put("orderID", contract, nil, 0, false)
+	if err != nil {
+		t.Error(err)
+	}
+	_, vendorContract, _, _, err := casesdb.GetByOrderId("orderID")
+	if err != nil {
+		t.Error(err)
+	}
+	if vendorContract != nil {
+		t.Error("Vendor contract was not nil")
+	}
+}
+
 func TestDeleteCase(t *testing.T) {
-	err := casesdb.Put("orderID", *contract, *contract, 0, false)
+	err := casesdb.Put("orderID", contract, contract, 0, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -129,7 +143,7 @@ func TestDeleteCase(t *testing.T) {
 }
 
 func TestMarkCaseAsRead(t *testing.T) {
-	err := casesdb.Put("orderID", *contract, *contract, 0, false)
+	err := casesdb.Put("orderID", contract, contract, 0, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -151,7 +165,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 }
 
 func TestCasesGetByOrderId(t *testing.T) {
-	err := casesdb.Put("orderID", *contract, *contract, 0, false)
+	err := casesdb.Put("orderID", contract, contract, 0, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -166,7 +180,7 @@ func TestCasesGetByOrderId(t *testing.T) {
 }
 
 func TestCasesGetAll(t *testing.T) {
-	err := casesdb.Put("orderID", *contract, *contract, 0, false)
+	err := casesdb.Put("orderID", contract, contract, 0, false)
 	if err != nil {
 		t.Error(err)
 	}
