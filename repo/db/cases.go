@@ -23,7 +23,7 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.Ricardia
 		readInt = 1
 	}
 	buyerOpenedInt := 0
-	if read {
+	if buyerOpened {
 		buyerOpenedInt = 1
 	}
 	m := jsonpb.Marshaler{

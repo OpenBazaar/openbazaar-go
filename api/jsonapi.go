@@ -1383,7 +1383,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 
 func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request) {
 	type dispute struct {
-		OrderID string `json:"orderID"`
+		OrderID string `json:"orderId"`
 		Claim   string `json:"claim"`
 	}
 	decoder := json.NewDecoder(r.Body)

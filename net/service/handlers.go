@@ -706,6 +706,8 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	} else {
 		return nil, errors.New("All contracts have already been received")
 	}
+	// TODO: all the signatures in the contract need to be validate and we need a way to
+	// save validation failures and display them in the UI.
 	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, state, read, buyerOpened, claim)
 
 	// Send notification to websocket

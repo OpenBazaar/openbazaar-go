@@ -30,7 +30,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	// Create outpoints
 	var outpoints []*pb.Dispute_Outpoint
 	for _, r := range records {
-		var o *pb.Dispute_Outpoint
+		o := new(pb.Dispute_Outpoint)
 		o.Hash = r.Txid
 		o.Index = r.Index
 		outpoints = append(outpoints, o)
@@ -111,7 +111,7 @@ func (n *OpenBazaarNode) SignDispute(contract *pb.RicardianContract) (*pb.Ricard
 
 func (n *OpenBazaarNode) VerifySignatureOnDisputeOpen(contract *pb.RicardianContract, peerID string) error {
 	var pubkey []byte
-	var deser *pb.RicardianContract
+	deser := new(pb.RicardianContract)
 	err := proto.Unmarshal(contract.Dispute.SerializedContract, deser)
 	if err != nil {
 		return err
@@ -154,7 +154,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	}
 
 	// Deserialize contract
-	var contract *pb.RicardianContract
+	contract := new(pb.RicardianContract)
 	err := proto.Unmarshal(rc.Dispute.SerializedContract, contract)
 	if err != nil {
 		return err
@@ -181,6 +181,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		if err != nil {
 			return err
 		}
+		// TODO: all the signatures in the contract need to be validate and we need a way to
+		// save validation failures and display them in the UI.
 	} else if contract.VendorListings[0].VendorID.Guid == n.IpfsNode.Identity.Pretty() { // Vendor
 		// Load out version of the contract from the db
 		myContract, state, _, _, _, err := n.Datastore.Sales().GetByOrderId(orderId)
