@@ -33,12 +33,19 @@ message OrderRespApi {
 }
 
 message CaseRespApi {
-    RicardianContract buyerContract         = 1;
-    RicardianContract vendorContract        = 2;
-    OrderState state                        = 3;
-    bool read                               = 4;
-    bool buyerOpened                        = 5;
-    string claim                            = 6;
+    RicardianContract buyerContract          = 1;
+    RicardianContract vendorContract         = 2;
+    ValidationError buyerContractValidation  = 3;
+    ValidationError vendorContractValidation = 4;
+    OrderState state                         = 5;
+    bool read                                = 6;
+    bool buyerOpened                         = 7;
+    string claim                             = 8;
+
+    message ValidationError {
+        bool success           = 1;
+        repeated string errors = 2;
+    }
 }
 
 message TransactionRecord {

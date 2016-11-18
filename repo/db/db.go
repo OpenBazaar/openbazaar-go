@@ -251,7 +251,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table watchedscripts (scriptPubKey text primary key not null);
-	create table cases (orderID text primary key not null, buyerContract blob, vendorContract blob, state integer, read integer, date integer, thumbnail text, buyerID text, buyerBlockchainID text, vendorID text, vendorBlockchainID text, title text, buyerOpened integer, claim text);
+	create table cases (orderID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, state integer, read integer, date integer, thumbnail text, buyerID text, buyerBlockchainID text, vendorID text, vendorBlockchainID text, title text, buyerOpened integer, claim text);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
