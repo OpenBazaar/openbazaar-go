@@ -1,11 +1,14 @@
 package core
 
 import (
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	"encoding/json"
+	"io/ioutil"
 	"os"
 	"path"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -51,4 +54,26 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 	profile.FollowingCount = uint32(n.Datastore.Following().Count())
 	profile.LastModified = uint32(time.Now().Unix())
 	return profile, nil
+}
+
+func (n *OpenBazaarNode) updateProfileCounts() error {
+	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profile := new(pb.Profile)
+	_, ferr := os.Stat(profilePath)
+	if !os.IsNotExist(ferr) {
+		// Read existing file
+		file, err := ioutil.ReadFile(profilePath)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(file, profile)
+		if err != nil {
+			return err
+		}
+	}
+	profile, err := n.appendCountsToProfile(profile)
+	if err != nil {
+		return err
+	}
+	return n.UpdateProfile(profile)
 }
