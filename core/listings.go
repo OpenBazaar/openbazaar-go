@@ -435,7 +435,8 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	return n.updateProfileCounts()
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
