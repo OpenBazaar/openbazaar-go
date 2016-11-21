@@ -1432,7 +1432,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
 
-	buyerContract, vendorContract, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
+	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1442,6 +1442,8 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract
 	resp.BuyerOpened = buyerOpened
+	resp.BuyerContractValidationErrors = buyerErrors
+	resp.VendorContractValidationErrors = vendorErrors
 	resp.Read = read
 	resp.State = state
 	resp.Claim = claim

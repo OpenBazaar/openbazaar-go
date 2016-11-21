@@ -175,7 +175,7 @@ type Sales interface {
 
 type Cases interface {
 	// Save or update a sale
-	Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, buyerOrdered bool, claim string) error
+	Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, buyerOrdered bool, claim string) error
 
 	// Mark a case as read in the database
 	MarkAsRead(orderID string) error
@@ -184,7 +184,7 @@ type Cases interface {
 	Delete(orderID string) error
 
 	// Return a sale given the order ID
-	GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, state pb.OrderState, read bool, buyerOpened bool, claim string, err error)
+	GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, buyerOpened bool, claim string, err error)
 
 	// Return the IDs for all cases
 	GetAll() ([]string, error)

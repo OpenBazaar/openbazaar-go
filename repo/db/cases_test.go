@@ -53,16 +53,18 @@ func init() {
 }
 
 func TestPutCase(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, 0, false, true, "blah")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := casesdb.db.Prepare("select orderID, buyerContract, vendorContract, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim from cases where orderID=?")
+	stmt, err := casesdb.db.Prepare("select orderID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim from cases where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
 	var c1 []byte
 	var c2 []byte
+	var berr []byte
+	var verr []byte
 	var state int
 	var read int
 	var date int
@@ -74,7 +76,7 @@ func TestPutCase(t *testing.T) {
 	var title string
 	var buyerOpened int
 	var claim string
-	err = stmt.QueryRow("orderID").Scan(&orderID, &c1, &c2, &state, &read, &date, &thumbnail, &buyerID, &buyerBlockchainID, &vendorID, &vendorBlockchainID, &title, &buyerOpened, &claim)
+	err = stmt.QueryRow("orderID").Scan(&orderID, &c1, &c2, &berr, &verr, &state, &read, &date, &thumbnail, &buyerID, &buyerBlockchainID, &vendorID, &vendorBlockchainID, &title, &buyerOpened, &claim)
 	if err != nil {
 		t.Error(err)
 	}
@@ -87,8 +89,8 @@ func TestPutCase(t *testing.T) {
 	if read != 0 {
 		t.Errorf(`Expected 0 got %d`, read)
 	}
-	if buyerOpened != 0 {
-		t.Errorf(`Expected 0 got %d`, read)
+	if buyerOpened != 1 {
+		t.Errorf(`Expected 0 got %d`, buyerOpened)
 	}
 	if date != int(contract.BuyerOrder.Timestamp.Seconds) {
 		t.Errorf("Expected %d got %d", int(contract.BuyerOrder.Timestamp.Seconds), date)
@@ -114,14 +116,17 @@ func TestPutCase(t *testing.T) {
 	if claim != strings.ToLower("blah") {
 		t.Errorf(`Expected %s got %s`, strings.ToLower("blah"), claim)
 	}
+	if string(berr) != `["someError","anotherError"]` {
+		t.Errorf(`Expected %s got %s`, `["someError","anotherError"]`, string(berr))
+	}
 }
 
 func TestPutNil(t *testing.T) {
-	err := casesdb.Put("orderID", contract, nil, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, nil, []string{}, []string{}, 0, false, false, "")
 	if err != nil {
 		t.Error(err)
 	}
-	_, vendorContract, _, _, _, _, err := casesdb.GetByOrderId("orderID")
+	_, vendorContract, _, _, _, _, _, _, err := casesdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,7 +136,7 @@ func TestPutNil(t *testing.T) {
 }
 
 func TestDeleteCase(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -151,7 +156,7 @@ func TestDeleteCase(t *testing.T) {
 }
 
 func TestMarkCaseAsRead(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,22 +178,43 @@ func TestMarkCaseAsRead(t *testing.T) {
 }
 
 func TestCasesGetByOrderId(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, _, _, err = casesdb.GetByOrderId("orderID")
+	bc, vc, berr, verr, state, read, buyerOpened, claim, err := casesdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, _, _, err = casesdb.GetByOrderId("adsfads")
+	if bc.String() != contract.String() || vc.String() != contract.String() {
+		t.Error("Failed to return correct contract")
+	}
+	if state != 0 {
+		t.Errorf(`Expected 0 got %d`, state)
+	}
+	if read != false {
+		t.Errorf(`Expected false got %b`, read)
+	}
+	if buyerOpened != true {
+		t.Errorf(`Expected true got %d`, buyerOpened)
+	}
+	if claim != strings.ToLower("blah") {
+		t.Errorf(`Expected %s got %s`, strings.ToLower("blah"), claim)
+	}
+	if berr[0] != "someError" || berr[1] != "anotherError" {
+		t.Error("Buyer validation errors returned incorrect")
+	}
+	if verr[0] != "someError" || verr[1] != "anotherError" {
+		t.Error("Vendor validation errors returned incorrect")
+	}
+	_, _, _, _, _, _, _, _, err = casesdb.GetByOrderId("adsfads")
 	if err == nil {
 		t.Error("Get by unknown orderID failed to return error")
 	}
 }
 
 func TestCasesGetAll(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
 	if err != nil {
 		t.Error(err)
 	}

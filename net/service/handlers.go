@@ -690,7 +690,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 		return nil, err
 	}
 
-	buyerContract, vendorContract, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
+	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -708,7 +708,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	// TODO: all the signatures in the contract need to be validate and we need a way to
 	// save validation failures and display them in the UI.
-	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, state, read, buyerOpened, claim)
+	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim)
 
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})

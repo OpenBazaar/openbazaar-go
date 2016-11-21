@@ -170,19 +170,19 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 	// Figure out what role we have in this dispute and process it
 	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
+		// TODO: all the signatures in the contract need to be validate and we need a way to
+		// save validation failures and display them in the UI.
 		var err error
 		if contract.VendorListings[0].VendorID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, nil, contract, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, nil, contract, []string{}, []string{}, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
 		} else if contract.BuyerOrder.BuyerID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, contract, nil, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, contract, nil, []string{}, []string{}, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
 		} else {
 			return errors.New("Peer ID doesn't match either buyer or vendor")
 		}
 		if err != nil {
 			return err
 		}
-		// TODO: all the signatures in the contract need to be validate and we need a way to
-		// save validation failures and display them in the UI.
 	} else if contract.VendorListings[0].VendorID.Guid == n.IpfsNode.Identity.Pretty() { // Vendor
 		// Load out version of the contract from the db
 		myContract, state, _, _, _, err := n.Datastore.Sales().GetByOrderId(orderId)
