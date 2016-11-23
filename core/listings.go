@@ -435,7 +435,28 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	return n.updateProfileCounts()
+}
+
+func (n *OpenBazaarNode) GetListings() ([]byte, error) {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	file, err := ioutil.ReadFile(indexPath)
+	if os.IsNotExist(err) {
+		return []byte("[]"), nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the index to check if file contains valid json
+	var index []listingData
+	err = json.Unmarshal(file, &index)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return bytes read from file
+	return file, nil
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {

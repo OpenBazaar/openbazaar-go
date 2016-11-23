@@ -2,9 +2,6 @@ package core
 
 import (
 	"encoding/json"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -16,7 +13,6 @@ import (
 func (n *OpenBazaarNode) UpdateFollow() error {
 	followPath := path.Join(n.RepoPath, "root", "followers")
 	followingPath := path.Join(n.RepoPath, "root", "following")
-	profilePath := path.Join(n.RepoPath, "root", "profile")
 
 	// Update followers file
 	followers, err := n.Datastore.Followers().Get("", -1)
@@ -64,47 +60,5 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 		return werr
 	}
 
-	// Update profile counts
-	profile := new(pb.Profile)
-
-	_, ferr := os.Stat(profilePath)
-	if !os.IsNotExist(ferr) {
-		// Read existing file
-		file, err := ioutil.ReadFile(profilePath)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(file, profile)
-		if err != nil {
-			return err
-		}
-	}
-
-	profile, err = n.appendCountsToProfile(profile)
-	if err != nil {
-		return err
-	}
-
-	f3, err := os.Create(profilePath)
-	defer f3.Close()
-	if err != nil {
-		return err
-	}
-
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		return err
-	}
-
-	if _, err := f3.WriteString(out); err != nil {
-		return err
-	}
-
-	return nil
+	return n.updateProfileCounts()
 }
