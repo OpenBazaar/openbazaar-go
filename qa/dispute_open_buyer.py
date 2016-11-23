@@ -27,9 +27,7 @@ class DisputeOpenBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # create a profile for charlie
@@ -116,6 +114,7 @@ class DisputeOpenBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Alice incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -130,7 +129,7 @@ class DisputeOpenBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(12)
+        time.sleep(4)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -191,7 +190,7 @@ class DisputeOpenBuyerTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Couldn't load case from Clarlie")
-        resp = json.loads(r.text)
+        resp = json.loads(r.text, object_pairs_hook=OrderedDict)
         if resp["state"] != "DISPUTED":
             raise TestFailure("DisputeOpenBuyerTest - FAIL: Charlie failed to detect the dispute")
 

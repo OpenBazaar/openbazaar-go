@@ -26,9 +26,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("RejectDirectOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # post listing to alice
@@ -88,6 +86,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {

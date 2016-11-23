@@ -184,7 +184,6 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 				orderId,
 				uint64(funding),
 			})
-		log.Notice(state)
 		l.broadcast <- n
 	}
 	record := &spvwallet.TransactionRecord{

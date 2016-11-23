@@ -27,9 +27,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # create a profile for charlie
@@ -118,6 +116,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -132,7 +131,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(12)
+        time.sleep(4)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

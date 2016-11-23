@@ -26,7 +26,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(2)
 
         # generate some coins and send them to alice
@@ -40,9 +40,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # post listing to alice
@@ -103,6 +101,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RefundDirectTest - FAIL: Alice incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -117,7 +116,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundDirectTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(12)
+        time.sleep(4)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

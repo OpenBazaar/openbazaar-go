@@ -105,7 +105,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if err != nil {
 		return errorResponse("Could not unmarshal order"), err
 	}
-	log.Notice(contract.VendorListings[0].Coupons[0].GetPercentDiscount())
 
 	err = service.node.ValidateOrder(contract)
 	if err != nil {
@@ -689,7 +688,6 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	if err != nil {
 		return nil, err
 	}
-
 	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
 	if err != nil {
 		return nil, err
@@ -701,13 +699,13 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	if buyerContract == nil {
 		buyerContract = rc
+		buyerValidationErrors = service.node.ValidateCaseContract(rc)
 	} else if vendorContract == nil {
 		vendorContract = rc
+		vendorValidationErrors = service.node.ValidateCaseContract(rc)
 	} else {
 		return nil, errors.New("All contracts have already been received")
 	}
-	// TODO: all the signatures in the contract need to be validate and we need a way to
-	// save validation failures and display them in the UI.
 	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim)
 
 	// Send notification to websocket
