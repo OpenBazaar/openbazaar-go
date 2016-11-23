@@ -12,8 +12,11 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"strconv"
+	"sync"
 	"time"
 )
+
+var DisputeWg = new(sync.WaitGroup)
 
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord, claim string) error {
 	var isPurchase bool
@@ -154,6 +157,9 @@ func (n *OpenBazaarNode) VerifySignatureOnDisputeOpen(contract *pb.RicardianCont
 }
 
 func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID string) error {
+	DisputeWg.Add(1)
+	defer DisputeWg.Done()
+
 	if rc.Dispute == nil {
 		return errors.New("Dispute message is nil")
 	}

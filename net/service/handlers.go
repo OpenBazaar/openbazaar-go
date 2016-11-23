@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -681,6 +682,9 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 
 func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
+
+	// Make sure we aren't currently processing any disputes before proceeding
+	core.DisputeWg.Wait()
 
 	// Unmarshall
 	update := new(pb.DisputeUpdate)
