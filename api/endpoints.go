@@ -136,6 +136,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETInventory(w, r)
 		return
 	}
+	if strings.Contains(path, "/ob/listings") {
+		i.GETListings(w, r)
+		return
+	}
 	if strings.Contains(path, "/ob/listing") {
 		i.GETListing(w, r)
 		return

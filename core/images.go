@@ -303,14 +303,15 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 }
 
 func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (width, height uint) {
-	targetRatio := targetWidth / targetHeight
-	imageRatio := imgWidth / imgHeight
+	targetRatio := float32(targetWidth) / float32(targetHeight)
+	imageRatio := float32(imgWidth) / float32(imgHeight)
+	var h, w float32
 	if imageRatio > targetRatio {
-		height = targetHeight
-		width = targetHeight * imageRatio
+		h = float32(targetHeight)
+		w = float32(targetHeight) * imageRatio
 	} else {
-		width = targetWidth
-		height = targetWidth * (imgHeight / imgWidth)
+		w = float32(targetWidth)
+		h = float32(targetWidth) * (float32(imgHeight) / float32(imgWidth))
 	}
-	return height, width
+	return uint(w), uint(h)
 }

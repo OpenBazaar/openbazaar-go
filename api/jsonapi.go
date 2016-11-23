@@ -4,6 +4,18 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"runtime/debug"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -17,17 +29,6 @@ import (
 	"github.com/jbenet/go-multiaddr"
 	"github.com/jbenet/go-multihash"
 	"golang.org/x/net/context"
-	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"path"
-	"path/filepath"
-	"runtime/debug"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type JsonAPIConfig struct {
@@ -1003,6 +1004,17 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	fmt.Fprintf(w, "{}")
+	return
+}
+
+func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
+	// Bytes are read from file so can be written to response directly
+	listingsBytes, err := i.node.GetListings()
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	fmt.Fprint(w, string(listingsBytes))
 	return
 }
 
