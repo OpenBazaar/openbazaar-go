@@ -281,6 +281,13 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	return nil
 }
 
+func (n *OpenBazaarNode) CloseDispute(buyerContract, vendorContract *pb.RicardianContract, buyerPercentage, vendorPercentage, moderatorPercentage float32, resolution string) error {
+	if buyerPercentage+vendorPercentage+moderatorPercentage != 100 {
+		return errors.New("Payout percentages must sum to 100")
+	}
+	return nil
+}
+
 func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []string {
 	var validationErrors []string
 

@@ -1441,6 +1441,41 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	return
 }
 
+func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request) {
+	type dispute struct {
+		OrderID             string  `json:"orderId"`
+		Resolution          string  `json:"resolution"`
+		BuyerPercentage     float32 `json:"buyerPercentage"`
+		VendorPercentage    float32 `json:"vendorPercentage"`
+		ModeratorPercentage float32 `json:"moderatorPercentage"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var d dispute
+	err := decoder.Decode(&d)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	buyerContract, vendorContract, _, _, state, _, _, _, err := i.node.Datastore.Cases().GetByOrderId(d.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, "Case not found")
+		return
+	}
+	if state != pb.OrderState_DISPUTED {
+		ErrorResponse(w, http.StatusBadRequest, "A dispute for this order is not open")
+		return
+	}
+
+	err = i.node.CloseDispute(buyerContract, vendorContract, d.BuyerPercentage, d.VendorPercentage, d.ModeratorPercentage, d.Resolution)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
+
 func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
 	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)

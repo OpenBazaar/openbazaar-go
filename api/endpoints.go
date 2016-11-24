@@ -81,6 +81,9 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	case "/ob/opendispute", "/ob/opendispute/":
 		i.POSTOpenDispute(w, r)
 		return
+	case "/ob/closedispute", "/ob/closedispute/":
+		i.POSTCloseDispute(w, r)
+		return
 	case "/ob/shutdown", "/ob/shutdown/":
 		i.POSTShutdown(w, r)
 		return
