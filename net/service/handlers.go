@@ -692,7 +692,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	if err != nil {
 		return nil, err
 	}
-	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
+	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -704,13 +704,17 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	if buyerContract == nil {
 		buyerContract = rc
 		buyerValidationErrors = service.node.ValidateCaseContract(rc)
+		buyerPayoutAddress = update.PayoutAddress
+		buyerOutpoints = update.Outpoints
 	} else if vendorContract == nil {
 		vendorContract = rc
 		vendorValidationErrors = service.node.ValidateCaseContract(rc)
+		vendorPayoutAddress = update.PayoutAddress
+		vendorOutpoints = update.Outpoints
 	} else {
 		return nil, errors.New("All contracts have already been received")
 	}
-	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, buyerOpened, claim)
+	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, buyerOpened, claim)
 
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})

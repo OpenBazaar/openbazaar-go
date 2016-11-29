@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "contracts.proto";
+
 message Moderator {
     string description        = 1;
     string termsAndConditions = 2;
@@ -26,7 +28,8 @@ message Moderator {
 }
 
 message DisputeUpdate {
-    string orderId           = 1;
-    string payoutAddress     = 2;
-    bytes serializedContract = 3;
+    string orderId              = 1;
+    string payoutAddress        = 2;
+    repeated Outpoint outpoints = 3;
+    bytes serializedContract    = 4;
 }

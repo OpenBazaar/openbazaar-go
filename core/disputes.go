@@ -36,23 +36,17 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	dispute.Claim = claim
 
 	// Create outpoints
-	var outpoints []*pb.Dispute_Outpoint
+	var outpoints []*pb.Outpoint
 	for _, r := range records {
-		o := new(pb.Dispute_Outpoint)
+		o := new(pb.Outpoint)
 		o.Hash = r.Txid
 		o.Index = r.Index
 		outpoints = append(outpoints, o)
 	}
 	dispute.Outpoints = outpoints
 
-	// Maybe add rating keys
-	if isPurchase {
-		var keys [][]byte
-		for _, k := range contract.BuyerOrder.RatingKeys {
-			keys = append(keys, k)
-		}
-		dispute.RatingKeys = keys
-	}
+	// Add payout address
+	dispute.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
 
 	// Serialize contract
 	ser, err := proto.Marshal(contract)
@@ -184,9 +178,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
 		if contract.VendorListings[0].VendorID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, nil, contract, []string{}, validationErrors, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, nil, contract, []string{}, validationErrors, "", rc.Dispute.PayoutAddress, nil, rc.Dispute.Outpoints, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
 		} else if contract.BuyerOrder.BuyerID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, contract, nil, validationErrors, []string{}, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, contract, nil, validationErrors, []string{}, rc.Dispute.PayoutAddress, "", rc.Dispute.Outpoints, nil, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
 		} else {
 			return errors.New("Peer ID doesn't match either buyer or vendor")
 		}
@@ -195,7 +189,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 	} else if contract.VendorListings[0].VendorID.Guid == n.IpfsNode.Identity.Pretty() { // Vendor
 		// Load out version of the contract from the db
-		myContract, state, _, _, _, err := n.Datastore.Sales().GetByOrderId(orderId)
+		myContract, state, _, records, _, err := n.Datastore.Sales().GetByOrderId(orderId)
 		if err != nil {
 			return err
 		}
@@ -213,6 +207,15 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		update.SerializedContract = ser
 		update.OrderId = orderId
 		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+		var outpoints []*pb.Outpoint
+		for _, r := range records {
+			o := new(pb.Outpoint)
+			o.Hash = r.Txid
+			o.Index = r.Index
+			outpoints = append(outpoints, o)
+		}
+		update.Outpoints = outpoints
 
 		// Send the message
 		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)
@@ -234,7 +237,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 	} else if contract.BuyerOrder.BuyerID.Guid == n.IpfsNode.Identity.Pretty() { // Buyer
 		// Load out version of the contract from the db
-		myContract, state, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
+		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
 		if err != nil {
 			return err
 		}
@@ -252,6 +255,15 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		update.SerializedContract = ser
 		update.OrderId = orderId
 		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+
+		var outpoints []*pb.Outpoint
+		for _, r := range records {
+			o := new(pb.Outpoint)
+			o.Hash = r.Txid
+			o.Index = r.Index
+			outpoints = append(outpoints, o)
+		}
+		update.Outpoints = outpoints
 
 		// Send the message
 		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)

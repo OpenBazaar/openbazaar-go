@@ -12,6 +12,9 @@ import (
 
 var casesdb CasesDB
 
+var buyerTestOutpoints []*pb.Outpoint = []*pb.Outpoint{&pb.Outpoint{"hash1", 0}}
+var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{&pb.Outpoint{"hash2", 1}}
+
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
@@ -53,11 +56,11 @@ func init() {
 }
 
 func TestPutCase(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, 0, false, true, "blah")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, vendorTestOutpoints, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := casesdb.db.Prepare("select orderID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim from cases where orderID=?")
+	stmt, err := casesdb.db.Prepare("select orderID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim from cases where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -65,6 +68,10 @@ func TestPutCase(t *testing.T) {
 	var c2 []byte
 	var berr []byte
 	var verr []byte
+	var buyerAddr string
+	var vendorAddr string
+	var buyerOuts []byte
+	var vendorOuts []byte
 	var state int
 	var read int
 	var date int
@@ -76,12 +83,24 @@ func TestPutCase(t *testing.T) {
 	var title string
 	var buyerOpened int
 	var claim string
-	err = stmt.QueryRow("orderID").Scan(&orderID, &c1, &c2, &berr, &verr, &state, &read, &date, &thumbnail, &buyerID, &buyerBlockchainID, &vendorID, &vendorBlockchainID, &title, &buyerOpened, &claim)
+	err = stmt.QueryRow("orderID").Scan(&orderID, &c1, &c2, &berr, &verr, &buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts, &state, &read, &date, &thumbnail, &buyerID, &buyerBlockchainID, &vendorID, &vendorBlockchainID, &title, &buyerOpened, &claim)
 	if err != nil {
 		t.Error(err)
 	}
 	if orderID != "orderID" {
 		t.Errorf(`Expected %s got %s`, "orderID", orderID)
+	}
+	if buyerAddr != "addr1" {
+		t.Errorf(`Expected addr1 got %s`, buyerAddr)
+	}
+	if vendorAddr != "addr2" {
+		t.Errorf(`Expected addr2 got %s`, vendorAddr)
+	}
+	if len(buyerOuts) == 0 {
+		t.Error("Failed out save buyer outpoints")
+	}
+	if len(vendorOuts) == 0 {
+		t.Error("Failed out save vendor outpoints")
 	}
 	if state != 0 {
 		t.Errorf(`Expected 0 got %d`, state)
@@ -122,21 +141,24 @@ func TestPutCase(t *testing.T) {
 }
 
 func TestPutNil(t *testing.T) {
-	err := casesdb.Put("orderID", contract, nil, []string{}, []string{}, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, nil, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, nil, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	_, vendorContract, _, _, _, _, _, _, err := casesdb.GetByOrderId("orderID")
+	_, vendorContract, _, _, _, _, _, vendorOuts, _, _, _, _, err := casesdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
 	if vendorContract != nil {
 		t.Error("Vendor contract was not nil")
 	}
+	if vendorOuts != nil {
+		t.Error("Vendor outpoints was not nil")
+	}
 }
 
 func TestDeleteCase(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, vendorTestOutpoints, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -156,7 +178,7 @@ func TestDeleteCase(t *testing.T) {
 }
 
 func TestMarkCaseAsRead(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, vendorTestOutpoints, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -178,11 +200,11 @@ func TestMarkCaseAsRead(t *testing.T) {
 }
 
 func TestCasesGetByOrderId(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, 0, false, true, "blah")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, vendorTestOutpoints, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	bc, vc, berr, verr, state, read, buyerOpened, claim, err := casesdb.GetByOrderId("orderID")
+	bc, vc, berr, verr, buyerAddr, vendorAddr, buyerOuts, vendorOuts, state, read, buyerOpened, claim, err := casesdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,14 +229,26 @@ func TestCasesGetByOrderId(t *testing.T) {
 	if verr[0] != "someError" || verr[1] != "anotherError" {
 		t.Error("Vendor validation errors returned incorrect")
 	}
-	_, _, _, _, _, _, _, _, err = casesdb.GetByOrderId("adsfads")
+	if buyerAddr != "addr1" {
+		t.Errorf(`Expected addr1 got %s`, buyerAddr)
+	}
+	if vendorAddr != "addr2" {
+		t.Errorf(`Expected addr2 got %s`, vendorAddr)
+	}
+	if buyerOuts == nil {
+		t.Error("Buyer outpoints are nil")
+	}
+	if vendorOuts == nil {
+		t.Error("Vendor outpoints are nil")
+	}
+	_, _, _, _, _, _, _, _, _, _, _, _, err = casesdb.GetByOrderId("adsfads")
 	if err == nil {
 		t.Error("Get by unknown orderID failed to return error")
 	}
 }
 
 func TestCasesGetAll(t *testing.T) {
-	err := casesdb.Put("orderID", contract, contract, []string{}, []string{}, 0, false, false, "")
+	err := casesdb.Put("orderID", contract, contract, []string{"someError", "anotherError"}, []string{"someError", "anotherError"}, "addr1", "addr2", buyerTestOutpoints, vendorTestOutpoints, 0, false, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}

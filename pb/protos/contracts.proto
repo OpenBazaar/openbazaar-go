@@ -292,14 +292,9 @@ message OrderCompletion {
 message Dispute {
     google.protobuf.Timestamp timestamp = 1;
     string claim                        = 2;
-    repeated Outpoint outpoints         = 3;
-    repeated bytes ratingKeys           = 4; // buyer dispute only
+    string payoutAddress                = 3;
+    repeated Outpoint outpoints         = 4;
     bytes serializedContract            = 5;
-
-    message Outpoint {
-        string hash  = 1; // Hex encoded
-        uint32 index = 2;
-    }
 }
 
 message DisputeResolution {
@@ -317,6 +312,11 @@ message DisputeResolution {
             uint64 moderatorAmount         = 6;
             uint64 fee                     = 7;
     }
+}
+
+message Outpoint {
+        string hash  = 1; // Hex encoded
+        uint32 index = 2;
 }
 
 message Refund {

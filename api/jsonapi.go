@@ -1457,7 +1457,7 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	buyerContract, vendorContract, _, _, state, _, _, _, err := i.node.Datastore.Cases().GetByOrderId(d.OrderID)
+	buyerContract, vendorContract, _, _, _, _, _, _, state, _, _, _, err := i.node.Datastore.Cases().GetByOrderId(d.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Case not found")
 		return
@@ -1478,7 +1478,7 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 
 func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
-	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
+	buyerContract, vendorContract, buyerErrors, vendorErrors, _, _, _, _, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
