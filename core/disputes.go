@@ -44,7 +44,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 		o := new(pb.Outpoint)
 		o.Hash = r.Txid
 		o.Index = r.Index
-		o.Value = r.Value
+		o.Value = uint64(r.Value)
 		outpoints = append(outpoints, o)
 	}
 	dispute.Outpoints = outpoints
@@ -217,7 +217,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = r.Txid
 			o.Index = r.Index
-			o.Value = r.Value
+			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -266,7 +266,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = r.Txid
 			o.Index = r.Index
-			o.Value = r.Value
+			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -326,7 +326,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	// Set resolution
 	d.Resolution = resolution
 
-	// Decide whose outpoints, redeem script, and chaincode we will use
+	// Decide whose contract to use
 	var buyerPayout bool
 	var vendorPayout bool
 	var moderatorPayout bool
@@ -334,12 +334,16 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	var redeemScript string
 	var chaincode string
 	var feePerByte uint64
+	var vendorId string
+	var buyerId string
 	if buyerPercentage > 0 && vendorPercentage == 0 {
 		buyerPayout = true
 		outpoints = buyerOutpoints
 		redeemScript = buyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
 		feePerByte = buyerContract.BuyerOrder.RefundFee
+		buyerId = buyerContract.BuyerOrder.BuyerID.Guid
+		vendorId = buyerContract.VendorListings[0].VendorID.Guid
 	} else if vendorPercentage > 0 && buyerPercentage == 0 {
 		vendorPayout = true
 		outpoints = vendorOutpoints
@@ -350,6 +354,8 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		} else {
 			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 		}
+		buyerId = vendorContract.BuyerOrder.BuyerID.Guid
+		vendorId = vendorContract.VendorListings[0].VendorID.Guid
 	} else if vendorPercentage > buyerPercentage {
 		buyerPayout = true
 		vendorPayout = true
@@ -361,6 +367,8 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		} else {
 			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 		}
+		buyerId = vendorContract.BuyerOrder.BuyerID.Guid
+		vendorId = vendorContract.VendorListings[0].VendorID.Guid
 	} else if buyerPercentage >= vendorPercentage {
 		buyerPayout = true
 		vendorPayout = true
@@ -368,6 +376,8 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		redeemScript = buyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
 		feePerByte = buyerContract.BuyerOrder.RefundFee
+		buyerId = buyerContract.BuyerOrder.BuyerID.Guid
+		vendorId = buyerContract.VendorListings[0].VendorID.Guid
 	}
 
 	// Calculate total out value
@@ -388,7 +398,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		buyerValue = uint64(float64(totalOut) * (float64(buyerPercentage) / 100))
 		out := spvwallet.TransactionOutput{
 			ScriptPubKey: buyerAddr.ScriptAddress(),
-			Value:        buyerValue,
+			Value:        int64(buyerValue),
 		}
 		outputs = append(outputs, out)
 	}
@@ -402,21 +412,18 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		vendorValue = uint64(float64(totalOut) * (float64(vendorPercentage) / 100))
 		out := spvwallet.TransactionOutput{
 			ScriptPubKey: vendorAddr.ScriptAddress(),
-			Value:        vendorValue,
+			Value:        int64(vendorValue),
 		}
 		outputs = append(outputs, out)
 	}
 	var modAddr btcutil.Address
 	var modValue uint64
 	if moderatorPercentage > 0 {
-		modAddr, err = btcutil.DecodeAddress(n.Wallet.CurrentAddress(spvwallet.EXTERNAL), n.Wallet.Params())
-		if err != nil {
-			return err
-		}
+		modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 		modValue = uint64(float64(totalOut) * (float64(moderatorPercentage) / 100))
 		out := spvwallet.TransactionOutput{
 			ScriptPubKey: modAddr.ScriptAddress(),
-			Value:        modValue,
+			Value:        int64(modValue),
 		}
 		outputs = append(outputs, out)
 		moderatorPayout = true
@@ -446,15 +453,19 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	// Calculate total fee
 	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
-	feePerOutput := txFee / len(outputs)
+	feePerOutput := txFee / uint64(len(outputs))
 
 	// Subtract fee from each output
 	for _, output := range outputs {
-		output.Value -= feePerOutput
+		output.Value -= int64(feePerOutput)
 	}
 
 	// Create moderator key
 	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	chaincodeBytes, err := hex.DecodeString(chaincode)
+	if err != nil {
+		return err
+	}
 	mPrivKey := n.Wallet.MasterPrivateKey()
 	if err != nil {
 		return err
@@ -466,7 +477,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	hdKey := hd.NewExtendedKey(
 		n.Wallet.Params().HDPublicKeyID[:],
 		mECKey.Serialize(),
-		chaincode,
+		chaincodeBytes,
 		parentFP,
 		0,
 		0,
@@ -474,11 +485,15 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	moderatorKey, err := hdKey.Child(0)
 	if err != nil {
-		return "", "", 0, false, err
+		return err
 	}
 
 	// Create signatures
-	sigs, err := n.Wallet.CreateMultisigSignature(inputs, outputs, moderatorKey, redeemScript, feePerByte)
+	redeemScriptBytes, err := hex.DecodeString(redeemScript)
+	if err != nil {
+		return err
+	}
+	sigs, err := n.Wallet.CreateMultisigSignature(inputs, outputs, moderatorKey, redeemScriptBytes, feePerByte)
 	if err != nil {
 		return err
 	}
@@ -495,16 +510,26 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
 	if buyerPayout {
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: buyerAddr.ScriptAddress(), Amount: buyerValue}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerAddr.ScriptAddress()), Amount: buyerValue - feePerOutput}
 	}
 	if vendorPayout {
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: vendorAddr.ScriptAddress(), Amount: vendorValue}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorAddr.ScriptAddress()), Amount: vendorValue - feePerOutput}
 	}
 	if moderatorPayout {
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: modAddr.ScriptAddress(), Amount: modValue}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modAddr.ScriptAddress()), Amount: modValue - feePerOutput}
 	}
 
-	// TODO: Send to other parties
+	d.Payout = payout
+
+	err = n.SendDisputeClose(buyerId, d)
+	if err != nil {
+		return err
+	}
+
+	err = n.SendDisputeClose(vendorId, d)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

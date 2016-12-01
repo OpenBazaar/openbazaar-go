@@ -216,7 +216,7 @@ func (h *HeaderDB) Close() {
 const (
 	MAX_HEADERS                = 2000
 	MAINNET_CHECKPOINT_HEIGHT  = 407232
-	TESTNET3_CHECKPOINT_HEIGHT = 919296
+	TESTNET3_CHECKPOINT_HEIGHT = 985824
 	REGTEST_CHECKPOINT_HEIGHT  = 0
 )
 
@@ -297,7 +297,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 	} else {
 		parentHeader, err = b.db.GetPreviousHeader(header)
 		if err != nil {
-			log.Error("Hash: "+header.BlockHash().String(), "Prev: "+header.PrevBlock.String())
+			log.Error(header.PrevBlock.String())
 			return false, errors.New("Header does not extend any known headers")
 		}
 	}
@@ -562,15 +562,15 @@ func createCheckpoints() {
 		Nonce:      3800536668,
 	}
 
-	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000002fb1337228db02ac464565271f22f045c1b6ee5e449f057a829")
-	testnet3Merk, _ := chainhash.NewHashFromStr("dd76d3c93254b05c6316eaf3bdb94ed4bd9dfeb464f8f9487fbd1eca2a12ca6e")
+	testnet3Prev, _ := chainhash.NewHashFromStr("000000000003c1a2b25093a64eb624055f6a3a26e18b8e7ea2d9382ec7a3609a")
+	testnet3Merk, _ := chainhash.NewHashFromStr("ce100eb5109abce467af2e153f3e42690b9094b695670dbb5dfd71bcd9e56ed6")
 	Testnet3Checkpoint = wire.BlockHeader{
 		Version:    536870912,
 		PrevBlock:  *testnet3Prev,
 		MerkleRoot: *testnet3Merk,
-		Timestamp:  time.Unix(1470087051, 0),
-		Bits:       437256176,
-		Nonce:      2288429377,
+		Timestamp:  time.Unix(1476269620, 0),
+		Bits:       453114005,
+		Nonce:      1664958147,
 	}
 	RegtestCheckpoint = chaincfg.RegressionNetParams.GenesisBlock.Header
 }

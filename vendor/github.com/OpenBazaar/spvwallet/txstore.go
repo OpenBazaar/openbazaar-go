@@ -176,7 +176,7 @@ func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
 	}
 	t.addrMutex.Lock()
 	elem := uint32(len(t.Adrs) + len(allUtxos) + len(allStxos))
-	f := bloom.NewFilter(elem, 0, 0.00001, wire.BloomUpdateP2PubkeyOnly)
+	f := bloom.NewFilter(elem, 0, 0.0001, wire.BloomUpdateP2PubkeyOnly)
 
 	// note there could be false positives since we're just looking
 	// for the 20 byte PKH without the opcodes.

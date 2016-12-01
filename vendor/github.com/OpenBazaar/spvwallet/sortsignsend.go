@@ -142,6 +142,17 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) err
 	return nil
 }
 
+func (w *SPVWallet) EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64 {
+	tx := new(wire.MsgTx)
+	for _, out := range outs {
+		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		tx.TxOut = append(tx.TxOut, output)
+	}
+	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false)
+	fee := estimatedSize * int(feePerByte)
+	return uint64(fee)
+}
+
 func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]Signature, error) {
 	var sigs []Signature
 	tx := new(wire.MsgTx)
