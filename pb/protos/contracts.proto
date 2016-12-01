@@ -305,18 +305,22 @@ message DisputeResolution {
 
     message Payout {
             repeated BitcoinSignature sigs = 1;
-            bytes unsignedTx               = 2;
-            string moderatorAddress        = 3;
-            uint64 buyerAmount             = 4;
-            uint64 vendorAmount            = 5;
-            uint64 moderatorAmount         = 6;
-            uint64 fee                     = 7;
+            repeated Outpoint inputs       = 2;
+            Output buyerOutput             = 3;
+            Output vendorOutput            = 4;
+            Output moderatorOutput         = 5;
+
+            message Output {
+                string script  = 1;
+                uint64 amount  = 2;
+            }
     }
 }
 
 message Outpoint {
         string hash  = 1; // Hex encoded
         uint32 index = 2;
+        uint64 value = 3;
 }
 
 message Refund {

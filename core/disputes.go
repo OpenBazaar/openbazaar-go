@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -17,6 +18,8 @@ import (
 )
 
 var DisputeWg = new(sync.WaitGroup)
+
+var ErrCaseNotFound = errors.New("Case not found")
 
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord, claim string) error {
 	var isPurchase bool
@@ -41,6 +44,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 		o := new(pb.Outpoint)
 		o.Hash = r.Txid
 		o.Index = r.Index
+		o.Value = r.Value
 		outpoints = append(outpoints, o)
 	}
 	dispute.Outpoints = outpoints
@@ -213,6 +217,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = r.Txid
 			o.Index = r.Index
+			o.Value = r.Value
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -261,6 +266,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = r.Txid
 			o.Index = r.Index
+			o.Value = r.Value
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -293,10 +299,213 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	return nil
 }
 
-func (n *OpenBazaarNode) CloseDispute(buyerContract, vendorContract *pb.RicardianContract, buyerPercentage, vendorPercentage, moderatorPercentage float32, resolution string) error {
+func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPercentage, moderatorPercentage float32, resolution string) error {
 	if buyerPercentage+vendorPercentage+moderatorPercentage != 100 {
 		return errors.New("Payout percentages must sum to 100")
 	}
+
+	buyerContract, vendorContract, _, _, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, _, _, _, err := n.Datastore.Cases().GetByOrderId(orderId)
+	if err != nil {
+		return ErrCaseNotFound
+	}
+	if state != pb.OrderState_DISPUTED {
+		return errors.New("A dispute for this order is not open")
+	}
+
+	d := new(pb.DisputeResolution)
+
+	// Add timestamp
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	d.Timestamp = ts
+
+	// Set self (moderator) as the party that made the resolution proposal
+	d.ProposedBy = n.IpfsNode.Identity.Pretty()
+
+	// Set resolution
+	d.Resolution = resolution
+
+	// Decide whose outpoints, redeem script, and chaincode we will use
+	var buyerPayout bool
+	var vendorPayout bool
+	var moderatorPayout bool
+	var outpoints []*pb.Outpoint
+	var redeemScript string
+	var chaincode string
+	var feePerByte uint64
+	if buyerPercentage > 0 && vendorPercentage == 0 {
+		buyerPayout = true
+		outpoints = buyerOutpoints
+		redeemScript = buyerContract.BuyerOrder.Payment.RedeemScript
+		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
+		feePerByte = buyerContract.BuyerOrder.RefundFee
+	} else if vendorPercentage > 0 && buyerPercentage == 0 {
+		vendorPayout = true
+		outpoints = vendorOutpoints
+		redeemScript = vendorContract.BuyerOrder.Payment.RedeemScript
+		chaincode = vendorContract.BuyerOrder.Payment.Chaincode
+		if len(vendorContract.VendorOrderFulfillment) > 0 && vendorContract.VendorOrderFulfillment[0].Payout != nil {
+			feePerByte = vendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
+		} else {
+			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
+		}
+	} else if vendorPercentage > buyerPercentage {
+		buyerPayout = true
+		vendorPayout = true
+		outpoints = vendorOutpoints
+		redeemScript = vendorContract.BuyerOrder.Payment.RedeemScript
+		chaincode = vendorContract.BuyerOrder.Payment.Chaincode
+		if len(vendorContract.VendorOrderFulfillment) > 0 && vendorContract.VendorOrderFulfillment[0].Payout != nil {
+			feePerByte = vendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
+		} else {
+			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
+		}
+	} else if buyerPercentage >= vendorPercentage {
+		buyerPayout = true
+		vendorPayout = true
+		outpoints = buyerOutpoints
+		redeemScript = buyerContract.BuyerOrder.Payment.RedeemScript
+		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
+		feePerByte = buyerContract.BuyerOrder.RefundFee
+	}
+
+	// Calculate total out value
+	var totalOut uint64
+	for _, o := range outpoints {
+		totalOut += o.Value
+	}
+
+	// Create outputs using full value. We will subtract the fee off each output later.
+	var outputs []spvwallet.TransactionOutput
+	var buyerAddr btcutil.Address
+	var buyerValue uint64
+	if buyerPayout {
+		buyerAddr, err = btcutil.DecodeAddress(buyerPayoutAddress, n.Wallet.Params())
+		if err != nil {
+			return err
+		}
+		buyerValue = uint64(float64(totalOut) * (float64(buyerPercentage) / 100))
+		out := spvwallet.TransactionOutput{
+			ScriptPubKey: buyerAddr.ScriptAddress(),
+			Value:        buyerValue,
+		}
+		outputs = append(outputs, out)
+	}
+	var vendorAddr btcutil.Address
+	var vendorValue uint64
+	if vendorPayout {
+		vendorAddr, err = btcutil.DecodeAddress(vendorPayoutAddress, n.Wallet.Params())
+		if err != nil {
+			return err
+		}
+		vendorValue = uint64(float64(totalOut) * (float64(vendorPercentage) / 100))
+		out := spvwallet.TransactionOutput{
+			ScriptPubKey: vendorAddr.ScriptAddress(),
+			Value:        vendorValue,
+		}
+		outputs = append(outputs, out)
+	}
+	var modAddr btcutil.Address
+	var modValue uint64
+	if moderatorPercentage > 0 {
+		modAddr, err = btcutil.DecodeAddress(n.Wallet.CurrentAddress(spvwallet.EXTERNAL), n.Wallet.Params())
+		if err != nil {
+			return err
+		}
+		modValue = uint64(float64(totalOut) * (float64(moderatorPercentage) / 100))
+		out := spvwallet.TransactionOutput{
+			ScriptPubKey: modAddr.ScriptAddress(),
+			Value:        modValue,
+		}
+		outputs = append(outputs, out)
+		moderatorPayout = true
+	}
+
+	if len(outputs) == 0 {
+		return errors.New("Transaction has no outputs")
+	}
+
+	// Create inputs
+	var inputs []spvwallet.TransactionInput
+	for _, o := range outpoints {
+		decodedHash, err := hex.DecodeString(o.Hash)
+		if err != nil {
+			return err
+		}
+		input := spvwallet.TransactionInput{
+			OutpointHash:  decodedHash,
+			OutpointIndex: o.Index,
+		}
+		inputs = append(inputs, input)
+	}
+
+	if len(inputs) == 0 {
+		return errors.New("Transaction has no inputs")
+	}
+
+	// Calculate total fee
+	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
+	feePerOutput := txFee / len(outputs)
+
+	// Subtract fee from each output
+	for _, output := range outputs {
+		output.Value -= feePerOutput
+	}
+
+	// Create moderator key
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mPrivKey := n.Wallet.MasterPrivateKey()
+	if err != nil {
+		return err
+	}
+	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPublicKeyID[:],
+		mECKey.Serialize(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		true)
+
+	moderatorKey, err := hdKey.Child(0)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+
+	// Create signatures
+	sigs, err := n.Wallet.CreateMultisigSignature(inputs, outputs, moderatorKey, redeemScript, feePerByte)
+	if err != nil {
+		return err
+	}
+	var bitcoinSigs []*pb.BitcoinSignature
+	for _, sig := range sigs {
+		s := new(pb.BitcoinSignature)
+		s.InputIndex = sig.InputIndex
+		s.Signature = sig.Signature
+		bitcoinSigs = append(bitcoinSigs, s)
+	}
+
+	// Create payout object
+	payout := new(pb.DisputeResolution_Payout)
+	payout.Inputs = outpoints
+	payout.Sigs = bitcoinSigs
+	if buyerPayout {
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: buyerAddr.ScriptAddress(), Amount: buyerValue}
+	}
+	if vendorPayout {
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: vendorAddr.ScriptAddress(), Amount: vendorValue}
+	}
+	if moderatorPayout {
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: modAddr.ScriptAddress(), Amount: modValue}
+	}
+
+	// TODO: Send to other parties
+
 	return nil
 }
 

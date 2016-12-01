@@ -1457,18 +1457,11 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	buyerContract, vendorContract, _, _, _, _, _, _, state, _, _, _, err := i.node.Datastore.Cases().GetByOrderId(d.OrderID)
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, "Case not found")
+	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.ModeratorPercentage, d.Resolution)
+	if err != nil && err == core.ErrCaseNotFound {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
-	}
-	if state != pb.OrderState_DISPUTED {
-		ErrorResponse(w, http.StatusBadRequest, "A dispute for this order is not open")
-		return
-	}
-
-	err = i.node.CloseDispute(buyerContract, vendorContract, d.BuyerPercentage, d.VendorPercentage, d.ModeratorPercentage, d.Resolution)
-	if err != nil {
+	} else if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}

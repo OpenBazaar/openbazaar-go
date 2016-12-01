@@ -203,10 +203,6 @@ func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 // API
 //
 
-// A TransactionCallback which is sent from the wallet implementation to the transaction
-// listener. It contains enough data to tell which part of the transaction affects our
-// wallet and which addresses coins were sent to and from.
-
 type FeeLevel int
 
 const (
