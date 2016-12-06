@@ -3,11 +3,10 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"strings"
 	"sync"
+	"time"
 )
 
 type CasesDB struct {
@@ -15,96 +14,37 @@ type CasesDB struct {
 	lock *sync.Mutex
 }
 
-func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, read bool, buyerOpened bool, claim string) error {
+func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	readInt := 0
-	if read {
-		readInt = 1
-	}
+
 	buyerOpenedInt := 0
 	if buyerOpened {
 		buyerOpenedInt = 1
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	var buyerOut string
-	var vendorOut string
-	var err error
-	if buyerContract != nil {
-		buyerOut, err = m.MarshalToString(buyerContract)
-		if err != nil {
-			return err
-		}
-	}
-	if vendorContract != nil {
-		vendorOut, err = m.MarshalToString(vendorContract)
-		if err != nil {
-			return err
-		}
-	}
-	buyerErrorsOut, err := json.Marshal(buyerValidationErrors)
-	if err != nil {
-		return err
-	}
-	vendorErrorsOut, err := json.Marshal(vendorValidationErrors)
-	if err != nil {
-		return err
-	}
-	buyerOutpointsOut, err := json.Marshal(buyerOutpoints)
-	if err != nil {
-		return err
-	}
-	vendorOutpointsOut, err := json.Marshal(vendorOutpoints)
-	if err != nil {
-		return err
 	}
 
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into cases(orderID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, date, thumbnail, buyerID, buyerBlockchainID, vendorID, vendorBlockchainID, title, buyerOpened, claim) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into cases(caseID, state, read, date, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
-	var contract *pb.RicardianContract
-	if buyerContract != nil {
-		contract = buyerContract
-	} else if vendorContract != nil {
-		contract = vendorContract
-	} else {
-		return errors.New("Both contracts cannot be nil")
-	}
 
 	defer stmt.Close()
 	_, err = stmt.Exec(
-		orderID,
-		buyerOut,
-		vendorOut,
-		string(buyerErrorsOut),
-		string(vendorErrorsOut),
-		buyerPayoutAddress,
-		vendorPayoutAddress,
-		string(buyerOutpointsOut),
-		string(vendorOutpointsOut),
+		caseID,
 		int(state),
 		readInt,
-		int(contract.BuyerOrder.Timestamp.Seconds),
-		contract.VendorListings[0].Item.Images[0].Tiny,
-		contract.BuyerOrder.BuyerID.Guid,
-		contract.BuyerOrder.BuyerID.BlockchainID,
-		contract.VendorListings[0].VendorID.Guid,
-		contract.VendorListings[0].VendorID.BlockchainID,
-		strings.ToLower(contract.VendorListings[0].Item.Title),
+		int(time.Now().Unix()),
 		buyerOpenedInt,
 		claim,
+		"",
+		"",
 	)
 	if err != nil {
 		tx.Rollback()
@@ -114,10 +54,106 @@ func (c *CasesDB) Put(orderID string, buyerContract, vendorContract *pb.Ricardia
 	return nil
 }
 
+func (c *CasesDB) UpdateBuyerInfo(caseID string, buyerContract *pb.RicardianContract, buyerValidationErrors []string, buyerPayoutAddress string, buyerOutpoints []*pb.Outpoint) error {
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	var buyerOut string
+	var err error
+	if buyerContract != nil {
+		buyerOut, err = m.MarshalToString(buyerContract)
+		if err != nil {
+			return err
+		}
+	}
+	buyerErrorsOut, err := json.Marshal(buyerValidationErrors)
+	if err != nil {
+		return err
+	}
+	var buyerOutpointsOut []byte
+	if buyerOutpoints != nil {
+		buyerOutpointsOut, err = json.Marshal(buyerOutpoints)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, err = c.db.Exec("update cases set buyerContract=?, buyerValidationErrors=?, buyerPayoutAddress=?, buyerOutpoints=? where caseID=?", buyerOut, string(buyerErrorsOut), buyerPayoutAddress, string(buyerOutpointsOut), caseID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CasesDB) UpdateVendorInfo(caseID string, vendorContract *pb.RicardianContract, vendorValidationErrors []string, vendorPayoutAddress string, vendorOutpoints []*pb.Outpoint) error {
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	var vendorOut string
+	var err error
+	if vendorContract != nil {
+		vendorOut, err = m.MarshalToString(vendorContract)
+		if err != nil {
+			return err
+		}
+	}
+	vendorErrorsOut, err := json.Marshal(vendorValidationErrors)
+	if err != nil {
+		return err
+	}
+	var vendorOutpointsOut []byte
+	if vendorOutpoints != nil {
+		vendorOutpointsOut, err = json.Marshal(vendorOutpoints)
+		if err != nil {
+			return err
+		}
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, err = c.db.Exec("update cases set vendorContract=?, vendorValidationErrors=?, vendorPayoutAddress=?, vendorOutpoints=? where caseID=?", vendorOut, string(vendorErrorsOut), vendorPayoutAddress, string(vendorOutpointsOut), caseID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CasesDB) MarkAsRead(orderID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	_, err := c.db.Exec("update cases set read=? where orderID=?", 1, orderID)
+	_, err := c.db.Exec("update cases set read=? where caseID=?", 1, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error {
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	var rOut string
+	var err error
+	if resolution != nil {
+		rOut, err = m.MarshalToString(resolution)
+		if err != nil {
+			return err
+		}
+	}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, err = c.db.Exec("update cases set disputeResolution=?, state=? where caseID=?", rOut, int(pb.OrderState_RESOLVED), caseID)
 	if err != nil {
 		return err
 	}
@@ -127,7 +163,7 @@ func (c *CasesDB) MarkAsRead(orderID string) error {
 func (c *CasesDB) Delete(orderID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	_, err := c.db.Exec("delete from cases where orderID=?", orderID)
+	_, err := c.db.Exec("delete from cases where caseID=?", orderID)
 	if err != nil {
 		return err
 	}
@@ -137,7 +173,7 @@ func (c *CasesDB) Delete(orderID string) error {
 func (c *CasesDB) GetAll() ([]string, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stm := "select orderID from cases"
+	stm := "select caseID from cases"
 	rows, err := c.db.Query(stm)
 	defer rows.Close()
 	if err != nil {
@@ -154,29 +190,29 @@ func (c *CasesDB) GetAll() ([]string, error) {
 	return ret, nil
 }
 
-func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, read bool, buyerOpened bool, claim string, err error) {
+func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, buyerOpened, claim from cases where orderID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, buyerOpened, claim, disputeResolution from cases where caseID=?")
 	defer stmt.Close()
 	var buyerCon []byte
 	var vendorCon []byte
 	var buyerErrors []byte
 	var vendorErrors []byte
-	var buyerOp []byte
-	var vendorOp []byte
 	var stateInt int
 	var readInt *int
+	var date int
 	var buyerOpenedInt int
-	err = stmt.QueryRow(orderId).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &buyerPayoutAddress, &vendorPayoutAddress, &buyerOp, &vendorOp, &stateInt, &readInt, &buyerOpenedInt, &claim)
+	var disputResolution []byte
+	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &stateInt, &readInt, &date, &buyerOpenedInt, &claim, &disputResolution)
 	if err != nil {
-		return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
+		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 	}
 	brc := new(pb.RicardianContract)
 	if string(buyerCon) != "" {
 		err = jsonpb.UnmarshalString(string(buyerCon), brc)
 		if err != nil {
-			return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
+			return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 		}
 	} else {
 		brc = nil
@@ -185,33 +221,12 @@ func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *p
 	if string(vendorCon) != "" {
 		err = jsonpb.UnmarshalString(string(vendorCon), vrc)
 		if err != nil {
-			return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
+			return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 		}
 	} else {
 		vrc = nil
 	}
 
-	toPointer := func(op []pb.Outpoint) []*pb.Outpoint {
-		if len(op) == 0 {
-			return nil
-		}
-		ret := make([]*pb.Outpoint, len(op))
-		for i, o := range op {
-			ret[i] = &o
-		}
-		return ret
-	}
-	var buyerOuts []pb.Outpoint
-	err = json.Unmarshal(buyerOp, &buyerOuts)
-	if err != nil {
-		return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
-	}
-
-	var vendorOuts []pb.Outpoint
-	err = json.Unmarshal(vendorOp, &vendorOuts)
-	if err != nil {
-		return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
-	}
 	read = false
 	if readInt != nil && *readInt == 1 {
 		read = true
@@ -224,12 +239,64 @@ func (c *CasesDB) GetByOrderId(orderId string) (buyerContract, vendorContract *p
 	var berr []string
 	err = json.Unmarshal(buyerErrors, &berr)
 	if err != nil {
-		return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
+		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 	}
 	var verr []string
 	err = json.Unmarshal(vendorErrors, &verr)
 	if err != nil {
-		return nil, nil, []string{}, []string{}, "", "", nil, nil, pb.OrderState(0), false, false, "", err
+		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 	}
-	return brc, vrc, berr, verr, buyerPayoutAddress, vendorPayoutAddress, toPointer(buyerOuts), toPointer(vendorOuts), pb.OrderState(stateInt), read, buyerOpened, claim, nil
+	resolution = new(pb.DisputeResolution)
+	if string(disputResolution) != "" {
+		err = jsonpb.UnmarshalString(string(disputResolution), resolution)
+		if err != nil {
+			return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
+		}
+	} else {
+		resolution = nil
+	}
+
+	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(date), 0), buyerOpened, claim, resolution, nil
+}
+
+func (c *CasesDB) GetPayoutDetails(caseID string) (buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, err error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	stmt, err := c.db.Prepare("select buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints from cases where caseID=?")
+	var buyerOuts []byte
+	var vendorOuts []byte
+	var buyerAddr string
+	var vendorAddr string
+
+	err = stmt.QueryRow(caseID).Scan(&buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+
+	var buyerOutpointsOut []pb.Outpoint
+	if len(buyerOuts) > 0 {
+		err = json.Unmarshal(buyerOuts, &buyerOutpointsOut)
+		if err != nil {
+			return "", "", nil, nil, err
+		}
+	}
+	var vendorOutpointsOut []pb.Outpoint
+	if len(vendorOuts) > 0 {
+		err = json.Unmarshal(vendorOuts, &vendorOutpointsOut)
+		if err != nil {
+			return "", "", nil, nil, err
+		}
+	}
+
+	toPointer := func(op []pb.Outpoint) []*pb.Outpoint {
+		if len(op) == 0 {
+			return nil
+		}
+		ret := make([]*pb.Outpoint, len(op))
+		for i, o := range op {
+			ret[i] = &o
+		}
+		return ret
+	}
+	return buyerAddr, vendorAddr, toPointer(buyerOutpointsOut), toPointer(vendorOutpointsOut), nil
 }
