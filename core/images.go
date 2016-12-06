@@ -314,5 +314,3 @@ func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (wi
 	}
 	return height, width
 }
-
-
