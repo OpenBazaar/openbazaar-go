@@ -1,0 +1,24 @@
+name: openbazaar-server
+version: master
+summary: OpenBazaar Server Daemon in Go
+description: |
+  OpenBazaar server daemon handles the heavy lifting for the OpenBazaar desktop
+  application. The server combines several technologies: A modified IPFS node,
+  which itself combines ideas from Git, BitTorrent, Kademlia. A lightweight SPV
+  Bitcoin wallet for interacting with the Bitcoin network. And a JSON API which
+  can be used by a user interface to control the node and browse the network.
+
+grade: devel
+confinement: strict
+
+apps:
+  daemon:
+    command: openbazaar-go
+    plugs: [network, network-bind]
+
+parts:
+  openbazaar-go:
+    source: .
+    plugin: go
+    go-importpath: github.com/OpenBazaar/openbazaar-go
+    stage-packages: [iproute2, net-tools]
