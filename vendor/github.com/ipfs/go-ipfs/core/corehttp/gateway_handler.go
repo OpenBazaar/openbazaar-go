@@ -261,14 +261,12 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// and only if it's /ipfs!
 	// TODO: break this out when we split /ipfs /ipns routes.
 	modtime := time.Now()
-	if paths[1] != "ipns" {
+	if strings.HasPrefix(urlPath, ipfsPathPrefix) {
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
-
 		// set modtime to a really long time ago, since files are immutable and should stay cached
 		modtime = time.Unix(1, 0)
-	} else if paths[1] == "ipns" && !ownID { // cache ipns returns for 10 minutes
-		w.Header().Set("Etag", etag)
+	} else if strings.HasPrefix(urlPath, ipnsPathPrefix) && !ownID { // cache ipns returns for 10 minutes
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
 
