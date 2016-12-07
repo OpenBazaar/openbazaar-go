@@ -1471,12 +1471,13 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 
 func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
-	buyerContract, vendorContract, buyerErrors, vendorErrors, _, _, _, _, state, read, buyerOpened, claim, err := i.node.Datastore.Cases().GetByOrderId(orderId)
+	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, _, buyerOpened, claim, _, err := i.node.Datastore.Cases().GetCaseMetadata(orderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	// TODO: Add claim and resolution to return here
 	resp := new(pb.CaseRespApi)
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract

@@ -259,32 +259,54 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(date), 0), buyerOpened, claim, resolution, nil
 }
 
-func (c *CasesDB) GetPayoutDetails(caseID string) (buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, err error) {
+func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	stmt, err := c.db.Prepare("select buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints from cases where caseID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state from cases where caseID=?")
+	var buyerCon []byte
+	var vendorCon []byte
 	var buyerOuts []byte
 	var vendorOuts []byte
 	var buyerAddr string
 	var vendorAddr string
+	var stateInt int
 
-	err = stmt.QueryRow(caseID).Scan(&buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts)
+	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts, &stateInt)
 	if err != nil {
-		return "", "", nil, nil, err
+		return nil, nil, "", "", nil, nil, pb.OrderState(0), err
+	}
+
+	brc := new(pb.RicardianContract)
+	if string(buyerCon) != "" {
+		err = jsonpb.UnmarshalString(string(buyerCon), brc)
+		if err != nil {
+			return nil, nil, "", "", nil, nil, pb.OrderState(0), err
+		}
+	} else {
+		brc = nil
+	}
+	vrc := new(pb.RicardianContract)
+	if string(vendorCon) != "" {
+		err = jsonpb.UnmarshalString(string(vendorCon), vrc)
+		if err != nil {
+			return nil, nil, "", "", nil, nil, pb.OrderState(0), err
+		}
+	} else {
+		vrc = nil
 	}
 
 	var buyerOutpointsOut []pb.Outpoint
 	if len(buyerOuts) > 0 {
 		err = json.Unmarshal(buyerOuts, &buyerOutpointsOut)
 		if err != nil {
-			return "", "", nil, nil, err
+			return nil, nil, "", "", nil, nil, pb.OrderState(0), err
 		}
 	}
 	var vendorOutpointsOut []pb.Outpoint
 	if len(vendorOuts) > 0 {
 		err = json.Unmarshal(vendorOuts, &vendorOutpointsOut)
 		if err != nil {
-			return "", "", nil, nil, err
+			return nil, nil, "", "", nil, nil, pb.OrderState(0), err
 		}
 	}
 
@@ -298,5 +320,5 @@ func (c *CasesDB) GetPayoutDetails(caseID string) (buyerPayoutAddress, vendorPay
 		}
 		return ret
 	}
-	return buyerAddr, vendorAddr, toPointer(buyerOutpointsOut), toPointer(vendorOutpointsOut), nil
+	return brc, vrc, buyerAddr, vendorAddr, toPointer(buyerOutpointsOut), toPointer(vendorOutpointsOut), pb.OrderState(stateInt), nil
 }

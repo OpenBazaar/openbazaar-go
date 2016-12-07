@@ -692,7 +692,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	if err != nil {
 		return nil, err
 	}
-	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, buyerOpened, claim, err := service.datastore.Cases().GetByOrderId(update.OrderId)
+	buyerContract, vendorContract, _, _, _, _, _, err := service.node.Datastore.Cases().GetPayoutDetails(update.OrderId)
 	if err != nil {
 		return nil, err
 	}
@@ -702,20 +702,20 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 		return nil, err
 	}
 	if buyerContract == nil {
-		buyerContract = rc
-		buyerValidationErrors = service.node.ValidateCaseContract(rc)
-		buyerPayoutAddress = update.PayoutAddress
-		buyerOutpoints = update.Outpoints
+		buyerValidationErrors := service.node.ValidateCaseContract(rc)
+		err = service.node.Datastore.Cases().UpdateBuyerInfo(update.OrderId, rc, buyerValidationErrors, update.PayoutAddress, update.Outpoints)
+		if err != nil {
+			return nil, err
+		}
 	} else if vendorContract == nil {
-		vendorContract = rc
-		vendorValidationErrors = service.node.ValidateCaseContract(rc)
-		vendorPayoutAddress = update.PayoutAddress
-		vendorOutpoints = update.Outpoints
+		vendorValidationErrors := service.node.ValidateCaseContract(rc)
+		err = service.node.Datastore.Cases().UpdateVendorInfo(update.OrderId, rc, vendorValidationErrors, update.PayoutAddress, update.Outpoints)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		return nil, errors.New("All contracts have already been received")
 	}
-	service.datastore.Cases().Put(update.OrderId, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, buyerOpened, claim)
-
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})
 	service.broadcast <- n

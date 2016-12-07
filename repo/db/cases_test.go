@@ -100,7 +100,7 @@ func TestUpdateWithNil(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, buyerOutpoints, _, err := casesdb.GetPayoutDetails("caseID")
+	_, _, _, _, buyerOutpoints, _, _, err := casesdb.GetPayoutDetails("caseID")
 	if err != nil {
 		t.Error(err)
 	}
@@ -298,9 +298,16 @@ func TestGetPayoutDetails(t *testing.T) {
 		t.Error(err)
 	}
 
-	buyerAddr, vendorAddr, buyerOutpoints, vendorOutpoints, err := casesdb.GetPayoutDetails("caseID")
+	buyerContract, vendorContract, buyerAddr, vendorAddr, buyerOutpoints, vendorOutpoints, state, err := casesdb.GetPayoutDetails("caseID")
 	if err != nil {
 		t.Error(err)
+	}
+	ser, _ := proto.Marshal(contract)
+	buyerSer, _ := proto.Marshal(buyerContract)
+	vendorSer, _ := proto.Marshal(vendorContract)
+
+	if !bytes.Equal(ser, buyerSer) || !bytes.Equal(ser, vendorSer) {
+		t.Error("Failed to fetch case contract from db")
 	}
 	if buyerAddr != "addr1" {
 		t.Errorf("Expected address %s got %s", "addr1", buyerAddr)
@@ -335,6 +342,9 @@ func TestGetPayoutDetails(t *testing.T) {
 		if o.Value != vendorTestOutpoints[i].Value {
 			t.Errorf("Expected outpoint value %s got %s", o.Value, vendorTestOutpoints[i].Value)
 		}
+	}
+	if state != pb.OrderState_DISPUTED {
+		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, state)
 	}
 }
 

@@ -182,9 +182,23 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
 		if contract.VendorListings[0].VendorID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, nil, contract, []string{}, validationErrors, "", rc.Dispute.PayoutAddress, nil, rc.Dispute.Outpoints, pb.OrderState_DISPUTED, false, false, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, false, rc.Dispute.Claim)
+			if err != nil {
+				return err
+			}
+			err = n.Datastore.Cases().UpdateVendorInfo(orderId, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			if err != nil {
+				return err
+			}
 		} else if contract.BuyerOrder.BuyerID.Guid == peerID {
-			err = n.Datastore.Cases().Put(orderId, contract, nil, validationErrors, []string{}, rc.Dispute.PayoutAddress, "", rc.Dispute.Outpoints, nil, pb.OrderState_DISPUTED, false, true, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, true, rc.Dispute.Claim)
+			if err != nil {
+				return err
+			}
+			err = n.Datastore.Cases().UpdateBuyerInfo(orderId, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+			if err != nil {
+				return err
+			}
 		} else {
 			return errors.New("Peer ID doesn't match either buyer or vendor")
 		}
@@ -304,7 +318,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return errors.New("Payout percentages must sum to 100")
 	}
 
-	buyerContract, vendorContract, _, _, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, _, _, _, err := n.Datastore.Cases().GetByOrderId(orderId)
+	buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, err := n.Datastore.Cases().GetPayoutDetails(orderId)
 	if err != nil {
 		return ErrCaseNotFound
 	}
