@@ -127,19 +127,14 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		get(i, u.String(), w, r)
-		return
 	case "POST":
 		post(i, u.String(), w, r)
-		return
 	case "PUT":
 		put(i, u.String(), w, r)
-		return
 	case "DELETE":
 		deleter(i, u.String(), w, r)
-		return
 	case "PATCH":
 		patch(i, u.String(), w, r)
-		return
 	}
 }
 
