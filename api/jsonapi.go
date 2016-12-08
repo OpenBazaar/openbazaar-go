@@ -24,6 +24,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/jbenet/go-multiaddr"
@@ -1471,14 +1472,16 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 
 func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
-	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, _, buyerOpened, claim, _, err := i.node.Datastore.Cases().GetCaseMetadata(orderId)
+	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, date, buyerOpened, claim, resolution, err := i.node.Datastore.Cases().GetCaseMetadata(orderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	// TODO: Add claim and resolution to return here
 	resp := new(pb.CaseRespApi)
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = int64(date.Unix())
+	ts.Nanos = 0
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract
 	resp.BuyerOpened = buyerOpened
@@ -1487,6 +1490,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	resp.Read = read
 	resp.State = state
 	resp.Claim = claim
+	resp.Resolution = resolution
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
