@@ -11,6 +11,9 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/ipfs/go-ipfs/routing/dht"
+	"golang.org/x/net/context"
+	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"strconv"
 	"sync"
@@ -334,6 +337,9 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	ts.Nanos = 0
 	d.Timestamp = ts
 
+	// Add orderId
+	d.OrderId = orderId
+
 	// Set self (moderator) as the party that made the resolution proposal
 	d.ProposedBy = n.IpfsNode.Identity.Pretty()
 
@@ -535,17 +541,43 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	d.Payout = payout
 
-	err = n.SendDisputeClose(buyerId, d)
+	rc := new(pb.RicardianContract)
+	rc.DisputeResolution = d
+	rc, err = n.SignDisputeResolution(rc)
 	if err != nil {
 		return err
 	}
 
-	err = n.SendDisputeClose(vendorId, d)
+	err = n.SendDisputeClose(buyerId, rc)
+	if err != nil {
+		return err
+	}
+
+	err = n.SendDisputeClose(vendorId, rc)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (n *OpenBazaarNode) SignDisputeResolution(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
+	serializedDR, err := proto.Marshal(contract.DisputeResolution)
+	if err != nil {
+		return contract, err
+	}
+	s := new(pb.Signature)
+	s.Section = pb.Signature_DISPUTE_RESOLUTION
+	if err != nil {
+		return contract, err
+	}
+	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedDR)
+	if err != nil {
+		return contract, err
+	}
+	s.SignatureBytes = guidSig
+	contract.Signatures = append(contract.Signatures, s)
+	return contract, nil
 }
 
 func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []string {
@@ -749,4 +781,54 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 	}
 
 	return validationErrors
+}
+
+func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContract) error {
+	err := n.verifySignatureOnDisputeResolution(contract)
+	if err != nil {
+		return err
+	}
+	if contract.DisputeResolution.Payout == nil || len(contract.DisputeResolution.Payout.Sigs) == 0 {
+		return errors.New("DisputeResolution contains invalid payout")
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.RicardianContract) error {
+
+	moderatorID, err := peer.IDFromString(contract.BuyerOrder.Payment.Moderator)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pubkey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, moderatorID)
+	if err != nil {
+		log.Errorf("Failed to find public key for %s", moderatorID.Pretty())
+		return err
+	}
+	pubKeyBytes, err := pubkey.Bytes()
+	if err != nil {
+		return err
+	}
+
+	if err := verifyMessageSignature(
+		contract.Dispute,
+		pubKeyBytes,
+		contract.Signatures,
+		pb.Signature_DISPUTE_RESOLUTION,
+		moderatorID.Pretty(),
+	); err != nil {
+		switch err.(type) {
+		case noSigError:
+			return errors.New("Contract does not contain a signature for the dispute resolution")
+		case invalidSigError:
+			return errors.New("Guid signature on contact failed to verify")
+		case matchKeyError:
+			return errors.New("Public key in dispute does not match reported ID")
+		default:
+			return err
+		}
+	}
+	return nil
 }

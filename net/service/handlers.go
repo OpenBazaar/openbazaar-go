@@ -47,6 +47,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleDisputeOpen
 	case pb.Message_DISPUTE_UPDATE:
 		return service.handleDisputeUpdate
+	case pb.Message_DISPUTE_CLOSE:
+		return service.handleDisputeClose
 	default:
 		return nil
 	}
@@ -718,6 +720,64 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	// Send notification to websocket
 	n := notifications.Serialize(notifications.DisputeUpdateNotification{update.OrderId})
+	service.broadcast <- n
+
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received DISPUTE_CLOSE message from %s", p.Pretty())
+
+	// Unmarshall
+	rc := new(pb.RicardianContract)
+	err := ptypes.UnmarshalAny(pmes.Payload, rc)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	isPurchase := false
+	var contract *pb.RicardianContract
+	contract, _, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
+	if err != nil {
+		contract, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
+		if err != nil {
+			return nil, err
+		}
+		isPurchase = true
+	}
+
+	// Validate
+	contract.DisputeResolution = rc.DisputeResolution
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signature_DISPUTE_RESOLUTION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+	err = service.node.ValidateDisputeResolution(contract)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save to database
+	contract.DisputeResolution = rc.DisputeResolution
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signature_DISPUTE_RESOLUTION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+	if isPurchase {
+		// Set message state to complete
+		err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_RESOLVED, false)
+	} else {
+		err = service.datastore.Sales().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_RESOLVED, false)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Send notification to websocket
+	n := notifications.Serialize(notifications.DisputeCloseNotification{rc.DisputeResolution.OrderId})
 	service.broadcast <- n
 
 	return nil, nil

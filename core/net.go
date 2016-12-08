@@ -346,7 +346,7 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.Disp
 	return nil
 }
 
-func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.DisputeResolution) error {
+func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.RicardianContract) error {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return err

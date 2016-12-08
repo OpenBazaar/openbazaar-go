@@ -299,9 +299,10 @@ message Dispute {
 
 message DisputeResolution {
     google.protobuf.Timestamp timestamp = 1;
-    string proposedBy                   = 2;
-    string resolution                   = 3;
-    Payout payout                       = 4;
+    string orderId                      = 2;
+    string proposedBy                   = 3;
+    string resolution                   = 4;
+    Payout payout                       = 5;
 
     message Payout {
             repeated BitcoinSignature sigs = 1;
