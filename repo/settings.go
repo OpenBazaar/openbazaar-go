@@ -2,7 +2,7 @@ package repo
 
 type SettingsData struct {
 	PaymentDataInQR    *bool              `json:"paymentDataInQR"`
-	ShowNotifications  *bool              `json:"showNotificatons"`
+	ShowNotifications  *bool              `json:"showNotifications"`
 	ShowNsfw           *bool              `json:"showNsfw"`
 	ShippingAddresses  *[]ShippingAddress `json:"shippingAddresses"`
 	LocalCurrency      *string            `json:"localCurrency"`
