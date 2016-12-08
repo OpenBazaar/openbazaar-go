@@ -108,3 +108,19 @@ func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	}
 	return nil
 }
+
+// Delete removes all settings from the database. It's a destructive action that should be used with care.
+func (s *SettingsDB) Delete() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	stmt, err := s.db.Prepare("delete from config where key = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec("settings")
+
+	return err
+}
