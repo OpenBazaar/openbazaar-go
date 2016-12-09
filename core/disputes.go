@@ -558,6 +558,11 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return err
 	}
 
+	err = n.Datastore.Cases().MarkAsClosed(orderId, d)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -796,7 +801,7 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 
 func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.RicardianContract) error {
 
-	moderatorID, err := peer.IDFromString(contract.BuyerOrder.Payment.Moderator)
+	moderatorID, err := peer.IDB58Decode(contract.BuyerOrder.Payment.Moderator)
 	if err != nil {
 		return err
 	}
@@ -808,12 +813,13 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 		return err
 	}
 	pubKeyBytes, err := pubkey.Bytes()
+	log.Notice(pubKeyBytes)
 	if err != nil {
 		return err
 	}
 
 	if err := verifyMessageSignature(
-		contract.Dispute,
+		contract.DisputeResolution,
 		pubKeyBytes,
 		contract.Signatures,
 		pb.Signature_DISPUTE_RESOLUTION,

@@ -183,9 +183,6 @@ class OpenBazaarTestFramework(object):
         except TestFailure as e:
             print(repr(e))
             failure = True
-            for n in self.nodes:
-                self.print_logs(n, "ob.log")
-                self.print_logs(n, "bitcoin.log")
         except Exception as e:
             print("Unexpected exception caught during testing: " + repr(e))
             traceback.print_tb(sys.exc_info()[2])
