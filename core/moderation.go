@@ -9,8 +9,10 @@ import (
 	"golang.org/x/net/context"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 )
 
 var ModeratorPointerID multihash.Multihash
@@ -130,4 +132,53 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 		return err
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error) {
+	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "moderation"))
+	if err != nil {
+		return 0, err
+	}
+	moderator := new(pb.Moderator)
+	err = jsonpb.UnmarshalString(string(file), moderator)
+	if err != nil {
+		return 0, err
+	}
+
+	switch moderator.Fee.FeeType {
+	case pb.Moderator_Fee_PERCENTAGE:
+		return uint64(float64(transactionTotal) * (float64(moderator.Fee.Percentage) / 100)), nil
+	case pb.Moderator_Fee_FIXED:
+		if strings.ToLower(moderator.Fee.FixedFee.CurrencyCode) == "btc" {
+			if moderator.Fee.FixedFee.Amount >= transactionTotal {
+				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
+			}
+			return moderator.Fee.FixedFee.Amount, nil
+		} else {
+			fee, err := n.getPriceInSatoshi(moderator.Fee.FixedFee.CurrencyCode, moderator.Fee.FixedFee.Amount)
+			if err != nil {
+				return 0, err
+			} else if fee >= transactionTotal {
+				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
+			}
+			return fee, err
+		}
+	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
+		var fixed uint64
+		if strings.ToLower(moderator.Fee.FixedFee.CurrencyCode) == "btc" {
+			fixed = moderator.Fee.FixedFee.Amount
+		} else {
+			fixed, err = n.getPriceInSatoshi(moderator.Fee.FixedFee.CurrencyCode, moderator.Fee.FixedFee.Amount)
+			if err != nil {
+				return 0, err
+			}
+		}
+		percentage := uint64(float64(transactionTotal) * (float64(moderator.Fee.Percentage) / 100))
+		if fixed+percentage >= transactionTotal {
+			return 0, errors.New("Fixed moderator fee exceeds transaction amount")
+		}
+		return fixed + percentage, nil
+	default:
+		return 0, errors.New("Unrecognized fee type")
+	}
 }

@@ -316,8 +316,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	return nil
 }
 
-func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPercentage, moderatorPercentage float32, resolution string) error {
-	if buyerPercentage+vendorPercentage+moderatorPercentage != 100 {
+func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPercentage float32, resolution string) error {
+	if buyerPercentage+vendorPercentage != 100 {
 		return errors.New("Payout percentages must sum to 100")
 	}
 
@@ -408,6 +408,22 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	// Create outputs using full value. We will subtract the fee off each output later.
 	var outputs []spvwallet.TransactionOutput
+	var modAddr btcutil.Address
+	var modValue uint64
+	modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+	modValue, err = n.GetModeratorFee(totalOut)
+	if err != nil {
+		return err
+	}
+	if modValue > 0 {
+		out := spvwallet.TransactionOutput{
+			ScriptPubKey: modAddr.ScriptAddress(),
+			Value:        int64(modValue),
+		}
+		outputs = append(outputs, out)
+		moderatorPayout = true
+	}
+
 	var buyerAddr btcutil.Address
 	var buyerValue uint64
 	if buyerPayout {
@@ -435,18 +451,6 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(vendorValue),
 		}
 		outputs = append(outputs, out)
-	}
-	var modAddr btcutil.Address
-	var modValue uint64
-	if moderatorPercentage > 0 {
-		modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
-		modValue = uint64(float64(totalOut) * (float64(moderatorPercentage) / 100))
-		out := spvwallet.TransactionOutput{
-			ScriptPubKey: modAddr.ScriptAddress(),
-			Value:        int64(modValue),
-		}
-		outputs = append(outputs, out)
-		moderatorPayout = true
 	}
 
 	if len(outputs) == 0 {

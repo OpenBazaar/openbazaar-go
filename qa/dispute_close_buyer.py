@@ -198,9 +198,8 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         dispute_resolution = {
             "OrderID": orderId,
             "Resolution": "I'm siding with Bob",
-            "BuyerPercentage": 90,
-            "VendorPercentage": 0,
-            "ModeratorPercentage": 10
+            "BuyerPercentage": 100,
+            "VendorPercentage": 0
         }
         api_url = charlie["gateway_url"] + "ob/closedispute/"
         r = requests.post(api_url, data=json.dumps(dispute_resolution, indent=4))

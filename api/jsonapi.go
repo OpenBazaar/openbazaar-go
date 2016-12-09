@@ -1444,11 +1444,10 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request) {
 	type dispute struct {
-		OrderID             string  `json:"orderId"`
-		Resolution          string  `json:"resolution"`
-		BuyerPercentage     float32 `json:"buyerPercentage"`
-		VendorPercentage    float32 `json:"vendorPercentage"`
-		ModeratorPercentage float32 `json:"moderatorPercentage"`
+		OrderID          string  `json:"orderId"`
+		Resolution       string  `json:"resolution"`
+		BuyerPercentage  float32 `json:"buyerPercentage"`
+		VendorPercentage float32 `json:"vendorPercentage"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var d dispute
@@ -1458,7 +1457,7 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.ModeratorPercentage, d.Resolution)
+	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
 	if err != nil && err == core.ErrCaseNotFound {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
