@@ -1218,8 +1218,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_FUNDED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be funded before refunding")
+	if (state != pb.OrderState_FUNDED) && (state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "order must be funded and not complete or disputed before refunding")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)
