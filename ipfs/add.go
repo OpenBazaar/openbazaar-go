@@ -2,16 +2,15 @@ package ipfs
 
 import (
 	"errors"
-	"path"
-
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	"path"
 )
 
 var addErr = errors.New(`Add directory failed`)
 
 // Resursively add a directory to IPFS and return the root hash
-func AddDirectory(ctx commands.Context, fpath string) (string, error) {
+func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err error) {
 	_, root := path.Split(fpath)
 	args := []string{"add", "-r", fpath}
 	req, cmd, err := NewRequest(ctx, args)
@@ -21,7 +20,6 @@ func AddDirectory(ctx commands.Context, fpath string) (string, error) {
 	res := commands.NewResponse(req)
 	cmd.PreRun(req)
 	cmd.Run(req, res)
-	var rootHash string
 	for r := range res.Output().(<-chan interface{}) {
 		if r.(*coreunix.AddedObject).Name == root {
 			rootHash = r.(*coreunix.AddedObject).Hash

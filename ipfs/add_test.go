@@ -43,11 +43,11 @@ func TestAddDirectory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	hash, err := AddDirectory(ctx, path.Join("./", "root"))
+	root, err := AddDirectory(ctx, path.Join("./", "root"))
 	if err != nil {
 		t.Error(err)
 	}
-	if hash != "QmbuHqv8yQDwSsLvK4wGEBBXAYiqzXn23yqU9rh1tYwJSb" {
+	if root != "QmbuHqv8yQDwSsLvK4wGEBBXAYiqzXn23yqU9rh1tYwJSb" {
 		t.Error("Ipfs add directory failed")
 	}
 }
