@@ -19,6 +19,11 @@ import (
 
 	"bufio"
 	"crypto/rand"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
@@ -54,10 +59,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
