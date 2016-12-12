@@ -386,7 +386,6 @@ func (i *gatewayHandler) putHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(i.node.Context(), time.Second*300)
 
 	var paths []string = strings.Split(r.URL.Path, "/")
-	fmt.Println(paths)
 	if paths[1] != "ipfs" {
 		webError(w, "Cannot put to IPNS", errors.New("Cannot put to IPNS"), http.StatusInternalServerError)
 		cancel()

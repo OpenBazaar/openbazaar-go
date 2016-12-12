@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"time"
 )
 
 var log = logging.MustGetLogger("core")
@@ -85,7 +86,10 @@ func (n *OpenBazaarNode) SeedNode() error {
 			if err != nil {
 				return
 			}
-			http.DefaultClient.Do(req)
+			var client = &http.Client{
+				Timeout: time.Second * 10,
+			}
+			client.Do(req)
 		}()
 	}
 	go n.publish(rootHash)
