@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -15,8 +16,10 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"net/http"
 	"net/url"
 	"path"
+	"time"
 )
 
 var log = logging.MustGetLogger("core")
@@ -73,11 +76,23 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
-	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
+	rootHash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
 	}
-	go n.publish(hash)
+	for _, g := range n.CrosspostGateways {
+		go func() {
+			req, err := http.NewRequest("PUT", g.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
+			if err != nil {
+				return
+			}
+			var client = &http.Client{
+				Timeout: time.Second * 10,
+			}
+			client.Do(req)
+		}()
+	}
+	go n.publish(rootHash)
 	return nil
 }
 
