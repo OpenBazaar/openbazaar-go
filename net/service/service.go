@@ -33,10 +33,8 @@ type OpenBazaarService struct {
 	node      *core.OpenBazaarNode
 }
 
-var OBService *OpenBazaarService
-
-func SetupOpenBazaarService(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
-	OBService = &OpenBazaarService{
+func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
+	service := &OpenBazaarService{
 		host:      node.IpfsNode.PeerHost.(host.Host),
 		self:      node.IpfsNode.Identity,
 		peerstore: node.IpfsNode.PeerHost.Peerstore(),
@@ -46,9 +44,9 @@ func SetupOpenBazaarService(node *core.OpenBazaarNode, ctx commands.Context, dat
 		datastore: datastore,
 		node:      node,
 	}
-	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, OBService.HandleNewStream)
+	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, service.HandleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
-	return OBService
+	return service
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
