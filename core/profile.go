@@ -2,14 +2,13 @@ package core
 
 import (
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
-
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {

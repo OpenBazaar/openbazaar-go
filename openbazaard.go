@@ -62,7 +62,7 @@ import (
 )
 
 var (
-	VERSION   = "0.2.3"
+	VERSION   = "0.2.4"
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
 
@@ -536,6 +536,7 @@ func (x *Start) Execute(args []string) error {
 				log.Info("Starting bitcoin wallet...")
 				go wallet.Start()
 			}
+			core.Node.UpdateFollow()
 			core.Node.SeedNode()
 		}
 		break
