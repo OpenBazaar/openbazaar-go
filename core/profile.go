@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -52,7 +53,11 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 	profile.ListingCount = uint32(n.GetListingCount())
 	profile.FollowerCount = uint32(n.Datastore.Followers().Count())
 	profile.FollowingCount = uint32(n.Datastore.Following().Count())
-	profile.LastModified = uint32(time.Now().Unix())
+
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	profile.LastModified = ts
 	return profile, nil
 }
 
