@@ -447,7 +447,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found. Use POST to create a new listing.")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
@@ -515,7 +515,7 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	err = i.node.DeleteListing(req.Slug)
@@ -1024,7 +1024,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		contract, inventory, err = i.node.GetListingFromSlug(listingID)
 	}
 	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	m := jsonpb.Marshaler{
