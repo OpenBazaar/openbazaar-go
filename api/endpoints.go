@@ -67,7 +67,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 
 func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/status/"):
+	case strings.Contains(path, "/ob/status"):
 		i.GETStatus(w, r)
 	case strings.Contains(path, "/ob/peers"):
 		i.GETPeers(w, r)
