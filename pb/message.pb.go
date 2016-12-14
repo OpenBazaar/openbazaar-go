@@ -26,9 +26,7 @@ var _ = math.Inf
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion1
 
 type Message_MessageType int32
 
@@ -103,13 +101,6 @@ func (m *Message) String() string            { return proto.CompactTextString(m)
 func (*Message) ProtoMessage()               {}
 func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
-func (m *Message) GetMessageType() Message_MessageType {
-	if m != nil {
-		return m.MessageType
-	}
-	return Message_PING
-}
-
 func (m *Message) GetPayload() *google_protobuf.Any {
 	if m != nil {
 		return m.Payload
@@ -135,27 +126,11 @@ func (m *Envelope) GetMessage() *Message {
 	return nil
 }
 
-func (m *Envelope) GetPubkey() []byte {
-	if m != nil {
-		return m.Pubkey
-	}
-	return nil
-}
-
-func (m *Envelope) GetSignature() []byte {
-	if m != nil {
-		return m.Signature
-	}
-	return nil
-}
-
 func init() {
 	proto.RegisterType((*Message)(nil), "Message")
 	proto.RegisterType((*Envelope)(nil), "Envelope")
 	proto.RegisterEnum("Message_MessageType", Message_MessageType_name, Message_MessageType_value)
 }
-
-func init() { proto.RegisterFile("message.proto", fileDescriptor2) }
 
 var fileDescriptor2 = []byte{
 	// 382 bytes of a gzipped FileDescriptorProto
