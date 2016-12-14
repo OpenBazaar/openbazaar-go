@@ -8,7 +8,6 @@ description: |
   Bitcoin wallet for interacting with the Bitcoin network. And a JSON API which
   can be used by a user interface to control the node and browse the network.
 
-grade: devel
 confinement: strict
 
 apps:
