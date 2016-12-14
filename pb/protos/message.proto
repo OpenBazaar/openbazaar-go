@@ -21,6 +21,7 @@ message Message {
         DISPUTE_CLOSE           = 11;
         REFUND                  = 12;
         OFFLINE_ACK             = 13;
+        OFFLINE_RELAY           = 14;
         ERROR                   = 500;
     }
 }
