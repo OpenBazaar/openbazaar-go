@@ -91,6 +91,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETFollowing(w, r)
 	case strings.Contains(path, "/ob/inventory"):
 		i.GETInventory(w, r)
+	case strings.Contains(path, "/ob/profile"):
+		i.GETProfile(w, r)
 	case strings.Contains(path, "/ob/listings"):
 		i.GETListings(w, r)
 	case strings.Contains(path, "/ob/listing"):

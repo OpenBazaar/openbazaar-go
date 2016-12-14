@@ -1050,6 +1050,33 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	log.Notice(peerId)
+	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		profile, err := i.node.GetProfile()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		m := jsonpb.Marshaler{
+			EnumsAsInts:  false,
+			EmitDefaults: true,
+			Indent:       "    ",
+			OrigName:     false,
+		}
+		out, err := m.MarshalToString(&profile)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, out)
+	} else {
+		ErrorResponse(w, http.StatusBadRequest, "This endpoint doesn't yet support fetching other people's profiles")
+		return
+	}
+}
+
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	fmt.Fprintf(w, `{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId))
