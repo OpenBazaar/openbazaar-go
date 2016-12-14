@@ -73,6 +73,9 @@ type OpenBazaarNode struct {
 
 	// An optional gateway URL where we can crosspost data to ensure persistence
 	CrosspostGateways []*url.URL
+
+	// The user-agent for this node
+	UserAgent string
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS

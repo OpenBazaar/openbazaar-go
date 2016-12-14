@@ -733,6 +733,7 @@ func (i *jsonAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
+	settings.Version = &i.node.UserAgent
 	settingsJson, err := json.MarshalIndent(&settings, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1052,7 +1053,6 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	log.Notice(peerId)
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err := i.node.GetProfile()
 		if err != nil {

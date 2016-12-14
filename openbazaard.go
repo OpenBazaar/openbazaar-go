@@ -502,6 +502,7 @@ func (x *Start) Execute(args []string) error {
 		Resolver:          bstk.NewBlockStackClient(resolverUrl),
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
+		UserAgent:         USERAGENT,
 	}
 
 	var gwErrc <-chan error
