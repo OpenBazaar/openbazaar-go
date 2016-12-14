@@ -26,3 +26,7 @@ _testmain.go
 .idea/
 *.iml
 .gx/
+
+# Development environment files
+.ackrc
+.tags*

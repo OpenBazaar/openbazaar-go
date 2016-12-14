@@ -127,19 +127,14 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		get(i, u.String(), w, r)
-		return
 	case "POST":
 		post(i, u.String(), w, r)
-		return
 	case "PUT":
 		put(i, u.String(), w, r)
-		return
 	case "DELETE":
 		deleter(i, u.String(), w, r)
-		return
 	case "PATCH":
 		patch(i, u.String(), w, r)
-		return
 	}
 }
 
@@ -452,7 +447,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found. Use POST to create a new listing.")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
@@ -520,7 +515,7 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	err = i.node.DeleteListing(req.Slug)
@@ -1029,7 +1024,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		contract, inventory, err = i.node.GetListingFromSlug(listingID)
 	}
 	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	m := jsonpb.Marshaler{
@@ -1223,8 +1218,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_FUNDED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be funded before refunding")
+	if (state != pb.OrderState_FUNDED) && (state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "order must be funded and not complete or disputed before refunding")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)

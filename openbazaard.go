@@ -19,6 +19,11 @@ import (
 
 	"bufio"
 	"crypto/rand"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
@@ -54,10 +59,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
 )
 
 var (
@@ -521,9 +522,8 @@ func (x *Start) Execute(args []string) error {
 	   FIXME: There has to be a better way */
 	for b := range cb {
 		if b == true {
-			OBService := service.SetupOpenBazaarService(core.Node, ctx, sqliteDB)
-			core.Node.Service = OBService
-			MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, OBService, 16, core.Node.SendOfflineAck)
+			core.Node.Service = service.New(core.Node, ctx, sqliteDB)
+			MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
 			go MR.Run()
 			core.Node.MessageRetriever = MR
 			PR := rep.NewPointerRepublisher(nd, sqliteDB)
