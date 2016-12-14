@@ -12,7 +12,7 @@ It has these top-level messages:
 	Message
 	Envelope
 */
-package message
+package pb
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
@@ -91,7 +91,7 @@ var Message_MessageType_value = map[string]int32{
 func (x Message_MessageType) String() string {
 	return proto.EnumName(Message_MessageType_name, int32(x))
 }
-func (Message_MessageType) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0, 0} }
+func (Message_MessageType) EnumDescriptor() ([]byte, []int) { return fileDescriptor2, []int{0, 0} }
 
 type Message struct {
 	MessageType Message_MessageType  `protobuf:"varint,1,opt,name=messageType,enum=Message_MessageType" json:"messageType,omitempty"`
@@ -101,7 +101,7 @@ type Message struct {
 func (m *Message) Reset()                    { *m = Message{} }
 func (m *Message) String() string            { return proto.CompactTextString(m) }
 func (*Message) ProtoMessage()               {}
-func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
 
 func (m *Message) GetMessageType() Message_MessageType {
 	if m != nil {
@@ -126,7 +126,7 @@ type Envelope struct {
 func (m *Envelope) Reset()                    { *m = Envelope{} }
 func (m *Envelope) String() string            { return proto.CompactTextString(m) }
 func (*Envelope) ProtoMessage()               {}
-func (*Envelope) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*Envelope) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{1} }
 
 func (m *Envelope) GetMessage() *Message {
 	if m != nil {
@@ -155,9 +155,9 @@ func init() {
 	proto.RegisterEnum("Message_MessageType", Message_MessageType_name, Message_MessageType_value)
 }
 
-func init() { proto.RegisterFile("message.proto", fileDescriptor0) }
+func init() { proto.RegisterFile("message.proto", fileDescriptor2) }
 
-var fileDescriptor0 = []byte{
+var fileDescriptor2 = []byte{
 	// 382 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x4c, 0x91, 0xcf, 0x6e, 0x9b, 0x40,
 	0x10, 0xc6, 0x6b, 0x3b, 0x36, 0x78, 0xc0, 0xe9, 0x64, 0x95, 0x56, 0x6e, 0xd5, 0x43, 0xc5, 0xa9,
