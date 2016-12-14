@@ -842,3 +842,112 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 	}
 	return nil
 }
+
+func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+	// Create inputs
+	var inputs []spvwallet.TransactionInput
+	for _, o := range contract.DisputeResolution.Payout.Inputs {
+		decodedHash, err := hex.DecodeString(o.Hash)
+		if err != nil {
+			return err
+		}
+		input := spvwallet.TransactionInput{
+			OutpointHash:  decodedHash,
+			OutpointIndex: o.Index,
+		}
+		inputs = append(inputs, input)
+	}
+
+	if len(inputs) == 0 {
+		return errors.New("Transaction has no inputs")
+	}
+
+	// Create outputs
+	var outputs []spvwallet.TransactionOutput
+	if contract.DisputeResolution.Payout.BuyerOutput != nil {
+		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.BuyerOutput.Script)
+		if err != nil {
+			return err
+		}
+		output := spvwallet.TransactionOutput{
+			ScriptPubKey: decodedScript,
+			Value:        int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
+		}
+		outputs = append(outputs, output)
+	}
+	if contract.DisputeResolution.Payout.VendorOutput != nil {
+		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.VendorOutput.Script)
+		if err != nil {
+			return err
+		}
+		output := spvwallet.TransactionOutput{
+			ScriptPubKey: decodedScript,
+			Value:        int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
+		}
+		outputs = append(outputs, output)
+	}
+	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
+		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.ModeratorOutput.Script)
+		if err != nil {
+			return err
+		}
+		output := spvwallet.TransactionOutput{
+			ScriptPubKey: decodedScript,
+			Value:        int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
+		}
+		outputs = append(outputs, output)
+	}
+
+	// Create signing key
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	chaincodeBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	if err != nil {
+		return err
+	}
+	mPrivKey := n.Wallet.MasterPrivateKey()
+	if err != nil {
+		return err
+	}
+	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPublicKeyID[:],
+		mECKey.Serialize(),
+		chaincodeBytes,
+		parentFP,
+		0,
+		0,
+		true)
+
+	signingKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+
+	// Create signatures
+	redeemScriptBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		return err
+	}
+	mySigs, err := n.Wallet.CreateMultisigSignature(inputs, outputs, signingKey, redeemScriptBytes, 0)
+	if err != nil {
+		return err
+	}
+
+	var moderatorSigs []spvwallet.Signature
+	for _, sig := range contract.DisputeResolution.Payout.Sigs {
+		s := spvwallet.Signature{
+			Signature:  sig.Signature,
+			InputIndex: sig.InputIndex,
+		}
+		moderatorSigs = append(moderatorSigs, s)
+	}
+
+	err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0)
+	if err != nil {
+		return err
+	}
+	return nil
+}

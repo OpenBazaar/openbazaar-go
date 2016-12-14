@@ -1506,3 +1506,40 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	i.node.Datastore.Cases().MarkAsRead(orderId)
 	fmt.Fprint(w, out)
 }
+
+func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request) {
+	type release struct {
+		OrderID string `json:"orderId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var rel release
+	err := decoder.Decode(&rel)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var records []*spvwallet.TransactionRecord
+	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	if err != nil {
+		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+	}
+
+	if state != pb.OrderState_RESOLVED {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be in RESOLVED state to release funds")
+		return
+	}
+
+	err = i.node.ReleaseFunds(contract, records)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
