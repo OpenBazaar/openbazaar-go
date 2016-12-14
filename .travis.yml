@@ -17,4 +17,6 @@ script:
   - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
+  # Build the snap.
+  - docker run -v $(pwd):/cwd snapcore/snapcraft sh -c 'cd /cwd && sudo apt update && snapcraft'
   - ./deploy.sh
