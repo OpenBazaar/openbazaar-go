@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
@@ -412,12 +413,17 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	var modValue uint64
 	modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	modValue, err = n.GetModeratorFee(totalOut)
+	var modOutputScript []byte
 	if err != nil {
 		return err
 	}
 	if modValue > 0 {
+		modOutputScript, err = txscript.PayToAddrScript(modAddr)
+		if err != nil {
+			return err
+		}
 		out := spvwallet.TransactionOutput{
-			ScriptPubKey: modAddr.ScriptAddress(),
+			ScriptPubKey: modOutputScript,
 			Value:        int64(modValue),
 		}
 		outputs = append(outputs, out)
@@ -426,28 +432,38 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	var buyerAddr btcutil.Address
 	var buyerValue uint64
+	var buyerOutputScript []byte
 	if buyerPayout {
 		buyerAddr, err = btcutil.DecodeAddress(buyerPayoutAddress, n.Wallet.Params())
 		if err != nil {
 			return err
 		}
-		buyerValue = uint64(float64(totalOut) * (float64(buyerPercentage) / 100))
+		buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
+		buyerOutputScript, err = txscript.PayToAddrScript(buyerAddr)
+		if err != nil {
+			return err
+		}
 		out := spvwallet.TransactionOutput{
-			ScriptPubKey: buyerAddr.ScriptAddress(),
+			ScriptPubKey: buyerOutputScript,
 			Value:        int64(buyerValue),
 		}
 		outputs = append(outputs, out)
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
+	var vendorOutputScript []byte
 	if vendorPayout {
 		vendorAddr, err = btcutil.DecodeAddress(vendorPayoutAddress, n.Wallet.Params())
 		if err != nil {
 			return err
 		}
-		vendorValue = uint64(float64(totalOut) * (float64(vendorPercentage) / 100))
+		vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
+		vendorOutputScript, err = txscript.PayToAddrScript(vendorAddr)
+		if err != nil {
+			return err
+		}
 		out := spvwallet.TransactionOutput{
-			ScriptPubKey: vendorAddr.ScriptAddress(),
+			ScriptPubKey: vendorOutputScript,
 			Value:        int64(vendorValue),
 		}
 		outputs = append(outputs, out)
@@ -534,13 +550,13 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
 	if buyerPayout {
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerAddr.ScriptAddress()), Amount: buyerValue - feePerOutput}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: buyerValue - feePerOutput}
 	}
 	if vendorPayout {
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorAddr.ScriptAddress()), Amount: vendorValue - feePerOutput}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: vendorValue - feePerOutput}
 	}
 	if moderatorPayout {
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modAddr.ScriptAddress()), Amount: modValue - feePerOutput}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: modValue - feePerOutput}
 	}
 
 	d.Payout = payout
@@ -800,6 +816,8 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 	if contract.DisputeResolution.Payout == nil || len(contract.DisputeResolution.Payout.Sigs) == 0 {
 		return errors.New("DisputeResolution contains invalid payout")
 	}
+	// TODO: check moderator returned correct payout address
+
 	return nil
 }
 

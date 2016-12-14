@@ -254,7 +254,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
             self.print_logs(alice, "ob.log")
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice failed to detect the dispute resolution")
 
-        # Bob check dispute opened correctly
+        # Bob check dispute closed correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
@@ -263,7 +263,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect the dispute resolution")
 
-        # Charlie check dispute opened correctly
+        # Charlie check dispute closed correctly
         api_url = charlie["gateway_url"] + "ob/case/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:

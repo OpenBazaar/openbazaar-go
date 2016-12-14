@@ -35,7 +35,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             else:
                 raise TestFailure("ReceiveCoinsTest - FAIL: Wallet is empty")
         elif r.status_code == 404:
-            raise TestFailure("ReceiveCoinsTest - FAIL: Listing post endpoint not found")
+            raise TestFailure("ReceiveCoinsTest - FAIL: Receive coins endpoint not found")
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
 

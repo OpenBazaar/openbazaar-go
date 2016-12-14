@@ -17,6 +17,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         charlie = self.nodes[2]
 
         # generate some coins and send them to bob
+        generated_coins = 10
         time.sleep(4)
         api_url = bob["gateway_url"] + "wallet/address"
         r = requests.get(api_url)
@@ -27,7 +28,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        self.send_bitcoin_cmd("sendtoaddress", address, generated_coins)
         time.sleep(3)
 
         # create a profile for charlie
@@ -220,7 +221,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
             self.print_logs(alice, "ob.log")
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice failed to detect the dispute resolution")
 
-        # Bob check dispute opened correctly
+        # Bob check dispute closed correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
@@ -229,7 +230,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect the dispute resolution")
 
-        # Charlie check dispute opened correctly
+        # Charlie check dispute closed correctly
         api_url = charlie["gateway_url"] + "ob/case/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
@@ -237,6 +238,37 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Charlie failed to detect the dispute resolution")
+
+        # Bob relase funds
+        release = {
+            "OrderID": orderId,
+        }
+        api_url = bob["gateway_url"] + "ob/releasefunds/"
+        r = requests.post(api_url, data=json.dumps(release, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("DisputeCloseBuyerTest - FAIL: ReleaseFunds post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("DisputeCloseBuyerTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
+        time.sleep(4)
+
+        # Check bob received payout
+        api_url = bob["gateway_url"] + "wallet/balance"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
+            if confirmed + unconfirmed <= (generated_coins*100000000) - payment_amount:
+                self.print_logs(bob, "ob.log")
+                raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect dispute payout")
+        elif r.status_code == 404:
+            raise TestFailure("DisputeCloseBuyerTest - FAIL: Receive coins endpoint not found")
+        else:
+            raise TestFailure("DisputeCloseBuyerTest - FAIL: Unknown response")
+
+        print("TotalCoins: ", confirmed + unconfirmed)
+        print("AfterPayment: ", generated_coins*100000000 - payment_amount)
 
         print("DisputeCloseBuyerTest - PASS")
 
