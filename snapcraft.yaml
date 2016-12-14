@@ -20,4 +20,5 @@ parts:
     source: .
     plugin: go
     go-importpath: github.com/OpenBazaar/openbazaar-go
+    build-packages: [gcc]
     stage-packages: [iproute2, net-tools]
