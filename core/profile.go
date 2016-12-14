@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -70,7 +69,7 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(file, profile)
+		err = jsonpb.UnmarshalString(string(file), profile)
 		if err != nil {
 			return err
 		}
