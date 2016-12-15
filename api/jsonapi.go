@@ -1530,8 +1530,8 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if state != pb.OrderState_RESOLVED {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be in RESOLVED state to release funds")
+	if state != pb.OrderState_DECIDED {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be in DECIDED state to release funds")
 		return
 	}
 

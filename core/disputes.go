@@ -216,7 +216,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			return err
 		}
 		// Check this order is currently in a state which can be disputed
-		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
+		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_DECIDED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
 			return errors.New("Contact can no longer be disputed")
 		}
 
@@ -265,7 +265,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			return err
 		}
 		// Check this order is currently in a state which can be disputed
-		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
+		if state == pb.OrderState_COMPLETE || state == pb.OrderState_DISPUTED || state == pb.OrderState_DECIDED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_REJECTED {
 			return errors.New("Contact can no longer be disputed")
 		}
 
@@ -496,8 +496,14 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	feePerOutput := txFee / uint64(len(outputs))
 
 	// Subtract fee from each output
+	var outs []spvwallet.TransactionOutput
 	for _, output := range outputs {
-		output.Value -= int64(feePerOutput)
+		o := spvwallet.TransactionOutput{
+			Value:        output.Value - int64(feePerOutput),
+			ScriptPubKey: output.ScriptPubKey,
+			Index:        output.Index,
+		}
+		outs = append(outs, o)
 	}
 
 	// Create moderator key
@@ -515,7 +521,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return err
 	}
 	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPublicKeyID[:],
+		n.Wallet.Params().HDPrivateKeyID[:],
 		mECKey.Serialize(),
 		chaincodeBytes,
 		parentFP,
@@ -533,7 +539,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	sigs, err := n.Wallet.CreateMultisigSignature(inputs, outputs, moderatorKey, redeemScriptBytes, feePerByte)
+	sigs, err := n.Wallet.CreateMultisigSignature(inputs, outs, moderatorKey, redeemScriptBytes, 0)
 	if err != nil {
 		return err
 	}
@@ -582,7 +588,6 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -835,7 +840,6 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 		return err
 	}
 	pubKeyBytes, err := pubkey.Bytes()
-	log.Notice(pubKeyBytes)
 	if err != nil {
 		return err
 	}
@@ -931,7 +935,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPublicKeyID[:],
+		n.Wallet.Params().HDPrivateKeyID[:],
 		mECKey.Serialize(),
 		chaincodeBytes,
 		parentFP,

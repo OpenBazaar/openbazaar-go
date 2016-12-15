@@ -160,7 +160,7 @@ class OpenBazaarTestFramework(object):
             except BrokenPipeError:
                 pass
         time.sleep(12)
-        shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
+        #shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
         parser = argparse.ArgumentParser(

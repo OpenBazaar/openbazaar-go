@@ -18,6 +18,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
 
         # generate some coins and send them to bob
         time.sleep(4)
+        generated_coins = 10
         api_url = bob["gateway_url"] + "wallet/address"
         r = requests.get(api_url)
         if r.status_code == 200:
@@ -27,7 +28,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseVendorTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("DisputeCloseVendorTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        self.send_bitcoin_cmd("sendtoaddress", address, generated_coins)
         time.sleep(3)
 
         # create a profile for charlie
@@ -131,7 +132,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseVendorTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(8)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -238,39 +239,88 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         api_url = charlie["gateway_url"] + "ob/closedispute/"
         r = requests.post(api_url, data=json.dumps(dispute_resolution, indent=4))
         if r.status_code == 404:
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: CloseDispute post endpoint not found")
+            raise TestFailure("DisputeCloseVendorTest - FAIL: CloseDispute post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: CloseDispute POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("DisputeCloseVendorTest - FAIL: CloseDispute POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # Alice check dispute closed correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "RESOLVED":
-            self.print_logs(alice, "ob.log")
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice failed to detect the dispute resolution")
+        if resp["state"] != "DECIDED":
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Alice failed to detect the dispute resolution")
 
         # Bob check dispute closed correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
-        if resp["state"] != "RESOLVED":
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect the dispute resolution")
+        if resp["state"] != "DECIDED":
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Bob failed to detect the dispute resolution")
 
         # Charlie check dispute closed correctly
         api_url = charlie["gateway_url"] + "ob/case/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load case from Clarlie")
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load case from Clarlie")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
         if resp["state"] != "RESOLVED":
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Charlie failed to detect the dispute resolution")
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Charlie failed to detect the dispute resolution")
+
+        # Alice release funds
+        release = {
+            "OrderID": orderId,
+        }
+        api_url = alice["gateway_url"] + "ob/releasefunds/"
+        r = requests.post(api_url, data=json.dumps(release, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: ReleaseFunds post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("DisputeCloseVendorTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
+        time.sleep(4)
+
+        # Check alice received payout
+        api_url = alice["gateway_url"] + "wallet/balance"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            confirmed = int(resp["confirmed"])
+            unconfirmed = int(resp["unconfirmed"])
+            if confirmed + unconfirmed <= 0:
+                raise TestFailure("DisputeCloseVendorTest - FAIL: Alice failed to detect dispute payout")
+        elif r.status_code == 404:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Receive coins endpoint not found")
+        else:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Unknown response")
+
+        # Alice check payout transaction recorded
+        api_url = alice["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load order from Alice")
+        resp = json.loads(r.text, object_pairs_hook=OrderedDict)
+        if len(resp["transactions"]) != 2:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Alice failed to record payout transaction")
+        if resp["state"] != "RESOLVED":
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Alice failed to set state to RESOLVED")
+
+        # Bob check payout transaction recorded
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text, object_pairs_hook=OrderedDict)
+        if len(resp["transactions"]) != 2:
+            print(resp)
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Bob failed to record payout transaction")
+        if resp["state"] != "RESOLVED":
+            raise TestFailure("DisputeCloseVendorTest - FAIL: Bob failed to set state to RESOLVED")
 
         print("DisputeCloseVendorTest - PASS")
 

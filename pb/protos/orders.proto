@@ -20,15 +20,19 @@ enum OrderState {
     DISPUTED  = 5;
 
     // The moderator has resolved the dispute and we are waiting for the winning party to
-    // accept the payout. After the payout is accepted the state will be set to COMPLETE
-    RESOLVED  = 6;
+    // accept the payout.
+    DECIDED   = 6;
+
+    // The winning party has accepted the dispute and it is now complete. After the buyer
+    // leaves a review the state should be set to COMPLETE.
+    RESOLVED  = 7;
 
     // Vendor refunded the order
-    REFUNDED  = 7;
+    REFUNDED  = 8;
 
     // Buyer canceled the order (offline order only)
-    CANCELED  = 8;
+    CANCELED  = 9;
 
     // Vendor declined to confirm the order (offline order only)
-    REJECTED  = 9;
+    REJECTED  = 10;
 }
