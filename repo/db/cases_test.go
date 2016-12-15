@@ -14,8 +14,8 @@ import (
 
 var casesdb CasesDB
 
-var buyerTestOutpoints []*pb.Outpoint = []*pb.Outpoint{&pb.Outpoint{"hash1", 0, 5}}
-var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{&pb.Outpoint{"hash2", 1, 11}}
+var buyerTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash1", 0, 5}}
+var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
