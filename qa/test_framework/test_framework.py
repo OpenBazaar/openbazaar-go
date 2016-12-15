@@ -74,6 +74,7 @@ class OpenBazaarTestFramework(object):
         config["Addresses"]["Swarm"] = ["/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + n)]
         config["Bootstrap"] = BOOTSTRAP_NODES
         config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
+        config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))

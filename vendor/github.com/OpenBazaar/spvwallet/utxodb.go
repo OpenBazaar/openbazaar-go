@@ -95,7 +95,6 @@ func (ts *TxStore) PopulateAdrs() error {
 // Ingest puts a tx into the DB atomically.  This can result in a
 // gain, a loss, or no result.  Gain or loss in satoshis is returned.
 func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
-	log.Notice("Incoming tx: ", tx.TxHash().String())
 	var hits uint32
 	var err error
 	// tx has been OK'd by SPV; check tx sanity

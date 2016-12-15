@@ -216,7 +216,7 @@ func (h *HeaderDB) Close() {
 const (
 	MAX_HEADERS                = 2000
 	MAINNET_CHECKPOINT_HEIGHT  = 407232
-	TESTNET3_CHECKPOINT_HEIGHT = 985824
+	TESTNET3_CHECKPOINT_HEIGHT = 1058400
 	REGTEST_CHECKPOINT_HEIGHT  = 0
 )
 
@@ -372,13 +372,13 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 
 	// TODO: Check header timestamps: from Core
 	/*
-			 // Check timestamp against prev
-			 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
+		 // Check timestamp against prev
+		 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
+	        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
 
-			 // Check timestamp
-			 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
+		 // Check timestamp
+		 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
+	        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
 	*/
 
 	return true // it must have worked if there's no errors and got to the end.
@@ -562,15 +562,15 @@ func createCheckpoints() {
 		Nonce:      3800536668,
 	}
 
-	testnet3Prev, _ := chainhash.NewHashFromStr("000000000003c1a2b25093a64eb624055f6a3a26e18b8e7ea2d9382ec7a3609a")
-	testnet3Merk, _ := chainhash.NewHashFromStr("ce100eb5109abce467af2e153f3e42690b9094b695670dbb5dfd71bcd9e56ed6")
+	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000008471ccf356a18dd48aa12506ef0b6162cb8f98a8d8bb0465902")
+	testnet3Merk, _ := chainhash.NewHashFromStr("a2bd975d9ac68eb1a7bc00df593c55a64e81ac0c9b8f535bb06b390d3010816f")
 	Testnet3Checkpoint = wire.BlockHeader{
 		Version:    536870912,
 		PrevBlock:  *testnet3Prev,
 		MerkleRoot: *testnet3Merk,
-		Timestamp:  time.Unix(1476269620, 0),
-		Bits:       453114005,
-		Nonce:      1664958147,
+		Timestamp:  time.Unix(1481479754, 0),
+		Bits:       436861323,
+		Nonce:      3058617296,
 	}
 	RegtestCheckpoint = chaincfg.RegressionNetParams.GenesisBlock.Header
 }

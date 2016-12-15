@@ -413,7 +413,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel) (
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
 	getScript := txscript.ScriptClosure(func(
-		addr btc.Address) ([]byte, error) {
+	addr btc.Address) ([]byte, error) {
 		return []byte{}, nil
 	})
 	for i, txIn := range authoredTx.Tx.TxIn {
