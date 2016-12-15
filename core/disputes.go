@@ -821,8 +821,26 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 	if contract.DisputeResolution.Payout == nil || len(contract.DisputeResolution.Payout.Sigs) == 0 {
 		return errors.New("DisputeResolution contains invalid payout")
 	}
-	// TODO: check moderator returned correct payout address
+	checkWeOwnAddress := func(scriptPubKey string) error {
+		scriptBytes, err := hex.DecodeString(scriptPubKey)
+		if err != nil {
+			return err
+		}
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(scriptBytes, n.Wallet.Params())
+		if err != nil {
+			return err
+		}
+		if !n.Wallet.HasKey(addrs[0]) {
+			return errors.New("Moderator payout sends coins to an address we don't control")
+		}
+		return nil
+	}
 
+	if contract.VendorListings[0].VendorID.Guid == n.IpfsNode.Identity.Pretty() && contract.DisputeResolution.Payout.VendorOutput != nil {
+		return checkWeOwnAddress(contract.DisputeResolution.Payout.VendorOutput.Script)
+	} else if contract.BuyerOrder.BuyerID.Guid == n.IpfsNode.Identity.Pretty() && contract.DisputeResolution.Payout.BuyerOutput != nil {
+		return checkWeOwnAddress(contract.DisputeResolution.Payout.BuyerOutput.Script)
+	}
 	return nil
 }
 

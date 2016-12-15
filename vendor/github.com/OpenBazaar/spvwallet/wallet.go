@@ -275,6 +275,18 @@ func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) btc.Address {
 	return btc.Address(addr)
 }
 
+func (w *SPVWallet) HasKey(addr btc.Address) bool {
+	script, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		return false
+	}
+	_, err = w.state.GetKeyForScript(script)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 	utxos, _ := w.db.Utxos().GetAll()
 	stxos, _ := w.db.Stxos().GetAll()

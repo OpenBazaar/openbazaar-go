@@ -139,6 +139,14 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 	return addr
 }
 
+func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
+	_, err := w.rpcClient.DumpPrivKey(addr)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
 	c, _ := w.rpcClient.GetBalance(account)

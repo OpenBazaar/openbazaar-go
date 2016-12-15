@@ -27,6 +27,9 @@ type BitcoinWallet interface {
 	// Get the current address for the given purpose
 	CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address
 
+	// Returns if the wallet has the key for the given address
+	HasKey(addr btc.Address) bool
+
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)
 
