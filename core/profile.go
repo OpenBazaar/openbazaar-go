@@ -73,6 +73,8 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 		if err != nil {
 			return err
 		}
+	} else {
+		return nil
 	}
 	profile, err := n.appendCountsToProfile(profile)
 	if err != nil {
