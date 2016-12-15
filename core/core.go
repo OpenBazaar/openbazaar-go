@@ -2,12 +2,7 @@ package core
 
 import (
 	"bytes"
-	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	"net/http"
-	"net/url"
-	"path"
-	"time"
-
+	"errors"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -21,6 +16,12 @@ import (
 	"github.com/ipfs/go-ipfs/routing"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
+	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	"net/http"
+	"net/url"
+	"path"
+	"time"
 )
 
 var log = logging.MustGetLogger("core")
@@ -123,19 +124,27 @@ func (n *OpenBazaarNode) publish(hash string) {
 }
 
 /* This is a placeholder until the libsignal is operational.
-   For now we will just encrypt outgoing offline messages with the long lived identity key. */
-func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, message []byte) (ct []byte, rerr error) {
+   For now we will just encrypt outgoing offline messages with the long lived identity key.
+   Optionally you may provide a public key, to avoid doing an IPFS lookup */
+func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, message []byte) (ct []byte, rerr error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	pubKey, err := routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
-	if err != nil {
-		log.Errorf("Failed to find public key for %s", peerID.Pretty())
-		return nil, err
+	if peerKey == nil {
+		pubKey, err := routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
+		if err != nil {
+			log.Errorf("Failed to find public key for %s", peerID.Pretty())
+			return nil, err
+		}
+		peerKey = &pubKey
 	}
-	ciphertext, err := net.Encrypt(pubKey, message)
-	if err != nil {
-		return nil, err
+	if peerID.MatchesPublicKey(*peerKey) {
+		ciphertext, err := net.Encrypt(*peerKey, message)
+		if err != nil {
+			return nil, err
+		}
+		return ciphertext, nil
+	} else {
+		log.Errorf("peer public key and id do not match for peer: %s", peerID.Pretty())
+		return nil, errors.New("peer public key and id do not match")
 	}
-	return ciphertext, nil
 }
