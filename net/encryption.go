@@ -68,7 +68,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	macKey := make([]byte, AESKeyBytes)
+	macKey := make([]byte, MacKeyBytes)
 	_, err = io.ReadFull(hkdf, macKey)
 	if err != nil {
 		return nil, err
