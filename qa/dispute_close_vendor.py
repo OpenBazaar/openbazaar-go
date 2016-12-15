@@ -283,7 +283,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseVendorTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(8)
 
         # Check alice received payout
         api_url = alice["gateway_url"] + "wallet/balance"
@@ -317,7 +317,6 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
         if len(resp["transactions"]) != 2:
-            print(resp)
             raise TestFailure("DisputeCloseVendorTest - FAIL: Bob failed to record payout transaction")
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseVendorTest - FAIL: Bob failed to set state to RESOLVED")

@@ -250,7 +250,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseBuyerTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(8)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance"
