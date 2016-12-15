@@ -111,7 +111,14 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 			return err
 		}
 	}
-	n.Datastore.Following().Put(peerId)
+	err = n.Datastore.Following().Put(peerId)
+	if err != nil {
+		return err
+	}
+	err = n.UpdateFollow()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -129,7 +136,14 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 			return err
 		}
 	}
-	n.Datastore.Following().Delete(peerId)
+	err = n.Datastore.Following().Delete(peerId)
+	if err != nil {
+		return err
+	}
+	err = n.UpdateFollow()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

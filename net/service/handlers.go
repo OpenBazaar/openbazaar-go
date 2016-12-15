@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -17,6 +18,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -29,6 +31,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleUnFollow
 	case pb.Message_OFFLINE_ACK:
 		return service.handleOfflineAck
+	case pb.Message_OFFLINE_RELAY:
+		return service.handleOfflineRelay
 	case pb.Message_ORDER:
 		return service.handleOrder
 	case pb.Message_ORDER_CONFIRMATION:
@@ -89,6 +93,60 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, 
 	if err != nil {
 		return nil, err
 	}
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received OFFLINE_RELAY message from %s", p.Pretty())
+	// This acts very similarly to attemptDecrypt&handleMessage in the Offline Message Retreiver
+	// However it does not send an ACK, or worry about message ordering
+
+	// Decrypt and unmarshal plaintext
+	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal plaintext
+	env := pb.Envelope{}
+	err = proto.Unmarshal(plaintext, &env)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate the signature
+	ser, err := proto.Marshal(env.Message)
+	if err != nil {
+		return nil, err
+	}
+	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
+	if err != nil {
+		return nil, err
+	}
+	valid, err := pubkey.Verify(ser, env.Signature)
+	if err != nil || !valid {
+		return nil, err
+	}
+
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get handler for this message type
+	handler := service.HandlerForMsgType(env.Message.MessageType)
+	if handler == nil {
+		log.Debug("Got back nil handler from HandlerForMsgType")
+		return nil, nil
+	}
+
+	// Dispatch handler
+	_, err = handler(id, env.Message, true)
+	if err != nil {
+		log.Errorf("Handle message error: %s", err)
+		return nil, err
+	}
+
 	return nil, nil
 }
 

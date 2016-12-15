@@ -13,6 +13,7 @@ type SettingsData struct {
 	BlockedNodes       *[]string          `json:"blockedNodes"`
 	StoreModerators    *[]string          `json:"storeModerators"`
 	SMTPSettings       *SMTPSettings      `json:"smtpSettings"`
+	Version            *string            `json:"version"`
 }
 
 type ShippingAddress struct {

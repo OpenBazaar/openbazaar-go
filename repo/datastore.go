@@ -1,11 +1,12 @@
 package repo
 
 import (
+	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
-	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	"time"
 )
 
@@ -105,6 +106,9 @@ type Settings interface {
 
 	// Return the settings object
 	Get() (SettingsData, error)
+
+	// Delete all settings data
+	Delete() error
 }
 
 type Inventory interface {

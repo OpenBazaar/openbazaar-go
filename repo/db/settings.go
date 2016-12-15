@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type SettingsDB struct {
@@ -24,7 +25,10 @@ func (s *SettingsDB) Put(settings repo.SettingsData) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("insert or replace into config(key, value) values(?,?)")
+	stmt, err := tx.Prepare("insert or replace into config(key, value) values(?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
 
 	_, err = stmt.Exec("settings", string(b))
@@ -41,6 +45,9 @@ func (s *SettingsDB) Get() (repo.SettingsData, error) {
 	defer s.lock.Unlock()
 	settings := repo.SettingsData{}
 	stmt, err := s.db.Prepare("select value from config where key=?")
+	if err != nil {
+		return settings, err
+	}
 	defer stmt.Close()
 	var settingsBytes []byte
 	err = stmt.QueryRow("settings").Scan(&settingsBytes)
@@ -100,4 +107,20 @@ func (s *SettingsDB) Update(settings repo.SettingsData) error {
 		return err
 	}
 	return nil
+}
+
+// Delete removes all settings from the database. It's a destructive action that should be used with care.
+func (s *SettingsDB) Delete() error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	stmt, err := s.db.Prepare("delete from config where key = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec("settings")
+
+	return err
 }

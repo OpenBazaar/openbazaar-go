@@ -1,14 +1,13 @@
 package core
 
 import (
-	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
-
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -52,7 +51,11 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 	profile.ListingCount = uint32(n.GetListingCount())
 	profile.FollowerCount = uint32(n.Datastore.Followers().Count())
 	profile.FollowingCount = uint32(n.Datastore.Following().Count())
-	profile.LastModified = uint32(time.Now().Unix())
+
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	profile.LastModified = ts
 	return profile, nil
 }
 
@@ -66,10 +69,12 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 		if err != nil {
 			return err
 		}
-		err = json.Unmarshal(file, profile)
+		err = jsonpb.UnmarshalString(string(file), profile)
 		if err != nil {
 			return err
 		}
+	} else {
+		return nil
 	}
 	profile, err := n.appendCountsToProfile(profile)
 	if err != nil {

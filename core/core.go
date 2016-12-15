@@ -1,6 +1,13 @@
 package core
 
 import (
+	"bytes"
+	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"net/http"
+	"net/url"
+	"path"
+	"time"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -11,12 +18,9 @@ import (
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/routing/dht"
+	"github.com/ipfs/go-ipfs/routing"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	"net/url"
-	"path"
 )
 
 var log = logging.MustGetLogger("core")
@@ -69,15 +73,30 @@ type OpenBazaarNode struct {
 
 	// An optional gateway URL where we can crosspost data to ensure persistence
 	CrosspostGateways []*url.URL
+
+	// The user-agent for this node
+	UserAgent string
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
-	hash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
+	rootHash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
 	}
-	go n.publish(hash)
+	for _, g := range n.CrosspostGateways {
+		go func() {
+			req, err := http.NewRequest("PUT", g.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
+			if err != nil {
+				return
+			}
+			var client = &http.Client{
+				Timeout: time.Second * 10,
+			}
+			client.Do(req)
+		}()
+	}
+	go n.publish(rootHash)
 	return nil
 }
 
@@ -105,12 +124,13 @@ func (n *OpenBazaarNode) publish(hash string) {
 
 /* This is a placeholder until the libsignal is operational.
    For now we will just encrypt outgoing offline messages with the long lived identity key. */
-func (n *OpenBazaarNode) EncryptMessage(peerId peer.ID, message []byte) (ct []byte, rerr error) {
+func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, message []byte) (ct []byte, rerr error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	pubKey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, peerId)
+
+	pubKey, err := routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
 	if err != nil {
-		log.Errorf("Failed to find public key for %s", peerId.Pretty())
+		log.Errorf("Failed to find public key for %s", peerID.Pretty())
 		return nil, err
 	}
 	ciphertext, err := net.Encrypt(pubKey, message)

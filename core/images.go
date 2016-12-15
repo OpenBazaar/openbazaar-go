@@ -136,9 +136,9 @@ func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*Images, error
 	imgWidth := uint(imgCfg.Width)
 	imgHeight := uint(imgCfg.Height)
 
-	w, h := getImageAttributes(304, 101, imgWidth, imgHeight)
+	w, h := getImageAttributes(304, 87, imgWidth, imgHeight)
 	ty := resize.Resize(w, h, img, resize.Lanczos3)
-	w, h = getImageAttributes(608, 202, imgWidth, imgHeight)
+	w, h = getImageAttributes(608, 174, imgWidth, imgHeight)
 	sm := resize.Resize(w, h, img, resize.Lanczos3)
 	w, h = getImageAttributes(1225, 350, imgWidth, imgHeight)
 	md := resize.Resize(w, h, img, resize.Lanczos3)

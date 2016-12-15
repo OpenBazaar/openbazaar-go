@@ -1,7 +1,6 @@
 package corehttp
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,12 +12,12 @@ import (
 	humanize "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
 	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 
+	"errors"
 	key "github.com/ipfs/go-ipfs/blocks/key"
 	core "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/importer"
 	chunk "github.com/ipfs/go-ipfs/importer/chunk"
 	dag "github.com/ipfs/go-ipfs/merkledag"
-	dagutils "github.com/ipfs/go-ipfs/merkledag/utils"
 	"github.com/ipfs/go-ipfs/namesys"
 	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
@@ -162,6 +161,8 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 		r.URL.Path = strings.Replace(r.URL.Path, paths[2], peerID, 1)
 	}
 
+	unmodifiedURLPath := r.URL.Path
+
 	// If this is an ipns query let's check to see if it's using our own peer ID.
 	// If so let's resolve it locally instead of going out to the network.
 	var ownID bool = false
@@ -261,12 +262,12 @@ func (i *gatewayHandler) getOrHeadHandler(w http.ResponseWriter, r *http.Request
 	// and only if it's /ipfs!
 	// TODO: break this out when we split /ipfs /ipns routes.
 	modtime := time.Now()
-	if strings.HasPrefix(urlPath, ipfsPathPrefix) {
+	if strings.HasPrefix(unmodifiedURLPath, ipfsPathPrefix) {
 		w.Header().Set("Etag", etag)
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 		// set modtime to a really long time ago, since files are immutable and should stay cached
 		modtime = time.Unix(1, 0)
-	} else if strings.HasPrefix(urlPath, ipnsPathPrefix) && !ownID { // cache ipns returns for 10 minutes
+	} else if strings.HasPrefix(unmodifiedURLPath, ipnsPathPrefix) && !ownID { // cache ipns returns for 10 minutes
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
 
@@ -384,91 +385,29 @@ func (i *gatewayHandler) postHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *gatewayHandler) putHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO(cryptix): move me to ServeHTTP and pass into all handlers
-	ctx, cancel := context.WithCancel(i.node.Context())
-	defer cancel()
+	ctx, cancel := context.WithTimeout(i.node.Context(), time.Second*300)
 
-	rootPath, err := path.ParsePath(r.URL.Path)
-	if err != nil {
-		webError(w, "putHandler: ipfs path not valid", err, http.StatusBadRequest)
+	var paths []string = strings.Split(r.URL.Path, "/")
+	if paths[1] != "ipfs" {
+		webError(w, "Cannot put to IPNS", errors.New("Cannot put to IPNS"), http.StatusInternalServerError)
+		cancel()
 		return
 	}
-
-	rsegs := rootPath.Segments()
-	if rsegs[0] == ipnsPathPrefix {
-		webError(w, "putHandler: updating named entries not supported", errors.New("WritableGateway: ipns put not supported"), http.StatusBadRequest)
+	if len(paths) != 3 {
+		webError(w, "Path must contain only one hash", errors.New("Path must contain only one hash"), http.StatusInternalServerError)
+		cancel()
 		return
 	}
-
-	var newnode *dag.Node
-	if rsegs[len(rsegs)-1] == "QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn" {
-		newnode = uio.NewEmptyDirectory()
-	} else {
-		putNode, err := i.newDagFromReader(r.Body)
+	go func() {
+		node, err := i.node.DAG.Get(ctx, key.B58KeyDecode(paths[2]))
 		if err != nil {
-			webError(w, "putHandler: Could not create DAG from request", err, http.StatusInternalServerError)
 			return
 		}
-		newnode = putNode
-	}
+		dag.FetchGraph(ctx, node, i.node.DAG)
+	}()
 
-	var newPath string
-	if len(rsegs) > 1 {
-		newPath = path.Join(rsegs[2:])
-	}
-
-	var newkey key.Key
-	rnode, err := core.Resolve(ctx, i.node, rootPath)
-	switch ev := err.(type) {
-	case path.ErrNoLink:
-		// ev.Node < node where resolve failed
-		// ev.Name < new link
-		// but we need to patch from the root
-		rnode, err := i.node.DAG.Get(ctx, key.B58KeyDecode(rsegs[1]))
-		if err != nil {
-			webError(w, "putHandler: Could not create DAG from request", err, http.StatusInternalServerError)
-			return
-		}
-
-		e := dagutils.NewDagEditor(rnode, i.node.DAG)
-		err = e.InsertNodeAtPath(ctx, newPath, newnode, uio.NewEmptyDirectory)
-		if err != nil {
-			webError(w, "putHandler: InsertNodeAtPath failed", err, http.StatusInternalServerError)
-			return
-		}
-
-		nnode, err := e.Finalize(i.node.DAG)
-		if err != nil {
-			webError(w, "putHandler: could not get node", err, http.StatusInternalServerError)
-			return
-		}
-
-		newkey, err = nnode.Key()
-		if err != nil {
-			webError(w, "putHandler: could not get key of edited node", err, http.StatusInternalServerError)
-			return
-		}
-
-	case nil:
-		// object set-data case
-		rnode.SetData(newnode.Data())
-
-		newkey, err = i.node.DAG.Add(rnode)
-		if err != nil {
-			nnk, _ := newnode.Key()
-			rk, _ := rnode.Key()
-			webError(w, fmt.Sprintf("putHandler: Could not add newnode(%q) to root(%q)", nnk.B58String(), rk.B58String()), err, http.StatusInternalServerError)
-			return
-		}
-	default:
-		log.Warningf("putHandler: unhandled resolve error %T", ev)
-		webError(w, "could not resolve root DAG", ev, http.StatusInternalServerError)
-		return
-	}
-
-	i.addUserHeaders(w) // ok, _now_ write user's headers.
-	w.Header().Set("IPFS-Hash", newkey.String())
-	http.Redirect(w, r, gopath.Join(ipfsPathPrefix, newkey.String(), newPath), http.StatusCreated)
+	i.addUserHeaders(w)
+	return
 }
 
 func (i *gatewayHandler) deleteHandler(w http.ResponseWriter, r *http.Request) {

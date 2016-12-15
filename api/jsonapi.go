@@ -128,19 +128,14 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		get(i, u.String(), w, r)
-		return
 	case "POST":
 		post(i, u.String(), w, r)
-		return
 	case "PUT":
 		put(i, u.String(), w, r)
-		return
 	case "DELETE":
 		deleter(i, u.String(), w, r)
-		return
 	case "PATCH":
 		patch(i, u.String(), w, r)
-		return
 	}
 }
 
@@ -453,7 +448,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found. Use POST to create a new listing.")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	contract, err := i.node.SignListing(ld.Listing)
@@ -521,12 +516,17 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found")
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	err = i.node.DeleteListing(req.Slug)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.UpdateFollow()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
 		return
 	}
 	if err := i.node.SeedNode(); err != nil {
@@ -734,6 +734,7 @@ func (i *jsonAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
+	settings.Version = &i.node.UserAgent
 	settingsJson, err := json.MarshalIndent(&settings, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1030,7 +1031,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		contract, inventory, err = i.node.GetListingFromSlug(listingID)
 	}
 	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
+		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
 	m := jsonpb.Marshaler{
@@ -1049,6 +1050,32 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, string(out))
 	return
+}
+
+func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		profile, err := i.node.GetProfile()
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		m := jsonpb.Marshaler{
+			EnumsAsInts:  false,
+			EmitDefaults: true,
+			Indent:       "    ",
+			OrigName:     false,
+		}
+		out, err := m.MarshalToString(&profile)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, out)
+	} else {
+		ErrorResponse(w, http.StatusBadRequest, "This endpoint doesn't yet support fetching other people's profiles")
+		return
+	}
 }
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
@@ -1224,8 +1251,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_FUNDED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be funded before refunding")
+	if (state != pb.OrderState_FUNDED) && (state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "order must be funded and not complete or disputed before refunding")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)

@@ -25,15 +25,15 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 
 ## Install
 
-A typical install of OpenBazaar contains a bundle of the server deamon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you are looking to run the server daemon by itself or to contribute to developement see below for instructions.
+A typical install of OpenBazaar contains a bundle of the server daemon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you are looking to run the server daemon by itself or to contribute to developement see below for instructions.
 
-### Install prebuilt packages
+### Install Pre-built Packages
 
 The easiest way to run the server is to download a pre-built binary. You can find binaries of our latest release for each operating system [here](https://github.com/OpenBazaar/openbazaar-go/releases/).
 
 ### Build from Source
 
-To build from source you will need to have Go installed and properly configured. Detailed instructs for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs).
+To build from source you will need to have Go installed and properly configured. Detailed instructions for installing Go and openbazaar-go on each operating system can be found in the [docs package](https://github.com/OpenBazaar/openbazaar-go/tree/master/docs).
 
 ## Dependency Management
 
@@ -41,7 +41,7 @@ We use [Godeps](https://github.com/tools/godep) with vendored third-party packag
 
 ### IPFS Dependency
 
-We are using a [fork](https://github.com/OpenBazaar/go-ipfs) of go-ipfs in the daemon. The primary changes include different protocol strings to segregate the OpenBazaar network from the main IPFS network and an increased TTL on certain types of DHT data. You can find the full diff in the readme of the forked repo. The fork is bundled in the vendor package and will be used automatically when you compile and run the server. Note that you will still see github.com/ipfs/go-ipfs import statements instead of github.com/OpenBazaar/gp-ipfs despite the package being a fork. This is done to avoid a major refactor of import statements and make rebasing IPFS much more easy.
+We are using a [fork](https://github.com/OpenBazaar/go-ipfs) of go-ipfs in the daemon. The primary changes include different protocol strings to segregate the OpenBazaar network from the main IPFS network and an increased TTL on certain types of DHT data. You can find the full diff in the readme of the forked repo. The fork is bundled in the vendor package and will be used automatically when you compile and run the server. Note that you will still see github.com/ipfs/go-ipfs import statements instead of github.com/OpenBazaar/go-ipfs despite the package being a fork. This is done to avoid a major refactor of import statements and make rebasing IPFS much more easy.
 
 ## Updating
 
@@ -87,8 +87,10 @@ When ready we will put up a full documentation of the OpenBazaar protocol and th
 The server is currently under heavy development. Most of the underlying networking is complete and what remains is to build out the order/purchase flow. We expect to have a development release which will be capable of browsing the network in a few weeks.
 
 ## Contributing
-Contributions are definitely welcome! Please read the contributing [guidlines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTE.md) before starting.
+
+Contributions are definitely welcome! Please read the contributing [guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTE.md) before starting.
 
 ## License
+
 MIT
 
