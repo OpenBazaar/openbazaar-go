@@ -358,7 +358,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				MessageType: pb.Message_ORDER,
 				Payload:     any,
 			}
-			err = n.SendOfflineMessage(peerId, &m)
+			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.SendOfflineMessage(peerId, &k, &m)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -487,7 +491,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				MessageType: pb.Message_ORDER,
 				Payload:     any,
 			}
-			err = n.SendOfflineMessage(peerId, &m)
+			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.SendOfflineMessage(peerId, &k, &m)
 			if err != nil {
 				return "", "", 0, false, err
 			}

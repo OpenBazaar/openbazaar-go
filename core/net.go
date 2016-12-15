@@ -2,6 +2,7 @@ package core
 
 import (
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -12,7 +13,8 @@ import (
 	"golang.org/x/net/context"
 )
 
-func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
+//supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
+func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
 	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
@@ -31,7 +33,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	if merr != nil {
 		return merr
 	}
-	ciphertext, cerr := n.EncryptMessage(p, messageBytes)
+	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
 	if cerr != nil {
 		return cerr
 	}
@@ -75,7 +77,7 @@ func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error 
 		Payload:     a}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil { // Could not connect directly to peer. Likely offline.
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -107,7 +109,7 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_FOLLOW}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil { // Could not connect directly to peer. Likely offline.
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -132,7 +134,7 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_UNFOLLOW}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -188,8 +190,10 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.Ricar
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
-			return err
+		if k, err := libp2p.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid); err != nil {
+			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -209,7 +213,7 @@ func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -233,7 +237,7 @@ func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -257,8 +261,10 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
-			return err
+		if k, err := libp2p.UnmarshalPublicKey(refundMessage.VendorListings[0].VendorID.Pubkeys.Guid); err != nil {
+			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -281,8 +287,10 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage 
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
-			return err
+		if k, err := libp2p.UnmarshalPublicKey(fulfillmentMessage.VendorListings[0].VendorID.Pubkeys.Guid); err != nil {
+			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -305,8 +313,10 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *p
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
-			return err
+		if k, err := libp2p.UnmarshalPublicKey(completionMessage.VendorListings[0].VendorID.Pubkeys.Guid); err != nil {
+			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
