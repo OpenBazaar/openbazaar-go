@@ -196,9 +196,10 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.Ricar
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
 		if k, err := libp2p.UnmarshalPublicKey(contract.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid); err != nil {
-			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
-				return err
-			}
+			return err
+		}
+		if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -226,10 +227,9 @@ func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
 		} else {
 			k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Guid)
 			if err != nil {
-				kp = &k
-			} else {
-				kp = nil
+				return err
 			}
+			kp = &k
 		}
 		if err := n.SendOfflineMessage(p, kp, &m); err != nil {
 			return err
@@ -261,12 +261,11 @@ func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject
 		if err != nil { //probably implies we can't find the order in the Datastore
 			kp = nil //instead SendOfflineMessage can try to get the key from the peerId
 		} else {
-			k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Guid)
+			k, err := libp2p.UnmarshalPublicKey(order.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid)
 			if err != nil {
-				kp = &k
-			} else {
-				kp = nil
+				return err
 			}
+			kp = &k
 		}
 		if err := n.SendOfflineMessage(p, kp, &m); err != nil {
 			return err
@@ -293,9 +292,10 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
 		if k, err := libp2p.UnmarshalPublicKey(refundMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid); err != nil {
-			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
-				return err
-			}
+			return err
+		}
+		if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -319,9 +319,10 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage 
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
 		if k, err := libp2p.UnmarshalPublicKey(fulfillmentMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid); err != nil {
-			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
-				return err
-			}
+			return err
+		}
+		if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -345,9 +346,10 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *p
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
 		if k, err := libp2p.UnmarshalPublicKey(completionMessage.GetVendorListings()[0].GetVendorID().GetPubkeys().Guid); err != nil {
-			if err := n.SendOfflineMessage(p, &k, &m); err != nil {
-				return err
-			}
+			return err
+		}
+		if err := n.SendOfflineMessage(p, &k, &m); err != nil {
+			return err
 		}
 	}
 	return nil
