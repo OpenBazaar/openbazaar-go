@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
-			"Rev": "0754dfcca172cfc4c07a61c123b23e5127d26760"
+			"Rev": "79b972a63c4d983f34cf3b6a9d4925e3e13b0b0e"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/jsonpb",

@@ -1,34 +1,40 @@
 package blockstackclient
 
 import (
-	"encoding/json"
+	"sync"
+	"time"
 	"errors"
-	"github.com/jbenet/go-multihash"
 	"net/http"
 	"net/url"
 	"path"
+	"encoding/json"
 	"strings"
-	"sync"
-	"time"
+	"github.com/jbenet/go-multihash"
 )
+
+type httpClient interface {
+	Get(string) (*http.Response, error)
+}
 
 type BlockstackClient struct {
 	resolverURL string
+	httpClient  httpClient
 	cache       map[string]CachedGuid
 	cacheLife   time.Duration
 	sync.Mutex
 }
 
 type CachedGuid struct {
-	guid   string
-	exipry time.Time
+	guid      string
+	exipry    time.Time
 }
 
 func NewBlockStackClient(resolverURL string) *BlockstackClient {
 	b := &BlockstackClient{
 		resolverURL: resolverURL,
-		cache:       make(map[string]CachedGuid),
-		cacheLife:   time.Minute,
+		httpClient: &http.Client{Timeout:time.Minute},
+		cache: make(map[string]CachedGuid),
+		cacheLife: time.Minute,
 	}
 	go b.gc()
 	return b
@@ -49,9 +55,12 @@ func (b *BlockstackClient) Resolve(handle string) (guid string, err error) {
 		return "", err
 	}
 	resolver.Path = path.Join(resolver.Path, "v2", "users", formatted)
-	resp, err := http.Get(resolver.String())
+	resp, err := b.httpClient.Get(resolver.String())
 	if err != nil {
 		return "", errors.New("Error querying resolver")
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return "", errors.New("Handle not found")
 	}
 	decoder := json.NewDecoder(resp.Body)
 	var data map[string]interface{}
@@ -92,13 +101,13 @@ func (b *BlockstackClient) gc() {
 	ticker := time.NewTicker(time.Minute)
 	for {
 		select {
-		case <-ticker.C:
+		case <- ticker.C:
 			b.deleteExpiredCache()
 		}
 	}
 }
 
-func (b *BlockstackClient) deleteExpiredCache() {
+func (b *BlockstackClient) deleteExpiredCache(){
 	b.Lock()
 	defer b.Unlock()
 	for k, v := range b.cache {
