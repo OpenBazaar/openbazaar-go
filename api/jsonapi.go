@@ -1231,6 +1231,7 @@ func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
 		os.Exit(1)
 	}
 	go shutdown()
+	fmt.Fprint(w, `{}`)
 	return
 }
 
