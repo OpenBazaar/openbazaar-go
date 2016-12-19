@@ -217,8 +217,13 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 	return nil
 }
 
-func (w *SPVWallet) SweepMultisig(utxos []Utxo, key *hd.ExtendedKey, redeemScript []byte, feeLevel FeeLevel) error {
-	internalAddr := w.CurrentAddress(INTERNAL)
+func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript []byte, feeLevel FeeLevel) error {
+	var internalAddr btc.Address
+	if address != nil {
+		internalAddr = *address
+	} else {
+		internalAddr = w.CurrentAddress(INTERNAL)
+	}
 	script, err := txscript.PayToAddrScript(internalAddr)
 	if err != nil {
 		return err
@@ -264,10 +269,10 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, key *hd.ExtendedKey, redeemScrip
 	}
 
 	pk := privKey.PubKey().SerializeCompressed()
-	address, err := btc.NewAddressPubKey(pk, w.params)
+	addressPub, err := btc.NewAddressPubKey(pk, w.params)
 
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
-		if address.EncodeAddress() == addr.EncodeAddress() {
+		if addressPub.EncodeAddress() == addr.EncodeAddress() {
 			wif, err := btc.NewWIF(privKey, w.params, true)
 			if err != nil {
 				return nil, false, err

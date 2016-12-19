@@ -127,7 +127,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-		err = n.Wallet.SweepMultisig(utxos, vendorKey, redeemScript, spvwallet.NORMAL)
+		err = n.Wallet.SweepMultisig(utxos, nil, vendorKey, redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return err
 		}

@@ -6,13 +6,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
-	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	"path"
-	"strings"
-	"time"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -20,11 +13,18 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	ipfspath "github.com/ipfs/go-ipfs/path"
+	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"path"
+	"strings"
+	"time"
 )
 
 type option struct {
@@ -47,23 +47,27 @@ type item struct {
 }
 
 type PurchaseData struct {
-	ShipTo               string `json:"shipTo"`
-	Address              string `json:"address"`
-	City                 string `json:"city"`
-	State                string `json:"state"`
-	PostalCode           string `json:"postalCode"`
-	CountryCode          string `json:"countryCode"`
-	AddressNotes         string `json:"addressNotes"`
-	Moderator            string `json:"moderator"`
-	Items                []item `json:"items"`
-	AlternateContactInfo string `json:"alternateContactInfo"`
+	ShipTo               string  `json:"shipTo"`
+	Address              string  `json:"address"`
+	City                 string  `json:"city"`
+	State                string  `json:"state"`
+	PostalCode           string  `json:"postalCode"`
+	CountryCode          string  `json:"countryCode"`
+	AddressNotes         string  `json:"addressNotes"`
+	Moderator            string  `json:"moderator"`
+	Items                []item  `json:"items"`
+	AlternateContactInfo string  `json:"alternateContactInfo"`
+	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
-	order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
-
+	if data.RefundAddress != nil {
+		order.RefundAddress = *(data.RefundAddress)
+	} else {
+		order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.INTERNAL).EncodeAddress()
+	}
 	shipping := new(pb.Order_Shipping)
 	shipping.ShipTo = data.ShipTo
 	shipping.Address = data.Address
@@ -582,7 +586,11 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-	err = n.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
+	refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, n.Wallet.Params())
+	if err != nil {
+		return err
+	}
+	err = n.Wallet.SweepMultisig(utxos, &refundAddress, buyerKey, redeemScript, spvwallet.NORMAL)
 	if err != nil {
 		return err
 	}

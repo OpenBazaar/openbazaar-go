@@ -45,8 +45,8 @@ type BitcoinWallet interface {
 	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
 	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64
 
-	// Build and broadcast a transaction that sweeps all coins from a 1 of 2 multisig to an internal address
-	SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedKey, reddemScript []byte, feeLevel spvwallet.FeeLevel) error
+	// Build and broadcast a transaction that sweeps all coins from a 1 of 2 multisig to an internal address (optionally provided)
+	SweepMultisig(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, reddemScript []byte, feeLevel spvwallet.FeeLevel) error
 
 	// Create a signature for a multisig transaction
 	CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error)
