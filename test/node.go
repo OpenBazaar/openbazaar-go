@@ -1,6 +1,7 @@
 package test
 
 import (
+	// "github.com/ipfs/go-ipfs/thirdparty/testutil"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
@@ -45,15 +46,19 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		return nil, err
 	}
 
-	wallet := spvwallet.NewSPVWallet(
+	wallet, err := spvwallet.NewSPVWallet(
 		mnemonic,
 		&chaincfg.TestNet3Params, 50000, 8000, 16000, 24000, walletCfg.FeeAPI,
 		repository.Path,
 		repository.DB,
 		"OpenBazaar-Test",
 		walletCfg.TrustedPeer,
+		nil,
 		NewLogger(),
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
