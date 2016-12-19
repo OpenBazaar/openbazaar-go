@@ -111,6 +111,8 @@ var decryptDatabase DecryptDatabase
 
 var parser = flags.NewParser(nil, flags.Default)
 
+var ErrNoGateways = errors.New("No gateway addresses configured")
+
 func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -505,46 +507,40 @@ func (x *Start) Execute(args []string) error {
 		UserAgent:         USERAGENT,
 	}
 
-	var gwErrc <-chan error
-	var cb <-chan bool
-	if len(cfg.Addresses.Gateway) > 0 {
-		if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
-			return errors.New("SSL cert and key files must be set when SSL is enabled")
-		}
-		err, cb, gwErrc = serveHTTPGateway(core.Node, authCookie, *apiConfig)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
+	if len(cfg.Addresses.Gateway) <= 0 {
+		return ErrNoGateways
+	}
+	if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
+		return errors.New("SSL cert and key files must be set when SSL is enabled")
 	}
 
-	/* Wait for gateway to start before starting the network service.
-	   This way the websocket channel we pass into the service gets created first.
-	   FIXME: There has to be a better way */
-	for b := range cb {
-		if b == true {
-			core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-			MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
-			go MR.Run()
-			core.Node.MessageRetriever = MR
-			PR := rep.NewPointerRepublisher(nd, sqliteDB)
-			go PR.Run()
-			core.Node.PointerRepublisher = PR
-			if !x.DisableWallet {
-				MR.Wait()
-				TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
-				wallet.AddTransactionListener(TL.OnTransactionReceived)
-				log.Info("Starting bitcoin wallet...")
-				go wallet.Start()
-			}
-			core.Node.UpdateFollow()
-			core.Node.SeedNode()
-		}
-		break
+	gateway, err := newHTTPGateway(core.Node, authCookie, *apiConfig)
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 
-	for err := range gwErrc {
-		fmt.Println(err)
+	core.Node.Service = service.New(core.Node, ctx, sqliteDB)
+	MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
+	go MR.Run()
+	core.Node.MessageRetriever = MR
+	PR := rep.NewPointerRepublisher(nd, sqliteDB)
+	go PR.Run()
+	core.Node.PointerRepublisher = PR
+	if !x.DisableWallet {
+		MR.Wait()
+		TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
+		wallet.AddTransactionListener(TL.OnTransactionReceived)
+		log.Info("Starting bitcoin wallet...")
+		go wallet.Start()
+	}
+	core.Node.UpdateFollow()
+	core.Node.SeedNode()
+
+	// Start gateway
+	err = gateway.Serve()
+	if err != nil {
+		log.Error(err)
 	}
 
 	return nil
@@ -596,37 +592,40 @@ func (d *DummyListener) Close() error {
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (error, <-chan bool, <-chan error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*api.Gateway, error) {
+	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
-		return err, nil, nil
+		return nil, err
 	}
 
+	// Create a network listener
 	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
 	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err), nil, nil
+		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
 	}
 	var gwLis manet.Listener
 	if config.SSL {
 		netAddr, err := manet.ToNetAddr(gatewayMaddr)
 		if err != nil {
-			return err, nil, nil
+			return nil, err
 		}
 		gwLis, err = manet.WrapNetListener(&DummyListener{netAddr})
 		if err != nil {
-			return err, nil, nil
+			return nil, err
 		}
 	} else {
 		gwLis, err = manet.Listen(gatewayMaddr)
 		if err != nil {
-			return fmt.Errorf("serveHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err), nil, nil
+			return nil, fmt.Errorf("newHTTPGateway: manet.Listen(%s) failed: %s", gatewayMaddr, err)
 		}
 	}
+
 	// We might have listened to /tcp/0 - let's see what we are listing on
 	gatewayMaddr = gwLis.Multiaddr()
-
 	log.Infof("Gateway/API server listening on %s\n", gatewayMaddr)
 
+	// Setup an options slice
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
 		corehttp.CommandsROOption(node.Context),
@@ -640,15 +639,11 @@ func serveHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config 
 	}
 
 	if err != nil {
-		return fmt.Errorf("serveHTTPGateway: ConstructNode() failed: %s", err), nil, nil
+		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
-	errc := make(chan error)
-	cb := make(chan bool)
-	go func() {
-		errc <- api.Serve(cb, node, node.Context, authCookie, gwLis.NetListener(), config, opts...)
-		close(errc)
-	}()
-	return nil, cb, errc
+
+	// Create and return an API gateway
+	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, opts...)
 }
 
 /* Returns the directory to store repo data in.
