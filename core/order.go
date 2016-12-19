@@ -120,8 +120,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
 	}
 	order.RatingKeys = ratingKeys
-	refundAddr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
-	order.RefundAddress = refundAddr.EncodeAddress()
 
 	var addedListings [][]string
 	for _, item := range data.Items {
