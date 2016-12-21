@@ -62,7 +62,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		isForSale := true
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
 		if err != nil {
-			contract, _, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
 			if err != nil {
 				continue
 			}
@@ -79,9 +79,11 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 
+		var fundsReleased bool
 		for _, r := range records {
 			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
 				r.Spent = true
+				fundsReleased = true
 			}
 		}
 
@@ -94,10 +96,16 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		records = append(records, record)
 		if isForSale {
 			l.db.Sales().UpdateFunding(orderId, funded, records)
+			// This is a dispute payout. We should set the order state.
+			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
+			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
 			if state == pb.OrderState_CONFIRMED {
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			} else if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		}
 	}
@@ -143,6 +151,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.broadcast <- n
 		}
 	}
+
 	record := &spvwallet.TransactionRecord{
 		Txid:         chainHash.String(),
 		Index:        output.Index,
@@ -184,9 +193,9 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 				orderId,
 				uint64(funding),
 			})
-		log.Notice(state)
 		l.broadcast <- n
 	}
+
 	record := &spvwallet.TransactionRecord{
 		Txid:         chainHash.String(),
 		Index:        output.Index,

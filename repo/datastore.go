@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
+	"time"
 )
 
 type Datastore interface {
@@ -19,6 +20,7 @@ type Datastore interface {
 	Inventory() Inventory
 	Purchases() Purchases
 	Sales() Sales
+	Cases() Cases
 	Close()
 }
 
@@ -173,5 +175,34 @@ type Sales interface {
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
 	// Return the IDs for all orders
+	GetAll() ([]string, error)
+}
+
+type Cases interface {
+	// Save a new case
+	Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error
+
+	// Update a case with the buyer info
+	UpdateBuyerInfo(caseID string, buyerContract *pb.RicardianContract, buyerValidationErrors []string, buyerPayoutAddress string, buyerOutpoints []*pb.Outpoint) error
+
+	// Update a case with the vendor info
+	UpdateVendorInfo(caseID string, vendorContract *pb.RicardianContract, vendorValidationErrors []string, vendorPayoutAddress string, vendorOutpoints []*pb.Outpoint) error
+
+	// Mark a case as read in the database
+	MarkAsRead(caseID string) error
+
+	// Mark a case as closed in the database
+	MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error
+
+	// Delete a case
+	Delete(caseID string) error
+
+	// Return the case metadata given a case ID
+	GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error)
+
+	// Return the dispute payout data for a case
+	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
+
+	// Return the IDs for all cases
 	GetAll() ([]string, error)
 }

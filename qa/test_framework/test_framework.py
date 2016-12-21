@@ -56,10 +56,10 @@ class OpenBazaarTestFramework(object):
 
     def send_bitcoin_cmd(self, *args):
         try:
-            self.bitcoin_api.call(*args)
+            return self.bitcoin_api.call(*args)
         except BrokenPipeError:
             self.bitcoin_api = rpc.Proxy(btc_conf_file=self.btc_config)
-            self.send_bitcoin_cmd(*args)
+            return self.send_bitcoin_cmd(*args)
 
     def configure_node(self, n):
         dir_path = os.path.join(self.temp_dir, "openbazaar-go", str(n))
@@ -74,6 +74,7 @@ class OpenBazaarTestFramework(object):
         config["Addresses"]["Swarm"] = ["/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + n)]
         config["Bootstrap"] = BOOTSTRAP_NODES
         config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
+        config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
@@ -124,7 +125,13 @@ class OpenBazaarTestFramework(object):
         args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_bitcoind_start(process, btc_conf_file)
+        self.init_blockchain()
+
+    def init_blockchain(self):
         self.send_bitcoin_cmd("generate", 1)
+        self.bitcoin_address = self.send_bitcoin_cmd("getnewaddress")
+        self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
+        self.send_bitcoin_cmd("generate", 125)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
         while True:
@@ -183,6 +190,7 @@ class OpenBazaarTestFramework(object):
             failure = True
 
         self.teardown()
+
         if failure:
             sys.exit(1)
 

@@ -77,7 +77,9 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 
 func (w *SPVWallet) Start() {
 
-	w.queryDNSSeeds()
+	if w.trustedPeer == "" {
+		w.queryDNSSeeds()
+	}
 
 	// shuffle addrs
 	for i := range w.addrs {
@@ -88,7 +90,7 @@ func (w *SPVWallet) Start() {
 	// create header db
 	bc := NewBlockchain(w.repoPath, w.params)
 	w.blockchain = bc
-	//bc.Print()
+	//bc.db.Print()
 
 	// If this is a new wallet or restoring from seed. Set the db height to the
 	// height of the checkpoint block.
@@ -187,7 +189,7 @@ func (w *SPVWallet) queryDNSSeeds() {
 
 func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 	for _, stxo := range stxos {
-		if stxo.SpendTxid == utxo.Op.Hash {
+		if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
 			if stxo.Utxo.AtHeight > 0 {
 				return true
 			} else {
@@ -271,6 +273,18 @@ func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) btc.Address {
 	key := w.state.GetCurrentKey(purpose)
 	addr, _ := key.Address(w.params)
 	return btc.Address(addr)
+}
+
+func (w *SPVWallet) HasKey(addr btc.Address) bool {
+	script, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		return false
+	}
+	_, err = w.state.GetKeyForScript(script)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {

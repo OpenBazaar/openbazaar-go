@@ -216,7 +216,7 @@ func (h *HeaderDB) Close() {
 const (
 	MAX_HEADERS                = 2000
 	MAINNET_CHECKPOINT_HEIGHT  = 407232
-	TESTNET3_CHECKPOINT_HEIGHT = 919296
+	TESTNET3_CHECKPOINT_HEIGHT = 1058400
 	REGTEST_CHECKPOINT_HEIGHT  = 0
 )
 
@@ -297,6 +297,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, error) {
 	} else {
 		parentHeader, err = b.db.GetPreviousHeader(header)
 		if err != nil {
+			log.Error(header.PrevBlock.String())
 			return false, errors.New("Header does not extend any known headers")
 		}
 	}
@@ -371,13 +372,13 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 
 	// TODO: Check header timestamps: from Core
 	/*
-			 // Check timestamp against prev
-			 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
+		 // Check timestamp against prev
+		 if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())
+	        	return state.Invalid(false, REJECT_INVALID, "time-too-old", "block's timestamp is too early");
 
-			 // Check timestamp
-			 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
-		        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
+		 // Check timestamp
+		 if (block.GetBlockTime() > nAdjustedTime + 2 * 60 * 60)
+	        	return state.Invalid(false, REJECT_INVALID, "time-too-new", "block timestamp too far in the future");
 	*/
 
 	return true // it must have worked if there's no errors and got to the end.
@@ -561,15 +562,15 @@ func createCheckpoints() {
 		Nonce:      3800536668,
 	}
 
-	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000002fb1337228db02ac464565271f22f045c1b6ee5e449f057a829")
-	testnet3Merk, _ := chainhash.NewHashFromStr("dd76d3c93254b05c6316eaf3bdb94ed4bd9dfeb464f8f9487fbd1eca2a12ca6e")
+	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000008471ccf356a18dd48aa12506ef0b6162cb8f98a8d8bb0465902")
+	testnet3Merk, _ := chainhash.NewHashFromStr("a2bd975d9ac68eb1a7bc00df593c55a64e81ac0c9b8f535bb06b390d3010816f")
 	Testnet3Checkpoint = wire.BlockHeader{
 		Version:    536870912,
 		PrevBlock:  *testnet3Prev,
 		MerkleRoot: *testnet3Merk,
-		Timestamp:  time.Unix(1470087051, 0),
-		Bits:       437256176,
-		Nonce:      2288429377,
+		Timestamp:  time.Unix(1481479754, 0),
+		Bits:       436861323,
+		Nonce:      3058617296,
 	}
 	RegtestCheckpoint = chaincfg.RegressionNetParams.GenesisBlock.Header
 }

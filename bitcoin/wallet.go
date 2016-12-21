@@ -27,6 +27,9 @@ type BitcoinWallet interface {
 	// Get the current address for the given purpose
 	CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address
 
+	// Returns if the wallet has the key for the given address
+	HasKey(addr btc.Address) bool
+
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)
 
@@ -38,6 +41,9 @@ type BitcoinWallet interface {
 
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
+
+	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
+	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64
 
 	// Build and broadcast a transaction that sweeps all coins from a 1 of 2 multisig to an internal address
 	SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedKey, reddemScript []byte, feeLevel spvwallet.FeeLevel) error

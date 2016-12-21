@@ -27,9 +27,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             raise TestFailure("RejectModeratedOffline - FAIL: Address endpoint not found")
         else:
             raise TestFailure("RejectModeratedOffline - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # create a profile for charlie
@@ -114,6 +112,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             raise TestFailure("RejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -146,7 +145,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(10)
+        time.sleep(12)
 
         # alice reject order
         api_url = alice["gateway_url"] + "ob/orderconfirmation"

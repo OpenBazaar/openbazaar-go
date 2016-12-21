@@ -119,7 +119,7 @@ message Listing {
                     COMBINED_SHIPPING_ADD      = 3;
                     COMBINED_SHIPPING_SUBTRACT = 4;
                 }
-            }
+        }
     }
 
     message Tax {
@@ -289,9 +289,40 @@ message OrderCompletion {
     }
 }
 
-// TODO: complete other messages
-message Dispute {}
-message DisputeResolution {}
+message Dispute {
+    google.protobuf.Timestamp timestamp = 1;
+    string claim                        = 2;
+    string payoutAddress                = 3;
+    repeated Outpoint outpoints         = 4;
+    bytes serializedContract            = 5;
+}
+
+message DisputeResolution {
+    google.protobuf.Timestamp timestamp = 1;
+    string orderId                      = 2;
+    string proposedBy                   = 3;
+    string resolution                   = 4;
+    Payout payout                       = 5;
+
+    message Payout {
+            repeated BitcoinSignature sigs = 1;
+            repeated Outpoint inputs       = 2;
+            Output buyerOutput             = 3;
+            Output vendorOutput            = 4;
+            Output moderatorOutput         = 5;
+
+            message Output {
+                string script  = 1;
+                uint64 amount  = 2;
+            }
+    }
+}
+
+message Outpoint {
+        string hash  = 1; // Hex encoded
+        uint32 index = 2;
+        uint64 value = 3;
+}
 
 message Refund {
     string orderID                 = 1;

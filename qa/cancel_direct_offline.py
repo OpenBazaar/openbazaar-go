@@ -26,9 +26,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # post listing to alice
@@ -88,6 +86,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -124,7 +123,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CancelDirectOfflineTest - FAIL: Cancel POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(4)
 
         # bob check order canceled correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -139,7 +138,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(5)
+        time.sleep(12)
 
         # check alice detected order
         api_url = alice["gateway_url"] + "ob/order/" + orderId

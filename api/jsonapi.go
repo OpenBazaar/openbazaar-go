@@ -24,6 +24,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/jbenet/go-multiaddr"
@@ -1413,6 +1414,156 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	err = i.node.CompleteOrder(&or, contract, records)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request) {
+	type dispute struct {
+		OrderID string `json:"orderId"`
+		Claim   string `json:"claim"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var d dispute
+	err := decoder.Decode(&d)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var isSale bool
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var records []*spvwallet.TransactionRecord
+	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	if err != nil {
+		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+		isSale = true
+	}
+	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "Only moderated orders can be disputed")
+		return
+	}
+
+	if isSale && (state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either funded or fulfilled to start a dispute")
+		return
+	}
+	if !isSale && (state != pb.OrderState_CONFIRMED && state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either confirmed, funded, or fulfilled to start a dispute")
+		return
+	}
+
+	err = i.node.OpenDispute(d.OrderID, contract, records, d.Claim)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request) {
+	type dispute struct {
+		OrderID          string  `json:"orderId"`
+		Resolution       string  `json:"resolution"`
+		BuyerPercentage  float32 `json:"buyerPercentage"`
+		VendorPercentage float32 `json:"vendorPercentage"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var d dispute
+	err := decoder.Decode(&d)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
+	if err != nil && err == core.ErrCaseNotFound {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	} else if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
+	_, orderId := path.Split(r.URL.Path)
+	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, date, buyerOpened, claim, resolution, err := i.node.Datastore.Cases().GetCaseMetadata(orderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resp := new(pb.CaseRespApi)
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = int64(date.Unix())
+	ts.Nanos = 0
+	resp.BuyerContract = buyerContract
+	resp.VendorContract = vendorContract
+	resp.BuyerOpened = buyerOpened
+	resp.BuyerContractValidationErrors = buyerErrors
+	resp.VendorContractValidationErrors = vendorErrors
+	resp.Read = read
+	resp.State = state
+	resp.Claim = claim
+	resp.Resolution = resolution
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(resp)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	i.node.Datastore.Cases().MarkAsRead(orderId)
+	fmt.Fprint(w, out)
+}
+
+func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request) {
+	type release struct {
+		OrderID string `json:"orderId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var rel release
+	err := decoder.Decode(&rel)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var records []*spvwallet.TransactionRecord
+	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	if err != nil {
+		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+	}
+
+	if state != pb.OrderState_DECIDED {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be in DECIDED state to release funds")
+		return
+	}
+
+	err = i.node.ReleaseFunds(contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

@@ -139,6 +139,14 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 	return addr
 }
 
+func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
+	_, err := w.rpcClient.DumpPrivKey(addr)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
 	c, _ := w.rpcClient.GetBalance(account)
@@ -177,6 +185,17 @@ func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
 		return defautlFee
 	}
 	fee := feePerKb / 1000
+	return uint64(fee)
+}
+
+func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64 {
+	tx := new(wire.MsgTx)
+	for _, out := range outs {
+		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		tx.TxOut = append(tx.TxOut, output)
+	}
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	fee := estimatedSize * int(feePerByte)
 	return uint64(fee)
 }
 

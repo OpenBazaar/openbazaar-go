@@ -118,7 +118,7 @@ func TestDeleteSale(t *testing.T) {
 	saldb.Put("orderID", *contract, 0, false)
 	err := saldb.Delete("orderID")
 	if err != nil {
-		t.Error("Purchase delete failed")
+		t.Error("Sale delete failed")
 	}
 
 	stmt, _ := saldb.db.Prepare("select orderID, contract, state from sales where orderID=?")
@@ -129,7 +129,7 @@ func TestDeleteSale(t *testing.T) {
 	var state int
 	err = stmt.QueryRow("orderID").Scan(&orderID, &contract, &state)
 	if err == nil {
-		t.Error("Pointer delete failed")
+		t.Error("Sale delete failed")
 	}
 }
 

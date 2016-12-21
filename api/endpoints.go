@@ -58,6 +58,12 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTRefund(w, r)
 	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
 		i.POSTResyncBlockchain(w, r)
+	case "/ob/opendispute", "/ob/opendispute/":
+		i.POSTOpenDispute(w, r)
+	case "/ob/closedispute", "/ob/closedispute/":
+		i.POSTCloseDispute(w, r)
+	case "/ob/releasefunds", "/ob/releasefunds/":
+		i.POSTReleaseFunds(w, r)
 	case "/ob/shutdown", "/ob/shutdown/":
 		i.POSTShutdown(w, r)
 	default:
@@ -107,6 +113,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETModerators(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
+	}
+	if strings.Contains(path, "/ob/case") {
+		i.GETCase(w, r)
+		return
 	}
 }
 

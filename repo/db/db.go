@@ -29,6 +29,7 @@ type SQLiteDatastore struct {
 	inventory       repo.Inventory
 	purchases       repo.Purchases
 	sales           repo.Sales
+	cases           repo.Cases
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -112,6 +113,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		cases: &CasesDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -183,6 +188,10 @@ func (d *SQLiteDatastore) WatchedScripts() spvwallet.WatchedScripts {
 	return d.watchedScripts
 }
 
+func (d *SQLiteDatastore) Cases() repo.Cases {
+	return d.cases
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -241,7 +250,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create table if not exists watchedscripts (scriptPubKey text primary key not null);
+	create table watchedscripts (scriptPubKey text primary key not null);
+	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, date integer, buyerOpened integer, claim text, disputeResolution blob);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

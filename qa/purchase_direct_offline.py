@@ -50,9 +50,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Address endpoint not found")
         else:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("generatetoaddress", 1, address)
-        time.sleep(2)
-        self.send_bitcoin_cmd("generate", 125)
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(3)
 
         # shutdown alice
@@ -88,6 +86,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
+        time.sleep(3)
 
         # fund order
         spend = {
@@ -120,7 +119,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(10)
+        time.sleep(12)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"path"
@@ -22,6 +21,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	ipfspath "github.com/ipfs/go-ipfs/path"
@@ -109,6 +109,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 
 	var ratingKeys [][]byte
 	for range data.Items {
+		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
+		// Also the fix for this will also need to be included in the rating signing code.
 		ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
 		if err != nil {
 			return "", "", 0, false, err

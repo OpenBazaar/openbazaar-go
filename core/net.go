@@ -311,3 +311,75 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *p
 	}
 	return nil
 }
+
+func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.RicardianContract) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(disputeMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_DISPUTE_OPEN,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.DisputeUpdate) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(updateMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_DISPUTE_UPDATE,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.RicardianContract) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(resolutionMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_DISPUTE_CLOSE,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}

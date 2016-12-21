@@ -2,6 +2,7 @@ syntax = "proto3";
 
 import "contracts.proto";
 import "orders.proto";
+import "google/protobuf/timestamp.proto";
 
 // This schema is used for the /ob/listing api call structure
 // We use protobuf for this instead of a basic struct because
@@ -30,6 +31,19 @@ message OrderRespApi {
     bool read                               = 3;
     bool funded                             = 4;
     repeated TransactionRecord transactions = 5;
+}
+
+message CaseRespApi {
+    google.protobuf.Timestamp timestamp            = 1;
+    RicardianContract buyerContract                = 2;
+    RicardianContract vendorContract               = 3;
+    repeated string buyerContractValidationErrors  = 4;
+    repeated string vendorContractValidationErrors = 5;
+    OrderState state                               = 6;
+    bool read                                      = 7;
+    bool buyerOpened                               = 8;
+    string claim                                   = 9;
+    DisputeResolution resolution                   = 10;
 }
 
 message TransactionRecord {
