@@ -1,29 +1,35 @@
 package api
 
 import (
-	manet "gx/ipfs/QmPpRcbNUXauP3zWZ1NJMLWpe4QnmEHrd2ba2D3yqWznw7/go-multiaddr-net"
-	"gx/ipfs/QmQopLATEYMNg7dVqZRNDfeE2S1yKy8zrRh5xnYiuqeZBn/goprocess"
 	"net"
 	"net/http"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("api")
 
-func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, l net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) (http.Handler, error) {
+// Gateway represents an HTTP API gateway
+type Gateway struct {
+	listener   net.Listener
+	handler    http.Handler
+	config     repo.APIConfig
+	shutdownCh chan struct{}
+}
+
+// NewGateway instantiates a new `Gateway`
+func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) (*Gateway, error) {
 	topMux := http.NewServeMux()
 
 	restAPI, err := newJsonAPIHandler(n, authCookie, config)
 	if err != nil {
 		return nil, err
 	}
-	wsAPI, err := newWSAPIHandler(n, ctx, config.Authenticated, authCookie, config.Username, config.Password)
+	wsAPI, err := newWSAPIHandler(n, n.Context, config.Authenticated, authCookie, config.Username, config.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -35,66 +41,47 @@ func makeHandler(n *core.OpenBazaarNode, ctx commands.Context, authCookie http.C
 
 	mux := topMux
 	for _, option := range options {
-		var err error
 		mux, err = option(n.IpfsNode, l, mux)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return topMux, nil
+
+	return &Gateway{
+		listener:   l,
+		handler:    topMux,
+		config:     config,
+		shutdownCh: make(chan struct{}),
+	}, nil
 }
 
-func Serve(cb chan<- bool, node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, lis net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) error {
-	handler, err := makeHandler(node, ctx, authCookie, lis, config, options...)
-	cb <- true
-	if err != nil {
-		return err
-	}
+// Close shutsdown the Gateway listener
+func (g *Gateway) Close() error {
+	log.Infof("server at %s terminating...", g.listener.Addr())
 
-	addr, err := manet.FromNetAddr(lis.Addr())
-	if err != nil {
-		return err
-	}
+	// Print shutdown message every few seconds if we're taking too long
+	go func() {
+		select {
+		case <-g.shutdownCh:
+			return
+		case <-time.After(5 * time.Second):
+			log.Infof("waiting for server at %s to terminate...", g.listener.Addr())
 
-	// If the server exits beforehand
-	var serverError error
-	serverExited := make(chan struct{})
-
-	node.IpfsNode.Process().Go(func(p goprocess.Process) {
-		if config.SSL {
-			serverError = http.ListenAndServeTLS(lis.Addr().String(), config.SSLCert, config.SSLKey, handler)
-		} else {
-			serverError = http.Serve(lis, handler)
 		}
-		close(serverExited)
-	})
+	}()
 
-	// Wait for server to exit
-	select {
-	case <-serverExited:
+	// Shutdown the listener
+	close(g.shutdownCh)
+	return g.listener.Close()
+}
 
-	// If node being closed before server exits, close server
-	case <-node.IpfsNode.Process().Closing():
-		log.Infof("server at %s terminating...", addr)
-		if config.SSL {
-			close(serverExited)
-		} else {
-			lis.Close()
-		}
-
-	outer:
-		for {
-			// Wait until server exits
-			select {
-			case <-serverExited:
-				// If the server exited as we are closing, we really do not care about errors
-				serverError = nil
-				break outer
-			case <-time.After(5 * time.Second):
-				log.Infof("waiting for server at %s to terminate...", addr)
-			}
-		}
+// Serve begins listening on the configured address
+func (g *Gateway) Serve() error {
+	var err error
+	if g.config.SSL {
+		err = http.ListenAndServeTLS(g.listener.Addr().String(), g.config.SSLCert, g.config.SSLKey, g.handler)
+	} else {
+		err = http.Serve(g.listener, g.handler)
 	}
-	log.Infof("server at %s terminated", addr)
-	return serverError
+	return err
 }
