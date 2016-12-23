@@ -206,3 +206,24 @@ type Cases interface {
 	// Return the IDs for all cases
 	GetAll() ([]string, error)
 }
+
+type Chat interface {
+
+	// Put a new chat message to the database
+	Put(peerId string, subject string, message string, read bool) error
+
+	// Returns a list of open conversations
+	GetConversations() []ChatConversation
+
+	// A list of messages given a peer ID and a subject
+	GetMessages(peerID string, subject string) []ChatMessage
+
+	// Mark a chat message as read
+	MarkAsRead(msgID int) error
+
+	// Delete a message
+	DeleteMessage(msgID int) error
+
+	// Delete all messages from from a peer
+	DeleteConversation(peerID string) error
+}
