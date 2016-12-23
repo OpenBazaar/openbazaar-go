@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"sync"
 	"testing"
+	"time"
 )
 
 var chdb ChatDB
@@ -89,17 +90,20 @@ func TestChatDB_GetMessages(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	time.Sleep(time.Second)
 	err = chdb.Put("abc", "", "mess2", true)
 	if err != nil {
 		t.Error(err)
 	}
+	time.Sleep(time.Second)
 	err = chdb.Put("xyz", "", "mess1", false)
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "")
-	if len(messages) != 2 {
+	messages := chdb.GetMessages("abc", "", 0, -1)
+	if len(messages) != 3 {
 		t.Error("Returned incorrect number of messages")
+		return
 	}
 	if messages[0].Message == "mess" {
 		if messages[0].PeerId != "abc" {
@@ -129,6 +133,18 @@ func TestChatDB_GetMessages(t *testing.T) {
 			t.Error("Returned incorrect timestamp")
 		}
 	}
+
+	limtedMessages := chdb.GetMessages("abc", "", 0, 2)
+	if len(limtedMessages) != 2 {
+		t.Error("Returned incorrect number of messages")
+		return
+	}
+
+	offsetMessages := chdb.GetMessages("abc", "", messages[0].MessageId, -1)
+	if len(offsetMessages) != 2 {
+		t.Error("Returned incorrect number of messages")
+		return
+	}
 }
 
 func TestChatDB_MarkAsRead(t *testing.T) {
@@ -137,9 +153,10 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "")
+	messages := chdb.GetMessages("abc", "", 0, -1)
 	if len(messages) == 0 {
 		t.Error("Returned incorrect number of messages")
+		return
 	}
 	err = chdb.MarkAsRead(messages[0].MessageId)
 	if err != nil {
@@ -163,9 +180,10 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "")
+	messages := chdb.GetMessages("abc", "", 0, -1)
 	if len(messages) == 0 {
 		t.Error("Returned incorrect number of messages")
+		return
 	}
 	err = chdb.DeleteMessage(messages[0].MessageId)
 	if err != nil {
@@ -190,9 +208,10 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "")
+	messages := chdb.GetMessages("abc", "", 0, -1)
 	if len(messages) != 2 {
 		t.Error("Returned incorrect number of messages")
+		return
 	}
 	err = chdb.DeleteConversation("abc")
 	if err != nil {

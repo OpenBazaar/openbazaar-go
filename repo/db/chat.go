@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -21,13 +21,11 @@ func (c *ChatDB) Put(peerId string, subject string, message string, read bool) e
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into chat(msgID, peerID, subject, message, read, timestamp) values(?,?,?,?,?,?)`
+	stm := `insert or replace into chat(peerID, subject, message, read, timestamp) values(?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
-
-	msgId := rand.Int63()
 	readInt := 0
 	if read {
 		readInt = 1
@@ -35,7 +33,6 @@ func (c *ChatDB) Put(peerId string, subject string, message string, read bool) e
 
 	defer stmt.Close()
 	_, err = stmt.Exec(
-		msgId,
 		peerId,
 		subject,
 		message,
@@ -85,12 +82,18 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 	return ret
 }
 
-func (c *ChatDB) GetMessages(peerID string, subject string) []repo.ChatMessage {
+func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit int) []repo.ChatMessage {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	var ret []repo.ChatMessage
 
-	stm := "select msgID, message, read, timestamp from chat where peerID='" + peerID + "' and subject='" + subject + "';"
+	var stm string
+	if offsetId > 0 {
+		stm = "select rowid, message, read, timestamp from chat where timestamp<(select timestamp from chat where rowid=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+	} else {
+		stm = "select rowid, message, read, timestamp from chat order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+	}
+
 	rows, err := c.db.Query(stm)
 	if err != nil {
 		return ret
@@ -128,7 +131,7 @@ func (c *ChatDB) MarkAsRead(msgId int) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("update chat set read=1 where msgID=?")
+	stmt, _ := tx.Prepare("update chat set read=1 where rowid=?")
 
 	defer stmt.Close()
 	_, err = stmt.Exec(msgId)
@@ -143,7 +146,7 @@ func (c *ChatDB) MarkAsRead(msgId int) error {
 func (c *ChatDB) DeleteMessage(msgID int) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.db.Exec("delete from chat where msgID=?", msgID)
+	c.db.Exec("delete from chat where rowid=?", msgID)
 	return nil
 }
 

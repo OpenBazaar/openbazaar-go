@@ -216,7 +216,7 @@ type Chat interface {
 	GetConversations() []ChatConversation
 
 	// A list of messages given a peer ID and a subject
-	GetMessages(peerID string, subject string) []ChatMessage
+	GetMessages(peerID string, subject string, offsetId int, limit int) []ChatMessage
 
 	// Mark a chat message as read
 	MarkAsRead(msgID int) error
