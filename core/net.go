@@ -371,7 +371,7 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.Ricar
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -395,7 +395,7 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.Disp
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
@@ -419,7 +419,7 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.R
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
