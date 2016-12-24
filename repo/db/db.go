@@ -262,10 +262,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table watchedscripts (scriptPubKey text primary key not null);
 	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, date integer, buyerOpened integer, claim text, disputeResolution blob);
 	create table chat (peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
-	create index chat_peerID ON chat(peerId);
-	create index chat_subject ON chat(subject);
-	create index chat_read ON chat(read);
-	create index chat_timestamp ON chat(timestamp);
+	create index index_chat ON chat(peerID, subject, read, timestamp);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
