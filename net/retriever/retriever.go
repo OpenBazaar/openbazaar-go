@@ -120,7 +120,8 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, err := http.Get(url)
+	client := http.Client{Timeout: time.Second * 10}
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
