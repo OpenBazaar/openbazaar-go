@@ -84,24 +84,24 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error
 	jpeg.Encode(out, img, nil)
 
 	// Add hash to profile
-	t, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "tiny", "avatar"))
-	if aerr != nil {
+	t, err := ipfs.AddFile(n.Context, path.Join(imgPath, "tiny", "avatar"))
+	if err != nil {
 		return nil, err
 	}
-	s, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "small", "avatar"))
-	if aerr != nil {
+	s, err := ipfs.AddFile(n.Context, path.Join(imgPath, "small", "avatar"))
+	if err != nil {
 		return nil, err
 	}
-	m, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "medium", "avatar"))
-	if aerr != nil {
+	m, err := ipfs.AddFile(n.Context, path.Join(imgPath, "medium", "avatar"))
+	if err != nil {
 		return nil, err
 	}
-	l, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "large", "avatar"))
-	if aerr != nil {
+	l, err := ipfs.AddFile(n.Context, path.Join(imgPath, "large", "avatar"))
+	if err != nil {
 		return nil, err
 	}
-	o, aerr := ipfs.AddFile(n.Context, path.Join(imgPath, "original", "avatar"))
-	if aerr != nil {
+	o, err := ipfs.AddFile(n.Context, path.Join(imgPath, "original", "avatar"))
+	if err != nil {
 		return nil, err
 	}
 	profile, err := n.GetProfile()
