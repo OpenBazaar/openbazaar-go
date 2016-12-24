@@ -1571,3 +1571,129 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	fmt.Fprint(w, `{}`)
 	return
 }
+
+func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var chat repo.ChatMessage
+	err := decoder.Decode(&chat)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	chatPb := &pb.Chat{
+		Subject: chat.Subject,
+		Message: chat.Message,
+	}
+	err = i.node.SendChat(chat.PeerId, chatPb)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+	return
+}
+
+func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offset := r.URL.Query().Get("offsetId")
+	offsetId := 0
+	if offset != "" {
+		offsetId, err = strconv.Atoi(offset)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, int(l))
+
+	ret, err := json.MarshalIndent(messages, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETChatConversations(w http.ResponseWriter, r *http.Request) {
+	conversations := i.node.Datastore.Chat().GetConversations()
+	ret, err := json.MarshalIndent(conversations, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Request) {
+	type peerId struct {
+		PeerID string `json:"peerId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var p peerId
+	err := decoder.Decode(&p)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = i.node.Datastore.Chat().MarkAsRead(p.PeerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Request) {
+	type messagID struct {
+		MessageID int `json:"messageId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var m messagID
+	err := decoder.Decode(&m)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = i.node.Datastore.Chat().DeleteMessage(m.MessageID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) DELETEChatConversation(w http.ResponseWriter, r *http.Request) {
+	type peerId struct {
+		PeerID string `json:"peerId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var p peerId
+	err := decoder.Decode(&p)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = i.node.Datastore.Chat().DeleteConversation(p.PeerID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+}
