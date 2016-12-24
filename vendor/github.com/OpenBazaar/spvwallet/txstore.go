@@ -1,7 +1,9 @@
 package spvwallet
 
 import (
+	"bytes"
 	"fmt"
+	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -12,178 +14,58 @@ import (
 	"sync"
 )
 
-type Datastore interface {
-	Utxos() Utxos
-	Stxos() Stxos
-	Txns() Txns
-	Keys() Keys
-	State() State
-	WatchedScripts() WatchedScripts
-}
-
-type Utxos interface {
-	// Put a utxo to the database
-	Put(utxo Utxo) error
-
-	// Fetch all utxos from the db
-	GetAll() ([]Utxo, error)
-
-	// Make a utxo unspendable
-	Freeze(utxo Utxo) error
-
-	// Delete a utxo from the db
-	Delete(utxo Utxo) error
-}
-
-type Stxos interface {
-	// Put a stxo to the database
-	Put(stxo Stxo) error
-
-	// Fetch all stxos from the db
-	GetAll() ([]Stxo, error)
-
-	// Delete a stxo from the db
-	Delete(stxo Stxo) error
-}
-
-type Txns interface {
-
-	// Put a new transaction to the database
-	Put(txn *wire.MsgTx) error
-
-	// Fetch a tx given it's hash
-	Get(txid chainhash.Hash) (*wire.MsgTx, error)
-
-	// Fetch all transactions from the db
-	GetAll() ([]*wire.MsgTx, error)
-
-	// Delete a transactions from the db
-	Delete(txid *chainhash.Hash) error
-}
-
-// Keys provides a database interface for the wallet to save key material, track
-// used keys, and manage the look ahead window.
-type Keys interface {
-	// Put a bip32 key to the database
-	Put(scriptPubKey []byte, keyPath KeyPath) error
-
-	// Mark the script as used
-	MarkKeyAsUsed(scriptPubKey []byte) error
-
-	// Fetch the last index for the given key purpose
-	// The bool should state whether the key has been used or not
-	GetLastKeyIndex(purpose KeyPurpose) (int, bool, error)
-
-	// Returns the first unused path for the given purpose
-	GetPathForScript(scriptPubKey []byte) (KeyPath, error)
-
-	// Get the first unused index for the given purpose
-	GetUnused(purpose KeyPurpose) (int, error)
-
-	// Fetch all key paths
-	GetAll() ([]KeyPath, error)
-
-	// Get the number of unused keys following the last used key
-	// for each key purpose.
-	GetLookaheadWindows() map[KeyPurpose]int
-}
-
-type State interface {
-	// Put a key/value pair to the database
-	Put(key, value string) error
-
-	// Get a value given the key
-	Get(key string) (string, error)
-}
-
-type WatchedScripts interface {
-	// Add a script to watch
-	Put(scriptPubKey []byte) error
-
-	// Return all watched scripts
-	GetAll() ([][]byte, error)
-
-	// Delete a watched script
-	Delete(scriptPubKey []byte) error
-}
-
-type ChainState int
-
-const (
-	SYNCING = 0
-	WAITING = 1
-	REORG   = 2
-)
-
 type TxStore struct {
 	Adrs           []btcutil.Address
-	WatchedScripts [][]byte
+	watchedScripts [][]byte
 	addrMutex      *sync.Mutex
-	db             Datastore
 
 	Param *chaincfg.Params
 
 	masterPrivKey *hd.ExtendedKey
 
-	chainState ChainState
-
 	listeners []func(TransactionCallback)
+
+	Datastore
 }
 
-type Utxo struct { // cash money.
-	Op wire.OutPoint // where
-
-	// all the info needed to spend
-	AtHeight int32 // block height where this tx was confirmed, 0 for unconf
-	Value    int64 // higher is better
-
-	ScriptPubkey []byte
-
-	// If true this utxo will not be selected for spending
-	Freeze bool
-}
-
-// Stxo is a utxo that has moved on.
-type Stxo struct {
-	Utxo        Utxo           // when it used to be a utxo
-	SpendHeight int32          // height at which it met its demise
-	SpendTxid   chainhash.Hash // the tx that consumed it
-}
-
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) *TxStore {
-	txs := new(TxStore)
-	txs.Param = p
-	txs.db = db
-	txs.masterPrivKey = masterPrivKey
-	txs.addrMutex = new(sync.Mutex)
-	txs.PopulateAdrs()
-	return txs
+func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) (*TxStore, error) {
+	txs := &TxStore{
+		Param:         p,
+		masterPrivKey: masterPrivKey,
+		addrMutex:     new(sync.Mutex),
+		Datastore:     db,
+	}
+	err := txs.PopulateAdrs()
+	if err != nil {
+		return nil, err
+	}
+	return txs, nil
 }
 
 // ... or I'm gonna fade away
-func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
-	t.PopulateAdrs()
+func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
+	ts.PopulateAdrs()
 
 	// get all utxos to add outpoints to filter
-	allUtxos, err := t.db.Utxos().GetAll()
+	allUtxos, err := ts.Utxos().GetAll()
 	if err != nil {
 		return nil, err
 	}
 
-	allStxos, err := t.db.Stxos().GetAll()
+	allStxos, err := ts.Stxos().GetAll()
 	if err != nil {
 		return nil, err
 	}
-	t.addrMutex.Lock()
-	elem := uint32(len(t.Adrs) + len(allUtxos) + len(allStxos))
+	ts.addrMutex.Lock()
+	elem := uint32(len(ts.Adrs) + len(allUtxos) + len(allStxos))
 	f := bloom.NewFilter(elem, 0, 0.0001, wire.BloomUpdateAll)
 
 	// note there could be false positives since we're just looking
 	// for the 20 byte PKH without the opcodes.
-	for _, a := range t.Adrs { // add 20-byte pubkeyhash
+	for _, a := range ts.Adrs { // add 20-byte pubkeyhash
 		f.Add(a.ScriptAddress())
 	}
-	t.addrMutex.Unlock()
+	ts.addrMutex.Unlock()
 	for _, u := range allUtxos {
 		f.AddOutPoint(&u.Op)
 	}
@@ -191,8 +73,8 @@ func (t *TxStore) GimmeFilter() (*bloom.Filter, error) {
 	for _, s := range allStxos {
 		f.AddOutPoint(&s.Utxo.Op)
 	}
-	for _, w := range t.WatchedScripts {
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(w, t.Param)
+	for _, w := range ts.watchedScripts {
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(w, ts.Param)
 		if err != nil {
 			continue
 		}
@@ -220,7 +102,7 @@ func CheckDoubleSpends(
 		for _, argIn := range argTx.TxIn {
 			// iterate through inputs of compTx
 			for _, compIn := range compTx.TxIn {
-				if OutPointsEqual(
+				if outPointsEqual(
 					argIn.PreviousOutPoint, compIn.PreviousOutPoint) {
 					// found double spend
 					dubs = append(dubs, &compTxid)
@@ -232,9 +114,181 @@ func CheckDoubleSpends(
 	return dubs, nil
 }
 
-// need this because before I was comparing pointers maybe?
-// so they were the same outpoint but stored in 2 places so false negative?
-func OutPointsEqual(a, b wire.OutPoint) bool {
+// GetPendingInv returns an inv message containing all txs known to the
+// db which are at height 0 (not known to be confirmed).
+// This can be useful on startup or to rebroadcast unconfirmed txs.
+func (ts *TxStore) GetPendingInv() (*wire.MsgInv, error) {
+	// use a map (really a set) do avoid dupes
+	txidMap := make(map[chainhash.Hash]struct{})
+
+	utxos, err := ts.Utxos().GetAll() // get utxos from db
+	if err != nil {
+		return nil, err
+	}
+	stxos, err := ts.Stxos().GetAll() // get stxos from db
+	if err != nil {
+		return nil, err
+	}
+
+	// iterate through utxos, adding txids of anything with height 0
+	for _, utxo := range utxos {
+		if utxo.AtHeight == 0 {
+			txidMap[utxo.Op.Hash] = struct{}{} // adds to map
+		}
+	}
+	// do the same with stxos based on height at which spent
+	for _, stxo := range stxos {
+		if stxo.SpendHeight == 0 {
+			txidMap[stxo.SpendTxid] = struct{}{}
+		}
+	}
+
+	invMsg := wire.NewMsgInv()
+	for txid := range txidMap {
+		item := wire.NewInvVect(wire.InvTypeTx, &txid)
+		err = invMsg.AddInvVect(item)
+		if err != nil {
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// return inv message with all txids (maybe none)
+	return invMsg, nil
+}
+
+// PopulateAdrs just puts a bunch of adrs in ram; it doesn't touch the DB
+func (ts *TxStore) PopulateAdrs() error {
+	ts.lookahead()
+	keys := ts.GetKeys()
+	ts.addrMutex.Lock()
+	ts.Adrs = []btcutil.Address{}
+	for _, k := range keys {
+		addr, err := k.Address(ts.Param)
+		if err != nil {
+			continue
+		}
+		ts.Adrs = append(ts.Adrs, addr)
+	}
+	ts.watchedScripts, _ = ts.WatchedScripts().GetAll()
+	ts.addrMutex.Unlock()
+	return nil
+}
+
+// Ingest puts a tx into the DB atomically.  This can result in a
+// gain, a loss, or no result.  Gain or loss in satoshis is returned.
+func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
+	var hits uint32
+	var err error
+	// Tx has been OK'd by SPV; check tx sanity
+	utilTx := btcutil.NewTx(tx) // convert for validation
+	// Checks basic stuff like there are inputs and ouputs
+	err = blockchain.CheckTransactionSanity(utilTx)
+	if err != nil {
+		return hits, err
+	}
+
+	// Generate PKscripts for all addresses
+	ts.addrMutex.Lock()
+	PKscripts := make([][]byte, len(ts.Adrs))
+	for i, _ := range ts.Adrs {
+		// Iterate through all our addresses
+		PKscripts[i], err = txscript.PayToAddrScript(ts.Adrs[i])
+		if err != nil {
+			return hits, err
+		}
+	}
+	ts.addrMutex.Unlock()
+	cachedSha := tx.TxHash()
+	// Iterate through all outputs of this tx, see if we gain
+	cb := TransactionCallback{Txid: cachedSha.CloneBytes()}
+	for i, txout := range tx.TxOut {
+		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
+		for _, script := range PKscripts {
+			if bytes.Equal(txout.PkScript, script) { // new utxo found
+				ts.Keys().MarkKeyAsUsed(txout.PkScript)
+				newop := wire.OutPoint{
+					Hash:  cachedSha,
+					Index: uint32(i),
+				}
+				newu := Utxo{
+					AtHeight:     height,
+					Value:        txout.Value,
+					ScriptPubkey: txout.PkScript,
+					Op:           newop,
+					Freeze:       false,
+				}
+				ts.Utxos().Put(newu)
+				hits++
+				break
+			}
+		}
+		// Now check watched scripts
+		for _, script := range ts.watchedScripts {
+			if bytes.Equal(txout.PkScript, script) {
+				newop := wire.OutPoint{
+					Hash:  cachedSha,
+					Index: uint32(i),
+				}
+				newu := Utxo{
+					AtHeight:     height,
+					Value:        txout.Value,
+					ScriptPubkey: txout.PkScript,
+					Op:           newop,
+					Freeze:       true,
+				}
+				ts.Utxos().Put(newu)
+				hits++
+			}
+		}
+		cb.Outputs = append(cb.Outputs, out)
+	}
+	utxos, err := ts.Utxos().GetAll()
+	if err != nil {
+		return 0, err
+	}
+	for _, txin := range tx.TxIn {
+		for i, u := range utxos {
+			if outPointsEqual(txin.PreviousOutPoint, u.Op) {
+				hits++
+				st := Stxo{
+					Utxo:        u,
+					SpendHeight: height,
+					SpendTxid:   cachedSha,
+				}
+				ts.Stxos().Put(st)
+				ts.Utxos().Delete(u)
+				utxos = append(utxos[:i], utxos[i+1:]...)
+
+				in := TransactionInput{
+					OutpointHash:       u.Op.Hash.CloneBytes(),
+					OutpointIndex:      u.Op.Index,
+					LinkedScriptPubKey: u.ScriptPubkey,
+					Value:              u.Value,
+				}
+				cb.Inputs = append(cb.Inputs, in)
+				break
+			}
+		}
+	}
+
+	// If hits is nonzero it's a relevant tx and we should store it
+	if hits > 0 {
+		_, err := ts.Txns().Get(tx.TxHash())
+		if err != nil {
+			// Callback on listeners
+			for _, listener := range ts.listeners {
+				listener(cb)
+			}
+			ts.Txns().Put(tx)
+			ts.PopulateAdrs()
+		}
+	}
+	return hits, err
+}
+
+func outPointsEqual(a, b wire.OutPoint) bool {
 	if !a.Hash.IsEqual(&b.Hash) {
 		return false
 	}

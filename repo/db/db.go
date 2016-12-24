@@ -20,7 +20,6 @@ type SQLiteDatastore struct {
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
 	keys            spvwallet.Keys
-	state           spvwallet.State
 	stxos           spvwallet.Stxos
 	txns            spvwallet.Txns
 	utxos           spvwallet.Utxos
@@ -74,10 +73,6 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			lock: l,
 		},
 		keys: &KeysDB{
-			db:   conn,
-			lock: l,
-		},
-		state: &StateDB{
 			db:   conn,
 			lock: l,
 		},
@@ -150,10 +145,6 @@ func (d *SQLiteDatastore) Pointers() repo.Pointers {
 
 func (d *SQLiteDatastore) Keys() spvwallet.Keys {
 	return d.keys
-}
-
-func (d *SQLiteDatastore) State() spvwallet.State {
-	return d.state
 }
 
 func (d *SQLiteDatastore) Stxos() spvwallet.Stxos {
@@ -246,7 +237,6 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);
-	create table state (key text primary key not null, value text);
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);

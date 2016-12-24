@@ -6,15 +6,10 @@ package wire
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"net"
 	"time"
 )
-
-// ErrInvalidNetAddr describes an error that indicates the caller didn't specify
-// a TCP address as required.
-var ErrInvalidNetAddr = errors.New("provided net.Addr is not a net.TCPAddr")
 
 // maxNetAddressPayload returns the max payload size for a bitcoin NetAddress
 // based on the protocol version.
@@ -53,10 +48,7 @@ type NetAddress struct {
 
 // HasService returns whether the specified service is supported by the address.
 func (na *NetAddress) HasService(service ServiceFlag) bool {
-	if na.Services&service == service {
-		return true
-	}
-	return false
+	return na.Services&service == service
 }
 
 // AddService adds service as a supported service by the peer generating the
@@ -65,20 +57,21 @@ func (na *NetAddress) AddService(service ServiceFlag) {
 	na.Services |= service
 }
 
-// SetAddress is a convenience function to set the IP address and port in one
-// call.
-func (na *NetAddress) SetAddress(ip net.IP, port uint16) {
-	na.IP = ip
-	na.Port = port
-}
-
 // NewNetAddressIPPort returns a new NetAddress using the provided IP, port, and
 // supported services with defaults for the remaining fields.
 func NewNetAddressIPPort(ip net.IP, port uint16, services ServiceFlag) *NetAddress {
+	return NewNetAddressTimestamp(time.Now(), services, ip, port)
+}
+
+// NewNetAddressTimestamp returns a new NetAddress using the provided
+// timestamp, IP, port, and supported services. The timestamp is rounded to
+// single second precision.
+func NewNetAddressTimestamp(
+	timestamp time.Time, services ServiceFlag, ip net.IP, port uint16) *NetAddress {
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	na := NetAddress{
-		Timestamp: time.Unix(time.Now().Unix(), 0),
+		Timestamp: time.Unix(timestamp.Unix(), 0),
 		Services:  services,
 		IP:        ip,
 		Port:      port,
@@ -88,24 +81,14 @@ func NewNetAddressIPPort(ip net.IP, port uint16, services ServiceFlag) *NetAddre
 
 // NewNetAddress returns a new NetAddress using the provided TCP address and
 // supported services with defaults for the remaining fields.
-//
-// Note that addr must be a net.TCPAddr.  An ErrInvalidNetAddr is returned
-// if it is not.
-func NewNetAddress(addr net.Addr, services ServiceFlag) (*NetAddress, error) {
-	tcpAddr, ok := addr.(*net.TCPAddr)
-	if !ok {
-		return nil, ErrInvalidNetAddr
-	}
-
-	na := NewNetAddressIPPort(tcpAddr.IP, uint16(tcpAddr.Port), services)
-	return na, nil
+func NewNetAddress(addr *net.TCPAddr, services ServiceFlag) *NetAddress {
+	return NewNetAddressIPPort(addr.IP, uint16(addr.Port), services)
 }
 
 // readNetAddress reads an encoded NetAddress from r depending on the protocol
 // version and whether or not the timestamp is included per ts.  Some messages
 // like version do not include the timestamp.
 func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
-	var services ServiceFlag
 	var ip [16]byte
 
 	// NOTE: The bitcoin protocol uses a uint32 for the timestamp so it will
@@ -118,7 +101,7 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
 		}
 	}
 
-	err := readElements(r, &services, &ip)
+	err := readElements(r, &na.Services, &ip)
 	if err != nil {
 		return err
 	}
@@ -128,8 +111,12 @@ func readNetAddress(r io.Reader, pver uint32, na *NetAddress, ts bool) error {
 		return err
 	}
 
-	na.Services = services
-	na.SetAddress(net.IP(ip[:]), port)
+	*na = NetAddress{
+		Timestamp: na.Timestamp,
+		Services:  na.Services,
+		IP:        net.IP(ip[:]),
+		Port:      port,
+	}
 	return nil
 }
 
@@ -158,10 +145,5 @@ func writeNetAddress(w io.Writer, pver uint32, na *NetAddress, ts bool) error {
 	}
 
 	// Sigh.  Bitcoin protocol mixes little and big endian.
-	err = binary.Write(w, bigEndian, na.Port)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return binary.Write(w, bigEndian, na.Port)
 }

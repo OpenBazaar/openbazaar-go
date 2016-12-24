@@ -24,14 +24,33 @@ const (
 	// MaxPrevOutIndex is the maximum index the index field of a previous
 	// outpoint can be.
 	MaxPrevOutIndex uint32 = 0xffffffff
-)
 
-const (
-	// defaultTxInOutAlloc is the default size used for the backing array
-	// for transaction inputs and outputs.  The array will dynamically grow
-	// as needed, but this figure is intended to provide enough space for
-	// the number of inputs and outputs in a typical transaction without
-	// needing to grow the backing array multiple times.
+	// SequenceLockTimeDisabled is a flag that if set on a transaction
+	// input's sequence number, the sequence number will not be interpreted
+	// as a relative locktime.
+	SequenceLockTimeDisabled = 1 << 31
+
+	// SequenceLockTimeIsSeconds is a flag that if set on a transaction
+	// input's sequence number, the relative locktime has units of 512
+	// seconds.
+	SequenceLockTimeIsSeconds = 1 << 22
+
+	// SequenceLockTimeMask is a mask that extracts the relative locktime
+	// when masked against the transaction input sequence number.
+	SequenceLockTimeMask = 0x0000ffff
+
+	// SequenceLockTimeGranularity is the defined time based granularity
+	// for seconds-based relative time locks. When converting from seconds
+	// to a sequence number, the value is right shifted by this amount,
+	// therefore the granularity of relative time locks in 512 or 2^9
+	// seconds. Enforced relative lock times are multiples of 512 seconds.
+	SequenceLockTimeGranularity = 9
+
+	// defaultTxInOutAlloc is the default size used for the backing array for
+	// transaction inputs and outputs.  The array will dynamically grow as needed,
+	// but this figure is intended to provide enough space for the number of
+	// inputs and outputs in a typical transaction without needing to grow the
+	// backing array multiple times.
 	defaultTxInOutAlloc = 15
 
 	// minTxInPayload is the minimum payload size for a transaction input.
@@ -518,12 +537,7 @@ func (msg *MsgTx) BtcEncode(w io.Writer, pver uint32) error {
 		}
 	}
 
-	err = binarySerializer.PutUint32(w, littleEndian, msg.LockTime)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return binarySerializer.PutUint32(w, littleEndian, msg.LockTime)
 }
 
 // Serialize encodes the transaction to w using a format that suitable for
@@ -617,9 +631,9 @@ func (msg *MsgTx) PkScriptLocs() []int {
 // are no transaction inputs or outputs.  Also, the lock time is set to zero
 // to indicate the transaction is valid immediately as opposed to some time in
 // future.
-func NewMsgTx() *MsgTx {
+func NewMsgTx(version int32) *MsgTx {
 	return &MsgTx{
-		Version: TxVersion,
+		Version: version,
 		TxIn:    make([]*TxIn, 0, defaultTxInOutAlloc),
 		TxOut:   make([]*TxOut, 0, defaultTxInOutAlloc),
 	}
@@ -633,11 +647,7 @@ func readOutPoint(r io.Reader, pver uint32, version int32, op *OutPoint) error {
 	}
 
 	op.Index, err = binarySerializer.Uint32(r, littleEndian)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // writeOutPoint encodes op to the bitcoin protocol encoding for an OutPoint
@@ -648,11 +658,7 @@ func writeOutPoint(w io.Writer, pver uint32, version int32, op *OutPoint) error 
 		return err
 	}
 
-	err = binarySerializer.PutUint32(w, littleEndian, op.Index)
-	if err != nil {
-		return err
-	}
-	return nil
+	return binarySerializer.PutUint32(w, littleEndian, op.Index)
 }
 
 // readScript reads a variable length byte array that represents a transaction
@@ -700,12 +706,7 @@ func readTxIn(r io.Reader, pver uint32, version int32, ti *TxIn) error {
 		return err
 	}
 
-	err = readElement(r, &ti.Sequence)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return readElement(r, &ti.Sequence)
 }
 
 // writeTxIn encodes ti to the bitcoin protocol encoding for a transaction
@@ -721,12 +722,7 @@ func writeTxIn(w io.Writer, pver uint32, version int32, ti *TxIn) error {
 		return err
 	}
 
-	err = binarySerializer.PutUint32(w, littleEndian, ti.Sequence)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return binarySerializer.PutUint32(w, littleEndian, ti.Sequence)
 }
 
 // readTxOut reads the next sequence of bytes from r as a transaction output
@@ -739,11 +735,7 @@ func readTxOut(r io.Reader, pver uint32, version int32, to *TxOut) error {
 
 	to.PkScript, err = readScript(r, pver, MaxMessagePayload,
 		"transaction output public key script")
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 // writeTxOut encodes to into the bitcoin protocol encoding for a transaction
@@ -754,9 +746,5 @@ func writeTxOut(w io.Writer, pver uint32, version int32, to *TxOut) error {
 		return err
 	}
 
-	err = WriteVarBytes(w, pver, to.PkScript)
-	if err != nil {
-		return err
-	}
-	return nil
+	return WriteVarBytes(w, pver, to.PkScript)
 }

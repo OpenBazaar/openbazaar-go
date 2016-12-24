@@ -61,7 +61,7 @@ func MurmurHash3(seed uint32, data []byte) uint32 {
 	}
 
 	// Finalization.
-	hash ^= uint32(dataLen)
+	hash ^= dataLen
 	hash ^= hash >> 16
 	hash *= 0x85ebca6b
 	hash ^= hash >> 13

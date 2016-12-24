@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2015 The btcsuite developers
+// Copyright (c) 2013-2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -32,6 +32,7 @@ const (
 		ScriptDiscourageUpgradableNops |
 		ScriptVerifyCleanStack |
 		ScriptVerifyCheckLockTimeVerify |
+		ScriptVerifyCheckSequenceVerify |
 		ScriptVerifyLowS
 )
 
@@ -137,7 +138,8 @@ func isNullData(pops []parsedOpcode) bool {
 
 	return l == 2 &&
 		pops[0].opcode.value == OP_RETURN &&
-		pops[1].opcode.value <= OP_PUSHDATA4 &&
+		(isSmallInt(pops[1].opcode) || pops[1].opcode.value <=
+			OP_PUSHDATA4) &&
 		len(pops[1].data) <= MaxDataCarrierSize
 }
 
@@ -347,6 +349,16 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 	}
 
 	return nil, ErrUnsupportedAddress
+}
+
+// NullDataScript creates a provably-prunable script containing OP_RETURN
+// followed by the passed data.
+func NullDataScript(data []byte) ([]byte, error) {
+	if len(data) > MaxDataCarrierSize {
+		return nil, ErrStackLongScript
+	}
+
+	return NewScriptBuilder().AddOp(OP_RETURN).AddData(data).Script()
 }
 
 // MultiSigScript returns a valid script for a multisignature redemption where

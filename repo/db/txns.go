@@ -48,7 +48,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, error) {
 		return nil, err
 	}
 	r := bytes.NewReader(ret)
-	msgTx := wire.NewMsgTx()
+	msgTx := wire.NewMsgTx(1)
 	msgTx.BtcDecode(r, 1)
 	return msgTx, nil
 }
@@ -69,7 +69,7 @@ func (t *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
 			continue
 		}
 		r := bytes.NewReader(tx)
-		msgTx := wire.NewMsgTx()
+		msgTx := wire.NewMsgTx(1)
 		msgTx.BtcDecode(r, 1)
 		ret = append(ret, msgTx)
 	}
