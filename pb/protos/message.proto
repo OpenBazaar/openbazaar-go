@@ -8,7 +8,7 @@ message Message {
 
     enum MessageType {
         PING                    = 0;
-        MESSAGE                 = 1;
+        CHAT                    = 1;
         FOLLOW                  = 2;
         UNFOLLOW                = 3;
         ORDER                   = 4;
@@ -31,4 +31,9 @@ message Envelope {
     Message message = 1;
     bytes pubkey    = 2;
     bytes signature = 3;
+}
+
+message Chat  {
+    string subject = 1;
+    string message = 2;
 }

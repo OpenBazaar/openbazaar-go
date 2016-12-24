@@ -23,7 +23,7 @@ func setupDB() {
 }
 
 func TestChatDB_Put(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", true)
+	err := chdb.Put("abc", "", "mess", time.Now(), true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -56,15 +56,15 @@ func TestChatDB_Put(t *testing.T) {
 }
 
 func TestChatDB_GetConversations(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess", false)
+	err = chdb.Put("xyz", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess2", false)
+	err = chdb.Put("xyz", "", "mess2", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,17 +86,17 @@ func TestChatDB_GetConversations(t *testing.T) {
 
 func TestChatDB_GetMessages(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = chdb.Put("abc", "", "mess2", true)
+	err = chdb.Put("abc", "", "mess2", time.Now(), true)
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = chdb.Put("xyz", "", "mess1", false)
+	err = chdb.Put("xyz", "", "mess1", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -149,7 +149,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 
 func TestChatDB_MarkAsRead(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -162,7 +162,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select read from chat where msgID=?")
+	stmt, err := chdb.db.Prepare("select read from chat where rowid=?")
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&read)
@@ -176,7 +176,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 
 func TestChatDB_DeleteMessage(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -189,7 +189,7 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select msgID from chat where msgID=?")
+	stmt, err := chdb.db.Prepare("select rowid from chat where rowid=?")
 	defer stmt.Close()
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
@@ -200,11 +200,11 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 
 func TestChatDB_DeleteConversation(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("abc", "", "mess2", false)
+	err = chdb.Put("abc", "", "mess2", time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -217,7 +217,7 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select msgID from chat where msgID=?")
+	stmt, err := chdb.db.Prepare("select rowid from chat where rowid=?")
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
 	if err == nil {

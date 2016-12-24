@@ -13,7 +13,7 @@ type ChatDB struct {
 	lock *sync.Mutex
 }
 
-func (c *ChatDB) Put(peerId string, subject string, message string, read bool) error {
+func (c *ChatDB) Put(peerId string, subject string, message string, timestamp time.Time, read bool) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -37,7 +37,7 @@ func (c *ChatDB) Put(peerId string, subject string, message string, read bool) e
 		subject,
 		message,
 		readInt,
-		time.Now().Second(),
+		timestamp.Second(),
 	)
 	if err != nil {
 		tx.Rollback()

@@ -21,6 +21,7 @@ type Datastore interface {
 	Purchases() Purchases
 	Sales() Sales
 	Cases() Cases
+	Chat() Chat
 	Close()
 }
 
@@ -210,7 +211,7 @@ type Cases interface {
 type Chat interface {
 
 	// Put a new chat message to the database
-	Put(peerId string, subject string, message string, read bool) error
+	Put(peerId string, subject string, message string, timestamp time.Time, read bool) error
 
 	// Returns a list of open conversations
 	GetConversations() []ChatConversation

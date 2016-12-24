@@ -2,10 +2,15 @@ package notifications
 
 import (
 	"encoding/json"
+	"time"
 )
 
 type notificationWrapper struct {
 	Notfication interface{} `json:"notification"`
+}
+
+type messageWrapper struct {
+	Message interface{} `json:"message"`
 }
 
 type orderWrapper struct {
@@ -102,6 +107,13 @@ type UnfollowNotification struct {
 	Unfollow string `json:"unfollow"`
 }
 
+type ChatMessage struct {
+	PeerId    string    `json:"peerId"`
+	Subject   string    `json:"subject"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 func Serialize(i interface{}) []byte {
 	var n notificationWrapper
 	switch i.(type) {
@@ -173,6 +185,12 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			i.(UnfollowNotification),
 		}
+	case ChatMessage:
+		m := messageWrapper{
+			i.(ChatMessage),
+		}
+		b, _ := json.MarshalIndent(m, "", "    ")
+		return b
 	}
 	b, _ := json.MarshalIndent(n, "", "    ")
 	return b
