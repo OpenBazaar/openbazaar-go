@@ -219,8 +219,8 @@ type Chat interface {
 	// A list of messages given a peer ID and a subject
 	GetMessages(peerID string, subject string, offsetId int, limit int) []ChatMessage
 
-	// Mark a chat message as read
-	MarkAsRead(msgID int) error
+	// Mark all chat messages for a peer as read
+	MarkAsRead(peerID string) error
 
 	// Delete a message
 	DeleteMessage(msgID int) error

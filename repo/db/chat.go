@@ -124,17 +124,17 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit 
 	return ret
 }
 
-func (c *ChatDB) MarkAsRead(msgId int) error {
+func (c *ChatDB) MarkAsRead(peerID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("update chat set read=1 where rowid=?")
+	stmt, _ := tx.Prepare("update chat set read=1 where peerID=? and subject=''")
 
 	defer stmt.Close()
-	_, err = stmt.Exec(msgId)
+	_, err = stmt.Exec(peerID)
 	if err != nil {
 		tx.Rollback()
 		return err

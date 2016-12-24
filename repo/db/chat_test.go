@@ -158,7 +158,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
-	err = chdb.MarkAsRead(messages[0].MessageId)
+	err = chdb.MarkAsRead("abc")
 	if err != nil {
 		t.Error(err)
 	}
