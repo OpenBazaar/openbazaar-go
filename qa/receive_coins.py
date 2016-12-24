@@ -39,6 +39,8 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
 
+        print("ReceiveCoinsTest - PASS")
+
 if __name__ == '__main__':
     print("Running ReceiveCoinsTest")
     ReceiveCoinsTest().main(["--regtest", "--disableexchangerates"])

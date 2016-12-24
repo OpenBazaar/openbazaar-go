@@ -23,18 +23,19 @@ func setupDB() {
 }
 
 func TestChatDB_Put(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", time.Now(), true)
+	err := chdb.Put("abc", "", "mess", time.Now(), true, true)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select peerID, subject, message, read, timestamp from chat where peerID=?")
+	stmt, err := chdb.db.Prepare("select peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
 	defer stmt.Close()
 	var peerId string
 	var subject string
 	var message string
 	var read int
 	var timestamp int
-	err = stmt.QueryRow("abc").Scan(&peerId, &subject, &message, &read, &timestamp)
+	var outgoing int
+	err = stmt.QueryRow("abc").Scan(&peerId, &subject, &message, &read, &timestamp, &outgoing)
 	if err != nil {
 		t.Error(err)
 	}
@@ -50,21 +51,24 @@ func TestChatDB_Put(t *testing.T) {
 	if read != 1 {
 		t.Errorf(`Expected 1 got %d`, read)
 	}
+	if outgoing != 1 {
+		t.Errorf(`Expected 1 got %d`, outgoing)
+	}
 	if timestamp <= 0 {
 		t.Error("Returned incorrect timestamp")
 	}
 }
 
 func TestChatDB_GetConversations(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", time.Now(), false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess", time.Now(), false)
+	err = chdb.Put("xyz", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess2", time.Now(), false)
+	err = chdb.Put("xyz", "", "mess2", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,17 +90,17 @@ func TestChatDB_GetConversations(t *testing.T) {
 
 func TestChatDB_GetMessages(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	time.Sleep(time.Second)
-	err = chdb.Put("abc", "", "mess2", time.Now(), true)
+	time.Sleep(time.Second * 1)
+	err = chdb.Put("abc", "", "mess2", time.Now(), true, true)
 	if err != nil {
 		t.Error(err)
 	}
-	time.Sleep(time.Second)
-	err = chdb.Put("xyz", "", "mess1", time.Now(), false)
+	time.Sleep(time.Second * 1)
+	err = chdb.Put("xyz", "", "mess1", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -115,6 +119,9 @@ func TestChatDB_GetMessages(t *testing.T) {
 		if messages[0].Read != false {
 			t.Error("Returned incorrect read bool")
 		}
+		if messages[0].Outgoing != true {
+			t.Error("Returned incorrect read bool")
+		}
 		if messages[0].Timestamp.Second() <= 0 {
 			t.Error("Returned incorrect timestamp")
 		}
@@ -127,6 +134,9 @@ func TestChatDB_GetMessages(t *testing.T) {
 			t.Error("Returned incorrect subject")
 		}
 		if messages[1].Read != true {
+			t.Error("Returned incorrect read bool")
+		}
+		if messages[1].Outgoing != true {
 			t.Error("Returned incorrect read bool")
 		}
 		if messages[1].Timestamp.Second() <= 0 {
@@ -149,7 +159,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 
 func TestChatDB_MarkAsRead(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -176,7 +186,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 
 func TestChatDB_DeleteMessage(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -200,11 +210,11 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 
 func TestChatDB_DeleteConversation(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false)
+	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("abc", "", "mess2", time.Now(), false)
+	err = chdb.Put("abc", "", "mess2", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}

@@ -211,7 +211,7 @@ type Cases interface {
 type Chat interface {
 
 	// Put a new chat message to the database
-	Put(peerId string, subject string, message string, timestamp time.Time, read bool) error
+	Put(peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error
 
 	// Returns a list of open conversations
 	GetConversations() []ChatConversation

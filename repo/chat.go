@@ -8,6 +8,7 @@ type ChatMessage struct {
 	Subject   string    `json:"subject"`
 	Message   string    `json:"message"`
 	Read      bool      `json:"read"`
+	Outgoing  bool      `json:"outgoing"`
 	Timestamp time.Time `json:"timestamp"`
 }
 

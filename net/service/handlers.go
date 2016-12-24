@@ -857,7 +857,7 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	t := time.Now()
 
 	// Put to database
-	err = service.datastore.Chat().Put(p.Pretty(), chat.Subject, chat.Message, t, false)
+	err = service.datastore.Chat().Put(p.Pretty(), chat.Subject, chat.Message, t, false, false)
 	if err != nil {
 		return nil, err
 	}

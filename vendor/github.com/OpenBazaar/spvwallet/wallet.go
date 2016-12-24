@@ -358,7 +358,9 @@ func (w *SPVWallet) Close() {
 		peer.con.Close()
 		log.Debugf("Disconnnected from %s", peer.con.RemoteAddr().String())
 	}
-	w.blockchain.Close()
+	if w.blockchain != nil {
+		w.blockchain.Close()
+	}
 }
 
 func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {

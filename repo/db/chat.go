@@ -13,7 +13,7 @@ type ChatDB struct {
 	lock *sync.Mutex
 }
 
-func (c *ChatDB) Put(peerId string, subject string, message string, timestamp time.Time, read bool) error {
+func (c *ChatDB) Put(peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -21,7 +21,7 @@ func (c *ChatDB) Put(peerId string, subject string, message string, timestamp ti
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into chat(peerID, subject, message, read, timestamp) values(?,?,?,?,?)`
+	stm := `insert or replace into chat(peerID, subject, message, read, timestamp, outgoing) values(?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -31,13 +31,19 @@ func (c *ChatDB) Put(peerId string, subject string, message string, timestamp ti
 		readInt = 1
 	}
 
+	outgoingInt := 0
+	if outgoing {
+		outgoingInt = 1
+	}
+
 	defer stmt.Close()
 	_, err = stmt.Exec(
 		peerId,
 		subject,
 		message,
 		readInt,
-		timestamp.Second(),
+		int(timestamp.Unix()),
+		outgoingInt,
 	)
 	if err != nil {
 		tx.Rollback()
@@ -89,9 +95,9 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit 
 
 	var stm string
 	if offsetId > 0 {
-		stm = "select rowid, message, read, timestamp from chat where timestamp<(select timestamp from chat where rowid=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+		stm = "select rowid, message, read, timestamp, outgoing from chat where timestamp<(select timestamp from chat where rowid=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select rowid, message, read, timestamp from chat order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		stm = "select rowid, message, read, timestamp, outgoing from chat order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
 
 	rows, err := c.db.Query(stm)
@@ -103,12 +109,17 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit 
 		var message string
 		var readInt int
 		var timestampInt int
-		if err := rows.Scan(&msgID, &message, &readInt, &timestampInt); err != nil {
+		var outgoingInt int
+		if err := rows.Scan(&msgID, &message, &readInt, &timestampInt, &outgoingInt); err != nil {
 			continue
 		}
 		var read bool
 		if readInt == 1 {
 			read = true
+		}
+		var outgoing bool
+		if outgoingInt == 1 {
+			outgoing = true
 		}
 		timestamp := time.Unix(int64(timestampInt), 0)
 		chatMessage := repo.ChatMessage{
@@ -118,6 +129,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit 
 			Message:   message,
 			Read:      read,
 			Timestamp: timestamp,
+			Outgoing:  outgoing,
 		}
 		ret = append(ret, chatMessage)
 	}
