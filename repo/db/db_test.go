@@ -70,9 +70,6 @@ func TestInterface(t *testing.T) {
 	if testDB.Keys() != testDB.keys {
 		t.Error("Keys() return wrong value")
 	}
-	if testDB.State() != testDB.state {
-		t.Error("State() return wrong value")
-	}
 	if testDB.Txns() != testDB.txns {
 		t.Error("Txns() return wrong value")
 	}
