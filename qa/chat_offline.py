@@ -24,7 +24,7 @@ class ChatOfflineTest(OpenBazaarTestFramework):
         # shutdown bob
         api_url = bob["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(4)
+        time.sleep(12)
 
         # alice send message
         message = {
@@ -66,7 +66,7 @@ class ChatOfflineTest(OpenBazaarTestFramework):
         if resp[0]["peerId"] != bob_id:
             raise TestFailure("ChatOfflineTest - FAIL: Did not record new conversation")
 
-        # startup alice again
+        # startup bob again
         self.start_node(bob)
         time.sleep(12)
 
