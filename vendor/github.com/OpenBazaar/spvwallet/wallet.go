@@ -94,6 +94,7 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 		OnMerkleBlock: w.onMerkleBlock,
 		OnInv:         w.onInv,
 		OnTx:          w.onTx,
+		OnGetData:     w.onGetData,
 	}
 
 	getNewestBlock := func() (*chainhash.Hash, int32, error) {
@@ -139,7 +140,6 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 func (w *SPVWallet) Start() {
 	go w.PeerManager.Start()
 	go w.fPositiveHandler(w.stopChan)
-	log.Info(w.CurrentAddress(EXTERNAL))
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

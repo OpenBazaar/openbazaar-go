@@ -28,7 +28,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("RefundModeratedTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -114,7 +114,6 @@ class RefundModeratedTest(OpenBazaarTestFramework):
             raise TestFailure("RefundModeratedTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RefundModeratedTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(5)
 
         # fund order
         spend = {
@@ -129,7 +128,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundModeratedTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -163,7 +162,7 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundModeratedTest - FAIL: Refund POST failed. Reason: %s", resp["reason"])
-        time.sleep(6)
+        time.sleep(20)
         
         # alice check order refunded correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

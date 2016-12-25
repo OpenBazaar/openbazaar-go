@@ -535,7 +535,7 @@ func (x *Start) Execute(args []string) error {
 		MR.Wait()
 		TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
 		wallet.AddTransactionListener(TL.OnTransactionReceived)
-		log.Info("Starting bitcoin wallet...")
+		log.Info("Starting bitcoin wallet")
 		go wallet.Start()
 	}
 	core.Node.UpdateFollow()

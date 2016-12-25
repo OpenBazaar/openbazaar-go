@@ -28,7 +28,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         else:
             raise TestFailure("RejectModeratedOffline - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -112,7 +112,6 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             raise TestFailure("RejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -127,7 +126,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RejectModeratedOffline - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -159,7 +158,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RejectModeratedOffline - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(20)
 
         # alice check order rejected correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

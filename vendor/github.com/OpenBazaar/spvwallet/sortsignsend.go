@@ -42,6 +42,7 @@ func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
 	log.Debugf("Broadcasting tx %s to peers", tx.TxHash().String())
 	for _, peer := range s.PeerManager.ConnectedPeers() {
 		peer.QueueMessage(invMsg, nil)
+		s.updateFilterAndSend(peer)
 	}
 	return nil
 }

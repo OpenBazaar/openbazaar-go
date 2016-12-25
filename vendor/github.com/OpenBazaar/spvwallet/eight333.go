@@ -121,7 +121,7 @@ func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 	}()
 }
 
-func (w *SPVWallet) GetDataHandler(p *peer.Peer, m *wire.MsgGetData) {
+func (w *SPVWallet) onGetData(p *peer.Peer, m *wire.MsgGetData) {
 	log.Debugf("Received getdata request from Peer%d\n", p.ID())
 	var sent int32
 	for _, thing := range m.InvList {

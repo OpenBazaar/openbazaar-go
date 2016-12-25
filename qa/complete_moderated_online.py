@@ -28,7 +28,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -116,7 +116,6 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -131,7 +130,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
