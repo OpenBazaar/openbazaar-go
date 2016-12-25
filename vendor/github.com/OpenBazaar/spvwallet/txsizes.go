@@ -1,8 +1,13 @@
 package spvwallet
 
+// Copyright (c) 2016 The btcsuite developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
+/* Copied here from a btcd internal package*/
+
 import (
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 )
 
 // Worst case script and input/output size estimates.
@@ -64,18 +69,11 @@ func EstimateSerializeSize(inputCount int, txOuts []*wire.TxOut, addChangeOutput
 	return 8 + wire.VarIntSerializeSize(uint64(inputCount)) +
 		wire.VarIntSerializeSize(uint64(outputCount)) +
 		inputCount*RedeemP2PKHInputSize +
-		SumOutputSerializeSizes(txOuts) +
+		sumOutputSerializeSizes(txOuts) +
 		changeSize
 }
 
-func SumOutputValues(outputs []*wire.TxOut) (totalOutput btcutil.Amount) {
-	for _, txOut := range outputs {
-		totalOutput += btcutil.Amount(txOut.Value)
-	}
-	return totalOutput
-}
-
-func SumOutputSerializeSizes(outputs []*wire.TxOut) (serializeSize int) {
+func sumOutputSerializeSizes(outputs []*wire.TxOut) (serializeSize int) {
 	for _, txOut := range outputs {
 		serializeSize += txOut.SerializeSize()
 	}

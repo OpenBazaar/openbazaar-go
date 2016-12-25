@@ -12,9 +12,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
-// BlockVersion is the current latest supported block version.
-const BlockVersion = 4
-
 // MaxBlockHeaderPayload is the maximum number of bytes a block header can be.
 // Version 4 bytes + Timestamp 4 bytes + Bits 4 bytes + Nonce 4 bytes +
 // PrevBlock and MerkleRoot hashes.
@@ -53,8 +50,8 @@ func (h *BlockHeader) BlockHash() chainhash.Hash {
 	// transactions.  Ignore the error returns since there is no way the
 	// encode could fail except being out of memory which would cause a
 	// run-time panic.
-	var buf bytes.Buffer
-	_ = writeBlockHeader(&buf, 0, h)
+	buf := bytes.NewBuffer(make([]byte, 0, MaxBlockHeaderPayload))
+	_ = writeBlockHeader(buf, 0, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())
 }
@@ -95,16 +92,16 @@ func (h *BlockHeader) Serialize(w io.Writer) error {
 	return writeBlockHeader(w, 0, h)
 }
 
-// NewBlockHeader returns a new BlockHeader using the provided previous block
-// hash, merkle root hash, difficulty bits, and nonce used to generate the
+// NewBlockHeader returns a new BlockHeader using the provided version, previous
+// block hash, merkle root hash, difficulty bits, and nonce used to generate the
 // block with defaults for the remaining fields.
-func NewBlockHeader(prevHash *chainhash.Hash, merkleRootHash *chainhash.Hash,
+func NewBlockHeader(version int32, prevHash, merkleRootHash *chainhash.Hash,
 	bits uint32, nonce uint32) *BlockHeader {
 
 	// Limit the timestamp to one second precision since the protocol
 	// doesn't support better.
 	return &BlockHeader{
-		Version:    BlockVersion,
+		Version:    version,
 		PrevBlock:  *prevHash,
 		MerkleRoot: *merkleRootHash,
 		Timestamp:  time.Unix(time.Now().Unix(), 0),
@@ -117,13 +114,8 @@ func NewBlockHeader(prevHash *chainhash.Hash, merkleRootHash *chainhash.Hash,
 // decoding block headers stored to disk, such as in a database, as opposed to
 // decoding from the wire.
 func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) error {
-	err := readElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
+	return readElements(r, &bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		(*uint32Time)(&bh.Timestamp), &bh.Bits, &bh.Nonce)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // writeBlockHeader writes a bitcoin block header to w.  See Serialize for
@@ -131,11 +123,6 @@ func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) error {
 // opposed to encoding for the wire.
 func writeBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) error {
 	sec := uint32(bh.Timestamp.Unix())
-	err := writeElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
+	return writeElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		sec, bh.Bits, bh.Nonce)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

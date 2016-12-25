@@ -29,7 +29,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseVendorTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, generated_coins)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -117,7 +117,6 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseVendorTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeCloseVendorTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -132,7 +131,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseVendorTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(8)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -283,7 +282,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseVendorTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(8)
+        time.sleep(20)
 
         # Check alice received payout
         api_url = alice["gateway_url"] + "wallet/balance"

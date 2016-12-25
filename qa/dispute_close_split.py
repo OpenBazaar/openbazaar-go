@@ -29,7 +29,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, generated_coins)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -115,7 +115,6 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseSplitTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -130,7 +129,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseSplitTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -250,7 +249,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseSplitTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance"

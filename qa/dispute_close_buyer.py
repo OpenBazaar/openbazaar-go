@@ -29,7 +29,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, generated_coins)
-        time.sleep(3)
+        time.sleep(20)
 
         # create a profile for charlie
         pro = {"name": "Charlie"}
@@ -115,7 +115,6 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -130,7 +129,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(8)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -234,7 +233,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         api_url = charlie["gateway_url"] + "ob/case/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load case from Clarlie")
+            raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load case from Charlie")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Charlie failed to detect the dispute resolution")
@@ -250,7 +249,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("DisputeCloseBuyerTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
-        time.sleep(8)
+        time.sleep(20)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance"

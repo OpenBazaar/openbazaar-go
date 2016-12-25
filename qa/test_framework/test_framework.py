@@ -9,6 +9,7 @@ import time
 import json
 import argparse
 import traceback
+import requests
 from random import randint
 from subprocess import PIPE
 from bitcoin import rpc
@@ -122,7 +123,7 @@ class OpenBazaarTestFramework(object):
         btc_conf_file = os.path.join(dir_path, "bitcoin.conf")
         copyfile(os.path.join(os.getcwd(), "testdata", "bitcoin.conf"), btc_conf_file)
         self.btc_config = btc_conf_file
-        args = [self.bitcoind, "-regtest", "-datadir=" + dir_path]
+        args = [self.bitcoind, "-regtest", "-datadir=" + dir_path, "-debug=net"]
         process = subprocess.Popen(args, stdout=PIPE)
         self.wait_for_bitcoind_start(process, btc_conf_file)
         self.init_blockchain()
@@ -154,14 +155,18 @@ class OpenBazaarTestFramework(object):
         print()
         f.close()
 
-    def teardown(self):
+    def teardown(self, delete_data):
+        for n in self.nodes:
+            requests.post(n["gateway_url"] + "ob/shutdown")
+        time.sleep(2)
         if self.bitcoin_api is not None:
             try:
                 self.send_bitcoin_cmd("stop")
             except BrokenPipeError:
                 pass
-        time.sleep(12)
-        shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
+        time.sleep(10)
+        if delete_data:
+            shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
         parser = argparse.ArgumentParser(
@@ -189,7 +194,11 @@ class OpenBazaarTestFramework(object):
             traceback.print_tb(sys.exc_info()[2])
             failure = True
 
-        self.teardown()
+        if not failure:
+            self.teardown(True)
+        else:
+            self.teardown(False)
+
 
         if failure:
             sys.exit(1)

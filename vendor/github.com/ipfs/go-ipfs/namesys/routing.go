@@ -209,14 +209,14 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		}
 
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+		r.datastore.Put(ds.NewKey(cachePrefix+name), val)
 		return p, nil
 	} else {
 		// Its an old style multihash record
 		log.Warning("Detected old style multihash record")
 		p := path.FromKey(key.Key(valh))
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+		r.datastore.Put(ds.NewKey(cachePrefix+name), val)
 		return p, nil
 	}
 }

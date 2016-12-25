@@ -41,7 +41,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("RefundDirectTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -101,7 +101,6 @@ class RefundDirectTest(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RefundDirectTest - FAIL: Alice incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -116,7 +115,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundDirectTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -149,7 +148,7 @@ class RefundDirectTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RefundDirectTest - FAIL: Refund POST failed. Reason: %s", resp["reason"])
-        time.sleep(10)
+        time.sleep(20)
 
         # alice check order refunded correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

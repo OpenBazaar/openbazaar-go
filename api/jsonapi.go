@@ -1501,7 +1501,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	_, orderId := path.Split(r.URL.Path)
 	buyerContract, vendorContract, buyerErrors, vendorErrors, state, read, date, buyerOpened, claim, resolution, err := i.node.Datastore.Cases().GetCaseMetadata(orderId)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
 

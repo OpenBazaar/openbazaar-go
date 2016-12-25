@@ -14,6 +14,7 @@ type GetBlockHeaderVerboseResult struct {
 	Confirmations uint64  `json:"confirmations"`
 	Height        int32   `json:"height"`
 	Version       int32   `json:"version"`
+	VersionHex    string  `json:"versionHex"`
 	MerkleRoot    string  `json:"merkleroot"`
 	Time          int64   `json:"time"`
 	Nonce         uint64  `json:"nonce"`
@@ -32,6 +33,7 @@ type GetBlockVerboseResult struct {
 	Size          int32         `json:"size"`
 	Height        int64         `json:"height"`
 	Version       int32         `json:"version"`
+	VersionHex    string        `json:"versionHex"`
 	MerkleRoot    string        `json:"merkleroot"`
 	Tx            []string      `json:"tx,omitempty"`
 	RawTx         []TxRawResult `json:"rawtx,omitempty"`
@@ -56,7 +58,7 @@ type DecodeScriptResult struct {
 	ReqSigs   int32    `json:"reqSigs,omitempty"`
 	Type      string   `json:"type"`
 	Addresses []string `json:"addresses,omitempty"`
-	P2sh      string   `json:"p2sh"`
+	P2sh      string   `json:"p2sh,omitempty"`
 }
 
 // GetAddedNodeInfoResultAddr models the data of the addresses portion of the
@@ -73,16 +75,41 @@ type GetAddedNodeInfoResult struct {
 	Addresses *[]GetAddedNodeInfoResultAddr `json:"addresses,omitempty"`
 }
 
+// SoftForkDescription describes the current state of a soft-fork which was
+// deployed using a super-majority block signalling.
+type SoftForkDescription struct {
+	ID      string `json:"id"`
+	Version uint32 `json:"version"`
+	Reject  struct {
+		Status bool `json:"status"`
+	} `json:"reject"`
+}
+
+// Bip9SoftForkDescription describes the current state of a defined BIP0009
+// version bits soft-fork.
+type Bip9SoftForkDescription struct {
+	Status    string `json:"status"`
+	Bit       uint8  `json:"bit"`
+	StartTime int64  `json:"startTime"`
+	Timeout   int64  `json:"timeout"`
+	Since     int32  `json:"since"`
+}
+
 // GetBlockChainInfoResult models the data returned from the getblockchaininfo
 // command.
 type GetBlockChainInfoResult struct {
-	Chain                string  `json:"chain"`
-	Blocks               int32   `json:"blocks"`
-	Headers              int32   `json:"headers"`
-	BestBlockHash        string  `json:"bestblockhash"`
-	Difficulty           float64 `json:"difficulty"`
-	VerificationProgress float64 `json:"verificationprogress"`
-	ChainWork            string  `json:"chainwork"`
+	Chain                string                              `json:"chain"`
+	Blocks               int32                               `json:"blocks"`
+	Headers              int32                               `json:"headers"`
+	BestBlockHash        string                              `json:"bestblockhash"`
+	Difficulty           float64                             `json:"difficulty"`
+	MedianTime           int64                               `json:"mediantime"`
+	VerificationProgress float64                             `json:"verificationprogress,omitempty"`
+	Pruned               bool                                `json:"pruned"`
+	PruneHeight          int32                               `json:"pruneheight,omitempty"`
+	ChainWork            string                              `json:"chainwork,omitempty"`
+	SoftForks            []*SoftForkDescription              `json:"softforks"`
+	Bip9SoftForks        map[string]*Bip9SoftForkDescription `json:"bip9_softforks"`
 }
 
 // GetBlockTemplateResultTx models the transactions field of the
@@ -164,6 +191,7 @@ type GetPeerInfoResult struct {
 	Addr           string  `json:"addr"`
 	AddrLocal      string  `json:"addrlocal,omitempty"`
 	Services       string  `json:"services"`
+	RelayTxes      bool    `json:"relaytxes"`
 	LastSend       int64   `json:"lastsend"`
 	LastRecv       int64   `json:"lastrecv"`
 	BytesSent      uint64  `json:"bytessent"`
@@ -178,6 +206,7 @@ type GetPeerInfoResult struct {
 	StartingHeight int32   `json:"startingheight"`
 	CurrentHeight  int32   `json:"currentheight,omitempty"`
 	BanScore       int32   `json:"banscore"`
+	FeeFilter      int64   `json:"feefilter"`
 	SyncNode       bool    `json:"syncnode"`
 }
 

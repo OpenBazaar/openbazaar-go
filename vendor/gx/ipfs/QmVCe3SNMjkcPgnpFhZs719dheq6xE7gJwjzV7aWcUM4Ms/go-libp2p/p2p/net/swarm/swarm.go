@@ -143,12 +143,6 @@ func (s *Swarm) teardown() error {
 	return s.swarm.Close()
 }
 
-// This method is not in the version of libp2p that we are using so I've added it manually.
-// When when rebase to a future ipfs release this library will reset.
-func (s *Swarm) AddTransport(t transport.Transport) {
-	s.transports = append(s.transports, t)
-}
-
 func (s *Swarm) AddAddrFilter(f string) error {
 	m, err := mafilter.NewMask(f)
 	if err != nil {

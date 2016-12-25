@@ -124,8 +124,8 @@ func (cs *CoinSet) removeElement(e *list.Element) Coin {
 
 // NewMsgTxWithInputCoins takes the coins in the CoinSet and makes them
 // the inputs to a new wire.MsgTx which is returned.
-func NewMsgTxWithInputCoins(inputCoins Coins) *wire.MsgTx {
-	msgTx := wire.NewMsgTx()
+func NewMsgTxWithInputCoins(txVersion int32, inputCoins Coins) *wire.MsgTx {
+	msgTx := wire.NewMsgTx(txVersion)
 	coins := inputCoins.Coins()
 	msgTx.TxIn = make([]*wire.TxIn, len(coins))
 	for i, coin := range coins {

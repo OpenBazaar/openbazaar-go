@@ -26,7 +26,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
@@ -86,7 +86,6 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -101,7 +100,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

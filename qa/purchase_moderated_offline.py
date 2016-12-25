@@ -28,7 +28,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -113,7 +113,6 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Bob incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -128,7 +127,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId

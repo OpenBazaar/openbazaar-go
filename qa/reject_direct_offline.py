@@ -27,7 +27,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(3)
+        time.sleep(20)
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
@@ -86,7 +86,6 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
-        time.sleep(3)
 
         # fund order
         spend = {
@@ -101,7 +100,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RejectDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
-        time.sleep(5)
+        time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -133,7 +132,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("RejectDirectOfflineTest - FAIL: OrderConfirmation POST failed. Reason: %s", resp["reason"])
-        time.sleep(12)
+        time.sleep(20)
 
         # alice check order rejected correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId

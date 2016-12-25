@@ -115,16 +115,14 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETOrder(w, r)
 	case strings.Contains(path, "/ob/moderators"):
 		i.GETModerators(w, r)
+	case strings.Contains(path, "/ob/case"):
+		i.GETCase(w, r)
 	case strings.Contains(path, "/ob/chatmessages"):
 		i.GETChatMessages(w, r)
 	case strings.Contains(path, "/ob/chatconversations"):
 		i.GETChatConversations(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
-	}
-	if strings.Contains(path, "/ob/case") {
-		i.GETCase(w, r)
-		return
 	}
 }
 

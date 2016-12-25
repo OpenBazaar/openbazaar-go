@@ -56,8 +56,8 @@ func (b *Block) Bytes() ([]byte, error) {
 	}
 
 	// Serialize the MsgBlock.
-	var w bytes.Buffer
-	err := b.msgBlock.Serialize(&w)
+	w := bytes.NewBuffer(make([]byte, 0, b.msgBlock.SerializeSize()))
+	err := b.msgBlock.Serialize(w)
 	if err != nil {
 		return nil, err
 	}

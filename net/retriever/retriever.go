@@ -59,6 +59,7 @@ func (m *MessageRetriever) fetchPointers() {
 	defer cancel()
 	wg := new(sync.WaitGroup)
 	wg.Add(1)
+	downloaded := 0
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
 
@@ -68,6 +69,7 @@ func (m *MessageRetriever) fetchPointers() {
 			// IPFS
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS {
 				wg.Add(1)
+				downloaded++
 				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
 			}
 
@@ -86,6 +88,7 @@ func (m *MessageRetriever) fetchPointers() {
 					continue
 				}
 				wg.Add(1)
+				downloaded++
 				go m.fetchHTTPS(p.ID, string(d.Digest), p.Addrs[0], wg)
 			}
 		}
@@ -120,7 +123,8 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, err := http.Get(url)
+	client := http.Client{Timeout: time.Second * 10}
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return

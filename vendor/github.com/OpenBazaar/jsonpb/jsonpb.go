@@ -228,6 +228,43 @@ func (m *Marshaler) marshalObject(out *errWriter, v proto.Message, indent, typeU
 		firstField = false
 	}
 
+	// Handle proto2 extensions.
+	if ep, ok := v.(proto.Message); ok {
+		extensions := proto.RegisteredExtensions(v)
+		// Sort extensions for stable output.
+		ids := make([]int32, 0, len(extensions))
+		for id, desc := range extensions {
+			if !proto.HasExtension(ep, desc) {
+				continue
+			}
+			ids = append(ids, id)
+		}
+		sort.Sort(int32Slice(ids))
+		for _, id := range ids {
+			desc := extensions[id]
+			if desc == nil {
+				// unknown extension
+				continue
+			}
+			ext, extErr := proto.GetExtension(ep, desc)
+			if extErr != nil {
+				return extErr
+			}
+			value := reflect.ValueOf(ext)
+			var prop proto.Properties
+			prop.Parse(desc.Tag)
+			prop.JSONName = fmt.Sprintf("[%s]", desc.Name)
+			if !firstField {
+				m.writeSep(out)
+			}
+			if err := m.marshalField(out, &prop, value, indent); err != nil {
+				return err
+			}
+			firstField = false
+		}
+
+	}
+
 	if m.Indent != "" {
 		out.write("\n")
 		out.write(indent)
@@ -464,11 +501,11 @@ func (m *Marshaler) marshalValue(out *errWriter, prop *proto.Properties, v refle
 	}
 	var bigInt bool
 	if v.Kind() == reflect.Int64 {
-		if v.Int() >= int64(1<<53) {
+		if v.Int() > int64(1<<32) {
 			bigInt = true
 		}
 	} else if v.Kind() == reflect.Uint64 {
-		if v.Uint() >= uint64(1<<53) {
+		if v.Uint() > uint64(1<<32) {
 			bigInt = true
 		}
 	}

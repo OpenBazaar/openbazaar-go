@@ -189,7 +189,7 @@ func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
 }
 
 func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64 {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
@@ -201,7 +201,7 @@ func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []sp
 
 func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error) {
 	var sigs []spvwallet.Signature
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -244,7 +244,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 }
 
 func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64) error {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
