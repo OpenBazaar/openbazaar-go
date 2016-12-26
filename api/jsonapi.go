@@ -1580,9 +1580,13 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	t := time.Now()
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = t.Unix()
 	chatPb := &pb.Chat{
-		Subject: chat.Subject,
-		Message: chat.Message,
+		Subject:   chat.Subject,
+		Message:   chat.Message,
+		Timestamp: ts,
 	}
 	err = i.node.SendChat(chat.PeerId, chatPb)
 	if err != nil {
@@ -1590,7 +1594,7 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Put to database
-	err = i.node.Datastore.Chat().Put(chat.PeerId, chat.Subject, chat.Message, time.Now(), false, true)
+	err = i.node.Datastore.Chat().Put(chat.PeerId, chat.Subject, chat.Message, t, false, true)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
