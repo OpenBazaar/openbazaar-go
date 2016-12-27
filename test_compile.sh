@@ -2,14 +2,14 @@
 
 set -e
 pwd
-go test -coverprofile=api.cover.out ./api test -coverprofile=ipfs.cover.out ./ipfs
-go test -coverprofile=net.cover.out ./ne
+go test -coverprofile=api.cover.out ./api
 go test -coverprofile=api.cover.out ./api/notifications
 go test -coverprofile=bitcoin.cover.out ./bitcoin
 go test -coverprofile=bitcoin.cover.out ./bitcoin/exchange
 go test -coverprofile=bitcoin.cover.out ./bitcoin/listeners
 go test -coverprofile=core.cover.out ./core
-got
+go test -coverprofile=ipfs.cover.out ./ipfs
+go test -coverprofile=net.cover.out ./net
 go test -coverprofile=netservice.cover.out ./net/service
 go test -coverprofile=netservice.cover.out ./net/repointer
 go test -coverprofile=netservice.cover.out ./net/retriever

@@ -854,6 +854,11 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		return nil, err
 	}
 
+	// Validate
+	if len(chat.Subject) > 500 || len(chat.Message) > 20000 {
+		return nil, errors.New("Chat message over max characters")
+	}
+
 	// Use correct timestamp
 	offline, _ := options.(bool)
 	var t time.Time

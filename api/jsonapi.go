@@ -1580,6 +1580,15 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if len(chat.Subject) > 500 {
+		ErrorResponse(w, http.StatusBadRequest, "Subjuct line is too long")
+		return
+	}
+	if len(chat.Message) > 20000 {
+		ErrorResponse(w, http.StatusBadRequest, "Subjuct line is too long")
+		return
+	}
+
 	t := time.Now()
 	ts := new(timestamp.Timestamp)
 	ts.Seconds = t.Unix()
