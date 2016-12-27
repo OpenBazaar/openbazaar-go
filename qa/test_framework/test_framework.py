@@ -99,11 +99,11 @@ class OpenBazaarTestFramework(object):
     def start_node(self, node):
         args = [self.binary, "start", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
-        peerId = self.wait_for_start_success(process)
+        peerId = self.wait_for_start_success(process, node)
         node["peerId"] = peerId
 
     @staticmethod
-    def wait_for_start_success(process):
+    def wait_for_start_success(process, node):
         peerId = ""
         while True:
             if process.poll() is not None:

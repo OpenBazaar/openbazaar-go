@@ -68,7 +68,7 @@ class ChatOfflineTest(OpenBazaarTestFramework):
 
         # startup bob again
         self.start_node(bob)
-        time.sleep(12)
+        time.sleep(45)
 
         # check bob saved message correctly
         api_url = bob["gateway_url"] + "ob/chatmessages/" + alice_id

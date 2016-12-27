@@ -161,6 +161,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 	if err != nil {
 		return
 	}
+
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
 		return

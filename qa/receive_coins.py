@@ -30,9 +30,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed > 0:
-                print("ReceiveCoinsTest - PASS")
-            else:
+            if confirmed + unconfirmed <= 0:
                 raise TestFailure("ReceiveCoinsTest - FAIL: Wallet is empty")
         elif r.status_code == 404:
             raise TestFailure("ReceiveCoinsTest - FAIL: Receive coins endpoint not found")
