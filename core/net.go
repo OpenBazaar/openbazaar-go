@@ -12,6 +12,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	CHAT_MESSAGE_MAX_CHARACTERS = 20000
+	CHAT_SUBJECT_MAX_CHARACTERS = 500
+)
+
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
 	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
