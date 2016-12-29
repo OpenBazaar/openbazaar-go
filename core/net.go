@@ -424,31 +424,9 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.R
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
-	p, err := peer.IDB58Decode(peerId)
-	if err != nil {
-		return err
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	a, err := ptypes.MarshalAny(chatMessage)
-	if err != nil {
-		return err
-	}
-	m := pb.Message{
-		MessageType: pb.Message_CHAT,
-		Payload:     a,
-	}
-	err = n.Service.SendMessage(ctx, p, &m)
-	if err != nil {
+==== BASE ====
 		if err := n.SendOfflineMessage(p, &m); err != nil {
+==== BASE ====
 			return err
 		}
 	}
