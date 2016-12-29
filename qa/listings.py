@@ -58,5 +58,5 @@ class ListingsTest(OpenBazaarTestFramework):
 
 
 if __name__ == '__main__':
-    print("Running UploadListingTest")
+    print("Running ListingTest")
     ListingsTest().main()

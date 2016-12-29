@@ -144,7 +144,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(12)
+        time.sleep(45)
 
         # alice reject order
         api_url = alice["gateway_url"] + "ob/orderconfirmation"

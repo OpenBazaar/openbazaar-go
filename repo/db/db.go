@@ -29,6 +29,7 @@ type SQLiteDatastore struct {
 	purchases       repo.Purchases
 	sales           repo.Sales
 	cases           repo.Cases
+	chat            repo.Chat
 	db              *sql.DB
 	lock            *sync.Mutex
 }
@@ -112,6 +113,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		chat: &ChatDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -183,6 +188,10 @@ func (d *SQLiteDatastore) Cases() repo.Cases {
 	return d.cases
 }
 
+func (d *SQLiteDatastore) Chat() repo.Chat {
+	return d.chat
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -242,6 +251,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create table watchedscripts (scriptPubKey text primary key not null);
 	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, date integer, buyerOpened integer, claim text, disputeResolution blob);
+	create table chat (peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
+	create index index_chat ON chat(peerID, subject, read, timestamp);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

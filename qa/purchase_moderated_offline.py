@@ -145,13 +145,13 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(12)
+        time.sleep(45)
 
         # check alice detected order and payment
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice failed to detect payment")

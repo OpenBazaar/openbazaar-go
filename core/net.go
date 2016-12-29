@@ -12,6 +12,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	CHAT_MESSAGE_MAX_CHARACTERS = 20000
+	CHAT_SUBJECT_MAX_CHARACTERS = 500
+)
+
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, m *pb.Message) error {
 	log.Debugf("Sending offline message to %s", p.Pretty())
 	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
@@ -373,6 +378,30 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.R
 	}
 	m := pb.Message{
 		MessageType: pb.Message_DISPUTE_CLOSE,
+		Payload:     a,
+	}
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil {
+		if err := n.SendOfflineMessage(p, &m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	a, err := ptypes.MarshalAny(chatMessage)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_CHAT,
 		Payload:     a,
 	}
 	err = n.Service.SendMessage(ctx, p, &m)

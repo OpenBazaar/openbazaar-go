@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
 
 message Message {
     MessageType messageType     = 1;
@@ -8,7 +9,7 @@ message Message {
 
     enum MessageType {
         PING                    = 0;
-        MESSAGE                 = 1;
+        CHAT                    = 1;
         FOLLOW                  = 2;
         UNFOLLOW                = 3;
         ORDER                   = 4;
@@ -31,4 +32,10 @@ message Envelope {
     Message message = 1;
     bytes pubkey    = 2;
     bytes signature = 3;
+}
+
+message Chat  {
+    string subject                      = 1;
+    string message                      = 2;
+    google.protobuf.Timestamp timestamp = 3;
 }

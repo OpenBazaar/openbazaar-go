@@ -19,6 +19,7 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	"time"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -53,6 +54,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleDisputeUpdate
 	case pb.Message_DISPUTE_CLOSE:
 		return service.handleDisputeClose
+	case pb.Message_CHAT:
+		return service.handleChat
 	default:
 		return nil
 	}
@@ -838,5 +841,49 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	n := notifications.Serialize(notifications.DisputeCloseNotification{rc.DisputeResolution.OrderId})
 	service.broadcast <- n
 
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received CHAT message from %s", p.Pretty())
+
+	// Unmarshall
+	chat := new(pb.Chat)
+	err := ptypes.UnmarshalAny(pmes.Payload, chat)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate
+	if len(chat.Subject) > core.CHAT_SUBJECT_MAX_CHARACTERS {
+		return nil, errors.New("Chat subject over max characters")
+	}
+	if len(chat.Message) > core.CHAT_MESSAGE_MAX_CHARACTERS {
+		return nil, errors.New("Chat message over max characters")
+	}
+
+	// Use correct timestamp
+	offline, _ := options.(bool)
+	var t time.Time
+	if !offline {
+		t = time.Now()
+	} else {
+		t = time.Unix(chat.Timestamp.Seconds, int64(chat.Timestamp.Nanos))
+	}
+
+	// Put to database
+	err = service.datastore.Chat().Put(p.Pretty(), chat.Subject, chat.Message, t, false, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Push to websocket
+	n := notifications.Serialize(notifications.ChatMessage{
+		PeerId:    p.Pretty(),
+		Subject:   chat.Subject,
+		Message:   chat.Message,
+		Timestamp: t,
+	})
+	service.broadcast <- n
 	return nil, nil
 }

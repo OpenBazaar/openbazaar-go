@@ -21,6 +21,7 @@ type Datastore interface {
 	Purchases() Purchases
 	Sales() Sales
 	Cases() Cases
+	Chat() Chat
 	Close()
 }
 
@@ -205,4 +206,25 @@ type Cases interface {
 
 	// Return the IDs for all cases
 	GetAll() ([]string, error)
+}
+
+type Chat interface {
+
+	// Put a new chat message to the database
+	Put(peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error
+
+	// Returns a list of open conversations
+	GetConversations() []ChatConversation
+
+	// A list of messages given a peer ID and a subject
+	GetMessages(peerID string, subject string, offsetId int, limit int) []ChatMessage
+
+	// Mark all chat messages for a peer as read
+	MarkAsRead(peerID string) error
+
+	// Delete a message
+	DeleteMessage(msgID int) error
+
+	// Delete all messages from from a peer
+	DeleteConversation(peerID string) error
 }
