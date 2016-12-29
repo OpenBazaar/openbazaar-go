@@ -190,7 +190,7 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 				"/ip6/::/tcp/4001",
 			},
 			API:     "",
-			Gateway: "/ip4/127.0.0.1/tcp/8080",
+			Gateway: "/ip4/127.0.0.1/tcp/4002",
 		},
 
 		Datastore: datastore,
