@@ -448,7 +448,7 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 	}
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, &m); err != nil {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
 	}
