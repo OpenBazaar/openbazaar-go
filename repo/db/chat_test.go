@@ -105,7 +105,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 		t.Error(err)
 	}
 	messages := chdb.GetMessages("abc", "", 0, -1)
-	if len(messages) != 3 {
+	if len(messages) != 2 {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
@@ -151,7 +151,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 	}
 
 	offsetMessages := chdb.GetMessages("abc", "", messages[0].MessageId, -1)
-	if len(offsetMessages) != 2 {
+	if len(offsetMessages) != 1 {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
