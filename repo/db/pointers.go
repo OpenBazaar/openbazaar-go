@@ -13,7 +13,7 @@ import (
 
 type PointersDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (p *PointersDB) Put(pointer ipfs.Pointer) error {
@@ -58,8 +58,8 @@ func (p *PointersDB) DeleteAll(purpose ipfs.Purpose) error {
 }
 
 func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
+	p.lock.RLock()
+	defer p.lock.RUnlock()
 	stm := "select * from pointers"
 	rows, err := p.db.Query(stm)
 	defer rows.Close()

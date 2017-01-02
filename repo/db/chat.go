@@ -10,7 +10,7 @@ import (
 
 type ChatDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (c *ChatDB) Put(peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error {
@@ -54,8 +54,8 @@ func (c *ChatDB) Put(peerId string, subject string, message string, timestamp ti
 }
 
 func (c *ChatDB) GetConversations() []repo.ChatConversation {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	var ret []repo.ChatConversation
 
 	stm := "select distinct peerID from chat;"
@@ -89,8 +89,8 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 }
 
 func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit int) []repo.ChatMessage {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	var ret []repo.ChatMessage
 
 	var stm string

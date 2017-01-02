@@ -8,7 +8,7 @@ import (
 
 type OfflineMessagesDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (o *OfflineMessagesDB) Put(url string) error {
@@ -33,8 +33,8 @@ func (o *OfflineMessagesDB) Put(url string) error {
 }
 
 func (o *OfflineMessagesDB) Has(url string) bool {
-	o.lock.Lock()
-	defer o.lock.Unlock()
+	o.lock.RLock()
+	defer o.lock.RUnlock()
 	stmt, err := o.db.Prepare("select url from offlinemessages where url=?")
 	defer stmt.Close()
 	var ret string

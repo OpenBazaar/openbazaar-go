@@ -8,7 +8,7 @@ import (
 
 type FollowerDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (f *FollowerDB) Put(follower string) error {
@@ -28,8 +28,8 @@ func (f *FollowerDB) Put(follower string) error {
 }
 
 func (f *FollowerDB) Get(offsetId string, limit int) ([]string, error) {
-	f.lock.Lock()
-	defer f.lock.Unlock()
+	f.lock.RLock()
+	defer f.lock.RUnlock()
 	var stm string
 	if offsetId != "" {
 		stm = "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset ((select coalesce(max(rowid)+1, 0) from followers)-(select rowid from followers where peerID='" + offsetId + "'))"
@@ -55,8 +55,8 @@ func (f *FollowerDB) Delete(follower string) error {
 }
 
 func (f *FollowerDB) Count() int {
-	f.lock.Lock()
-	defer f.lock.Unlock()
+	f.lock.RLock()
+	defer f.lock.RUnlock()
 	row := f.db.QueryRow("select Count(*) from followers")
 	var count int
 	row.Scan(&count)
@@ -64,8 +64,8 @@ func (f *FollowerDB) Count() int {
 }
 
 func (f *FollowerDB) FollowsMe(peerId string) bool {
-	f.lock.Lock()
-	defer f.lock.Unlock()
+	f.lock.RLock()
+	defer f.lock.RUnlock()
 	stmt, err := f.db.Prepare("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string

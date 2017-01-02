@@ -13,7 +13,7 @@ import (
 
 type SalesDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {
@@ -119,8 +119,8 @@ func (s *SalesDB) Delete(orderID string) error {
 }
 
 func (s *SalesDB) GetAll() ([]string, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	stm := "select orderID from sales"
 	rows, err := s.db.Query(stm)
 	defer rows.Close()
@@ -139,8 +139,8 @@ func (s *SalesDB) GetAll() ([]string, error) {
 }
 
 func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where paymentAddr=?")
 	defer stmt.Close()
 	var contract []byte
@@ -166,8 +166,8 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 }
 
 func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, bool, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 	stmt, err := s.db.Prepare("select contract, state, funded, transactions, read from sales where orderID=?")
 	defer stmt.Close()
 	var contract []byte

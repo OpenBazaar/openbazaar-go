@@ -8,7 +8,7 @@ import (
 
 type WatchedScriptsDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock *sync.RWMutex
 }
 
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
@@ -31,8 +31,8 @@ func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 }
 
 func (w *WatchedScriptsDB) GetAll() ([][]byte, error) {
-	w.lock.Lock()
-	defer w.lock.Unlock()
+	w.lock.RLock()
+	defer w.lock.RUnlock()
 	var ret [][]byte
 	stm := "select scriptPubKey from watchedscripts"
 	rows, err := w.db.Query(stm)
