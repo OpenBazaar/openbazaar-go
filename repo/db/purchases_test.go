@@ -8,7 +8,6 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -20,8 +19,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	purdb = PurchasesDB{
-		db:   conn,
-		lock: new(sync.Mutex),
+		db: conn,
 	}
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)

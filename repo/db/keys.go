@@ -11,7 +11,7 @@ import (
 
 type KeysDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock sync.RWMutex
 }
 
 func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
@@ -52,8 +52,8 @@ func (k *KeysDB) MarkKeyAsUsed(scriptPubKey []byte) error {
 }
 
 func (k *KeysDB) GetLastKeyIndex(purpose spvwallet.KeyPurpose) (int, bool, error) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 
 	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " order by rowid desc limit 1"
 	stmt, err := k.db.Prepare(stm)
@@ -74,8 +74,8 @@ func (k *KeysDB) GetLastKeyIndex(purpose spvwallet.KeyPurpose) (int, bool, error
 }
 
 func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 
 	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptPubKey=?")
 	defer stmt.Close()
@@ -93,8 +93,8 @@ func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error
 }
 
 func (k *KeysDB) GetUnused(purpose spvwallet.KeyPurpose) (int, error) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 
 	stm := "select keyIndex from keys where purpose=" + strconv.Itoa(int(purpose)) + " and used=0 order by rowid asc limit 1"
 	stmt, err := k.db.Prepare(stm)
@@ -108,8 +108,8 @@ func (k *KeysDB) GetUnused(purpose spvwallet.KeyPurpose) (int, error) {
 }
 
 func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 	var ret []spvwallet.KeyPath
 	stm := "select purpose, keyIndex from keys"
 	rows, err := k.db.Query(stm)
@@ -133,8 +133,8 @@ func (k *KeysDB) GetAll() ([]spvwallet.KeyPath, error) {
 }
 
 func (k *KeysDB) GetLookaheadWindows() map[spvwallet.KeyPurpose]int {
-	k.lock.Lock()
-	defer k.lock.Unlock()
+	k.lock.RLock()
+	defer k.lock.RUnlock()
 	windows := make(map[spvwallet.KeyPurpose]int)
 	for i := 0; i < 2; i++ {
 		stm := "select used from keys where purpose=" + strconv.Itoa(i) + " order by rowid desc"

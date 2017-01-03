@@ -13,7 +13,7 @@ import (
 
 type UtxoDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock sync.RWMutex
 }
 
 func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
@@ -41,8 +41,8 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 }
 
 func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+	u.lock.RLock()
+	defer u.lock.RUnlock()
 	var ret []spvwallet.Utxo
 	stm := "select outpoint, value, height, scriptPubKey, freeze from utxos"
 	rows, err := u.db.Query(stm)

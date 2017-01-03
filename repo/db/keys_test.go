@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
-	"sync"
 	"testing"
 )
 
@@ -15,8 +14,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	kdb = KeysDB{
-		db:   conn,
-		lock: new(sync.Mutex),
+		db: conn,
 	}
 }
 

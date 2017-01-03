@@ -7,7 +7,7 @@ import (
 
 type InventoryDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock sync.RWMutex
 }
 
 func (i *InventoryDB) Put(slug string, count int) error {
@@ -26,8 +26,8 @@ func (i *InventoryDB) Put(slug string, count int) error {
 }
 
 func (i *InventoryDB) GetSpecific(path string) (int, error) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	stmt, err := i.db.Prepare("select count from inventory where slug=?")
 	defer stmt.Close()
 	var count int
@@ -39,8 +39,8 @@ func (i *InventoryDB) GetSpecific(path string) (int, error) {
 }
 
 func (i *InventoryDB) Get(slug string) (map[string]int, error) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	ret := make(map[string]int)
 	stm := `select * from inventory where slug like "` + slug + `%";`
 	rows, err := i.db.Query(stm)
@@ -58,8 +58,8 @@ func (i *InventoryDB) Get(slug string) (map[string]int, error) {
 }
 
 func (i *InventoryDB) GetAll() (map[string]int, error) {
-	i.lock.Lock()
-	defer i.lock.Unlock()
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	ret := make(map[string]int)
 	stm := "select slug, count from inventory"
 	rows, err := i.db.Query(stm)

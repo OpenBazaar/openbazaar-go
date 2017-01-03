@@ -11,7 +11,7 @@ import (
 
 type CasesDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock sync.RWMutex
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {
@@ -171,8 +171,8 @@ func (c *CasesDB) Delete(orderID string) error {
 }
 
 func (c *CasesDB) GetAll() ([]string, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	stm := "select caseID from cases"
 	rows, err := c.db.Query(stm)
 	defer rows.Close()
@@ -191,8 +191,8 @@ func (c *CasesDB) GetAll() ([]string, error) {
 }
 
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, buyerOpened, claim, disputeResolution from cases where caseID=?")
 	defer stmt.Close()
 	var buyerCon []byte
@@ -260,8 +260,8 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 }
 
 func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state from cases where caseID=?")
 	var buyerCon []byte
 	var vendorCon []byte

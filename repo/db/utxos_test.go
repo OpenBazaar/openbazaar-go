@@ -8,7 +8,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"strconv"
-	"sync"
 	"testing"
 )
 
@@ -19,8 +18,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	uxdb = UtxoDB{
-		db:   conn,
-		lock: new(sync.Mutex),
+		db: conn,
 	}
 	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
 	outpoint := wire.NewOutPoint(sh1, 0)

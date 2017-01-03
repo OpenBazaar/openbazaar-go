@@ -31,7 +31,7 @@ type SQLiteDatastore struct {
 	cases           repo.Cases
 	chat            repo.Chat
 	db              *sql.DB
-	lock            *sync.Mutex
+	lock            sync.RWMutex
 }
 
 func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
@@ -49,8 +49,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		p := "pragma key = '" + password + "';"
 		conn.Exec(p)
 	}
-
-	l := new(sync.Mutex)
+	var l sync.RWMutex
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
 			db:   conn,
@@ -263,7 +262,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 
 type ConfigDB struct {
 	db   *sql.DB
-	lock *sync.Mutex
+	lock sync.RWMutex
 	path string
 }
 
@@ -298,8 +297,8 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) er
 }
 
 func (c *ConfigDB) GetMnemonic() (string, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
 	defer stmt.Close()
 	var mnemonic string
@@ -311,8 +310,8 @@ func (c *ConfigDB) GetMnemonic() (string, error) {
 }
 
 func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
 	defer stmt.Close()
 	var identityKey []byte
@@ -324,6 +323,8 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 }
 
 func (c *ConfigDB) IsEncrypted() bool {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	pwdCheck := "select count(*) from sqlite_master;"
 	_, err := c.db.Exec(pwdCheck) // Fails if wrong password is entered
 	if err != nil {
