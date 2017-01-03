@@ -7,7 +7,6 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -21,8 +20,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	casesdb = CasesDB{
-		db:   conn,
-		lock: new(sync.Mutex),
+		db: conn,
 	}
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)

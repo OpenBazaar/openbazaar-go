@@ -10,7 +10,7 @@ import (
 
 type TxnsDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (t *TxnsDB) Put(txn *wire.MsgTx) error {

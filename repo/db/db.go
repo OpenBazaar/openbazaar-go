@@ -31,7 +31,7 @@ type SQLiteDatastore struct {
 	cases           repo.Cases
 	chat            repo.Chat
 	db              *sql.DB
-	lock            *sync.RWMutex
+	lock            sync.RWMutex
 }
 
 func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
@@ -49,8 +49,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		p := "pragma key = '" + password + "';"
 		conn.Exec(p)
 	}
-
-	l := new(sync.RWMutex)
+	var l sync.RWMutex
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
 			db:   conn,
@@ -263,7 +262,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 
 type ConfigDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 	path string
 }
 

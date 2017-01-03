@@ -8,7 +8,7 @@ import (
 
 type WatchedScriptsDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {

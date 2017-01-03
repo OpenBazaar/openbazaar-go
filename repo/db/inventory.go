@@ -7,7 +7,7 @@ import (
 
 type InventoryDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (i *InventoryDB) Put(slug string, count int) error {

@@ -13,7 +13,7 @@ import (
 
 type PurchasesDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {

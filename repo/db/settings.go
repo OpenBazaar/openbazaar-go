@@ -11,7 +11,7 @@ import (
 
 type SettingsDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (s *SettingsDB) Put(settings repo.SettingsData) error {

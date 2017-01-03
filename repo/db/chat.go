@@ -10,7 +10,7 @@ import (
 
 type ChatDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (c *ChatDB) Put(peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error {

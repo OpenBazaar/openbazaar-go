@@ -13,7 +13,7 @@ import (
 
 type StxoDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (s *StxoDB) Put(stxo spvwallet.Stxo) error {

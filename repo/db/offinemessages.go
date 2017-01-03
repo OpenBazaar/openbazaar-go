@@ -8,7 +8,7 @@ import (
 
 type OfflineMessagesDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (o *OfflineMessagesDB) Put(url string) error {

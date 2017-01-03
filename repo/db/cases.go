@@ -11,7 +11,7 @@ import (
 
 type CasesDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {

@@ -11,7 +11,7 @@ import (
 
 type KeysDB struct {
 	db   *sql.DB
-	lock *sync.RWMutex
+	lock sync.RWMutex
 }
 
 func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
