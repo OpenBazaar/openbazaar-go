@@ -399,7 +399,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-		err = service.node.Wallet.SweepMultisig(utxos, buyerKey, redeemScript, spvwallet.NORMAL)
+		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		if err != nil {
+			return nil, err
+		}
+		err = service.node.Wallet.SweepMultisig(utxos, &refundAddress, buyerKey, redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}

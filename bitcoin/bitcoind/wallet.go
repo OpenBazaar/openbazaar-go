@@ -302,8 +302,13 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	return nil
 }
 
-func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, key *hd.ExtendedKey, redeemScript []byte, feeLevel spvwallet.FeeLevel) error {
-	internalAddr := w.CurrentAddress(spvwallet.INTERNAL)
+func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript []byte, feeLevel spvwallet.FeeLevel) error {
+	var internalAddr btc.Address
+	if address != nil {
+		internalAddr = *address
+	} else {
+		internalAddr = w.CurrentAddress(spvwallet.INTERNAL)
+	}
 	script, err := txscript.PayToAddrScript(internalAddr)
 	if err != nil {
 		return err
