@@ -1716,3 +1716,74 @@ func (i *jsonAPIHandler) DELETEChatConversation(w http.ResponseWriter, r *http.R
 	}
 	fmt.Fprint(w, `{}`)
 }
+
+func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offset := r.URL.Query().Get("offsetId")
+	offsetId := 0
+	if offset != "" {
+		offsetId, err = strconv.Atoi(offset)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	notifs := i.node.Datastore.Notifications().GetAll(offsetId, int(l))
+
+	ret, err := json.MarshalIndent(notifs, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
+	type id struct {
+		ID int `json:"id"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var p id
+	err := decoder.Decode(&p)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = i.node.Datastore.Notifications().MarkAsRead(p.ID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
+	type id struct {
+		ID int `json:"id"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var p id
+	err := decoder.Decode(&p)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = i.node.Datastore.Notifications().Delete(p.ID)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, `{}`)
+}

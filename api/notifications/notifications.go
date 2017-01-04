@@ -5,8 +5,17 @@ import (
 	"time"
 )
 
+type Notification struct {
+	ID        int       `json:"id"`
+	Data      Data      `json:"notification"`
+	Timestamp time.Time `json:"timestamp"`
+	Read      bool      `json:"read"`
+}
+
+type Data interface{}
+
 type notificationWrapper struct {
-	Notfication interface{} `json:"notification"`
+	Notification Data `json:"notification"`
 }
 
 type messageWrapper struct {

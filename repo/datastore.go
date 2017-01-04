@@ -3,6 +3,7 @@ package repo
 import (
 	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
 
+	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
@@ -22,6 +23,7 @@ type Datastore interface {
 	Sales() Sales
 	Cases() Cases
 	Chat() Chat
+	Notifications() Notifications
 	Close()
 }
 
@@ -217,7 +219,7 @@ type Chat interface {
 	GetConversations() []ChatConversation
 
 	// A list of messages given a peer ID and a subject
-	GetMessages(peerID string, subject string, offsetId int, limit int) []ChatMessage
+	GetMessages(peerID string, subject string, offsetID int, limit int) []ChatMessage
 
 	// Mark all chat messages for a peer as read
 	MarkAsRead(peerID string) error
@@ -227,4 +229,19 @@ type Chat interface {
 
 	// Delete all messages from from a peer
 	DeleteConversation(peerID string) error
+}
+
+type Notifications interface {
+
+	// Put a new notification to the database
+	Put(notification notif.Data, timestamp time.Time) error
+
+	// Mark notification as read
+	MarkAsRead(notifID int) error
+
+	// Fetch notifications from database
+	GetAll(offsetID int, limit int) []notif.Notification
+
+	// Delete a notification
+	Delete(notifID int) error
 }

@@ -68,6 +68,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTChat(w, r)
 	case "/ob/markchatasread", "/ob/markchatasread/":
 		i.POSTMarkChatAsRead(w, r)
+	case "/ob/marknotificationasread", "/ob/marknotificationasread/":
+		i.POSTMarkNotificationAsRead(w, r)
 	case "/ob/shutdown", "/ob/shutdown/":
 		i.POSTShutdown(w, r)
 	default:
@@ -121,6 +123,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETChatMessages(w, r)
 	case strings.Contains(path, "/ob/chatconversations"):
 		i.GETChatConversations(w, r)
+	case strings.Contains(path, "/ob/notifications"):
+		i.GETNotifications(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -145,6 +149,8 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		i.DELETEChatMessage(w, r)
 	case "/ob/chatconversation", "/ob/chatconversation/":
 		i.DELETEChatConversation(w, r)
+	case "/ob/notifications", "/ob/notifications/":
+		i.DELETENotification(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
