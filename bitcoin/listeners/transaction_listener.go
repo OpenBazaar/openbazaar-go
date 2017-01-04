@@ -15,6 +15,7 @@ import (
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"strings"
 	"sync"
+	"time"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -138,17 +139,17 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			}
 			l.adjustInventory(contract)
 
-			n := notifications.Serialize(
-				notifications.OrderNotification{
-					contract.VendorListings[0].Item.Title,
-					contract.BuyerOrder.BuyerID.Guid,
-					contract.BuyerOrder.BuyerID.BlockchainID,
-					contract.VendorListings[0].Item.Images[0].Tiny,
-					int(contract.BuyerOrder.Timestamp.Seconds),
-					orderId,
-				})
+			n := notifications.OrderNotification{
+				contract.VendorListings[0].Item.Title,
+				contract.BuyerOrder.BuyerID.Guid,
+				contract.BuyerOrder.BuyerID.BlockchainID,
+				contract.VendorListings[0].Item.Images[0].Tiny,
+				int(contract.BuyerOrder.Timestamp.Seconds),
+				orderId,
+			}
 
-			l.broadcast <- n
+			l.broadcast <- notifications.Serialize(n)
+			l.db.Notifications().Put(n, time.Now())
 		}
 	}
 
@@ -188,12 +189,12 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
 			}
 		}
-		n := notifications.Serialize(
-			notifications.PaymentNotification{
-				orderId,
-				uint64(funding),
-			})
-		l.broadcast <- n
+		n := notifications.PaymentNotification{
+			orderId,
+			uint64(funding),
+		}
+		l.broadcast <- notifications.Serialize(n)
+		l.db.Notifications().Put(n, time.Now())
 	}
 
 	record := &spvwallet.TransactionRecord{

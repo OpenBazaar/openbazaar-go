@@ -311,8 +311,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("We are not involved in this dispute")
 	}
 
-	notif := notifications.Serialize(notifications.DisputeOpenNotification{orderId})
-	n.Broadcast <- notif
+	notif := notifications.DisputeOpenNotification{orderId}
+	n.Broadcast <- notifications.Serialize(notif)
+	n.Datastore.Notifications().Put(notif, time.Now())
 
 	return nil
 }
