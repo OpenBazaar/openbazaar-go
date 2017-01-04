@@ -15,9 +15,10 @@ Next enter the following commands to generate a self-signed server certificate.
 openssl genrsa -out rootCA.key 4096
 openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out rootCA.crt -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=rootCA"
 openssl genrsa -out server.key 4096
-openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=localhost"
+openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=**SERVER_IP_OR_HOSTNAME**"
 openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out server.crt
 ```
+Note you *must* replace the **bolded** part above with your server's IP address or hostname.
 
 The above commands will generate three files that are of interest to us: `server.crt`, `server.key`, and `rootCA.crt`.
 
