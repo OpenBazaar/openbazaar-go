@@ -93,7 +93,7 @@ type BitcoinAverage struct {
 }
 
 func (b *BitcoinAverage) fetch() (err error) {
-	resp, err := http.Get("https://api.bitcoinaverage.com/ticker/global/all")
+	resp, err := http.Get("https://ticker.openbazaar.org/api")
 	if err != nil {
 		return err
 	}

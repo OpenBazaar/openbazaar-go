@@ -10,12 +10,12 @@ First, enter the OpenBazaar data directory.
 ```
 cd .openbazaar2.0
 ```
-Next enter the following commands to generate a self-signed server certificate.
+Next enter the following commands to generate a self-signed server certificate. If running a remote server, on the fourth line, be sure to replace \<server-ip\> with the ip of your remote server.
 ```
 openssl genrsa -out rootCA.key 4096
 openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out rootCA.crt -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=rootCA"
 openssl genrsa -out server.key 4096
-openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=localhost"
+openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=<server-ip>"
 openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out server.crt
 ```
 
