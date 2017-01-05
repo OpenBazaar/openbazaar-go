@@ -25,6 +25,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/jbenet/go-multiaddr"
@@ -1054,28 +1055,45 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
+	var profile pb.Profile
+	var err error
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
-		profile, err := i.node.GetProfile()
+		profile, err = i.node.GetProfile()
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		m := jsonpb.Marshaler{
-			EnumsAsInts:  false,
-			EmitDefaults: true,
-			Indent:       "    ",
-			OrigName:     false,
+	} else {
+		if strings.HasPrefix(peerId, "@") {
+			peerId, err = i.node.Resolver.Resolve(peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
 		}
-		out, err := m.MarshalToString(&profile)
+		p, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "profile")))
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		fmt.Fprint(w, out)
-	} else {
-		ErrorResponse(w, http.StatusBadRequest, "This endpoint doesn't yet support fetching other people's profiles")
+		err = jsonpb.UnmarshalString(string(p), &profile)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(&profile)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	fmt.Fprint(w, out)
 }
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
