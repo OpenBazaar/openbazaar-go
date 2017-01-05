@@ -1011,14 +1011,31 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
-	// Bytes are read from file so can be written to response directly
-	listingsBytes, err := i.node.GetListings()
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
+	_, peerId := path.Split(r.URL.Path)
+	var err error
+	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		listingsBytes, err := i.node.GetListings()
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(listingsBytes))
+	} else {
+		if strings.HasPrefix(peerId, "@") {
+			peerId, err = i.node.Resolver.Resolve(peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", "index.json")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(listingsBytes))
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
-	fmt.Fprint(w, string(listingsBytes))
-	return
 }
 
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
