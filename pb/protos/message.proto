@@ -38,4 +38,11 @@ message Chat  {
     string subject                      = 1;
     string message                      = 2;
     google.protobuf.Timestamp timestamp = 3;
+    Flag flag                           = 4;
+
+    enum Flag {
+        MESSAGE = 0;
+        TYPING  = 1;
+        READ    = 2;
+    }
 }

@@ -868,6 +868,17 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		return nil, err
 	}
 
+	if chat.Flag == pb.Chat_TYPING {
+		n := notifications.ChatMessage{
+			PeerId:    p.Pretty(),
+			Subject:   chat.Subject,
+			Message:   "",
+			Timestamp: time.Now(),
+		}
+		service.broadcast <- notifications.Serialize(n)
+		return nil, nil
+	}
+
 	// Validate
 	if len(chat.Subject) > core.CHAT_SUBJECT_MAX_CHARACTERS {
 		return nil, errors.New("Chat subject over max characters")
@@ -899,6 +910,5 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		Timestamp: t,
 	}
 	service.broadcast <- notifications.Serialize(n)
-	service.datastore.Notifications().Put(n, time.Now())
 	return nil, nil
 }

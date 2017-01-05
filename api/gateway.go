@@ -25,7 +25,7 @@ type Gateway struct {
 func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) (*Gateway, error) {
 	topMux := http.NewServeMux()
 
-	restAPI, err := newJsonAPIHandler(n, authCookie, config)
+	jsonAPI, err := newJsonAPIHandler(n, authCookie, config)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +35,8 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	}
 	n.Broadcast = wsAPI.h.Broadcast
 
-	topMux.Handle("/ob/", restAPI)
-	topMux.Handle("/wallet/", restAPI)
+	topMux.Handle("/ob/", jsonAPI)
+	topMux.Handle("/wallet/", jsonAPI)
 	topMux.Handle("/ws", wsAPI)
 
 	mux := topMux

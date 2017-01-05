@@ -316,5 +316,18 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 		MessageType: pb.Message_CHAT,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err = n.Service.SendMessage(ctx, p, &m)
+	if err != nil && chatMessage.Flag != pb.Chat_TYPING {
+		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
+			return err
+		}
+	}
+	return nil
 }
