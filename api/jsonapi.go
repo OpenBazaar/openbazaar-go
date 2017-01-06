@@ -807,50 +807,87 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
-	offset := r.URL.Query().Get("offsetId")
-	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "-1"
+	_, peerId := path.Split(r.URL.Path)
+	var err error
+	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		offset := r.URL.Query().Get("offsetId")
+		limit := r.URL.Query().Get("limit")
+		if limit == "" {
+			limit = "-1"
+		}
+		l, err := strconv.ParseInt(limit, 10, 32)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		followers, err := i.node.Datastore.Followers().Get(offset, int(l))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		ret, _ := json.MarshalIndent(followers, "", "    ")
+		if string(ret) == "null" {
+			ret = []byte("[]")
+		}
+		fmt.Fprint(w, string(ret))
+	} else {
+		if strings.HasPrefix(peerId, "@") {
+			peerId, err = i.node.Resolver.Resolve(peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+		fmt.Fprint(w, string(followBytes))
 	}
-	l, err := strconv.ParseInt(limit, 10, 32)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	followers, err := i.node.Datastore.Followers().Get(offset, int(l))
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	ret, _ := json.MarshalIndent(followers, "", "    ")
-	if string(ret) == "null" {
-		ret = []byte("[]")
-	}
-	fmt.Fprint(w, string(ret))
 }
 
 func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
-	offset := r.URL.Query().Get("offsetId")
-	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "-1"
+	_, peerId := path.Split(r.URL.Path)
+	var err error
+	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		offset := r.URL.Query().Get("offsetId")
+		limit := r.URL.Query().Get("limit")
+		if limit == "" {
+			limit = "-1"
+		}
+		l, err := strconv.ParseInt(limit, 10, 32)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		followers, err := i.node.Datastore.Following().Get(offset, int(l))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		ret, _ := json.MarshalIndent(followers, "", "    ")
+		if string(ret) == "null" {
+			ret = []byte("[]")
+		}
+		fmt.Fprint(w, string(ret))
+	} else {
+		if strings.HasPrefix(peerId, "@") {
+			peerId, err = i.node.Resolver.Resolve(peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+		fmt.Fprint(w, string(followBytes))
 	}
-	l, err := strconv.ParseInt(limit, 10, 32)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	following, err := i.node.Datastore.Following().Get(offset, int(l))
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	ret, _ := json.MarshalIndent(following, "", "    ")
-	if string(ret) == "null" {
-		ret = []byte("[]")
-	}
-	fmt.Fprint(w, string(ret))
-	return
 }
 
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
