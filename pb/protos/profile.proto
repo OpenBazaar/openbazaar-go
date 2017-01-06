@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/timestamp.proto";
+import "moderator.proto";
 
 message Profile {
     string handle                          = 1;
@@ -19,25 +20,26 @@ message Profile {
     bool nsfw                              = 12;
     bool vendor                            = 13;
     bool moderator                         = 14;
+    Moderator modInfo                      = 15;
 
-    string primaryColor                    = 15;
-    string secondaryColor                  = 16;
-    string textColor                       = 17;
-    string highlightColor                  = 18;
-    string highlightTextColor              = 19;
+    string primaryColor                    = 16;
+    string secondaryColor                  = 17;
+    string textColor                       = 18;
+    string highlightColor                  = 19;
+    string highlightTextColor              = 20;
 
     // The following data is added to the profile
     // automatically by the server and may be omitted
     // when setting the profile via API.
 
-    Image avatarHashes                     = 20;
-    Image headerHashes                     = 21;
+    Image avatarHashes                     = 21;
+    Image headerHashes                     = 22;
 
-    uint32 followerCount                   = 22;
-    uint32 followingCount                  = 23;
-    uint32 listingCount                    = 24;
+    uint32 followerCount                   = 23;
+    uint32 followingCount                  = 24;
+    uint32 listingCount                    = 25;
 
-    google.protobuf.Timestamp lastModified = 25;
+    google.protobuf.Timestamp lastModified = 26;
 
     message SocialAccount {
         string type     = 1;

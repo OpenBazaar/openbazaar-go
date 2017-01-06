@@ -40,8 +40,6 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTSettings(w, r)
 	case "/ob/inventory", "/ob/inventory/":
 		i.POSTInventory(w, r)
-	case "/ob/moderator", "/ob/moderator/":
-		i.POSTModerator(w, r)
 	case "/ob/avatar", "/ob/avatar/":
 		i.POSTAvatar(w, r)
 	case "/ob/header", "/ob/header/":

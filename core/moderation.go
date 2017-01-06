@@ -45,33 +45,13 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	}
 	moderator.PubKey = mPubKey.SerializeCompressed()
 
-	// Save to file
-	modPath := path.Join(n.RepoPath, "root", "moderation")
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(moderator)
-	if err != nil {
-		return err
-	}
-	f, err := os.Create(modPath)
-	defer f.Close()
-	if err != nil {
-		return err
-	}
-	if _, err := f.WriteString(out); err != nil {
-		return err
-	}
-
 	// Update profile
 	profile, err := n.GetProfile()
 	if err != nil {
 		return err
 	}
 	profile.Moderator = true
+	profile.ModInfo = moderator
 	err = n.UpdateProfile(&profile)
 	if err != nil {
 		return err
