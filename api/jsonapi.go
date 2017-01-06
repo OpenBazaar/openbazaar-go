@@ -25,6 +25,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
@@ -1868,4 +1869,19 @@ func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
+	_, imageHash := path.Split(r.URL.Path)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, "/ipfs/"+imageHash)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer dr.Close()
+	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	w.Header().Del("Content-Type")
+	http.ServeContent(w, r, imageHash, time.Now(), dr)
 }
