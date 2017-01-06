@@ -123,7 +123,7 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETChatConversations(w, r)
 	case strings.Contains(path, "/ob/notifications"):
 		i.GETNotifications(w, r)
-	case strings.Contains(path, "/ob/image"):
+	case strings.Contains(path, "/ob/images"):
 		i.GETImage(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
