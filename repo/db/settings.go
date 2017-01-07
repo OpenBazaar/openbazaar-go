@@ -99,6 +99,9 @@ func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	if settings.StoreModerators == nil {
 		settings.StoreModerators = current.StoreModerators
 	}
+	if settings.MisPaymentBuffer == nil {
+		settings.MisPaymentBuffer = current.MisPaymentBuffer
+	}
 	if settings.SMTPSettings == nil {
 		settings.SMTPSettings = current.SMTPSettings
 	}

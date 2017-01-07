@@ -699,6 +699,10 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusConflict, "Settings is already set. Use PUT.")
 		return
 	}
+	if settings.MisPaymentBuffer == nil {
+		i := float32(1)
+		settings.MisPaymentBuffer = &i
+	}
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
