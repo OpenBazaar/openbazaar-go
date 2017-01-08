@@ -2,15 +2,17 @@ package core
 
 import (
 	"encoding/base64"
-	"fmt"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/nfnt/resize"
 	"image"
+	_ "image/gif"
 	"image/jpeg"
+	_ "image/png"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/nfnt/resize"
 )
 
 type Images struct {
