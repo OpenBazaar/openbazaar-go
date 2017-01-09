@@ -1,10 +1,12 @@
 package db
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/btcec"
 	"testing"
 )
 
@@ -61,6 +63,45 @@ func TestPutKey(t *testing.T) {
 	}
 	if used != 0 {
 		t.Errorf(`Expected 0 got %s`, used)
+	}
+}
+
+func TestImportKey(t *testing.T) {
+	key, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		t.Error(err)
+	}
+	b := make([]byte, 32)
+	err = kdb.ImportKey(b, key)
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := kdb.db.Prepare("select scriptPubKey, purpose, used, key from keys where scriptPubKey=?")
+	defer stmt.Close()
+
+	var scriptPubKey string
+	var purpose int
+	var used int
+	var keyHex string
+	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptPubKey, &purpose, &used, &keyHex)
+	if err != nil {
+		t.Error(err)
+	}
+	if scriptPubKey != hex.EncodeToString(b) {
+		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), scriptPubKey)
+	}
+	if purpose != -1 {
+		t.Errorf(`Expected -1 got %d`, purpose)
+	}
+	if used != 0 {
+		t.Errorf(`Expected 0 got %s`, used)
+	}
+	keyBytes, err := hex.DecodeString(keyHex)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(key.Serialize(), keyBytes) {
+		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), hex.EncodeToString(keyBytes))
 	}
 }
 
@@ -134,6 +175,25 @@ func TestGetPathForScript(t *testing.T) {
 	}
 	if path.Index != 15 || path.Purpose != spvwallet.EXTERNAL {
 		t.Error("Returned incorrect key path")
+	}
+}
+
+func TestKeyForScript(t *testing.T) {
+	key, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		t.Error(err)
+	}
+	b := make([]byte, 32)
+	err = kdb.ImportKey(b, key)
+	if err != nil {
+		t.Error(err)
+	}
+	k, err := kdb.GetKeyForScript(b)
+	if err != nil {
+		t.Error(err)
+	}
+	if !bytes.Equal(key.Serialize(), k.Serialize()) {
+		t.Error("Failed to return imported key")
 	}
 }
 

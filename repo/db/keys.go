@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/btcec"
 	"strconv"
 	"sync"
 )
@@ -24,6 +25,24 @@ func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
 	stmt, _ := tx.Prepare("insert into keys(scriptPubKey, purpose, keyIndex, used) values(?,?,?,?)")
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey), int(keyPath.Purpose), keyPath.Index, 0)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
+	return nil
+}
+
+func (k *KeysDB) ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+	tx, err := k.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, _ := tx.Prepare("insert into keys(scriptPubKey, purpose, used, key) values(?,?,?,?)")
+	defer stmt.Close()
+	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey), -1, 0, hex.EncodeToString(key.Serialize()))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -90,6 +109,25 @@ func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error
 		Index:   index,
 	}
 	return p, nil
+}
+
+func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error) {
+	k.lock.Lock()
+	defer k.lock.Unlock()
+
+	stmt, err := k.db.Prepare("select key from keys where scriptPubKey=? and purpose=-1")
+	defer stmt.Close()
+	var keyHex string
+	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&keyHex)
+	if err != nil {
+		return nil, errors.New("Key not found")
+	}
+	keyBytes, err := hex.DecodeString(keyHex)
+	if err != nil {
+		return nil, err
+	}
+	key, _ := btcec.PrivKeyFromBytes(btcec.S256(), keyBytes)
+	return key, nil
 }
 
 func (k *KeysDB) GetUnused(purpose spvwallet.KeyPurpose) (int, error) {

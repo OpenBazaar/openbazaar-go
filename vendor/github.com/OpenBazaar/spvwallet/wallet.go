@@ -261,8 +261,8 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int)
 }
 
 func (w *SPVWallet) Close() {
-	log.Info("Disconnecting from peers and shutting down")
 	if w.running {
+		log.Info("Disconnecting from peers and shutting down")
 		w.PeerManager.Stop()
 		w.blockchain.Close()
 		w.stopChan <- 1
