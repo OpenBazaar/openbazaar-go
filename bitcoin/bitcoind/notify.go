@@ -43,7 +43,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		outputs = append(outputs, out)
 
 		// Check stealth
-		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[1:4], l.stealthFlag) {
+		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], l.stealthFlag) {
 			_, key, err := l.checkStealth(tx.MsgTx(), txout.PkScript)
 			if err == nil {
 				wif, err := btcutil.NewWIF(key, l.params, true)
