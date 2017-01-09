@@ -12,6 +12,7 @@ type SettingsData struct {
 	RefundPolicy       *string            `json:"refundPolicy"`
 	BlockedNodes       *[]string          `json:"blockedNodes"`
 	StoreModerators    *[]string          `json:"storeModerators"`
+	MisPaymentBuffer   *float32           `json:"mispaymentBuffer"`
 	SMTPSettings       *SMTPSettings      `json:"smtpSettings"`
 	Version            *string            `json:"version"`
 }

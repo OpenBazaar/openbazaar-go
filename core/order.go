@@ -1347,3 +1347,19 @@ func validateVersionNumber(rc *pb.RicardianContract) error {
 	}
 	return nil
 }
+
+func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount uint64) bool {
+	settings, err := n.Datastore.Settings().Get()
+	if err != nil {
+		return false
+	}
+	bufferPercent := float32(0)
+	if settings.MisPaymentBuffer != nil {
+		bufferPercent = *settings.MisPaymentBuffer
+	}
+	buffer := float32(requestedAmount) * (bufferPercent / 100)
+	if float32(paymentAmount)+buffer < float32(requestedAmount) {
+		return false
+	}
+	return true
+}

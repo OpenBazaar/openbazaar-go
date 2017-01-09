@@ -184,7 +184,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		if total != contract.BuyerOrder.Payment.Amount {
+		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
 			return errorResponse("Calculated a different payment amount"), err
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true)
@@ -226,7 +226,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse("Error calculating payment amount"), err
 		}
-		if total != contract.BuyerOrder.Payment.Amount {
+		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
 			return errorResponse("Calculated a different payment amount"), err
 		}
 		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
