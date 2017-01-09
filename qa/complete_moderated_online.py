@@ -45,7 +45,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         with open('testdata/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
-        r = requests.post(api_url, data=json.dumps(moderation_json, indent=4))
+        r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Moderator post endpoint not found")
         elif r.status_code != 200:
@@ -58,6 +58,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         slug = listing_json["listing"]["slug"]
+        listing_json["listing"]["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:
