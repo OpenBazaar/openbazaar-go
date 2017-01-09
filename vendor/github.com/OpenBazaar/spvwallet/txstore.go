@@ -2,8 +2,11 @@ package spvwallet
 
 import (
 	"bytes"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -14,6 +17,8 @@ import (
 	"sync"
 )
 
+const FlagPrefix = 0x00
+
 type TxStore struct {
 	Adrs           []btcutil.Address
 	watchedScripts [][]byte
@@ -22,20 +27,36 @@ type TxStore struct {
 	Param *chaincfg.Params
 
 	masterPrivKey *hd.ExtendedKey
+	masterPubKey  *hd.ExtendedKey
 
 	listeners []func(TransactionCallback)
+
+	stealthFlag []byte
 
 	Datastore
 }
 
 func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) (*TxStore, error) {
+	mPubKey, err := masterPrivKey.Neuter()
+	if err != nil {
+		return nil, err
+	}
+	pubKey, err := mPubKey.ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+	pubkeyBytes := pubKey.SerializeCompressed()
+	f := []byte{FlagPrefix}
+	f = append(f, pubkeyBytes[1:2]...)
 	txs := &TxStore{
 		Param:         p,
 		masterPrivKey: masterPrivKey,
+		masterPubKey:  mPubKey,
 		addrMutex:     new(sync.Mutex),
 		Datastore:     db,
+		stealthFlag:   f,
 	}
-	err := txs.PopulateAdrs()
+	err = txs.PopulateAdrs()
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +101,8 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 		}
 		f.Add(addrs[0].ScriptAddress())
 	}
+	f.Add(ts.stealthFlag)
+
 	return f, nil
 }
 
@@ -242,6 +265,27 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				hits++
 			}
 		}
+		// Check stealth
+		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], ts.stealthFlag) {
+			outIndex, key, err := ts.checkStealth(tx, txout.PkScript)
+			if err == nil {
+				newop := wire.OutPoint{
+					Hash:  cachedSha,
+					Index: uint32(outIndex),
+				}
+				newu := Utxo{
+					AtHeight:     height,
+					Value:        tx.TxOut[outIndex].Value,
+					ScriptPubkey: tx.TxOut[outIndex].PkScript,
+					Op:           newop,
+					Freeze:       false,
+				}
+				ts.Utxos().Put(newu)
+				hits++
+				ts.Keys().ImportKey(tx.TxOut[outIndex].PkScript, key)
+				ts.Keys().MarkKeyAsUsed(tx.TxOut[outIndex].PkScript)
+			}
+		}
 		cb.Outputs = append(cb.Outputs, out)
 	}
 	utxos, err := ts.Utxos().GetAll()
@@ -286,6 +330,58 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 	}
 	return hits, err
+}
+
+func (ts *TxStore) checkStealth(tx *wire.MsgTx, scriptPubkey []byte) (outIndex int, privkey *btcec.PrivateKey, err error) {
+	// Extract the ephemeral public key from the script
+	ephemPubkeyBytes := scriptPubkey[5:38]
+	ephemPubkey, err := btcec.ParsePubKey(ephemPubkeyBytes, btcec.S256())
+	if err != nil {
+		return 0, nil, err
+	}
+	mPrivKey, err := ts.masterPrivKey.ECPrivKey()
+	if err != nil {
+		return 0, nil, err
+	}
+	// Calculate a shared secret using the master private key and ephemeral public key
+	ss := btcec.GenerateSharedSecret(mPrivKey, ephemPubkey)
+
+	// Create an HD key using the shared secret as the chaincode
+	hdKey := hd.NewExtendedKey(
+		ts.Param.HDPrivateKeyID[:],
+		mPrivKey.Serialize(),
+		ss,
+		[]byte{0x00, 0x00, 0x00, 0x00},
+		0,
+		0,
+		true)
+
+	// Derive child key 0
+	childKey, err := hdKey.Child(0)
+	if err != nil {
+		return 0, nil, err
+	}
+	addr, err := childKey.Address(ts.Param)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	// Check to see if the p2pkh script for our derived child key matches any output scripts in this transaction
+	script, err := txscript.PayToAddrScript(addr)
+	if err != nil {
+		return 0, nil, err
+	}
+	for i, out := range tx.TxOut {
+		log.Notice(hex.EncodeToString(script), hex.EncodeToString(out.PkScript), i)
+		if bytes.Equal(script, out.PkScript) {
+			privkey, err := childKey.ECPrivKey()
+			if err != nil {
+				return 0, nil, err
+			}
+			return i, privkey, nil
+		}
+	}
+	return 0, nil, errors.New("Stealth transaction not for us")
 }
 
 func outPointsEqual(a, b wire.OutPoint) bool {

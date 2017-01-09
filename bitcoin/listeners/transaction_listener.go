@@ -37,7 +37,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
 		_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
-		if err != nil {
+		if err != nil || len(addrs) == 0 {
 			continue
 		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
@@ -57,7 +57,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 		_, addrs, _, err := txscript.ExtractPkScriptAddrs(input.LinkedScriptPubKey, l.params)
-		if err != nil {
+		if err != nil || len(addrs) == 0 {
 			continue
 		}
 		isForSale := true

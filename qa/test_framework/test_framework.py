@@ -166,6 +166,7 @@ class OpenBazaarTestFramework(object):
                 pass
         time.sleep(10)
         if delete_data:
+            a=1
             shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
