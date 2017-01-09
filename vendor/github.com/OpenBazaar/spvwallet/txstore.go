@@ -2,11 +2,8 @@ package spvwallet
 
 import (
 	"bytes"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -15,6 +12,8 @@ import (
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"sync"
+	"github.com/btcsuite/btcd/btcec"
+	"errors"
 )
 
 const FlagPrefix = 0x00
@@ -266,7 +265,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 			}
 		}
 		// Check stealth
-		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], ts.stealthFlag) {
+		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], ts.stealthFlag){
 			outIndex, key, err := ts.checkStealth(tx, txout.PkScript)
 			if err == nil {
 				newop := wire.OutPoint{
@@ -372,7 +371,6 @@ func (ts *TxStore) checkStealth(tx *wire.MsgTx, scriptPubkey []byte) (outIndex i
 		return 0, nil, err
 	}
 	for i, out := range tx.TxOut {
-		log.Notice(hex.EncodeToString(script), hex.EncodeToString(out.PkScript), i)
 		if bytes.Equal(script, out.PkScript) {
 			privkey, err := childKey.ECPrivKey()
 			if err != nil {
