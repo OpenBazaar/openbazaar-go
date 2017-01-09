@@ -260,13 +260,17 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
-		ipnsPath := ipfspath.FromString(data.Moderator + "/moderation")
-		moderatorBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
+		ipnsPath := ipfspath.FromString(data.Moderator + "/profile")
+		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		moderatorInfo := new(pb.Moderator)
-		err = jsonpb.UnmarshalString(string(moderatorBytes), moderatorInfo)
+		profile := new(pb.Profile)
+		err = jsonpb.UnmarshalString(string(profileBytes), profile)
+		if err != nil {
+			return "", "", 0, false, err
+		}
+		moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -312,7 +316,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		hdKey = hd.NewExtendedKey(
 			n.Wallet.Params().HDPublicKeyID[:],
-			moderatorInfo.PubKey,
+			moderatorKeyBytes,
 			chaincode,
 			parentFP,
 			0,
@@ -975,6 +979,20 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 		if err != nil {
 			return errors.New("Invalid moderator")
 		}
+		var availableMods []string
+		for _, listing := range contract.VendorListings {
+			availableMods = append(availableMods, listing.Moderators...)
+		}
+		validMod := false
+		for _, mod := range availableMods {
+			if mod == contract.BuyerOrder.Payment.Moderator {
+				validMod = true
+				break
+			}
+		}
+		if !validMod {
+			return errors.New("Invalid moderator")
+		}
 	}
 
 	// Validate that the hash of the items in the contract match claimed hash in the order
@@ -1200,13 +1218,17 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 }
 
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error {
-	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/moderation")
-	moderatorBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
+	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile")
+	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 	if err != nil {
 		return err
 	}
-	moderatorInfo := new(pb.Moderator)
-	err = jsonpb.UnmarshalString(string(moderatorBytes), moderatorInfo)
+	profile := new(pb.Profile)
+	err = jsonpb.UnmarshalString(string(profileBytes), profile)
+	if err != nil {
+		return err
+	}
+	moderatorBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 	if err != nil {
 		return err
 	}
@@ -1248,7 +1270,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error 
 	}
 	hdKey = hd.NewExtendedKey(
 		n.Wallet.Params().HDPublicKeyID[:],
-		moderatorInfo.PubKey,
+		moderatorBytes,
 		chaincode,
 		parentFP,
 		0,

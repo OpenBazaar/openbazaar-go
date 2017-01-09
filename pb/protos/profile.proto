@@ -39,7 +39,9 @@ message Profile {
     uint32 followingCount                  = 24;
     uint32 listingCount                    = 25;
 
-    google.protobuf.Timestamp lastModified = 26;
+    string bitcoinPubkey                   = 26;
+
+    google.protobuf.Timestamp lastModified = 27;
 
     message SocialAccount {
         string type     = 1;

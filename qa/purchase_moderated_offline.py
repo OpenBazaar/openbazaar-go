@@ -30,19 +30,6 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(20)
 
-        # post listing to alice
-        with open('testdata/listing.json') as listing_file:
-            listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-
-        api_url = alice["gateway_url"] + "ob/listing"
-        r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
-        if r.status_code == 404:
-            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Listing post endpoint not found")
-        elif r.status_code != 200:
-            resp = json.loads(r.text)
-            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
-
         # create a profile for charlie
         pro = {"name": "Charlie"}
         api_url = charlie["gateway_url"] + "ob/profile"
@@ -58,13 +45,27 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         with open('testdata/moderation.json') as listing_file:
             moderation_json = json.load(listing_file, object_pairs_hook=OrderedDict)
         api_url = charlie["gateway_url"] + "ob/moderator"
-        r = requests.post(api_url, data=json.dumps(moderation_json, indent=4))
+        r = requests.put(api_url, data=json.dumps(moderation_json, indent=4))
         if r.status_code == 404:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Moderator post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Moderator POST failed. Reason: %s", resp["reason"])
         moderatorId = charlie["peerId"]
+        time.sleep(4)
+
+        # post listing to alice
+        with open('testdata/listing.json') as listing_file:
+            listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+
+        api_url = alice["gateway_url"] + "ob/listing"
+        listing_json["listing"]["moderators"] = [moderatorId]
+        r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Listing post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
         # get listing hash

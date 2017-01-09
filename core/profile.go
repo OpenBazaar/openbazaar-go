@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/hex"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -25,6 +26,11 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 }
 
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
+	mPubkey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return err
+	}
+	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
