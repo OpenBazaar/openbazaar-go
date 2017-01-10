@@ -31,6 +31,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return err
 	}
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
+	if n.Wallet.AcceptStealth() {
+		profile.AcceptStealth = true
+	} else {
+		profile.AcceptStealth = false
+	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,

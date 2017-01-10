@@ -93,7 +93,7 @@ func (w *BitcoindWallet) Start() {
 	}
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
-	go startNotificationListener(client, w.listeners, w.masterPrivateKey, w.params)
+	go startNotificationListener(client, w.listeners)
 
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
@@ -125,6 +125,10 @@ func (w *BitcoindWallet) shutdownIfActive() {
 
 func (w *BitcoindWallet) CurrencyCode() string {
 	return "btc"
+}
+
+func (w *BitcoindWallet) AcceptStealth() bool {
+	return false
 }
 
 func (w *BitcoindWallet) MasterPrivateKey() *hd.ExtendedKey {

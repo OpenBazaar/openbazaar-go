@@ -41,7 +41,7 @@ class SendStealthTest(OpenBazaarTestFramework):
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(20)
 
-        # send coins to alice
+        # get charlie address
         api_url = charlie["gateway_url"] + "wallet/address"
         r = requests.get(api_url)
         if r.status_code == 200:
@@ -112,7 +112,7 @@ class SendStealthTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("SendStealthTest - FAIL: Unknown response")
 
-        # stealth send to charlie
+        # send to charlie
         charlie_payment_amount = 5000
         spend = {
             "address": charlie_address,

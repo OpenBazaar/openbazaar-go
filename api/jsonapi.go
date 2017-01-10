@@ -692,6 +692,10 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if !profile.AcceptStealth {
+			ErrorResponse(w, http.StatusInternalServerError, "Recipeint does not accept stealth payments")
+			return
+		}
 		pubkeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())

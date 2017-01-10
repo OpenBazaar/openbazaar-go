@@ -19,6 +19,9 @@ type BitcoinWallet interface {
 	// Returns the type of crytocurrency this wallet implements
 	CurrencyCode() string
 
+	// This wallet accepts stealth payments
+	AcceptStealth() bool
+
 	// Get the master private key
 	MasterPrivateKey() *hd.ExtendedKey
 

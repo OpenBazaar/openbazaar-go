@@ -40,8 +40,9 @@ message Profile {
     uint32 listingCount                    = 25;
 
     string bitcoinPubkey                   = 26;
+    bool acceptStealth                     = 27;
 
-    google.protobuf.Timestamp lastModified = 27;
+    google.protobuf.Timestamp lastModified = 28;
 
     message SocialAccount {
         string type     = 1;
