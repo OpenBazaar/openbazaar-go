@@ -119,6 +119,7 @@ func (w *BitcoindWallet) shutdownIfActive() {
 	if err != nil {
 		return
 	}
+	client.RawRequest("stop", []json.RawMessage{})
 	client.Shutdown()
 	time.Sleep(5 * time.Second)
 }
@@ -551,5 +552,6 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 }
 
 func (w *BitcoindWallet) Close() {
+	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 }
