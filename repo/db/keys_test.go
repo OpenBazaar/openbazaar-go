@@ -71,7 +71,10 @@ func TestImportKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	b := make([]byte, 32)
+	var b []byte
+	for i := 0; i < 32; i++ {
+		b = append(b, 0xff)
+	}
 	err = kdb.ImportKey(b, key)
 	if err != nil {
 		t.Error(err)
@@ -183,7 +186,10 @@ func TestKeyForScript(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	b := make([]byte, 32)
+	var b []byte
+	for i := 0; i < 32; i++ {
+		b = append(b, 0xee)
+	}
 	err = kdb.ImportKey(b, key)
 	if err != nil {
 		t.Error(err)

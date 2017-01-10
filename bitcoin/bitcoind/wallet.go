@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -28,8 +27,6 @@ import (
 )
 
 var log = logging.MustGetLogger("bitcoind")
-
-var account string = "OpenBazaar"
 
 const FlagPrefix = 0x00
 
@@ -85,7 +82,6 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 
 func (w *BitcoindWallet) Start() {
 	w.shutdownIfActive()
-
 	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server"}
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")
@@ -140,7 +136,7 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 }
 
 func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
-	addr, _ := w.rpcClient.GetAccountAddress(account)
+	addr, _ := w.rpcClient.GetAccountAddress("")
 	return addr
 }
 
@@ -153,8 +149,8 @@ func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 }
 
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
-	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
-	c, _ := w.rpcClient.GetBalance(account)
+	u, _ := w.rpcClient.GetUnconfirmedBalance("")
+	c, _ := w.rpcClient.GetBalance("")
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
@@ -171,7 +167,7 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 	if err != nil {
 		return err
 	}
-	_, err = w.rpcClient.SendFrom(account, addr, amt)
+	_, err = w.rpcClient.SendFrom("", addr, amt)
 	return err
 }
 
@@ -243,7 +239,6 @@ func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeL
 	if err != nil {
 		return err
 	}
-	fmt.Println(fundResp.Hex, err)
 	decodedTx, err := hex.DecodeString(fundResp.Hex)
 	if err != nil {
 		return err
@@ -256,7 +251,6 @@ func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeL
 	}
 
 	signedTx, success, err := w.rpcClient.SignRawTransaction(fundedTx)
-	fmt.Println(signedTx, success, err)
 	if !success {
 		return errors.New("Failed to sign transaction")
 	}
