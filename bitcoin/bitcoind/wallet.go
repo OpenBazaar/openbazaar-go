@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
@@ -166,7 +167,7 @@ func (w *BitcoindWallet) ChainTip() uint32 {
 }
 
 func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error {
-	amt, err := btc.NewAmount(float64(amount))
+	amt, err := btc.NewAmount(float64(amount) / 100000000)
 	if err != nil {
 		return err
 	}
@@ -214,7 +215,7 @@ func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeL
 	txout := wire.NewTxOut(0, script)
 
 	addrMap := make(map[btc.Address]btc.Amount)
-	amt, err := btc.NewAmount(float64(amount))
+	amt, err := btc.NewAmount(float64(amount) / 100000000)
 	if err != nil {
 		return err
 	}
@@ -222,14 +223,10 @@ func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeL
 	rawtx, err := w.rpcClient.CreateRawTransaction([]btcjson.TransactionInput{}, addrMap, nil)
 	rawtx.TxOut = append(rawtx.TxOut, txout)
 
-	var ser []byte
-	buff := bytes.NewBuffer(ser)
-	err = rawtx.Serialize(buff)
-	if err != nil {
-		return err
-	}
+	ser := new(bytes.Buffer)
+	rawtx.Serialize(ser)
 
-	b := json.RawMessage([]byte(hex.EncodeToString(ser)))
+	b := json.RawMessage([]byte(`"` + hex.EncodeToString(ser.Bytes()) + `"`))
 	resp, err := w.rpcClient.RawRequest("fundrawtransaction", []json.RawMessage{b})
 	if err != nil {
 		return err
@@ -237,30 +234,29 @@ func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeL
 	type fundTxResponse struct {
 		Hex string
 	}
-	var respBytes []byte
-	err = resp.UnmarshalJSON(respBytes)
+	respBytes, err := resp.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	var fundResp *fundTxResponse
+	fundResp := new(fundTxResponse)
 	err = json.Unmarshal(respBytes, fundResp)
 	if err != nil {
 		return err
 	}
+	fmt.Println(fundResp.Hex, err)
 	decodedTx, err := hex.DecodeString(fundResp.Hex)
 	if err != nil {
 		return err
 	}
-	txbuff := bytes.NewBuffer(decodedTx)
+
 	fundedTx := wire.NewMsgTx(1)
-	err = fundedTx.Deserialize(txbuff)
+	err = fundedTx.Deserialize(bytes.NewBuffer(decodedTx))
 	if err != nil {
 		return err
 	}
+
 	signedTx, success, err := w.rpcClient.SignRawTransaction(fundedTx)
-	if err != nil {
-		return err
-	}
+	fmt.Println(signedTx, success, err)
 	if !success {
 		return errors.New("Failed to sign transaction")
 	}

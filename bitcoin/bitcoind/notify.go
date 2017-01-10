@@ -9,8 +9,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcrpcclient"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"io/ioutil"
 	"net/http"
 )
@@ -98,7 +98,7 @@ func startNotificationListener(client *btcrpcclient.Client, listeners []func(spv
 
 func (l *NotificationListener) checkStealth(tx *wire.MsgTx, scriptPubkey []byte) (outIndex int, privkey *btcec.PrivateKey, err error) {
 	// Extract the ephemeral public key from the script
-	ephemPubkeyBytes := scriptPubkey[5:len(scriptPubkey)]
+	ephemPubkeyBytes := scriptPubkey[5:38]
 	ephemPubkey, err := btcec.ParsePubKey(ephemPubkeyBytes, btcec.S256())
 	if err != nil {
 		return 0, nil, err
