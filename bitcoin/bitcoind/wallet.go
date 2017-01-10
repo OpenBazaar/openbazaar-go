@@ -28,7 +28,10 @@ import (
 
 var log = logging.MustGetLogger("bitcoind")
 
-const FlagPrefix = 0x00
+const (
+	FlagPrefix = 0x00
+	Account    = "OpenBazaar"
+)
 
 type BitcoindWallet struct {
 	params           *chaincfg.Params
@@ -141,7 +144,7 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 }
 
 func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
-	addr, _ := w.rpcClient.GetAccountAddress("")
+	addr, _ := w.rpcClient.GetAccountAddress(Account)
 	return addr
 }
 
@@ -154,8 +157,16 @@ func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 }
 
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
-	u, _ := w.rpcClient.GetUnconfirmedBalance("")
-	c, _ := w.rpcClient.GetBalance("")
+	resp, _ := w.rpcClient.RawRequest("getwalletinfo", []json.RawMessage{})
+	type walletInfo struct {
+		Balance     float64 `json:"balance"`
+		Unconfirmed float64 `json:"unconfirmed_balance"`
+	}
+	respBytes, _ := resp.MarshalJSON()
+	i := new(walletInfo)
+	json.Unmarshal(respBytes, i)
+	c, _ := btc.NewAmount(i.Balance)
+	u, _ := btc.NewAmount(i.Unconfirmed)
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
@@ -172,7 +183,7 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 	if err != nil {
 		return err
 	}
-	_, err = w.rpcClient.SendFrom("", addr, amt)
+	_, err = w.rpcClient.SendFrom(Account, addr, amt)
 	return err
 }
 
