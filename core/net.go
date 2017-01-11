@@ -243,7 +243,7 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 	return n.sendMessage(peerId, &k, m)
 }
 
-func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, k *libp2p.PubKey, fulfillmentMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(fulfillmentMessage)
 	if err != nil {
 		return err
@@ -252,7 +252,7 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage 
 		MessageType: pb.Message_ORDER_FULFILLMENT,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 }
 
 func (n *OpenBazaarNode) SendOrderCompletion(peerId string, k *libp2p.PubKey, completionMessage *pb.RicardianContract) error {
