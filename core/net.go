@@ -270,7 +270,7 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, k *libp2p.PubKey, co
 	return n.sendMessage(peerId, k, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeOpen(peerId string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(disputeMessage)
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.Ricar
 		MessageType: pb.Message_DISPUTE_OPEN,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 }
 
 func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.DisputeUpdate) error {
