@@ -100,7 +100,7 @@ func (w *BitcoindWallet) Start() {
 
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-	ticker := time.NewTicker(20 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	go func() {
 		for range ticker.C {
 			log.Fatal("Failed to connect to bitcoind")
@@ -541,6 +541,7 @@ func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
 }
 
 func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
+	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
 	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-rescan"}
