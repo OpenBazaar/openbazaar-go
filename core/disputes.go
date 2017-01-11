@@ -367,7 +367,9 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	var chaincode string
 	var feePerByte uint64
 	var vendorId string
+	var vendorKey libp2p.PubKey
 	var buyerId string
+	var buyerKey libp2p.PubKey
 	if buyerPercentage > 0 && vendorPercentage == 0 {
 		buyerPayout = true
 		outpoints = buyerOutpoints
@@ -375,7 +377,15 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
 		feePerByte = buyerContract.BuyerOrder.RefundFee
 		buyerId = buyerContract.BuyerOrder.BuyerID.Guid
+		buyerKey, err = libp2p.UnmarshalPublicKey(buyerContract.BuyerOrder.BuyerID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 		vendorId = buyerContract.VendorListings[0].VendorID.Guid
+		vendorKey, err = libp2p.UnmarshalPublicKey(buyerContract.VendorListings[0].VendorID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 	} else if vendorPercentage > 0 && buyerPercentage == 0 {
 		vendorPayout = true
 		outpoints = vendorOutpoints
@@ -387,7 +397,15 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 		}
 		buyerId = vendorContract.BuyerOrder.BuyerID.Guid
+		buyerKey, err = libp2p.UnmarshalPublicKey(vendorContract.BuyerOrder.BuyerID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 		vendorId = vendorContract.VendorListings[0].VendorID.Guid
+		vendorKey, err = libp2p.UnmarshalPublicKey(vendorContract.VendorListings[0].VendorID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 	} else if vendorPercentage > buyerPercentage {
 		buyerPayout = true
 		vendorPayout = true
@@ -400,7 +418,15 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 		}
 		buyerId = vendorContract.BuyerOrder.BuyerID.Guid
+		buyerKey, err = libp2p.UnmarshalPublicKey(vendorContract.BuyerOrder.BuyerID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 		vendorId = vendorContract.VendorListings[0].VendorID.Guid
+		vendorKey, err = libp2p.UnmarshalPublicKey(vendorContract.VendorListings[0].VendorID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 	} else if buyerPercentage >= vendorPercentage {
 		buyerPayout = true
 		vendorPayout = true
@@ -409,7 +435,15 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		chaincode = buyerContract.BuyerOrder.Payment.Chaincode
 		feePerByte = buyerContract.BuyerOrder.RefundFee
 		buyerId = buyerContract.BuyerOrder.BuyerID.Guid
+		buyerKey, err = libp2p.UnmarshalPublicKey(buyerContract.BuyerOrder.BuyerID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 		vendorId = buyerContract.VendorListings[0].VendorID.Guid
+		vendorKey, err = libp2p.UnmarshalPublicKey(buyerContract.VendorListings[0].VendorID.Pubkeys.Guid)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Calculate total out value
@@ -585,12 +619,11 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return err
 	}
 
-	err = n.SendDisputeClose(buyerId, rc)
+	err = n.SendDisputeClose(buyerId, &buyerKey, rc)
 	if err != nil {
 		return err
 	}
-
-	err = n.SendDisputeClose(vendorId, rc)
+	err = n.SendDisputeClose(vendorId, &vendorKey, rc)
 	if err != nil {
 		return err
 	}
