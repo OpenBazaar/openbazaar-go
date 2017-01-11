@@ -2,20 +2,15 @@ package bitcoind
 
 import (
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcrpcclient"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"io/ioutil"
 	"net/http"
 )
 
 type NotificationListener struct {
-	client        *btcrpcclient.Client
-	listeners     []func(spvwallet.TransactionCallback)
-	masterPrivKey *hd.ExtendedKey
-	params        *chaincfg.Params
-	stealthFlag   []byte
+	client    *btcrpcclient.Client
+	listeners []func(spvwallet.TransactionCallback)
 }
 
 func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
