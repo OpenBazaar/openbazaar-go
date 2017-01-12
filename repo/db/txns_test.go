@@ -25,19 +25,27 @@ func TestTxnsPut(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx)
+	err := txdb.Put(tx, 5, 1)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := txdb.db.Prepare("select tx from txns where txid=?")
+	stmt, err := txdb.db.Prepare("select tx, value, height from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
-	err = stmt.QueryRow(tx.TxHash().String()).Scan(&ret)
+	var val int
+	var height int
+	err = stmt.QueryRow(tx.TxHash().String()).Scan(&ret, &val, &height)
 	if err != nil {
 		t.Error(err)
 	}
 	if hex.EncodeToString(ret) != txHex {
 		t.Error("Txn db put failed")
+	}
+	if val != 5 {
+		t.Error("Txn db failed to put value")
+	}
+	if height != 1 {
+		t.Error("Tns db failed to put height")
 	}
 }
 
@@ -48,16 +56,19 @@ func TestTxnsGet(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx)
+	err := txdb.Put(tx, 0, 1)
 	if err != nil {
 		t.Error(err)
 	}
-	tx2, err := txdb.Get(tx.TxHash())
+	tx2, h, err := txdb.Get(tx.TxHash())
 	if err != nil {
 		t.Error(err)
 	}
 	if tx.TxHash().String() != tx2.TxHash().String() {
 		t.Error("Txn db get failed")
+	}
+	if h != 1 {
+		t.Error("Txn db failed to get height")
 	}
 }
 
@@ -68,7 +79,7 @@ func TestTxnsGetAll(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx)
+	err := txdb.Put(tx, 1, 5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +99,7 @@ func TestDeleteTxns(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx)
+	err := txdb.Put(tx, 0, 1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -102,7 +113,7 @@ func TestDeleteTxns(t *testing.T) {
 		t.Error(err)
 	}
 	for _, txn := range txns {
-		if txn.TxHash().String() == txid.String() {
+		if txn.Txid == txid.String() {
 			t.Error("Txns db delete failed")
 		}
 	}

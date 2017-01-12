@@ -2,8 +2,10 @@ package spvwallet
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -12,8 +14,6 @@ import (
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"sync"
-	"github.com/btcsuite/btcd/btcec"
-	"errors"
 )
 
 const FlagPrefix = 0x00
@@ -225,6 +225,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	cachedSha := tx.TxHash()
 	// Iterate through all outputs of this tx, see if we gain
 	cb := TransactionCallback{Txid: cachedSha.CloneBytes()}
+	value := int64(0)
 	for i, txout := range tx.TxOut {
 		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
@@ -241,6 +242,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Op:           newop,
 					Freeze:       false,
 				}
+				value += newu.Value
 				ts.Utxos().Put(newu)
 				hits++
 				break
@@ -265,7 +267,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 			}
 		}
 		// Check stealth
-		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], ts.stealthFlag){
+		if len(txout.PkScript) == 38 && txout.PkScript[0] == 0x6a && bytes.Equal(txout.PkScript[2:4], ts.stealthFlag) {
 			outIndex, key, err := ts.checkStealth(tx, txout.PkScript)
 			if err == nil {
 				newop := wire.OutPoint{
@@ -279,6 +281,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Op:           newop,
 					Freeze:       false,
 				}
+				value += newu.Value
 				ts.Utxos().Put(newu)
 				hits++
 				ts.Keys().ImportKey(tx.TxOut[outIndex].PkScript, key)
@@ -303,6 +306,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				ts.Stxos().Put(st)
 				ts.Utxos().Delete(u)
 				utxos = append(utxos[:i], utxos[i+1:]...)
+				value -= u.Value
 
 				in := TransactionInput{
 					OutpointHash:       u.Op.Hash.CloneBytes(),
@@ -318,14 +322,18 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 {
-		_, err := ts.Txns().Get(tx.TxHash())
+		_, h, err := ts.Txns().Get(tx.TxHash())
 		if err != nil {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
 				listener(cb)
 			}
-			ts.Txns().Put(tx)
 			ts.PopulateAdrs()
+		}
+		// Let's check the height before committing so we don't allow rogue peers to send us a lose
+		// tx that resets our height to zero.
+		if h <= 0 {
+			ts.Txns().Put(tx, int(value), int(height))
 		}
 	}
 	return hits, err

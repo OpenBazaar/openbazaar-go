@@ -1272,6 +1272,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		tx := new(pb.TransactionRecord)
 		tx.Txid = r.Txid
 		tx.Value = r.Value
+		// TODO: add confirmations
 		txs = append(txs, tx)
 	}
 

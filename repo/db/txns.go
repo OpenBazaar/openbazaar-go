@@ -3,6 +3,7 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
@@ -13,14 +14,14 @@ type TxnsDB struct {
 	lock sync.RWMutex
 }
 
-func (t *TxnsDB) Put(txn *wire.MsgTx) error {
+func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tx, err := t.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert into txns(txid, tx) values(?,?)")
+	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, tx) values(?,?,?,?)")
 	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
@@ -28,7 +29,7 @@ func (t *TxnsDB) Put(txn *wire.MsgTx) error {
 	}
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
-	_, err = stmt.Exec(txn.TxHash().String(), buf.Bytes())
+	_, err = stmt.Exec(txn.TxHash().String(), value, height, buf.Bytes())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -37,41 +38,46 @@ func (t *TxnsDB) Put(txn *wire.MsgTx) error {
 	return nil
 }
 
-func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, error) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-	stmt, err := t.db.Prepare("select tx from txns where txid=?")
+func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, uint32, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	stmt, err := t.db.Prepare("select tx, height from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
-	err = stmt.QueryRow(txid.String()).Scan(&ret)
+	var height int
+	err = stmt.QueryRow(txid.String()).Scan(&ret, &height)
 	if err != nil {
-		return nil, err
+		return nil, uint32(0), err
 	}
 	r := bytes.NewReader(ret)
-	msgTx := wire.NewMsgTx(wire.TxVersion)
+	msgTx := wire.NewMsgTx(1)
 	msgTx.BtcDecode(r, 1)
-	return msgTx, nil
+	return msgTx, uint32(height), nil
 }
 
-func (t *TxnsDB) GetAll() ([]*wire.MsgTx, error) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
-	var ret []*wire.MsgTx
-	stm := "select tx from txns"
+func (t *TxnsDB) GetAll() ([]spvwallet.Txn, error) {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	var ret []spvwallet.Txn
+	stm := "select tx, value, height from txns"
 	rows, err := t.db.Query(stm)
+	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
-	defer rows.Close()
 	for rows.Next() {
 		var tx []byte
-		if err := rows.Scan(&tx); err != nil {
+		var value int
+		var height int
+		if err := rows.Scan(&tx, &value, &height); err != nil {
 			continue
 		}
 		r := bytes.NewReader(tx)
-		msgTx := wire.NewMsgTx(wire.TxVersion)
+		msgTx := wire.NewMsgTx(1)
 		msgTx.BtcDecode(r, 1)
-		ret = append(ret, msgTx)
+
+		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), uint32(height)}
+		ret = append(ret, txn)
 	}
 	return ret, nil
 }

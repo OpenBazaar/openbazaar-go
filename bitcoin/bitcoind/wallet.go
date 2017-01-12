@@ -170,6 +170,27 @@ func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
+func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
+	var ret []spvwallet.Txn
+	resp, err := w.rpcClient.ListTransactions(Account)
+	if err != nil {
+		return ret, err
+	}
+	for _, r := range resp {
+		amt, err := btc.NewAmount(r.Amount)
+		if err != nil {
+			return ret, err
+		}
+		t := spvwallet.Txn{
+			Txid:   r.TxID,
+			Value:  int64(amt.ToUnit(btc.AmountSatoshi)),
+			Height: uint32(*r.BlockIndex),
+		}
+		ret = append(ret, t)
+	}
+	return ret, nil
+}
+
 func (w *BitcoindWallet) ChainTip() uint32 {
 	info, err := w.rpcClient.GetInfo()
 	if err != nil {
@@ -564,6 +585,8 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 }
 
 func (w *BitcoindWallet) Close() {
-	w.rpcClient.RawRequest("stop", []json.RawMessage{})
-	w.rpcClient.Shutdown()
+	if w.rpcClient != nil {
+		w.rpcClient.RawRequest("stop", []json.RawMessage{})
+		w.rpcClient.Shutdown()
+	}
 }

@@ -41,13 +41,13 @@ type Stxos interface {
 
 type Txns interface {
 	// Put a new transaction to the database
-	Put(txn *wire.MsgTx) error
+	Put(txn *wire.MsgTx, value, height int) error
 
-	// Fetch a tx given it's hash
-	Get(txid chainhash.Hash) (*wire.MsgTx, error)
+	// Fetch a tx and height given it's hash
+	Get(txid chainhash.Hash) (*wire.MsgTx, uint32, error)
 
 	// Fetch all transactions from the db
-	GetAll() ([]*wire.MsgTx, error)
+	GetAll() ([]Txn, error)
 
 	// Delete a transactions from the db
 	Delete(txid *chainhash.Hash) error
@@ -125,4 +125,15 @@ type Stxo struct {
 
 	// The tx that consumed it
 	SpendTxid chainhash.Hash
+}
+
+type Txn struct {
+	// Transaction ID
+	Txid string
+
+	// The value relevant to the wallet
+	Value int64
+
+	// The height at which it was mined
+	Height uint32
 }

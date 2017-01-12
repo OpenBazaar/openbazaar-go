@@ -37,6 +37,9 @@ type BitcoinWallet interface {
 	// Get the confirmed and unconfirmed balances
 	Balance() (confirmed, unconfirmed int64)
 
+	// Returns a list of transactions for this wallet
+	Transactions() ([]spvwallet.Txn, error)
+
 	// Get the height of the blockchain
 	ChainTip() uint32
 

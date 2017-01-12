@@ -200,6 +200,10 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 	return confirmed, unconfirmed
 }
 
+func (w *SPVWallet) Transactions() ([]Txn, error) {
+	return w.txstore.Txns().GetAll()
+}
+
 func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 	for _, stxo := range stxos {
 		if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
@@ -218,7 +222,7 @@ func (w *SPVWallet) Params() *chaincfg.Params {
 }
 
 func (w *SPVWallet) AcceptStealth() bool {
-	return true
+	return false
 }
 
 func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
