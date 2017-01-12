@@ -48,7 +48,19 @@ func (ts *TxStore) GetKeys() []*hd.ExtendedKey {
 func (ts *TxStore) GetKeyForScript(scriptPubKey []byte) (*hd.ExtendedKey, error) {
 	keyPath, err := ts.Keys().GetPathForScript(scriptPubKey)
 	if err != nil {
-		return nil, err
+		key, err := ts.Keys().GetKeyForScript(scriptPubKey)
+		if err != nil {
+			return nil, err
+		}
+		hdKey := hd.NewExtendedKey(
+			ts.Param.HDPrivateKeyID[:],
+			key.Serialize(),
+			make([]byte, 32),
+			[]byte{0x00, 0x00, 0x00, 0x00},
+			0,
+			0,
+			true)
+		return hdKey, nil
 	}
 	return ts.generateChildKey(keyPath.Purpose, uint32(keyPath.Index)), nil
 }

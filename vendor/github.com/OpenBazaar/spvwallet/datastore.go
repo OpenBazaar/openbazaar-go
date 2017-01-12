@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
@@ -58,6 +59,9 @@ type Keys interface {
 	// Put a bip32 key to the database
 	Put(scriptPubKey []byte, keyPath KeyPath) error
 
+	// Import a loose private key not part of the keychain
+	ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error
+
 	// Mark the script as used
 	MarkKeyAsUsed(scriptPubKey []byte) error
 
@@ -67,6 +71,9 @@ type Keys interface {
 
 	// Returns the first unused path for the given purpose
 	GetPathForScript(scriptPubKey []byte) (KeyPath, error)
+
+	// Returns an imported private key given a script
+	GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error)
 
 	// Get the first unused index for the given purpose
 	GetUnused(purpose KeyPurpose) (int, error)

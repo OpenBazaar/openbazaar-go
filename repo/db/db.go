@@ -250,7 +250,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table following (peerID text primary key not null);
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, purpose integer, timestamp integer);
-	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer);
+	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer, key text);
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, tx blob);

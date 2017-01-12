@@ -1,11 +1,13 @@
 package bitcoind
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -26,7 +28,10 @@ import (
 
 var log = logging.MustGetLogger("bitcoind")
 
-var account string = "OpenBazaar"
+const (
+	FlagPrefix = 0x00
+	Account    = "OpenBazaar"
+)
 
 type BitcoindWallet struct {
 	params           *chaincfg.Params
@@ -80,7 +85,6 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 
 func (w *BitcoindWallet) Start() {
 	w.shutdownIfActive()
-
 	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server"}
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")
@@ -96,7 +100,7 @@ func (w *BitcoindWallet) Start() {
 
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-	ticker := time.NewTicker(20 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
 	go func() {
 		for range ticker.C {
 			log.Fatal("Failed to connect to bitcoind")
@@ -118,12 +122,17 @@ func (w *BitcoindWallet) shutdownIfActive() {
 	if err != nil {
 		return
 	}
+	client.RawRequest("stop", []json.RawMessage{})
 	client.Shutdown()
 	time.Sleep(5 * time.Second)
 }
 
 func (w *BitcoindWallet) CurrencyCode() string {
 	return "btc"
+}
+
+func (w *BitcoindWallet) AcceptStealth() bool {
+	return false
 }
 
 func (w *BitcoindWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -135,7 +144,7 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 }
 
 func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
-	addr, _ := w.rpcClient.GetAccountAddress(account)
+	addr, _ := w.rpcClient.GetAccountAddress(Account)
 	return addr
 }
 
@@ -148,8 +157,16 @@ func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 }
 
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
-	u, _ := w.rpcClient.GetUnconfirmedBalance(account)
-	c, _ := w.rpcClient.GetBalance(account)
+	resp, _ := w.rpcClient.RawRequest("getwalletinfo", []json.RawMessage{})
+	type walletInfo struct {
+		Balance     float64 `json:"balance"`
+		Unconfirmed float64 `json:"unconfirmed_balance"`
+	}
+	respBytes, _ := resp.MarshalJSON()
+	i := new(walletInfo)
+	json.Unmarshal(respBytes, i)
+	c, _ := btc.NewAmount(i.Balance)
+	u, _ := btc.NewAmount(i.Unconfirmed)
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
@@ -162,12 +179,102 @@ func (w *BitcoindWallet) ChainTip() uint32 {
 }
 
 func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error {
-	amt, err := btc.NewAmount(float64(amount))
+	amt, err := btc.NewAmount(float64(amount) / 100000000)
 	if err != nil {
 		return err
 	}
-	_, err = w.rpcClient.SendFrom(account, addr, amt)
+	_, err = w.rpcClient.SendFrom(Account, addr, amt)
 	return err
+}
+
+func (w *BitcoindWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeLevel spvwallet.FeeLevel) error {
+	// Generated ephemeral key pair
+	ephemPriv, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		return err
+	}
+
+	// Calculate a shared secret using the master private key and ephemeral public key
+	ss := btcec.GenerateSharedSecret(ephemPriv, pubkey)
+
+	// Create an HD key using the shared secret as the chaincode
+	hdKey := hd.NewExtendedKey(
+		w.params.HDPublicKeyID[:],
+		pubkey.SerializeCompressed(),
+		ss,
+		[]byte{0x00, 0x00, 0x00, 0x00},
+		0,
+		0,
+		false)
+
+	// Derive child key 0
+	childKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	addr, err := childKey.Address(w.params)
+	if err != nil {
+		return err
+	}
+
+	// Create op_return output
+	pubkeyBytes := pubkey.SerializeCompressed()
+	ephemPubKeyBytes := ephemPriv.PubKey().SerializeCompressed()
+	script := []byte{0x6a, 0x02, FlagPrefix}
+	script = append(script, pubkeyBytes[1:2]...)
+	script = append(script, 0x21)
+	script = append(script, ephemPubKeyBytes...)
+	txout := wire.NewTxOut(0, script)
+
+	addrMap := make(map[btc.Address]btc.Amount)
+	amt, err := btc.NewAmount(float64(amount) / 100000000)
+	if err != nil {
+		return err
+	}
+	addrMap[addr] = amt
+	rawtx, err := w.rpcClient.CreateRawTransaction([]btcjson.TransactionInput{}, addrMap, nil)
+	rawtx.TxOut = append(rawtx.TxOut, txout)
+
+	ser := new(bytes.Buffer)
+	rawtx.Serialize(ser)
+
+	b := json.RawMessage([]byte(`"` + hex.EncodeToString(ser.Bytes()) + `"`))
+	resp, err := w.rpcClient.RawRequest("fundrawtransaction", []json.RawMessage{b})
+	if err != nil {
+		return err
+	}
+	type fundTxResponse struct {
+		Hex string
+	}
+	respBytes, err := resp.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	fundResp := new(fundTxResponse)
+	err = json.Unmarshal(respBytes, fundResp)
+	if err != nil {
+		return err
+	}
+	decodedTx, err := hex.DecodeString(fundResp.Hex)
+	if err != nil {
+		return err
+	}
+
+	fundedTx := wire.NewMsgTx(1)
+	err = fundedTx.Deserialize(bytes.NewBuffer(decodedTx))
+	if err != nil {
+		return err
+	}
+
+	signedTx, success, err := w.rpcClient.SignRawTransaction(fundedTx)
+	if !success {
+		return errors.New("Failed to sign transaction")
+	}
+	_, err = w.rpcClient.SendRawTransaction(signedTx, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
@@ -434,6 +541,7 @@ func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
 }
 
 func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
+	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
 	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-rescan"}
@@ -456,5 +564,6 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 }
 
 func (w *BitcoindWallet) Close() {
+	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 }

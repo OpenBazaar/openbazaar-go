@@ -16,12 +16,14 @@ import (
 	"strings"
 	"time"
 
+	"encoding/hex"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/btcec"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -650,17 +652,13 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	type Send struct {
 		Address  string `json:"address"`
+		PeerId   string `json:"peerId"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var snd Send
 	err := decoder.Decode(&snd)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -674,9 +672,54 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	case "ECONOMIC":
 		feeLevel = spvwallet.ECONOMIC
 	}
-	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+	if snd.Address == "" {
+		peerId := snd.PeerId
+		if strings.HasPrefix(peerId, "@") {
+			peerId, err = i.node.Resolver.Resolve(peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		p, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "profile")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		var profile pb.Profile
+		err = jsonpb.UnmarshalString(string(p), &profile)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !profile.AcceptStealth {
+			ErrorResponse(w, http.StatusInternalServerError, "Recipeint does not accept stealth payments")
+			return
+		}
+		pubkeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		pubkey, err := btcec.ParsePubKey(pubkeyBytes, btcec.S256())
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if err := i.node.Wallet.SendStealth(snd.Amount, pubkey, feeLevel); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 	fmt.Fprint(w, `{}`)
 	return
