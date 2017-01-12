@@ -12,8 +12,9 @@ if [ ! -z "$TRAVIS_TAG" ] &&
   xgo --targets=windows/386,windows/amd64,darwin/amd64,linux/386,linux/amd64,linux/arm ../
   chmod +x *
 
-  # Copy libwinpthread-1.dll
-  cp .travis/libwinpthread-1.dll dist/
+  # Copy libwinpthread-1.dll (user must rename the dll for their system to libwinpthread-1.dll)
+  cp ../.travis/win32/libwinpthread-1.dll dist/libwinpthread-1.win32.dll
+  cp ../.travis/win64/libwinpthread-1.dll dist/libwinpthread-1.win64.dll
 
   # Calculate SHA512 hashes
   sha512sum * > sha512_checksums.txt
