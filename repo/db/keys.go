@@ -97,6 +97,9 @@ func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error
 	defer k.lock.RUnlock()
 
 	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptPubKey=?")
+	if err != nil {
+		return spvwallet.KeyPath{}, err
+	}
 	defer stmt.Close()
 	var purpose int
 	var index int
@@ -116,6 +119,9 @@ func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error)
 	defer k.lock.Unlock()
 
 	stmt, err := k.db.Prepare("select key from keys where scriptPubKey=? and purpose=-1")
+	if err != nil {
+		return nil, err
+	}
 	defer stmt.Close()
 	var keyHex string
 	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&keyHex)
