@@ -1,5 +1,5 @@
 {
-  "author": "chris",
+  "author": "OpenBazaar Developers",
   "bugs": {
     "url": "https://github.com/OpenBazaar/openbazaar-go/issues"
   },
@@ -10,5 +10,5 @@
   "language": "go",
   "license": "MIT",
   "name": "openbazaar-go",
-  "version": "0.4.1"
+  "version": "0.4.2"
 }
