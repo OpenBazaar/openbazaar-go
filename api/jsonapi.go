@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	mh "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"encoding/hex"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -260,6 +262,52 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, out)
+	return
+}
+
+func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
+	// If profile is not set tell them to use POST
+	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	_, ferr := os.Stat(profilePath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
+		return
+	}
+
+	// Read JSON from r.Body and decode into map
+	patch := make(map[string]interface{})
+	patchBytes, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	err = json.Unmarshal(patchBytes, &patch)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Apply patch
+	err = i.node.PatchProfile(patch)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	fmt.Fprint(w, `{}`)
 	return
 }
 
