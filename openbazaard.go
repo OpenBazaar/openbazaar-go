@@ -85,6 +85,10 @@ type Init struct {
 	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
 	Force    bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
 }
+type Status struct {
+	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Testnet bool   `short:"t" long:"testnet" description:"use the test network"`
+}
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
@@ -108,6 +112,7 @@ var stopServer Stop
 var restartServer Restart
 var encryptDatabase EncryptDatabase
 var decryptDatabase DecryptDatabase
+var status Status
 
 var parser = flags.NewParser(nil, flags.Default)
 
@@ -135,6 +140,10 @@ func main() {
 		"initialize a new repo and exit",
 		"Initializes a new repo without starting the server",
 		&initRepo)
+	parser.AddCommand("status",
+		"get the repo status",
+		"Returns the status of the repo ― Uninitialized, Encrypted, Decrypted. Also returns whether Tor is available.",
+		&status)
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
@@ -167,6 +176,59 @@ func (x *EncryptDatabase) Execute(args []string) error {
 
 func (x *DecryptDatabase) Execute(args []string) error {
 	return db.Decrypt()
+}
+
+func (x *Status) Execute(args []string) error {
+	// Set repo path
+	repoPath, err := getRepoPath(x.Testnet)
+	if err != nil {
+		return err
+	}
+	if x.DataDir != "" {
+		repoPath = x.DataDir
+	}
+	torAvailble := false
+	_, err = obnet.GetTorControlPort()
+	if err == nil {
+		torAvailble = true
+	}
+	if fsrepo.IsInitialized(repoPath) {
+		sqliteDB, err := db.Create(repoPath, "", x.Testnet)
+		if err != nil {
+			return err
+			os.Exit(1)
+		}
+		defer sqliteDB.Close()
+		if sqliteDB.Config().IsEncrypted() {
+			if !torAvailble {
+				fmt.Println("Initialized - Encrypted")
+				os.Exit(5)
+			} else {
+				fmt.Println("Initialized - Encrypted")
+				fmt.Println("Tor Available")
+				os.Exit(8)
+			}
+		} else {
+			if !torAvailble {
+				fmt.Println("Initialized - Not Encrypted")
+				os.Exit(4)
+			} else {
+				fmt.Println("Initialized - Not Encrypted")
+				fmt.Println("Tor Available")
+				os.Exit(7)
+			}
+		}
+	} else {
+		if !torAvailble {
+			fmt.Println("Not initialized")
+			os.Exit(3)
+		} else {
+			fmt.Println("Not initialized")
+			fmt.Println("Tor Available")
+			os.Exit(6)
+		}
+	}
+	return nil
 }
 
 func (x *Init) Execute(args []string) error {
