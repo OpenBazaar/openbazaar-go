@@ -36,9 +36,13 @@ func (f *FollowerDB) Get(offsetId string, limit int) ([]string, error) {
 	} else {
 		stm = "select peerID from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset 0"
 	}
-	rows, _ := f.db.Query(stm)
-	defer rows.Close()
 	var ret []string
+	rows, err := f.db.Query(stm)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var peerID string
 		rows.Scan(&peerID)

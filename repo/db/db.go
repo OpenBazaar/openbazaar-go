@@ -47,7 +47,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		return nil, err
 	}
 	if password != "" {
-		p := "pragma key = '" + password + "';"
+		p := "pragma key='" + password + "';"
 		conn.Exec(p)
 	}
 	var l sync.RWMutex
