@@ -222,6 +222,11 @@
 			"Rev": "e2e3d8414d0fbae04004f151979f4e27c6747fe7"
 		},
 		{
+			"ImportPath": "github.com/imdario/mergo",
+			"Comment": "0.2.2-6-g50d4dbd",
+			"Rev": "50d4dbd4eb0e84778abe37cefef140271d96fade"
+		},
+		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/bazil.org/fuse",
 			"Comment": "v0.4.3-26-g87fe838",
 			"Rev": "87fe83851933b0f58a7f1b700eea302c2c1afe64"
