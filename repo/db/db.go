@@ -325,11 +325,14 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
+	if err != nil {
+		return nil, err
+	}
 	defer stmt.Close()
 	var identityKey []byte
 	err = stmt.QueryRow("identityKey").Scan(&identityKey)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	return identityKey, nil
 }
