@@ -27,7 +27,6 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 				log.Info("Chain download complete")
 				w.blockchain.SetChainState(WAITING)
 				w.Rebroadcast()
-				close(w.blockQueue)
 			}
 			return
 		}

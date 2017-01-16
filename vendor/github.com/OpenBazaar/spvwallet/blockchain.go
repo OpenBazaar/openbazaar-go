@@ -159,15 +159,17 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 	}
 
 	// Check the header meets the difficulty requirement
-	diffTarget, err := b.calcRequiredWork(header, int32(height+1), prevHeader)
-	if err != nil {
-		log.Errorf("Error calclating difficulty", err)
-		return false
-	}
-	if header.Bits != diffTarget {
-		log.Warningf("Block %d %s incorrect difficuly.  Read %d, expect %d\n",
-			height+1, header.BlockHash().String(), header.Bits, diffTarget)
-		return false
+	if !b.params.ReduceMinDifficulty {
+		diffTarget, err := b.calcRequiredWork(header, int32(height+1), prevHeader)
+		if err != nil {
+			log.Errorf("Error calclating difficulty", err)
+			return false
+		}
+		if header.Bits != diffTarget {
+			log.Warningf("Block %d %s incorrect difficuly.  Read %d, expect %d\n",
+				height+1, header.BlockHash().String(), header.Bits, diffTarget)
+			return false
+		}
 	}
 
 	// Check if there's a valid proof of work.  That whole "Bitcoin" thing.
