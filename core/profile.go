@@ -2,13 +2,16 @@ package core
 
 import (
 	"encoding/hex"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/imdario/mergo"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -56,6 +59,36 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		return err
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
+	profilePath := path.Join(n.RepoPath, "root", "profile")
+
+	// Read stored profile data
+	profile := make(map[string]interface{})
+	profileBytes, err := ioutil.ReadFile(profilePath)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(profileBytes, &profile); err != nil {
+		return err
+	}
+
+	// Assuming that `profile` map contains complete data, as it is read
+	// from storage, and `patch` map is possibly incomplete, merge first
+	// into second recursively, preserving new fields and adding missing
+	// old ones
+	if err := mergo.Map(&patch, &profile); err != nil {
+		return err
+	}
+
+	// Execute UpdateProfile with new profile
+	newProfile, err := json.Marshal(patch)
+	p := new(pb.Profile)
+	if err := jsonpb.UnmarshalString(string(newProfile), p); err != nil {
+		return nil
+	}
+	return n.UpdateProfile(p)
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {

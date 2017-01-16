@@ -134,6 +134,8 @@ func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Reques
 	switch path {
 	case "/ob/settings", "/ob/settings/":
 		i.PATCHSettings(w, r)
+	case "/ob/profile", "/ob/profile/":
+		i.PATCHProfile(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
