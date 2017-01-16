@@ -202,30 +202,30 @@ func (x *Status) Execute(args []string) error {
 		if sqliteDB.Config().IsEncrypted() {
 			if !torAvailble {
 				fmt.Println("Initialized - Encrypted")
-				os.Exit(5)
+				os.Exit(30)
 			} else {
 				fmt.Println("Initialized - Encrypted")
 				fmt.Println("Tor Available")
-				os.Exit(8)
+				os.Exit(31)
 			}
 		} else {
 			if !torAvailble {
 				fmt.Println("Initialized - Not Encrypted")
-				os.Exit(4)
+				os.Exit(20)
 			} else {
 				fmt.Println("Initialized - Not Encrypted")
 				fmt.Println("Tor Available")
-				os.Exit(7)
+				os.Exit(21)
 			}
 		}
 	} else {
 		if !torAvailble {
 			fmt.Println("Not initialized")
-			os.Exit(3)
+			os.Exit(10)
 		} else {
 			fmt.Println("Not initialized")
 			fmt.Println("Tor Available")
-			os.Exit(6)
+			os.Exit(11)
 		}
 	}
 	return nil
@@ -321,7 +321,8 @@ func (x *Start) Execute(args []string) error {
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
-		return encryptedDatabaseError
+		log.Error("Invalid database encryption password")
+		os.Exit(3)
 	}
 
 	// Create authentication cookie
