@@ -26,6 +26,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -774,7 +775,11 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 }
 
 func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `{"guid": "%s", "cryptoCurrency": "%s"}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode())
+	testnet := false
+	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
+		testnet = true
+	}
+	fmt.Fprintf(w, `{"guid": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet)
 }
 
 func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
