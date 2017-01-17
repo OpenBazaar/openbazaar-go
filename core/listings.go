@@ -314,6 +314,52 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	return nil
 }
 
+// Update the hashes in the index.json file
+func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	var index []listingData
+
+	_, ferr := os.Stat(indexPath)
+	if os.IsNotExist(ferr) {
+		return ferr
+	}
+	// Read existing file
+	file, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(file, &index)
+	if err != nil {
+		return err
+	}
+
+	// Update hashes
+	for _, d := range index {
+		hash, ok := hashes[d.Slug]
+		if ok {
+			d.Hash = hash
+		}
+	}
+
+	// Write it back to file
+	f, err := os.Create(indexPath)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+
+	j, jerr := json.MarshalIndent(index, "", "    ")
+	if jerr != nil {
+		return jerr
+	}
+	_, werr := f.Write(j)
+	if werr != nil {
+		return werr
+	}
+	return nil
+}
+
 // Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")

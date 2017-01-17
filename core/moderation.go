@@ -10,7 +10,9 @@ import (
 	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
 	"io/ioutil"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -147,4 +149,57 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 	default:
 		return 0, errors.New("Unrecognized fee type")
 	}
+}
+
+func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
+	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
+	if err != nil {
+		return err
+	}
+	hashes := make(map[string]string)
+	walkpath := func(p string, f os.FileInfo, err error) error {
+		if !strings.HasSuffix(f.Name(), "index.json") && !f.IsDir() {
+			file, err := ioutil.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			rc := new(pb.RicardianContract)
+			err = jsonpb.UnmarshalString(string(file), rc)
+			if err != nil {
+				return err
+			}
+			rc.VendorListings[0].Moderators = moderators
+			m := jsonpb.Marshaler{
+				EnumsAsInts:  false,
+				EmitDefaults: false,
+				Indent:       "    ",
+				OrigName:     false,
+			}
+			fi, err := os.Create(p)
+			if err != nil {
+				return err
+			}
+			out, err := m.MarshalToString(rc)
+			if err != nil {
+				return err
+			}
+			if _, err := fi.WriteString(out); err != nil {
+				return err
+			}
+			hash, err := ipfs.GetHash(n.Context, p)
+			if err != nil {
+				return err
+			}
+			hashes[rc.VendorListings[0].Slug] = hash
+
+			return n.UpdateListingIndex(rc)
+		}
+		return nil
+	}
+
+	err = filepath.Walk(absPath, walkpath)
+	if err != nil {
+		return err
+	}
+	return n.UpdateIndexHashes(hashes)
 }

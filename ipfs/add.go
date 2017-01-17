@@ -57,3 +57,26 @@ func AddFile(ctx commands.Context, fpath string) (string, error) {
 	}
 	return fileHash, nil
 }
+
+func GetHash(ctx commands.Context, fpath string) (string, error) {
+	args := []string{"add", "-n", fpath}
+	req, cmd, err := NewRequest(ctx, args)
+	if err != nil {
+		return "", err
+	}
+	res := commands.NewResponse(req)
+	cmd.PreRun(req)
+	cmd.Run(req, res)
+	var fileHash string
+	for r := range res.Output().(<-chan interface{}) {
+		fileHash = r.(*coreunix.AddedObject).Hash
+	}
+	cmd.PostRun(req, res)
+	if res.Error() != nil {
+		return "", res.Error()
+	}
+	if fileHash == "" {
+		return "", addErr
+	}
+	return fileHash, nil
+}

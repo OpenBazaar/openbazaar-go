@@ -858,6 +858,14 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if settings.StoreModerators != nil {
+		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+		if err := i.node.SeedNode(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+	}
 	err = i.node.Datastore.Settings().Update(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
