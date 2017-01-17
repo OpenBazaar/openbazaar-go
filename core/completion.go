@@ -363,7 +363,7 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ra
 
 	var index []ratingShort
 
-	ratingHash, err := ipfs.AddFile(n.Context, ratingPath)
+	ratingHash, err := ipfs.GetHash(n.Context, ratingPath)
 	if err != nil {
 		return err
 	}

@@ -220,7 +220,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	var index []listingData
 
-	listingHash, err := ipfs.AddFile(n.Context, listingPath)
+	listingHash, err := ipfs.GetHash(n.Context, listingPath)
 	if err != nil {
 		return err
 	}
