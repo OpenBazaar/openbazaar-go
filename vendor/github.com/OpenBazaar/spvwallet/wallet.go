@@ -152,7 +152,11 @@ func (w *SPVWallet) Start() {
 //////////////
 
 func (w *SPVWallet) CurrencyCode() string {
-	return "btc"
+	if w.params.Name == chaincfg.MainNetParams.Name {
+		return "btc"
+	} else {
+		return "tbtc"
+	}
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {

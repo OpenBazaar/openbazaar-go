@@ -128,7 +128,11 @@ func (w *BitcoindWallet) shutdownIfActive() {
 }
 
 func (w *BitcoindWallet) CurrencyCode() string {
-	return "btc"
+	if w.params.Name == chaincfg.MainNetParams.Name {
+		return "btc"
+	} else {
+		return "tbtc"
+	}
 }
 
 func (w *BitcoindWallet) AcceptStealth() bool {

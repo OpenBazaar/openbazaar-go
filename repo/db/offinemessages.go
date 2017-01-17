@@ -36,6 +36,9 @@ func (o *OfflineMessagesDB) Has(url string) bool {
 	o.lock.RLock()
 	defer o.lock.RUnlock()
 	stmt, err := o.db.Prepare("select url from offlinemessages where url=?")
+	if err != nil {
+		return false
+	}
 	defer stmt.Close()
 	var ret string
 	err = stmt.QueryRow(url).Scan(&ret)

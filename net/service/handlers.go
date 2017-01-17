@@ -182,17 +182,21 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
+			log.Error("Error calculating payment amount")
 			return errorResponse("Error calculating payment amount"), err
 		}
 		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
+			log.Error("Calculated a different payment amount")
 			return errorResponse("Calculated a different payment amount"), err
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true)
 		if err != nil {
+			log.Error(err)
 			return errorResponse("Error building order confirmation"), err
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
+			log.Error(err)
 			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
@@ -204,19 +208,23 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
 		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
@@ -224,30 +232,37 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
+			log.Error("Error calculating payment amount")
 			return errorResponse("Error calculating payment amount"), err
 		}
 		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
+			log.Error("Calculated a different payment amount")
 			return errorResponse("Calculated a different payment amount"), err
 		}
 		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		contract, err = service.node.NewOrderConfirmation(contract, false)
 		if err != nil {
+			log.Error(err)
 			return errorResponse("Error building order confirmation"), err
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
+			log.Error(err)
 			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
@@ -259,24 +274,29 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
 		err := service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		script, err := txscript.PayToAddrScript(addr)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
+			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
 		return nil, nil
 	}
+	log.Error("Unrecognized payment type")
 	return errorResponse("Unrecognized payment type"), nil
 }
 

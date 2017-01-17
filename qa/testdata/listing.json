@@ -6,7 +6,7 @@
 		"contractType": "PHYSICAL_GOOD",
 		"format": "FIXED_PRICE",
 		"expiry": "2017-08-17T04:52:19.000Z",
-		"pricingCurrency": "btc"
+		"pricingCurrency": "tbtc"
 	    },
 	    "item": {
 		"title": "Ron Swanson Tshirt",
