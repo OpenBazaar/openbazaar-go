@@ -22,11 +22,11 @@ func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int) error {
 		return err
 	}
 	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, tx) values(?,?,?,?)")
-	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
 	_, err = stmt.Exec(txn.TxHash().String(), value, height, buf.Bytes())

@@ -336,11 +336,11 @@ func (x *Start) Execute(args []string) error {
 		rand.Read(authBytes)
 		authCookie.Value = base58.Encode(authBytes)
 		f, err := os.Create(cookiePath)
-		defer f.Close()
 		if err != nil {
 			log.Error(err)
 			return err
 		}
+		defer f.Close()
 		cookie := cookiePrefix + authCookie.Value
 		_, werr := f.Write([]byte(cookie))
 		if werr != nil {

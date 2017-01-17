@@ -44,10 +44,10 @@ func (i *InventoryDB) Get(slug string) (map[string]int, error) {
 	ret := make(map[string]int)
 	stm := `select * from inventory where slug like "` + slug + `%";`
 	rows, err := i.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var slug string
 		var count int

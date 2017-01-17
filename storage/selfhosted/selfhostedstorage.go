@@ -34,10 +34,10 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	hash := hex.EncodeToString(b[:])
 	filePath := path.Join(s.repoPath, "outbox", hash)
 	f, err := os.Create(filePath)
-	defer f.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 	_, ferr := f.Write(ciphertext)
 	if ferr != nil {
 		return nil, ferr

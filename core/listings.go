@@ -298,10 +298,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 
 	// Write it back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
