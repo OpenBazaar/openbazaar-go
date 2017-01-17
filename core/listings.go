@@ -702,6 +702,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 
 	// ShippingOptions
+	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD && len(listing.ShippingOptions) == 0 {
+		return errors.New("Must be at least one shipping option for a physical good")
+	}
 	if len(listing.ShippingOptions) > MaxListItems {
 		return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
 	}

@@ -27,6 +27,7 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 				log.Info("Chain download complete")
 				w.blockchain.SetChainState(WAITING)
 				w.Rebroadcast()
+				close(w.blockQueue)
 			}
 			return
 		}
@@ -105,7 +106,7 @@ func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 				gData := wire.NewMsgGetData()
 				gData.AddInvVect(inv)
 				p.QueueMessage(gData, nil)
-				if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer().ID() == p.ID() {
+				if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer() != nil && w.PeerManager.DownloadPeer().ID() == p.ID() {
 					w.blockQueue <- inv.Hash
 				}
 			case wire.InvTypeTx:
