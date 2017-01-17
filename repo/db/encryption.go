@@ -26,7 +26,7 @@ func Encrypt() error {
 	for {
 		fmt.Print("Encrypt the mainnet or testnet db?: ")
 		resp, _ := reader.ReadString('\n')
-		if strings.ToLower(resp) == "mainnet\n" {
+		if strings.Contains(strings.ToLower(resp), "mainnet") {
 			rPath := "~/.openbazaar2.0"
 			filename = "mainnet.db"
 			testnet = false
@@ -42,7 +42,7 @@ func Encrypt() error {
 				return nil
 			}
 			break
-		} else if strings.ToLower(resp) == "testnet\n" {
+		} else if strings.Contains(strings.ToLower(resp), "testnet") {
 			rPath := "~/.openbazaar2.0-testnet"
 			filename = "testnet.db"
 			testnet = true
