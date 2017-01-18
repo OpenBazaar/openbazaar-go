@@ -21,11 +21,11 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 	defer u.lock.Unlock()
 	tx, _ := u.db.Begin()
 	stmt, err := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey, freeze) values(?,?,?,?,?)")
-	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 	freezeInt := 0
 	if utxo.Freeze {
 		freezeInt = 1

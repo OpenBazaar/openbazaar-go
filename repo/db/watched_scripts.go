@@ -16,11 +16,11 @@ func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 	defer w.lock.Unlock()
 	tx, _ := w.db.Begin()
 	stmt, err := tx.Prepare("insert or replace into watchedscripts(scriptPubKey) values(?)")
-	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey))
 	if err != nil {
 		tx.Rollback()

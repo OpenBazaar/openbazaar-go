@@ -123,10 +123,10 @@ func (s *SalesDB) GetAll() ([]string, error) {
 	defer s.lock.RUnlock()
 	stm := "select orderID from sales"
 	rows, err := s.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var ret []string
 	for rows.Next() {
 		var orderID string

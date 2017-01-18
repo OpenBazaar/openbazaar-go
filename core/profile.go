@@ -17,10 +17,10 @@ import (
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
 	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
-	defer f.Close()
 	if err != nil {
 		return profile, err
 	}
+	defer f.Close()
 	err = jsonpb.Unmarshal(f, &profile)
 	if err != nil {
 		return profile, err

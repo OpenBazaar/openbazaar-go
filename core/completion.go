@@ -322,10 +322,10 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 
 		ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
 		f, err := os.Create(ratingPath)
-		defer f.Close()
 		if err != nil {
 			return err
 		}
+		defer f.Close()
 
 		_, werr := f.Write([]byte(ratingJson))
 		if werr != nil {

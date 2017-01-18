@@ -122,10 +122,10 @@ func (p *PurchasesDB) GetAll() ([]string, error) {
 	defer p.lock.RUnlock()
 	stm := "select orderID from purchases"
 	rows, err := p.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var ret []string
 	for rows.Next() {
 		var orderID string

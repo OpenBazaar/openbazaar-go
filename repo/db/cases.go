@@ -175,10 +175,10 @@ func (c *CasesDB) GetAll() ([]string, error) {
 	defer c.lock.RUnlock()
 	stm := "select caseID from cases"
 	rows, err := c.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	var ret []string
 	for rows.Next() {
 		var orderID string
