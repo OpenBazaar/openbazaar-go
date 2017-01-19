@@ -357,7 +357,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Create user-agent file
-	userAgentBytes := []byte(USERAGENT)
+	userAgentBytes := []byte(core.USERAGENT)
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
 	// IPFS node setup
@@ -571,7 +571,7 @@ func (x *Start) Execute(args []string) error {
 		Resolver:          bstk.NewBlockStackClient(resolverUrl),
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
-		UserAgent:         USERAGENT,
+		UserAgent:         core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -761,5 +761,5 @@ func printSplashScreen() {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v" + VERSION + " starting...")
+	fmt.Println("OpenBazaar Server v" + core.VERSION + " starting...")
 }

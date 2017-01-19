@@ -24,6 +24,11 @@ import (
 	"time"
 )
 
+var (
+	VERSION   = "0.4.3"
+	USERAGENT = "/openbazaar-go:" + VERSION + "/"
+)
+
 var log = logging.MustGetLogger("core")
 
 var Node *OpenBazaarNode
