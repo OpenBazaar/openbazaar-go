@@ -1,11 +1,12 @@
 package net
 
 import (
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type PointerRepublisher struct {
