@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 	"gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
 	"io/ioutil"
 	"os"
@@ -201,8 +202,11 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	if err != nil {
 		return err
 	}
-
-	err = n.SendOrderCompletion(contract.VendorListings[0].VendorID.Guid, rc)
+	vendorkey, err := libp2p.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+	if err != nil {
+		return err
+	}
+	err = n.SendOrderCompletion(contract.VendorListings[0].VendorID.Guid, &vendorkey, rc)
 	if err != nil {
 		return err
 	}

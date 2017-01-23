@@ -243,7 +243,7 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 	return n.sendMessage(peerId, &k, m)
 }
 
-func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, k *libp2p.PubKey, fulfillmentMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(fulfillmentMessage)
 	if err != nil {
 		return err
@@ -252,10 +252,10 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, fulfillmentMessage 
 		MessageType: pb.Message_ORDER_FULFILLMENT,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 }
 
-func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendOrderCompletion(peerId string, k *libp2p.PubKey, completionMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(completionMessage)
 	if err != nil {
 		return err
@@ -267,10 +267,10 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, completionMessage *p
 	if err != nil {
 		return err
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeOpen(peerId string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(disputeMessage)
 	if err != nil {
 		return err
@@ -279,7 +279,7 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerId string, disputeMessage *pb.Ricar
 		MessageType: pb.Message_DISPUTE_OPEN,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 }
 
 func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.DisputeUpdate) error {
@@ -294,7 +294,7 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.Disp
 	return n.sendMessage(peerId, nil, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.RicardianContract) error {
+func (n *OpenBazaarNode) SendDisputeClose(peerId string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(resolutionMessage)
 	if err != nil {
 		return err
@@ -303,7 +303,7 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, resolutionMessage *pb.R
 		MessageType: pb.Message_DISPUTE_CLOSE,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerId, k, m)
 	return nil
 }
 

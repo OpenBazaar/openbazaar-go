@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	crypto "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
@@ -119,7 +120,11 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	if err != nil {
 		return err
 	}
-	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.Guid, rc)
+	buyerkey, err := libp2p.UnmarshalPublicKey(contract.BuyerOrder.BuyerID.Pubkeys.Guid)
+	if err != nil {
+		return err
+	}
+	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.Guid, &buyerkey, rc)
 	if err != nil {
 		return err
 	}
