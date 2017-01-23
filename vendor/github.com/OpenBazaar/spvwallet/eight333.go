@@ -96,6 +96,11 @@ func (w *SPVWallet) onTx(p *peer.Peer, m *wire.MsgTx) {
 
 func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Error(err)
+			}
+		}()
 		for _, inv := range m.InvList {
 			switch inv.Type {
 			case wire.InvTypeBlock:
