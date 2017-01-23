@@ -18,7 +18,7 @@ class SendStealthTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # create a profile for bob
-        pro = {"name": "Bob"}
+        pro = {"name": "Bob", "acceptStealth": True}
         api_url = bob["gateway_url"] + "ob/profile"
         r = requests.post(api_url, data=json.dumps(pro, indent=4))
         if r.status_code == 404:

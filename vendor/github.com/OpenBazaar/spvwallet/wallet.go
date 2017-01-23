@@ -226,7 +226,7 @@ func (w *SPVWallet) Params() *chaincfg.Params {
 }
 
 func (w *SPVWallet) AcceptStealth() bool {
-	return false
+	return true
 }
 
 func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
