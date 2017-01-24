@@ -32,11 +32,11 @@ func IdentityFromKey(privkey []byte) (config.Identity, error) {
 
 func IdentityKeyFromSeed(seed []byte, bits int) ([]byte, error) {
 	reader := &DeterministicReader{Seed: seed, Counter: 0}
-	sk, _, err := libp2p.GenerateKeyPairWithReader(libp2p.RSA, bits, reader)
+	sk, _, err := libp2p.GenerateKeyPairWithReader(libp2p.Ed25519, bits, reader)
 	if err != nil {
 		return nil, err
 	}
-	encodedKey, err := libp2p.MarshalPrivateKey(sk)
+	encodedKey, err := sk.Bytes()
 	if err != nil {
 		return nil, err
 	}

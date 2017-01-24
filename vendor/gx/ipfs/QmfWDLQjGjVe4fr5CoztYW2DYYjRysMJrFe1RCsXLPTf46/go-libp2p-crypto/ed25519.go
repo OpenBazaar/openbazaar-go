@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519"
+	extra "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/extra25519"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	pb "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto/pb"
 )
@@ -69,6 +70,12 @@ func (k *Ed25519PrivateKey) Sign(msg []byte) ([]byte, error) {
 	return (*out)[:], nil
 }
 
+func (k *Ed25519PrivateKey) ToCurve25519() *[32]byte {
+	var sk [32]byte
+	extra.PrivateKeyToCurve25519(&sk, k.sk)
+	return &sk
+}
+
 func (k *Ed25519PublicKey) Bytes() ([]byte, error) {
 	pbmes := new(pb.PublicKey)
 	typ := pb.KeyType_Ed25519
@@ -94,6 +101,15 @@ func (k *Ed25519PublicKey) Verify(data []byte, sig []byte) (bool, error) {
 	var asig [64]byte
 	copy(asig[:], sig)
 	return ed25519.Verify(k.k, data, &asig), nil
+}
+
+func (k *Ed25519PublicKey) ToCurve25519() (*[32]byte, error) {
+	var pk [32]byte
+	success := extra.PublicKeyToCurve25519(&pk, k.k)
+	if !success {
+		return nil, fmt.Errorf("Error converting ed25519 pubkey to curve25519 pubkey")
+	}
+	return &pk, nil
 }
 
 func UnmarshalEd25519PrivateKey(data []byte) (*Ed25519PrivateKey, error) {
