@@ -17,10 +17,12 @@ func TestEncrypt(t *testing.T) {
 	ciphertext, err := Encrypt(pub, []byte(plaintext))
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	decryptedPlaintext, err := Decrypt(priv, ciphertext)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if string(decryptedPlaintext) != plaintext {
 		t.Error("Result plaintext doesn't match original plaintext")
@@ -33,46 +35,56 @@ func TestDecrypt(t *testing.T) {
 	privKeyBytes, err := hex.DecodeString(privKeyHex)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	privKey, err := libp2p.UnmarshalPrivateKey(privKeyBytes)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	cipherTextBytes, err := hex.DecodeString(ciphertextHex)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	plaintext, err := Decrypt(privKey, cipherTextBytes)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	if "Hello World!!!" != string(plaintext) {
 		t.Error("Result plaintext doesn't match original plaintext")
+		return
 	}
 
 	ciphertextInvalidHmacHex := "00000001b7f70c6921501ac75379ce0d99630e03b48d4d9a0c2298c5c02ff994c5b865bd10f7d4ab1aa2ff340ed837c3697f83a575d586a0fa48ea84cd8076bf11be5fd3d19d0e339a0b876b943acfe3bb3406888d2a2c510526dad6409fbacb8e29b9a34431941bfb29db00795ef3b26b9a0d00e92342181ac8236efba72e989c5aacbef7db1872b9b900e5144eb3528183bdebbb62fdbcc64ec132550f5184b7596d94cbfb24edae59b465ff101e91b4256f1da5529b161846597afa6eeb0d1747da10f24aa367e1913997113689f4d2758980c3d1674ec8b4ba9f3b084b382a7870789d8f1411d7fc41a86ef02481fa48c8f9b1a1b81022ece9a7f76884510a3502133a30b02b4f72329e4cb6bc97ac60d3c253757f5d5c541daf874f1789b0e22e7250fa1040e6f10cee66fa95073cd08953a2600b13f5046ba406b1d143760e861428235d37e0637416c7e0160dd6b830e19d2004ec39d2900b1d5bd1d0c0bb2c5b48e2200437fdb2d6f709296914d39f9f31a68007c27ee123843f08b751289247d7d65a0aa98218b708221518c74e6bc1386389dd345785abe72697fe1b89447e254113112aaee9353432007f0e3bb987b28bb56d2c3e92f9fc088d01147396a36317c1388e712571d5f7271f32b5aa94cc55d75dd5fc791c5dc4e5a2ba51817b27c1ef73441242d33b4670343ad2850e8b373536b4e9846eb51a8ca7ccaff9286b92f75c1c79c6872b995ea5e3ebd72df9169b486532aae16472edc571841667edf519ade6b87fbbd5ffe4811d8e0b48b4c1601a62c4052537869295f554"
 	cipherTextInvalidHmacBytes, err := hex.DecodeString(ciphertextInvalidHmacHex)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	_, err = Decrypt(privKey, cipherTextInvalidHmacBytes)
 	if err != ErrInvalidHmac {
 		t.Error("Failed to catch invalid hmac")
+		return
 	}
 	ciphertextShortHex := "00000001b7f70c6921501ac75379ce0d99630e03b48d4d9a0c2298c5c02ff994c5b865bd10f7d4ab1aa2ff340ed837c3697f83a575d586a0fa48ea84cd8076bf11be5fd3d19d0e339a0b876b943acfe3bb3406888d2a2c510526dad6409fbacb8e29b9a34431941bfb29db00795ef3b26b9a0d00e92342181ac8236efba72e989c5aacbef7db1872b9b900e5144eb3528183bdebbb62fdbcc64ec132550f5184b7596d94cbfb24edae59b465ff101e91b4256f1da5529b161846597afa6eeb0d1747da10f24aa367e1913997113689f4d2758980c3d1674ec8b4ba9f3b084b382a7870789d8f1411d7fc41a86ef02481fa48c8f9b1a1b81022ece9a7f76884510a3502133a30b02b4f72329e4cb6bc97ac60d3c253757f5d5c541daf874f1789b0e22e7250fa1040e6f10cee66fa95073cd08953a2600b13f5046ba406b1d143760e861428235d37e0637416c7e0160dd6b830e19d2004ec39d2900b1d5bd1d0c0bb2c5b48e2200437fdb2d6f709296914d39f9f31a68007c27ee123843f08b751289247d7d65a0aa98218b708221518c74e6bc1386389dd345785abe72697fe1b89447e254113112aaee9353432007f0e3bb987b28bb56d2c3e92f9fc088d01147396a36317c1388e712571d5f7271f32b5aa94cc55d75dd5fc791c5dc4e5a2ba51817b27c1ef73441242d33b4670343ad2850e8b373536b4e9846eb51a8ca7ccaff9286b92f75c1c79c6872b995ea5e3ebd72df9169b486532aae16472edc571841667edf519ade6b87fbbd5ffe4811d8e0b"
 	cipherTextShortBytes, err := hex.DecodeString(ciphertextShortHex)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	_, err = Decrypt(privKey, cipherTextShortBytes)
 	if err != ErrShortCiphertext {
 		t.Error("Failed to catch too short ciphertext")
+		return
 	}
 	ciphertextInvalidHex := "00000001b7f70c6921501ac65379ce0d99630e03b48d4d9a0c2298c5c02ff994c5b865bd10f7d4ab1aa2ff340ed837c3697f83a575d586a0fa48ea84cd8076bf11be5fd3d19d0e339a0b876b943acfe3bb3406888d2a2c510526dad6409fbacb8e29b9a34431941bfb29db00795ef3b26b9a0d00e92342181ac8236efba72e989c5aacbef7db1872b9b900e5144eb3528183bdebbb62fdbcc64ec132550f5184b7596d94cbfb24edae59b465ff101e91b4256f1da5529b161846597afa6eeb0d1747da10f24aa367e1913997113689f4d2758980c3d1674ec8b4ba9f3b084b382a7870789d8f1411d7fc41a86ef02481fa48c8f9b1a1b81022ece9a7f76884510a3502133a30b02b4f72329e4cb6bc97ac60d3c253757f5d5c541daf874f1789b0e22e7250fa1040e6f10cee66fa95073cd08953a2600b13f5046ba406b1d143760e861428235d37e0637416c7e0160dd6b830e19d2004ec39d2900b1d5bd1d0c0bb2c5b48e2200437fdb2d6f709296914d39f9f31a68007c27ee123843f08b751289247d7d65a0aa98218b708221518c74e6bc1386389dd345785abe72697fe1b89447e254113112aaee9353432007f0e3bb987b28bb56d2c3e92f9fc088d01147396a36317c1388e712571d5f7271f32b5aa94cc55d75dd5fc791c5dc4e5a2ba51817b27c1ef73441242d33b4670343ad2850e8b373536b4e9846eb51a8ca7ccaff9286b92f75c1c79c6872b995ea5e3ebd72df9169b486532aae16472edc571841667edf519ade6b87fbbd5ffe4811d8e0b48b4c1601a62c4052537869295f557"
 	cipherTextInvalidBytes, err := hex.DecodeString(ciphertextInvalidHex)
 	if err != nil {
 		t.Error(err)
+		return
 	}
 	_, err = Decrypt(privKey, cipherTextInvalidBytes)
 	if err != rsa.ErrDecryption {

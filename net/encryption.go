@@ -53,7 +53,7 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	secretKey := make([]byte, SecretKeyBytes)
 	rand.Read(secretKey)
 
-	pubKeyBytes, err := pubKey.Bytes()
+	pubKeyBytes, err := libp2p.MarshalRsaPublicKey(pubKey.(*libp2p.RsaPublicKey))
 	if err != nil {
 		return nil, err
 	}
@@ -131,10 +131,7 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < CiphertextVersionBytes+EncryptedSecretKeyBytes+aes.BlockSize+MacKeyBytes {
 		return nil, ErrShortCiphertext
 	}
-	privKeyBytes, err := privKey.Bytes()
-	if err != nil {
-		return nil, err
-	}
+	privKeyBytes := libp2p.MarshalRsaPrivateKey(privKey.(*libp2p.RsaPrivateKey))
 	rsaPrivKey, err := libp2p.UnmarshalRsaPrivateKey(privKeyBytes)
 	if err != nil {
 		return nil, err
