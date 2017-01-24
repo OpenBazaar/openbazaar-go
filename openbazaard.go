@@ -54,11 +54,11 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
-	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	recpb "gx/ipfs/QmdM4ohF7cr4MvAECVeD3hRA3HtZrk1ngaek4n8ojVT87h/go-libp2p-record/pb"
 )
 
@@ -427,16 +427,16 @@ func (x *Start) Execute(args []string) error {
 
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(ds.NewKey(ipnskey))
-	var dirHash []byte
-	if hasherr == nil {
-		val := ival.([]byte)
-		dhtrec := new(recpb.Record)
-		proto.Unmarshal(val, dhtrec)
-		e := new(namepb.IpnsEntry)
-		proto.Unmarshal(dhtrec.GetValue(), e)
-		dirHash = e.Value
+	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
+	if hasherr != nil {
+		log.Error(hasherr)
+		return hasherr
 	}
+	val := ival.([]byte)
+	dhtrec := new(recpb.Record)
+	proto.Unmarshal(val, dhtrec)
+	e := new(namepb.IpnsEntry)
+	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
@@ -563,7 +563,7 @@ func (x *Start) Execute(args []string) error {
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
 		IpfsNode:          nd,
-		RootHash:          ipath.Path(dirHash).String(),
+		RootHash:          ipath.Path(e.Value).String(),
 		RepoPath:          repoPath,
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
