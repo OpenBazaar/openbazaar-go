@@ -39,7 +39,7 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 }
 
 func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
-	if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer().ID() == p.ID() {
+	if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer() != nil && w.PeerManager.DownloadPeer().ID() == p.ID() {
 		queueHash := <-w.blockQueue
 		headerHash := m.Header.BlockHash()
 		if !headerHash.IsEqual(&queueHash) {
@@ -185,6 +185,7 @@ func (w *SPVWallet) Rebroadcast() {
 	invMsg, err := w.txstore.GetPendingInv()
 	if err != nil {
 		log.Errorf("Rebroadcast error: %s", err.Error())
+		return
 	}
 	if len(invMsg.InvList) == 0 { // nothing to broadcast, so don't
 		return

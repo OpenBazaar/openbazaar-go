@@ -1,13 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	ipfslogging "gx/ipfs/QmNQynaz7qfriSUJkiEZUrm2Wen1u3Kj9goZzWtrPyu7XR/go-log"
-	manet "gx/ipfs/QmPpRcbNUXauP3zWZ1NJMLWpe4QnmEHrd2ba2D3yqWznw7/go-multiaddr-net"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
+	manet "gx/ipfs/QmT6Cp31887FpAc25z25YHgpFJohZedrYLWPPspRtj1Brp/go-multiaddr-net"
+	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	"gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
 	"net"
 	"os"
 	"os/signal"
@@ -54,11 +54,12 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
+	recpb "gx/ipfs/QmdM4ohF7cr4MvAECVeD3hRA3HtZrk1ngaek4n8ojVT87h/go-libp2p-record/pb"
 )
 
 var (
@@ -426,17 +427,16 @@ func (x *Start) Execute(args []string) error {
 
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(ipnskey.DsKey())
-	if hasherr != nil {
-		log.Error("Error getting current directory root hash")
-		log.Error(hasherr)
-		return hasherr
+	ival, hasherr := nd.Repo.Datastore().Get(ds.NewKey(ipnskey))
+	var dirHash []byte
+	if hasherr == nil {
+		val := ival.([]byte)
+		dhtrec := new(recpb.Record)
+		proto.Unmarshal(val, dhtrec)
+		e := new(namepb.IpnsEntry)
+		proto.Unmarshal(dhtrec.GetValue(), e)
+		dirHash = e.Value
 	}
-	val := ival.([]byte)
-	dhtrec := new(dhtpb.Record)
-	proto.Unmarshal(val, dhtrec)
-	e := new(namepb.IpnsEntry)
-	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
@@ -563,7 +563,7 @@ func (x *Start) Execute(args []string) error {
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
 		IpfsNode:          nd,
-		RootHash:          ipath.Path(e.Value).String(),
+		RootHash:          ipath.Path(dirHash).String(),
 		RepoPath:          repoPath,
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
@@ -698,7 +698,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

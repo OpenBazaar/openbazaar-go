@@ -13,11 +13,11 @@ import (
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/routing"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
 	"net/http"
 	"net/url"
 	"path"
@@ -81,6 +81,7 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
+	ipfs.UnPinDir(n.Context, n.RootHash)
 	rootHash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
 	if aerr != nil {
 		return aerr
@@ -105,17 +106,13 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		n.Broadcast <- []byte(`{"status": "publishing"}`)
 	}
-	var err, perr error
+	var err error
 	inflightPublishRequests++
 	_, err = ipfs.Publish(n.Context, hash)
-	if hash != n.RootHash {
-		perr = ipfs.UnPinDir(n.Context, n.RootHash)
-		n.RootHash = hash
-	}
 	inflightPublishRequests--
 	if inflightPublishRequests == 0 {
-		if err != nil || perr != nil {
-			log.Error(err, perr)
+		if err != nil {
+			log.Error(err)
 			n.Broadcast <- []byte(`{"status": "error publishing"}`)
 		} else {
 			n.Broadcast <- []byte(`{"status": "publish complete"}`)

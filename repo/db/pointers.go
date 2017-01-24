@@ -3,10 +3,10 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	keys "github.com/ipfs/go-ipfs/blocks/key"
-	ps "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
+	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"sync"
 	"time"
 )
@@ -28,7 +28,7 @@ func (p *PointersDB) Put(pointer ipfs.Pointer) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(pointer.Value.ID.Pretty(), pointer.Key.B58String(), pointer.Value.Addrs[0].String(), pointer.Purpose, int(time.Now().Unix()))
+	_, err = stmt.Exec(pointer.Value.ID.Pretty(), pointer.Cid.KeyString(), pointer.Value.Addrs[0].String(), pointer.Purpose, int(time.Now().Unix()))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -84,8 +84,12 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 		if err != nil {
 			return ret, err
 		}
+		k, err := cid.Decode(key)
+		if err != nil {
+			return ret, err
+		}
 		pointer := ipfs.Pointer{
-			Key: keys.B58KeyDecode(key),
+			Cid: k,
 			Value: ps.PeerInfo{
 				ID:    pid,
 				Addrs: []ma.Multiaddr{maAddr},

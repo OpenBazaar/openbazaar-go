@@ -4,11 +4,11 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	key "github.com/ipfs/go-ipfs/blocks/key"
-	ps "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	multihash "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
+	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"testing"
 	"time"
 )
@@ -27,8 +27,9 @@ func init() {
 	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
 	id, _ := peer.IDFromBytes(h)
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
+	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
 	pointer = ipfs.Pointer{
-		key.B58KeyDecode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr"),
+		k,
 		ps.PeerInfo{
 			ID:    id,
 			Addrs: []ma.Multiaddr{maAddr},
@@ -57,7 +58,7 @@ func TestPointersPut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr" || purpose != 1 {
+	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != pointer.Cid.KeyString() || purpose != 1 {
 		t.Error("Pointer returned incorrect values")
 	}
 	err = pdb.Put(pointer)
@@ -121,7 +122,7 @@ func TestGetAllPointers(t *testing.T) {
 		if p.Value.ID != pointer.Value.ID {
 			t.Error("Get all pointers returned incorrect data")
 		}
-		if p.Key != pointer.Key {
+		if !p.Cid.Equals(pointer.Cid) {
 			t.Error("Get all pointers returned incorrect data")
 		}
 	}

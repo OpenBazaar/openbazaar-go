@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"golang.org/x/crypto/hkdf"
-	libp2p "gx/ipfs/QmUWER4r4qMvaCnX5zREcfyiWN7cXN9g3a7fkRqNz8qWPP/go-libp2p-crypto"
+	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
 	"io"
 )
 
@@ -53,7 +53,16 @@ func Encrypt(pubKey libp2p.PubKey, plaintext []byte) ([]byte, error) {
 	secretKey := make([]byte, SecretKeyBytes)
 	rand.Read(secretKey)
 
-	encKey, err := pubKey.Encrypt(secretKey)
+	pubKeyBytes, err := pubKey.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	rsaPubKey, err := libp2p.UnmarshalRsaPublicKey(pubKeyBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	encKey, err := rsaPubKey.Encrypt(secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +131,17 @@ func decryptV1(privKey libp2p.PrivKey, ciphertext []byte) ([]byte, error) {
 	if len(ciphertext) < CiphertextVersionBytes+EncryptedSecretKeyBytes+aes.BlockSize+MacKeyBytes {
 		return nil, ErrShortCiphertext
 	}
+	privKeyBytes, err := privKey.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	rsaPrivKey, err := libp2p.UnmarshalRsaPrivateKey(privKeyBytes)
+	if err != nil {
+		return nil, err
+	}
 
 	// Decrypt the secret key using the RSA private key
-	secretKey, err := privKey.Decrypt(ciphertext[CiphertextVersionBytes : CiphertextVersionBytes+EncryptedSecretKeyBytes])
+	secretKey, err := rsaPrivKey.Decrypt(ciphertext[CiphertextVersionBytes : CiphertextVersionBytes+EncryptedSecretKeyBytes])
 	if err != nil {
 		return nil, err
 	}
