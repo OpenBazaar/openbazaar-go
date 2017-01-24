@@ -2,8 +2,8 @@ package ipfs
 
 import (
 	"github.com/ipfs/go-ipfs/commands"
-	"github.com/ipfs/go-ipfs/notifications"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
+	"gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing/notifications"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 )
 
 func Query(ctx commands.Context, peerID string) ([]peer.ID, error) {

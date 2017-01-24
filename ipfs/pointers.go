@@ -1,6 +1,7 @@
 package ipfs
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -9,18 +10,17 @@ import (
 	"sync"
 
 	"github.com/ipfs/go-ipfs/core"
-	ps "gx/ipfs/QmQdnfvZQuhdT93LNc5bos52wAmdr3G2p6G8teLJMEN32P/go-libp2p-peerstore"
-	peer "gx/ipfs/QmRBqJF7hb8ZSpRcMwUt8hNhydWcxGEhtk81HKq6oUwKvs/go-libp2p-peer"
-	host "gx/ipfs/QmVCe3SNMjkcPgnpFhZs719dheq6xE7gJwjzV7aWcUM4Ms/go-libp2p/p2p/host"
-	multihash "gx/ipfs/QmYf7ng2hG5XBtJA3tN34DQ2GUN5HNksEw1rLDkmr6vGku/go-multihash"
-	ma "gx/ipfs/QmYzDkkgAEmrcNzFCiYo6L1dTX4EAG1gZkbtdbd9trL4vd/go-multiaddr"
+	host "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
+	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	multihash "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	context "gx/ipfs/QmZy2y8t9zQH2a1b8q2ZSLKp17ATuJoCNxxyMFG5qFExpt/go-net/context"
+	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 
-	key "github.com/ipfs/go-ipfs/blocks/key"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	ctxio "github.com/jbenet/go-context/io"
+	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
 	"time"
 )
 
@@ -41,7 +41,7 @@ const (
    a magic number so we distinguish it from regular providers and use a longer ttl.
    Note this will only be compatible with the OpenBazaar/go-ipfs fork. */
 type Pointer struct {
-	Key       key.Key
+	Cid       *cid.Cid
 	Value     ps.PeerInfo
 	Purpose   Purpose
 	Timestamp time.Time
@@ -49,7 +49,10 @@ type Pointer struct {
 
 func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) (Pointer, error) {
 	keyhash := createKey(mhKey, prefixLen)
-	k := key.B58KeyDecode(keyhash.B58String())
+	k, err := cid.Decode(keyhash.B58String())
+	if err != nil {
+		return Pointer{}, err
+	}
 
 	magicID, err := getMagicID()
 	if err != nil {
@@ -59,17 +62,18 @@ func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Mu
 		ID:    magicID,
 		Addrs: []ma.Multiaddr{addr},
 	}
-	return Pointer{Key: k, Value: pi}, addPointer(node, ctx, k, pi)
+	return Pointer{Cid: k, Value: pi}, addPointer(node, ctx, k, pi)
 }
 
 func RePublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer) error {
-	return addPointer(node, ctx, pointer.Key, pointer.Value)
+	return addPointer(node, ctx, pointer.Cid, pointer.Value)
 }
 
 // Fetch pointers from the dht. They will be returned asynchronously.
 func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) <-chan ps.PeerInfo {
 	keyhash := createKey(mhKey, prefixLen)
-	peerout := dht.FindProvidersAsync(ctx, key.B58KeyDecode(keyhash.B58String()), 100000)
+	key, _ := cid.Decode(keyhash.B58String())
+	peerout := dht.FindProvidersAsync(ctx, key, 100000)
 	return peerout
 }
 
@@ -82,10 +86,10 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 	return providers, nil
 }
 
-func addPointer(node *core.IpfsNode, ctx context.Context, k key.Key, pi ps.PeerInfo) error {
+func addPointer(node *core.IpfsNode, ctx context.Context, k *cid.Cid, pi ps.PeerInfo) error {
 	dht := node.Routing.(*routing.IpfsDHT)
 	peerHosts := node.PeerHost
-	peers, err := dht.GetClosestPeers(ctx, k)
+	peers, err := dht.GetClosestPeers(ctx, k.KeyString())
 	if err != nil {
 		return err
 	}
@@ -94,7 +98,7 @@ func addPointer(node *core.IpfsNode, ctx context.Context, k key.Key, pi ps.PeerI
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			putPointer(ctx, peerHosts.(host.Host), p, pi, string(k))
+			putPointer(ctx, peerHosts.(host.Host), p, pi, k.KeyString())
 		}(p)
 	}
 	wg.Wait()
@@ -112,7 +116,7 @@ func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, pi ps.PeerI
 }
 
 func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Message) error {
-	s, err := host.NewStream(ctx, routing.ProtocolDHT, p)
+	s, err := host.NewStream(ctx, p, routing.ProtocolDHT)
 	if err != nil {
 		return err
 	}

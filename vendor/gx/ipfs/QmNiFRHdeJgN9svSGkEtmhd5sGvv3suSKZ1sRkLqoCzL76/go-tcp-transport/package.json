@@ -1,0 +1,47 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-tcp-transport"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-tcp-transport"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTMy4hVSY28DdwJ9kBz6y7q6MuioFzPcpM3Ma3aPjo1i3",
+      "name": "go-libp2p-loggables",
+      "version": "1.1.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmREK4tFmkEmrGgYU5cupeRVh71kLAkfjWcRq3krVUWWRq",
+      "name": "go-reuseport",
+      "version": "0.1.4"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmT6Cp31887FpAc25z25YHgpFJohZedrYLWPPspRtj1Brp",
+      "name": "go-multiaddr-net",
+      "version": "1.5.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQkdkvXE4oKXAcLZK5d7Zc6xvyukQc8WVjX7QvxDJ7hJj",
+      "name": "mafmt",
+      "version": "1.1.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmWMia2fBVBesMerbtApQY7Tj2sgTaziveBACfCRUcv45f",
+      "name": "go-libp2p-transport",
+      "version": "2.2.1"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-tcp-transport",
+  "version": "1.1.0"
+}
+

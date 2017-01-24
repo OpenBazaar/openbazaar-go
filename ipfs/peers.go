@@ -13,5 +13,5 @@ func ConnectedPeers(ctx commands.Context) ([]string, error) {
 	if res.Error() != nil {
 		return nil, res.Error()
 	}
-	return res.Output().([]string), nil
+	return *res.Output().(*[]string), nil
 }

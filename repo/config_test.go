@@ -134,16 +134,19 @@ func TestExtendConfigFile(t *testing.T) {
 	r, err := fsrepo.Open(testConfigFolder)
 	if err != nil {
 		t.Error("fsrepo.Open threw an unexpected error", err)
+		return
 	}
 	config, _ := GetWalletConfig(testConfigPath)
 	originalMaxFee := config.MaxFee
 	newMaxFee := config.MaxFee + 1
 	if err := extendConfigFile(r, "Wallet.MaxFee", newMaxFee); err != nil {
 		t.Error("extendConfigFile threw an unexpected error ", err)
+		return
 	}
 	config, _ = GetWalletConfig(testConfigPath)
 	if config.MaxFee != newMaxFee {
 		t.Errorf("Expected maxFee to be %v, got %v", newMaxFee, config.MaxFee)
+		return
 	}
 	// Reset maxFee to original value
 	extendConfigFile(r, "Wallet.MaxFee", originalMaxFee)

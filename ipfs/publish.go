@@ -11,7 +11,7 @@ var pubErr = errors.New(`Name publish failed`)
 
 // Publish a signed IPNS record to our Peer ID
 func Publish(ctx commands.Context, hash string) (string, error) {
-	args := []string{"name", "publish", hash}
+	args := []string{"name", "publish", "/ipfs/" + hash}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
@@ -24,7 +24,7 @@ func Publish(ctx commands.Context, hash string) (string, error) {
 		return "", res.Error()
 	}
 	returnedVal := resp.(*coreCmds.IpnsEntry).Value
-	if returnedVal != hash {
+	if returnedVal != "/ipfs/"+hash {
 		return "", pubErr
 	}
 	log.Infof("Published %s to IPNS", hash)

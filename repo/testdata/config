@@ -17,13 +17,16 @@
     "/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
     "/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
   ],
+  "Crosspost-gateways": [
+    "http://gateway.ob1.io/"
+  ],
   "Datastore": {
     "BloomFilterSize": 0,
     "GCPeriod": "1h",
     "HashOnRead": false,
     "NoSync": false,
     "Params": null,
-    "Path": "/Users/uscreen/OpenBazaar2.0/datastore",
+    "Path": "/datastore",
     "StorageGCWatermark": 90,
     "StorageMax": "10GB",
     "Type": "leveldb"
@@ -66,12 +69,16 @@
     "IPFS": "/ipfs",
     "IPNS": "/ipns"
   },
+  "Reprovider": {
+    "Interval": ""
+  },
   "Resolver": "https://resolver.onename.com/",
   "SupernodeRouting": {
     "Servers": null
   },
   "Swarm": {
-    "AddrFilters": null
+    "AddrFilters": null,
+    "DisableBandwidthMetrics": false
   },
   "Tour": {
     "Last": ""

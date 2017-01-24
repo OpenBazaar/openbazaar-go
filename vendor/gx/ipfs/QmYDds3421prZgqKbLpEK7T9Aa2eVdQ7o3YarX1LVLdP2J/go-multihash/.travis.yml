@@ -1,0 +1,10 @@
+language: go
+
+go:
+  - 1.7
+  - tip
+
+script:
+  - make test
+
+env: TEST_VERBOSE=1
