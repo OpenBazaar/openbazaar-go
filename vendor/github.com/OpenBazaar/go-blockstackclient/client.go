@@ -1,15 +1,15 @@
 package blockstackclient
 
 import (
-	"encoding/json"
+	"sync"
+	"time"
 	"errors"
-	"github.com/jbenet/go-multihash"
 	"net/http"
 	"net/url"
 	"path"
+	"encoding/json"
 	"strings"
-	"sync"
-	"time"
+	"github.com/jbenet/go-multihash"
 )
 
 type httpClient interface {
@@ -25,16 +25,16 @@ type BlockstackClient struct {
 }
 
 type CachedGuid struct {
-	guid   string
-	exipry time.Time
+	guid      string
+	exipry    time.Time
 }
 
 func NewBlockStackClient(resolverURL string) *BlockstackClient {
 	b := &BlockstackClient{
 		resolverURL: resolverURL,
-		httpClient:  &http.Client{Timeout: time.Minute},
-		cache:       make(map[string]CachedGuid),
-		cacheLife:   time.Minute,
+		httpClient: &http.Client{Timeout:time.Minute},
+		cache: make(map[string]CachedGuid),
+		cacheLife: time.Minute,
 	}
 	go b.gc()
 	return b
@@ -101,13 +101,13 @@ func (b *BlockstackClient) gc() {
 	ticker := time.NewTicker(time.Minute)
 	for {
 		select {
-		case <-ticker.C:
+		case <- ticker.C:
 			b.deleteExpiredCache()
 		}
 	}
 }
 
-func (b *BlockstackClient) deleteExpiredCache() {
+func (b *BlockstackClient) deleteExpiredCache(){
 	b.Lock()
 	defer b.Unlock()
 	for k, v := range b.cache {

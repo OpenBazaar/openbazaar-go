@@ -290,7 +290,7 @@ func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.M
 		} else if isPointer(pi.ID) {
 			dht.peerstore.AddAddrs(pi.ID, pi.Addrs, time.Hour*24*7)
 		}
-		dht.providers.AddProvider(ctx, c, pi.ID)
+		dht.providers.AddProvider(ctx, c, p)
 	}
 
 	return nil, nil
