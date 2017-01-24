@@ -1,0 +1,42 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-cbor-node"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipld-cbor"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRSU5EqqWVZSNdbU51yXmVoF1uNw3JgTNB6RaiL7DZM16",
+      "name": "go-ipld-node",
+      "version": "0.4.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD",
+      "name": "go-cid",
+      "version": "0.7.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmb912gdngC1UWwTkhuW8knyRbcWeu5kqkxBpveLmW8bSr",
+      "name": "go-ipfs-util",
+      "version": "1.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPL3RCWaM6s7b82LSLS1MGX2jpxPxA1v2vmgLm15b1NcW",
+      "name": "cbor",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "",
+  "name": "go-ipld-cbor",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.0"
+}
+

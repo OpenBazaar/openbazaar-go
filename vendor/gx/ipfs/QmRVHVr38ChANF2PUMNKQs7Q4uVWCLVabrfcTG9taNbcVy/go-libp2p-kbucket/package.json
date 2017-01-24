@@ -1,0 +1,40 @@
+{
+  "bugs": {
+    "url": "https://github.com/libp2p/go-libp2p-kbucket"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-libp2p-kbucket",
+    "goversion": "1.5.2"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52",
+      "name": "go-log",
+      "version": "1.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC",
+      "name": "go-libp2p-peer",
+      "version": "2.1.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU",
+      "name": "go-libp2p-peerstore",
+      "version": "1.4.0"
+    },
+    {
+      "hash": "QmbHpE8HYbHdwAxyiJMsPzywVyZKLLHNi5HemfVCPwo839",
+      "name": "go-testutil",
+      "version": "1.1.1"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-libp2p-kbucket",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "2.1.2"
+}
+

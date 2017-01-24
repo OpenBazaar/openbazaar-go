@@ -1,0 +1,23 @@
+{
+  "author": "multiformats",
+  "bugs": {
+    "url": "https://github.com/multiformats/go-multiaddr/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/multiformats/go-multiaddr"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J",
+      "name": "go-multihash",
+      "version": "1.0.0"
+    }
+  ],
+  "gxVersion": "0.9.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-multiaddr",
+  "releaseCmd": "git commit -a -m 'gx publish $VERSION'",
+  "version": "1.1.2"
+}
+

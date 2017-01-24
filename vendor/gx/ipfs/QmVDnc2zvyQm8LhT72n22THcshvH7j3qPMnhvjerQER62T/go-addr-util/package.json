@@ -1,0 +1,41 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-addr-util"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-addr-util"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52",
+      "name": "go-log",
+      "version": "1.2.0"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmT6Cp31887FpAc25z25YHgpFJohZedrYLWPPspRtj1Brp",
+      "name": "go-multiaddr-net",
+      "version": "1.5.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQkdkvXE4oKXAcLZK5d7Zc6xvyukQc8WVjX7QvxDJ7hJj",
+      "name": "mafmt",
+      "version": "1.1.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSC7uaj9igPHBEBRVD48iahCe3kBrywsmSaU4FesHgXWn",
+      "name": "ws-transport",
+      "version": "1.4.1"
+    }
+  ],
+  "gxVersion": "0.9.1",
+  "language": "go",
+  "license": "",
+  "name": "go-addr-util",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.1.1"
+}
+
