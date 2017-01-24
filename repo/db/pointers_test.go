@@ -58,7 +58,7 @@ func TestPointersPut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != pointer.Cid.KeyString() || purpose != 1 {
+	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != pointer.Cid.String() || purpose != 1 {
 		t.Error("Pointer returned incorrect values")
 	}
 	err = pdb.Put(pointer)
