@@ -55,6 +55,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 	p2phost "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
 	addrutil "gx/ipfs/QmVDnc2zvyQm8LhT72n22THcshvH7j3qPMnhvjerQER62T/go-addr-util"
 	metrics "gx/ipfs/QmY2otvyPM2sTaDsczo7Yuosg98sUMCJ9qx1gpPaAPTS9B/go-libp2p-metrics"
@@ -418,11 +419,14 @@ func (x *Start) Execute(args []string) error {
 
 	// Iterate over our address and process them as needed
 	var onionTransport *torOnion.OnionTransport
+	var torDialer proxy.Dialer
+	var usingTor, usingClearnet bool
 	for i, addr := range cfg.Addresses.Swarm {
 		m, _ := ma.NewMultiaddr(addr)
 		p := m.Protocols()
 		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
 		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
+			usingClearnet = true
 			port, serr := obnet.Stun()
 			if serr != nil {
 				log.Error(serr)
@@ -432,6 +436,7 @@ func (x *Start) Execute(args []string) error {
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
 		} else if p[0].Name == "onion" {
+			usingTor = true
 			controlPort, err := obnet.GetTorControlPort()
 			if err != nil {
 				log.Error(err)
@@ -454,6 +459,17 @@ func (x *Start) Execute(args []string) error {
 				log.Error(err)
 				return err
 			}
+		} else {
+			usingClearnet = true
+		}
+	}
+	// If we're only using Tor set the proxy dialer
+	if usingTor && !usingClearnet {
+		log.Notice("Using Tor exclusively")
+		torDialer, err = onionTransport.TorDialer()
+		if err != nil {
+			log.Error(err)
+			return err
 		}
 	}
 
@@ -637,7 +653,7 @@ func (x *Start) Execute(args []string) error {
 
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher()
+		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
 
 	// OpenBazaar node setup

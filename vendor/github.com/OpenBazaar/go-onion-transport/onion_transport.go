@@ -106,6 +106,17 @@ func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir
 	return &o, nil
 }
 
+// Returns a proxy dialer gathered from the control interface.
+// This isn't needed for the IPFS transport but it provides
+// easy access to Tor for other functions.
+func (t *OnionTransport) TorDialer() (proxy.Dialer, error) {
+	dialer, err := t.controlConn.Dialer(t.auth)
+	if err != nil {
+		return nil, err
+	}
+	return dialer, nil
+}
+
 // loadKeys loads keys into our keys map from files in the keys directory
 func (t *OnionTransport) loadKeys() (map[string]*rsa.PrivateKey, error) {
 	keys := make(map[string]*rsa.PrivateKey)
