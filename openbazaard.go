@@ -665,7 +665,7 @@ func (x *Start) Execute(args []string) error {
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
 		MessageStorage:    storage,
-		Resolver:          bstk.NewBlockStackClient(resolverUrl),
+		Resolver:          bstk.NewBlockStackClient(resolverUrl, torDialer),
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 		UserAgent:         USERAGENT,
