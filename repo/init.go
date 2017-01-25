@@ -43,7 +43,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		}
 	}
 	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
-	fmt.Printf("Generating %d-bit RSA keypair...", nBitsForKeypair)
+	fmt.Printf("Generating Ed25519 keypair...")
 	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
 	if err != nil {
 		return err
