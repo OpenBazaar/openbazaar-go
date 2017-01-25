@@ -26,6 +26,7 @@ _testmain.go
 .idea/
 *.iml
 .gx/
+dist
 
 # Development environment files
 .ackrc
