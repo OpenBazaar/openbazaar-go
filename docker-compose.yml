@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+  openbazaard:
+    build: .
+    ports:
+      - 4001
+      - 4002
+    volumes:
+      - obdata:/var/openbazaar
+
+volumes:
+  obdata:
