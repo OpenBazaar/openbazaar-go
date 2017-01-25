@@ -106,6 +106,8 @@ type Start struct {
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
+	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
 	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
@@ -284,6 +286,10 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Invalid combination of testnet and regtest modes")
 	}
 
+	if x.Tor && x.DualStack {
+		return errors.New("Invalid combination of tor and dual stack modes")
+	}
+
 	isTestnet := false
 	if x.Testnet || x.Regtest {
 		isTestnet = true
@@ -394,7 +400,21 @@ func (x *Start) Execute(args []string) error {
 	}
 	cfg.Identity = identity
 
-	obnet.MaybeCreateHiddenServiceKey(repoPath)
+	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	onionAddrString := "/onion/" + onionAddr + ":4003"
+	if x.Tor {
+		cfg.Addresses.Swarm = []string{}
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
+	} else if x.DualStack {
+		cfg.Addresses.Swarm = []string{}
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/4001")
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip6/::/tcp/4001")
+	}
 
 	// Iterate over our address and process them as needed
 	var onionTransport *torOnion.OnionTransport

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 // Return the Tor control port if Tor is running or an error
@@ -28,51 +29,52 @@ func GetTorControlPort() (int, error) {
 }
 
 // Generate a new RSA key and onion address and save it to the repo
-func CreateHiddenServiceKey(repoPath string) error {
+func CreateHiddenServiceKey(repoPath string) (onionAddr string, err error) {
 	priv, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
-		log.Fatalf("Failed to generate RSA key")
+		return "", err
 	}
 	id, err := pkcs1.OnionAddr(&priv.PublicKey)
 	if err != nil {
-		log.Fatalf("Failed to derive onion ID: %v", err)
+		return "", err
 	}
 
 	f, err := os.Create(path.Join(repoPath, id+".onion_key"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
 
 	privKeyBytes, err := pkcs1.EncodePrivateKeyDER(priv)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	block := pem.Block{Type: "RSA PRIVATE KEY", Bytes: privKeyBytes}
 	err = pem.Encode(f, &block)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
 // Generate a new key pair if one does not already exist
-func MaybeCreateHiddenServiceKey(repoPath string) error {
+func MaybeCreateHiddenServiceKey(repoPath string) (onionAddr string, err error) {
 	d, err := os.Open(repoPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer d.Close()
 
 	files, err := d.Readdir(-1)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".onion_key" {
-			return nil
+			addr := strings.Split(file.Name(), ".onion_key")
+			return addr[0], nil
 		}
 	}
 
