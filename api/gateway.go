@@ -33,7 +33,7 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	if err != nil {
 		return nil, err
 	}
-	n.Broadcast = wsAPI.h.Broadcast
+	n.Broadcast = manageNotifications(n, wsAPI.h.Broadcast)
 
 	topMux.Handle("/ob/", jsonAPI)
 	topMux.Handle("/wallet/", jsonAPI)

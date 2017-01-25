@@ -118,8 +118,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 
 func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
-		notif := notifications.StatusNotification{"publishing"}
-		n.Broadcast <- notifications.Serialize(notif)
+		n.Broadcast <- notifications.StatusNotification{"publishing"}
 	}
 	var err error
 	inflightPublishRequests++
@@ -128,11 +127,9 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		if err != nil {
 			log.Error(err)
-			notif := notifications.StatusNotification{"error publishing"}
-			n.Broadcast <- notifications.Serialize(notif)
+			n.Broadcast <- notifications.StatusNotification{"error publishing"}
 		} else {
-			notif := notifications.StatusNotification{"publish complete"}
-			n.Broadcast <- notifications.Serialize(notif)
+			n.Broadcast <- notifications.StatusNotification{"publish complete"}
 		}
 	}
 }
