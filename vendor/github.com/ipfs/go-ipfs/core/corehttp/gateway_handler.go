@@ -219,7 +219,6 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		originalUrlPath = prefix + hdr[0]
 		ipnsHostname = true
 	}
-	fmt.Println(urlPath)
 	dr, err := i.api.Cat(ctx, urlPath)
 	dir := false
 	switch err {
