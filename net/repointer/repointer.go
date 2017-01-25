@@ -1,11 +1,12 @@
 package net
 
 import (
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
 	"golang.org/x/net/context"
-	"time"
 )
 
 type PointerRepublisher struct {
@@ -23,13 +24,13 @@ func NewPointerRepublisher(node *core.IpfsNode, database repo.Datastore) *Pointe
 func (r *PointerRepublisher) Run() {
 	tick := time.NewTicker(time.Hour * 24)
 	defer tick.Stop()
-	go r.republish()
+	go r.Republish()
 	for range tick.C {
-		go r.republish()
+		go r.Republish()
 	}
 }
 
-func (r *PointerRepublisher) republish() {
+func (r *PointerRepublisher) Republish() {
 	pointers, err := r.db.Pointers().GetAll()
 	if err != nil {
 		return
