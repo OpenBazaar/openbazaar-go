@@ -673,6 +673,7 @@ func (x *Start) Execute(args []string) error {
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 		UserAgent:         USERAGENT,
+		TorDialer:         torDialer,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
