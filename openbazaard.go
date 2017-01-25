@@ -685,7 +685,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-	MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
+	MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, torDialer, core.Node.SendOfflineAck)
 	go MR.Run()
 	core.Node.MessageRetriever = MR
 	PR := rep.NewPointerRepublisher(nd, sqliteDB)
