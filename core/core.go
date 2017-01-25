@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -117,7 +118,8 @@ func (n *OpenBazaarNode) SeedNode() error {
 
 func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
-		n.Broadcast <- []byte(`{"status": "publishing"}`)
+		notif := notifications.StatusNotification{"publishing"}
+		n.Broadcast <- notifications.Serialize(notif)
 	}
 	var err error
 	inflightPublishRequests++
@@ -126,9 +128,11 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- []byte(`{"status": "error publishing"}`)
+			notif := notifications.StatusNotification{"error publishing"}
+			n.Broadcast <- notifications.Serialize(notif)
 		} else {
-			n.Broadcast <- []byte(`{"status": "publish complete"}`)
+			notif := notifications.StatusNotification{"publish complete"}
+			n.Broadcast <- notifications.Serialize(notif)
 		}
 	}
 }

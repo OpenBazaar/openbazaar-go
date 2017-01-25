@@ -124,6 +124,10 @@ type UnfollowNotification struct {
 	Unfollow string `json:"unfollow"`
 }
 
+type StatusNotification struct {
+	Status string `json:"status"`
+}
+
 type ChatMessage struct {
 	MessageId string    `json:"messageId"`
 	PeerId    string    `json:"peerId"`
@@ -214,6 +218,10 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			i.(UnfollowNotification),
 		}
+	case StatusNotification:
+		s := i.(StatusNotification)
+		b, _ := json.Marshal(s)
+		return b
 	case ChatMessage:
 		m := messageWrapper{
 			i.(ChatMessage),
