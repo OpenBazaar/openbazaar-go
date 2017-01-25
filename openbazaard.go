@@ -622,8 +622,12 @@ func (x *Start) Execute(args []string) error {
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer)
 	} else if x.Storage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
+		}
 		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
 		if err != nil {
 			log.Error(err)
