@@ -34,7 +34,11 @@ func (c *CouponDB) Get(slug string) ([]repo.Coupon, error) {
 	defer c.lock.RUnlock()
 	var stm string
 	stm = "select slug, code, hash from coupons where slug='" + slug + "';"
-	rows, _ := c.db.Query(stm)
+	rows, err := c.db.Query(stm)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 	defer rows.Close()
 	var ret []repo.Coupon
 	for rows.Next() {

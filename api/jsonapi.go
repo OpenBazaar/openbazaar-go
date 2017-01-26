@@ -1142,35 +1142,76 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
-	contract := new(pb.RicardianContract)
-	inventory := []*pb.Inventory{}
-	_, listingID := path.Split(r.URL.Path)
-	_, err := mh.FromB58String(listingID)
-	if err == nil {
-		contract, inventory, err = i.node.GetListingFromHash(listingID)
+	urlPath, listingId := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		contract := new(pb.RicardianContract)
+		inventory := []*pb.Inventory{}
+		_, err := mh.FromB58String(listingId)
+		if err == nil {
+			contract, inventory, err = i.node.GetListingFromHash(listingId)
+		} else {
+			contract, inventory, err = i.node.GetListingFromSlug(listingId)
+		}
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return
+		}
+		m := jsonpb.Marshaler{
+			EnumsAsInts:  false,
+			EmitDefaults: false,
+			Indent:       "    ",
+			OrigName:     false,
+		}
+		coupons := []*pb.Coupon{}
+		savedCoupons, err := i.node.Datastore.Coupons().Get(contract.VendorListings[0].Slug)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		for _, c := range savedCoupons {
+			co := new(pb.Coupon)
+			co.Code = c.Code
+			co.Hash = c.Hash
+			coupons = append(coupons, co)
+		}
+		resp := new(pb.ListingRespApi)
+		resp.Contract = contract
+		resp.Inventory = inventory
+		resp.Coupons = coupons
+		out, err := m.MarshalToString(resp)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(out))
+		return
 	} else {
-		contract, inventory, err = i.node.GetListingFromSlug(listingID)
+		var listingsBytes []byte
+		_, err := mh.FromB58String(listingId)
+		if err == nil {
+			listingsBytes, err = ipfs.Cat(i.node.Context, listingId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		} else {
+			if strings.HasPrefix(peerId, "@") {
+				peerId, err = i.node.Resolver.Resolve(peerId)
+				if err != nil {
+					ErrorResponse(w, http.StatusNotFound, err.Error())
+					return
+				}
+			}
+			listingsBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		fmt.Fprint(w, string(listingsBytes))
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	resp := new(pb.ListingRespApi)
-	resp.Contract = contract
-	resp.Inventory = inventory
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	fmt.Fprint(w, string(out))
-	return
 }
 
 func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
