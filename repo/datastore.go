@@ -24,6 +24,7 @@ type Datastore interface {
 	Cases() Cases
 	Chat() Chat
 	Notifications() Notifications
+	Coupons() Coupons
 	Close()
 }
 
@@ -244,4 +245,16 @@ type Notifications interface {
 
 	// Delete a notification
 	Delete(notifID int) error
+}
+
+type Coupons interface {
+
+	// Put a list of coupons to the db
+	Put(coupons []Coupon) error
+
+	// Get a list of coupons given a slug
+	Get(slug string) ([]Coupon, error)
+
+	// Delete all coupons for a given slug
+	Delete(slug string) error
 }
