@@ -46,29 +46,30 @@ var (
 	ErrShardingFileMissing   = fmt.Errorf("%s file not found in datastore", SHARDING_FN)
 )
 
-func Create(path string, fun *ShardIdV1) error {
+func Create(p string, fun *ShardIdV1) error {
 
-	err := os.Mkdir(path, 0777)
+	err := os.Mkdir(p, 0777)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	dsFun, err := ReadShardFunc(path)
+	dsFun, err := ReadShardFunc(p)
 	switch err {
 	case ErrShardingFileMissing:
-		isEmpty, err := DirIsEmpty(path)
+		os.Remove(path.Join(p, "._check_writeable"))
+		isEmpty, err := DirIsEmpty(p)
 		if err != nil {
 			return err
 		}
 		if !isEmpty {
-			return fmt.Errorf("directory missing %s file: %s", SHARDING_FN, path)
+			return fmt.Errorf("directory missing %s file: %s", SHARDING_FN, p)
 		}
 
-		err = WriteShardFunc(path, fun)
+		err = WriteShardFunc(p, fun)
 		if err != nil {
 			return err
 		}
-		err = WriteReadme(path, fun)
+		err = WriteReadme(p, fun)
 		return err
 	case nil:
 		if fun.String() != dsFun.String() {
