@@ -421,6 +421,7 @@ func (x *Start) Execute(args []string) error {
 	var onionTransport *torOnion.OnionTransport
 	var torDialer proxy.Dialer
 	var usingTor, usingClearnet bool
+	var controlPort int
 	for i, addr := range cfg.Addresses.Swarm {
 		m, _ := ma.NewMultiaddr(addr)
 		p := m.Protocols()
@@ -437,7 +438,7 @@ func (x *Start) Execute(args []string) error {
 			break
 		} else if p[0].Name == "onion" {
 			usingTor = true
-			controlPort, err := obnet.GetTorControlPort()
+			controlPort, err = obnet.GetTorControlPort()
 			if err != nil {
 				log.Error(err)
 				return err
@@ -575,7 +576,11 @@ func (x *Start) Execute(args []string) error {
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
-		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword)
+		usetor := false
+		if usingTor && !usingClearnet {
+			usetor = true
+		}
+		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
 	} else {
 		log.Fatal("Unknown wallet type")
 	}

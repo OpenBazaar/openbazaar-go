@@ -42,6 +42,8 @@ type BitcoindWallet struct {
 	listeners        []func(spvwallet.TransactionCallback)
 	rpcClient        *btcrpcclient.Client
 	binary           string
+	controlPort      int
+	userTor          bool
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -52,7 +54,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string) *BitcoindWallet {
+func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string, useTor bool, torControlPort int) *BitcoindWallet {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -79,13 +81,15 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
 		binary:           binary,
+		controlPort:      torControlPort,
+		userTor:          useTor,
 	}
 	return &w
 }
 
 func (w *BitcoindWallet) Start() {
 	w.shutdownIfActive()
-	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server"}
+	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")
 	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
@@ -94,13 +98,22 @@ func (w *BitcoindWallet) Start() {
 	if w.trustedPeer != "" {
 		args = append(args, "-connect="+w.trustedPeer)
 	}
+	if w.userTor {
+		var port int
+		if w.controlPort == 9151 {
+			port = 9150
+		} else if w.controlPort == 9051 {
+			port = 9050
+		}
+		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(port), "-onlynet=onion")
+	}
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
 	go startNotificationListener(client, w.listeners)
 
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(time.Second * 30)
 	go func() {
 		for range ticker.C {
 			log.Fatal("Failed to connect to bitcoind")
@@ -111,6 +124,7 @@ func (w *BitcoindWallet) Start() {
 		if err == nil {
 			break
 		}
+		time.Sleep(time.Second)
 	}
 	ticker.Stop()
 	log.Info("Connected to bitcoind")
@@ -569,7 +583,7 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
-	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-rescan"}
+	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-rescan", "-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")
 	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
@@ -577,6 +591,15 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 	}
 	if w.trustedPeer != "" {
 		args = append(args, "-connect="+w.trustedPeer)
+	}
+	if w.userTor {
+		var port int
+		if w.controlPort == 9151 {
+			port = 9150
+		} else if w.controlPort == 9051 {
+			port = 9050
+		}
+		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(port), "-onlynet=onion")
 	}
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
