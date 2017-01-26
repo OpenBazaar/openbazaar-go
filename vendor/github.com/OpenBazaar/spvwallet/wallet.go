@@ -9,6 +9,7 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 	"net"
 	"os"
 	"path"
@@ -50,7 +51,7 @@ var log = logging.MustGetLogger("bitcoin")
 const WALLET_VERSION = "0.1.0"
 
 func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
-	repoPath string, db Datastore, userAgent string, trustedPeer string, logger logging.LeveledBackend) (*SPVWallet, error) {
+	repoPath string, db Datastore, userAgent string, trustedPeer string, proxy proxy.Dialer, logger logging.LeveledBackend) (*SPVWallet, error) {
 
 	log.SetBackend(logger)
 
@@ -121,6 +122,7 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 		StartChainDownload: w.startChainDownload,
 		GetNewestBlock:     getNewestBlock,
 		Listeners:          listeners,
+		Proxy:              proxy,
 	}
 
 	if trustedPeer != "" {

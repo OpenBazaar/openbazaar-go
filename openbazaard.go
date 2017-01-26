@@ -566,7 +566,7 @@ func (x *Start) Execute(args []string) error {
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	var wallet bitcoin.BitcoinWallet
 	if strings.ToLower(walletCfg.Type) == "spvwallet" {
-		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, ml)
+		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, torDialer, ml)
 		if err != nil {
 			log.Error(err)
 			return err

@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
+	"net"
 	"net/http"
 	"time"
 )
@@ -460,6 +461,12 @@ type Fees struct {
 var cache *feeCache = &feeCache{}
 
 func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
+	dial := net.Dial
+	if w.config.Proxy != nil {
+		dial = w.config.Proxy.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	httpClient := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
 	defaultFee := func() uint64 {
 		switch feeLevel {
 		case PRIOIRTY:
@@ -477,7 +484,7 @@ func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
 	}
 	fees := new(Fees)
 	if time.Since(cache.lastUpdated) > time.Minute {
-		resp, err := http.Get(w.feeAPI)
+		resp, err := httpClient.Get(w.feeAPI)
 		if err != nil {
 			return defaultFee()
 		}
