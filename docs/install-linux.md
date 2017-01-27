@@ -6,8 +6,7 @@ LINUX INSTALL NOTES
 You need to have gcc and git installed to compile and run the daemon.
 ```
 sudo apt-get update
-sudo apt-get build-essential
-sudo apt-get install git
+sudo apt-get install build-essential git -y
 ```
 
 ### Intall Go 1.7 or greater
