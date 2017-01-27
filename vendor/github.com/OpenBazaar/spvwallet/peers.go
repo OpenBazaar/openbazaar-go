@@ -177,13 +177,15 @@ func (pm *PeerManager) DownloadPeer() *peer.Peer {
 }
 
 func (pm *PeerManager) onConnection(req *connmgr.ConnReq, conn net.Conn) {
-	// Don't let the connection manager connect us to the same peer more than once
+	// Don't let the connection manager connect us to the same peer more than once unless using a proxy
 	pm.peerMutex.Lock()
 	defer pm.peerMutex.Unlock()
-	for _, peer := range pm.connectedPeers {
-		if conn.RemoteAddr().String() == peer.Addr() {
-			pm.connManager.Disconnect(req.ID())
-			return
+	if pm.proxy == nil {
+		for _, peer := range pm.connectedPeers {
+			if conn.RemoteAddr().String() == peer.Addr() {
+				pm.connManager.Disconnect(req.ID())
+				return
+			}
 		}
 	}
 
