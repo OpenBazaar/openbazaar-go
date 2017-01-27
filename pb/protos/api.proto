@@ -18,7 +18,6 @@ message ListingReqApi {
 message ListingRespApi {
     RicardianContract contract   = 1;
     repeated Inventory inventory = 2;
-    repeated Coupon coupons      = 3;
 }
 
 message Inventory {

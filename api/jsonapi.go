@@ -1163,22 +1163,23 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			Indent:       "    ",
 			OrigName:     false,
 		}
-		coupons := []*pb.Coupon{}
 		savedCoupons, err := i.node.Datastore.Coupons().Get(contract.VendorListings[0].Slug)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		for _, c := range savedCoupons {
-			co := new(pb.Coupon)
-			co.Code = c.Code
-			co.Hash = c.Hash
-			coupons = append(coupons, co)
+		for _, coupon := range contract.VendorListings[0].Coupons {
+			for _, c := range savedCoupons {
+				if coupon.GetHash() == c.Hash {
+					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+					break
+				}
+			}
 		}
+
 		resp := new(pb.ListingRespApi)
 		resp.Contract = contract
 		resp.Inventory = inventory
-		resp.Coupons = coupons
 		out, err := m.MarshalToString(resp)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
