@@ -53,24 +53,24 @@ func TestPutCoupons(t *testing.T) {
 
 func TestGetCoupons(t *testing.T) {
 	coupons := []repo.Coupon{
-		{"slug", "code1", "hash1"},
-		{"slug", "code2", "hash2"},
+		{"s", "code1", "hash1"},
+		{"s", "code2", "hash2"},
 	}
 	err := coup.Put(coupons)
 	if err != nil {
 		t.Error(err)
 	}
-	ret, err := coup.Get("slug")
+	ret, err := coup.Get("s")
 	if err != nil {
 		t.Error(err)
 	}
 	if len(ret) != 2 {
 		t.Error("Failed to return correct number of coupons")
 	}
-	if ret[0].Slug != "slug" || ret[0].Code != "code1" || ret[0].Hash != "hash1" {
+	if ret[0].Slug != "s" || ret[0].Code != "code1" || ret[0].Hash != "hash1" {
 		t.Error("Failed to return correct values")
 	}
-	if ret[1].Slug != "slug" || ret[1].Code != "code2" || ret[1].Hash != "hash2" {
+	if ret[1].Slug != "s" || ret[1].Code != "code2" || ret[1].Hash != "hash2" {
 		t.Error("Failed to return correct values")
 	}
 }
@@ -81,6 +81,10 @@ func TestDeleteCoupons(t *testing.T) {
 		{"slug", "code2", "hash2"},
 	}
 	err := coup.Put(coupons)
+	if err != nil {
+		t.Error(err)
+	}
+	err = coup.Delete("slug")
 	if err != nil {
 		t.Error(err)
 	}
