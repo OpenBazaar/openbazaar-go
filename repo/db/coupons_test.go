@@ -18,8 +18,8 @@ func init() {
 
 func TestPutCoupons(t *testing.T) {
 	coupons := []repo.Coupon{
-		repo.Coupon{"slug", "code1", "hash1"},
-		repo.Coupon{"slug", "code2", "hash2"},
+		{"slug", "code1", "hash1"},
+		{"slug", "code2", "hash2"},
 	}
 	err := coup.Put(coupons)
 	if err != nil {
@@ -53,8 +53,8 @@ func TestPutCoupons(t *testing.T) {
 
 func TestGetCoupons(t *testing.T) {
 	coupons := []repo.Coupon{
-		repo.Coupon{"slug", "code1", "hash1"},
-		repo.Coupon{"slug", "code2", "hash2"},
+		{"slug", "code1", "hash1"},
+		{"slug", "code2", "hash2"},
 	}
 	err := coup.Put(coupons)
 	if err != nil {
@@ -77,8 +77,8 @@ func TestGetCoupons(t *testing.T) {
 
 func TestDeleteCoupons(t *testing.T) {
 	coupons := []repo.Coupon{
-		repo.Coupon{"slug", "code1", "hash1"},
-		repo.Coupon{"slug", "code2", "hash2"},
+		{"slug", "code1", "hash1"},
+		{"slug", "code2", "hash2"},
 	}
 	err := coup.Put(coupons)
 	if err != nil {
