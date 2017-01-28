@@ -490,8 +490,12 @@ func (x *Start) Execute(args []string) error {
 		for _, f := range fs {
 			network.Swarm().Filters.AddDialFilter(f)
 		}
-
-		host := p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+		var host *p2pbhost.BasicHost
+		if usingTor && !usingClearnet {
+			host = p2pbhost.New(network)
+		} else {
+			host = p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+		}
 
 		return host, nil
 	}
