@@ -3,6 +3,15 @@ package core
 import (
 	"bytes"
 	"errors"
+	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
+	gonet "net"
+	"net/http"
+	"net/url"
+	"path"
+	"time"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
@@ -17,14 +26,6 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
-	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
-	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
-	gonet "net"
-	"net/http"
-	"net/url"
-	"path"
-	"time"
 )
 
 var (
@@ -60,7 +61,7 @@ type OpenBazaarNode struct {
 	Datastore repo.Datastore
 
 	// Websocket channel used for pushing data to the UI
-	Broadcast chan []byte
+	Broadcast chan interface{}
 
 	// Bitcoin wallet implementation
 	Wallet bitcoin.BitcoinWallet
