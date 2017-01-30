@@ -199,10 +199,10 @@ func (x *Status) Execute(args []string) error {
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
-	torAvailble := false
+	torAvailable := false
 	_, err = obnet.GetTorControlPort()
 	if err == nil {
-		torAvailble = true
+		torAvailable = true
 	}
 	if fsrepo.IsInitialized(repoPath) {
 		sqliteDB, err := db.Create(repoPath, "", x.Testnet)
@@ -212,7 +212,7 @@ func (x *Status) Execute(args []string) error {
 		}
 		defer sqliteDB.Close()
 		if sqliteDB.Config().IsEncrypted() {
-			if !torAvailble {
+			if !torAvailable {
 				fmt.Println("Initialized - Encrypted")
 				os.Exit(30)
 			} else {
@@ -221,7 +221,7 @@ func (x *Status) Execute(args []string) error {
 				os.Exit(31)
 			}
 		} else {
-			if !torAvailble {
+			if !torAvailable {
 				fmt.Println("Initialized - Not Encrypted")
 				os.Exit(20)
 			} else {
@@ -231,7 +231,7 @@ func (x *Status) Execute(args []string) error {
 			}
 		}
 	} else {
-		if !torAvailble {
+		if !torAvailable {
 			fmt.Println("Not initialized")
 			os.Exit(10)
 		} else {
