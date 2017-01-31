@@ -438,13 +438,22 @@ func (x *Start) Execute(args []string) error {
 			break
 		} else if p[0].Name == "onion" {
 			usingTor = true
-			controlPort, err = obnet.GetTorControlPort()
+			torConfig, err := repo.GetTorConfig(path.Join(repoPath, "config"))
 			if err != nil {
 				log.Error(err)
 				return err
 			}
-			torControl := "127.0.0.1:" + strconv.Itoa(controlPort)
-			onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, nil, repoPath)
+			torControl := torConfig.TorControl
+			if torControl == "" {
+				controlPort, err = obnet.GetTorControlPort()
+				if err != nil {
+					log.Error(err)
+					return err
+				}
+				torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+			}
+			auth := &proxy.Auth{Password: torConfig.Password}
+			onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath)
 			if err != nil {
 				log.Error(err)
 				return err
