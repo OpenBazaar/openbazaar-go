@@ -66,11 +66,6 @@ import (
 	"syscall"
 )
 
-var (
-	VERSION   = "0.4.3"
-	USERAGENT = "/openbazaar-go:" + VERSION + "/"
-)
-
 var log = logging.MustGetLogger("main")
 
 var stdoutLogFormat = logging.MustStringFormatter(
