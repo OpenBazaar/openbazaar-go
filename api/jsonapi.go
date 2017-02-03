@@ -19,6 +19,7 @@ import (
 
 	"encoding/hex"
 
+	"crypto/sha256"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -102,6 +103,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			username, password, ok := r.BasicAuth()
+			h := sha256.Sum256([]byte(password))
+			password = hex.EncodeToString(h[:])
 			if !ok || username != i.config.Username || password != i.config.Password {
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
