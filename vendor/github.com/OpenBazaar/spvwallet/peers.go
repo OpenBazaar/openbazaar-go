@@ -177,7 +177,7 @@ func (pm *PeerManager) DownloadPeer() *peer.Peer {
 }
 
 func (pm *PeerManager) onConnection(req *connmgr.ConnReq, conn net.Conn) {
-	// Don't let the connection manager connect us to the same peer more than once unless using a proxy
+	// Don't let the connection manager connect us to the same peer more than once unless we're using a proxy
 	pm.peerMutex.Lock()
 	defer pm.peerMutex.Unlock()
 	if pm.proxy == nil {

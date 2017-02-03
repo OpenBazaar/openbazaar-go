@@ -227,10 +227,6 @@ func (w *SPVWallet) Params() *chaincfg.Params {
 	return w.params
 }
 
-func (w *SPVWallet) AcceptStealth() bool {
-	return true
-}
-
 func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
 	w.txstore.listeners = append(w.txstore.listeners, callback)
 }
@@ -292,5 +288,10 @@ func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 		return
 	}
 	w.blockchain = blockchain
+	w.PeerManager, err = NewPeerManager(w.config)
+	if err != nil {
+		return
+	}
+	w.blockQueue = make(chan chainhash.Hash, 32)
 	go w.Start()
 }

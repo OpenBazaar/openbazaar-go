@@ -19,6 +19,13 @@ import (
 
 	"bufio"
 	"crypto/rand"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+
+	"crypto/sha256"
+	"encoding/hex"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/go-onion-transport"
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -55,6 +62,7 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
 	p2phost "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
 	addrutil "gx/ipfs/QmVDnc2zvyQm8LhT72n22THcshvH7j3qPMnhvjerQER62T/go-addr-util"
@@ -65,15 +73,7 @@ import (
 	pstore "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
-)
-
-var (
-	VERSION   = "0.4.3"
-	USERAGENT = "/openbazaar-go:" + VERSION + "/"
+	"syscall"
 )
 
 var log = logging.MustGetLogger("main")
@@ -98,6 +98,10 @@ type Init struct {
 type Status struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet bool   `short:"t" long:"testnet" description:"use the test network"`
+}
+type SetAPICreds struct {
+	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Testnet bool   `short:"t" long:"testnet" description:"config file is for testnet node"`
 }
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
@@ -124,6 +128,7 @@ var stopServer Stop
 var restartServer Restart
 var encryptDatabase EncryptDatabase
 var decryptDatabase DecryptDatabase
+var setAPICreds SetAPICreds
 var status Status
 
 var parser = flags.NewParser(nil, flags.Default)
@@ -156,6 +161,10 @@ func main() {
 		"get the repo status",
 		"Returns the status of the repo ― Uninitialized, Encrypted, Decrypted. Also returns whether Tor is available.",
 		&status)
+	parser.AddCommand("setapicreds",
+		"set API credentials",
+		"The API password field in the config file takes a SHA256 hash of the password. This command will generate the hash for you and save it to the config file.",
+		&setAPICreds)
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
@@ -188,6 +197,70 @@ func (x *EncryptDatabase) Execute(args []string) error {
 
 func (x *DecryptDatabase) Execute(args []string) error {
 	return db.Decrypt()
+}
+
+func (x *SetAPICreds) Execute(args []string) error {
+	// Set repo path
+	repoPath, err := getRepoPath(x.Testnet)
+	if err != nil {
+		return err
+	}
+	if x.DataDir != "" {
+		repoPath = x.DataDir
+	}
+	r, err := fsrepo.Open(repoPath)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	apiCfg, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter username: ")
+	username, _ := reader.ReadString('\n')
+
+	var pw string
+	for {
+		fmt.Print("Enter a veerrrry strong password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		resp := string(bytePassword)
+		if len(resp) < 8 {
+			fmt.Println("You call that a password? Try again.")
+		} else if resp != "" {
+			pw = resp
+			break
+		} else {
+			fmt.Println("Seriously, enter a password.")
+		}
+	}
+	for {
+		fmt.Print("Confirm your password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		resp := string(bytePassword)
+		if resp == pw {
+			break
+		} else {
+			fmt.Println("Quit effin around. Try again.")
+		}
+	}
+	pw = strings.Replace(pw, "'", "''", -1)
+	if strings.Contains(username, "\r\n") {
+		apiCfg.Username = strings.Replace(username, "\r\n", "", -1)
+	} else if strings.Contains(username, "\n") {
+		apiCfg.Username = strings.Replace(username, "\n", "", -1)
+	}
+	h := sha256.Sum256([]byte(pw))
+	apiCfg.Password = hex.EncodeToString(h[:])
+
+	if err := r.SetConfigKey("JSON-API", apiCfg); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (x *Status) Execute(args []string) error {

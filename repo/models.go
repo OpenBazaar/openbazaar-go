@@ -37,3 +37,9 @@ type SMTPSettings struct {
 	SenderEmail    string `json:"senderEmail"`
 	RecipientEmail string `json:"recipientEmail"`
 }
+
+type Coupon struct {
+	Slug string
+	Code string
+	Hash string
+}

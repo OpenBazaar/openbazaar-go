@@ -25,6 +25,11 @@ message Inventory {
     uint64 count = 2;
 }
 
+message Coupon {
+    string hash = 1;
+    string code = 2;
+}
+
 message OrderRespApi {
     RicardianContract contract              = 1;
     OrderState state                        = 2;

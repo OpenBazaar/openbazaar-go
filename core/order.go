@@ -716,7 +716,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				if err != nil {
 					return 0, err
 				}
-				if multihash.B58String() == vendorCoupon.Hash {
+				if multihash.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
 						itemTotal -= discount
 					} else if discount := vendorCoupon.GetPercentDiscount(); discount > 0 {

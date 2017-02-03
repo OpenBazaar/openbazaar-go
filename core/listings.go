@@ -14,9 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"crypto/sha256"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
 )
@@ -124,6 +126,35 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 	// Set crypto currency
 	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
+
+	// Update coupon db
+	n.Datastore.Coupons().Delete(listing.Slug)
+	var couponsToStore []repo.Coupon
+	for i, coupon := range listing.Coupons {
+		hash := coupon.GetHash()
+		code := coupon.GetDiscountCode()
+		_, err := mh.FromB58String(hash)
+		if err != nil {
+			h := sha256.Sum256([]byte(code))
+			encoded, err := mh.Encode(h[:], mh.SHA2_256)
+			if err != nil {
+				return c, err
+			}
+			couponMH, err := mh.Cast(encoded)
+			if err != nil {
+				return c, err
+			}
+
+			listing.Coupons[i].Code = &pb.Listing_Coupon_Hash{couponMH.B58String()}
+			hash = couponMH.B58String()
+		}
+		c := repo.Coupon{listing.Slug, code, hash}
+		couponsToStore = append(couponsToStore, c)
+	}
+	err = n.Datastore.Coupons().Put(couponsToStore)
+	if err != nil {
+		return c, err
+	}
 
 	// Sign listing
 	s := new(pb.Signature)
@@ -860,10 +891,6 @@ func validateListing(listing *pb.Listing) (err error) {
 		}
 		if len(coupon.Title) > SentenceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
-		}
-		_, err := mh.FromB58String(coupon.Hash)
-		if err != nil {
-			return errors.New("Coupon hashes must be multihashes")
 		}
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("Percent discount cannot be over 100 percent")

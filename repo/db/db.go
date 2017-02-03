@@ -31,6 +31,7 @@ type SQLiteDatastore struct {
 	cases           repo.Cases
 	chat            repo.Chat
 	notifications   repo.Notifications
+	coupons         repo.Coupons
 	db              *sql.DB
 	lock            sync.RWMutex
 }
@@ -121,6 +122,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		coupons: &CouponDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -200,6 +205,10 @@ func (d *SQLiteDatastore) Notifications() repo.Notifications {
 	return d.notifications
 }
 
+func (d *SQLiteDatastore) Coupons() repo.Coupons {
+	return d.coupons
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -264,6 +273,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table chat (peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
 	create index index_chat on chat (peerID, subject, read, timestamp);
 	create table notifications (serializedNotification blob, timestamp integer, read integer);
+	create table coupons (slug text, code text, hash text);
+	create index index_coupons on coupons (slug);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {

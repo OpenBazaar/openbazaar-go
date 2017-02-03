@@ -19,13 +19,13 @@ import (
 
 	"encoding/hex"
 
+	"crypto/sha256"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
@@ -102,6 +102,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			username, password, ok := r.BasicAuth()
+			h := sha256.Sum256([]byte(password))
+			password = hex.EncodeToString(h[:])
 			if !ok || username != i.config.Username || password != i.config.Password {
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
@@ -701,7 +703,6 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	type Send struct {
 		Address  string `json:"address"`
-		PeerId   string `json:"peerId"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
 	}
@@ -721,54 +722,14 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	case "ECONOMIC":
 		feeLevel = spvwallet.ECONOMIC
 	}
-	if snd.Address == "" {
-		peerId := snd.PeerId
-		if strings.HasPrefix(peerId, "@") {
-			peerId, err = i.node.Resolver.Resolve(peerId)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, err.Error())
-				return
-			}
-		}
-		p, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "profile")))
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		var profile pb.Profile
-		err = jsonpb.UnmarshalString(string(p), &profile)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if !profile.AcceptStealth {
-			ErrorResponse(w, http.StatusInternalServerError, "Recipeint does not accept stealth payments")
-			return
-		}
-		pubkeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		pubkey, err := btcec.ParsePubKey(pubkeyBytes, btcec.S256())
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		if err := i.node.Wallet.SendStealth(snd.Amount, pubkey, feeLevel); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	} else {
-		addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
-		if err != nil {
-			ErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+	addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
 	fmt.Fprint(w, `{}`)
 	return
@@ -1142,35 +1103,77 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
-	contract := new(pb.RicardianContract)
-	inventory := []*pb.Inventory{}
-	_, listingID := path.Split(r.URL.Path)
-	_, err := mh.FromB58String(listingID)
-	if err == nil {
-		contract, inventory, err = i.node.GetListingFromHash(listingID)
+	urlPath, listingId := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		contract := new(pb.RicardianContract)
+		inventory := []*pb.Inventory{}
+		_, err := mh.FromB58String(listingId)
+		if err == nil {
+			contract, inventory, err = i.node.GetListingFromHash(listingId)
+		} else {
+			contract, inventory, err = i.node.GetListingFromSlug(listingId)
+		}
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return
+		}
+		m := jsonpb.Marshaler{
+			EnumsAsInts:  false,
+			EmitDefaults: false,
+			Indent:       "    ",
+			OrigName:     false,
+		}
+		savedCoupons, err := i.node.Datastore.Coupons().Get(contract.VendorListings[0].Slug)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		for _, coupon := range contract.VendorListings[0].Coupons {
+			for _, c := range savedCoupons {
+				if coupon.GetHash() == c.Hash {
+					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+					break
+				}
+			}
+		}
+
+		resp := new(pb.ListingRespApi)
+		resp.Contract = contract
+		resp.Inventory = inventory
+		out, err := m.MarshalToString(resp)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(out))
+		return
 	} else {
-		contract, inventory, err = i.node.GetListingFromSlug(listingID)
+		var listingsBytes []byte
+		_, err := mh.FromB58String(listingId)
+		if err == nil {
+			listingsBytes, err = ipfs.Cat(i.node.Context, listingId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		} else {
+			if strings.HasPrefix(peerId, "@") {
+				peerId, err = i.node.Resolver.Resolve(peerId)
+				if err != nil {
+					ErrorResponse(w, http.StatusNotFound, err.Error())
+					return
+				}
+			}
+			listingsBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+		}
+		fmt.Fprint(w, string(listingsBytes))
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	resp := new(pb.ListingRespApi)
-	resp.Contract = contract
-	resp.Inventory = inventory
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	fmt.Fprint(w, string(out))
-	return
 }
 
 func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
