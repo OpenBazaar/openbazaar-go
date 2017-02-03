@@ -2,7 +2,6 @@ package bitcoin
 
 import (
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
@@ -18,9 +17,6 @@ type BitcoinWallet interface {
 
 	// Returns the type of crytocurrency this wallet implements
 	CurrencyCode() string
-
-	// This wallet accepts stealth payments
-	AcceptStealth() bool
 
 	// Get the master private key
 	MasterPrivateKey() *hd.ExtendedKey
@@ -48,9 +44,6 @@ type BitcoinWallet interface {
 
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
-
-	// Make a stealth transaction. Coins will be sent to a new address derived from the public key and wont be linkable by third parties to this public key.
-	SendStealth(amount int64, pubkey *btcec.PublicKey, feeLevel spvwallet.FeeLevel) error
 
 	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
 	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64

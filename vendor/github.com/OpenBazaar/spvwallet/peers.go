@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/peer"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil/bloom"
+	"golang.org/x/net/proxy"
 	"net"
 	"strconv"
 	"sync"
@@ -62,6 +63,9 @@ type Config struct {
 
 	// Listeners to handle messages from peers. If nil, no messages will be handled.
 	Listeners *peer.MessageListeners
+
+	// An optional proxy dialer. Will use net.Dial if nil.
+	Proxy proxy.Dialer
 }
 
 type PeerManager struct {
@@ -79,6 +83,8 @@ type PeerManager struct {
 
 	getFilter          func() (*bloom.Filter, error)
 	startChainDownload func(*peer.Peer)
+
+	proxy proxy.Dialer
 }
 
 func NewPeerManager(config *Config) (*PeerManager, error) {
@@ -96,6 +102,7 @@ func NewPeerManager(config *Config) (*PeerManager, error) {
 		trustedPeer:        config.TrustedPeer,
 		getFilter:          config.GetFilter,
 		startChainDownload: config.StartChainDownload,
+		proxy:              config.Proxy,
 	}
 
 	targetOutbound := config.TargetOutbound
@@ -112,6 +119,11 @@ func NewPeerManager(config *Config) (*PeerManager, error) {
 		retryDuration = defaultRetryDuration
 	}
 
+	dial := net.Dial
+	if config.Proxy != nil {
+		dial = config.Proxy.Dial
+	}
+
 	connMgrConfig := &connmgr.Config{
 		TargetOutbound:  targetOutbound,
 		RetryDuration:   retryDuration,
@@ -119,7 +131,7 @@ func NewPeerManager(config *Config) (*PeerManager, error) {
 		OnDisconnection: pm.onDisconnection,
 		GetNewAddress:   pm.getNewAddress,
 		Dial: func(addr net.Addr) (net.Conn, error) {
-			return net.Dial("tcp", addr.String())
+			return dial("tcp", addr.String())
 		},
 	}
 
@@ -144,6 +156,9 @@ func NewPeerManager(config *Config) (*PeerManager, error) {
 		DisableRelayTx:   true,
 		Listeners:        *listeners,
 	}
+	if config.Proxy != nil {
+		pm.peerConfig.Proxy = "0.0.0.0"
+	}
 	return pm, nil
 }
 
@@ -162,13 +177,15 @@ func (pm *PeerManager) DownloadPeer() *peer.Peer {
 }
 
 func (pm *PeerManager) onConnection(req *connmgr.ConnReq, conn net.Conn) {
-	// Don't let the connection manager connect us to the same peer more than once
+	// Don't let the connection manager connect us to the same peer more than once unless we're using a proxy
 	pm.peerMutex.Lock()
 	defer pm.peerMutex.Unlock()
-	for _, peer := range pm.connectedPeers {
-		if conn.RemoteAddr().String() == peer.Addr() {
-			pm.connManager.Disconnect(req.ID())
-			return
+	if pm.proxy == nil {
+		for _, peer := range pm.connectedPeers {
+			if conn.RemoteAddr().String() == peer.Addr() {
+				pm.connManager.Disconnect(req.ID())
+				return
+			}
 		}
 	}
 
@@ -297,10 +314,25 @@ func (pm *PeerManager) queryDNSSeeds() {
 		wg.Add(1)
 		go func(host string) {
 			returnedAddresses := 0
-			addrs, err := net.LookupHost(host)
-			if err != nil {
-				wg.Done()
-				return
+			var addrs []string
+			var err error
+			if pm.proxy != nil {
+				for i := 0; i < 5; i++ {
+					ips, err := TorLookupIP(host)
+					if err != nil {
+						wg.Done()
+						return
+					}
+					for _, ip := range ips {
+						addrs = append(addrs, ip.String())
+					}
+				}
+			} else {
+				addrs, err = net.LookupHost(host)
+				if err != nil {
+					wg.Done()
+					return
+				}
 			}
 			for _, addr := range addrs {
 				netAddr := wire.NewNetAddressIPPort(net.ParseIP(addr), defaultPort, 0)

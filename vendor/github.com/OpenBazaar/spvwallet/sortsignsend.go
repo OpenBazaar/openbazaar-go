@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
+	"net"
 	"net/http"
 	"time"
 )
@@ -98,54 +99,6 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 
 func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) error {
 	tx, err := w.buildTx(amount, addr, feeLevel, nil)
-	if err != nil {
-		return err
-	}
-	// broadcast
-	w.Broadcast(tx)
-	return nil
-}
-
-func (w *SPVWallet) SendStealth(amount int64, pubkey *btcec.PublicKey, feeLevel FeeLevel) error {
-	// Generated ephemeral key pair
-	ephemPriv, err := btcec.NewPrivateKey(btcec.S256())
-	if err != nil {
-		return err
-	}
-
-	// Calculate a shared secret using the master private key and ephemeral public key
-	ss := btcec.GenerateSharedSecret(ephemPriv, pubkey)
-
-	// Create an HD key using the shared secret as the chaincode
-	hdKey := hd.NewExtendedKey(
-		w.params.HDPublicKeyID[:],
-		pubkey.SerializeCompressed(),
-		ss,
-		[]byte{0x00, 0x00, 0x00, 0x00},
-		0,
-		0,
-		false)
-
-	// Derive child key 0
-	childKey, err := hdKey.Child(0)
-	if err != nil {
-		return err
-	}
-	addr, err := childKey.Address(w.params)
-	if err != nil {
-		return err
-	}
-
-	// Create op_return output
-	pubkeyBytes := pubkey.SerializeCompressed()
-	ephemPubKeyBytes := ephemPriv.PubKey().SerializeCompressed()
-	script := []byte{0x6a, 0x02, FlagPrefix}
-	script = append(script, pubkeyBytes[1:2]...)
-	script = append(script, 0x21)
-	script = append(script, ephemPubKeyBytes...)
-	txout := wire.NewTxOut(0, script)
-
-	tx, err := w.buildTx(amount, addr, feeLevel, txout)
 	if err != nil {
 		return err
 	}
@@ -460,6 +413,12 @@ type Fees struct {
 var cache *feeCache = &feeCache{}
 
 func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
+	dial := net.Dial
+	if w.config.Proxy != nil {
+		dial = w.config.Proxy.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	httpClient := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
 	defaultFee := func() uint64 {
 		switch feeLevel {
 		case PRIOIRTY:
@@ -477,7 +436,7 @@ func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
 	}
 	fees := new(Fees)
 	if time.Since(cache.lastUpdated) > time.Minute {
-		resp, err := http.Get(w.feeAPI)
+		resp, err := httpClient.Get(w.feeAPI)
 		if err != nil {
 			return defaultFee()
 		}
