@@ -8,7 +8,7 @@ import (
 )
 
 func newRandomProfile() *pb.Profile {
-	name := fake.Company()
+	name := "🤖" + fake.Company()
 
 	vendor := true
 	if rand.Intn(3) == 0 {
@@ -41,12 +41,12 @@ func newRandomProfile() *pb.Profile {
 		Location:         fake.City() + ", " + fake.Country(),
 		About:            fake.Paragraphs(),
 		Email:            fake.EmailAddress(),
-		ShortDescription: fake.Sentences(),
+		ShortDescription: "I am a robot.\n\n" + fake.Sentences(),
 
-		Vendor:        vendor,
-		Nsfw:          isNSFW(),
-		Moderator:     moderator,
-		ModInfo:       &modInfo,
+		Vendor:    vendor,
+		Nsfw:      isNSFW(),
+		Moderator: moderator,
+		ModInfo:   &modInfo,
 
 		FollowerCount:  uint32(rand.Intn(9999)),
 		FollowingCount: uint32(rand.Intn(9999)),
