@@ -69,6 +69,18 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
+	modInfo, ok := patch["modInfo"]
+	if ok {
+		fee, ok := modInfo.(map[string]interface{})["fee"]
+		if ok {
+			fixedFee, ok := fee.(map[string]interface{})["fixedFee"]
+			if ok {
+				amt := fixedFee.(map[string]interface{})["amount"].(float64)
+				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
+			}
+		}
+	}
+
 	// Assuming that `profile` map contains complete data, as it is read
 	// from storage, and `patch` map is possibly incomplete, merge first
 	// into second recursively, preserving new fields and adding missing
@@ -81,7 +93,7 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	newProfile, err := json.Marshal(patch)
 	p := new(pb.Profile)
 	if err := jsonpb.UnmarshalString(string(newProfile), p); err != nil {
-		return nil
+		return err
 	}
 	return n.UpdateProfile(p)
 }
