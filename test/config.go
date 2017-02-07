@@ -19,9 +19,6 @@ func NewAPIConfig() (*repo.APIConfig, error) {
 	apiConfig.Password = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" // sha256("test")
 	corsOrigin := "example.com"
 	apiConfig.CORS = &corsOrigin
-	apiConfig.HTTPHeaders = map[string][]string{
-		"X-Foo": []string{"Trade Free or Die"},
-	}
 
 	return apiConfig, nil
 }
