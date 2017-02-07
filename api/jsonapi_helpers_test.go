@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/test"
-	"github.com/stretchr/testify/assert"
 
 	manet "gx/ipfs/QmT6Cp31887FpAc25z25YHgpFJohZedrYLWPPspRtj1Brp/go-multiaddr-net"
 	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
@@ -126,8 +125,8 @@ func runAPITest(t *testing.T, test apiTest) {
 	}
 
 	// Ensure correct status code
-	isEqual := assert.Equal(t, test.expectedResponseCode, resp.StatusCode)
-	if !isEqual {
+	if resp.StatusCode != test.expectedResponseCode {
+		t.Fatalf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)
 		return
 	}
 
@@ -153,10 +152,10 @@ func runAPITest(t *testing.T, test apiTest) {
 			t.Fatal(err)
 		}
 
-		isEqual = assert.True(t, reflect.DeepEqual(responseJSON, expectedJSON))
-		if !isEqual {
+		if !reflect.DeepEqual(responseJSON, expectedJSON) {
 			fmt.Println("expected:", test.expectedResponseBody)
 			fmt.Println("actual:", string(respBody))
+			t.Fatal("Incorrect response")
 		}
 	}
 }
