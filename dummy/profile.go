@@ -16,11 +16,6 @@ func newRandomProfile() *pb.Profile {
 		name = fake.FullName()
 	}
 
-	acceptStealth := true
-	if rand.Intn(3) == 0 {
-		acceptStealth = false
-	}
-
 	moderator := false
 	modInfo := pb.Moderator{}
 	if rand.Intn(8) == 0 {
@@ -50,7 +45,6 @@ func newRandomProfile() *pb.Profile {
 
 		Vendor:        vendor,
 		Nsfw:          isNSFW(),
-		AcceptStealth: acceptStealth,
 		Moderator:     moderator,
 		ModInfo:       &modInfo,
 

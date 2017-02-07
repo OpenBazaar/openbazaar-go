@@ -294,7 +294,7 @@ func newWallet(repoPath string, db *db.SQLiteDatastore) (*spvwallet.SPVWallet, e
 		MaxAge:     1,
 	}, "", 0), fileLogFormat))
 
-	wallet, err := spvwallet.NewSPVWallet(mn, &chaincfg.TestNet3Params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, db, "OpenBazaar", walletCfg.TrustedPeer, ml)
+	wallet, err := spvwallet.NewSPVWallet(mn, &chaincfg.TestNet3Params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, db, "OpenBazaar", walletCfg.TrustedPeer, nil, ml)
 	if err != nil {
 		return nil, err
 	}
