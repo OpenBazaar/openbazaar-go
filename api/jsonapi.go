@@ -1724,11 +1724,11 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(chat.Subject) > 500 {
-		ErrorResponse(w, http.StatusBadRequest, "Subjuct line is too long")
+		ErrorResponse(w, http.StatusBadRequest, "Subject line is too long")
 		return
 	}
 	if len(chat.Message) > 20000 {
-		ErrorResponse(w, http.StatusBadRequest, "Subjuct line is too long")
+		ErrorResponse(w, http.StatusBadRequest, "Message is too long")
 		return
 	}
 

@@ -886,9 +886,6 @@ func validateListing(listing *pb.Listing) (err error) {
 		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
 	}
 	for _, coupon := range listing.Coupons {
-		if coupon.Title == "" {
-			return errors.New("Coupon titles must not be empty")
-		}
 		if len(coupon.Title) > SentenceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
 		}
