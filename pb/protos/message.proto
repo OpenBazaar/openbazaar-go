@@ -35,10 +35,11 @@ message Envelope {
 }
 
 message Chat  {
-    string subject                      = 1;
-    string message                      = 2;
-    google.protobuf.Timestamp timestamp = 3;
-    Flag flag                           = 4;
+    string messageId                    = 1;
+    string subject                      = 2;
+    string message                      = 3;
+    google.protobuf.Timestamp timestamp = 4;
+    Flag flag                           = 5;
 
     enum Flag {
         MESSAGE = 0;

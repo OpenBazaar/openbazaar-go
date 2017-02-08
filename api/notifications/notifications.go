@@ -22,6 +22,14 @@ type messageWrapper struct {
 	Message interface{} `json:"message"`
 }
 
+type messageReadWrapper struct {
+	MessageRead interface{} `json:"messageRead"`
+}
+
+type messageTypingWrapper struct {
+	MessageRead interface{} `json:"messageTyping"`
+}
+
 type orderWrapper struct {
 	OrderNotification `json:"order"`
 }
@@ -117,10 +125,22 @@ type UnfollowNotification struct {
 }
 
 type ChatMessage struct {
+	MessageId string    `json:"messageId"`
 	PeerId    string    `json:"peerId"`
 	Subject   string    `json:"subject"`
 	Message   string    `json:"message"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+type ChatRead struct {
+	MessageId string `json:"messageId"`
+	PeerId    string `json:"peerId"`
+	Subject   string `json:"subject"`
+}
+
+type ChatTyping struct {
+	PeerId  string `json:"peerId"`
+	Subject string `json:"subject"`
 }
 
 func Serialize(i interface{}) []byte {
@@ -200,7 +220,20 @@ func Serialize(i interface{}) []byte {
 		}
 		b, _ := json.MarshalIndent(m, "", "    ")
 		return b
+	case ChatRead:
+		m := messageReadWrapper{
+			i.(ChatRead),
+		}
+		b, _ := json.MarshalIndent(m, "", "    ")
+		return b
+	case ChatTyping:
+		m := messageTypingWrapper{
+			i.(ChatTyping),
+		}
+		b, _ := json.MarshalIndent(m, "", "    ")
+		return b
 	}
+
 	b, _ := json.MarshalIndent(n, "", "    ")
 	return b
 }

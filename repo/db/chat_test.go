@@ -21,21 +21,25 @@ func setupDB() {
 }
 
 func TestChatDB_Put(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", time.Now(), true, true)
+	err := chdb.Put("12345", "abc", "", "mess", time.Now(), true, true)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
+	stmt, err := chdb.db.Prepare("select messageID, peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
 	defer stmt.Close()
+	var msgId string
 	var peerId string
 	var subject string
 	var message string
 	var read int
 	var timestamp int
 	var outgoing int
-	err = stmt.QueryRow("abc").Scan(&peerId, &subject, &message, &read, &timestamp, &outgoing)
+	err = stmt.QueryRow("abc").Scan(&msgId, &peerId, &subject, &message, &read, &timestamp, &outgoing)
 	if err != nil {
 		t.Error(err)
+	}
+	if msgId != "12345" {
+		t.Errorf(`Expected "abc" got %s`, peerId)
 	}
 	if peerId != "abc" {
 		t.Errorf(`Expected "abc" got %s`, peerId)
@@ -58,15 +62,16 @@ func TestChatDB_Put(t *testing.T) {
 }
 
 func TestChatDB_GetConversations(t *testing.T) {
-	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
+	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess", time.Now(), false, true)
+	err = chdb.Put("22222", "xyz", "", "mess", time.Now(), false, false)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("xyz", "", "mess2", time.Now(), false, true)
+	time.Sleep(time.Second)
+	err = chdb.Put("33333", "xyz", "", "mess2", time.Now(), false, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,30 +80,33 @@ func TestChatDB_GetConversations(t *testing.T) {
 		t.Error("Returned incorrect number of conversations")
 	}
 	if convos[0].PeerId == "abc" {
-		if convos[0].Unread != 1 {
-			t.Error("Returned incorrect unread count")
+		if convos[0].Last != "mess" {
+			t.Error("Returned incorrect last message")
 		}
 	}
 	if convos[1].PeerId == "xyz" {
 		if convos[1].Unread != 2 {
 			t.Error("Returned incorrect unread count")
 		}
+		if convos[1].Last != "mess2" {
+			t.Error("Returned incorrect last message")
+		}
 	}
 }
 
 func TestChatDB_GetMessages(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
+	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(time.Second * 1)
-	err = chdb.Put("abc", "", "mess2", time.Now(), true, true)
+	err = chdb.Put("22222", "abc", "", "mess2", time.Now(), true, true)
 	if err != nil {
 		t.Error(err)
 	}
 	time.Sleep(time.Second * 1)
-	err = chdb.Put("xyz", "", "mess1", time.Now(), false, true)
+	err = chdb.Put("33333", "xyz", "", "mess1", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -157,7 +165,23 @@ func TestChatDB_GetMessages(t *testing.T) {
 
 func TestChatDB_MarkAsRead(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
+	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("22222", "abc", "", "mess", time.Now().Add(time.Second), false, false)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("33333", "xyz", "", "mess", time.Now(), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("44444", "xyz", "", "mess", time.Now().Add(time.Second), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("55555", "xyz", "", "mess", time.Now().Add(time.Second*2), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -166,25 +190,74 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
-	err = chdb.MarkAsRead("abc")
+	last, err := chdb.MarkAsRead("abc", "", true, "")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select read from chat where rowid=?")
+	stmt, err := chdb.db.Prepare("select read from chat where messageID=?")
 	defer stmt.Close()
 	var read int
-	err = stmt.QueryRow(messages[0].MessageId).Scan(&read)
+	err = stmt.QueryRow("11111").Scan(&read)
 	if err != nil {
 		t.Error(err)
 	}
 	if read != 1 {
 		t.Error("Failed to mark message as read")
 	}
+	if last != "11111" {
+		t.Error("Returned incorrect last message Id")
+	}
+	stmt2, err := chdb.db.Prepare("select read from chat where messageID=?")
+	defer stmt2.Close()
+	err = stmt2.QueryRow("22222").Scan(&read)
+	if err != nil {
+		t.Error(err)
+	}
+	if read != 0 {
+		t.Error("Failed to mark message as read")
+	}
+	last, err = chdb.MarkAsRead("abc", "", false, "")
+	if err != nil {
+		t.Error(err)
+	}
+	stmt3, err := chdb.db.Prepare("select read from chat where messageID=?")
+	defer stmt3.Close()
+	err = stmt3.QueryRow("22222").Scan(&read)
+	if err != nil {
+		t.Error(err)
+	}
+	if read != 1 {
+		t.Error("Failed to mark message as read")
+	}
+	if last != "22222" {
+		t.Error("Returned incorrect last message Id")
+	}
+	_, err = chdb.MarkAsRead("xyz", "", true, "44444")
+	if err != nil {
+		t.Error(err)
+	}
+	stm := `select read, messageID from chat where peerID="xyz"`
+	rows, _ := chdb.db.Query(stm)
+	defer rows.Close()
+	for rows.Next() {
+		var msgID string
+		var read int
+		rows.Scan(&read, &msgID)
+		if msgID == "33333" && read == 0 {
+			t.Error("Failed to set message as read")
+		}
+		if msgID == "44444" && read == 0 {
+			t.Error("Failed to set message as read")
+		}
+		if msgID == "55555" && read == 1 {
+			t.Error("Incorrectly set message as read")
+		}
+	}
 }
 
 func TestChatDB_DeleteMessage(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
+	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -197,7 +270,7 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select rowid from chat where rowid=?")
+	stmt, err := chdb.db.Prepare("select messageID from chat where messageID=?")
 	defer stmt.Close()
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
@@ -208,11 +281,11 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 
 func TestChatDB_DeleteConversation(t *testing.T) {
 	setupDB()
-	err := chdb.Put("abc", "", "mess", time.Now(), false, true)
+	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
-	err = chdb.Put("abc", "", "mess2", time.Now(), false, true)
+	err = chdb.Put("22222", "abc", "", "mess2", time.Now(), false, true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -225,7 +298,7 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select rowid from chat where rowid=?")
+	stmt, err := chdb.db.Prepare("select messageID from chat where messageID=?")
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
 	if err == nil {

@@ -270,7 +270,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create index index_sales on sales (paymentAddr);
 	create table watchedscripts (scriptPubKey text primary key not null);
 	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, date integer, buyerOpened integer, claim text, disputeResolution blob);
-	create table chat (peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
+	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
 	create index index_chat on chat (peerID, subject, read, timestamp);
 	create table notifications (serializedNotification blob, timestamp integer, read integer);
 	create table coupons (slug text, code text, hash text);

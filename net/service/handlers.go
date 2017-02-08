@@ -889,13 +889,25 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	}
 
 	if chat.Flag == pb.Chat_TYPING {
-		n := notifications.ChatMessage{
-			PeerId:    p.Pretty(),
-			Subject:   chat.Subject,
-			Message:   "",
-			Timestamp: time.Now(),
+		n := notifications.ChatTyping{
+			PeerId:  p.Pretty(),
+			Subject: chat.Subject,
 		}
 		service.broadcast <- notifications.Serialize(n)
+		return nil, nil
+	}
+
+	if chat.Flag == pb.Chat_READ {
+		n := notifications.ChatRead{
+			PeerId:    p.Pretty(),
+			Subject:   chat.Subject,
+			MessageId: chat.MessageId,
+		}
+		service.broadcast <- notifications.Serialize(n)
+		_, err = service.datastore.Chat().MarkAsRead(p.Pretty(), chat.Subject, true, chat.MessageId)
+		if err != nil {
+			return nil, err
+		}
 		return nil, nil
 	}
 
@@ -917,13 +929,14 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	}
 
 	// Put to database
-	err = service.datastore.Chat().Put(p.Pretty(), chat.Subject, chat.Message, t, false, false)
+	err = service.datastore.Chat().Put(chat.MessageId, p.Pretty(), chat.Subject, chat.Message, t, false, false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Push to websocket
 	n := notifications.ChatMessage{
+		MessageId: chat.MessageId,
 		PeerId:    p.Pretty(),
 		Subject:   chat.Subject,
 		Message:   chat.Message,
