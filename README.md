@@ -1,5 +1,5 @@
 # openbazaar-go
-![banner](http://gateway.ob1.io/ipfs/QmPkVUNKvWsjfQYxdnr8bkSBmLwu8AD1ivmsbhPrVWKeFx)
+![banner](https://i.imgur.com/RDGxXSi.png)
 OpenBazaar Server Daemon in Go
 
 [![Build Status](https://travis-ci.org/OpenBazaar/openbazaar-go.svg?branch=master)](https://travis-ci.org/OpenBazaar/openbazaar-go)
