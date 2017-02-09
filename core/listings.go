@@ -889,6 +889,9 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(coupon.Title) > SentenceMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
 		}
+		if len(coupon.GetDiscountCode()) > SentenceMaxCharacters {
+            return fmt.Errorf("Coupon code length must be less than the max of %d", SentenceMaxCharacters)
+        }
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("Percent discount cannot be over 100 percent")
 		}
