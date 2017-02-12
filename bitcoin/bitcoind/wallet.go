@@ -41,7 +41,7 @@ type BitcoindWallet struct {
 	rpcClient        *btcrpcclient.Client
 	binary           string
 	controlPort      int
-	userTor          bool
+	useTor           bool
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -80,7 +80,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		masterPublicKey:  mPubKey,
 		binary:           binary,
 		controlPort:      torControlPort,
-		userTor:          useTor,
+		useTor:           useTor,
 	}
 	return &w
 }
@@ -96,14 +96,9 @@ func (w *BitcoindWallet) Start() {
 	if w.trustedPeer != "" {
 		args = append(args, "-connect="+w.trustedPeer)
 	}
-	if w.userTor {
-		var port int
-		if w.controlPort == 9151 {
-			port = 9150
-		} else if w.controlPort == 9051 {
-			port = 9050
-		}
-		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(port), "-onlynet=onion")
+	if w.useTor {
+		socksPort := defaultSocksPort(w.controlPort)
+		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
@@ -496,14 +491,9 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 	if w.trustedPeer != "" {
 		args = append(args, "-connect="+w.trustedPeer)
 	}
-	if w.userTor {
-		var port int
-		if w.controlPort == 9151 {
-			port = 9150
-		} else if w.controlPort == 9051 {
-			port = 9050
-		}
-		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(port), "-onlynet=onion")
+	if w.useTor {
+		socksPort := defaultSocksPort(w.controlPort)
+		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
@@ -520,4 +510,13 @@ func (w *BitcoindWallet) Close() {
 		w.rpcClient.RawRequest("stop", []json.RawMessage{})
 		w.rpcClient.Shutdown()
 	}
+}
+
+func defaultSocksPort(controlPort int) int {
+	socksPort := 9050
+	if controlPort == 9151 || controlPort == 9051 {
+		controlPort--
+		socksPort = controlPort
+	}
+	return socksPort
 }
