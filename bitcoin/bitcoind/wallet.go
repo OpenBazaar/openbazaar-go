@@ -182,7 +182,7 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 		t := spvwallet.Txn{
 			Txid:   r.TxID,
 			Value:  int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height: uint32(*r.BlockIndex),
+			Height: int32(*r.BlockIndex),
 		}
 		ret = append(ret, t)
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"time"
 )
 
 type Datastore interface {
@@ -41,13 +42,16 @@ type Stxos interface {
 
 type Txns interface {
 	// Put a new transaction to the database
-	Put(txn *wire.MsgTx, value, height int) error
+	Put(txn *wire.MsgTx, value, height int, timestamp time.Time) error
 
-	// Fetch a tx and height given it's hash
-	Get(txid chainhash.Hash) (*wire.MsgTx, uint32, error)
+	// Fetch a tx, height, and timestamp given it's hash
+	Get(txid chainhash.Hash) (*wire.MsgTx, int32, time.Time, error)
 
 	// Fetch all transactions from the db
 	GetAll() ([]Txn, error)
+
+	// Mark a transaction as dead
+	MarkAsDead(txid chainhash.Hash) error
 
 	// Delete a transactions from the db
 	Delete(txid *chainhash.Hash) error
@@ -135,5 +139,8 @@ type Txn struct {
 	Value int64
 
 	// The height at which it was mined
-	Height uint32
+	Height int32
+
+	// The time the transaction was first seen
+	Timestamp time.Time
 }
