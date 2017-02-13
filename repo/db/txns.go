@@ -7,6 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
+	"time"
 )
 
 type TxnsDB struct {
@@ -14,22 +15,22 @@ type TxnsDB struct {
 	lock sync.RWMutex
 }
 
-func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int) error {
+func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int, timestamp time.Time) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tx, err := t.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, tx) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, timestamp, tx) values(?,?,?,?,?)")
+	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
-	defer stmt.Close()
 	var buf bytes.Buffer
 	txn.Serialize(&buf)
-	_, err = stmt.Exec(txn.TxHash().String(), value, height, buf.Bytes())
+	_, err = stmt.Exec(txn.TxHash().String(), value, height, int(timestamp.Unix()), buf.Bytes())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -38,28 +39,29 @@ func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int) error {
 	return nil
 }
 
-func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, uint32, error) {
+func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, int32, time.Time, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	stmt, err := t.db.Prepare("select tx, height from txns where txid=?")
+	stmt, err := t.db.Prepare("select tx, height, timestamp from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
 	var height int
-	err = stmt.QueryRow(txid.String()).Scan(&ret, &height)
+	var timestamp int
+	err = stmt.QueryRow(txid.String()).Scan(&ret, &height, &timestamp)
 	if err != nil {
-		return nil, uint32(0), err
+		return nil, int32(0), time.Now(), err
 	}
 	r := bytes.NewReader(ret)
 	msgTx := wire.NewMsgTx(1)
 	msgTx.BtcDecode(r, 1)
-	return msgTx, uint32(height), nil
+	return msgTx, int32(height), time.Unix(int64(timestamp), 0), nil
 }
 
 func (t *TxnsDB) GetAll() ([]spvwallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var ret []spvwallet.Txn
-	stm := "select tx, value, height from txns"
+	stm := "select tx, value, height, timestamp from txns"
 	rows, err := t.db.Query(stm)
 	defer rows.Close()
 	if err != nil {
@@ -69,14 +71,15 @@ func (t *TxnsDB) GetAll() ([]spvwallet.Txn, error) {
 		var tx []byte
 		var value int
 		var height int
-		if err := rows.Scan(&tx, &value, &height); err != nil {
+		var timestamp int
+		if err := rows.Scan(&tx, &value, &height, &timestamp); err != nil {
 			continue
 		}
 		r := bytes.NewReader(tx)
 		msgTx := wire.NewMsgTx(1)
 		msgTx.BtcDecode(r, 1)
 
-		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), uint32(height)}
+		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0)}
 		ret = append(ret, txn)
 	}
 	return ret, nil
@@ -89,5 +92,26 @@ func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (t *TxnsDB) MarkAsDead(txid chainhash.Hash) error {
+	t.lock.Lock()
+	defer t.lock.Unlock()
+	tx, err := t.db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err := tx.Prepare("update txns set height=-1 where txid=?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(txid.String())
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	tx.Commit()
 	return nil
 }

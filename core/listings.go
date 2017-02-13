@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"crypto/sha256"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -32,8 +33,10 @@ const (
 	MaxCategories            = 10
 	MaxListItems             = 30
 	FilenameMaxCharacters    = 255
+	CodeMaxCharacters        = 20
 	WordMaxCharacters        = 40
 	SentenceMaxCharacters    = 70
+	CouponTitleMaxCharacters = 70
 	PolicyMaxCharacters      = 10000
 	MaxCountryCodes          = 255
 )
@@ -886,8 +889,11 @@ func validateListing(listing *pb.Listing) (err error) {
 		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
 	}
 	for _, coupon := range listing.Coupons {
-		if len(coupon.Title) > SentenceMaxCharacters {
+		if len(coupon.Title) > CouponTitleMaxCharacters {
 			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
+		}
+		if len(coupon.GetDiscountCode()) > CodeMaxCharacters {
+			return fmt.Errorf("Coupon code length must be less than the max of %d", CodeMaxCharacters)
 		}
 		if coupon.GetPercentDiscount() > 100 {
 			return errors.New("Percent discount cannot be over 100 percent")

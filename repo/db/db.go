@@ -262,7 +262,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer, key text);
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
-	create table txns (txid text primary key not null, value integer, height integer, tx blob);
+	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, tx blob);
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create index index_purchases on purchases (paymentAddr);
@@ -316,7 +316,6 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) er
 	}
 	tx.Commit()
 	return nil
-
 }
 
 func (c *ConfigDB) GetMnemonic() (string, error) {

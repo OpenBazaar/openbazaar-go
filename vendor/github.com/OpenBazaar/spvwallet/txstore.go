@@ -12,6 +12,7 @@ import (
 	"github.com/btcsuite/btcutil/bloom"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"sync"
+	"time"
 )
 
 const FlagPrefix = 0x00
@@ -287,8 +288,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 {
-		_, h, err := ts.Txns().Get(tx.TxHash())
+		_, h, timestamp, err := ts.Txns().Get(tx.TxHash())
 		if err != nil {
+			timestamp = time.Now()
 			// Callback on listeners
 			for _, listener := range ts.listeners {
 				listener(cb)
@@ -298,10 +300,44 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if h <= 0 {
-			ts.Txns().Put(tx, int(value), int(height))
+			ts.Txns().Put(tx, int(value), int(height), timestamp)
 		}
 	}
 	return hits, err
+}
+
+func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
+	utxos, err := ts.Utxos().GetAll()
+	if err != nil {
+		return err
+	}
+	stxos, err := ts.Stxos().GetAll()
+	if err != nil {
+		return err
+	}
+	for _, u := range utxos {
+		if txid.IsEqual(&u.Op.Hash) {
+			err := ts.Utxos().Delete(u)
+			if err != nil {
+				return err
+			}
+			ts.Txns().MarkAsDead(txid)
+		}
+	}
+	for _, s := range stxos {
+		if txid.IsEqual(&s.Utxo.Op.Hash) {
+			err := ts.Stxos().Delete(s)
+			if err != nil {
+				return err
+			}
+			ts.Txns().MarkAsDead(txid)
+			err = ts.markAsDead(s.SpendTxid)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func outPointsEqual(a, b wire.OutPoint) bool {
