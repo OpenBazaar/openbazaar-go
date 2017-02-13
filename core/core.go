@@ -15,9 +15,11 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
+	"golang.org/x/net/proxy"
 	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
+	gonet "net"
 	"net/http"
 	"net/url"
 	"path"
@@ -82,6 +84,9 @@ type OpenBazaarNode struct {
 
 	// The user-agent for this node
 	UserAgent string
+
+	// A dialer for Tor if available
+	TorDialer proxy.Dialer
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
@@ -97,9 +102,12 @@ func (n *OpenBazaarNode) SeedNode() error {
 			if err != nil {
 				return
 			}
-			var client = &http.Client{
-				Timeout: time.Second * 10,
+			dial := gonet.Dial
+			if n.TorDialer != nil {
+				dial = n.TorDialer.Dial
 			}
+			tbTransport := &http.Transport{Dial: dial}
+			client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 			client.Do(req)
 		}()
 	}

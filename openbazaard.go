@@ -27,6 +27,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/go-onion-transport"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
@@ -62,7 +63,16 @@ import (
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/proxy"
+	p2phost "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
+	addrutil "gx/ipfs/QmVDnc2zvyQm8LhT72n22THcshvH7j3qPMnhvjerQER62T/go-addr-util"
+	metrics "gx/ipfs/QmY2otvyPM2sTaDsczo7Yuosg98sUMCJ9qx1gpPaAPTS9B/go-libp2p-metrics"
+	"gx/ipfs/Qmbiq2d2ZMi34A6V22kNY3b4GgPGFztmRCQZ931TJkYWp7/go-libp2p-swarm"
 	recpb "gx/ipfs/QmdM4ohF7cr4MvAECVeD3hRA3HtZrk1ngaek4n8ojVT87h/go-libp2p-record/pb"
+	p2pbhost "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/host/basic"
+	pstore "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"syscall"
 )
 
@@ -101,6 +111,8 @@ type Start struct {
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
+	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
 	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
 	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
@@ -260,10 +272,10 @@ func (x *Status) Execute(args []string) error {
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
-	torAvailble := false
+	torAvailable := false
 	_, err = obnet.GetTorControlPort()
 	if err == nil {
-		torAvailble = true
+		torAvailable = true
 	}
 	if fsrepo.IsInitialized(repoPath) {
 		sqliteDB, err := db.Create(repoPath, "", x.Testnet)
@@ -273,7 +285,7 @@ func (x *Status) Execute(args []string) error {
 		}
 		defer sqliteDB.Close()
 		if sqliteDB.Config().IsEncrypted() {
-			if !torAvailble {
+			if !torAvailable {
 				fmt.Println("Initialized - Encrypted")
 				os.Exit(30)
 			} else {
@@ -282,7 +294,7 @@ func (x *Status) Execute(args []string) error {
 				os.Exit(31)
 			}
 		} else {
-			if !torAvailble {
+			if !torAvailable {
 				fmt.Println("Initialized - Not Encrypted")
 				os.Exit(20)
 			} else {
@@ -292,7 +304,7 @@ func (x *Status) Execute(args []string) error {
 			}
 		}
 	} else {
-		if !torAvailble {
+		if !torAvailable {
 			fmt.Println("Not initialized")
 			os.Exit(10)
 		} else {
@@ -346,6 +358,10 @@ func (x *Start) Execute(args []string) error {
 
 	if x.Testnet && x.Regtest {
 		return errors.New("Invalid combination of testnet and regtest modes")
+	}
+
+	if x.Tor && x.DualStack {
+		return errors.New("Invalid combination of tor and dual stack modes")
 	}
 
 	isTestnet := false
@@ -458,12 +474,33 @@ func (x *Start) Execute(args []string) error {
 	}
 	cfg.Identity = identity
 
+	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	onionAddrString := "/onion/" + onionAddr + ":4003"
+	if x.Tor {
+		cfg.Addresses.Swarm = []string{}
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
+	} else if x.DualStack {
+		cfg.Addresses.Swarm = []string{}
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/4001")
+		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip6/::/tcp/4001")
+	}
+
 	// Iterate over our address and process them as needed
+	var onionTransport *torOnion.OnionTransport
+	var torDialer proxy.Dialer
+	var usingTor, usingClearnet bool
+	var controlPort int
 	for i, addr := range cfg.Addresses.Swarm {
 		m, _ := ma.NewMultiaddr(addr)
 		p := m.Protocols()
 		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
 		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
+			usingClearnet = true
 			port, serr := obnet.Stun()
 			if serr != nil {
 				log.Error(serr)
@@ -472,13 +509,88 @@ func (x *Start) Execute(args []string) error {
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
+		} else if p[0].Name == "onion" {
+			usingTor = true
+			torConfig, err := repo.GetTorConfig(path.Join(repoPath, "config"))
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			torControl := torConfig.TorControl
+			if torControl == "" {
+				controlPort, err = obnet.GetTorControlPort()
+				if err != nil {
+					log.Error(err)
+					return err
+				}
+				torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+			}
+			auth := &proxy.Auth{Password: torConfig.Password}
+			onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
+			t, err := ma.ProtocolsWithString("/onion")
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+		} else {
+			usingClearnet = true
 		}
+	}
+	// If we're only using Tor set the proxy dialer
+	if usingTor && !usingClearnet {
+		log.Notice("Using Tor exclusively")
+		torDialer, err = onionTransport.TorDialer()
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
+	// Custom host option used if Tor is enabled
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport) (p2phost.Host, error) {
+
+		// No addresses to begin with. we'll start later.
+		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, nil, tpt, bwr)
+		if err != nil {
+			return nil, err
+		}
+
+		network := (*swarm.Network)(swrm)
+
+		network.Swarm().AddTransport(onionTransport)
+
+		for _, f := range fs {
+			network.Swarm().Filters.AddDialFilter(f)
+		}
+		var host *p2pbhost.BasicHost
+		if usingTor && !usingClearnet {
+			host = p2pbhost.New(network)
+		} else {
+			host = p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+		}
+
+		return host, nil
 	}
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
 	}
+
+	if onionTransport != nil {
+		ncfg.Host = defaultHostOption
+	}
+
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error(err)
@@ -541,7 +653,7 @@ func (x *Start) Execute(args []string) error {
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	var wallet bitcoin.BitcoinWallet
 	if strings.ToLower(walletCfg.Type) == "spvwallet" {
-		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, nil, ml)
+		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, torDialer, ml)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -550,7 +662,11 @@ func (x *Start) Execute(args []string) error {
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
-		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword)
+		usetor := false
+		if usingTor && !usingClearnet {
+			usetor = true
+		}
+		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
 	} else {
 		log.Fatal("Unknown wallet type")
 	}
@@ -597,8 +713,12 @@ func (x *Start) Execute(args []string) error {
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer)
 	} else if x.Storage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
+		}
 		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
 		if err != nil {
 			log.Error(err)
@@ -628,7 +748,7 @@ func (x *Start) Execute(args []string) error {
 
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher()
+		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
 
 	// OpenBazaar node setup
@@ -640,9 +760,10 @@ func (x *Start) Execute(args []string) error {
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
 		MessageStorage:    storage,
-		Resolver:          bstk.NewBlockStackClient(resolverUrl),
+		Resolver:          bstk.NewBlockStackClient(resolverUrl, torDialer),
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
+		TorDialer:         torDialer,
 		UserAgent:         core.USERAGENT,
 	}
 
@@ -660,7 +781,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-	MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
+	MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, torDialer, core.Node.SendOfflineAck)
 	go MR.Run()
 	core.Node.MessageRetriever = MR
 	PR := rep.NewPointerRepublisher(nd, sqliteDB)

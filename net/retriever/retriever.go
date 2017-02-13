@@ -1,6 +1,7 @@
 package net
 
 import (
+	"context"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -10,12 +11,13 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/op/go-logging"
-	"golang.org/x/net/context"
+	"golang.org/x/net/proxy"
 	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
 	multihash "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
 	"io/ioutil"
+	gonet "net"
 	"net/http"
 	"sync"
 	"time"
@@ -31,12 +33,19 @@ type MessageRetriever struct {
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
 	messageQueue []pb.Envelope
+	httpClient   *http.Client
 	queueLock    *sync.Mutex
 	*sync.WaitGroup
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, new(sync.Mutex), new(sync.WaitGroup)}
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+	dial := gonet.Dial
+	if dialer != nil {
+		dial = dialer.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
+	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, client, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
@@ -123,8 +132,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	client := http.Client{Timeout: time.Second * 10}
-	resp, err := client.Get(url)
+	resp, err := m.httpClient.Get(url)
 	if err != nil {
 		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return

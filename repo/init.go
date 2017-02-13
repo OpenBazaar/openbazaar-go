@@ -195,6 +195,8 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		Enabled:     true,
 		HTTPHeaders: nil,
 	}
+
+	var t TorConfig = TorConfig{}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
 	}
@@ -208,6 +210,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		return err
 	}
 	if err := extendConfigFile(r, "JSON-API", a); err != nil {
+		return err
+	}
+	if err := extendConfigFile(r, "Tor-config", t); err != nil {
 		return err
 	}
 	if err := r.Close(); err != nil {

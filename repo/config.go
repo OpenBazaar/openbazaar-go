@@ -27,6 +27,11 @@ type APIConfig struct {
 	SSLKey        string
 }
 
+type TorConfig struct {
+	Password   string
+	TorControl string
+}
+
 type WalletConfig struct {
 	Type             string
 	Binary           string
@@ -119,6 +124,21 @@ func GetWalletConfig(cfgPath string) (*WalletConfig, error) {
 		RPCPassword:      rpcPassword,
 	}
 	return wCfg, nil
+}
+
+func GetTorConfig(cfgPath string) (TorConfig, error) {
+	file, err := ioutil.ReadFile(cfgPath)
+	if err != nil {
+		return TorConfig{}, err
+	}
+	var cfg interface{}
+	json.Unmarshal(file, &cfg)
+
+	tc := cfg.(map[string]interface{})["Tor-config"]
+	pw := tc.(map[string]interface{})["Password"].(string)
+	controlUrl := tc.(map[string]interface{})["TorControl"].(string)
+
+	return TorConfig{TorControl: controlUrl, Password: pw}, nil
 }
 
 func GetDropboxApiToken(cfgPath string) (string, error) {

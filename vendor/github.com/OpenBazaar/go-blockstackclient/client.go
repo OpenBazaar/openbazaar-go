@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/jbenet/go-multihash"
+	"golang.org/x/net/proxy"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -29,10 +31,16 @@ type CachedGuid struct {
 	exipry time.Time
 }
 
-func NewBlockStackClient(resolverURL string) *BlockstackClient {
+func NewBlockStackClient(resolverURL string, dialer proxy.Dialer) *BlockstackClient {
+	dial := net.Dial
+	if dialer != nil {
+		dial = dialer.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 	b := &BlockstackClient{
 		resolverURL: resolverURL,
-		httpClient:  &http.Client{Timeout: time.Minute},
+		httpClient:  client,
 		cache:       make(map[string]CachedGuid),
 		cacheLife:   time.Minute,
 	}

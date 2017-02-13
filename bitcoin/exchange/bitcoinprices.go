@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -25,14 +27,19 @@ type BitcoinPriceFetcher struct {
 	providers []ExchangeRateProvider
 }
 
-func NewBitcoinPriceFetcher() *BitcoinPriceFetcher {
+func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 	b := BitcoinPriceFetcher{
 		cache: make(map[string]float64),
 	}
-	b.providers = []ExchangeRateProvider{&BitcoinAverage{b.cache}, &BitPay{b.cache}, &BlockchainInfo{b.cache}, &BitcoinCharts{b.cache}}
+	dial := net.Dial
+	if dialer != nil {
+		dial = dialer.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
+	b.providers = []ExchangeRateProvider{&BitcoinAverage{b.cache, client}, &BitPay{b.cache, client}, &BlockchainInfo{b.cache, client}, &BitcoinCharts{b.cache, client}}
 
 	go b.run()
-
 	return &b
 }
 
@@ -89,11 +96,12 @@ func (b *BitcoinPriceFetcher) fetchCurrentRates() error {
 }
 
 type BitcoinAverage struct {
-	cache map[string]float64
+	cache  map[string]float64
+	client *http.Client
 }
 
 func (b *BitcoinAverage) fetch() (err error) {
-	resp, err := http.Get("https://ticker.openbazaar.org/api")
+	resp, err := b.client.Get("https://ticker.openbazaar.org/api")
 	if err != nil {
 		return err
 	}
@@ -124,11 +132,12 @@ func (b *BitcoinAverage) decode(body io.ReadCloser) (err error) {
 }
 
 type BitPay struct {
-	cache map[string]float64
+	cache  map[string]float64
+	client *http.Client
 }
 
 func (b *BitPay) fetch() (err error) {
-	resp, err := http.Get("https://bitpay.com/api/rates")
+	resp, err := b.client.Get("https://bitpay.com/api/rates")
 	if err != nil {
 		return err
 	}
@@ -157,11 +166,12 @@ func (b *BitPay) decode(body io.ReadCloser) (err error) {
 }
 
 type BlockchainInfo struct {
-	cache map[string]float64
+	cache  map[string]float64
+	client *http.Client
 }
 
 func (b *BlockchainInfo) fetch() (err error) {
-	resp, err := http.Get("https://blockchain.info/ticker")
+	resp, err := b.client.Get("https://blockchain.info/ticker")
 	if err != nil {
 		return err
 	}
@@ -190,11 +200,12 @@ func (b *BlockchainInfo) decode(body io.ReadCloser) (err error) {
 }
 
 type BitcoinCharts struct {
-	cache map[string]float64
+	cache  map[string]float64
+	client *http.Client
 }
 
 func (b *BitcoinCharts) fetch() (err error) {
-	resp, err := http.Get("https://api.bitcoincharts.com/v1/weighted_prices.json")
+	resp, err := b.client.Get("https://api.bitcoincharts.com/v1/weighted_prices.json")
 	if err != nil {
 		return err
 	}
