@@ -1,5 +1,6 @@
 import requests
 import json
+import time
 from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
@@ -86,11 +87,11 @@ class ChatTest(OpenBazaarTestFramework):
         if resp[0]["peerId"] != alice_id:
             raise TestFailure("ChatTest - FAIL: Did not record new conversation")
 
-        # alice mark as read
+        # bob mark as read
         message = {
-            "peerId": bob_id
+            "peerId": alice_id
         }
-        api_url = alice["gateway_url"] + "ob/markchatasread"
+        api_url = bob["gateway_url"] + "ob/markchatasread"
         r = requests.post(api_url, data=json.dumps(message, indent=4))
         if r.status_code == 404:
             raise TestFailure("ChatTest - FAIL: Chat markasread post endpoint not found")
@@ -98,8 +99,8 @@ class ChatTest(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("ChatTest - FAIL: Chat markasread POST failed. Reason: %s", resp["reason"])
 
-        # check alice marked as read correctly
-        api_url = alice["gateway_url"] + "ob/chatconversations/" + bob_id
+        # check bob marked as read correctly
+        api_url = bob["gateway_url"] + "ob/chatconversations/" + bob_id
         r = requests.get(api_url)
         if r.status_code == 404:
             raise TestFailure("ChatTest - FAIL: Chat conversations GET endpoint not found")

@@ -47,7 +47,7 @@ type Coupon struct {
 }
 
 type ChatMessage struct {
-	MessageId int       `json:"messageId"`
+	MessageId string    `json:"messageId"`
 	PeerId    string    `json:"peerId"`
 	Subject   string    `json:"subject"`
 	Message   string    `json:"message"`

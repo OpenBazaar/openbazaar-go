@@ -107,17 +107,17 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit 
 
 	var stm string
 	if offsetId > 0 {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where peerID='" + peerID + "' and timestamp<(select timestamp from chat where messageID=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' and timestamp<(select timestamp from chat where messageID=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where peerID='" + peerID + "' order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
-
 	rows, err := c.db.Query(stm)
 	if err != nil {
+		log.Error(err)
 		return ret
 	}
 	for rows.Next() {
-		var msgID int
+		var msgID string
 		var message string
 		var readInt int
 		var timestampInt int
