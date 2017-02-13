@@ -925,7 +925,10 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	if !offline {
 		t = time.Now()
 	} else {
-		t = time.Unix(chat.Timestamp.Seconds, int64(chat.Timestamp.Nanos))
+		if chat.Timestamp == nil {
+			return nil, errors.New("Invalid timestamp")
+		}
+		t = time.Unix(chat.Timestamp.Seconds, 0)
 	}
 
 	// Put to database

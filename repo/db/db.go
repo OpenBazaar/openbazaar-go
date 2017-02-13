@@ -316,7 +316,6 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) er
 	}
 	tx.Commit()
 	return nil
-
 }
 
 func (c *ConfigDB) GetMnemonic() (string, error) {
