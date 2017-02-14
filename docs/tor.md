@@ -59,7 +59,7 @@ Example:
 The runtime option will override the swarm address configuration in the config file and use default ports.
 
 ## Advanced Tor configuration
-If you have manually edited your `torrc` file to change the control port or set password authentication on the Tor daemon, you can set both on the openbazaar-go config file:
+If you have manually edited your `torrc` file to change the control port or set password authentication on the Tor daemon, you can set both in the openbazaar-go config file:
 ```
 "Tor-config": {
     "Password": "16:A90FDB3A36749874609416DA8FE1896C39081BDD69D53B55F0AEEDEAFC", 
@@ -77,7 +77,7 @@ TODO: once the client has Tor support, add a tutorial about how to configure it.
 
 ### Important Privacy Considerations
 
-All nodes in OpenBazaar are identified by a peer ID such as `QmNgBZN7z1CfMLbwyEwnGoixjbSaBcP9fS5ecMzZwCq3Ku`. Other nodes in the network will associate yoru peer ID with your
+All nodes in OpenBazaar are identified by a peer ID such as `QmNgBZN7z1CfMLbwyEwnGoixjbSaBcP9fS5ecMzZwCq3Ku`. Other nodes in the network will associate your peer ID with your
 network addresses (whether IPv4, IPv6, or onion). If you run openbazaar-go in the clear even *once*, you must assume *someone* has recorded the mapping between your
 peer ID and your IP address. Therefore using a given peer ID in the clear, *then* switching to Tor-only mode will almost certainly blow your privacy.
 
