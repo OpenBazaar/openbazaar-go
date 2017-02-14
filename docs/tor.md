@@ -29,7 +29,7 @@ Edit the config file found in the openbazaar2.0 data directory to the following 
 ```
 "Addresses": {
     "Swarm": [
-      "/onion/erhkddypoy6qml6h:4002"
+      "/onion/erhkddypoy6qml6h:4003"
     ]
   },
 ```
@@ -37,7 +37,7 @@ Or the following for dual-stack mode:
 ```
 "Addresses": {
     "Swarm": [
-      "/onion/erhkddypoy6qml6h:4002",
+      "/onion/erhkddypoy6qml6h:4003",
       "/ip4/0.0.0.0/tcp/4001",
       "/ip6/::/tcp/4001"
     ]
@@ -57,6 +57,15 @@ Example:
 ./openbazaar-go start --dualstack
 ```
 The runtime option will override the swarm address configuration in the config file and use default ports.
+
+## Advanced Tor configuration
+If you have manually edited your `torrc` file to change the control port or set password authentication on the Tor daemon, you can set both on the openbazaar-go config file:
+```
+"Tor-config": {
+    "Password": "16:A90FDB3A36749874609416DA8FE1896C39081BDD69D53B55F0AEEDEAFC", 
+    "TorControl": "127.0.0.1:9000"
+},
+```
 
 ## Configuring the client
 The openbazaar-desktop client **must** also be configured to run over Tor as some html tags, such as `IMG`, are allowed in the profile and store data and will trigger the client to make outgoing network calls.
