@@ -216,9 +216,19 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 }
 
 func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
-	b := json.RawMessage([]byte(`1`))
 	defautlFee := uint64(50)
-	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{b})
+	var nBlocks json.RawMessage
+	switch feeLevel {
+	case spvwallet.PRIOIRTY:
+		nBlocks = json.RawMessage([]byte(`1`))
+	case spvwallet.NORMAL:
+		nBlocks = json.RawMessage([]byte(`3`))
+	case spvwallet.ECONOMIC:
+		nBlocks = json.RawMessage([]byte(`6`))
+	default:
+		return defautlFee
+	}
+	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{nBlocks})
 	if err != nil {
 		return defautlFee
 	}
