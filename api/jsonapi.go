@@ -1785,15 +1785,7 @@ func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	offset := r.URL.Query().Get("offsetId")
-	offsetId := 0
-	if offset != "" {
-		offsetId, err = strconv.Atoi(offset)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
+	offsetId := r.URL.Query().Get("offsetId")
 	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, int(l))
 
 	ret, err := json.MarshalIndent(messages, "", "    ")
@@ -1853,7 +1845,7 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 
 func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Request) {
 	type messagID struct {
-		MessageID int `json:"messageId"`
+		MessageID string `json:"messageId"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var m messagID

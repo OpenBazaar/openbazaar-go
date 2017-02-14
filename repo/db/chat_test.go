@@ -114,7 +114,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "", 0, -1)
+	messages := chdb.GetMessages("abc", "", "", -1)
 	if len(messages) != 2 {
 		t.Error("Returned incorrect number of messages")
 		return
@@ -154,7 +154,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 		}
 	}
 
-	limtedMessages := chdb.GetMessages("abc", "", 0, 2)
+	limtedMessages := chdb.GetMessages("abc", "", "", 2)
 	if len(limtedMessages) != 2 {
 		t.Error("Returned incorrect number of messages")
 		return
@@ -165,7 +165,7 @@ func TestChatDB_GetMessages(t *testing.T) {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
-	messages = chdb.GetMessages("xyz", "sub", 0, -1)
+	messages = chdb.GetMessages("xyz", "sub", "", -1)
 	if len(messages) != 1 {
 		t.Error("Returned incorrect number of messages")
 		return
@@ -194,7 +194,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "", 0, -1)
+	messages := chdb.GetMessages("abc", "", "", -1)
 	if len(messages) == 0 {
 		t.Error("Returned incorrect number of messages")
 		return
@@ -270,7 +270,7 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "", 0, -1)
+	messages := chdb.GetMessages("abc", "", "", -1)
 	if len(messages) == 0 {
 		t.Error("Returned incorrect number of messages")
 		return
@@ -298,7 +298,7 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	messages := chdb.GetMessages("abc", "", 0, -1)
+	messages := chdb.GetMessages("abc", "", "", -1)
 	if len(messages) != 2 {
 		t.Error("Returned incorrect number of messages")
 		return

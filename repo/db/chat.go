@@ -100,14 +100,14 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 	return ret
 }
 
-func (c *ChatDB) GetMessages(peerID string, subject string, offsetId int, limit int) []repo.ChatMessage {
+func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, limit int) []repo.ChatMessage {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	var ret []repo.ChatMessage
 
 	var stm string
-	if offsetId > 0 {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' and timestamp<(select timestamp from chat where messageID=" + strconv.Itoa(offsetId) + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+	if offsetId != "" {
+		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' and timestamp<(select timestamp from chat where messageID=" + offsetId + ") order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
@@ -188,7 +188,7 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	return msgId, nil
 }
 
-func (c *ChatDB) DeleteMessage(msgID int) error {
+func (c *ChatDB) DeleteMessage(msgID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.db.Exec("delete from chat where messageID=?", msgID)
