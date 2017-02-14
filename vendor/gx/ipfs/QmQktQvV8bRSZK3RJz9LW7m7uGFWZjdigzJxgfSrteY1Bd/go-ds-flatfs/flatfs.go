@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -46,30 +45,29 @@ var (
 	ErrShardingFileMissing   = fmt.Errorf("%s file not found in datastore", SHARDING_FN)
 )
 
-func Create(p string, fun *ShardIdV1) error {
+func Create(path string, fun *ShardIdV1) error {
 
-	err := os.Mkdir(p, 0777)
+	err := os.Mkdir(path, 0777)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
 
-	dsFun, err := ReadShardFunc(p)
+	dsFun, err := ReadShardFunc(path)
 	switch err {
 	case ErrShardingFileMissing:
-		os.Remove(path.Join(p, "._check_writeable"))
-		isEmpty, err := DirIsEmpty(p)
+		isEmpty, err := DirIsEmpty(path)
 		if err != nil {
 			return err
 		}
 		if !isEmpty {
-			return fmt.Errorf("directory missing %s file: %s", SHARDING_FN, p)
+			return fmt.Errorf("directory missing %s file: %s", SHARDING_FN, path)
 		}
 
-		err = WriteShardFunc(p, fun)
+		err = WriteShardFunc(path, fun)
 		if err != nil {
 			return err
 		}
-		err = WriteReadme(p, fun)
+		err = WriteReadme(path, fun)
 		return err
 	case nil:
 		if fun.String() != dsFun.String() {
@@ -119,13 +117,13 @@ func (fs *Datastore) ShardStr() string {
 
 func (fs *Datastore) encode(key datastore.Key) (dir, file string) {
 	noslash := key.String()[1:]
-	dir = path.Join(fs.path, fs.getDir(noslash))
-	file = path.Join(dir, noslash+extension)
+	dir = filepath.Join(fs.path, fs.getDir(noslash))
+	file = filepath.Join(dir, noslash+extension)
 	return dir, file
 }
 
 func (fs *Datastore) decode(file string) (key datastore.Key, ok bool) {
-	if path.Ext(file) != extension {
+	if filepath.Ext(file) != extension {
 		return datastore.Key{}, false
 	}
 	name := file[:len(file)-len(extension)]

@@ -27,9 +27,9 @@
     },
     {
       "author": "whyrusleeping",
-      "hash": "QmPL3RCWaM6s7b82LSLS1MGX2jpxPxA1v2vmgLm15b1NcW",
+      "hash": "QmVQfuckfPnW5LGmgSWsJVJr6Xea1bWXD8sBixe8E9MQD6",
       "name": "cbor",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ],
   "gxVersion": "0.10.0",
@@ -37,6 +37,6 @@
   "license": "",
   "name": "go-ipld-cbor",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "version": "1.0.0"
+  "version": "1.1.8"
 }
 

@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	cbor "gx/ipfs/QmPL3RCWaM6s7b82LSLS1MGX2jpxPxA1v2vmgLm15b1NcW/cbor/go"
 	node "gx/ipfs/QmRSU5EqqWVZSNdbU51yXmVoF1uNw3JgTNB6RaiL7DZM16/go-ipld-node"
+	cbor "gx/ipfs/QmVQfuckfPnW5LGmgSWsJVJr6Xea1bWXD8sBixe8E9MQD6/cbor/go"
 	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
 )
@@ -357,7 +357,7 @@ func toSaneMap(n map[interface{}]interface{}) (interface{}, error) {
 			return nil, err
 		}
 
-		return c, nil
+		return map[string]interface{}{"/": c}, nil
 	}
 	out := make(map[string]interface{})
 	for k, v := range n {
@@ -383,6 +383,9 @@ func convertToJsonIsh(v interface{}) (interface{}, error) {
 		return toSaneMap(v)
 	case []interface{}:
 		var out []interface{}
+		if len(v) == 0 && v != nil {
+			return []interface{}{}, nil
+		}
 		for _, i := range v {
 			obj, err := convertToJsonIsh(i)
 			if err != nil {
@@ -392,6 +395,8 @@ func convertToJsonIsh(v interface{}) (interface{}, error) {
 			out = append(out, obj)
 		}
 		return out, nil
+	case *cid.Cid:
+		return map[string]interface{}{"/": v.String()}, nil
 	default:
 		return v, nil
 	}

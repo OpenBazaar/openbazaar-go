@@ -1028,7 +1028,7 @@ func (r *reflectValue) SetNil() error {
 	switch rv.Kind() {
 	case reflect.Ptr:
 		//return setNil(reflect.Indirect(rv))
-		rv.Set(reflect.Zero(rv.Type()))
+		rv.Elem().Set(reflect.Zero(rv.Elem().Type()))
 	case reflect.Interface:
 		if rv.IsNil() {
 			// already nil, okay!
@@ -1270,6 +1270,10 @@ func (enc *Encoder) Encode(ob interface{}) error {
 func (enc *Encoder) writeReflection(rv reflect.Value) error {
 	if enc.filter != nil {
 		rv = reflect.ValueOf(enc.filter(rv.Interface()))
+	}
+
+	if !rv.IsValid() {
+		return enc.tagAuxOut(cbor7, uint64(cborNull))
 	}
 
 	if v, ok := rv.Interface().(MarshallValue); ok {
