@@ -54,7 +54,7 @@ You can run the server with `go run openbazaard.go start`
 ### Options
 ```
 Usage:
-  openbazaar-go [OPTIONS] start [start-OPTIONS]
+  openbazaard [OPTIONS] start [start-OPTIONS]
 
 The start command starts the OpenBazaar-Server
 
@@ -69,13 +69,21 @@ Help Options:
       -l, --loglevel=             set the logging level [debug, info, notice,
                                   warning, error, critical]
       -a, --allowip=              only allow API connections from these IPs
-      -s, --stun                  use stun on µTP IPv4
+      -s, --stun                  use stun on µTP IPv4 [deprecated for now]
       -d, --datadir=              specify the data directory to be used
+          --tor                   Automatically configure the daemon to run as
+                                  a Tor hidden service and use Tor exclusively.
+                                  Requires Tor to be running.
+          --dualstack             Automatically configure the daemon to run as
+                                  a Tor hidden service IN ADDITION to using the
+                                  clear internet. Requires Tor to be running.
+                                  WARNING: this mode is not private
           --disablewallet         disable the wallet functionality of the node
           --disableexchangerates  disable the exchange rate service to prevent
                                   api queries
           --storage=              set the outgoing message storage option
                                   [self-hosted, dropbox] default=self-hosted
+
 ```
 
 ## Documentation
