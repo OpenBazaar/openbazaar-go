@@ -79,8 +79,8 @@ type OnionTransport struct {
 // controlNet and controlAddr contain the connecting information
 // for the tor control port; either TCP or UNIX domain socket.
 //
+// auth contains the optional tor control password
 // keysDir is the key material for the Tor onion service.
-// If key is nil then generate a new key; it will not be persisted upon shutdown.
 func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir string) (*OnionTransport, error) {
 	conn, err := bulb.Dial(controlNet, controlAddr)
 	if err != nil {
@@ -250,24 +250,7 @@ func (d *OnionDialer) Dial(raddr ma.Multiaddr) (tpt.Conn, error) {
 }
 
 func (d *OnionDialer) DialContext(ctx context.Context, raddr ma.Multiaddr) (tpt.Conn, error) {
-	dialer, err := d.transport.controlConn.Dialer(d.auth)
-	if err != nil {
-		return nil, err
-	}
-	netaddr, err := manet.ToNetAddr(raddr)
-	if err != nil {
-		return nil, err
-	}
-	onionConn := OnionConn{
-		transport: tpt.Transport(d.transport),
-		laddr:     d.laddr,
-		raddr:     &raddr,
-	}
-	onionConn.Conn, err = dialer.Dial(netaddr.Network(), netaddr.String())
-	if err != nil {
-		return nil, err
-	}
-	return &onionConn, nil
+	return d.Dial(raddr)
 }
 
 // Matches returns true if the given multiaddr represents a Tor onion service
@@ -286,7 +269,7 @@ type OnionListener struct {
 
 // Accept blocks until a connection is received returning
 // go-libp2p-transport's Conn interface or an error if
-/// something went wrong
+// something went wrong
 func (l *OnionListener) Accept() (tpt.Conn, error) {
 	conn, err := l.listener.Accept()
 	if err != nil {
@@ -345,3 +328,4 @@ func (c *OnionConn) LocalMultiaddr() ma.Multiaddr {
 func (c *OnionConn) RemoteMultiaddr() ma.Multiaddr {
 	return *c.raddr
 }
+

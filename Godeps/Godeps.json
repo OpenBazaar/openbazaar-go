@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-onion-transport",
-			"Rev": "0603e390a0c2083f6a0aec5e90bf4445c66f92fa"
+			"Rev": "e7d67ec3609d19949eef1b3b4b260a5abf5c7b5b"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/jsonpb",
