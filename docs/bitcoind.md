@@ -60,11 +60,6 @@ Obviously replacing the username and password with the username and password you
 That's it! Just start openbazaar-go.
 
 ### Things to consider
-- Bitcoind cannot accept bitcoin payments sent to your OpenBazaar peerId/handle. Any user attempting to send you a payment this way will
-be given an error message telling them you don't accept such payments. 
-- If you are switching from the spvwallet to bitcoind and someone sends you a payment in the time between you shutdown the spvwallet and
-started the bitcoind wallet, bitcoind will not detect the payment. The coins are not lost, they can be recovered by switching back to the
-spvwallet. For this reason we recommend you use bitcoind with a new OpenBazaar identity and avoid switching between wallets.
 - If bitcoind is running when you start openbazaar-go, it will shut it down and restart it. This is done because bitcoind needs to be run
 with a specific set of options so that openbazaar-go can detect incoming payments. 
 - It's highly recommended you do not run bitcoind independently of openbazaar-go. If you receive a transaction while openbazaar-go is not
