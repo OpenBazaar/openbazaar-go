@@ -83,3 +83,5 @@ peer ID and your IP address. Therefore using a given peer ID in the clear, *then
 
 Therefore if you wish to run in Tor-only mode, it is *highly recommended* that you use a fresh peer ID which has never been used on the network and has not had a chance
 to get associated with your actual IP address. To get a new peer ID you can just delete your data folder and restart openbazaar-go. It will create a new peer ID on start up.
+
+Finally, as noted in the [bitcoind doc](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/bitcoind.md) the default SPV wallet has known privacy issues which may allow attackers to associate your bitcoin transactions with your OpenBazaar peer ID. For those looking to maximize privacy it's recommended you switch out the default wallet for bitcoind. See the bitcoind doc for instructions. 
