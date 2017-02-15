@@ -239,7 +239,8 @@ func (d *OnionDialer) Dial(raddr ma.Multiaddr) (tpt.Conn, error) {
 		raddr:     &raddr,
 	}
 	if onionAddress != "" {
-		onionConn.Conn, err = dialer.Dial("tcp4", onionAddress)
+		split := strings.Split(onionAddress, ":")
+		onionConn.Conn, err = dialer.Dial("tcp4", split[0]+".onion:"+split[1])
 	} else {
 		onionConn.Conn, err = dialer.Dial(netaddr.Network(), netaddr.String())
 	}
@@ -328,4 +329,3 @@ func (c *OnionConn) LocalMultiaddr() ma.Multiaddr {
 func (c *OnionConn) RemoteMultiaddr() ma.Multiaddr {
 	return *c.raddr
 }
-
