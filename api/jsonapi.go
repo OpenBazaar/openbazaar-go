@@ -35,9 +35,10 @@ import (
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
-	"github.com/jbenet/go-multiaddr"
-	"github.com/jbenet/go-multihash"
 	"golang.org/x/net/context"
+	"gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	"gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	"sync"
 )
 
 type JsonAPIConfig struct {
@@ -1965,4 +1966,73 @@ func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	w.Header().Del("Content-Type")
 	http.ServeContent(w, r, imageHash, time.Now(), dr)
+}
+
+func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("async")
+	async, _ := strconv.ParseBool(query)
+
+	var pids []string
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&pids)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	type ProfileObj struct {
+		PeerId  string      `json:"peerId"`
+		Profile interface{} `json:"profile"`
+	}
+	if !async {
+		var wg sync.WaitGroup
+		var ret []ProfileObj
+		for _, p := range pids {
+			wg.Add(1)
+			go func(pid string) {
+				profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
+				if err != nil || len(profile) == 0 {
+					wg.Done()
+					return
+				}
+				var pro pb.Profile
+				err = jsonpb.UnmarshalString(string(profile), &pro)
+				if err != nil {
+					wg.Done()
+					return
+				}
+				obj := ProfileObj{p, pro}
+				ret = append(ret, obj)
+				wg.Done()
+			}(p)
+		}
+		wg.Wait()
+		retObj, err := json.MarshalIndent(ret, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		fmt.Fprint(w, string(retObj))
+	} else {
+		for _, p := range pids {
+			go func(pid string) {
+				profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
+				if err != nil || len(profile) == 0 {
+					return
+				}
+				var pro pb.Profile
+				err = jsonpb.UnmarshalString(string(profile), &pro)
+				if err != nil {
+					return
+				}
+				obj := ProfileObj{p, pro}
+				ser, err := json.MarshalIndent(obj, "", "    ")
+				if err != nil {
+					return
+				}
+				i.node.Broadcast <- ser
+			}(p)
+
+		}
+	}
 }

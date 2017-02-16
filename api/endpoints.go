@@ -68,6 +68,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTMarkChatAsRead(w, r)
 	case "/ob/marknotificationasread", "/ob/marknotificationasread/":
 		i.POSTMarkNotificationAsRead(w, r)
+	case "/ob/fetchprofiles", "/ob/fetchprofiles/":
+		i.POSTFetchProfiles(w, r)
 	case "/ob/shutdown", "/ob/shutdown/":
 		i.POSTShutdown(w, r)
 	default:

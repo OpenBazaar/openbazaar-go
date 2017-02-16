@@ -9,7 +9,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-onion-transport",
-			"Rev": "e7d67ec3609d19949eef1b3b4b260a5abf5c7b5b"
+			"Rev": "64934f3a70beb1521a2151010643c3095a9dd934"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/jsonpb",
@@ -703,11 +703,6 @@
 		{
 			"ImportPath": "github.com/jbenet/go-context/io",
 			"Rev": "d14ea06fba99483203c19d92cfcd13ebe73135f4"
-		},
-		{
-			"ImportPath": "github.com/jbenet/go-multiaddr",
-			"Comment": "0.1.2-59-g1dd0034",
-			"Rev": "1dd0034f7fe862dd8dc86a02602ff6f9e546f5fe"
 		},
 		{
 			"ImportPath": "github.com/jbenet/go-multihash",

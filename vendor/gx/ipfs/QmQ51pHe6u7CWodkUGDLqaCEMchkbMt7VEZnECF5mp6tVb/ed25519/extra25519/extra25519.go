@@ -6,6 +6,7 @@ package extra25519
 
 import (
 	"crypto/sha512"
+
 	"gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/edwards25519"
 )
 
