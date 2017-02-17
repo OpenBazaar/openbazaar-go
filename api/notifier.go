@@ -1,7 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"net/smtp"
+	"strings"
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -65,19 +67,28 @@ type smtpNotifier struct {
 }
 
 func (notifier *smtpNotifier) notify(n interface{}) error {
+	template := strings.Join([]string{
+		"From: %s",
+		"To: %s",
+		"MIME-Version: 1.0",
+		"Content-Type: text/html; charset=UTF-8",
+		"Subject: [OpenBazaar] %s\r\n",
+		"%s\r\n",
+	}, "\r\n")
 	head, body := notifications.Describe(n)
-	subject := "[OpenBazaar] " + head
-	return sendEmail(notifier.settings, subject, []byte(body))
+	conf := notifier.settings
+	data := fmt.Sprintf(template, conf.SenderEmail, conf.RecipientEmail, head, body)
+	return sendEmail(notifier.settings, []byte(data))
 }
 
 // Send email using PLAIN authentication to the server
-func sendEmail(conf *repo.SMTPSettings, subject string, body []byte) error {
-	auth := smtp.PlainAuth("", conf.SenderEmail, conf.Password, conf.ServerAddress)
-	return smtp.SendMail(
-		conf.ServerAddress+":587",
-		auth,
-		conf.SenderEmail,
-		[]string{conf.RecipientEmail},
-		body,
-	)
+func sendEmail(conf *repo.SMTPSettings, body []byte) error {
+	hostAndPort := strings.Split(conf.ServerAddress, ":")
+	host := conf.ServerAddress
+	if len(hostAndPort) == 2 {
+		host = hostAndPort[0]
+	}
+	auth := smtp.PlainAuth("", conf.SenderEmail, conf.Password, host)
+	recipients := []string{conf.RecipientEmail}
+	return smtp.SendMail(conf.ServerAddress, auth, conf.SenderEmail, recipients, body)
 }
