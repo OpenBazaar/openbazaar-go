@@ -187,6 +187,14 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Maybe set as moderator
+	if profile.Moderator {
+		if err := i.node.SetSelfAsModerator(profile.ModInfo); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -219,16 +227,15 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// If profile is not set tell them to use POST
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-	_, ferr := os.Stat(profilePath)
-	if os.IsNotExist(ferr) {
+	currentProfile, err := i.node.GetProfile()
+	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
 		return
 	}
 
 	// Check JSON decoding and add proper indentation
 	profile := new(pb.Profile)
-	err := jsonpb.Unmarshal(r.Body, profile)
+	err = jsonpb.Unmarshal(r.Body, profile)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -239,6 +246,19 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Update moderator
+	if profile.Moderator && currentProfile.Moderator != profile.Moderator {
+		if err := i.node.SetSelfAsModerator(nil); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else if !profile.Moderator && currentProfile.Moderator != profile.Moderator {
+		if err := i.node.RemoveSelfAsModerator(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Update followers/following
@@ -2032,7 +2052,6 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 				}
 				i.node.Broadcast <- ser
 			}(p)
-
 		}
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/btcsuite/goleveldb/leveldb/errors"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/imdario/mergo"
 )
@@ -77,6 +78,28 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 			if ok {
 				amt := fixedFee.(map[string]interface{})["amount"].(float64)
 				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
+			}
+		}
+	}
+
+	patchMod, pok := patch["moderator"]
+	storedMod, sok := profile["moderator"]
+	if pok && sok {
+		patchBool, ok := patchMod.(bool)
+		if !ok {
+			return errors.New("Invalid moderator type")
+		}
+		storedBool, ok := storedMod.(bool)
+		if !ok {
+			return errors.New("Invalid moderator type")
+		}
+		if patchBool && patchBool != storedBool {
+			if err := n.SetSelfAsModerator(nil); err != nil {
+				return err
+			}
+		} else if !patchBool && patchBool != storedBool {
+			if err := n.RemoveSelfAsModerator(); err != nil {
+				return err
 			}
 		}
 	}

@@ -32,23 +32,25 @@ func init() {
 }
 
 func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
-	if moderator.Fee == nil {
-		return errors.New("Moderator must have a fee set")
-	}
-	if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
-		return errors.New("Fixed fee must be set when using a fixed fee type")
-	}
+	if moderator != nil {
+		if moderator.Fee == nil {
+			return errors.New("Moderator must have a fee set")
+		}
+		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
+			return errors.New("Fixed fee must be set when using a fixed fee type")
+		}
 
-	// Update profile
-	profile, err := n.GetProfile()
-	if err != nil {
-		return err
-	}
-	profile.Moderator = true
-	profile.ModInfo = moderator
-	err = n.UpdateProfile(&profile)
-	if err != nil {
-		return err
+		// Update profile
+		profile, err := n.GetProfile()
+		if err != nil {
+			return err
+		}
+		profile.Moderator = true
+		profile.ModInfo = moderator
+		err = n.UpdateProfile(&profile)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Publish pointer
