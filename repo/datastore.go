@@ -97,6 +97,9 @@ type Pointers interface {
 	// Delete all pointers of a given purpose
 	DeleteAll(purpose ipfs.Purpose) error
 
+	// Fetch all pointers of the given type
+	Get(purpose ipfs.Purpose) ([]ipfs.Pointer, error)
+
 	// Fetch the entire list of pointers
 	GetAll() ([]ipfs.Pointer, error)
 }

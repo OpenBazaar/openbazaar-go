@@ -127,3 +127,41 @@ func TestGetAllPointers(t *testing.T) {
 		}
 	}
 }
+
+func TestGetPointers(t *testing.T) {
+	pdb.Put(pointer)
+	randBytes := make([]byte, 32)
+	rand.Read(randBytes)
+	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
+	id, _ := peer.IDFromBytes(h)
+	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
+	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
+	m := ipfs.Pointer{
+		k,
+		ps.PeerInfo{
+			ID:    id,
+			Addrs: []ma.Multiaddr{maAddr},
+		},
+		ipfs.MODERATOR,
+		time.Now(),
+	}
+	err := pdb.Put(m)
+	pointers, err := pdb.Get(ipfs.MODERATOR)
+	if err != nil {
+		t.Error("Get pointers returned error")
+	}
+	if len(pointers) != 1 {
+		t.Error("Returned incorrect number of pointers")
+	}
+	for _, p := range pointers {
+		if p.Purpose != m.Purpose {
+			t.Error("Get pointers returned incorrect data")
+		}
+		if p.Value.ID != m.Value.ID {
+			t.Error("Get pointers returned incorrect data")
+		}
+		if !p.Cid.Equals(m.Cid) {
+			t.Error("Get pointers returned incorrect data")
+		}
+	}
+}

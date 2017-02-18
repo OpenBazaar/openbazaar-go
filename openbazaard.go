@@ -785,7 +785,7 @@ func (x *Start) Execute(args []string) error {
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 16, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB)
+		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.IsModerator)
 		go PR.Run()
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {
