@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
@@ -11,7 +12,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/btcsuite/goleveldb/leveldb/errors"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/imdario/mergo"
 	ipnspath "github.com/ipfs/go-ipfs/path"
