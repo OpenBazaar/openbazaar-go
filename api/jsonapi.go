@@ -1216,12 +1216,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		p, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "profile")))
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		err = jsonpb.UnmarshalString(string(p), &profile)
+		profile, err = i.node.FetchProfile(peerId)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1435,19 +1430,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 	async, _ := strconv.ParseBool(query)
 	include := r.URL.Query().Get("include")
 
-	getProfile := func(pid string) (*pb.Profile, error) {
-		profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
-		if err != nil || len(profile) == 0 {
-			return nil, err
-		}
-		var pro pb.Profile
-		err = jsonpb.UnmarshalString(string(profile), &pro)
-		if err != nil {
-			return nil, err
-		}
-		return &pro, nil
-	}
-
 	ctx := context.Background()
 	if !async {
 		removeDuplicates := func(xs *[]string) {
@@ -1499,7 +1481,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			for _, mod := range mods {
 				wg.Add(1)
 				go func(m string) {
-					profile, err := getProfile(m)
+					profile, err := i.node.FetchProfile(m)
 					if err != nil {
 						wg.Done()
 						return
@@ -1568,7 +1550,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					if !found[string(d.Digest)] {
 						found[string(d.Digest)] = true
 						if strings.ToLower(include) == "profile" {
-							profile, err := getProfile(string(d.Digest))
+							profile, err := i.node.FetchProfile(string(d.Digest))
 							if err != nil {
 								return
 							}
@@ -2090,13 +2072,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		for _, p := range pids {
 			wg.Add(1)
 			go func(pid string) {
-				profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
-				if err != nil || len(profile) == 0 {
-					wg.Done()
-					return
-				}
-				var pro pb.Profile
-				err = jsonpb.UnmarshalString(string(profile), &pro)
+				pro, err := i.node.FetchProfile(pid)
 				if err != nil {
 					wg.Done()
 					return
@@ -2133,12 +2109,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		go func() {
 			for _, p := range pids {
 				go func(pid string) {
-					profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
-					if err != nil || len(profile) == 0 {
-						return
-					}
-					var pro pb.Profile
-					err = jsonpb.UnmarshalString(string(profile), &pro)
+					pro, err := i.node.FetchProfile(pid)
 					if err != nil {
 						return
 					}

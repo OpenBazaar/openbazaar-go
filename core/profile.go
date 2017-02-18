@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/goleveldb/leveldb/errors"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/imdario/mergo"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -27,6 +29,19 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 		return profile, err
 	}
 	return profile, nil
+}
+
+func (n *OpenBazaarNode) FetchProfile(peerId string) (pb.Profile, error) {
+	profile, err := ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile")))
+	if err != nil || len(profile) == 0 {
+		return pb.Profile{}, err
+	}
+	var pro pb.Profile
+	err = jsonpb.UnmarshalString(string(profile), &pro)
+	if err != nil {
+		return pb.Profile{}, err
+	}
+	return pro, nil
 }
 
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
