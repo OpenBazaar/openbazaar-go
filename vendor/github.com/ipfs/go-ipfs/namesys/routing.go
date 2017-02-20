@@ -144,7 +144,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 	resp := make(chan error, 2)
 	go func() {
 		ipnsKey := string(h)
-		val, err := r.routing.GetValue(ctx, ipnsKey)
+		val, err = r.routing.GetValue(ctx, ipnsKey)
 		if err != nil {
 			log.Warning("RoutingResolve get failed.")
 			resp <- err
