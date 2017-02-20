@@ -25,6 +25,7 @@ import (
 // results and continue querying closer peers. Note that different query
 // results will wait for the channel to drain.
 var asyncQueryBuffer = 10
+var QuerySize = 10
 
 // This file implements the Routing interface for the IpfsDHT struct.
 
@@ -87,7 +88,7 @@ func (dht *IpfsDHT) GetValue(ctx context.Context, key string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	vals, err := dht.GetValues(ctx, key, 10)
+	vals, err := dht.GetValues(ctx, key, QuerySize)
 	if err != nil {
 		return nil, err
 	}

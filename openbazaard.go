@@ -57,6 +57,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	dht "github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
@@ -604,6 +605,19 @@ func (x *Start) Execute(args []string) error {
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
 		return nd, nil
+	}
+
+	// Set IPNS query size
+	ipnsConfig, err := nd.Repo.GetConfigKey("Ipns")
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	qs := ipnsConfig.(map[string]interface{})["QuerySize"].(float64)
+	if qs <= 20 {
+		dht.QuerySize = int(qs)
+	} else {
+		dht.QuerySize = 20
 	}
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
