@@ -358,7 +358,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 }
 
 func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ratingPath string) error {
-	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "ratingsIndex.json")
 
 	type ratingShort struct {
 		Hash string `json:"hash"`

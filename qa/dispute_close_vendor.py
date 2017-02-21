@@ -72,7 +72,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
+        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listingsIndex.json"
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("DisputeCloseVendorTest - FAIL: Couldn't get listing index")
@@ -187,7 +187,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "FULFILLED":
             raise TestFailure("FulfillDirectOnlineTest - FAIL: Alice failed to order fulfillment")
-        
+
         # Alice open dispute
         dispute = {
             "orderId": orderId,

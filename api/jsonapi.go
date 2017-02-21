@@ -1094,7 +1094,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", "index.json")))
+		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listingsIndex.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return

@@ -45,7 +45,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
+        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listingsIndex.json"
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't get listing index")
@@ -126,7 +126,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # alice send order fulfillment
         with open('testdata/fulfillment.json') as fulfillment_file:
             fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
