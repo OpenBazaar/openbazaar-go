@@ -5,7 +5,6 @@ import os
 import sys
 import subprocess
 import shutil
-import smtpd
 import time
 import json
 import argparse
@@ -200,14 +199,5 @@ class OpenBazaarTestFramework(object):
         else:
             self.teardown(False)
 
-
         if failure:
             sys.exit(1)
-
-
-SMTP_DUMPFILE = 'mail.dump'
-
-class SMTPTestServer(smtpd.SMTPServer):
-    def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
-        with open(SMTP_DUMPFILE, 'w') as f:
-            f.write(data)
