@@ -20,7 +20,6 @@ import (
 	"encoding/hex"
 
 	"crypto/sha256"
-	"encoding/base64"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -1832,16 +1831,21 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	} else {
 		flag = pb.Chat_MESSAGE
 	}
-	msgIdBytes := make([]byte, 10)
-	_, err = rand.Read(msgIdBytes)
+	tss := strconv.Itoa(int(ts.Seconds))
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + tss))
+	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	msgId := base64.StdEncoding.EncodeToString(msgIdBytes)
+	msgId, err := mh.Cast(encoded)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	chatPb := &pb.Chat{
-		MessageId: msgId,
+		MessageId: msgId.B58String(),
 		Subject:   chat.Subject,
 		Message:   chat.Message,
 		Timestamp: ts,
@@ -1854,7 +1858,7 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	}
 	// Put to database
 	if chatPb.Flag == pb.Chat_MESSAGE {
-		err = i.node.Datastore.Chat().Put(msgId, chat.PeerId, chat.Subject, chat.Message, t, false, true)
+		err = i.node.Datastore.Chat().Put(msgId.B58String(), chat.PeerId, chat.Subject, chat.Message, t, false, true)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

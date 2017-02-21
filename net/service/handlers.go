@@ -1,6 +1,7 @@
 package service
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,8 +18,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
+	"strconv"
 	"time"
 )
 
@@ -896,7 +899,6 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		service.broadcast <- notifications.Serialize(n)
 		return nil, nil
 	}
-
 	if chat.Flag == pb.Chat_READ {
 		n := notifications.ChatRead{
 			PeerId:    p.Pretty(),
@@ -929,6 +931,20 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 			return nil, errors.New("Invalid timestamp")
 		}
 		t = time.Unix(chat.Timestamp.Seconds, 0)
+	}
+
+	tss := strconv.Itoa(int(chat.Timestamp.Seconds))
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + tss))
+	encoded, err := mh.Encode(h[:], mh.SHA2_256)
+	if err != nil {
+		return nil, err
+	}
+	msgId, err := mh.Cast(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if msgId.B58String() != chat.MessageId {
+		return nil, errors.New("Invalid message ID")
 	}
 
 	// Put to database
