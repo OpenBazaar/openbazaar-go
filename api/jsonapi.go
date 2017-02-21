@@ -1432,17 +1432,17 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	if !async {
-		removeDuplicates := func(xs *[]string) {
+		removeDuplicates := func(xs []string) {
 			found := make(map[string]bool)
 			j := 0
-			for i, x := range *xs {
+			for i, x := range xs {
 				if !found[x] {
 					found[x] = true
-					(*xs)[j] = (*xs)[i]
+					(xs)[j] = (xs)[i]
 					j++
 				}
 			}
-			*xs = (*xs)[:j]
+			xs = (xs)[:j]
 		}
 		type modWithProfile struct {
 			PeerId  string      `json:"peerId"`
@@ -1455,6 +1455,9 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
+			if len(p.Addrs) == 0 {
+				continue
+			}
 			addr := p.Addrs[0]
 			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
 				continue
@@ -1474,7 +1477,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			mods = append(mods, string(d.Digest))
 		}
 		var resp []byte
-		removeDuplicates(&mods)
+		removeDuplicates(mods)
 		if strings.ToLower(include) == "profile" {
 			var withProfiles []modWithProfile
 			var wg sync.WaitGroup
@@ -1531,6 +1534,9 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			found := make(map[string]bool)
 			for p := range peerChan {
 				go func() {
+					if len(p.Addrs) == 0 {
+						return
+					}
 					addr := p.Addrs[0]
 					if addr.Protocols()[0].Code != multiaddr.P_IPFS {
 						return
