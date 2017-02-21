@@ -169,7 +169,7 @@ const profileJSON = `{
     "numRatings": 21000000,
     "nsfw": true,
     "vendor": true,
-    "moderator": true,
+    "moderator": false,
     "primaryColor": "#000000",
     "secondaryColor": "#FFD700",
     "textColor": "#ffffff",

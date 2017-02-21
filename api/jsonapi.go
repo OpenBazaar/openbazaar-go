@@ -187,6 +187,14 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Maybe set as moderator
+	if profile.Moderator {
+		if err := i.node.SetSelfAsModerator(profile.ModInfo); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	// Update followers/following
 	err = i.node.UpdateFollow()
 	if err != nil {
@@ -219,16 +227,15 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// If profile is not set tell them to use POST
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
-	_, ferr := os.Stat(profilePath)
-	if os.IsNotExist(ferr) {
+	currentProfile, err := i.node.GetProfile()
+	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
 		return
 	}
 
 	// Check JSON decoding and add proper indentation
 	profile := new(pb.Profile)
-	err := jsonpb.Unmarshal(r.Body, profile)
+	err = jsonpb.Unmarshal(r.Body, profile)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -239,6 +246,19 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+
+	// Update moderator
+	if profile.Moderator && currentProfile.Moderator != profile.Moderator {
+		if err := i.node.SetSelfAsModerator(nil); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else if !profile.Moderator && currentProfile.Moderator != profile.Moderator {
+		if err := i.node.RemoveSelfAsModerator(); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Update followers/following
@@ -1196,12 +1216,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		p, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "profile")))
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		err = jsonpb.UnmarshalString(string(p), &profile)
+		profile, err = i.node.FetchProfile(peerId)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1413,9 +1428,26 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("async")
 	async, _ := strconv.ParseBool(query)
+	include := r.URL.Query().Get("include")
 
 	ctx := context.Background()
 	if !async {
+		removeDuplicates := func(xs []string) {
+			found := make(map[string]bool)
+			j := 0
+			for i, x := range xs {
+				if !found[x] {
+					found[x] = true
+					(xs)[j] = (xs)[i]
+					j++
+				}
+			}
+			xs = (xs)[:j]
+		}
+		type modWithProfile struct {
+			PeerId  string      `json:"peerId"`
+			Profile interface{} `json:"profile"`
+		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1423,6 +1455,9 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
+			if len(p.Addrs) == 0 {
+				continue
+			}
 			addr := p.Addrs[0]
 			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
 				continue
@@ -1441,10 +1476,35 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			mods = append(mods, string(d.Digest))
 		}
-		resp, err := json.MarshalIndent(mods, "", "    ")
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+		var resp []byte
+		removeDuplicates(mods)
+		if strings.ToLower(include) == "profile" {
+			var withProfiles []modWithProfile
+			var wg sync.WaitGroup
+			for _, mod := range mods {
+				wg.Add(1)
+				go func(m string) {
+					profile, err := i.node.FetchProfile(m)
+					if err != nil {
+						wg.Done()
+						return
+					}
+					withProfiles = append(withProfiles, modWithProfile{mod, profile})
+					wg.Done()
+				}(mod)
+			}
+			wg.Wait()
+			resp, err = json.MarshalIndent(withProfiles, "", "    ")
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		} else {
+			resp, err = json.MarshalIndent(mods, "", "    ")
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 		}
 		fmt.Fprint(w, string(resp))
 	} else {
@@ -1459,36 +1519,65 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		respJson, _ := json.MarshalIndent(response, "", "    ")
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, string(respJson))
-		peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
+		go func() {
+			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
-		type wsResp struct {
-			Id        string `json:"id"`
-			Moderator string `json:"moderator"`
-		}
-		for p := range peerChan {
-			addr := p.Addrs[0]
-			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
-				continue
+			type wsResp struct {
+				Id        string `json:"id"`
+				Moderator string `json:"moderator"`
 			}
-			val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
-			if err != nil {
-				continue
+			type wsRespWithProfile struct {
+				Id        string      `json:"id"`
+				Moderator string      `json:"moderator"`
+				Profile   interface{} `json:"profile"`
 			}
-			mh, err := multihash.FromB58String(val)
-			if err != nil {
-				continue
+			found := make(map[string]bool)
+			for p := range peerChan {
+				go func() {
+					if len(p.Addrs) == 0 {
+						return
+					}
+					addr := p.Addrs[0]
+					if addr.Protocols()[0].Code != multiaddr.P_IPFS {
+						return
+					}
+					val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
+					if err != nil {
+						return
+					}
+					mh, err := multihash.FromB58String(val)
+					if err != nil {
+						return
+					}
+					d, err := multihash.Decode(mh)
+					if err != nil {
+						return
+					}
+					if !found[string(d.Digest)] {
+						found[string(d.Digest)] = true
+						if strings.ToLower(include) == "profile" {
+							profile, err := i.node.FetchProfile(string(d.Digest))
+							if err != nil {
+								return
+							}
+							resp := wsRespWithProfile{id, string(d.Digest), profile}
+							respJson, err := json.MarshalIndent(resp, "", "    ")
+							if err != nil {
+								return
+							}
+							i.node.Broadcast <- respJson
+						} else {
+							resp := wsResp{id, string(d.Digest)}
+							respJson, err := json.MarshalIndent(resp, "", "    ")
+							if err != nil {
+								return
+							}
+							i.node.Broadcast <- respJson
+						}
+					}
+				}()
 			}
-			d, err := multihash.Decode(mh)
-			if err != nil {
-				continue
-			}
-			resp := wsResp{id, string(d.Digest)}
-			respJson, err := json.MarshalIndent(resp, "", "    ")
-			if err != nil {
-				continue
-			}
-			i.node.Broadcast <- respJson
-		}
+		}()
 	}
 }
 
@@ -1979,29 +2068,22 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	type ProfileObj struct {
-		PeerId  string      `json:"peerId"`
-		Profile interface{} `json:"profile"`
-	}
 	if !async {
+		type ProfileObj struct {
+			PeerId  string      `json:"peerId"`
+			Profile interface{} `json:"profile"`
+		}
 		var wg sync.WaitGroup
 		var ret []ProfileObj
 		for _, p := range pids {
 			wg.Add(1)
 			go func(pid string) {
-				profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
-				if err != nil || len(profile) == 0 {
-					wg.Done()
-					return
-				}
-				var pro pb.Profile
-				err = jsonpb.UnmarshalString(string(profile), &pro)
+				pro, err := i.node.FetchProfile(pid)
 				if err != nil {
 					wg.Done()
 					return
 				}
-				obj := ProfileObj{p, pro}
+				obj := ProfileObj{pid, pro}
 				ret = append(ret, obj)
 				wg.Done()
 			}(p)
@@ -2014,25 +2096,37 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		}
 		fmt.Fprint(w, string(retObj))
 	} else {
-		for _, p := range pids {
-			go func(pid string) {
-				profile, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(pid, "profile")))
-				if err != nil || len(profile) == 0 {
-					return
-				}
-				var pro pb.Profile
-				err = jsonpb.UnmarshalString(string(profile), &pro)
-				if err != nil {
-					return
-				}
-				obj := ProfileObj{p, pro}
-				ser, err := json.MarshalIndent(obj, "", "    ")
-				if err != nil {
-					return
-				}
-				i.node.Broadcast <- ser
-			}(p)
-
+		type ProfileObj struct {
+			Id      string      `json:"id"`
+			PeerId  string      `json:"peerId"`
+			Profile interface{} `json:"profile"`
 		}
+		idBytes := make([]byte, 16)
+		rand.Read(idBytes)
+		id := base58.Encode(idBytes)
+
+		type resp struct {
+			Id string `json:"id"`
+		}
+		response := resp{id}
+		respJson, _ := json.MarshalIndent(response, "", "    ")
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, string(respJson))
+		go func() {
+			for _, p := range pids {
+				go func(pid string) {
+					pro, err := i.node.FetchProfile(pid)
+					if err != nil {
+						return
+					}
+					obj := ProfileObj{id, p, pro}
+					ser, err := json.MarshalIndent(obj, "", "    ")
+					if err != nil {
+						return
+					}
+					i.node.Broadcast <- ser
+				}(p)
+			}
+		}()
 	}
 }

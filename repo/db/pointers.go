@@ -7,6 +7,7 @@ import (
 	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
 	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -61,6 +62,51 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	stm := "select * from pointers"
+	rows, err := p.db.Query(stm)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ret []ipfs.Pointer
+	for rows.Next() {
+		var pointerID string
+		var key string
+		var address string
+		var purpose int
+		var timestamp int
+		if err := rows.Scan(&pointerID, &key, &address, &purpose, &timestamp); err != nil {
+			return ret, err
+		}
+		maAddr, err := ma.NewMultiaddr(address)
+		if err != nil {
+			return ret, err
+		}
+		pid, err := peer.IDB58Decode(pointerID)
+		if err != nil {
+			return ret, err
+		}
+		k, err := cid.Decode(key)
+		if err != nil {
+			return ret, err
+		}
+		pointer := ipfs.Pointer{
+			Cid: k,
+			Value: ps.PeerInfo{
+				ID:    pid,
+				Addrs: []ma.Multiaddr{maAddr},
+			},
+			Purpose:   ipfs.Purpose(purpose),
+			Timestamp: time.Unix(int64(timestamp), 0),
+		}
+		ret = append(ret, pointer)
+	}
+	return ret, nil
+}
+
+func (p *PointersDB) Get(purpose ipfs.Purpose) ([]ipfs.Pointer, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	stm := "select * from pointers where purpose=" + strconv.Itoa(int(purpose))
 	rows, err := p.db.Query(stm)
 	if err != nil {
 		return nil, err

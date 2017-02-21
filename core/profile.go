@@ -3,15 +3,18 @@ package core
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/imdario/mergo"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -26,6 +29,19 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 		return profile, err
 	}
 	return profile, nil
+}
+
+func (n *OpenBazaarNode) FetchProfile(peerId string) (pb.Profile, error) {
+	profile, err := ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile")))
+	if err != nil || len(profile) == 0 {
+		return pb.Profile{}, err
+	}
+	var pro pb.Profile
+	err = jsonpb.UnmarshalString(string(profile), &pro)
+	if err != nil {
+		return pb.Profile{}, err
+	}
+	return pro, nil
 }
 
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
@@ -77,6 +93,28 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 			if ok {
 				amt := fixedFee.(map[string]interface{})["amount"].(float64)
 				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
+			}
+		}
+	}
+
+	patchMod, pok := patch["moderator"]
+	storedMod, sok := profile["moderator"]
+	if pok && sok {
+		patchBool, ok := patchMod.(bool)
+		if !ok {
+			return errors.New("Invalid moderator type")
+		}
+		storedBool, ok := storedMod.(bool)
+		if !ok {
+			return errors.New("Invalid moderator type")
+		}
+		if patchBool && patchBool != storedBool {
+			if err := n.SetSelfAsModerator(nil); err != nil {
+				return err
+			}
+		} else if !patchBool && patchBool != storedBool {
+			if err := n.RemoveSelfAsModerator(); err != nil {
+				return err
 			}
 		}
 	}

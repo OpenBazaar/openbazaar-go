@@ -31,53 +31,66 @@ func init() {
 	ModeratorPointerID = mh
 }
 
-func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
-	if moderator.Fee == nil {
-		return errors.New("Moderator must have a fee set")
-	}
-	if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
-		return errors.New("Fixed fee must be set when using a fixed fee type")
-	}
-
-	// Update profile
+func (n *OpenBazaarNode) IsModerator() bool {
 	profile, err := n.GetProfile()
 	if err != nil {
-		return err
+		return false
 	}
-	profile.Moderator = true
-	profile.ModInfo = moderator
-	err = n.UpdateProfile(&profile)
-	if err != nil {
-		return err
+	return profile.Moderator
+}
+
+func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
+	if moderator != nil {
+		if moderator.Fee == nil {
+			return errors.New("Moderator must have a fee set")
+		}
+		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
+			return errors.New("Fixed fee must be set when using a fixed fee type")
+		}
+
+		// Update profile
+		profile, err := n.GetProfile()
+		if err != nil {
+			return err
+		}
+		profile.Moderator = true
+		profile.ModInfo = moderator
+		err = n.UpdateProfile(&profile)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Publish pointer
+	pointers, err := n.Datastore.Pointers().Get(ipfs.MODERATOR)
 	ctx := context.Background()
-
-	b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)
-	if err != nil {
-		return err
-	}
-	mhc, err := multihash.Cast(b)
-	if err != nil {
-		return err
-	}
-	addr, err := ma.NewMultiaddr("/ipfs/" + mhc.B58String())
-	if err != nil {
-		return err
-	}
-	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, ModeratorPointerID, 64, addr)
-	if err != nil {
-		return err
-	}
-	pointer.Purpose = ipfs.MODERATOR
-	err = n.Datastore.Pointers().DeleteAll(pointer.Purpose)
-	if err != nil {
-		return err
-	}
-	err = n.Datastore.Pointers().Put(pointer)
-	if err != nil {
-		return err
+	if err != nil || len(pointers) == 0 {
+		b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)
+		if err != nil {
+			return err
+		}
+		mhc, err := multihash.Cast(b)
+		if err != nil {
+			return err
+		}
+		addr, err := ma.NewMultiaddr("/ipfs/" + mhc.B58String())
+		if err != nil {
+			return err
+		}
+		pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, ModeratorPointerID, 64, addr)
+		if err != nil {
+			return err
+		}
+		pointer.Purpose = ipfs.MODERATOR
+		err = n.Datastore.Pointers().Put(pointer)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := ipfs.RePublishPointer(n.IpfsNode, ctx, pointers[0])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
