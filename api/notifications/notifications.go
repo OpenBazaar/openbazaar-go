@@ -326,34 +326,6 @@ func Describe(i interface{}) (string, string) {
 		n := i.(DisputeCloseNotification)
 		form := "Dispute around order \"%s\" was closed."
 		body = fmt.Sprintf(form, n.OrderId)
-
-	case FollowNotification:
-		head = "Follow"
-
-		n := i.(FollowNotification)
-		form := "New follower: %s."
-		body = fmt.Sprintf(form, n.Follow)
-
-	case UnfollowNotification:
-		head = "Unfollow"
-
-		n := i.(UnfollowNotification)
-		form := "Follower just left: %s."
-		body = fmt.Sprintf(form, n.Unfollow)
-
-	case StatusNotification:
-		head = "Status"
-
-		n := i.(StatusNotification)
-		form := "Node tatus update: %s"
-		body = fmt.Sprintf(form, n.Status)
-
-	case ChatMessage:
-		head = "New chat message received"
-
-		n := i.(ChatMessage)
-		form := "New chat message from \"%s\"\n\nTime: %s\nSubject: %s\n%s\n"
-		body = fmt.Sprintf(form, n.PeerId, n.Timestamp, n.Subject, n.Message)
 	}
 	return head, body
 }
