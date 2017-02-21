@@ -3,7 +3,17 @@ package core
 import (
 	"bytes"
 	"errors"
+	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
+	gonet "net"
+	"net/http"
+	"net/url"
+	"path"
+	"time"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -16,14 +26,6 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
-	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
-	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
-	gonet "net"
-	"net/http"
-	"net/url"
-	"path"
-	"time"
 )
 
 var (
@@ -59,7 +61,7 @@ type OpenBazaarNode struct {
 	Datastore repo.Datastore
 
 	// Websocket channel used for pushing data to the UI
-	Broadcast chan []byte
+	Broadcast chan interface{}
 
 	// Bitcoin wallet implementation
 	Wallet bitcoin.BitcoinWallet
@@ -117,7 +119,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 
 func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
-		n.Broadcast <- []byte(`{"status": "publishing"}`)
+		n.Broadcast <- notifications.StatusNotification{"publishing"}
 	}
 	var err error
 	inflightPublishRequests++
@@ -126,9 +128,9 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- []byte(`{"status": "error publishing"}`)
+			n.Broadcast <- notifications.StatusNotification{"error publishing"}
 		} else {
-			n.Broadcast <- []byte(`{"status": "publish complete"}`)
+			n.Broadcast <- notifications.StatusNotification{"publish complete"}
 		}
 	}
 }

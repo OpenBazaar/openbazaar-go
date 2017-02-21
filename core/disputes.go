@@ -4,6 +4,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"strconv"
+	"sync"
+	"time"
+
+	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
@@ -14,12 +22,6 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
-	libp2p "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
-	"strconv"
-	"sync"
-	"time"
 )
 
 var DisputeWg = new(sync.WaitGroup)
@@ -322,7 +324,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 	}
 
 	notif := notifications.DisputeOpenNotification{orderId}
-	n.Broadcast <- notifications.Serialize(notif)
+	n.Broadcast <- notif
 	n.Datastore.Notifications().Put(notif, time.Now())
 
 	return nil

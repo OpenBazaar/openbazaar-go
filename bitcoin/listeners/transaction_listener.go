@@ -3,6 +3,11 @@ package bitcoin
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -12,22 +17,18 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
-	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
-	"strings"
-	"sync"
-	"time"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
 
 type TransactionListener struct {
 	db        repo.Datastore
-	broadcast chan []byte
+	broadcast chan interface{}
 	params    *chaincfg.Params
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan []byte, params *chaincfg.Params) *TransactionListener {
+func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, params *chaincfg.Params) *TransactionListener {
 	l := &TransactionListener{db, broadcast, params, new(sync.Mutex)}
 	return l
 }
@@ -148,7 +149,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 				orderId,
 			}
 
-			l.broadcast <- notifications.Serialize(n)
+			l.broadcast <- n
 			l.db.Notifications().Put(n, time.Now())
 		}
 	}
@@ -193,7 +194,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			orderId,
 			uint64(funding),
 		}
-		l.broadcast <- notifications.Serialize(n)
+		l.broadcast <- n
 		l.db.Notifications().Put(n, time.Now())
 	}
 

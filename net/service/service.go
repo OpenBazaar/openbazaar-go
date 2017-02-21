@@ -28,7 +28,7 @@ type OpenBazaarService struct {
 	peerstore ps.Peerstore
 	cmdCtx    commands.Context
 	ctx       context.Context
-	broadcast chan []byte
+	broadcast chan interface{}
 	datastore repo.Datastore
 	node      *core.OpenBazaarNode
 }

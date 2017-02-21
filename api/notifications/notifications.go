@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -12,14 +13,21 @@ type Notification struct {
 	Read      bool      `json:"read"`
 }
 
-type Data interface{}
+type Data interface {
+	// TODO maybe should be made 'real interface', which will allow
+	// to use typed channels, type checking and semantic dispatching
+	// instead of typecase:
+
+	// Serialize() []byte
+	// Describe() (string, string)
+}
 
 type notificationWrapper struct {
 	Notification Data `json:"notification"`
 }
 
 type messageWrapper struct {
-	Message interface{} `json:"message"`
+	Message Data `json:"message"`
 }
 
 type messageReadWrapper struct {
@@ -124,6 +132,10 @@ type UnfollowNotification struct {
 	Unfollow string `json:"unfollow"`
 }
 
+type StatusNotification struct {
+	Status string `json:"status"`
+}
+
 type ChatMessage struct {
 	MessageId string    `json:"messageId"`
 	PeerId    string    `json:"peerId"`
@@ -214,6 +226,10 @@ func Serialize(i interface{}) []byte {
 		n = notificationWrapper{
 			i.(UnfollowNotification),
 		}
+	case StatusNotification:
+		s := i.(StatusNotification)
+		b, _ := json.Marshal(s)
+		return b
 	case ChatMessage:
 		m := messageWrapper{
 			i.(ChatMessage),
@@ -236,4 +252,86 @@ func Serialize(i interface{}) []byte {
 
 	b, _ := json.MarshalIndent(n, "", "    ")
 	return b
+}
+
+func Describe(i interface{}) (string, string) {
+	var head, body string
+	switch i.(type) {
+	case OrderNotification:
+		head = "Order received"
+
+		n := i.(OrderNotification)
+		var buyer string
+		if n.BuyerBlockchainId != "" {
+			buyer = n.BuyerBlockchainId
+		} else {
+			buyer = n.BuyerGuid
+		}
+		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail: %s\nTimestamp: %d"
+		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail, n.Timestamp)
+
+	case PaymentNotification:
+		head = "Payment received"
+
+		n := i.(PaymentNotification)
+		form := "Payment for order \"%s\" received (total %d)."
+		body = fmt.Sprintf(form, n.OrderId, n.FundingTotal)
+
+	case OrderConfirmationNotification:
+		head = "Order confirmed"
+
+		n := i.(OrderConfirmationNotification)
+		form := "Order \"%s\" has been confirmed."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case OrderCancelNotification:
+		head = "Order cancelled"
+
+		n := i.(OrderCancelNotification)
+		form := "Order \"%s\" has been cancelled."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case RefundNotification:
+		head = "Payment refunded"
+
+		n := i.(RefundNotification)
+		form := "Payment refund for order \"%s\" received."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case FulfillmentNotification:
+		head = "Order fulfilled"
+
+		n := i.(FulfillmentNotification)
+		form := "Order \"%s\" was marked as fulfilled."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case CompletionNotification:
+		head = "Order completed"
+
+		n := i.(CompletionNotification)
+		form := "Order \"%s\" was marked as completed."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case DisputeOpenNotification:
+		head = "Dispute opened"
+
+		n := i.(DisputeOpenNotification)
+		form := "Dispute around order \"%s\" was opened."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case DisputeUpdateNotification:
+		head = "Dispute updated"
+
+		n := i.(DisputeUpdateNotification)
+		form := "Dispute around order \"%s\" was updated."
+		body = fmt.Sprintf(form, n.OrderId)
+
+	case DisputeCloseNotification:
+		head = "Dispute closed"
+
+		n := i.(DisputeCloseNotification)
+		form := "Dispute around order \"%s\" was closed."
+		body = fmt.Sprintf(form, n.OrderId)
+	}
+	return head, body
 }

@@ -199,7 +199,5 @@ class OpenBazaarTestFramework(object):
         else:
             self.teardown(False)
 
-
         if failure:
             sys.exit(1)
-
