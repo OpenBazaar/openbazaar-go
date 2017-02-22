@@ -230,7 +230,7 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 			ResolveCacheSize: 128,
 			RecordLifetime:   "7d",
 			RepublishPeriod:  "24h",
-			QuerySize:        10,
+			QuerySize:        5,
 		},
 
 		Gateway: config.Gateway{
