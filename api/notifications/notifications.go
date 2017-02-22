@@ -248,6 +248,8 @@ func Serialize(i interface{}) []byte {
 		}
 		b, _ := json.MarshalIndent(m, "", "    ")
 		return b
+	case []byte:
+		return i.([]byte)
 	}
 
 	b, _ := json.MarshalIndent(n, "", "    ")

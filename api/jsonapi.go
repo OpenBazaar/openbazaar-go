@@ -1443,10 +1443,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			xs = (xs)[:j]
 		}
-		type modWithProfile struct {
-			PeerId  string      `json:"peerId"`
-			Profile interface{} `json:"profile"`
-		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1475,10 +1471,10 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			mods = append(mods, string(d.Digest))
 		}
-		var resp []byte
+		var resp string
 		removeDuplicates(mods)
 		if strings.ToLower(include) == "profile" {
-			var withProfiles []modWithProfile
+			var withProfiles []string
 			var wg sync.WaitGroup
 			for _, mod := range mods {
 				wg.Add(1)
@@ -1488,24 +1484,48 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						wg.Done()
 						return
 					}
-					withProfiles = append(withProfiles, modWithProfile{mod, profile})
+					resp := &pb.PeerAndProfile{mod, &profile}
+					mar := jsonpb.Marshaler{
+						EnumsAsInts:  false,
+						EmitDefaults: true,
+						Indent:       "    ",
+						OrigName:     false,
+					}
+					respJson, err := mar.MarshalToString(resp)
+					if err != nil {
+						return
+					}
+					withProfiles = append(withProfiles, respJson)
 					wg.Done()
 				}(mod)
 			}
 			wg.Wait()
-			resp, err = json.MarshalIndent(withProfiles, "", "    ")
-			if err != nil {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
+			resp = "[\n"
+			max := len(withProfiles)
+			for i, r := range withProfiles {
+				lines := strings.Split(r, "\n")
+				maxx := len(lines)
+				for x, s := range lines {
+					resp += "    "
+					resp += s
+					if x != maxx-1 {
+						resp += "\n"
+					}
+				}
+				if i != max-1 {
+					resp += ",\n"
+				}
 			}
+			resp += "\n]"
 		} else {
-			resp, err = json.MarshalIndent(mods, "", "    ")
+			res, err := json.MarshalIndent(mods, "", "    ")
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
 			}
+			resp = string(res)
 		}
-		fmt.Fprint(w, string(resp))
+		fmt.Fprint(w, resp)
 	} else {
 		idBytes := make([]byte, 16)
 		rand.Read(idBytes)
@@ -1519,17 +1539,12 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, string(respJson))
 		go func() {
+			type wsResp struct {
+				Id     string `json:"id"`
+				PeerId string `json:"peerId"`
+			}
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
-			type wsResp struct {
-				Id        string `json:"id"`
-				Moderator string `json:"moderator"`
-			}
-			type wsRespWithProfile struct {
-				Id        string      `json:"id"`
-				Moderator string      `json:"moderator"`
-				Profile   interface{} `json:"profile"`
-			}
 			found := make(map[string]bool)
 			for p := range peerChan {
 				go func() {
@@ -1559,19 +1574,25 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 							if err != nil {
 								return
 							}
-							resp := wsRespWithProfile{id, string(d.Digest), profile}
-							respJson, err := json.MarshalIndent(resp, "", "    ")
+							resp := pb.PeerAndProfileWithID{id, string(d.Digest), &profile}
+							m := jsonpb.Marshaler{
+								EnumsAsInts:  false,
+								EmitDefaults: true,
+								Indent:       "    ",
+								OrigName:     false,
+							}
+							respJson, err := m.MarshalToString(&resp)
 							if err != nil {
 								return
 							}
-							i.node.Broadcast <- respJson
+							i.node.Broadcast <- []byte(respJson)
 						} else {
 							resp := wsResp{id, string(d.Digest)}
 							respJson, err := json.MarshalIndent(resp, "", "    ")
 							if err != nil {
 								return
 							}
-							i.node.Broadcast <- respJson
+							i.node.Broadcast <- []byte(respJson)
 						}
 					}
 				}()
@@ -2073,12 +2094,8 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if !async {
-		type ProfileObj struct {
-			PeerId  string      `json:"peerId"`
-			Profile interface{} `json:"profile"`
-		}
 		var wg sync.WaitGroup
-		var ret []ProfileObj
+		var ret []string
 		for _, p := range pids {
 			wg.Add(1)
 			go func(pid string) {
@@ -2087,24 +2104,41 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					wg.Done()
 					return
 				}
-				obj := ProfileObj{pid, pro}
-				ret = append(ret, obj)
+				obj := pb.PeerAndProfile{pid, &pro}
+				m := jsonpb.Marshaler{
+					EnumsAsInts:  false,
+					EmitDefaults: true,
+					Indent:       "    ",
+					OrigName:     false,
+				}
+				respJson, err := m.MarshalToString(&obj)
+				if err != nil {
+					return
+				}
+				ret = append(ret, respJson)
 				wg.Done()
 			}(p)
 		}
 		wg.Wait()
-		retObj, err := json.MarshalIndent(ret, "", "    ")
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+		resp := "[\n"
+		max := len(ret)
+		for i, r := range ret {
+			lines := strings.Split(r, "\n")
+			maxx := len(lines)
+			for x, s := range lines {
+				resp += "    "
+				resp += s
+				if x != maxx-1 {
+					resp += "\n"
+				}
+			}
+			if i != max-1 {
+				resp += ",\n"
+			}
 		}
-		fmt.Fprint(w, string(retObj))
+		resp += "\n]"
+		fmt.Fprint(w, resp)
 	} else {
-		type ProfileObj struct {
-			Id      string      `json:"id"`
-			PeerId  string      `json:"peerId"`
-			Profile interface{} `json:"profile"`
-		}
 		idBytes := make([]byte, 16)
 		rand.Read(idBytes)
 		id := base58.Encode(idBytes)
@@ -2123,12 +2157,18 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					if err != nil {
 						return
 					}
-					obj := ProfileObj{id, p, pro}
-					ser, err := json.MarshalIndent(obj, "", "    ")
+					obj := pb.PeerAndProfileWithID{id, p, &pro}
+					m := jsonpb.Marshaler{
+						EnumsAsInts:  false,
+						EmitDefaults: true,
+						Indent:       "    ",
+						OrigName:     false,
+					}
+					respJson, err := m.MarshalToString(&obj)
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- ser
+					i.node.Broadcast <- []byte(respJson)
 				}(p)
 			}
 		}()

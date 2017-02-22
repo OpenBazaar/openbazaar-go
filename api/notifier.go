@@ -24,6 +24,9 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 	go func() {
 		for {
 			n := <-nodeBroadcast
+			// Fixme: right now this assumes that n is a notification but it should be agnostic
+			// enough to let us send any data to the websocket. You can technically do that by
+			// sending over a []byte as the serialize function ignores []bytes but it's kind of hacky.
 			manager.sendNotification(n)
 			out <- notifications.Serialize(n)
 		}
