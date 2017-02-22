@@ -89,11 +89,13 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 		if outInt > 0 {
 			outgoing = true
 		}
+		timestamp := time.Unix(int64(ts), 0)
 		convo := repo.ChatConversation{
-			PeerId:   peerId,
-			Unread:   count,
-			Last:     m,
-			Outgoing: outgoing,
+			PeerId:    peerId,
+			Unread:    count,
+			Last:      m,
+			Timestamp: timestamp,
+			Outgoing:  outgoing,
 		}
 		ret = append(ret, convo)
 	}

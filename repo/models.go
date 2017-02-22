@@ -57,8 +57,9 @@ type ChatMessage struct {
 }
 
 type ChatConversation struct {
-	PeerId   string `json:"peerId"`
-	Unread   int    `json:"unread"`
-	Last     string `json:"lastMessage"`
-	Outgoing bool   `json:"outgoing"`
+	PeerId    string    `json:"peerId"`
+	Unread    int       `json:"unread"`
+	Last      string    `json:"lastMessage"`
+	Timestamp time.Time `json:"timestamp"`
+	Outgoing  bool      `json:"outgoing"`
 }
