@@ -11,6 +11,10 @@ build:
 build_linux:
 	./build.sh linux/amd64
 
+protos:
+	cd pb/protos && protoc --go_out=.. *.proto
+
+
 ##
 ## docker
 ##
