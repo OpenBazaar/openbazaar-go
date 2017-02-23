@@ -481,9 +481,6 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	onionAddrString := "/onion/" + onionAddr + ":4003"
-	// add websocket support for browser peers
-	cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
-	cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip6/::/tcp/9005/ws")
 	if x.Tor {
 		cfg.Addresses.Swarm = []string{}
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
