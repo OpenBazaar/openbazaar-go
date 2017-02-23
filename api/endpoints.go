@@ -6,14 +6,14 @@ import (
 )
 
 func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	switch path {
-	case "/ob/profile", "/ob/profile/":
+	switch {
+	case strings.Contains(path, "/ob/profile"):
 		i.PUTProfile(w, r)
-	case "/ob/settings", "/ob/settings/":
+	case strings.Contains(path, "/ob/settings"):
 		i.PUTSettings(w, r)
-	case "/ob/moderator", "/ob/moderator/":
+	case strings.Contains(path, "/ob/moderator"):
 		i.PUTModerator(w, r)
-	case "/ob/listing", "/ob/listing/":
+	case strings.Contains(path, "/ob/listing"):
 		i.PUTListing(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -21,56 +21,56 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 }
 
 func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	switch path {
-	case "/ob/listing", "/ob/listing/":
+	switch {
+	case strings.Contains(path, "/ob/listing"):
 		i.POSTListing(w, r)
-	case "/ob/purchase", "/ob/purchase/":
+	case strings.Contains(path, "/ob/purpose"):
 		i.POSTPurchase(w, r)
-	case "/ob/follow", "/ob/follow/":
+	case strings.Contains(path, "/ob/follow"):
 		i.POSTFollow(w, r)
-	case "/ob/unfollow", "/ob/unfollow/":
+	case strings.Contains(path, "/ob/unfollow"):
 		i.POSTUnfollow(w, r)
-	case "/ob/profile", "/ob/profile/":
+	case strings.Contains(path, "/ob/profile"):
 		i.POSTProfile(w, r)
-	case "/ob/images", "/ob/images/":
+	case strings.Contains(path, "/ob/images"):
 		i.POSTImage(w, r)
-	case "/wallet/spend", "/wallet/spend/":
+	case strings.Contains(path, "/wallet/spend"):
 		i.POSTSpendCoins(w, r)
-	case "/ob/settings", "/ob/settings/":
+	case strings.Contains(path, "/ob/settings"):
 		i.POSTSettings(w, r)
-	case "/ob/inventory", "/ob/inventory/":
+	case strings.Contains(path, "/ob/inventory"):
 		i.POSTInventory(w, r)
-	case "/ob/avatar", "/ob/avatar/":
+	case strings.Contains(path, "/ob/avatar"):
 		i.POSTAvatar(w, r)
-	case "/ob/header", "/ob/header/":
+	case strings.Contains(path, "/ob/header"):
 		i.POSTHeader(w, r)
-	case "/ob/orderconfirmation", "/ob/orderconfirmation/":
+	case strings.Contains(path, "/ob/orderconfirmation"):
 		i.POSTOrderConfirmation(w, r)
-	case "/ob/ordercancel", "/ob/ordercancel/":
+	case strings.Contains(path, "/ob/ordercancel"):
 		i.POSTOrderCancel(w, r)
-	case "/ob/orderfulfillment", "/ob/orderfulfillment/":
+	case strings.Contains(path, "/ob/orderfulfillment"):
 		i.POSTOrderFulfill(w, r)
-	case "/ob/ordercompletion", "/ob/ordercompletion/":
+	case strings.Contains(path, "/ob/ordercompletion"):
 		i.POSTOrderComplete(w, r)
-	case "/ob/refund", "/ob/refund/":
+	case strings.Contains(path, "/ob/refund"):
 		i.POSTRefund(w, r)
-	case "/wallet/resyncblockchain", "/wallet/resyncblockchain/":
+	case strings.Contains(path, "/wallet/resyncblockchain"):
 		i.POSTResyncBlockchain(w, r)
-	case "/ob/opendispute", "/ob/opendispute/":
+	case strings.Contains(path, "/ob/opendispute"):
 		i.POSTOpenDispute(w, r)
-	case "/ob/closedispute", "/ob/closedispute/":
+	case strings.Contains(path, "/ob/closedispute"):
 		i.POSTCloseDispute(w, r)
-	case "/ob/releasefunds", "/ob/releasefunds/":
+	case strings.Contains(path, "/ob/releasefunds"):
 		i.POSTReleaseFunds(w, r)
-	case "/ob/chat", "/ob/chat/":
+	case strings.Contains(path, "/ob/chat"):
 		i.POSTChat(w, r)
-	case "/ob/markchatasread", "/ob/markchatasread/":
+	case strings.Contains(path, "/ob/markchatasread"):
 		i.POSTMarkChatAsRead(w, r)
-	case "/ob/marknotificationasread", "/ob/marknotificationasread/":
+	case strings.Contains(path, "/ob/marknotificationasread"):
 		i.POSTMarkNotificationAsRead(w, r)
-	case "/ob/fetchprofiles", "/ob/fetchprofiles/":
+	case strings.Contains(path, "/ob/fetchprofiles"):
 		i.POSTFetchProfiles(w, r)
-	case "/ob/shutdown", "/ob/shutdown/":
+	case strings.Contains(path, "/ob/shutdown"):
 		i.POSTShutdown(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -133,10 +133,10 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 }
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	switch path {
-	case "/ob/settings", "/ob/settings/":
+	switch {
+	case strings.Contains(path, "/ob/settings"):
 		i.PATCHSettings(w, r)
-	case "/ob/profile", "/ob/profile/":
+	case strings.Contains(path, "/ob/profile"):
 		i.PATCHProfile(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -144,16 +144,16 @@ func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Reques
 }
 
 func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
-	switch path {
-	case "/ob/moderator", "/ob/moderator/":
+	switch {
+	case strings.Contains(path, "/ob/moderator"):
 		i.DELETEModerator(w, r)
-	case "/ob/listing", "/ob/listing/":
+	case strings.Contains(path, "/ob/listing"):
 		i.DELETEListing(w, r)
-	case "/ob/chatmessage", "/ob/chatmessage/":
+	case strings.Contains(path, "/ob/chatmessage"):
 		i.DELETEChatMessage(w, r)
-	case "/ob/chatconversation", "/ob/chatconversation/":
+	case strings.Contains(path, "/ob/chatconversation"):
 		i.DELETEChatConversation(w, r)
-	case "/ob/notifications", "/ob/notifications/":
+	case strings.Contains(path, "/ob/notifications"):
 		i.DELETENotification(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
