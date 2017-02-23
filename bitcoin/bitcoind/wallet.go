@@ -85,9 +85,13 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 	return &w
 }
 
-func (w *BitcoindWallet) Start() {
-	w.shutdownIfActive()
-	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}
+func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
+	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server"}
+	if rescan {
+		args = append(args, "-rescan")
+	}
+	args = append(args, []string{"-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}...)
+
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")
 	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
@@ -100,6 +104,12 @@ func (w *BitcoindWallet) Start() {
 		socksPort := defaultSocksPort(w.controlPort)
 		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
+	return args
+}
+
+func (w *BitcoindWallet) Start() {
+	w.shutdownIfActive()
+	args := w.BuildArguments(false)
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
 	go startNotificationListener(client, w.listeners)
@@ -492,19 +502,7 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
 	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
-	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server", "-rescan", "-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}
-	if w.params.Name == chaincfg.TestNet3Params.Name {
-		args = append(args, "-testnet")
-	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
-		args = append(args, "-regtest")
-	}
-	if w.trustedPeer != "" {
-		args = append(args, "-connect="+w.trustedPeer)
-	}
-	if w.useTor {
-		socksPort := defaultSocksPort(w.controlPort)
-		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
-	}
+	args := w.BuildArguments(true)
 	cmd := exec.Command(w.binary, args...)
 	cmd.Start()
 
