@@ -104,7 +104,7 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			username, password, ok := r.BasicAuth()
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
-			if !ok || username != i.config.Username || password != i.config.Password {
+			if !ok || username != i.config.Username || strings.ToLower(password) != strings.ToLower(i.config.Password) {
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return

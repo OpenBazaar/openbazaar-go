@@ -1,11 +1,14 @@
 package api
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/gorilla/websocket"
 	"github.com/ipfs/go-ipfs/commands"
 	"net/http"
+	"strings"
 )
 
 type connection struct {
@@ -97,7 +100,9 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			username, password, ok := r.BasicAuth()
-			if !ok || username != wsh.username || password != wsh.password {
+			h := sha256.Sum256([]byte(password))
+			password = hex.EncodeToString(h[:])
+			if !ok || username != wsh.username || strings.ToLower(password) != strings.ToLower(wsh.password) {
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return
