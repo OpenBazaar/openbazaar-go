@@ -1930,17 +1930,8 @@ func (i *jsonAPIHandler) GETChatConversations(w http.ResponseWriter, r *http.Req
 }
 
 func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Request) {
-	type peerId struct {
-		PeerID string `json:"peerId"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p peerId
-	err := decoder.Decode(&p)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	lastId, err := i.node.Datastore.Chat().MarkAsRead(p.PeerID, r.URL.Query().Get("subject"), false, "")
+	_, peerId := path.Split(r.URL.Path)
+	lastId, err := i.node.Datastore.Chat().MarkAsRead(peerId, r.URL.Query().Get("subject"), false, "")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1950,7 +1941,7 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 		Subject:   r.URL.Query().Get("subject"),
 		Flag:      pb.Chat_READ,
 	}
-	err = i.node.SendChat(p.PeerID, chatPb)
+	err = i.node.SendChat(peerId, chatPb)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1959,17 +1950,8 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 }
 
 func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Request) {
-	type messagID struct {
-		MessageID string `json:"messageId"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var m messagID
-	err := decoder.Decode(&m)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = i.node.Datastore.Chat().DeleteMessage(m.MessageID)
+	_, messageId := path.Split(r.URL.Path)
+	err := i.node.Datastore.Chat().DeleteMessage(messageId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1978,17 +1960,8 @@ func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Reques
 }
 
 func (i *jsonAPIHandler) DELETEChatConversation(w http.ResponseWriter, r *http.Request) {
-	type peerId struct {
-		PeerID string `json:"peerId"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p peerId
-	err := decoder.Decode(&p)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = i.node.Datastore.Chat().DeleteConversation(p.PeerID)
+	_, peerId := path.Split(r.URL.Path)
+	err := i.node.Datastore.Chat().DeleteConversation(peerId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
