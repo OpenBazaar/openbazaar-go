@@ -1,4 +1,6 @@
 syntax = "proto3";
+option go_package = "pb";
+
 
 import "countrycodes.proto";
 import "google/protobuf/timestamp.proto";
