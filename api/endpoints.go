@@ -7,13 +7,13 @@ import (
 
 func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/profile"):
+	case strings.HasPrefix(path, "/ob/profile"):
 		i.PUTProfile(w, r)
-	case strings.Contains(path, "/ob/settings"):
+	case strings.HasPrefix(path, "/ob/settings"):
 		i.PUTSettings(w, r)
-	case strings.Contains(path, "/ob/moderator"):
+	case strings.HasPrefix(path, "/ob/moderator"):
 		i.PUTModerator(w, r)
-	case strings.Contains(path, "/ob/listing"):
+	case strings.HasPrefix(path, "/ob/listing"):
 		i.PUTListing(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -22,55 +22,55 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 
 func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/listing"):
+	case strings.HasPrefix(path, "/ob/listing"):
 		i.POSTListing(w, r)
-	case strings.Contains(path, "/ob/purpose"):
+	case strings.HasPrefix(path, "/ob/purpose"):
 		i.POSTPurchase(w, r)
-	case strings.Contains(path, "/ob/follow"):
+	case strings.HasPrefix(path, "/ob/follow"):
 		i.POSTFollow(w, r)
-	case strings.Contains(path, "/ob/unfollow"):
+	case strings.HasPrefix(path, "/ob/unfollow"):
 		i.POSTUnfollow(w, r)
-	case strings.Contains(path, "/ob/profile"):
+	case strings.HasPrefix(path, "/ob/profile"):
 		i.POSTProfile(w, r)
-	case strings.Contains(path, "/ob/images"):
+	case strings.HasPrefix(path, "/ob/images"):
 		i.POSTImage(w, r)
-	case strings.Contains(path, "/wallet/spend"):
+	case strings.HasPrefix(path, "/wallet/spend"):
 		i.POSTSpendCoins(w, r)
-	case strings.Contains(path, "/ob/settings"):
+	case strings.HasPrefix(path, "/ob/settings"):
 		i.POSTSettings(w, r)
-	case strings.Contains(path, "/ob/inventory"):
+	case strings.HasPrefix(path, "/ob/inventory"):
 		i.POSTInventory(w, r)
-	case strings.Contains(path, "/ob/avatar"):
+	case strings.HasPrefix(path, "/ob/avatar"):
 		i.POSTAvatar(w, r)
-	case strings.Contains(path, "/ob/header"):
+	case strings.HasPrefix(path, "/ob/header"):
 		i.POSTHeader(w, r)
-	case strings.Contains(path, "/ob/orderconfirmation"):
+	case strings.HasPrefix(path, "/ob/orderconfirmation"):
 		i.POSTOrderConfirmation(w, r)
-	case strings.Contains(path, "/ob/ordercancel"):
+	case strings.HasPrefix(path, "/ob/ordercancel"):
 		i.POSTOrderCancel(w, r)
-	case strings.Contains(path, "/ob/orderfulfillment"):
+	case strings.HasPrefix(path, "/ob/orderfulfillment"):
 		i.POSTOrderFulfill(w, r)
-	case strings.Contains(path, "/ob/ordercompletion"):
+	case strings.HasPrefix(path, "/ob/ordercompletion"):
 		i.POSTOrderComplete(w, r)
-	case strings.Contains(path, "/ob/refund"):
+	case strings.HasPrefix(path, "/ob/refund"):
 		i.POSTRefund(w, r)
-	case strings.Contains(path, "/wallet/resyncblockchain"):
+	case strings.HasPrefix(path, "/wallet/resyncblockchain"):
 		i.POSTResyncBlockchain(w, r)
-	case strings.Contains(path, "/ob/opendispute"):
+	case strings.HasPrefix(path, "/ob/opendispute"):
 		i.POSTOpenDispute(w, r)
-	case strings.Contains(path, "/ob/closedispute"):
+	case strings.HasPrefix(path, "/ob/closedispute"):
 		i.POSTCloseDispute(w, r)
-	case strings.Contains(path, "/ob/releasefunds"):
+	case strings.HasPrefix(path, "/ob/releasefunds"):
 		i.POSTReleaseFunds(w, r)
-	case strings.Contains(path, "/ob/chat"):
+	case strings.HasPrefix(path, "/ob/chat"):
 		i.POSTChat(w, r)
-	case strings.Contains(path, "/ob/markchatasread"):
+	case strings.HasPrefix(path, "/ob/markchatasread"):
 		i.POSTMarkChatAsRead(w, r)
-	case strings.Contains(path, "/ob/marknotificationasread"):
+	case strings.HasPrefix(path, "/ob/marknotificationasread"):
 		i.POSTMarkNotificationAsRead(w, r)
-	case strings.Contains(path, "/ob/fetchprofiles"):
+	case strings.HasPrefix(path, "/ob/fetchprofiles"):
 		i.POSTFetchProfiles(w, r)
-	case strings.Contains(path, "/ob/shutdown"):
+	case strings.HasPrefix(path, "/ob/shutdown"):
 		i.POSTShutdown(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -79,53 +79,53 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 
 func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/status"):
+	case strings.HasPrefix(path, "/ob/status"):
 		i.GETStatus(w, r)
-	case strings.Contains(path, "/ob/peers"):
+	case strings.HasPrefix(path, "/ob/peers"):
 		i.GETPeers(w, r)
-	case strings.Contains(path, "/ob/config"):
+	case strings.HasPrefix(path, "/ob/config"):
 		i.GETConfig(w, r)
-	case strings.Contains(path, "/wallet/address"):
+	case strings.HasPrefix(path, "/wallet/address"):
 		i.GETAddress(w, r)
-	case strings.Contains(path, "/wallet/mnemonic"):
+	case strings.HasPrefix(path, "/wallet/mnemonic"):
 		i.GETMnemonic(w, r)
-	case strings.Contains(path, "/wallet/balance"):
+	case strings.HasPrefix(path, "/wallet/balance"):
 		i.GETBalance(w, r)
-	case strings.Contains(path, "/ob/settings"):
+	case strings.HasPrefix(path, "/ob/settings"):
 		i.GETSettings(w, r)
-	case strings.Contains(path, "/ob/closestpeers"):
+	case strings.HasPrefix(path, "/ob/closestpeers"):
 		i.GETClosestPeers(w, r)
-	case strings.Contains(path, "/ob/exchangerate"):
+	case strings.HasPrefix(path, "/ob/exchangerate"):
 		i.GETExchangeRate(w, r)
-	case strings.Contains(path, "/ob/followers"):
+	case strings.HasPrefix(path, "/ob/followers"):
 		i.GETFollowers(w, r)
-	case strings.Contains(path, "/ob/following"):
+	case strings.HasPrefix(path, "/ob/following"):
 		i.GETFollowing(w, r)
-	case strings.Contains(path, "/ob/inventory"):
+	case strings.HasPrefix(path, "/ob/inventory"):
 		i.GETInventory(w, r)
-	case strings.Contains(path, "/ob/profile"):
+	case strings.HasPrefix(path, "/ob/profile"):
 		i.GETProfile(w, r)
-	case strings.Contains(path, "/ob/listings"):
+	case strings.HasPrefix(path, "/ob/listings"):
 		i.GETListings(w, r)
-	case strings.Contains(path, "/ob/listing"):
+	case strings.HasPrefix(path, "/ob/listing"):
 		i.GETListing(w, r)
-	case strings.Contains(path, "/ob/followsme"):
+	case strings.HasPrefix(path, "/ob/followsme"):
 		i.GETFollowsMe(w, r)
-	case strings.Contains(path, "/ob/isfollowing"):
+	case strings.HasPrefix(path, "/ob/isfollowing"):
 		i.GETIsFollowing(w, r)
-	case strings.Contains(path, "/ob/order"):
+	case strings.HasPrefix(path, "/ob/order"):
 		i.GETOrder(w, r)
-	case strings.Contains(path, "/ob/moderators"):
+	case strings.HasPrefix(path, "/ob/moderators"):
 		i.GETModerators(w, r)
-	case strings.Contains(path, "/ob/case"):
+	case strings.HasPrefix(path, "/ob/case"):
 		i.GETCase(w, r)
-	case strings.Contains(path, "/ob/chatmessages"):
+	case strings.HasPrefix(path, "/ob/chatmessages"):
 		i.GETChatMessages(w, r)
-	case strings.Contains(path, "/ob/chatconversations"):
+	case strings.HasPrefix(path, "/ob/chatconversations"):
 		i.GETChatConversations(w, r)
-	case strings.Contains(path, "/ob/notifications"):
+	case strings.HasPrefix(path, "/ob/notifications"):
 		i.GETNotifications(w, r)
-	case strings.Contains(path, "/ob/images"):
+	case strings.HasPrefix(path, "/ob/images"):
 		i.GETImage(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -134,9 +134,9 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 
 func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/settings"):
+	case strings.HasPrefix(path, "/ob/settings"):
 		i.PATCHSettings(w, r)
-	case strings.Contains(path, "/ob/profile"):
+	case strings.HasPrefix(path, "/ob/profile"):
 		i.PATCHProfile(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
@@ -145,15 +145,15 @@ func patch(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Reques
 
 func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
-	case strings.Contains(path, "/ob/moderator"):
+	case strings.HasPrefix(path, "/ob/moderator"):
 		i.DELETEModerator(w, r)
-	case strings.Contains(path, "/ob/listing"):
+	case strings.HasPrefix(path, "/ob/listing"):
 		i.DELETEListing(w, r)
-	case strings.Contains(path, "/ob/chatmessage"):
+	case strings.HasPrefix(path, "/ob/chatmessage"):
 		i.DELETEChatMessage(w, r)
-	case strings.Contains(path, "/ob/chatconversation"):
+	case strings.HasPrefix(path, "/ob/chatconversation"):
 		i.DELETEChatConversation(w, r)
-	case strings.Contains(path, "/ob/notifications"):
+	case strings.HasPrefix(path, "/ob/notifications"):
 		i.DELETENotification(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
