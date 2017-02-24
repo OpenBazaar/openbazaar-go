@@ -1885,7 +1885,7 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fmt.Fprint(w, `{}`)
+	fmt.Fprintf(w, `{"messageId": "%s"}`, msgId.B58String())
 	return
 }
 
