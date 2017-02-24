@@ -2130,7 +2130,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					if err != nil {
 						return
 					}
-					obj := pb.PeerAndProfileWithID{id, p, &pro}
+					obj := pb.PeerAndProfileWithID{id, pid, &pro}
 					m := jsonpb.Marshaler{
 						EnumsAsInts:  false,
 						EmitDefaults: true,
