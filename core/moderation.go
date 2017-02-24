@@ -18,6 +18,8 @@ import (
 
 var ModeratorPointerID multihash.Multihash
 
+var NoListingsError error = errors.New("No listings to set moderators on")
+
 func init() {
 	modHash := sha256.Sum256([]byte("moderators"))
 	encoded, err := multihash.Encode(modHash[:], multihash.SHA2_256)
