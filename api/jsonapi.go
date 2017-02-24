@@ -463,6 +463,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
 	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -532,7 +533,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.SetListingInventory(ld, ld.Inventory)
+	err = i.node.SetListingInventory(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1128,12 +1129,11 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		contract := new(pb.RicardianContract)
-		inventory := []*pb.Inventory{}
 		_, err := mh.FromB58String(listingId)
 		if err == nil {
-			contract, inventory, err = i.node.GetListingFromHash(listingId)
+			contract, err = i.node.GetListingFromHash(listingId)
 		} else {
-			contract, inventory, err = i.node.GetListingFromSlug(listingId)
+			contract, err = i.node.GetListingFromSlug(listingId)
 		}
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
@@ -1159,10 +1159,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		resp := new(pb.ListingRespApi)
-		resp.Contract = contract
-		resp.Inventory = inventory
-		out, err := m.MarshalToString(resp)
+		out, err := m.MarshalToString(contract)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

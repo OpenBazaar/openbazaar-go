@@ -209,10 +209,6 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 }
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
-	inventory, err := l.db.Inventory().GetAll()
-	if err != nil {
-		return
-	}
 	for _, item := range contract.BuyerOrder.Items {
 		var variants []string
 		for _, option := range item.Options {

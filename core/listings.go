@@ -73,6 +73,11 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
 	}
 
+	// Set inventory to the default as it's not part of the contract
+	for _, s := range listing.Item.Skus {
+		s.Quantity = 0
+	}
+
 	c := new(pb.RicardianContract)
 	// If the slug is empty, create one from the title
 	if listing.Slug == "" {
@@ -80,7 +85,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		slugBase := slugFromTitle(listing.Item.Title)
 		slugToTry := slugBase
 		for {
-			_, _, err := n.GetListingFromSlug(slugToTry)
+			_, err := n.GetListingFromSlug(slugToTry)
 			if err != nil {
 				listing.Slug = slugToTry
 				break
@@ -179,70 +184,22 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
-	// Format to remove leading and trailing path separator if one exists
-	for _, v := range listing.Item.Skus {
-		if string(inv.Item[0]) == "/" {
-			inv.Item = inv.Item[1:]
-		}
-		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
-			inv.Item = inv.Item[:len(inv.Item)-1]
-		}
-		s := strings.Split(inv.Item, "/")
-		if s[0] != listing.Slug {
-			inv.Item = path.Join(listing.Slug, inv.Item)
-		}
-	}
-	// Grab the current inventory for this listing
-	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
+	// Delete current inventory
+	err := n.Datastore.Inventory().DeleteAll(listing.Slug)
 	if err != nil {
 		return err
 	}
-	/* Delete from currentInv any variants that are carrying forward.
-	   The remainder should be a map of variants that should be deleted. */
-	for _, i := range inventory {
-		for k := range currentInv {
-			if i.Item == k {
-				delete(currentInv, k)
-			}
-		}
-	}
-	// Create a list of variants from the contract so we can check correct ordering
-	var variants [][]string = make([][]string, len(listing.Item.Options))
-	for i, option := range listing.Item.Options {
-		var name []string
-		for _, variant := range option.Variants {
-			name = append(name, variant.Name)
-		}
-		variants[i] = name
-	}
-	for _, inv := range inventory {
-		names := strings.Split(inv.Item, "/")
-		if names[0] != listing.Slug {
-			return errors.New("Slug must be first item in inventory string")
-		}
-		if len(names) != len(variants)+1 {
-			return errors.New("Incorrect number of variants in inventory string")
-		}
-
-		// Check ordering of inventory string matches options in listing item
-	outer:
-		for i, name := range names[1:] {
-			for _, n := range variants[i] {
-				if n == name {
-					continue outer
-				}
-			}
-			return fmt.Errorf("Inventory string in position %d is incorrect value", i+1)
-		}
-		// Put to database
-		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
-	}
-	// Delete any variants that do not carry forward
-	for k := range currentInv {
-		err := n.Datastore.Inventory().Delete(k)
+	for _, s := range listing.Item.Skus {
+		formatted, err := json.Marshal(s.VariantCombo)
 		if err != nil {
 			return err
 		}
+		err = n.Datastore.Inventory().Put(listing.Slug, string(formatted), int(s.Quantity))
+		if err != nil {
+			return err
+		}
+		// Set the quantity at the default value as we don't save this quantity with the listing
+		s.Quantity = 0
 	}
 	return nil
 }
@@ -469,7 +426,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	var index []listingData
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
-	if !os.IsNotExist(ferr) { // FIXME: What if there is an error other than NotExist?
+	if !os.IsNotExist(ferr) {
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
@@ -539,19 +496,19 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	return file, nil
 }
 
-func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
 	// Read index.json
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Unmarshal the index
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Extract slug that matches hash
@@ -564,41 +521,43 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	}
 
 	if slug == "" {
-		return nil, nil, errors.New("Listing does not exist")
+		return nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
-func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
 	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Unmarshal listing
 	contract := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Get the listing inventory
-	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug) // FIXME: Can this be simplified to Get(slug)?
-	if err != nil {
-		return nil, nil, err
-	}
+	inventory, _ := n.Datastore.Inventory().Get(slug)
 
 	// Build the inventory list
-	var invList []*pb.Inventory
-	for k, v := range inventory {
-		inv := new(pb.Inventory)
-		inv.Item = k
-		inv.Count = uint64(v)
-		invList = append(invList, inv)
+	for variant, count := range inventory {
+		for _, s := range contract.VendorListings[0].Item.Skus {
+			formatted, err := json.Marshal(s.VariantCombo)
+			if err != nil {
+				continue
+			}
+			if string(formatted) == variant {
+				s.Quantity = uint64(count)
+				break
+			}
+		}
 	}
-	return contract, invList, nil
+	return contract, nil
 }
 
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
@@ -718,9 +677,6 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
 		}
 	}
-	if len(listing.Item.Sku) > WordMaxCharacters {
-		return fmt.Errorf("Sku length must be less than the max of %d", WordMaxCharacters)
-	}
 	if len(listing.Item.Condition) > SentenceMaxCharacters {
 		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
 	}
@@ -744,39 +700,8 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
 		}
 		for _, variant := range option.Variants {
-			if variant.Name == "" {
-				return errors.New("Variant names must not be empty")
-			}
-			if len(variant.Name) > WordMaxCharacters {
+			if len(variant) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
-			}
-			if variant.Image != nil {
-				_, err := mh.FromB58String(variant.Image.Tiny)
-				if err != nil {
-					return errors.New("Tiny image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Small)
-				if err != nil {
-					return errors.New("Small image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Medium)
-				if err != nil {
-					return errors.New("Medium image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Large)
-				if err != nil {
-					return errors.New("Large image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Original)
-				if err != nil {
-					return errors.New("Original image hashes must be multihashes")
-				}
-				if variant.Image.Filename == "" {
-					return errors.New("Variant image file names must not be empty")
-				}
-				if len(variant.Image.Filename) > SentenceMaxCharacters {
-					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
-				}
 			}
 		}
 	}
