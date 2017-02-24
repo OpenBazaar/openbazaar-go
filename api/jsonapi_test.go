@@ -186,9 +186,9 @@ func TestStatus(t *testing.T) {
 
 func TestWallet(t *testing.T) {
 	runAPITests(t, apiTests{
-		{"GET", "/ob/wallet/address", "", 200, walletAddressJSONResponse},
-		{"GET", "/ob/wallet/balance", "", 200, walletBalanceJSONResponse},
-		{"GET", "/ob/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
+		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
+		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
+		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
 		{"POST", "/wallet/spend", spendJSON, 500, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
 	})
