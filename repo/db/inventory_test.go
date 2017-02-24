@@ -17,20 +17,24 @@ func init() {
 }
 
 func TestPutInventory(t *testing.T) {
-	err := ivdb.Put("abc", 5)
+	err := ivdb.Put("slug", "[0, 1]", 5)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := ivdb.db.Prepare("select slug, count from inventory where slug=?")
+	stmt, err := ivdb.db.Prepare("select slug, variant, count from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
+	var variant string
 	var count int
-	err = stmt.QueryRow("abc").Scan(&slug, &count)
+	err = stmt.QueryRow("slug").Scan(&slug, &variant, &count)
 	if err != nil {
 		t.Error(err)
 	}
-	if slug != "abc" {
-		t.Errorf(`Expected "abc" got %s`, slug)
+	if slug != "slug" {
+		t.Errorf(`Expected "slug" got %s`, slug)
+	}
+	if variant != "[0, 1]" {
+		t.Errorf(`Expected [0, 1] got %s`, variant)
 	}
 	if count != 5 {
 		t.Errorf(`Expected 5 got %d`, count)
@@ -38,81 +42,83 @@ func TestPutInventory(t *testing.T) {
 }
 
 func TestPutReplaceInventory(t *testing.T) {
-	ivdb.Put("abc", 6)
-	err := ivdb.Put("abc", 5)
+	ivdb.Put("slug", "[0, 1]", 6)
+	err := ivdb.Put("slug", "[0, 1]", 5)
 	if err != nil {
 		t.Error("Error replacing inventory value")
 	}
 }
 
 func TestGetSpecificInventory(t *testing.T) {
-	ivdb.Put("abc", 5)
-	count, err := ivdb.GetSpecific("abc")
+	ivdb.Put("slug", "[0, 1]", 5)
+	count, err := ivdb.GetSpecific("slug", "[0, 1]")
 	if err != nil || count != 5 {
 		t.Error("Error in inventory get")
 	}
-	count, err = ivdb.GetSpecific("xyz")
+	count, err = ivdb.GetSpecific("xyz", "[0, 1]")
 	if err == nil {
 		t.Error("Error in inventory get")
 	}
 }
 
 func TestDeleteInventory(t *testing.T) {
-	ivdb.Put("abc", 5)
-	err := ivdb.Delete("abc")
+	ivdb.Put("slug", "[0, 1]", 5)
+	err := ivdb.Delete("slug", "[0, 1]")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := ivdb.db.Prepare("select slug from inventory where slug=?")
+	stmt, _ := ivdb.db.Prepare("select variant from inventory where slug=?")
 	defer stmt.Close()
-	var slug string
-	stmt.QueryRow("abc").Scan(&slug)
-	if slug != "" {
-		t.Error("Failed to delete follower")
+	var variant string
+	stmt.QueryRow("inventory").Scan(&variant)
+	if variant != "" {
+		t.Error("Failed to delete inventory")
 	}
 }
 
 func TestDeleteAllInventory(t *testing.T) {
-	ivdb.Put("abc/1234", 5)
-	ivdb.Put("abc/5678", 5)
-	err := ivdb.DeleteAll("abc")
+	ivdb.Put("slug", "[0, 1]", 5)
+	ivdb.Put("slug", "[0, 2]", 10)
+	err := ivdb.DeleteAll("slug")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := ivdb.db.Prepare("select slug from inventory where slug=?")
+	stmt, _ := ivdb.db.Prepare("select variant from inventory where slug=?")
 	defer stmt.Close()
-	var slug string
-	stmt.QueryRow("abc/1234").Scan(&slug)
-	if slug != "" {
-		t.Error("Failed to delete follower")
-	}
-	stmt, _ = ivdb.db.Prepare("select slug from inventory where slug=?")
-	defer stmt.Close()
-	slug = ""
-	stmt.QueryRow("abc/5678").Scan(&slug)
-	if slug != "" {
-		t.Error("Failed to delete follower")
+	var variant string
+	stmt.QueryRow("slug").Scan(&variant)
+	if variant != "" {
+		t.Error("Failed to delete inventory")
 	}
 }
 
 func TestGetAllInventory(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		ivdb.Put(strconv.Itoa(i), i)
+		ivdb.Put("slug1", strconv.Itoa(i), i)
+	}
+	for i := 0; i < 100; i++ {
+		ivdb.Put("slug2", strconv.Itoa(i), i)
 	}
 	inventory, err := ivdb.GetAll()
 	if err != nil {
 		t.Error(err)
 	}
-	if len(inventory) != 100 {
+	if len(inventory) != 2 {
+		t.Error("Failed to get all inventory")
+	}
+	if len(inventory["slug1"]) != 100 {
+		t.Error("Failed to get all inventory")
+	}
+	if len(inventory["slug2"]) != 100 {
 		t.Error("Failed to get all inventory")
 	}
 }
 
 func TestGetInventory(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		ivdb.Put("inv/"+strconv.Itoa(i), i)
+		ivdb.Put("slug", strconv.Itoa(i), i)
 	}
-	inventory, err := ivdb.Get("inv")
+	inventory, err := ivdb.Get("slug")
 	if err != nil {
 		t.Error(err)
 	}

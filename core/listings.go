@@ -178,9 +178,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
-func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
+func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	// Format to remove leading and trailing path separator if one exists
-	for _, inv := range inventory {
+	for _, v := range listing.Item.Skus {
 		if string(inv.Item[0]) == "/" {
 			inv.Item = inv.Item[1:]
 		}

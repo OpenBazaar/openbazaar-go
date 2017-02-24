@@ -525,10 +525,10 @@ func (*Listing_ShippingOption_ShippingRules_Rule) Descriptor() ([]byte, []int) {
 }
 
 type Listing_Tax struct {
-	TaxType     string                     `protobuf:"bytes,1,opt,name=taxType" json:"taxType,omitempty"`
-	TaxRegions  []countrycodes.CountryCode `protobuf:"varint,2,rep,name=taxRegions,enum=CountryCode" json:"taxRegions,omitempty"`
-	TaxShipping bool                       `protobuf:"varint,3,opt,name=taxShipping" json:"taxShipping,omitempty"`
-	Percentage  float32                    `protobuf:"fixed32,4,opt,name=percentage" json:"percentage,omitempty"`
+	TaxType     string        `protobuf:"bytes,1,opt,name=taxType" json:"taxType,omitempty"`
+	TaxRegions  []CountryCode `protobuf:"varint,2,rep,name=taxRegions,enum=CountryCode" json:"taxRegions,omitempty"`
+	TaxShipping bool          `protobuf:"varint,3,opt,name=taxShipping" json:"taxShipping,omitempty"`
+	Percentage  float32       `protobuf:"fixed32,4,opt,name=percentage" json:"percentage,omitempty"`
 }
 
 func (m *Listing_Tax) Reset()                    { *m = Listing_Tax{} }

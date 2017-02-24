@@ -469,7 +469,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
-	err = i.node.SetListingInventory(ld, ld.Inventory)
+	err = i.node.SetListingInventory(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
