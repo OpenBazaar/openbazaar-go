@@ -447,7 +447,7 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
+	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -455,21 +455,21 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the listing already exists tell them to use PUT
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
-	if ld.Listing.Slug != "" {
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
+	if ld.Slug != "" {
 		_, ferr := os.Stat(listingPath)
 		if !os.IsNotExist(ferr) {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
 	}
-	contract, err := i.node.SignListing(ld.Listing)
+	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
-	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
+	err = i.node.SetListingInventory(ld, ld.Inventory)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -515,24 +515,24 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
+	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
-	contract, err := i.node.SignListing(ld.Listing)
+	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
+	err = i.node.SetListingInventory(ld, ld.Inventory)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

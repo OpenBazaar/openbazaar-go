@@ -11,21 +11,6 @@ import "google/protobuf/timestamp.proto";
 // we want to avoid putting fields in the contract that are only
 // used by the api.
 
-message ListingReqApi {
-    Listing listing              = 1;
-    repeated Inventory inventory = 2;
-}
-
-message ListingRespApi {
-    RicardianContract contract   = 1;
-    repeated Inventory inventory = 2;
-}
-
-message Inventory {
-    string item  = 1;
-    uint64 count = 2;
-}
-
 message Coupon {
     string hash = 1;
     string code = 2;
