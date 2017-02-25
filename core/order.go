@@ -68,13 +68,14 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	} else {
 		order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.INTERNAL).EncodeAddress()
 	}
-	shipping := new(pb.Order_Shipping)
-	shipping.ShipTo = data.ShipTo
-	shipping.Address = data.Address
-	shipping.City = data.City
-	shipping.State = data.State
-	shipping.PostalCode = data.PostalCode
-	shipping.Country = pb.CountryCode(pb.CountryCode_value[data.CountryCode])
+	shipping := &pb.Order_Shipping{
+		ShipTo:     data.ShipTo,
+		Address:    data.Address,
+		City:       data.City,
+		State:      data.State,
+		PostalCode: data.PostalCode,
+		Country:    pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
+	}
 	order.Shipping = shipping
 
 	id := new(pb.ID)
@@ -201,7 +202,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
-						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+						if strings.ToLower(v) == strings.ToLower(checkOpt.Value) {
 							validVariant = true
 						}
 					}
@@ -641,27 +642,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
 		var itemTotal uint64
-		var l *pb.Listing
-		for _, listing := range contract.VendorListings {
-			ser, err := proto.Marshal(listing)
-			if err != nil {
-				return 0, err
-			}
-			h := sha256.Sum256(ser)
-			encoded, err := mh.Encode(h[:], mh.SHA2_256)
-			if err != nil {
-				return 0, err
-			}
-			listingMH, err := mh.Cast(encoded)
-			if err != nil {
-				return 0, err
-			}
-			if item.ListingHash == listingMH.B58String() {
-				l = listing
-				break
-			}
-		}
-		if l == nil {
+		l, err := GetListingFromHash(item.ListingHash, contract)
+		if err != nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
 		}
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
@@ -672,36 +654,25 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			return 0, err
 		}
 		itemTotal += satoshis
-		for _, option := range item.Options {
-			optionExists := false
-			for _, listingOption := range l.Item.Options {
-				if strings.ToLower(option.Name) == strings.ToLower(listingOption.Name) {
-					optionExists = true
-					variantExists := false
-					for _, variant := range listingOption.Variants {
-						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
-							if variant.PriceModifier > 0 {
-								satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(variant.PriceModifier))
-								if variant.PriceModifier < 0 {
-									satoshis = -satoshis
-								}
-								if err != nil {
-									return 0, err
-								}
-								itemTotal += satoshis
-							}
-							variantExists = true
-							break
-						}
+		selectedVariants := GetSelectedVariants(l.Item.Options, item.Options)
+		skuExists := false
+		for _, sku := range l.Item.Skus {
+			if SameSku(selectedVariants, sku) {
+				skuExists = true
+				if sku.Surcharge != 0 {
+					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(sku.Surcharge))
+					if err != nil {
+						return 0, err
 					}
-					if !variantExists {
-						return 0, errors.New("Selected variant not found in listing")
+					if sku.Surcharge < 0 {
+						satoshis = -satoshis
 					}
-					break
+					itemTotal += satoshis
 				}
-			}
-			if !optionExists {
-				return 0, errors.New("Selected option not found in listing")
+				if !skuExists {
+					return 0, errors.New("Selected variant not found in listing")
+				}
+				break
 			}
 		}
 		// Subtract any coupons
@@ -1357,6 +1328,63 @@ func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount ui
 	buffer := float32(requestedAmount) * (bufferPercent / 100)
 	if float32(paymentAmount)+buffer < float32(requestedAmount) {
 		return false
+	}
+	return true
+}
+
+func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listing, error) {
+	for _, listing := range contract.VendorListings {
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			return 0, err
+		}
+		h := sha256.Sum256(ser)
+		encoded, err := mh.Encode(h[:], mh.SHA2_256)
+		if err != nil {
+			return 0, err
+		}
+		listingMH, err := mh.Cast(encoded)
+		if err != nil {
+			return 0, err
+		}
+		if hash == listingMH.B58String() {
+			return listing, nil
+		}
+	}
+	return nil, errors.New("Not found")
+}
+
+func GetSelectedVariants(listingOtions []*pb.Listing_Item_Option, itemOptions []*pb.Order_Item_Option) []int {
+	var selectedVariants []int
+	for _, s := range listingOtions {
+	optionsLoop:
+		for _, o := range itemOptions {
+			if o.Name == s.Name {
+				for i, va := range s.Variants {
+					if va == o.Value {
+						selectedVariants = append(selectedVariants, i)
+						break optionsLoop
+					}
+				}
+			}
+		}
+	}
+	return selectedVariants
+}
+
+func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {
+	if sku == nil || len(selectedVariants) == 0 {
+		return false
+	}
+	combos := sku.VariantCombo
+	if len(selectedVariants) != len(combos) {
+		return false
+	}
+
+	for i := range selectedVariants {
+		if selectedVariants[i] != int(combos[i]) {
+			return false
+		}
 	}
 	return true
 }
