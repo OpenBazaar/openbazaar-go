@@ -63,8 +63,7 @@ type listingData struct {
 	FreeShipping []string  `json:"freeShipping"`
 }
 
-// Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GenerateSlug(title string) string {
 	slugFromTitle := func(title string) string {
 		l := TitleMaxCharacters
 		if len(title) < TitleMaxCharacters {
@@ -72,28 +71,27 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		}
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
 	}
+	counter := 1
+	slugBase := slugFromTitle(title)
+	slugToTry := slugBase
+	for {
+		_, err := n.GetListingFromSlug(slugToTry)
+		if err != nil {
+			return slugToTry
+		}
+		slugToTry = slugBase + strconv.Itoa(counter)
+		counter++
+	}
+}
 
+// Add our identity to the listing and sign it
+func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
 		s.Quantity = 0
 	}
 
 	c := new(pb.RicardianContract)
-	// If the slug is empty, create one from the title
-	if listing.Slug == "" {
-		counter := 1
-		slugBase := slugFromTitle(listing.Item.Title)
-		slugToTry := slugBase
-		for {
-			_, err := n.GetListingFromSlug(slugToTry)
-			if err != nil {
-				listing.Slug = slugToTry
-				break
-			}
-			slugToTry = slugBase + strconv.Itoa(counter)
-			counter++
-		}
-	}
 
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
@@ -198,8 +196,6 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 		if err != nil {
 			return err
 		}
-		// Set the quantity at the default value as we don't save this quantity with the listing
-		s.Quantity = 0
 	}
 	return nil
 }

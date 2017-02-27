@@ -462,19 +462,20 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
+	} else {
+		ld.Slug = i.node.GenerateSlug(ld.Item.Title)
 	}
-
+	err = i.node.SetListingInventory(ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
-	err = i.node.SetListingInventory(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	f, err := os.Create(listingPath)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -528,12 +529,12 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
-	contract, err := i.node.SignListing(ld)
+	err = i.node.SetListingInventory(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.SetListingInventory(ld)
+	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -985,6 +986,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
+		Variants []int  `json:"variants"`
 		Quantity int    `json:"quantity"`
 	}
 	var invList []inv
@@ -992,9 +994,17 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintf(w, `[]`)
 	}
-	for k, v := range inventory {
-		i := inv{k, v}
-		invList = append(invList, i)
+	for slug, m := range inventory {
+		for variant, count := range m {
+			variantList := []int{}
+			err := json.Unmarshal([]byte(variant), &variantList)
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			i := inv{slug, variantList, count}
+			invList = append(invList, i)
+		}
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
@@ -1007,6 +1017,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
+		Variants []int  `json:"variants"`
 		Quantity int    `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
@@ -1017,7 +1028,12 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		err := i.node.Datastore.Inventory().Put(in.Slug, in.Quantity)
+		formatted, err := json.Marshal(in.Variants)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		err = i.node.Datastore.Inventory().Put(in.Slug, string(formatted), in.Quantity)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

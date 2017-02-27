@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/jsonpb"
@@ -22,7 +23,6 @@ import (
 	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	crypto "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
-	"path"
 	"strings"
 	"time"
 )
@@ -967,6 +967,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	}
 
 	// Validate that the hash of the items in the contract match claimed hash in the order
+	// itemHashes should avoid duplicates
 	var itemHashes []string
 collectListings:
 	for _, item := range contract.BuyerOrder.Items {
@@ -977,6 +978,7 @@ collectListings:
 		}
 		itemHashes = append(itemHashes, item.ListingHash)
 	}
+	// TODO: use function for this
 	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
 		if err != nil {
@@ -1010,7 +1012,12 @@ collectListings:
 	}
 
 	// Validate the selected variants
-	var inventory []map[string]int
+	type inventory struct {
+		Slug     string
+		Variants []int
+		Count    int
+	}
+	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
 		var userOptions []*pb.Order_Item_Option
 		var listingOptions []string
@@ -1020,16 +1027,16 @@ collectListings:
 		for _, uopt := range item.Options {
 			userOptions = append(userOptions, uopt)
 		}
-		inv := make(map[string]int)
-		invPath := listingMap[item.ListingHash].Slug
+		inv := inventory{Slug: listingMap[item.ListingHash].Slug}
+		selectedVariants := GetSelectedVariants(listingMap[item.ListingHash].Item.Options, item.Options)
+		inv.Variants = selectedVariants
 		for _, o := range listingMap[item.ListingHash].Item.Options {
 			for _, checkOpt := range userOptions {
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
-						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+						if strings.ToLower(v) == strings.ToLower(checkOpt.Value) {
 							validVariant = true
-							invPath = path.Join(invPath, v.Name)
 						}
 					}
 					if validVariant == false {
@@ -1049,8 +1056,8 @@ collectListings:
 			return errors.New("Not all options were selected")
 		}
 		// Create inventory paths to check later
-		inv[invPath] = int(item.Quantity)
-		inventory = append(inventory, inv)
+		inv.Count = int(item.Quantity)
+		inventoryList = append(inventoryList, inv)
 	}
 
 	// Validate the selected shipping options
@@ -1096,15 +1103,18 @@ collectListings:
 	}
 
 	// Check we have enough inventory
-	for _, invMap := range inventory {
-		for invString, quantity := range invMap {
-			amt, err := n.Datastore.Inventory().GetSpecific(invString)
-			if err != nil {
-				return errors.New("Vendor has no inventory for the selected variant.")
-			}
-			if amt >= 0 && amt < quantity {
-				return fmt.Errorf("Not enough inventory for item %s, only %d in stock", invString, amt)
-			}
+	for _, inv := range inventoryList {
+		formatted, err := json.Marshal(inv.Variants)
+		if err != nil {
+			return err
+		}
+		log.Notice(inv.Slug, string(formatted))
+		amt, err := n.Datastore.Inventory().GetSpecific(inv.Slug, string(formatted))
+		if err != nil {
+			return errors.New("Vendor has no inventory for the selected variant.")
+		}
+		if amt >= 0 && amt < inv.Count {
+			return fmt.Errorf("Not enough inventory for item %s:%s, only %d in stock", inv.Slug, string(formatted), amt)
 		}
 	}
 
@@ -1336,16 +1346,16 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		h := sha256.Sum256(ser)
 		encoded, err := mh.Encode(h[:], mh.SHA2_256)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		listingMH, err := mh.Cast(encoded)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 		if hash == listingMH.B58String() {
 			return listing, nil

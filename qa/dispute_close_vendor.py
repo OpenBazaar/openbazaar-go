@@ -59,7 +59,7 @@ class DisputeCloseVendorTest(OpenBazaarTestFramework):
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
 
-        listing_json["listing"]["moderators"] = [moderatorId]
+        listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:

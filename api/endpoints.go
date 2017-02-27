@@ -24,7 +24,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	switch {
 	case strings.HasPrefix(path, "/ob/listing"):
 		i.POSTListing(w, r)
-	case strings.HasPrefix(path, "/ob/purpose"):
+	case strings.HasPrefix(path, "/ob/purchase"):
 		i.POSTPurchase(w, r)
 	case strings.HasPrefix(path, "/ob/follow"):
 		i.POSTFollow(w, r)
