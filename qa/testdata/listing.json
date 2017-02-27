@@ -32,7 +32,64 @@
 		],
 		"grams": 28,
 		"condition": "New",
-		"skus": [{"variantCombo":[], "quantity": 1}]
+		"options": [
+			{
+				"name": "Size",
+				"description": "What size do you want your shirt?",
+				"variants": ["Small", "Medium", "Large", "XL"]
+			},
+			{
+				"name": "Color",
+				"description": "What color do you want your shirt?",
+				"variants": ["Red", "Yellow"]
+			}
+		],
+		"skus": [
+			{
+				"variantCombo": [0,0],
+				"productID": "932-33-2945",
+				"surcharge": 0,
+				"quantity": 12
+			},
+			{
+				"variantCombo": [0,1],
+				"surcharge": 0,
+				"quantity": 100
+			},
+			{
+				"variantCombo": [1,0],
+				"productID": "123-99-1111",
+				"surcharge": 0,
+				"quantity": 44
+			},
+			{
+				"variantCombo": [1,1],
+				"productID": "229-00-3333",
+				"surcharge": 0,
+				"quantity": 19
+			},
+			{
+				"variantCombo": [2,0],
+				"productID": "987-54-3456",
+				"surcharge": 0,
+				"quantity": 7
+			},
+			{
+				"variantCombo": [2,1],
+				"surcharge": 0,
+				"quantity": 3
+			},
+			{
+				"variantCombo": [3,0],
+				"surcharge": 1000,
+				"quantity": 16
+			},
+			{
+				"variantCombo": [3,1],
+				"surcharge": 1000,
+				"quantity": 12
+			}
+		]
 	},
 	"shippingOptions": [
 	{
