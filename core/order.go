@@ -1108,7 +1108,9 @@ collectListings:
 		if err != nil {
 			return err
 		}
-		log.Notice(inv.Slug, string(formatted))
+		if string(formatted) == "null" {
+			formatted = []byte("[]")
+		}
 		amt, err := n.Datastore.Inventory().GetSpecific(inv.Slug, string(formatted))
 		if err != nil {
 			return errors.New("Vendor has no inventory for the selected variant.")

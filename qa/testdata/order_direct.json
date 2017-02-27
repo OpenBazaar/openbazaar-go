@@ -12,14 +12,7 @@
 			"listingHash": "",
 			"quantity": 1,
 			"options": [
-				{
-					"name": "Color",
-					"value": "Red"
-				},
-				{
-					"name": "Size",
-					"value": "Large"
-				}
+
 			],
 			"shipping": {
 					"name": "Domestic Shipping",
