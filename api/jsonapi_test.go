@@ -147,9 +147,9 @@ func TestListings(t *testing.T) {
 		// change each test run due to signatures
 
 		// Create/Get
-		{"GET", "/ob/listing/ron_swanson_tshirt", "", 404, NotFoundJSON("Listing")},
+		{"GET", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
 		{"POST", "/ob/listing", listingJSON, 200, listingJSONResponse},
-		{"GET", "/ob/listing/ron_swanson_tshirt", "", 200, anyResponseJSON},
+		{"GET", "/ob/listing/ron-swanson-tshirt", "", 200, anyResponseJSON},
 		{"POST", "/ob/listing", listingUpdateJSON, 409, AlreadyExistsUsePUTJSON("Listing")},
 
 		// TOOD: Add support for improved JSON matching to since contracts
@@ -165,12 +165,12 @@ func TestListings(t *testing.T) {
 
 		// Update/Get Listing
 		{"PUT", "/ob/listing", listingUpdateJSON, 200, `{}`},
-		{"GET", "/ob/listing/ron_swanson_tshirt", "", 200, anyResponseJSON},
+		{"GET", "/ob/listing/ron-swanson-tshirt", "", 200, anyResponseJSON},
 
 		// Delete/Get
 		{"DELETE", "/ob/listing", listingJSONResponse, 200, `{}`},
 		{"DELETE", "/ob/listing", listingJSONResponse, 404, NotFoundJSON("Listing")},
-		{"GET", "/ob/listing/ron_swanson_tshirt", "", 404, NotFoundJSON("Listing")},
+		{"GET", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
 
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", listingUpdateJSON, 404, NotFoundJSON("Listing")},

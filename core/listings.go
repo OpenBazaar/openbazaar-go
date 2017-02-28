@@ -679,6 +679,7 @@ func validateListing(listing *pb.Listing) (err error) {
 	if len(listing.Item.Options) > MaxListItems {
 		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
 	}
+	maxCombos := 1
 	for _, option := range listing.Item.Options {
 		if option.Name == "" {
 			return errors.New("Options titles must not be empty")
@@ -699,6 +700,27 @@ func validateListing(listing *pb.Listing) (err error) {
 			if len(variant) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
+		}
+		maxCombos *= len(option.Variants)
+	}
+
+	if len(listing.Item.Skus) > maxCombos {
+		return errors.New("More skus than variant combinations")
+	}
+	comboMap := make(map[string]bool)
+	for _, sku := range listing.Item.Skus {
+		if len(sku.ProductID) > WordMaxCharacters {
+			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
+		}
+		formatted, err := json.Marshal(sku.VariantCombo)
+		if err != nil {
+			return err
+		}
+		_, ok := comboMap[string(formatted)]
+		if !ok {
+			comboMap[string(formatted)] = true
+		} else {
+			return errors.New("Duplicate sku")
 		}
 	}
 
