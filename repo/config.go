@@ -12,7 +12,7 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/107.170.133.32/tcp/4001/ipfs/QmbY4yo9Eifg7DPjL7qK5JvNdiJaRAD7N76gVg4YoQsvgA", // Le Marché Serpette
 	"/ip4/139.59.174.197/tcp/4001/ipfs/QmcCoBtYyduyurcLHRF14QhhA88YojJJpGFuMHoMZuU8sc", // Brixton-Village
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmdzzGGc9xZq8w4z42vSHe32DZM7VXfDUFEUyfPvYNYhXE",   // Johari
-	"/ip4/46.101.198.170/tcp/4001/ipfs/QmZPkQT2btirSNHgddmWcv8SeT5mVFKJKMS6naPJL7eebX", // Duo Search
+	"/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX", // Duo Search
 }
 
 type APIConfig struct {
