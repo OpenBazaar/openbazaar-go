@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/jsonpb"
@@ -654,10 +653,13 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			return 0, err
 		}
 		itemTotal += satoshis
-		selectedVariants := GetSelectedVariants(l.Item.Options, item.Options)
+		selectedSku, err := GetSelectedSku(l, item.Options)
+		if err != nil {
+			return 0, err
+		}
 		skuExists := false
-		for _, sku := range l.Item.Skus {
-			if SameSku(selectedVariants, sku) {
+		for i, sku := range l.Item.Skus {
+			if selectedSku == i {
 				skuExists = true
 				if sku.Surcharge != 0 {
 					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(sku.Surcharge))
@@ -1013,9 +1015,9 @@ collectListings:
 
 	// Validate the selected variants
 	type inventory struct {
-		Slug     string
-		Variants []int
-		Count    int
+		Slug    string
+		Variant int
+		Count   int
 	}
 	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
@@ -1028,8 +1030,11 @@ collectListings:
 			userOptions = append(userOptions, uopt)
 		}
 		inv := inventory{Slug: listingMap[item.ListingHash].Slug}
-		selectedVariants := GetSelectedVariants(listingMap[item.ListingHash].Item.Options, item.Options)
-		inv.Variants = selectedVariants
+		selectedVariant, err := GetSelectedSku(listingMap[item.ListingHash], item.Options)
+		if err != nil {
+			return err
+		}
+		inv.Variant = selectedVariant
 		for _, o := range listingMap[item.ListingHash].Item.Options {
 			for _, checkOpt := range userOptions {
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
@@ -1104,19 +1109,12 @@ collectListings:
 
 	// Check we have enough inventory
 	for _, inv := range inventoryList {
-		formatted, err := json.Marshal(inv.Variants)
-		if err != nil {
-			return err
-		}
-		if string(formatted) == "null" {
-			formatted = []byte("[]")
-		}
-		amt, err := n.Datastore.Inventory().GetSpecific(inv.Slug, string(formatted))
+		amt, err := n.Datastore.Inventory().GetSpecific(inv.Slug, inv.Variant)
 		if err != nil {
 			return errors.New("Vendor has no inventory for the selected variant.")
 		}
 		if amt >= 0 && amt < inv.Count {
-			return fmt.Errorf("Not enough inventory for item %s:%s, only %d in stock", inv.Slug, string(formatted), amt)
+			return fmt.Errorf("Not enough inventory for item %s:%d, only %d in stock", inv.Slug, inv.Variant, amt)
 		}
 	}
 
@@ -1366,22 +1364,27 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 	return nil, errors.New("Not found")
 }
 
-func GetSelectedVariants(listingOtions []*pb.Listing_Item_Option, itemOptions []*pb.Order_Item_Option) []int {
-	var selectedVariants []int
-	for _, s := range listingOtions {
+func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (int, error) {
+	var selected []int
+	for _, s := range listing.Item.Options {
 	optionsLoop:
 		for _, o := range itemOptions {
 			if o.Name == s.Name {
 				for i, va := range s.Variants {
 					if va == o.Value {
-						selectedVariants = append(selectedVariants, i)
+						selected = append(selected, i)
 						break optionsLoop
 					}
 				}
 			}
 		}
 	}
-	return selectedVariants
+	for i, sku := range listing.Item.Skus {
+		if SameSku(selected, sku) {
+			return i, nil
+		}
+	}
+	return 0, errors.New("No skus selected")
 }
 
 func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {

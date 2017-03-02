@@ -263,7 +263,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, tx blob);
-	create table inventory (slug text, variant text, count integer);
+	create table inventory (slug text, variantIndex integer, count integer);
 	create index index_inventory on inventory (slug);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create index index_purchases on purchases (paymentAddr);

@@ -182,17 +182,25 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
-	// Delete current inventory
-	err := n.Datastore.Inventory().DeleteAll(listing.Slug)
+	// Grab current inventory
+	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
 		return err
 	}
-	for _, s := range listing.Item.Skus {
-		formatted, err := json.Marshal(s.VariantCombo)
+	// Update inventory
+	for i, s := range listing.Item.Skus {
+		err = n.Datastore.Inventory().Put(listing.Slug, i, int(s.Quantity))
 		if err != nil {
 			return err
 		}
-		err = n.Datastore.Inventory().Put(listing.Slug, string(formatted), int(s.Quantity))
+		_, ok := currentInv[i]
+		if ok {
+			delete(currentInv, i)
+		}
+	}
+	// Delete anything that did not update
+	for i, _ := range currentInv {
+		err = n.Datastore.Inventory().Delete(listing.Slug, i)
 		if err != nil {
 			return err
 		}
@@ -542,12 +550,8 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 
 	// Build the inventory list
 	for variant, count := range inventory {
-		for _, s := range contract.VendorListings[0].Item.Skus {
-			formatted, err := json.Marshal(s.VariantCombo)
-			if err != nil {
-				continue
-			}
-			if string(formatted) == variant {
+		for i, s := range contract.VendorListings[0].Item.Skus {
+			if variant == i {
 				s.Quantity = uint64(count)
 				break
 			}

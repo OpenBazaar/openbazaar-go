@@ -3,11 +3,6 @@ package bitcoin
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
-	"sync"
-	"time"
-
-	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -18,6 +13,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	"sync"
+	"time"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -215,12 +213,11 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 		if err != nil {
 			continue
 		}
-		selectedVariants := core.GetSelectedVariants(listing.Item.Options, item.Options)
-		formatted, err := json.Marshal(selectedVariants)
+		variant, err := core.GetSelectedSku(listing, item.Options)
 		if err != nil {
 			continue
 		}
-		c, err := l.db.Inventory().GetSpecific(listing.Slug, string(formatted))
+		c, err := l.db.Inventory().GetSpecific(listing.Slug, variant)
 
 		q := int(item.Quantity)
 		if c-q < 0 {
@@ -232,8 +229,8 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			log.Warning("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
 			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
 		}
-		l.db.Inventory().Put(listing.Slug, string(formatted), c-q)
-		log.Debugf("Adjusting inventory for %s:%s to %d\n", listing.Slug, string(formatted), c-q)
+		l.db.Inventory().Put(listing.Slug, variant, c-q)
+		log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, c-q)
 	}
 }
 

@@ -986,7 +986,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
-		Variants []int  `json:"variants"`
+		Variant  int    `json:"variant"`
 		Quantity int    `json:"quantity"`
 	}
 	var invList []inv
@@ -996,13 +996,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	for slug, m := range inventory {
 		for variant, count := range m {
-			variantList := []int{}
-			err := json.Unmarshal([]byte(variant), &variantList)
-			if err != nil {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-			i := inv{slug, variantList, count}
+			i := inv{slug, variant, count}
 			invList = append(invList, i)
 		}
 	}
@@ -1017,7 +1011,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
-		Variants []int  `json:"variants"`
+		Variant  int    `json:"variant"`
 		Quantity int    `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
@@ -1028,12 +1022,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		formatted, err := json.Marshal(in.Variants)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		err = i.node.Datastore.Inventory().Put(in.Slug, string(formatted), in.Quantity)
+		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, in.Quantity)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

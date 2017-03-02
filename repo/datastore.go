@@ -121,19 +121,19 @@ type Settings interface {
 type Inventory interface {
 	/* Put an inventory count for a listing
 	   Override the existing count if it exists */
-	Put(slug string, variant string, count int) error
+	Put(slug string, variantIndex int, count int) error
 
 	// Return the count for a specific listing including variants
-	GetSpecific(slug, variant string) (int, error)
+	GetSpecific(slug string, variantIndex int) (int, error)
 
 	// Get the count for all variants of a given listing
-	Get(slug string) (map[string]int, error)
+	Get(slug string) (map[int]int, error)
 
 	// Fetch all inventory maps for each slug
-	GetAll() (map[string]map[string]int, error)
+	GetAll() (map[string]map[int]int, error)
 
 	// Delete a listing and related count
-	Delete(slug, variant string) error
+	Delete(slug string, variant int) error
 
 	// Delete all variants of a given slug
 	DeleteAll(slug string) error
