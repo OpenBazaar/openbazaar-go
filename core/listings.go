@@ -546,7 +546,10 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	}
 
 	// Get the listing inventory
-	inventory, _ := n.Datastore.Inventory().Get(slug)
+	inventory, err := n.Datastore.Inventory().Get(slug)
+	if err != nil {
+		return nil, err
+	}
 
 	// Build the inventory list
 	for variant, count := range inventory {
