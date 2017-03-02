@@ -14,9 +14,12 @@ func (i *InventoryDB) Put(slug string, variantIndex int, count int) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	tx, _ := i.db.Begin()
-	stmt, _ := tx.Prepare("insert or replace into inventory(slug, variantIndex, count) values(?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into inventory(slug, variantIndex, count) values(?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
-	_, err := stmt.Exec(slug, variantIndex, count)
+	_, err = stmt.Exec(slug, variantIndex, count)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -72,10 +75,10 @@ func (i *InventoryDB) GetAll() (map[string]map[int]int, error) {
 	ret := make(map[string]map[int]int)
 	stm := "select slug, variantIndex, count from inventory"
 	rows, err := i.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var slug string
 		var count int

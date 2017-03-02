@@ -997,6 +997,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
 		fmt.Fprintf(w, `[]`)
+		return
 	}
 	for slug, m := range inventory {
 		for variant, count := range m {
@@ -1006,7 +1007,8 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
-		ret = []byte("[]")
+		fmt.Fprintf(w, `[]`)
+		return
 	}
 	fmt.Fprint(w, string(ret))
 	return
