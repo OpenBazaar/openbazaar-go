@@ -463,7 +463,11 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		ld.Slug = i.node.GenerateSlug(ld.Item.Title)
+		ld.Slug, err = i.node.GenerateSlug(ld.Item.Title)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 	err = i.node.SetListingInventory(ld)
 	if err != nil {

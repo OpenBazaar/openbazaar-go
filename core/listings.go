@@ -63,7 +63,7 @@ type listingData struct {
 	FreeShipping []string  `json:"freeShipping"`
 }
 
-func (n *OpenBazaarNode) GenerateSlug(title string) string {
+func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	slugFromTitle := func(title string) string {
 		l := TitleMaxCharacters
 		if len(title) < TitleMaxCharacters {
@@ -76,8 +76,10 @@ func (n *OpenBazaarNode) GenerateSlug(title string) string {
 	slugToTry := slugBase
 	for {
 		_, err := n.GetListingFromSlug(slugToTry)
-		if err != nil {
-			return slugToTry
+		if os.IsNotExist(err) {
+			return slugToTry, nil
+		} else if err != nil {
+			return "", err
 		}
 		slugToTry = slugBase + strconv.Itoa(counter)
 		counter++
