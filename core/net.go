@@ -16,6 +16,7 @@ import (
 const (
 	CHAT_MESSAGE_MAX_CHARACTERS = 20000
 	CHAT_SUBJECT_MAX_CHARACTERS = 500
+	DefaultPointerPrefixLength  = 14
 )
 
 func (n *OpenBazaarNode) sendMessage(peerId string, k *libp2p.PubKey, message pb.Message) error {
@@ -70,7 +71,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	}
 	/* TODO: We are just using a default prefix length for now. Eventually we will want to customize this,
 	   but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
-	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, 16, addr)
+	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, DefaultPointerPrefixLength, addr)
 	if err != nil {
 		return err
 	}
