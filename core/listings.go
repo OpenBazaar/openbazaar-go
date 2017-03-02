@@ -201,7 +201,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 		}
 	}
 	// Delete anything that did not update
-	for i, _ := range currentInv {
+	for i := range currentInv {
 		err = n.Datastore.Inventory().Delete(listing.Slug, i)
 		if err != nil {
 			return err
