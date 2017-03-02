@@ -218,7 +218,9 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			continue
 		}
 		c, err := l.db.Inventory().GetSpecific(listing.Slug, variant)
-
+		if err != nil {
+			continue
+		}
 		q := int(item.Quantity)
 		if c-q < 0 {
 			q = 0
