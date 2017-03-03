@@ -21,7 +21,7 @@ func (c *ChatDB) Put(messageId string, peerId string, subject string, message st
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into chat(messageID, peerID, subject, message, read, timestamp, outgoing) values(?,?,?,?,?,?,?)`
+	stm := `insert into chat(messageID, peerID, subject, message, read, timestamp, outgoing) values(?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
