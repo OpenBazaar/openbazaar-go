@@ -85,8 +85,7 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 		return err
 	}
 
-	modInfo, ok := patch["modInfo"]
-	if ok {
+	formatModeratorAmount := func(modInfo interface{}) {
 		fee, ok := modInfo.(map[string]interface{})["fee"]
 		if ok {
 			fixedFee, ok := fee.(map[string]interface{})["fixedFee"]
@@ -95,6 +94,14 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
 			}
 		}
+	}
+	modInfo, ok := patch["modInfo"]
+	if ok {
+		formatModeratorAmount(modInfo)
+	}
+	modInfo, ok = profile["modInfo"]
+	if ok {
+		formatModeratorAmount(modInfo)
 	}
 
 	patchMod, pok := patch["moderator"]
