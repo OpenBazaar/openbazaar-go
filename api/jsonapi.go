@@ -2124,10 +2124,20 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, string(respJson))
 		go func() {
+			type profileError struct {
+				PeerId string `json:"peerId"`
+				Error  string `json:"error"`
+			}
 			for _, p := range pids {
 				go func(pid string) {
 					pro, err := i.node.FetchProfile(pid)
 					if err != nil {
+						e := profileError{pid, "Not found"}
+						ret, err := json.MarshalIndent(e, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- ret
 						return
 					}
 					obj := pb.PeerAndProfileWithID{id, pid, &pro}
@@ -2139,6 +2149,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					}
 					respJson, err := m.MarshalToString(&obj)
 					if err != nil {
+						e := profileError{pid, "Error Marshalling to JSON"}
+						ret, err := json.MarshalIndent(e, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- ret
 						return
 					}
 					i.node.Broadcast <- []byte(respJson)
