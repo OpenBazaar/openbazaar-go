@@ -1931,20 +1931,22 @@ func (i *jsonAPIHandler) GETChatConversations(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	lastId, err := i.node.Datastore.Chat().MarkAsRead(peerId, r.URL.Query().Get("subject"), false, "")
+	lastId, updated, err := i.node.Datastore.Chat().MarkAsRead(peerId, r.URL.Query().Get("subject"), false, "")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	chatPb := &pb.Chat{
-		MessageId: lastId,
-		Subject:   r.URL.Query().Get("subject"),
-		Flag:      pb.Chat_READ,
-	}
-	err = i.node.SendChat(peerId, chatPb)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+	if updated {
+		chatPb := &pb.Chat{
+			MessageId: lastId,
+			Subject:   r.URL.Query().Get("subject"),
+			Flag:      pb.Chat_READ,
+		}
+		err = i.node.SendChat(peerId, chatPb)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 	fmt.Fprint(w, `{}`)
 }
