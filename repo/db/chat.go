@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
@@ -158,32 +159,42 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	if outgoing {
 		outgoingInt = 1
 	}
-	tx, err := c.db.Begin()
-	if err != nil {
-		return "", updated, err
-	}
 	var stmt *sql.Stmt
+	var tx *sql.Tx
+	var err error
 	if messageId != "" {
-		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
 		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 and timestamp<=(select timestamp from chat where messageID=?)"
 		rows, err := c.db.Query(stm, peerID, subject, outgoingInt, messageId)
 		if err != nil {
+			fmt.Println("***", err)
 			return "", updated, err
 		}
 		for rows.Next() {
 			updated = true
 			break
 		}
+		rows.Close()
+		tx, err = c.db.Begin()
+		if err != nil {
+			return "", updated, err
+		}
+		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
 		_, err = stmt.Exec(peerID, subject, outgoingInt, messageId)
 	} else {
 		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0"
 		rows, err := c.db.Query(stm, peerID, subject, outgoingInt)
 		if err != nil {
+			fmt.Println("***", err)
 			return "", updated, err
 		}
 		for rows.Next() {
 			updated = true
 			break
+		}
+		rows.Close()
+		tx, err = c.db.Begin()
+		if err != nil {
+			return "", updated, err
 		}
 		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=?")
 		_, err = stmt.Exec(peerID, subject, outgoingInt)

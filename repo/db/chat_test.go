@@ -199,9 +199,12 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
-	last, err := chdb.MarkAsRead("abc", "", true, "")
+	last, updated, err := chdb.MarkAsRead("abc", "", true, "")
 	if err != nil {
 		t.Error(err)
+	}
+	if !updated {
+		t.Error("Updated bool returned incorrectly")
 	}
 	stmt, err := chdb.db.Prepare("select read from chat where messageID=?")
 	defer stmt.Close()
@@ -225,9 +228,12 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if read != 0 {
 		t.Error("Failed to mark message as read")
 	}
-	last, err = chdb.MarkAsRead("abc", "", false, "")
+	last, updated, err = chdb.MarkAsRead("abc", "", false, "")
 	if err != nil {
 		t.Error(err)
+	}
+	if !updated {
+		t.Error("Updated bool returned incorrectly")
 	}
 	stmt3, err := chdb.db.Prepare("select read from chat where messageID=?")
 	defer stmt3.Close()
@@ -241,9 +247,12 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if last != "22222" {
 		t.Error("Returned incorrect last message Id")
 	}
-	_, err = chdb.MarkAsRead("xyz", "", true, "44444")
+	_, updated, err = chdb.MarkAsRead("xyz", "", true, "44444")
 	if err != nil {
 		t.Error(err)
+	}
+	if !updated {
+		t.Error("Updated bool returned incorrectly")
 	}
 	stm := `select read, messageID from chat where peerID="xyz"`
 	rows, _ := chdb.db.Query(stm)
