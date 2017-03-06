@@ -757,18 +757,27 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 
 	var orderId string
 	var thumbnail string
+	var memo string
+	var title string
 	contract, _, _, _, err := i.node.Datastore.Purchases().GetByPaymentAddress(addr)
 	if contract != nil && err == nil {
 		orderId, _ = i.node.CalcOrderId(contract.BuyerOrder)
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
+			title = contract.VendorListings[0].Item.Title
 		}
 	}
+	if title == "" {
+		memo = snd.Memo
+	} else {
+		memo = title
+	}
+
 
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
 		Txid: txid.String(),
 		Address: snd.Address,
-		Memo: snd.Memo,
+		Memo: memo,
 		OrderId: orderId,
 		Thumbnail: thumbnail,
 	}); err != nil {
