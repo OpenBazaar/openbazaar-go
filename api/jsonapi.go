@@ -749,7 +749,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel);
+	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
