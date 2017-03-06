@@ -97,14 +97,18 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	return m
 }
 
-func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) error {
+func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) (*chainhash.Hash, error) {
 	tx, err := w.buildTx(amount, addr, feeLevel, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// broadcast
-	w.Broadcast(tx)
-	return nil
+	// Broadcast
+	err = w.Broadcast(tx)
+	if err != nil {
+		return nil, err
+	}
+	ch := tx.TxHash()
+	return &ch, nil
 }
 
 func (w *SPVWallet) EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64 {

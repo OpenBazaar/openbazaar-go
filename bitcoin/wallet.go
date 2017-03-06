@@ -3,6 +3,7 @@ package bitcoin
 import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 )
@@ -43,7 +44,7 @@ type BitcoinWallet interface {
 	GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64
 
 	// Send bitcoins to an external wallet
-	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error
+	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error)
 
 	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
 	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64

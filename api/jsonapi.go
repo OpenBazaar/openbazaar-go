@@ -726,6 +726,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Address  string `json:"address"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
+		Memo     string `json:"memo"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var snd Send
@@ -748,7 +749,16 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel); err != nil {
+	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel);
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
+		Txid: txid.String(),
+		Address: snd.Address,
+		Memo: snd.Memo,
+	}); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}

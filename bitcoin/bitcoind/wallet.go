@@ -218,13 +218,12 @@ func (w *BitcoindWallet) ChainTip() uint32 {
 	return uint32(info.Blocks)
 }
 
-func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) error {
+func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {
 	amt, err := btc.NewAmount(float64(amount) / 100000000)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = w.rpcClient.SendFrom(Account, addr, amt)
-	return err
+	return w.rpcClient.SendFrom(Account, addr, amt)
 }
 
 func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
