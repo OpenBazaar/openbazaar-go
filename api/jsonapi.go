@@ -773,12 +773,11 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		memo = title
 	}
 
-
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid: txid.String(),
-		Address: snd.Address,
-		Memo: memo,
-		OrderId: orderId,
+		Txid:      txid.String(),
+		Address:   snd.Address,
+		Memo:      memo,
+		OrderId:   orderId,
 		Thumbnail: thumbnail,
 	}); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
