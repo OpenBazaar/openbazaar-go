@@ -16,7 +16,7 @@ build_linux:
 ## Protobuf compilation
 ##
 P_TIMESTAMP = Mgoogle/protobuf/timestamp.proto=github.com/golang/protobuf/ptypes/timestamp
-P_ANY = Mgoogle/protobuf/any.go=github.com/golang/protobuf/ptypes/any
+P_ANY = Mgoogle/protobuf/any.proto=github.com/golang/protobuf/ptypes/any
 
 PKGMAP = $(P_TIMESTAMP),$(P_ANY)
 
