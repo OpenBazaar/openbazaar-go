@@ -207,8 +207,8 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 		Addresses: config.Addresses{
 			Swarm: []string{
 				"/ip4/0.0.0.0/tcp/4001",
-				"/ip4/0.0.0.0/tcp/9005/ws",
 				"/ip6/::/tcp/4001",
+				"/ip4/0.0.0.0/tcp/9005/ws",
 				"/ip6/::/tcp/9005/ws",
 			},
 			API:     "",

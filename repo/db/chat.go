@@ -150,44 +150,69 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 	return ret
 }
 
-func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, error) {
+func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, bool, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	updated := false
 	outgoingInt := 0
 	if outgoing {
 		outgoingInt = 1
 	}
-	tx, err := c.db.Begin()
-	if err != nil {
-		return "", err
-	}
 	var stmt *sql.Stmt
+	var tx *sql.Tx
+	var err error
 	if messageId != "" {
+		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 and timestamp<=(select timestamp from chat where messageID=?) limit 1"
+		rows, err := c.db.Query(stm, peerID, subject, outgoingInt, messageId)
+		if err != nil {
+			return "", updated, err
+		}
+		if rows.Next() {
+			updated = true
+		}
+		rows.Close()
+		tx, err = c.db.Begin()
+		if err != nil {
+			return "", updated, err
+		}
 		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
 		_, err = stmt.Exec(peerID, subject, outgoingInt, messageId)
 	} else {
+		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 limit 1"
+		rows, err := c.db.Query(stm, peerID, subject, outgoingInt)
+		if err != nil {
+			return "", updated, err
+		}
+		if rows.Next() {
+			updated = true
+		}
+		rows.Close()
+		tx, err = c.db.Begin()
+		if err != nil {
+			return "", updated, err
+		}
 		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=?")
 		_, err = stmt.Exec(peerID, subject, outgoingInt)
 	}
 	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
-		return "", err
+		return "", updated, err
 	}
 	tx.Commit()
 
 	stmt2, err := c.db.Prepare("select max(timestamp), messageID from chat where peerID=? and subject=? and outgoing=?")
 	if err != nil {
-		return "", err
+		return "", updated, err
 	}
 	defer stmt2.Close()
 	var ts int
 	var msgId string
 	err = stmt2.QueryRow(peerID, subject, outgoingInt).Scan(&ts, &msgId)
 	if err != nil {
-		return "", err
+		return "", updated, err
 	}
-	return msgId, nil
+	return msgId, updated, nil
 }
 
 func (c *ChatDB) DeleteMessage(msgID string) error {

@@ -225,9 +225,10 @@ type Chat interface {
 	// A list of messages given a peer ID and a subject
 	GetMessages(peerID string, subject string, offsetID string, limit int) []ChatMessage
 
-	// Mark all chat messages for a peer as read. Returns the Id of the last seen message.
+	// Mark all chat messages for a peer as read. Returns the Id of the last seen message and
+	// whether any messages were updated.
 	// If message Id is specified it will only mark that message and earlier as read.
-	MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, error)
+	MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, bool, error)
 
 	// Delete a message
 	DeleteMessage(msgID string) error
