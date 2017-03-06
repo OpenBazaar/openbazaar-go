@@ -2165,3 +2165,63 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		}()
 	}
 }
+
+func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request) {
+	type Tx struct {
+		Txid          string    `json:"Txid"`
+		Value         int64     `json:"Value"`
+		Address       string    `json:"Address"`
+		Status        string    `json:"Status"`
+		Memo          string    `json:"Memo"`
+		Timestamp     time.Time `json:"Timestamp"`
+		Confirmations int32     `json:"Confirmations"`
+		OrderId       string    `json:"OrderId"`
+		ImageHash     string    `json:"ImageHash"`
+	}
+	transactions, err := i.node.Wallet.Transactions()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	metadata, err := i.node.Datastore.TxMetadata().GetAll()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	height := i.node.Wallet.ChainTip()
+	var txs []Tx
+	for _, t := range transactions {
+		var confirmations int32
+		var status string
+		confs := int32(height) - t.Height
+		switch {
+		case confs < 0:
+			status = "DEAD"
+		case confs == 0 && time.Since(t.Timestamp) <= time.Hour*6:
+			status = "UNCONFIRMED"
+		case confs == 0 && time.Since(t.Timestamp) > time.Hour*6:
+			status = "STUCK"
+		case confs > 0 && confs < 7:
+			status = "PENDING"
+			confirmations = confs
+		case confs > 6:
+			status = "CONFIRMED"
+			confirmations = confs
+		}
+		tx := Tx{
+			Txid:          t.Txid,
+			Value:         t.Value,
+			Timestamp:     t.Timestamp,
+			Confirmations: confirmations,
+			Status:        status,
+		}
+		m, ok := metadata[t.Txid]
+		if ok {
+			tx.Address = m.Address
+			tx.Memo = m.Memo
+			tx.OrderId = m.OrderId
+			tx.ImageHash = m.ImageHash
+		}
+		txs = append(txs, tx)
+	}
+}

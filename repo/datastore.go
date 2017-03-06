@@ -25,6 +25,7 @@ type Datastore interface {
 	Chat() Chat
 	Notifications() Notifications
 	Coupons() Coupons
+	TxMetadata() TxMetadata
 	Close()
 }
 
@@ -262,4 +263,19 @@ type Coupons interface {
 
 	// Delete all coupons for a given slug
 	Delete(slug string) error
+}
+
+type TxMetadata interface {
+
+	// Put metadata for a transaction to the db
+	Put(m Metadata) error
+
+	// Get the metadata given the txid
+	Get(txid string) (Metadata, error)
+
+	// Get a map of the txid to each metadata object
+	GetAll() (map[string]Metadata, error)
+
+	// Delete a metadata entry
+	Delete(txid string) error
 }

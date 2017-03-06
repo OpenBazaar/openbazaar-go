@@ -32,6 +32,7 @@ type SQLiteDatastore struct {
 	chat            repo.Chat
 	notifications   repo.Notifications
 	coupons         repo.Coupons
+	txMetadata      repo.TxMetadata
 	db              *sql.DB
 	lock            sync.RWMutex
 }
@@ -126,6 +127,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		txMetadata: &TxMetadataDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -209,6 +214,10 @@ func (d *SQLiteDatastore) Coupons() repo.Coupons {
 	return d.coupons
 }
 
+func (d *SQLiteDatastore) TxMetadata() repo.TxMetadata {
+	return d.txMetadata
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -263,6 +272,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, tx blob);
+	create table txmetadata (txid text primary key not null, address text, memo text, orderID text, imageHash text);
 	create table inventory (slug text primary key not null, count integer);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, date integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create index index_purchases on purchases (paymentAddr);

@@ -198,10 +198,12 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 		if err != nil {
 			return ret, err
 		}
+		ts := time.Unix(r.TimeReceived, 0)
 		t := spvwallet.Txn{
-			Txid:   r.TxID,
-			Value:  int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height: int32(*r.BlockIndex),
+			Txid:      r.TxID,
+			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
+			Height:    int32(*r.BlockIndex),
+			Timestamp: ts,
 		}
 		ret = append(ret, t)
 	}
