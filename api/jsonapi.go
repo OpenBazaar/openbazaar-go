@@ -754,10 +754,23 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	var orderId string
+	var thumbnail string
+	contract, _, _, _, _ := i.node.Datastore.Purchases().GetByPaymentAddress(addr)
+	if contract != nil {
+		orderId, _ = i.node.CalcOrderId(contract.BuyerOrder)
+		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
+		}
+	}
+
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
 		Txid: txid.String(),
 		Address: snd.Address,
 		Memo: snd.Memo,
+		OrderId: orderId,
+		Thumbnail: thumbnail,
 	}); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2186,7 +2199,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Timestamp     time.Time `json:"Timestamp"`
 		Confirmations int32     `json:"Confirmations"`
 		OrderId       string    `json:"OrderId"`
-		ImageHash     string    `json:"ImageHash"`
+		Thumbnail     string    `json:"Thumbnail"`
 	}
 	transactions, err := i.node.Wallet.Transactions()
 	if err != nil {
@@ -2230,7 +2243,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Address = m.Address
 			tx.Memo = m.Memo
 			tx.OrderId = m.OrderId
-			tx.ImageHash = m.ImageHash
+			tx.Thumbnail = m.Thumbnail
 		}
 		txs = append(txs, tx)
 	}

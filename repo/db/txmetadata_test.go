@@ -23,10 +23,10 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := metDB.db.Prepare("select txid, address, memo, orderID, imageHash from txmetadata where txid=?")
+	stmt, err := metDB.db.Prepare("select txid, address, memo, orderID, thumbnail from txmetadata where txid=?")
 	defer stmt.Close()
-	var txid, addr, memo, orderId, imageHash string
-	err = stmt.QueryRow(m.Txid).Scan(&txid, &addr, &memo, &orderId, &imageHash)
+	var txid, addr, memo, orderId, thumbnail string
+	err = stmt.QueryRow(m.Txid).Scan(&txid, &addr, &memo, &orderId, &thumbnail)
 	if err != nil {
 		t.Error(err)
 	}
@@ -42,7 +42,7 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	if orderId != m.OrderId {
 		t.Error("TxMetadataDB failed to put order ID")
 	}
-	if imageHash != m.ImageHash {
+	if thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to put image hash")
 	}
 }
@@ -68,7 +68,7 @@ func TestTxMetadataDB_Get(t *testing.T) {
 	if ret.OrderId != m.OrderId {
 		t.Error("TxMetadataDB failed to get order ID")
 	}
-	if ret.ImageHash != m.ImageHash {
+	if ret.Thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to get image hash")
 	}
 }
@@ -101,7 +101,7 @@ func TestTxMetadataDB_GetAll(t *testing.T) {
 	if ret.OrderId != m.OrderId {
 		t.Error("TxMetadataDB failed to get order ID")
 	}
-	if ret.ImageHash != m.ImageHash {
+	if ret.Thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to get image hash")
 	}
 }

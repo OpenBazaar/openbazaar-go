@@ -71,5 +71,5 @@ type Metadata struct {
 	Address   string
 	Memo      string
 	OrderId   string
-	ImageHash string
+	Thumbnail string
 }
