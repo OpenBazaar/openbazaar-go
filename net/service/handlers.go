@@ -983,7 +983,7 @@ func (service *OpenBazaarService) handleModeratorAdd(peer peer.ID, pmes *pb.Mess
 
 func (service *OpenBazaarService) handleModeratorRemove(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	log.Debugf("Received MODERATOR_REMOVE message from %s", peer.Pretty())
-	err := service.datastore.ModeratedStores().Put(peer.Pretty())
+	err := service.datastore.ModeratedStores().Delete(peer.Pretty())
 	if err != nil {
 		return nil, err
 	}
