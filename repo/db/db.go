@@ -285,6 +285,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table notifications (serializedNotification blob, timestamp integer, read integer);
 	create table coupons (slug text, code text, hash text);
 	create index index_coupons on coupons (slug);
+	create table moderatedstores (peerID text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
