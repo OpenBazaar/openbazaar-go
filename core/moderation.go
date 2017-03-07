@@ -234,18 +234,17 @@ func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {
 	for _, mod := range moderators {
 		if !currentMods[mod] {
 			addedMods = append(addedMods, mod)
+		} else {
 			delete(currentMods, mod)
 		}
 	}
-	var removedMods []string
-	for mod := range currentMods {
-		removedMods = append(removedMods, mod)
-	}
+
+	removedMods := currentMods
 
 	for _, mod := range addedMods {
 		go n.SendModeratorAdd(mod)
 	}
-	for _, mod := range removedMods {
+	for mod := range removedMods {
 		go n.SendModeratorRemove(mod)
 	}
 	return nil
