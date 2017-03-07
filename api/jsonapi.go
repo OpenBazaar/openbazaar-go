@@ -812,6 +812,7 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
 	}
+	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -834,6 +835,7 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
 		return
 	}
+	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
