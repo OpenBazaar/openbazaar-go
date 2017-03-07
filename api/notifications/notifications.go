@@ -132,6 +132,14 @@ type UnfollowNotification struct {
 	Unfollow string `json:"unfollow"`
 }
 
+type ModeratorAddNotification struct {
+	ModeratorAdd string `json:"moderatorAdd"`
+}
+
+type ModeratorRemoveNotification struct {
+	ModeratorRemove string `json:"moderatorRemove"`
+}
+
 type StatusNotification struct {
 	Status string `json:"status"`
 }
@@ -225,6 +233,14 @@ func Serialize(i interface{}) []byte {
 	case UnfollowNotification:
 		n = notificationWrapper{
 			i.(UnfollowNotification),
+		}
+	case ModeratorAddNotification:
+		n = notificationWrapper{
+			i.(ModeratorAddNotification),
+		}
+	case ModeratorRemoveNotification:
+		n = notificationWrapper{
+			i.(ModeratorRemoveNotification),
 		}
 	case StatusNotification:
 		s := i.(StatusNotification)
