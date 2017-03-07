@@ -319,7 +319,7 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 
 	_, ferr := os.Stat(indexPath)
 	if os.IsNotExist(ferr) {
-		return ferr
+		return nil
 	}
 	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)

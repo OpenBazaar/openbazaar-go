@@ -1,4 +1,6 @@
 syntax = "proto3";
+option go_package = "pb";
+
 
 enum OrderState {
     // New order, has not yet been accepted by the vendor

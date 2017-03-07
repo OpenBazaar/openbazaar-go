@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -127,7 +126,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 	order.RatingKeys = ratingKeys
 
-	var addedListings [][]string
+	addedListings := make(map[string]*pb.Listing)
 	for _, item := range data.Items {
 		i := new(pb.Order_Item)
 
@@ -136,14 +135,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		   use the quantity field. But different variants require two separate item entries. However,
 		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
 		   So let's check to see if that's the case here and handle it. */
-		toAdd := true
-		for _, addedListing := range addedListings {
-			if item.ListingHash == addedListing[0] {
-				toAdd = false
-			}
-		}
+		_, exists := addedListings[item.ListingHash]
+
 		listing := new(pb.Listing)
-		if toAdd {
+		if !exists {
 			// Let's fetch the listing, should be cached
 			b, err := ipfs.Cat(n.Context, item.ListingHash)
 			if err != nil {
@@ -168,19 +163,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
 			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
-			addedListings = append(addedListings, []string{item.ListingHash, rc.VendorListings[0].Slug})
+			addedListings[item.ListingHash] = rc.VendorListings[0]
 			listing = rc.VendorListings[0]
 		} else {
-			for _, addedListing := range addedListings {
-				if addedListing[0] == item.ListingHash {
-					for _, l := range contract.VendorListings {
-						if l.Slug == addedListing[1] {
-							listing = l
-							break
-						}
-					}
-				}
-			}
+			listing = addedListings[item.ListingHash]
 		}
 
 		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
@@ -188,35 +174,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 
 		// Validate the selected options
-		var userOptions []option
-		var listingOptions []string
+		listingOptions := make(map[string]*pb.Listing_Item_Option)
 		for _, opt := range listing.Item.Options {
-			listingOptions = append(listingOptions, opt.Name)
+			listingOptions[strings.ToLower(opt.Name)] = opt
 		}
 		for _, uopt := range item.Options {
-			userOptions = append(userOptions, uopt)
-		}
-		for _, checkOpt := range userOptions {
-			for _, o := range listing.Item.Options {
-				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
-					var validVariant bool = false
-					for _, v := range o.Variants {
-						if strings.ToLower(v) == strings.ToLower(checkOpt.Value) {
-							validVariant = true
-						}
-					}
-					if validVariant == false {
-						return "", "", 0, false, errors.New("Selected variant not in listing")
-					}
-				}
+			_, ok := listingOptions[strings.ToLower(uopt.Name)]
+			if !ok {
+				return "", "", 0, false, errors.New("Selected variant not in listing")
 			}
-		check:
-			for i, lopt := range listingOptions {
-				if strings.ToLower(checkOpt.Name) == strings.ToLower(lopt) {
-					listingOptions = append(listingOptions[:i], listingOptions[i+1:]...)
-					continue check
-				}
-			}
+			delete(listingOptions, strings.ToLower(uopt.Name))
 		}
 		if len(listingOptions) > 0 {
 			return "", "", 0, false, errors.New("Not all options were selected")
@@ -226,12 +193,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		h := sha256.Sum256(ser)
-		encoded, err := mh.Encode(h[:], mh.SHA2_256)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		listingMH, err := mh.Cast(encoded)
+		listingMH, err := EncodeMultihash(ser)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -239,14 +201,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		i.Quantity = uint32(item.Quantity)
 
 		for _, option := range item.Options {
-			o := new(pb.Order_Item_Option)
-			o.Name = option.Name
-			o.Value = option.Value
+			o := &pb.Order_Item_Option{
+				Name:  option.Name,
+				Value: option.Value,
+			}
 			i.Options = append(i.Options, o)
 		}
-		so := new(pb.Order_Item_ShippingOption)
-		so.Name = item.Shipping.Name
-		so.Service = item.Shipping.Service
+		so := &pb.Order_Item_ShippingOption{
+			Name:    item.Shipping.Name,
+			Service: item.Shipping.Service,
+		}
 		i.ShippingOption = so
 		i.Memo = item.Memo
 		i.CouponCodes = item.Coupons
@@ -619,12 +583,7 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	orderBytes := sha256.Sum256(ser)
-	encoded, err := mh.Encode(orderBytes[:], mh.SHA2_256)
-	if err != nil {
-		return "", err
-	}
-	multihash, err := mh.Cast(encoded)
+	multihash, err := EncodeMultihash(ser)
 	if err != nil {
 		return "", err
 	}
@@ -680,12 +639,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		// Subtract any coupons
 		for _, couponCode := range item.CouponCodes {
 			for _, vendorCoupon := range l.Coupons {
-				h := sha256.Sum256([]byte(couponCode))
-				encoded, err := mh.Encode(h[:], mh.SHA2_256)
-				if err != nil {
-					return 0, err
-				}
-				multihash, err := mh.Cast(encoded)
+				multihash, err := EncodeMultihash([]byte(couponCode))
 				if err != nil {
 					return 0, err
 				}
@@ -986,12 +940,7 @@ collectListings:
 		if err != nil {
 			return err
 		}
-		hash := sha256.Sum256(ser)
-		encoded, err := mh.Encode(hash[:], mh.SHA2_256)
-		if err != nil {
-			return err
-		}
-		multihash, err := mh.Cast(encoded)
+		multihash, err := EncodeMultihash(ser)
 		if err != nil {
 			return err
 		}
@@ -1348,12 +1297,7 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 		if err != nil {
 			return nil, err
 		}
-		h := sha256.Sum256(ser)
-		encoded, err := mh.Encode(h[:], mh.SHA2_256)
-		if err != nil {
-			return nil, err
-		}
-		listingMH, err := mh.Cast(encoded)
+		listingMH, err := EncodeMultihash(ser)
 		if err != nil {
 			return nil, err
 		}

@@ -907,7 +907,7 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 			MessageId: chat.MessageId,
 		}
 		service.broadcast <- n
-		_, err = service.datastore.Chat().MarkAsRead(p.Pretty(), chat.Subject, true, chat.MessageId)
+		_, _, err = service.datastore.Chat().MarkAsRead(p.Pretty(), chat.Subject, true, chat.MessageId)
 		if err != nil {
 			return nil, err
 		}

@@ -1,6 +1,8 @@
 package repo
 
-import "time"
+import (
+	"time"
+)
 
 type SettingsData struct {
 	PaymentDataInQR    *bool              `json:"paymentDataInQR"`
@@ -62,4 +64,12 @@ type ChatConversation struct {
 	Last      string    `json:"lastMessage"`
 	Timestamp time.Time `json:"timestamp"`
 	Outgoing  bool      `json:"outgoing"`
+}
+
+type Metadata struct {
+	Txid      string
+	Address   string
+	Memo      string
+	OrderId   string
+	Thumbnail string
 }

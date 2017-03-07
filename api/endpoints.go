@@ -91,6 +91,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETMnemonic(w, r)
 	case strings.HasPrefix(path, "/wallet/balance"):
 		i.GETBalance(w, r)
+	case strings.HasPrefix(path, "/wallet/transactions"):
+		i.GETTransactions(w, r)
 	case strings.HasPrefix(path, "/ob/settings"):
 		i.GETSettings(w, r)
 	case strings.HasPrefix(path, "/ob/closestpeers"):

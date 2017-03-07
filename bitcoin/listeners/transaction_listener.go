@@ -161,6 +161,15 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	}
 	records = append(records, record)
 	l.db.Sales().UpdateFunding(orderId, funded, records)
+
+	// Save tx metadata
+	var thumbnail string
+	var title string
+	if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+		thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
+		title = contract.VendorListings[0].Item.Title
+	}
+	l.db.TxMetadata().Put(repo.Metadata{chainHash.String(), "", title, orderId, thumbnail})
 }
 
 func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
