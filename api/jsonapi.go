@@ -2039,17 +2039,8 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 }
 
 func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
-	type id struct {
-		ID int `json:"id"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p id
-	err := decoder.Decode(&p)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = i.node.Datastore.Notifications().MarkAsRead(p.ID)
+	_, noftifId := path.Split(r.URL.Path)
+	err := i.node.Datastore.Notifications().MarkAsRead(noftifId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2058,17 +2049,8 @@ func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *ht
 }
 
 func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
-	type id struct {
-		ID int `json:"id"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p id
-	err := decoder.Decode(&p)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = i.node.Datastore.Notifications().Delete(p.ID)
+	_, noftifId := path.Split(r.URL.Path)
+	err := i.node.Datastore.Notifications().Delete(noftifId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
