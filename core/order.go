@@ -1365,6 +1365,10 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 }
 
 func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (int, error) {
+	if len(itemOptions) == 0 && len(listing.Item.Skus) == 1 {
+		// Default sku
+		return 0, nil
+	}
 	var selected []int
 	for _, s := range listing.Item.Options {
 	optionsLoop:
