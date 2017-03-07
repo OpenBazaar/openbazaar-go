@@ -872,6 +872,7 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if settings.StoreModerators != nil {
+		go i.node.NotifyModerators(*settings.StoreModerators)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}

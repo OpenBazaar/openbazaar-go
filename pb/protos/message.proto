@@ -26,6 +26,8 @@ message Message {
         REFUND                  = 13;
         OFFLINE_ACK             = 14;
         OFFLINE_RELAY           = 15;
+        MODERATOR_ADD           = 16;
+        MODERATOR_REMOVE        = 17;
         ERROR                   = 500;
     }
 }

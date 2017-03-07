@@ -218,3 +218,35 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	}
 	return n.UpdateIndexHashes(hashes)
 }
+
+func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {
+	settings, err := n.Datastore.Settings().Get()
+	if err != nil {
+		return err
+	}
+	currentMods := make(map[string]bool)
+	if settings.StoreModerators != nil {
+		for _, mod := range *settings.StoreModerators {
+			currentMods[mod] = true
+		}
+	}
+	var addedMods []string
+	for _, mod := range moderators {
+		if !currentMods[mod] {
+			addedMods = append(addedMods, mod)
+			delete(currentMods, mod)
+		}
+	}
+	var removedMods []string
+	for mod := range currentMods {
+		removedMods = append(removedMods, mod)
+	}
+
+	for _, mod := range addedMods {
+		go n.SendModeratorAdd(mod)
+	}
+	for _, mod := range removedMods {
+		go n.SendModeratorRemove(mod)
+	}
+	return nil
+}
