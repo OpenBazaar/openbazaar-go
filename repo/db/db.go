@@ -33,6 +33,7 @@ type SQLiteDatastore struct {
 	notifications   repo.Notifications
 	coupons         repo.Coupons
 	txMetadata      repo.TxMetadata
+	moderatedStores repo.ModeratedStores
 	db              *sql.DB
 	lock            sync.RWMutex
 }
@@ -131,6 +132,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		moderatedStores: &ModeratedDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -216,6 +221,10 @@ func (d *SQLiteDatastore) Coupons() repo.Coupons {
 
 func (d *SQLiteDatastore) TxMetadata() repo.TxMetadata {
 	return d.txMetadata
+}
+
+func (d *SQLiteDatastore) ModeratedStores() repo.ModeratedStores {
+	return d.moderatedStores
 }
 
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {

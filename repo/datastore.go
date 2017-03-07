@@ -26,6 +26,7 @@ type Datastore interface {
 	Notifications() Notifications
 	Coupons() Coupons
 	TxMetadata() TxMetadata
+	ModeratedStores() ModeratedStores
 	Close()
 }
 
@@ -52,7 +53,7 @@ type Followers interface {
 	   The offset and limit arguments can be used to for lazy loading. */
 	Get(offsetId string, limit int) ([]string, error)
 
-	// Delete a follower from the databse
+	// Delete a follower from the database
 	Delete(follower string) error
 
 	// Return the number of followers in the database
@@ -278,4 +279,16 @@ type TxMetadata interface {
 
 	// Delete a metadata entry
 	Delete(txid string) error
+}
+
+type ModeratedStores interface {
+	// Put a B58 encoded peer ID to the database
+	Put(peerId string) error
+
+	/* Get the moderated store list from the database.
+	   The offset and limit arguments can be used to for lazy loading. */
+	Get(offsetId string, limit int) ([]string, error)
+
+	// Delete a moderated store from the database
+	Delete(peerId string) error
 }
