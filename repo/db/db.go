@@ -33,6 +33,7 @@ type SQLiteDatastore struct {
 	notifications   repo.Notifications
 	coupons         repo.Coupons
 	txMetadata      repo.TxMetadata
+	moderatedStores repo.ModeratedStores
 	db              *sql.DB
 	lock            sync.RWMutex
 }
@@ -131,6 +132,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 			db:   conn,
 			lock: l,
 		},
+		moderatedStores: &ModeratedDB{
+			db:   conn,
+			lock: l,
+		},
 		db:   conn,
 		lock: l,
 	}
@@ -218,6 +223,10 @@ func (d *SQLiteDatastore) TxMetadata() repo.TxMetadata {
 	return d.txMetadata
 }
 
+func (d *SQLiteDatastore) ModeratedStores() repo.ModeratedStores {
+	return d.moderatedStores
+}
+
 func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	d.lock.Lock()
 	defer d.lock.Unlock()
@@ -285,6 +294,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table notifications (serializedNotification blob, timestamp integer, read integer);
 	create table coupons (slug text, code text, hash text);
 	create index index_coupons on coupons (slug);
+	create table moderatedstores (peerID text primary key not null);
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
