@@ -2355,7 +2355,7 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -2390,7 +2390,7 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -2425,7 +2425,7 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
