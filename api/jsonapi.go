@@ -235,7 +235,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, out)
+	SanitizedResponse(w, out)
 	return
 }
 
@@ -301,7 +301,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, out)
+	SanitizedResponse(w, out)
 	return
 }
 
@@ -347,7 +347,7 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -385,7 +385,7 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(jsonHashes))
+	SanitizedResponse(w, string(jsonHashes))
 	return
 }
 
@@ -423,7 +423,7 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(jsonHashes))
+	SanitizedResponse(w, string(jsonHashes))
 	return
 }
 
@@ -458,7 +458,7 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(jsonHashes))
+	SanitizedResponse(w, string(jsonHashes))
 	return
 }
 
@@ -526,7 +526,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, `{"slug": "%s"}`, contract.VendorListings[0].Slug)
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, contract.VendorListings[0].Slug))
 	return
 }
 
@@ -590,7 +590,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -625,7 +625,7 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -654,7 +654,7 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(b))
+	SanitizedResponse(w, string(b))
 	return
 }
 
@@ -665,7 +665,7 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	fmt.Fprintf(w, `{"status": "%s"}`, status)
+	SanitizedResponse(w, fmt.Sprintf(`{"status": "%s"}`, status))
 }
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
@@ -680,7 +680,7 @@ func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(peerJson))
+	SanitizedResponse(w, string(peerJson))
 }
 
 func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
@@ -699,7 +699,7 @@ func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -718,13 +718,13 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 	addr := i.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
-	fmt.Fprintf(w, `{"address": "%s"}`, addr.EncodeAddress())
+	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
 }
 
 func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
@@ -733,12 +733,12 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, `{"mnemonic": "%s"}`, mn)
+	SanitizedResponse(w, fmt.Sprintf(`{"mnemonic": "%s"}`, mn))
 }
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	fmt.Fprintf(w, `{"confirmed": "%d", "unconfirmed": "%d"}`, int(confirmed), int(unconfirmed))
+	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": "%d", "unconfirmed": "%d"}`, int(confirmed), int(unconfirmed)))
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
@@ -803,7 +803,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, txid.String()))
 	return
 }
 
@@ -812,7 +812,7 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
 		testnet = true
 	}
-	fmt.Fprintf(w, `{"guid": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet)
+	SanitizedResponse(w, fmt.Sprintf(`{"guid": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet))
 }
 
 func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
@@ -849,7 +849,7 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -883,7 +883,7 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -899,7 +899,7 @@ func (i *jsonAPIHandler) GETSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, string(settingsJson))
+	SanitizedResponse(w, string(settingsJson))
 }
 
 func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
@@ -940,7 +940,7 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
@@ -956,7 +956,7 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 }
 
 func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
@@ -972,7 +972,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		fmt.Fprint(w, string(exchangeRateJson))
+		SanitizedResponse(w, string(exchangeRateJson))
 
 	} else {
 		rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
@@ -980,7 +980,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		fmt.Fprintf(w, `%.2f`, rate)
+		SanitizedResponse(w, fmt.Sprintf(`%.2f`, rate))
 	}
 }
 
@@ -1007,7 +1007,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 		if string(ret) == "null" {
 			ret = []byte("[]")
 		}
-		fmt.Fprint(w, string(ret))
+		SanitizedResponse(w, string(ret))
 	} else {
 		if strings.HasPrefix(peerId, "@") {
 			peerId, err = i.node.Resolver.Resolve(peerId)
@@ -1022,7 +1022,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
-		fmt.Fprint(w, string(followBytes))
+		SanitizedResponse(w, string(followBytes))
 	}
 }
 
@@ -1049,7 +1049,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		if string(ret) == "null" {
 			ret = []byte("[]")
 		}
-		fmt.Fprint(w, string(ret))
+		SanitizedResponse(w, string(ret))
 	} else {
 		if strings.HasPrefix(peerId, "@") {
 			peerId, err = i.node.Resolver.Resolve(peerId)
@@ -1064,7 +1064,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
-		fmt.Fprint(w, string(followBytes))
+		SanitizedResponse(w, string(followBytes))
 	}
 }
 
@@ -1076,7 +1076,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
-		fmt.Fprintf(w, `[]`)
+		SanitizedResponse(w, `[]`)
 	}
 	for k, v := range inventory {
 		i := inv{k, v}
@@ -1086,7 +1086,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -1109,7 +1109,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1148,7 +1148,7 @@ func (i *jsonAPIHandler) PUTModerator(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, "IPNS Error: "+err.Error())
 		return
 	}
-	fmt.Fprint(w, "{}")
+	SanitizedResponse(w, "{}")
 	return
 }
 
@@ -1178,7 +1178,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, "{}")
+	SanitizedResponse(w, "{}")
 	return
 }
 
@@ -1191,7 +1191,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		fmt.Fprint(w, string(listingsBytes))
+		SanitizedResponse(w, string(listingsBytes))
 	} else {
 		if strings.HasPrefix(peerId, "@") {
 			peerId, err = i.node.Resolver.Resolve(peerId)
@@ -1205,7 +1205,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		fmt.Fprint(w, string(listingsBytes))
+		SanitizedResponse(w, string(listingsBytes))
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
 }
@@ -1254,7 +1254,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		fmt.Fprint(w, string(out))
+		SanitizedResponse(w, string(out))
 		return
 	} else {
 		var listingsBytes []byte
@@ -1265,6 +1265,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
+			w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 		} else {
 			if strings.HasPrefix(peerId, "@") {
 				peerId, err = i.node.Resolver.Resolve(peerId)
@@ -1278,9 +1279,9 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
+			w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 		}
-		fmt.Fprint(w, string(listingsBytes))
-		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+		SanitizedResponse(w, string(listingsBytes))
 	}
 }
 
@@ -1320,17 +1321,17 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, out)
+	SanitizedResponse(w, out)
 }
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	fmt.Fprintf(w, `{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId))
+	SanitizedResponse(w, fmt.Sprintf(`{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId)))
 }
 
 func (i *jsonAPIHandler) GETIsFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	fmt.Fprintf(w, `{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId))
+	SanitizedResponse(w, fmt.Sprintf(`{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId)))
 }
 
 func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Request) {
@@ -1371,7 +1372,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 			return
 		}
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1400,13 +1401,13 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
 func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Request) {
 	i.node.Wallet.ReSyncBlockchain(0)
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1461,7 +1462,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	} else {
 		i.node.Datastore.Purchases().MarkAsRead(orderId)
 	}
-	fmt.Fprint(w, out)
+	SanitizedResponse(w, out)
 }
 
 func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
@@ -1478,7 +1479,7 @@ func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
 		os.Exit(1)
 	}
 	go shutdown()
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1507,7 +1508,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1612,7 +1613,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			resp = string(res)
 		}
-		fmt.Fprint(w, resp)
+		SanitizedResponse(w, resp)
 	} else {
 		idBytes := make([]byte, 16)
 		rand.Read(idBytes)
@@ -1624,7 +1625,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		response := resp{id}
 		respJson, _ := json.MarshalIndent(response, "", "    ")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, string(respJson))
+		SanitizedResponse(w, string(respJson))
 		go func() {
 			type wsResp struct {
 				Id     string `json:"id"`
@@ -1710,7 +1711,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1759,7 +1760,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1807,7 +1808,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1834,7 +1835,7 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1873,7 +1874,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	i.node.Datastore.Cases().MarkAsRead(orderId)
-	fmt.Fprint(w, out)
+	SanitizedResponse(w, out)
 }
 
 func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request) {
@@ -1909,7 +1910,7 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 	return
 }
 
@@ -1972,7 +1973,7 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"messageId": "%s"}`, msgId.B58String())
+	SanitizedResponse(w, fmt.Sprintf(`{"messageId": "%s"}`, msgId.B58String()))
 	return
 }
 
@@ -1998,7 +1999,7 @@ func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request)
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -2012,7 +2013,7 @@ func (i *jsonAPIHandler) GETChatConversations(w http.ResponseWriter, r *http.Req
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -2035,7 +2036,7 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 			return
 		}
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Request) {
@@ -2045,7 +2046,7 @@ func (i *jsonAPIHandler) DELETEChatMessage(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) DELETEChatConversation(w http.ResponseWriter, r *http.Request) {
@@ -2055,7 +2056,7 @@ func (i *jsonAPIHandler) DELETEChatConversation(w http.ResponseWriter, r *http.R
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request) {
@@ -2087,7 +2088,7 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 	return
 }
 
@@ -2103,7 +2104,7 @@ func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *ht
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
@@ -2118,7 +2119,7 @@ func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Reque
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
@@ -2191,7 +2192,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 			}
 		}
 		resp += "\n]"
-		fmt.Fprint(w, resp)
+		SanitizedResponse(w, resp)
 	} else {
 		idBytes := make([]byte, 16)
 		rand.Read(idBytes)
@@ -2203,7 +2204,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		response := resp{id}
 		respJson, _ := json.MarshalIndent(response, "", "    ")
 		w.WriteHeader(http.StatusAccepted)
-		fmt.Fprint(w, string(respJson))
+		SanitizedResponse(w, string(respJson))
 		go func() {
 			type profileError struct {
 				PeerId string `json:"peerId"`
@@ -2311,7 +2312,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	if string(ret) == "null" {
 		ret = []byte("[]")
 	}
-	fmt.Fprint(w, string(ret))
+	SanitizedResponse(w, string(ret))
 }
 
 func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
@@ -2343,7 +2344,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	i.node.BanManager.AddBlockedId(pid)
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
 
 func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request) {
@@ -2372,5 +2373,5 @@ func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	i.node.BanManager.RemoveBlockedId(pid)
-	fmt.Fprint(w, `{}`)
+	SanitizedResponse(w, `{}`)
 }
