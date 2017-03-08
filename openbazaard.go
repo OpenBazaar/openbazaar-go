@@ -766,6 +766,24 @@ func (x *Start) Execute(args []string) error {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
 
+	// Set up the ban manager
+	settings, err := sqliteDB.Settings().Get()
+	if err != nil && err != db.SettingsNotSetError {
+		log.Error(err)
+		return err
+	}
+	var blockedNodes []peer.ID
+	if settings.BlockedNodes != nil {
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedNodes = append(blockedNodes, id)
+		}
+	}
+	bm := obnet.NewBanManager(blockedNodes)
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
@@ -780,6 +798,7 @@ func (x *Start) Execute(args []string) error {
 		CrosspostGateways: gatewayUrls,
 		TorDialer:         torDialer,
 		UserAgent:         core.USERAGENT,
+		BanManager:        bm,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -797,7 +816,7 @@ func (x *Start) Execute(args []string) error {
 
 	go func() {
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, core.Node.Service, 14, torDialer, core.Node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.IsModerator)
