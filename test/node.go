@@ -4,10 +4,12 @@ import (
 	// "github.com/ipfs/go-ipfs/thirdparty/testutil"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 )
 
 // NewNode creates a new *core.OpenBazaarNode prepared for testing
@@ -62,11 +64,12 @@ func NewNode() (*core.OpenBazaarNode, error) {
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
-		Context:   ctx,
-		RepoPath:  GetRepoPath(),
-		IpfsNode:  ipfsNode,
-		Datastore: repository.DB,
-		Wallet:    wallet,
+		Context:    ctx,
+		RepoPath:   GetRepoPath(),
+		IpfsNode:   ipfsNode,
+		Datastore:  repository.DB,
+		Wallet:     wallet,
+		BanManager: net.NewBanManager([]peer.ID{}),
 	}
 
 	node.Service = service.New(node, ctx, repository.DB)

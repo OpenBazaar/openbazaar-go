@@ -28,6 +28,7 @@ var log = logging.MustGetLogger("retriever")
 type MessageRetriever struct {
 	db           repo.Datastore
 	node         *core.IpfsNode
+	bm           *net.BanManager
 	ctx          commands.Context
 	service      net.NetworkService
 	prefixLen    int
@@ -38,14 +39,14 @@ type MessageRetriever struct {
 	*sync.WaitGroup
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, service net.NetworkService, prefixLen int, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
 	dial := gonet.Dial
 	if dialer != nil {
 		dial = dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
-	mr := MessageRetriever{db, node, ctx, service, prefixLen, sendAck, nil, client, new(sync.Mutex), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, nil, client, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
@@ -177,6 +178,10 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
+		return
+	}
+
+	if m.bm.IsBanned(id) {
 		return
 	}
 

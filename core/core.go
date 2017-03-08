@@ -89,6 +89,9 @@ type OpenBazaarNode struct {
 
 	// A dialer for Tor if available
 	TorDialer proxy.Dialer
+
+	// Manage blocked peers
+	BanManager *net.BanManager
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS

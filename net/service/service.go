@@ -60,6 +60,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	w := ggio.NewDelimitedWriter(cw)
 	mPeer := s.Conn().RemotePeer()
 
+	// Check if banned
+	if service.node.BanManager.IsBanned(mPeer) {
+		return
+	}
+
 	// Receive msg
 	defer s.Close()
 	pmes := new(pb.Message)
