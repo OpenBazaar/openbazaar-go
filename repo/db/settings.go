@@ -9,6 +9,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
+var SettingsNotSetError error = errors.New("Settings not set")
+
 type SettingsDB struct {
 	db   *sql.DB
 	lock sync.RWMutex
@@ -52,7 +54,7 @@ func (s *SettingsDB) Get() (repo.SettingsData, error) {
 	var settingsBytes []byte
 	err = stmt.QueryRow("settings").Scan(&settingsBytes)
 	if err != nil {
-		return settings, err
+		return settings, SettingsNotSetError
 	}
 	err = json.Unmarshal(settingsBytes, &settings)
 	if err != nil {

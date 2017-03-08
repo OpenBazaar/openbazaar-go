@@ -37,6 +37,7 @@ import (
 	"golang.org/x/net/context"
 	"gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
 	"gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"sync"
 )
 
@@ -812,6 +813,17 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
 	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
+	}
 	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
@@ -834,6 +846,17 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
 		return
+	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
 	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
@@ -881,6 +904,17 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		if err := i.node.SeedNode(); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
+	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
 	err = i.node.Datastore.Settings().Update(settings)
 	if err != nil {
@@ -2040,7 +2074,12 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 
 func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
 	_, noftifId := path.Split(r.URL.Path)
-	err := i.node.Datastore.Notifications().MarkAsRead(noftifId)
+	id, err := strconv.Atoi(noftifId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.Datastore.Notifications().MarkAsRead(id)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2050,7 +2089,12 @@ func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *ht
 
 func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
 	_, noftifId := path.Split(r.URL.Path)
-	err := i.node.Datastore.Notifications().Delete(noftifId)
+	id, err := strconv.Atoi(noftifId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.Datastore.Notifications().Delete(id)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2249,4 +2293,65 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		ret = []byte("[]")
 	}
 	fmt.Fprint(w, string(ret))
+}
+
+func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	settings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var nodes []string
+	if settings.BlockedNodes != nil {
+		for _, pid := range *settings.BlockedNodes {
+			if pid == peerId {
+				fmt.Fprint(w, `{}`)
+				return
+			}
+			nodes = append(nodes, pid)
+		}
+	}
+	nodes = append(nodes, peerId)
+	settings.BlockedNodes = &nodes
+	if err := i.node.Datastore.Settings().Put(settings); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	i.node.BanManager.AddBlockedId(pid)
+	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	settings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if settings.BlockedNodes != nil {
+		var nodes []string
+		for _, pid := range *settings.BlockedNodes {
+			if pid != peerId {
+				nodes = append(nodes, pid)
+			}
+		}
+		settings.BlockedNodes = &nodes
+	}
+	if err := i.node.Datastore.Settings().Put(settings); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	i.node.BanManager.RemoveBlockedId(pid)
+	fmt.Fprint(w, `{}`)
 }
