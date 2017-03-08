@@ -162,6 +162,21 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 	fmt.Fprint(w, string(resp))
 }
 
+func SanitizedResponse(w http.ResponseWriter, response string) {
+	var i interface{}
+	err := json.Unmarshal([]byte(response), &i)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret, err := SanitizeJSON(i)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, string(ret))
+}
+
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// If the profile is already set tell them to use PUT
