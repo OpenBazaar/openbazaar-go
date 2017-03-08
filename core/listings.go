@@ -689,7 +689,8 @@ func validateListing(listing *pb.Listing) (err error) {
 		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
 	}
 	maxCombos := 1
-	for _, option := range listing.Item.Options {
+	variantSizeMap := make(map[int]int)
+	for i, option := range listing.Item.Options {
 		if option.Name == "" {
 			return errors.New("Options titles must not be empty")
 		}
@@ -710,6 +711,7 @@ func validateListing(listing *pb.Listing) (err error) {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
 		}
+		variantSizeMap[i] = len(option.Variants)
 		maxCombos *= len(option.Variants)
 	}
 
@@ -734,6 +736,15 @@ func validateListing(listing *pb.Listing) (err error) {
 		} else {
 			return errors.New("Duplicate sku")
 		}
+		if len(sku.VariantCombo) < len(listing.Item.Options) {
+			return errors.New("Not enough options selected in sku combination")
+		}
+		for i, combo := range sku.VariantCombo {
+			if int(combo) > variantSizeMap[i] {
+				return errors.New("Invalid sku variant combination")
+			}
+		}
+
 	}
 
 	// ShippingOptions
