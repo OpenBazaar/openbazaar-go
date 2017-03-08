@@ -27,6 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -1390,7 +1391,15 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		tx := new(pb.TransactionRecord)
 		tx.Txid = r.Txid
 		tx.Value = r.Value
-		// TODO: add confirmations
+		ch, err := chainhash.NewHashFromStr(tx.Txid)
+		if err != nil {
+			continue
+		}
+		confirmations, err := i.node.Wallet.GetConfirmations(*ch)
+		if err != nil {
+			continue
+		}
+		tx.Confirmations = confirmations
 		txs = append(txs, tx)
 	}
 

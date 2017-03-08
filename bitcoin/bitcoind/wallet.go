@@ -210,6 +210,14 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 	return ret, nil
 }
 
+func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
+	resp, err := w.rpcClient.GetTransaction(&txid, true)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(resp.Confirmations), nil
+}
+
 func (w *BitcoindWallet) ChainTip() uint32 {
 	info, err := w.rpcClient.GetInfo()
 	if err != nil {
