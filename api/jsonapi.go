@@ -644,7 +644,11 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	status := i.node.GetPeerStatus(peerId)
+	status, err := i.node.GetPeerStatus(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	fmt.Fprintf(w, `{"status": "%s"}`, status)
 }
 

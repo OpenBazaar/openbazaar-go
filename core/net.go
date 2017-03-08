@@ -93,19 +93,19 @@ func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error 
 	return n.sendMessage(peerId, nil, m)
 }
 
-func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
+func (n *OpenBazaarNode) GetPeerStatus(peerId string) (string, error) {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
-		return "error parsing peerId"
+		return "", err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	m := pb.Message{MessageType: pb.Message_PING}
 	_, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
-		return "offline"
+		return "offline", nil
 	}
-	return "online"
+	return "online", nil
 }
 
 func (n *OpenBazaarNode) Follow(peerId string) error {
