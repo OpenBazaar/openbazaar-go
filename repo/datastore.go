@@ -160,8 +160,8 @@ type Purchases interface {
 	// Return a purchase given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all purchases
+	GetAll(offsetId string, limit int) ([]Purchase, error)
 }
 
 type Sales interface {
@@ -183,8 +183,8 @@ type Sales interface {
 	// Return a sale given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all sales
+	GetAll(offsetId string, limit int) ([]Sale, error)
 }
 
 type Cases interface {
@@ -212,8 +212,8 @@ type Cases interface {
 	// Return the dispute payout data for a case
 	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
 
-	// Return the IDs for all cases
-	GetAll() ([]string, error)
+	// Return the metadata for all cases
+	GetAll(offsetId string, limit int) ([]Case, error)
 }
 
 type Chat interface {
@@ -231,6 +231,9 @@ type Chat interface {
 	// whether any messages were updated.
 	// If message Id is specified it will only mark that message and earlier as read.
 	MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, bool, error)
+
+	// Returns the incoming unread count for all messages of a given subject
+	GetUnreadCount(subject string) (int, error)
 
 	// Delete a message
 	DeleteMessage(msgID string) error

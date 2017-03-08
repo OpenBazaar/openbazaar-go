@@ -59,7 +59,7 @@ func TestPutPurchase(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := purdb.db.Prepare("select orderID, contract, state, read, date, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress from purchases where orderID=?")
+	stmt, _ := purdb.db.Prepare("select orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress from purchases where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -256,5 +256,31 @@ func TestPurchasesGetByOrderId(t *testing.T) {
 	_, _, _, _, _, err = purdb.GetByOrderId("fasdfas")
 	if err == nil {
 		t.Error("Get by unknown orderId failed to return error")
+	}
+}
+
+func TestPurchasesDB_GetAll(t *testing.T) {
+	purdb.Put("orderID", *contract, 0, false)
+	purdb.Put("orderID2", *contract, 0, false)
+	purchases, err := purdb.GetAll("", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 2 {
+		t.Error("Returned incorrect number of purchases")
+	}
+	purchases, err = purdb.GetAll("", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 1 {
+		t.Error("Returned incorrect number of purchases")
+	}
+	purchases, err = purdb.GetAll("orderID", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 1 {
+		t.Error("Returned incorrect number of purchases")
 	}
 }

@@ -27,6 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -1440,7 +1441,15 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		tx := new(pb.TransactionRecord)
 		tx.Txid = r.Txid
 		tx.Value = r.Value
-		// TODO: add confirmations
+		ch, err := chainhash.NewHashFromStr(tx.Txid)
+		if err != nil {
+			continue
+		}
+		confirmations, err := i.node.Wallet.GetConfirmations(*ch)
+		if err != nil {
+			continue
+		}
+		tx.Confirmations = confirmations
 		txs = append(txs, tx)
 	}
 
@@ -2313,6 +2322,111 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		ret = []byte("[]")
 	}
 	SanitizedResponse(w, string(ret))
+}
+
+func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, p := range purchases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
+		if err != nil {
+			continue
+		}
+		p.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(purchases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, s := range sales {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
+		if err != nil {
+			continue
+		}
+		s.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(sales, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, c := range cases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
+		if err != nil {
+			continue
+		}
+		c.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(cases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
 }
 
 func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
