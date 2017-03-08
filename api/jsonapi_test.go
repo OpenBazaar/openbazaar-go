@@ -180,7 +180,8 @@ func TestListings(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	runAPITests(t, apiTests{
-		{"GET", "/ob/status", "", 200, statusBadPeerIDJSONResponse},
+		{"GET", "/ob/status", "", 400, anyResponseJSON},
+		{"GET", "/ob/status/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "", 200, anyResponseJSON},
 	})
 }
 

@@ -27,6 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -37,6 +38,7 @@ import (
 	"golang.org/x/net/context"
 	"gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
 	"gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"sync"
 )
 
@@ -650,7 +652,11 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	status := i.node.GetPeerStatus(peerId)
+	status, err := i.node.GetPeerStatus(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	fmt.Fprintf(w, `{"status": "%s"}`, status)
 }
 
@@ -818,6 +824,18 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
 	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
+	}
+	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -840,6 +858,18 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
 		return
 	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
+	}
+	go i.node.NotifyModerators(*settings.StoreModerators)
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -878,12 +908,24 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if settings.StoreModerators != nil {
+		go i.node.NotifyModerators(*settings.StoreModerators)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
 		if err := i.node.SeedNode(); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
+	}
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
 	err = i.node.Datastore.Settings().Update(settings)
 	if err != nil {
@@ -1391,7 +1433,15 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		tx := new(pb.TransactionRecord)
 		tx.Txid = r.Txid
 		tx.Value = r.Value
-		// TODO: add confirmations
+		ch, err := chainhash.NewHashFromStr(tx.Txid)
+		if err != nil {
+			continue
+		}
+		confirmations, err := i.node.Wallet.GetConfirmations(*ch)
+		if err != nil {
+			continue
+		}
+		tx.Confirmations = confirmations
 		txs = append(txs, tx)
 	}
 
@@ -2044,17 +2094,13 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 }
 
 func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
-	type id struct {
-		ID int `json:"id"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p id
-	err := decoder.Decode(&p)
+	_, noftifId := path.Split(r.URL.Path)
+	id, err := strconv.Atoi(noftifId)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.Datastore.Notifications().MarkAsRead(p.ID)
+	err = i.node.Datastore.Notifications().MarkAsRead(id)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2063,17 +2109,13 @@ func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *ht
 }
 
 func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
-	type id struct {
-		ID int `json:"id"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var p id
-	err := decoder.Decode(&p)
+	_, noftifId := path.Split(r.URL.Path)
+	id, err := strconv.Atoi(noftifId)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.Datastore.Notifications().Delete(p.ID)
+	err = i.node.Datastore.Notifications().Delete(id)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2272,4 +2314,170 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		ret = []byte("[]")
 	}
 	fmt.Fprint(w, string(ret))
+}
+
+func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, p := range purchases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
+		if err != nil {
+			continue
+		}
+		p.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(purchases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, s := range sales {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
+		if err != nil {
+			continue
+		}
+		s.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(sales, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, c := range cases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
+		if err != nil {
+			continue
+		}
+		c.UnreadChatMessages = unread
+	}
+	ret, err := json.MarshalIndent(cases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	settings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var nodes []string
+	if settings.BlockedNodes != nil {
+		for _, pid := range *settings.BlockedNodes {
+			if pid == peerId {
+				fmt.Fprint(w, `{}`)
+				return
+			}
+			nodes = append(nodes, pid)
+		}
+	}
+	nodes = append(nodes, peerId)
+	settings.BlockedNodes = &nodes
+	if err := i.node.Datastore.Settings().Put(settings); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	i.node.BanManager.AddBlockedId(pid)
+	fmt.Fprint(w, `{}`)
+}
+
+func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	settings, err := i.node.Datastore.Settings().Get()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if settings.BlockedNodes != nil {
+		var nodes []string
+		for _, pid := range *settings.BlockedNodes {
+			if pid != peerId {
+				nodes = append(nodes, pid)
+			}
+		}
+		settings.BlockedNodes = &nodes
+	}
+	if err := i.node.Datastore.Settings().Put(settings); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	i.node.BanManager.RemoveBlockedId(pid)
+	fmt.Fprint(w, `{}`)
 }

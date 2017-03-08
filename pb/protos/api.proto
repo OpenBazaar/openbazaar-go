@@ -40,8 +40,9 @@ message CaseRespApi {
 }
 
 message TransactionRecord {
-    string txid = 1;
-    int64 value = 2;
+    string txid          = 1;
+    int64 value          = 2;
+    uint32 confirmations = 3;
 }
 
 message PeerAndProfile {

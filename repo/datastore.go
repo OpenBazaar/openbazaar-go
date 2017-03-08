@@ -26,6 +26,7 @@ type Datastore interface {
 	Notifications() Notifications
 	Coupons() Coupons
 	TxMetadata() TxMetadata
+	ModeratedStores() ModeratedStores
 	Close()
 }
 
@@ -52,7 +53,7 @@ type Followers interface {
 	   The offset and limit arguments can be used to for lazy loading. */
 	Get(offsetId string, limit int) ([]string, error)
 
-	// Delete a follower from the databse
+	// Delete a follower from the database
 	Delete(follower string) error
 
 	// Return the number of followers in the database
@@ -159,8 +160,8 @@ type Purchases interface {
 	// Return a purchase given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all purchases
+	GetAll(offsetId string, limit int) ([]Purchase, error)
 }
 
 type Sales interface {
@@ -182,8 +183,8 @@ type Sales interface {
 	// Return a sale given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all sales
+	GetAll(offsetId string, limit int) ([]Sale, error)
 }
 
 type Cases interface {
@@ -211,8 +212,8 @@ type Cases interface {
 	// Return the dispute payout data for a case
 	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
 
-	// Return the IDs for all cases
-	GetAll() ([]string, error)
+	// Return the metadata for all cases
+	GetAll(offsetId string, limit int) ([]Case, error)
 }
 
 type Chat interface {
@@ -230,6 +231,9 @@ type Chat interface {
 	// whether any messages were updated.
 	// If message Id is specified it will only mark that message and earlier as read.
 	MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, bool, error)
+
+	// Returns the incoming unread count for all messages of a given subject
+	GetUnreadCount(subject string) (int, error)
 
 	// Delete a message
 	DeleteMessage(msgID string) error
@@ -278,4 +282,16 @@ type TxMetadata interface {
 
 	// Delete a metadata entry
 	Delete(txid string) error
+}
+
+type ModeratedStores interface {
+	// Put a B58 encoded peer ID to the database
+	Put(peerId string) error
+
+	/* Get the moderated store list from the database.
+	   The offset and limit arguments can be used to for lazy loading. */
+	Get(offsetId string, limit int) ([]string, error)
+
+	// Delete a moderated store from the database
+	Delete(peerId string) error
 }

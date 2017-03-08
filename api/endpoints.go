@@ -70,6 +70,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTMarkNotificationAsRead(w, r)
 	case strings.HasPrefix(path, "/ob/fetchprofiles"):
 		i.POSTFetchProfiles(w, r)
+	case strings.HasPrefix(path, "/ob/blocknode"):
+		i.POSTBlockNode(w, r)
 	case strings.HasPrefix(path, "/ob/shutdown"):
 		i.POSTShutdown(w, r)
 	default:
@@ -129,6 +131,12 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETNotifications(w, r)
 	case strings.HasPrefix(path, "/ob/images"):
 		i.GETImage(w, r)
+	case strings.HasPrefix(path, "/ob/purchases"):
+		i.GETPurchases(w, r)
+	case strings.HasPrefix(path, "/ob/sales"):
+		i.GETSales(w, r)
+	case strings.HasPrefix(path, "/ob/cases"):
+		i.GETCases(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -157,6 +165,8 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		i.DELETEChatConversation(w, r)
 	case strings.HasPrefix(path, "/ob/notifications"):
 		i.DELETENotification(w, r)
+	case strings.HasPrefix(path, "/ob/blocknode"):
+		i.DELETEBlockNode(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}

@@ -215,6 +215,17 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	return msgId, updated, nil
 }
 
+func (c *ChatDB) GetUnreadCount(subject string) (int, error) {
+	stm := "select Count(*) from chat where read=0 and subject=? and outgoing=0;"
+	row := c.db.QueryRow(stm, subject)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (c *ChatDB) DeleteMessage(msgID string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()

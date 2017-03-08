@@ -93,23 +93,22 @@ func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error 
 	return n.sendMessage(peerId, nil, m)
 }
 
-func (n *OpenBazaarNode) GetPeerStatus(peerId string) string {
+func (n *OpenBazaarNode) GetPeerStatus(peerId string) (string, error) {
 	p, err := peer.IDB58Decode(peerId)
 	if err != nil {
-		return "error parsing peerId"
+		return "", err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	m := pb.Message{MessageType: pb.Message_PING}
 	_, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
-		return "offline"
+		return "offline", nil
 	}
-	return "online"
+	return "online", nil
 }
 
 func (n *OpenBazaarNode) Follow(peerId string) error {
-
 	m := pb.Message{MessageType: pb.Message_FOLLOW}
 	err := n.sendMessage(peerId, nil, m)
 	if err != nil {
@@ -329,6 +328,24 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 		if err := n.SendOfflineMessage(p, nil, &m); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
+	m := pb.Message{MessageType: pb.Message_MODERATOR_ADD}
+	err := n.sendMessage(peerId, nil, m)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
+	m := pb.Message{MessageType: pb.Message_MODERATOR_REMOVE}
+	err := n.sendMessage(peerId, nil, m)
+	if err != nil {
+		return err
 	}
 	return nil
 }

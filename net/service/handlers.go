@@ -59,6 +59,10 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleDisputeClose
 	case pb.Message_CHAT:
 		return service.handleChat
+	case pb.Message_MODERATOR_ADD:
+		return service.handleModeratorAdd
+	case pb.Message_MODERATOR_REMOVE:
+		return service.handleModeratorRemove
 	default:
 		return nil
 	}
@@ -963,5 +967,29 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		Timestamp: t,
 	}
 	service.broadcast <- n
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleModeratorAdd(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received MODERATOR_ADD message from %s", peer.Pretty())
+	err := service.datastore.ModeratedStores().Put(peer.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.ModeratorAddNotification{peer.Pretty()}
+	service.broadcast <- n
+	service.datastore.Notifications().Put(n, time.Now())
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleModeratorRemove(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	log.Debugf("Received MODERATOR_REMOVE message from %s", peer.Pretty())
+	err := service.datastore.ModeratedStores().Delete(peer.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.ModeratorRemoveNotification{peer.Pretty()}
+	service.broadcast <- n
+	service.datastore.Notifications().Put(n, time.Now())
 	return nil, nil
 }
