@@ -273,6 +273,25 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	}
 }
 
+func TestChatDB_GetUnreadCount(t *testing.T) {
+	setupDB()
+	err := chdb.Put("11111", "abc", "sub", "mess", time.Now(), false, false)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("22222", "abc", "sub", "mess", time.Now().Add(time.Second), false, false)
+	if err != nil {
+		t.Error(err)
+	}
+	count, err := chdb.GetUnreadCount("sub")
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 2 {
+		t.Error("GetUnreadCount returned incorrect count")
+	}
+}
+
 func TestChatDB_DeleteMessage(t *testing.T) {
 	setupDB()
 	err := chdb.Put("11111", "abc", "", "mess", time.Now(), false, true)

@@ -75,44 +75,47 @@ type Metadata struct {
 }
 
 type Purchase struct {
-	OrderId         string    `json:"orderId"`
-	Timestamp       time.Time `json:"timestamp"`
-	Title           string    `json:"title"`
-	Thumbnail       string    `json:"thumbnail"`
-	Total           uint64    `json:"total"`
-	VendorId        string    `json:"vendorId"`
-	VendorHandle    string    `json:"vendorHandle"`
-	ShippingName    string    `json:"shippingName"`
-	ShippingAddress string    `json:"shippingAddress"`
-	State           string    `json:"status"`
-	Read            bool      `json:"read"`
+	OrderId            string    `json:"orderId"`
+	Timestamp          time.Time `json:"timestamp"`
+	Title              string    `json:"title"`
+	Thumbnail          string    `json:"thumbnail"`
+	Total              uint64    `json:"total"`
+	VendorId           string    `json:"vendorId"`
+	VendorHandle       string    `json:"vendorHandle"`
+	ShippingName       string    `json:"shippingName"`
+	ShippingAddress    string    `json:"shippingAddress"`
+	State              string    `json:"status"`
+	Read               bool      `json:"read"`
+	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
 
 type Sale struct {
-	OrderId         string    `json:"orderId"`
-	Timestamp       time.Time `json:"timestamp"`
-	Title           string    `json:"title"`
-	Thumbnail       string    `json:"thumbnail"`
-	Total           uint64    `json:"total"`
-	BuyerId         string    `json:"buyerId"`
-	BuyerHandle     string    `json:"buyerHandle"`
-	ShippingName    string    `json:"shippingName"`
-	ShippingAddress string    `json:"shippingAddress"`
-	State           string    `json:"state"`
-	Read            bool      `json:"read"`
+	OrderId            string    `json:"orderId"`
+	Timestamp          time.Time `json:"timestamp"`
+	Title              string    `json:"title"`
+	Thumbnail          string    `json:"thumbnail"`
+	Total              uint64    `json:"total"`
+	BuyerId            string    `json:"buyerId"`
+	BuyerHandle        string    `json:"buyerHandle"`
+	ShippingName       string    `json:"shippingName"`
+	ShippingAddress    string    `json:"shippingAddress"`
+	State              string    `json:"state"`
+	Read               bool      `json:"read"`
+	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
 
 type Case struct {
-	CaseId       string    `json:"caseId"`
-	Timestamp    time.Time `json:"timestamp"`
-	Title        string    `json:"title"`
-	Thumbnail    string    `json:"thumbnail"`
-	Total        uint64    `json:"total"`
-	BuyerId      string    `json:"buyerId"`
-	BuyerHandle  string    `json:"buyerHandle"`
-	VendorId     string    `json:"vendorId"`
-	VendorHandle string    `json:"vendorHandle"`
-	BuyerOpened  bool      `json:"buyerOpened"`
-	State        string    `json:"state"`
-	Read         bool      `json:"read"`
+	CaseId             string    `json:"caseId"`
+	Timestamp          time.Time `json:"timestamp"`
+	Title              string    `json:"title"`
+	Thumbnail          string    `json:"thumbnail"`
+	Total              uint64    `json:"total"`
+	BuyerId            string    `json:"buyerId"`
+	BuyerHandle        string    `json:"buyerHandle"`
+	VendorId           string    `json:"vendorId"`
+	VendorHandle       string    `json:"vendorHandle"`
+	BuyerOpened        bool      `json:"buyerOpened"`
+	State              string    `json:"state"`
+	Read               bool      `json:"read"`
+	UnreadChatMessages int       `json:"unreadChatMessages"`
 }

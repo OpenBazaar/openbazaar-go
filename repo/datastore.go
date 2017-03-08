@@ -232,6 +232,9 @@ type Chat interface {
 	// If message Id is specified it will only mark that message and earlier as read.
 	MarkAsRead(peerID string, subject string, outgoing bool, messageId string) (string, bool, error)
 
+	// Returns the incoming unread count for all messages of a given subject
+	GetUnreadCount(subject string) (int, error)
+
 	// Delete a message
 	DeleteMessage(msgID string) error
 

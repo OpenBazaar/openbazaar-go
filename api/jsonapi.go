@@ -2290,6 +2290,13 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	for _, p := range purchases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
+		if err != nil {
+			continue
+		}
+		p.UnreadChatMessages = unread
+	}
 	ret, err := json.MarshalIndent(purchases, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -2318,6 +2325,13 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	for _, s := range sales {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
+		if err != nil {
+			continue
+		}
+		s.UnreadChatMessages = unread
+	}
 	ret, err := json.MarshalIndent(sales, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -2345,6 +2359,13 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	for _, c := range cases {
+		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
+		if err != nil {
+			continue
+		}
+		c.UnreadChatMessages = unread
 	}
 	ret, err := json.MarshalIndent(cases, "", "    ")
 	if err != nil {
