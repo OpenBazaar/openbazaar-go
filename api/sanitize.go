@@ -22,6 +22,8 @@ func SanitizeJSON(data interface{}) ([]byte, error) {
 				SanitizeJSON(v)
 			case []interface{}:
 				SanitizeJSON(v)
+			case float64:
+				d[k] = uint64(v.(float64))
 			}
 		}
 	case []interface{}:
@@ -30,6 +32,10 @@ func SanitizeJSON(data interface{}) ([]byte, error) {
 			case string:
 				for i, s := range d {
 					d[i] = sanitizer.Sanitize(s.(string))
+				}
+			case float64:
+				for i, f := range d {
+					d[i] = uint64(f.(float64))
 				}
 			case map[string]interface{}:
 				for _, t := range d {
