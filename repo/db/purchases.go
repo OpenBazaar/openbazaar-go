@@ -126,9 +126,9 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error
 
 	var stm string
 	if offsetId != "" {
-		stm = "select orderID, timestamp, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select orderID, timestamp, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases limit " + strconv.Itoa(limit) + ";"
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases limit " + strconv.Itoa(limit) + ";"
 	}
 	rows, err := p.db.Query(stm)
 	if err != nil {
@@ -138,8 +138,8 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error
 	var ret []repo.Purchase
 	for rows.Next() {
 		var orderID, title, thumbnail, vendorID, vendorHandle, shippingName, shippingAddr string
-		var timestamp, stateInt, readInt int
-		if err := rows.Scan(&orderID, &timestamp, &title, &thumbnail, &vendorID, &vendorHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
+		var timestamp, total, stateInt, readInt int
+		if err := rows.Scan(&orderID, &timestamp, &total, &title, &thumbnail, &vendorID, &vendorHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
 			return ret, err
 		}
 		read := false
@@ -152,6 +152,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
+			Total:           total,
 			VendorId:        vendorID,
 			VendorHandle:    vendorHandle,
 			ShippingName:    shippingName,

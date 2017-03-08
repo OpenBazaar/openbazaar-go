@@ -127,9 +127,9 @@ func (s *SalesDB) GetAll(offsetId string, limit int) ([]repo.Sale, error) {
 
 	var stm string
 	if offsetId != "" {
-		stm = "select orderID, timestamp, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select orderID, timestamp, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales limit " + strconv.Itoa(limit) + ";"
+		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales limit " + strconv.Itoa(limit) + ";"
 	}
 	rows, err := s.db.Query(stm)
 	if err != nil {
@@ -139,8 +139,8 @@ func (s *SalesDB) GetAll(offsetId string, limit int) ([]repo.Sale, error) {
 	var ret []repo.Sale
 	for rows.Next() {
 		var orderID, title, thumbnail, buyerID, buyerHandle, shippingName, shippingAddr string
-		var timestamp, stateInt, readInt int
-		if err := rows.Scan(&orderID, &timestamp, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
+		var timestamp, total, stateInt, readInt int
+		if err := rows.Scan(&orderID, &timestamp, &total, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
 			return ret, err
 		}
 		read := false
@@ -153,6 +153,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int) ([]repo.Sale, error) {
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
+			Total:           total,
 			BuyerId:         buyerID,
 			BuyerHandle:     buyerHandle,
 			ShippingName:    shippingName,

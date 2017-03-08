@@ -79,6 +79,7 @@ type Purchase struct {
 	Timestamp       time.Time `json:"timestamp"`
 	Title           string    `json:"title"`
 	Thumbnail       string    `json:"thumbnail"`
+	Total           uint64    `json:"total"`
 	VendorId        string    `json:"vendorId"`
 	VendorHandle    string    `json:"vendorHandle"`
 	ShippingName    string    `json:"shippingName"`
@@ -92,6 +93,7 @@ type Sale struct {
 	Timestamp       time.Time `json:"timestamp"`
 	Title           string    `json:"title"`
 	Thumbnail       string    `json:"thumbnail"`
+	Total           uint64    `json:"total"`
 	BuyerId         string    `json:"vendorId"`
 	BuyerHandle     string    `json:"vendorHandle"`
 	ShippingName    string    `json:"shippingName"`
@@ -101,12 +103,13 @@ type Sale struct {
 }
 
 type Case struct {
-	CaseId      string    `json:"caseId"`
-	Timestamp   time.Time `json:"timestamp"`
-	Title       string    `json:"title"`
-	Thumbnail   string    `json:"thumbnail"`
-	BuyerId     string    `json:"vendorId"`
-	BuyerHandle string    `json:"vendorHandle"`
-	State       string    `json:"state"`
-	Read        bool      `json:"read"`
+	CaseId       string    `json:"caseId"`
+	Timestamp    time.Time `json:"timestamp"`
+	Total        uint64    `json:"total"`
+	BuyerId      string    `json:"vendorId"`
+	BuyerHandle  string    `json:"vendorHandle"`
+	VendorId     string    `json:"vendorId"`
+	VendorHandle string    `json:"vendorHandle"`
+	State        string    `json:"state"`
+	Read         bool      `json:"read"`
 }
