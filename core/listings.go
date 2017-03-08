@@ -718,6 +718,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	comboMap := make(map[string]bool)
 	for _, sku := range listing.Item.Skus {
+		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
+			return errors.New("Skus must specifiy a variant combo when options are used")
+		}
 		if len(sku.ProductID) > WordMaxCharacters {
 			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
 		}
