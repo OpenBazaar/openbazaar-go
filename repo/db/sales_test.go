@@ -58,7 +58,7 @@ func TestPutSale(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.db.Prepare("select orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress from sales where orderID=?")
+	stmt, _ := saldb.db.Prepare("select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress from sales where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -254,5 +254,31 @@ func TestSalesGetByOrderId(t *testing.T) {
 	_, _, _, _, _, err = saldb.GetByOrderId("adsfads")
 	if err == nil {
 		t.Error("Get by unknown orderID failed to return error")
+	}
+}
+
+func TestSalesDB_GetAll(t *testing.T) {
+	saldb.Put("orderID1", *contract, 0, false)
+	saldb.Put("orderID2", *contract, 0, false)
+	sales, err := saldb.GetAll("", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 2 {
+		t.Error("Returned incorrect number of sales")
+	}
+	sales, err = saldb.GetAll("", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 1 {
+		t.Error("Returned incorrect number of sales")
+	}
+	sales, err = saldb.GetAll("orderID1", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 1 {
+		t.Error("Returned incorrect number of sales")
 	}
 }

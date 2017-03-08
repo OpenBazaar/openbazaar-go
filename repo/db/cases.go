@@ -29,7 +29,7 @@ func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, clai
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into cases(caseID, state, read, date, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into cases(caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -193,7 +193,7 @@ func (c *CasesDB) GetAll() ([]string, error) {
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, buyerOpened, claim, disputeResolution from cases where caseID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, timestamp, buyerOpened, claim, disputeResolution from cases where caseID=?")
 	defer stmt.Close()
 	var buyerCon []byte
 	var vendorCon []byte
@@ -201,10 +201,10 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 	var vendorErrors []byte
 	var stateInt int
 	var readInt *int
-	var date int
+	var ts int
 	var buyerOpenedInt int
 	var disputResolution []byte
-	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &stateInt, &readInt, &date, &buyerOpenedInt, &claim, &disputResolution)
+	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &stateInt, &readInt, &ts, &buyerOpenedInt, &claim, &disputResolution)
 	if err != nil {
 		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 	}
@@ -256,7 +256,7 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 		resolution = nil
 	}
 
-	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(date), 0), buyerOpened, claim, resolution, nil
+	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(ts), 0), buyerOpened, claim, resolution, nil
 }
 
 func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error) {

@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type SalesDB struct {
@@ -36,7 +39,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into sales(orderID, contract, state, read, date, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from sales where orderID="` + orderID + `"),(select transactions from sales where orderID="` + orderID + `"))`
+	stm := `insert or replace into sales(orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from sales where orderID="` + orderID + `"),(select transactions from sales where orderID="` + orderID + `"))`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -118,22 +121,45 @@ func (s *SalesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) GetAll() ([]string, error) {
+func (s *SalesDB) GetAll(offsetId string, limit int) ([]repo.Sale, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	stm := "select orderID from sales"
+
+	var stm string
+	if offsetId != "" {
+		stm = "select orderID, timestamp, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+	} else {
+		stm = "select orderID, timestamp, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales limit " + strconv.Itoa(limit) + ";"
+	}
 	rows, err := s.db.Query(stm)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var ret []string
+	var ret []repo.Sale
 	for rows.Next() {
-		var orderID string
-		if err := rows.Scan(&orderID); err != nil {
+		var orderID, title, thumbnail, buyerID, buyerHandle, shippingName, shippingAddr string
+		var timestamp, stateInt, readInt int
+		if err := rows.Scan(&orderID, &timestamp, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
 			return ret, err
 		}
-		ret = append(ret, orderID)
+		read := false
+		if readInt > 0 {
+			read = true
+		}
+
+		ret = append(ret, repo.Sale{
+			OrderId:         orderID,
+			Timestamp:       time.Unix(int64(timestamp), 0),
+			Title:           title,
+			Thumbnail:       thumbnail,
+			BuyerId:         buyerID,
+			BuyerHandle:     buyerHandle,
+			ShippingName:    shippingName,
+			ShippingAddress: shippingAddr,
+			State:           pb.OrderState(stateInt).String(),
+			Read:            read,
+		})
 	}
 	return ret, nil
 }

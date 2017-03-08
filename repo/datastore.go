@@ -160,8 +160,8 @@ type Purchases interface {
 	// Return a purchase given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all purchases
+	GetAll(offsetId string, limit int) ([]Purchase, error)
 }
 
 type Sales interface {
@@ -183,8 +183,8 @@ type Sales interface {
 	// Return a sale given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the IDs for all orders
-	GetAll() ([]string, error)
+	// Return the metadata for all sales
+	GetAll(offsetId string, limit int) ([]Sale, error)
 }
 
 type Cases interface {

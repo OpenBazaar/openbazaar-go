@@ -73,3 +73,40 @@ type Metadata struct {
 	OrderId   string
 	Thumbnail string
 }
+
+type Purchase struct {
+	OrderId         string    `json:"orderId"`
+	Timestamp       time.Time `json:"timestamp"`
+	Title           string    `json:"title"`
+	Thumbnail       string    `json:"thumbnail"`
+	VendorId        string    `json:"vendorId"`
+	VendorHandle    string    `json:"vendorHandle"`
+	ShippingName    string    `json:"shippingName"`
+	ShippingAddress string    `json:"shippingAddress"`
+	State           string    `json:"status"`
+	Read            bool      `json:"read"`
+}
+
+type Sale struct {
+	OrderId         string    `json:"orderId"`
+	Timestamp       time.Time `json:"timestamp"`
+	Title           string    `json:"title"`
+	Thumbnail       string    `json:"thumbnail"`
+	BuyerId         string    `json:"vendorId"`
+	BuyerHandle     string    `json:"vendorHandle"`
+	ShippingName    string    `json:"shippingName"`
+	ShippingAddress string    `json:"shippingAddress"`
+	State           string    `json:"state"`
+	Read            bool      `json:"read"`
+}
+
+type Case struct {
+	CaseId      string    `json:"caseId"`
+	Timestamp   time.Time `json:"timestamp"`
+	Title       string    `json:"title"`
+	Thumbnail   string    `json:"thumbnail"`
+	BuyerId     string    `json:"vendorId"`
+	BuyerHandle string    `json:"vendorHandle"`
+	State       string    `json:"state"`
+	Read        bool      `json:"read"`
+}
