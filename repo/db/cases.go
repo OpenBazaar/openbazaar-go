@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -29,7 +31,7 @@ func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, clai
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into cases(caseID, state, read, date, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into cases(caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -170,22 +172,85 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll() ([]string, error) {
+func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	stm := "select caseID from cases"
-	rows, err := c.db.Query(stm)
+
+	var stm string
+	if offsetId != "" {
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?) limit " + strconv.Itoa(limit) + " ;"
+	} else {
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases limit " + strconv.Itoa(limit) + ";"
+	}
+
+	rows, err := c.db.Query(stm, offsetId)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var ret []string
+	var ret []repo.Case
 	for rows.Next() {
-		var orderID string
-		if err := rows.Scan(&orderID); err != nil {
+		var caseID string
+		var buyerContract, vendorContract []byte
+		var timestamp, buyerOpenedInt, stateInt, readInt int
+		if err := rows.Scan(&caseID, &timestamp, &buyerContract, &vendorContract, &buyerOpenedInt, &stateInt, &readInt); err != nil {
 			return ret, err
 		}
-		ret = append(ret, orderID)
+		read := false
+		if readInt > 0 {
+			read = true
+		}
+
+		buyerOpened := false
+		if buyerOpenedInt > 0 {
+			buyerOpened = true
+		}
+		var total uint64
+		var title, thumbnail, vendorId, vendorHandle, buyerId, buyerHandle string
+
+		contract := new(pb.RicardianContract)
+		err := jsonpb.UnmarshalString(string(buyerContract), contract)
+		if err != nil {
+			jsonpb.UnmarshalString(string(vendorContract), contract)
+		}
+		if contract != nil {
+			if len(contract.VendorListings) > 0 {
+				if contract.VendorListings[0].VendorID != nil {
+					vendorId = contract.VendorListings[0].VendorID.Guid
+					vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+				}
+				if contract.VendorListings[0].Item != nil {
+					title = contract.VendorListings[0].Item.Title
+					if len(contract.VendorListings[0].Item.Images) > 0 {
+						thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
+					}
+				}
+			}
+			if contract.BuyerOrder != nil {
+				if contract.BuyerOrder.BuyerID != nil {
+					buyerId = contract.BuyerOrder.BuyerID.Guid
+					buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+				}
+				if contract.BuyerOrder.Payment != nil {
+					total = contract.BuyerOrder.Payment.Amount
+				}
+			}
+		}
+
+		ret = append(ret, repo.Case{
+			CaseId:       caseID,
+			Timestamp:    time.Unix(int64(timestamp), 0),
+			Title:        title,
+			Thumbnail:    thumbnail,
+			Total:        total,
+			VendorId:     vendorId,
+			VendorHandle: vendorHandle,
+			BuyerId:      buyerId,
+			BuyerHandle:  buyerHandle,
+			BuyerOpened:  buyerOpened,
+			State:        pb.OrderState(stateInt).String(),
+			Read:         read,
+		})
 	}
 	return ret, nil
 }
@@ -193,7 +258,7 @@ func (c *CasesDB) GetAll() ([]string, error) {
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
-	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, buyerOpened, claim, disputeResolution from cases where caseID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, timestamp, buyerOpened, claim, disputeResolution from cases where caseID=?")
 	defer stmt.Close()
 	var buyerCon []byte
 	var vendorCon []byte
@@ -201,10 +266,10 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 	var vendorErrors []byte
 	var stateInt int
 	var readInt *int
-	var date int
+	var ts int
 	var buyerOpenedInt int
 	var disputResolution []byte
-	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &stateInt, &readInt, &date, &buyerOpenedInt, &claim, &disputResolution)
+	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerErrors, &vendorErrors, &stateInt, &readInt, &ts, &buyerOpenedInt, &claim, &disputResolution)
 	if err != nil {
 		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
 	}
@@ -256,7 +321,7 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 		resolution = nil
 	}
 
-	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(date), 0), buyerOpened, claim, resolution, nil
+	return brc, vrc, berr, verr, pb.OrderState(stateInt), read, time.Unix(int64(ts), 0), buyerOpened, claim, resolution, nil
 }
 
 func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error) {

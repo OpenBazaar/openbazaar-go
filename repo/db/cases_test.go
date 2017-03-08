@@ -377,19 +377,50 @@ func TestMarkAsClosed(t *testing.T) {
 	}
 }
 
-func TestCasesGetAll(t *testing.T) {
+func TestCasesDB_GetAll(t *testing.T) {
 	err := casesdb.Put("caseID", 0, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	ids, err := casesdb.GetAll()
+	err = casesdb.UpdateBuyerInfo("caseID", contract, []string{"someError", "anotherError"}, "addr1", buyerTestOutpoints)
 	if err != nil {
 		t.Error(err)
 	}
-	if len(ids) != 1 {
-		t.Error("Get all returned incorrent number of IDs")
+	err = casesdb.UpdateVendorInfo("caseID", contract, []string{"someError", "anotherError"}, "addr2", vendorTestOutpoints)
+	if err != nil {
+		t.Error(err)
 	}
-	if ids[0] != "caseID" {
-		t.Error("Get all returned incorrent number of IDs")
+	err = casesdb.Put("caseID2", 0, true, "blah")
+	if err != nil {
+		t.Error(err)
+	}
+	err = casesdb.UpdateBuyerInfo("caseID2", contract, []string{"someError", "anotherError"}, "addr1", buyerTestOutpoints)
+	if err != nil {
+		t.Error(err)
+	}
+	err = casesdb.UpdateVendorInfo("caseID2", contract, []string{"someError", "anotherError"}, "addr2", vendorTestOutpoints)
+	if err != nil {
+		t.Error(err)
+	}
+	cases, err := casesdb.GetAll("", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 2 {
+		t.Error("Returned incorrect number of cases")
+	}
+	cases, err = casesdb.GetAll("", 1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	cases, err = casesdb.GetAll("caseID", -1)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
 	}
 }
