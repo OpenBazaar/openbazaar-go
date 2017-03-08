@@ -2264,3 +2264,59 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	}
 	fmt.Fprint(w, string(ret))
 }
+
+func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret, err := json.MarshalIndent(purchases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
+
+func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret, err := json.MarshalIndent(sales, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
