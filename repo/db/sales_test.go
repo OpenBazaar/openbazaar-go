@@ -258,7 +258,7 @@ func TestSalesGetByOrderId(t *testing.T) {
 }
 
 func TestSalesDB_GetAll(t *testing.T) {
-	saldb.Put("orderID1", *contract, 0, false)
+	saldb.Put("orderID", *contract, 0, false)
 	saldb.Put("orderID2", *contract, 0, false)
 	sales, err := saldb.GetAll("", -1)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	if len(sales) != 1 {
 		t.Error("Returned incorrect number of sales")
 	}
-	sales, err = saldb.GetAll("orderID1", -1)
+	sales, err = saldb.GetAll("orderID", -1)
 	if err != nil {
 		t.Error(err)
 	}

@@ -260,7 +260,7 @@ func TestPurchasesGetByOrderId(t *testing.T) {
 }
 
 func TestPurchasesDB_GetAll(t *testing.T) {
-	purdb.Put("orderID1", *contract, 0, false)
+	purdb.Put("orderID", *contract, 0, false)
 	purdb.Put("orderID2", *contract, 0, false)
 	purchases, err := purdb.GetAll("", -1)
 	if err != nil {
@@ -276,7 +276,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	if len(purchases) != 1 {
 		t.Error("Returned incorrect number of purchases")
 	}
-	purchases, err = purdb.GetAll("orderID1", -1)
+	purchases, err = purdb.GetAll("orderID", -1)
 	if err != nil {
 		t.Error(err)
 	}

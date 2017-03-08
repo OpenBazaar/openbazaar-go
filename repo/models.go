@@ -94,8 +94,8 @@ type Sale struct {
 	Title           string    `json:"title"`
 	Thumbnail       string    `json:"thumbnail"`
 	Total           uint64    `json:"total"`
-	BuyerId         string    `json:"vendorId"`
-	BuyerHandle     string    `json:"vendorHandle"`
+	BuyerId         string    `json:"buyerId"`
+	BuyerHandle     string    `json:"buyerHandle"`
 	ShippingName    string    `json:"shippingName"`
 	ShippingAddress string    `json:"shippingAddress"`
 	State           string    `json:"state"`
@@ -105,11 +105,14 @@ type Sale struct {
 type Case struct {
 	CaseId       string    `json:"caseId"`
 	Timestamp    time.Time `json:"timestamp"`
+	Title        string    `json:"title"`
+	Thumbnail    string    `json:"thumbnail"`
 	Total        uint64    `json:"total"`
-	BuyerId      string    `json:"vendorId"`
-	BuyerHandle  string    `json:"vendorHandle"`
+	BuyerId      string    `json:"buyerId"`
+	BuyerHandle  string    `json:"buyerHandle"`
 	VendorId     string    `json:"vendorId"`
 	VendorHandle string    `json:"vendorHandle"`
+	BuyerOpened  bool      `json:"buyerOpened"`
 	State        string    `json:"state"`
 	Read         bool      `json:"read"`
 }

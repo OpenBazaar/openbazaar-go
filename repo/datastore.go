@@ -212,8 +212,8 @@ type Cases interface {
 	// Return the dispute payout data for a case
 	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
 
-	// Return the IDs for all cases
-	GetAll() ([]string, error)
+	// Return the metadata for all cases
+	GetAll(offsetId string, limit int) ([]Case, error)
 }
 
 type Chat interface {

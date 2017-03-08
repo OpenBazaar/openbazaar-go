@@ -152,7 +152,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
-			Total:           total,
+			Total:           uint64(total),
 			VendorId:        vendorID,
 			VendorHandle:    vendorHandle,
 			ShippingName:    shippingName,

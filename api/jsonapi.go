@@ -2320,3 +2320,31 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(ret))
 	return
 }
+
+func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
+	limit := r.URL.Query().Get("limit")
+	if limit == "" {
+		limit = "-1"
+	}
+	l, err := strconv.Atoi(limit)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetId := r.URL.Query().Get("offsetId")
+	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret, err := json.MarshalIndent(cases, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if string(ret) == "null" {
+		ret = []byte("[]")
+	}
+	fmt.Fprint(w, string(ret))
+	return
+}
