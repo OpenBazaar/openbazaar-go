@@ -32,10 +32,12 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 			var i interface{}
 			err := json.Unmarshal(notifications.Serialize(n), &i)
 			if err != nil {
+				log.Notice(err)
 				continue
 			}
-			sanitized, err := SanitizeJSON(n)
+			sanitized, err := SanitizeJSON(i)
 			if err != nil {
+				log.Notice(err)
 				continue
 			}
 			out <- sanitized
