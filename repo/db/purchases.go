@@ -126,11 +126,11 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error
 
 	var stm string
 	if offsetId != "" {
-		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?) limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases limit " + strconv.Itoa(limit) + ";"
 	}
-	rows, err := p.db.Query(stm)
+	rows, err := p.db.Query(stm, offsetId)
 	if err != nil {
 		return nil, err
 	}

@@ -178,12 +178,12 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 
 	var stm string
 	if offsetId != "" {
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?) limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases limit " + strconv.Itoa(limit) + ";"
 	}
 
-	rows, err := c.db.Query(stm)
+	rows, err := c.db.Query(stm, offsetId)
 	if err != nil {
 		return nil, err
 	}

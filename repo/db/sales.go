@@ -127,11 +127,11 @@ func (s *SalesDB) GetAll(offsetId string, limit int) ([]repo.Sale, error) {
 
 	var stm string
 	if offsetId != "" {
-		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID='" + offsetId + "') limit " + strconv.Itoa(limit) + " ;"
+		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID=?) limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales limit " + strconv.Itoa(limit) + ";"
 	}
-	rows, err := s.db.Query(stm)
+	rows, err := s.db.Query(stm, offsetId)
 	if err != nil {
 		return nil, err
 	}
