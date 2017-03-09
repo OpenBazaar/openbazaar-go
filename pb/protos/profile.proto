@@ -6,32 +6,33 @@ import "google/protobuf/timestamp.proto";
 import "moderator.proto";
 
 message Profile {
-    string handle                          = 1;
-    string name                            = 2;
-    string location                        = 3;
-    string about                           = 4;
-    string shortDescription                = 5;
+    string peerID                          = 1;
+    string handle                          = 2;
+    string name                            = 3;
+    string location                        = 4;
+    string about                           = 5;
+    string shortDescription                = 6;
 
-    bool nsfw                              = 6;
-    bool vendor                            = 7;
-    bool moderator                         = 8;
-    Moderator moderatorInfo                = 9;
+    bool nsfw                              = 7;
+    bool vendor                            = 8;
+    bool moderator                         = 9;
+    Moderator moderatorInfo                = 10;
 
-    Contact contactInfo                    = 10;
-    Colors colors                          = 11;
+    Contact contactInfo                    = 11;
+    Colors colors                          = 12;
 
     // The following data is added to the profile
     // automatically by the server and may be omitted
     // when setting the profile via API.
 
-    Image avatarHashes                     = 12;
-    Image headerHashes                     = 13;
+    Image avatarHashes                     = 13;
+    Image headerHashes                     = 14;
 
-    Stats stats                            = 14;
+    Stats stats                            = 15;
 
-    string bitcoinPubkey                   = 15;
+    string bitcoinPubkey                   = 16;
 
-    google.protobuf.Timestamp lastModified = 16;
+    google.protobuf.Timestamp lastModified = 17;
 
     message Contact {
         string website                = 1;

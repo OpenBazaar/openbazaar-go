@@ -1290,6 +1290,10 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
+		if profile.PeerID != peerId {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
 	m := jsonpb.Marshaler{

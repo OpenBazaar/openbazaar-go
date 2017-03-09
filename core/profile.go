@@ -131,6 +131,7 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
+	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	if profile.Stats == nil {
 		profile.Stats = new(pb.Profile_Stats)
 	}
