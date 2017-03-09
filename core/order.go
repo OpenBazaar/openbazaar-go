@@ -175,6 +175,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
 		}
 
+		// Remove any duplicate coupons
+		couponMap := make(map[string]bool)
+		var coupons []string
+		for _, c := range item.Coupons {
+			if !couponMap[c] {
+				couponMap[c] = true
+				coupons = append(coupons, c)
+			}
+		}
+
 		// Validate the selected options
 		listingOptions := make(map[string]*pb.Listing_Item_Option)
 		for _, opt := range listing.Item.Options {
@@ -220,7 +230,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		i.ShippingOption = so
 		i.Memo = item.Memo
-		i.CouponCodes = item.Coupons
+		i.CouponCodes = coupons
 		order.Items = append(order.Items, i)
 	}
 
@@ -1006,6 +1016,17 @@ collectListings:
 	for _, listing := range contract.VendorListings {
 		if !n.IsItemForSale(listing) {
 			return errors.New("Contract contained item that is not for sale")
+		}
+	}
+
+	// Validate no duplicate coupons
+	for _, item := range contract.BuyerOrder.Items {
+		couponMap := make(map[string]bool)
+		for _, c := range item.CouponCodes {
+			if couponMap[c] {
+				return errors.New("Duplicate coupon code in order")
+			}
+			couponMap[c] = true
 		}
 	}
 
