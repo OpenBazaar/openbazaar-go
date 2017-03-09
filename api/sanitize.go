@@ -11,7 +11,17 @@ func init() {
 	sanitizer = bluemonday.UGCPolicy()
 }
 
-func SanitizeJSON(data interface{}) ([]byte, error) {
+func SanitizeJSON(s []byte) ([]byte, error) {
+	var i interface{}
+	err := json.Unmarshal(s, &i)
+	if err != nil {
+		return nil, err
+	}
+	sanitize(i)
+	return json.MarshalIndent(i, "", "    ")
+}
+
+func sanitize(data interface{}) {
 	switch d := data.(type) {
 	case map[string]interface{}:
 		for k, v := range d {
@@ -19,9 +29,9 @@ func SanitizeJSON(data interface{}) ([]byte, error) {
 			case string:
 				d[k] = sanitizer.Sanitize(v.(string))
 			case map[string]interface{}:
-				SanitizeJSON(v)
+				sanitize(v)
 			case []interface{}:
-				SanitizeJSON(v)
+				sanitize(v)
 			case float64:
 				d[k] = uint64(v.(float64))
 			}
@@ -39,14 +49,13 @@ func SanitizeJSON(data interface{}) ([]byte, error) {
 				}
 			case map[string]interface{}:
 				for _, t := range d {
-					SanitizeJSON(t)
+					sanitize(t)
 				}
 			case []interface{}:
 				for _, t := range d {
-					SanitizeJSON(t)
+					sanitize(t)
 				}
 			}
 		}
 	}
-	return json.MarshalIndent(data, "", "    ")
 }

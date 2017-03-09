@@ -30,6 +30,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
@@ -164,18 +165,37 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 }
 
 func SanitizedResponse(w http.ResponseWriter, response string) {
-	var i interface{}
-	err := json.Unmarshal([]byte(response), &i)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	ret, err := SanitizeJSON(i)
+	ret, err := SanitizeJSON([]byte(response))
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	fmt.Fprint(w, string(ret))
+}
+
+func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message) {
+	ret, err := SanitizeJSON([]byte(response))
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = jsonpb.UnmarshalString(string(ret), m)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	marshaler := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := marshaler.MarshalToString(m)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprint(w, out)
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +256,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, out)
+	SanitizedResponseM(w, out, new(pb.Profile))
 	return
 }
 
@@ -302,7 +322,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, out)
+	SanitizedResponseM(w, out, new(pb.Profile))
 	return
 }
 
@@ -1255,7 +1275,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponse(w, string(out))
+		SanitizedResponseM(w, string(out), new(pb.ListingRespApi))
 		return
 	} else {
 		var listingsBytes []byte
@@ -1282,7 +1302,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 			w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 		}
-		SanitizedResponse(w, string(listingsBytes))
+		SanitizedResponseM(w, string(listingsBytes), new(pb.RicardianContract))
 	}
 }
 
@@ -1322,7 +1342,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, out)
+	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
@@ -1471,7 +1491,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	} else {
 		i.node.Datastore.Purchases().MarkAsRead(orderId)
 	}
-	SanitizedResponse(w, out)
+	SanitizedResponseM(w, out, new(pb.OrderRespApi))
 }
 
 func (i *jsonAPIHandler) POSTShutdown(w http.ResponseWriter, r *http.Request) {
@@ -1883,7 +1903,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	i.node.Datastore.Cases().MarkAsRead(orderId)
-	SanitizedResponse(w, out)
+	SanitizedResponseM(w, out, new(pb.CaseRespApi))
 }
 
 func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request) {
