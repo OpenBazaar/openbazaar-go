@@ -70,7 +70,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
+        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listingsIndex.json"
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't get listing index")
@@ -153,7 +153,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice incorrectly saved as unfunded")
-        
+
         # Bob open dispute
         dispute = {
             "orderId": orderId,

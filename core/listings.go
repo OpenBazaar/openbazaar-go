@@ -247,9 +247,9 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 	return nil
 }
 
-// Update the index.json file in the listings directory
+// Update listingsIndex.json
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 
 	var index []listingData
@@ -348,9 +348,9 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	return nil
 }
 
-// Update the hashes in the index.json file
+// Update listingsIndex.json
 func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 
 	var index []listingData
 
@@ -396,7 +396,7 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 
 // Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 
 	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
@@ -420,7 +420,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 		log.Error(err)
 		return false
 	}
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 
 	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
@@ -467,7 +467,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		return err
 	}
 	var index []listingData
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) { // FIXME: What if there is an error other than NotExist?
 		// Read existing file
@@ -520,7 +520,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 }
 
 func (n *OpenBazaarNode) GetListings() ([]byte, error) {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if os.IsNotExist(err) {
 		return []byte("[]"), nil
@@ -540,8 +540,8 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
-	// Read index.json
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	// Read listingsIndex.json
+	indexPath := path.Join(n.RepoPath, "root", "listingsIndex.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return nil, nil, err
