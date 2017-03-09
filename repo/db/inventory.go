@@ -10,13 +10,16 @@ type InventoryDB struct {
 	lock sync.RWMutex
 }
 
-func (i *InventoryDB) Put(slug string, count int) error {
+func (i *InventoryDB) Put(slug string, variantIndex int, count int) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	tx, _ := i.db.Begin()
-	stmt, _ := tx.Prepare("insert or replace into inventory(slug, count) values(?,?)")
+	stmt, err := tx.Prepare("insert or replace into inventory(slug, variantIndex, count) values(?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
-	_, err := stmt.Exec(slug, count)
+	_, err = stmt.Exec(slug, variantIndex, count)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -25,24 +28,52 @@ func (i *InventoryDB) Put(slug string, count int) error {
 	return nil
 }
 
-func (i *InventoryDB) GetSpecific(path string) (int, error) {
+func (i *InventoryDB) GetSpecific(slug string, variantIndex int) (int, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
-	stmt, err := i.db.Prepare("select count from inventory where slug=?")
+	stmt, err := i.db.Prepare("select count from inventory where slug=? and variantIndex=?")
+	if err != nil {
+		return 0, err
+	}
 	defer stmt.Close()
 	var count int
-	err = stmt.QueryRow(path).Scan(&count)
+	err = stmt.QueryRow(slug, variantIndex).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
 	return count, nil
 }
 
-func (i *InventoryDB) Get(slug string) (map[string]int, error) {
+func (i *InventoryDB) Get(slug string) (map[int]int, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
-	ret := make(map[string]int)
-	stm := `select * from inventory where slug like "` + slug + `%";`
+	ret := make(map[int]int)
+	stmt, err := i.db.Prepare("select * from inventory where slug=?")
+	if err != nil {
+		return ret, err
+	}
+	defer stmt.Close()
+	rows, err := stmt.Query(slug)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var slug string
+		var count int
+		var variantIndex int
+		rows.Scan(&slug, &variantIndex, &count)
+		ret[variantIndex] = count
+	}
+	return ret, nil
+}
+
+func (i *InventoryDB) GetAll() (map[string]map[int]int, error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+
+	ret := make(map[string]map[int]int)
+	stm := "select slug, variantIndex, count from inventory"
 	rows, err := i.db.Query(stm)
 	if err != nil {
 		return ret, err
@@ -51,42 +82,30 @@ func (i *InventoryDB) Get(slug string) (map[string]int, error) {
 	for rows.Next() {
 		var slug string
 		var count int
-		rows.Scan(&slug, &count)
-		ret[slug] = count
+		var variantIndex int
+		rows.Scan(&slug, &variantIndex, &count)
+		m, ok := ret[slug]
+		if !ok {
+			r := make(map[int]int)
+			r[variantIndex] = count
+			ret[slug] = r
+		} else {
+			m[variantIndex] = count
+		}
 	}
 	return ret, nil
 }
 
-func (i *InventoryDB) GetAll() (map[string]int, error) {
-	i.lock.RLock()
-	defer i.lock.RUnlock()
-	ret := make(map[string]int)
-	stm := "select slug, count from inventory"
-	rows, err := i.db.Query(stm)
-	defer rows.Close()
-	if err != nil {
-		return ret, err
-	}
-	for rows.Next() {
-		var slug string
-		var count int
-		rows.Scan(&slug, &count)
-		ret[slug] = count
-	}
-	return ret, nil
-}
-
-func (i *InventoryDB) Delete(path string) error {
+func (i *InventoryDB) Delete(slug string, variantIndex int) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	_, err := i.db.Exec("delete from inventory where slug=?", path)
+	_, err := i.db.Exec("delete from inventory where slug=? and variantIndex=?", slug, variantIndex)
 	return err
 }
 
 func (i *InventoryDB) DeleteAll(slug string) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	stm := `delete from inventory where slug like "` + slug + `%";`
-	_, err := i.db.Exec(stm)
+	_, err := i.db.Exec("delete from inventory where slug=?", slug)
 	return err
 }
