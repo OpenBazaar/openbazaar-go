@@ -61,6 +61,7 @@ type listingData struct {
 	Price        price     `json:"price"`
 	ShipsTo      []string  `json:"shipsTo"`
 	FreeShipping []string  `json:"freeShipping"`
+	Language     string    `json:"language"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -262,6 +263,7 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 		ShipsTo:      shipsTo,
 		FreeShipping: freeShipping,
+		Language:     contract.VendorListings[0].Metadata.Language,
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -611,6 +613,12 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if listing.Metadata.PricingCurrency == "" {
 		return errors.New("Listing pricing currency code must not be empty")
+	}
+	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
+		return fmt.Errorf("PricingCurrency is longer than the max of %d characters", WordMaxCharacters)
+	}
+	if len(listing.Metadata.Language) > WordMaxCharacters {
+		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
 	}
 
 	// Item

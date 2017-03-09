@@ -36,6 +36,7 @@ message Listing {
         google.protobuf.Timestamp expiry = 4;
         string acceptedCurrency          = 5;
         string pricingCurrency           = 6;
+        string language                  = 7;
 
         enum ContractType {
             PHYSICAL_GOOD = 0;
