@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -190,7 +189,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Maybe set as moderator
 	if profile.Moderator {
-		if err := i.node.SetSelfAsModerator(profile.ModInfo); err != nil {
+		if err := i.node.SetSelfAsModerator(profile.ModeratorInfo); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -300,21 +299,19 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read JSON from r.Body and decode into map
-	patch := make(map[string]interface{})
-	patchBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = json.Unmarshal(patchBytes, &patch)
+	// Read json data into interface
+	d := json.NewDecoder(r.Body)
+	d.UseNumber()
+
+	var patch interface{}
+	err := d.Decode(&patch)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Apply patch
-	err = i.node.PatchProfile(patch)
+	err = i.node.PatchProfile(patch.(map[string]interface{}))
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1145,7 +1142,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	profile.Moderator = false
-	profile.ModInfo = nil
+	profile.ModeratorInfo = nil
 	err = i.node.UpdateProfile(&profile)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

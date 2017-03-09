@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 			return err
 		}
 		profile.Moderator = true
-		profile.ModInfo = moderator
+		profile.ModeratorInfo = moderator
 		err = n.UpdateProfile(&profile)
 		if err != nil {
 			return err
@@ -128,17 +128,17 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 		return 0, err
 	}
 
-	switch profile.ModInfo.Fee.FeeType {
+	switch profile.ModeratorInfo.Fee.FeeType {
 	case pb.Moderator_Fee_PERCENTAGE:
-		return uint64(float64(transactionTotal) * (float64(profile.ModInfo.Fee.Percentage) / 100)), nil
+		return uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100)), nil
 	case pb.Moderator_Fee_FIXED:
-		if strings.ToLower(profile.ModInfo.Fee.FixedFee.CurrencyCode) == "btc" {
-			if profile.ModInfo.Fee.FixedFee.Amount >= transactionTotal {
+		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+			if profile.ModeratorInfo.Fee.FixedFee.Amount >= transactionTotal {
 				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 			}
-			return profile.ModInfo.Fee.FixedFee.Amount, nil
+			return profile.ModeratorInfo.Fee.FixedFee.Amount, nil
 		} else {
-			fee, err := n.getPriceInSatoshi(profile.ModInfo.Fee.FixedFee.CurrencyCode, profile.ModInfo.Fee.FixedFee.Amount)
+			fee, err := n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 			if err != nil {
 				return 0, err
 			} else if fee >= transactionTotal {
@@ -148,15 +148,15 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 		}
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed uint64
-		if strings.ToLower(profile.ModInfo.Fee.FixedFee.CurrencyCode) == "btc" {
-			fixed = profile.ModInfo.Fee.FixedFee.Amount
+		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+			fixed = profile.ModeratorInfo.Fee.FixedFee.Amount
 		} else {
-			fixed, err = n.getPriceInSatoshi(profile.ModInfo.Fee.FixedFee.CurrencyCode, profile.ModInfo.Fee.FixedFee.Amount)
+			fixed, err = n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 			if err != nil {
 				return 0, err
 			}
 		}
-		percentage := uint64(float64(transactionTotal) * (float64(profile.ModInfo.Fee.Percentage) / 100))
+		percentage := uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100))
 		if fixed+percentage >= transactionTotal {
 			return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 		}
