@@ -162,23 +162,29 @@ const profileJSON = `{
     "location": "Japan",
     "about": "Bitcoin's Creator",
     "shortDescription": "I make money",
-    "website": "bitcoin.org",
-    "email": "satoshi@gmx.com",
-    "phoneNumber": "5551234567",
-    "avgRating": 1,
-    "numRatings": 21000000,
+    "contactInfo": {
+	    "website": "bitcoin.org",
+	    "email": "satoshi@gmx.com",
+	    "phoneNumber": "5551234567"
+    },
     "nsfw": true,
     "vendor": true,
     "moderator": false,
-    "primaryColor": "#000000",
-    "secondaryColor": "#FFD700",
-    "textColor": "#ffffff",
-    "highlightColor": "#123ABC",
-    "highlightTextColor": "#DEAD00",
-    "followerCount": 1,
-    "followingCount": 2,
-    "listingCount": 3,
-	"bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
+    "colors": {
+	    "primary": "#000000",
+	    "secondary": "#FFD700",
+	    "text": "#ffffff",
+	    "highlight": "#123ABC",
+	    "highlightText": "#DEAD00"
+    },
+    "stats": {
+	    "followerCount": 1,
+	    "followingCount": 2,
+	    "listingCount": 3,
+	    "avgerageRating": 1,
+	    "ratingCount": 21000000
+    },
+    "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
 
 const profileUpdateJSON = `{
@@ -193,23 +199,10 @@ const profileUpdatedJSON = `{
     "location": "Austrailia",
     "about": "",
     "shortDescription": "",
-    "website": "",
-    "email": "",
-    "phoneNumber": "",
-    "avgRating": 0,
-    "numRatings": 0,
     "nsfw": false,
     "vendor": false,
     "moderator": false,
-    "primaryColor": "",
-    "secondaryColor": "",
-    "textColor": "",
-    "highlightColor": "",
-    "highlightTextColor": "",
-    "followerCount": 0,
-    "followingCount": 0,
-    "listingCount": 0,
-	"bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
+    "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
 
 //
