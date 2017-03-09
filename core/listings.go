@@ -736,8 +736,8 @@ func validateListing(listing *pb.Listing) (err error) {
 		} else {
 			return errors.New("Duplicate sku")
 		}
-		if len(sku.VariantCombo) < len(listing.Item.Options) {
-			return errors.New("Not enough options selected in sku combination")
+		if len(sku.VariantCombo) != len(listing.Item.Options) {
+			return errors.New("Incorrect number of variants in sku combination")
 		}
 		for i, combo := range sku.VariantCombo {
 			if int(combo) > variantSizeMap[i] {
