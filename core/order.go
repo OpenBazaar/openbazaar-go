@@ -2,7 +2,6 @@ package core
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -22,7 +21,6 @@ import (
 	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	crypto "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
-	"path"
 	"strings"
 	"time"
 )
@@ -175,6 +173,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
 		}
 
+		// Remove any duplicate coupons
+		couponMap := make(map[string]bool)
+		var coupons []string
+		for _, c := range item.Coupons {
+			if !couponMap[c] {
+				couponMap[c] = true
+				coupons = append(coupons, c)
+			}
+		}
+
 		// Validate the selected options
 		listingOptions := make(map[string]*pb.Listing_Item_Option)
 		for _, opt := range listing.Item.Options {
@@ -195,12 +203,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		h := sha256.Sum256(ser)
-		encoded, err := mh.Encode(h[:], mh.SHA2_256)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		listingMH, err := mh.Cast(encoded)
+		listingMH, err := EncodeMultihash(ser)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -220,7 +223,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 		i.ShippingOption = so
 		i.Memo = item.Memo
-		i.CouponCodes = item.Coupons
+		i.CouponCodes = coupons
 		order.Items = append(order.Items, i)
 	}
 
@@ -590,12 +593,7 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	orderBytes := sha256.Sum256(ser)
-	encoded, err := mh.Encode(orderBytes[:], mh.SHA2_256)
-	if err != nil {
-		return "", err
-	}
-	multihash, err := mh.Cast(encoded)
+	multihash, err := EncodeMultihash(ser)
 	if err != nil {
 		return "", err
 	}
@@ -612,27 +610,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
 		var itemTotal uint64
-		var l *pb.Listing
-		for _, listing := range contract.VendorListings {
-			ser, err := proto.Marshal(listing)
-			if err != nil {
-				return 0, err
-			}
-			h := sha256.Sum256(ser)
-			encoded, err := mh.Encode(h[:], mh.SHA2_256)
-			if err != nil {
-				return 0, err
-			}
-			listingMH, err := mh.Cast(encoded)
-			if err != nil {
-				return 0, err
-			}
-			if item.ListingHash == listingMH.B58String() {
-				l = listing
-				break
-			}
-		}
-		if l == nil {
+		l, err := GetListingFromHash(item.ListingHash, contract)
+		if err != nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
 		}
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
@@ -643,47 +622,34 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			return 0, err
 		}
 		itemTotal += satoshis
-		for _, option := range item.Options {
-			optionExists := false
-			for _, listingOption := range l.Item.Options {
-				if strings.ToLower(option.Name) == strings.ToLower(listingOption.Name) {
-					optionExists = true
-					variantExists := false
-					for _, variant := range listingOption.Variants {
-						if strings.ToLower(variant.Name) == strings.ToLower(option.Value) {
-							if variant.PriceModifier > 0 {
-								satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(variant.PriceModifier))
-								if variant.PriceModifier < 0 {
-									satoshis = -satoshis
-								}
-								if err != nil {
-									return 0, err
-								}
-								itemTotal += satoshis
-							}
-							variantExists = true
-							break
-						}
+		selectedSku, err := GetSelectedSku(l, item.Options)
+		if err != nil {
+			return 0, err
+		}
+		skuExists := false
+		for i, sku := range l.Item.Skus {
+			if selectedSku == i {
+				skuExists = true
+				if sku.Surcharge != 0 {
+					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(sku.Surcharge))
+					if err != nil {
+						return 0, err
 					}
-					if !variantExists {
-						return 0, errors.New("Selected variant not found in listing")
+					if sku.Surcharge < 0 {
+						satoshis = -satoshis
 					}
-					break
+					itemTotal += satoshis
 				}
-			}
-			if !optionExists {
-				return 0, errors.New("Selected option not found in listing")
+				if !skuExists {
+					return 0, errors.New("Selected variant not found in listing")
+				}
+				break
 			}
 		}
 		// Subtract any coupons
 		for _, couponCode := range item.CouponCodes {
 			for _, vendorCoupon := range l.Coupons {
-				h := sha256.Sum256([]byte(couponCode))
-				encoded, err := mh.Encode(h[:], mh.SHA2_256)
-				if err != nil {
-					return 0, err
-				}
-				multihash, err := mh.Cast(encoded)
+				multihash, err := EncodeMultihash([]byte(couponCode))
 				if err != nil {
 					return 0, err
 				}
@@ -967,6 +933,7 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract) error {
 	}
 
 	// Validate that the hash of the items in the contract match claimed hash in the order
+	// itemHashes should avoid duplicates
 	var itemHashes []string
 collectListings:
 	for _, item := range contract.BuyerOrder.Items {
@@ -977,17 +944,13 @@ collectListings:
 		}
 		itemHashes = append(itemHashes, item.ListingHash)
 	}
+	// TODO: use function for this
 	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return err
 		}
-		hash := sha256.Sum256(ser)
-		encoded, err := mh.Encode(hash[:], mh.SHA2_256)
-		if err != nil {
-			return err
-		}
-		multihash, err := mh.Cast(encoded)
+		multihash, err := EncodeMultihash(ser)
 		if err != nil {
 			return err
 		}
@@ -1009,8 +972,24 @@ collectListings:
 		}
 	}
 
+	// Validate no duplicate coupons
+	for _, item := range contract.BuyerOrder.Items {
+		couponMap := make(map[string]bool)
+		for _, c := range item.CouponCodes {
+			if couponMap[c] {
+				return errors.New("Duplicate coupon code in order")
+			}
+			couponMap[c] = true
+		}
+	}
+
 	// Validate the selected variants
-	var inventory []map[string]int
+	type inventory struct {
+		Slug    string
+		Variant int
+		Count   int
+	}
+	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
 		var userOptions []*pb.Order_Item_Option
 		var listingOptions []string
@@ -1020,16 +999,19 @@ collectListings:
 		for _, uopt := range item.Options {
 			userOptions = append(userOptions, uopt)
 		}
-		inv := make(map[string]int)
-		invPath := listingMap[item.ListingHash].Slug
+		inv := inventory{Slug: listingMap[item.ListingHash].Slug}
+		selectedVariant, err := GetSelectedSku(listingMap[item.ListingHash], item.Options)
+		if err != nil {
+			return err
+		}
+		inv.Variant = selectedVariant
 		for _, o := range listingMap[item.ListingHash].Item.Options {
 			for _, checkOpt := range userOptions {
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
-						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
+						if strings.ToLower(v) == strings.ToLower(checkOpt.Value) {
 							validVariant = true
-							invPath = path.Join(invPath, v.Name)
 						}
 					}
 					if validVariant == false {
@@ -1049,8 +1031,8 @@ collectListings:
 			return errors.New("Not all options were selected")
 		}
 		// Create inventory paths to check later
-		inv[invPath] = int(item.Quantity)
-		inventory = append(inventory, inv)
+		inv.Count = int(item.Quantity)
+		inventoryList = append(inventoryList, inv)
 	}
 
 	// Validate the selected shipping options
@@ -1096,15 +1078,13 @@ collectListings:
 	}
 
 	// Check we have enough inventory
-	for _, invMap := range inventory {
-		for invString, quantity := range invMap {
-			amt, err := n.Datastore.Inventory().GetSpecific(invString)
-			if err != nil {
-				return errors.New("Vendor has no inventory for the selected variant.")
-			}
-			if amt >= 0 && amt < quantity {
-				return fmt.Errorf("Not enough inventory for item %s, only %d in stock", invString, amt)
-			}
+	for _, inv := range inventoryList {
+		amt, err := n.Datastore.Inventory().GetSpecific(inv.Slug, inv.Variant)
+		if err != nil {
+			return errors.New("Vendor has no inventory for the selected variant.")
+		}
+		if amt >= 0 && amt < inv.Count {
+			return fmt.Errorf("Not enough inventory for item %s:%d, only %d in stock", inv.Slug, inv.Variant, amt)
 		}
 	}
 
@@ -1328,6 +1308,67 @@ func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount ui
 	buffer := float32(requestedAmount) * (bufferPercent / 100)
 	if float32(paymentAmount)+buffer < float32(requestedAmount) {
 		return false
+	}
+	return true
+}
+
+func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listing, error) {
+	for _, listing := range contract.VendorListings {
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			return nil, err
+		}
+		listingMH, err := EncodeMultihash(ser)
+		if err != nil {
+			return nil, err
+		}
+		if hash == listingMH.B58String() {
+			return listing, nil
+		}
+	}
+	return nil, errors.New("Not found")
+}
+
+func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (int, error) {
+	if len(itemOptions) == 0 && len(listing.Item.Skus) == 1 {
+		// Default sku
+		return 0, nil
+	}
+	var selected []int
+	for _, s := range listing.Item.Options {
+	optionsLoop:
+		for _, o := range itemOptions {
+			if o.Name == s.Name {
+				for i, va := range s.Variants {
+					if va == o.Value {
+						selected = append(selected, i)
+						break optionsLoop
+					}
+				}
+			}
+		}
+	}
+	for i, sku := range listing.Item.Skus {
+		if SameSku(selected, sku) {
+			return i, nil
+		}
+	}
+	return 0, errors.New("No skus selected")
+}
+
+func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {
+	if sku == nil || len(selectedVariants) == 0 {
+		return false
+	}
+	combos := sku.VariantCombo
+	if len(selectedVariants) != len(combos) {
+		return false
+	}
+
+	for i := range selectedVariants {
+		if selectedVariants[i] != int(combos[i]) {
+			return false
+		}
 	}
 	return true
 }

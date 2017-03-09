@@ -123,7 +123,6 @@ func runAPITest(t *testing.T, test apiTest) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	// Ensure correct status code
 	if resp.StatusCode != test.expectedResponseCode {
 		t.Fatalf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)

@@ -449,7 +449,7 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
+	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -457,25 +457,31 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If the listing already exists tell them to use PUT
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
-	if ld.Listing.Slug != "" {
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
+	if ld.Slug != "" {
 		_, ferr := os.Stat(listingPath)
 		if !os.IsNotExist(ferr) {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
+	} else {
+		ld.Slug, err = i.node.GenerateSlug(ld.Item.Title)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
-	contract, err := i.node.SignListing(ld.Listing)
+	err = i.node.SetListingInventory(ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
-	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	f, err := os.Create(listingPath)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -517,24 +523,24 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
-	ld := new(pb.ListingReqApi)
+	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Listing.Slug+".json")
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
-	contract, err := i.node.SignListing(ld.Listing)
+	err = i.node.SetListingInventory(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.SetListingInventory(ld.Listing, ld.Inventory)
+	contract, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1057,20 +1063,25 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
+		Variant  int    `json:"variant"`
 		Quantity int    `json:"quantity"`
 	}
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
 		fmt.Fprintf(w, `[]`)
+		return
 	}
-	for k, v := range inventory {
-		i := inv{k, v}
-		invList = append(invList, i)
+	for slug, m := range inventory {
+		for variant, count := range m {
+			i := inv{slug, variant, count}
+			invList = append(invList, i)
+		}
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
-		ret = []byte("[]")
+		fmt.Fprintf(w, `[]`)
+		return
 	}
 	fmt.Fprint(w, string(ret))
 	return
@@ -1079,6 +1090,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
+		Variant  int    `json:"variant"`
 		Quantity int    `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
@@ -1089,7 +1101,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, in := range invList {
-		err := i.node.Datastore.Inventory().Put(in.Slug, in.Quantity)
+		err = i.node.Datastore.Inventory().Put(in.Slug, in.Variant, in.Quantity)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1201,12 +1213,11 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		contract := new(pb.RicardianContract)
-		inventory := []*pb.Inventory{}
 		_, err := mh.FromB58String(listingId)
 		if err == nil {
-			contract, inventory, err = i.node.GetListingFromHash(listingId)
+			contract, err = i.node.GetListingFromHash(listingId)
 		} else {
-			contract, inventory, err = i.node.GetListingFromSlug(listingId)
+			contract, err = i.node.GetListingFromSlug(listingId)
 		}
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
@@ -1232,10 +1243,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		resp := new(pb.ListingRespApi)
-		resp.Contract = contract
-		resp.Inventory = inventory
-		out, err := m.MarshalToString(resp)
+		out, err := m.MarshalToString(contract)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
