@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -12,8 +13,11 @@ func init() {
 }
 
 func SanitizeJSON(s []byte) ([]byte, error) {
+	d := json.NewDecoder(bytes.NewReader(s))
+	d.UseNumber()
+
 	var i interface{}
-	err := json.Unmarshal(s, &i)
+	err := d.Decode(&i)
 	if err != nil {
 		return nil, err
 	}
@@ -32,8 +36,6 @@ func sanitize(data interface{}) {
 				sanitize(v)
 			case []interface{}:
 				sanitize(v)
-			case float64:
-				d[k] = uint64(v.(float64))
 			}
 		}
 	case []interface{}:
@@ -42,10 +44,6 @@ func sanitize(data interface{}) {
 			case string:
 				for i, s := range d {
 					d[i] = sanitizer.Sanitize(s.(string))
-				}
-			case float64:
-				for i, f := range d {
-					d[i] = uint64(f.(float64))
 				}
 			case map[string]interface{}:
 				for _, t := range d {
