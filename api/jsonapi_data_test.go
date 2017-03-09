@@ -182,7 +182,7 @@ const profileJSON = `{
 	    "followerCount": 1,
 	    "followingCount": 2,
 	    "listingCount": 3,
-	    "avgerageRating": 1,
+	    "averageRating": 1,
 	    "ratingCount": 21000000
     },
     "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
