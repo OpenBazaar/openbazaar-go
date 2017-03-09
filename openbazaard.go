@@ -412,8 +412,19 @@ func (x *Start) Execute(args []string) error {
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
-		log.Error("Invalid database encryption password")
-		os.Exit(3)
+		sqliteDB.Close()
+		fmt.Print("Database is encrypted, enter your password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		pw := string(bytePassword)
+		sqliteDB, err = initializeRepo(repoPath, pw, "", isTestnet)
+		if err != nil && err != repo.ErrRepoExists {
+			return err
+		}
+		if sqliteDB.Config().IsEncrypted() {
+			log.Error("Invalid password")
+			os.Exit(3)
+		}
 	}
 
 	// Create authentication cookie
