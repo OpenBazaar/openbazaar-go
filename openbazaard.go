@@ -255,6 +255,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	} else if strings.Contains(username, "\n") {
 		apiCfg.Username = strings.Replace(username, "\n", "", -1)
 	}
+	apiCfg.Authenticated = true
 	h := sha256.Sum256([]byte(pw))
 	apiCfg.Password = hex.EncodeToString(h[:])
 
