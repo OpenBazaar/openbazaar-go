@@ -47,6 +47,7 @@ type JsonAPIConfig struct {
 	Enabled       bool
 	Cors          *string
 	Authenticated bool
+	AllowedIPs    map[string]bool
 	Cookie        http.Cookie
 	Username      string
 	Password      string
@@ -58,13 +59,17 @@ type jsonAPIHandler struct {
 }
 
 func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
-
+	allowedIPs := make(map[string]bool)
+	for _, ip := range config.AllowedIPs {
+		allowedIPs[ip] = true
+	}
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
 			Enabled:       config.Enabled,
 			Cors:          config.CORS,
 			Headers:       config.HTTPHeaders,
 			Authenticated: config.Authenticated,
+			AllowedIPs:    allowedIPs,
 			Cookie:        authCookie,
 			Username:      config.Username,
 			Password:      config.Password,
@@ -80,6 +85,15 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
+	if len(i.config.AllowedIPs) > 0 {
+		remoteAddr := strings.Split(r.RemoteAddr, ":")
+		if !i.config.AllowedIPs[remoteAddr[0]] {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
+
 	if i.config.Cors != nil {
 		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
 		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")

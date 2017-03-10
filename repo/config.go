@@ -17,6 +17,7 @@ var DefaultBootstrapAddresses = []string{
 
 type APIConfig struct {
 	Authenticated bool
+	AllowedIPs    []string
 	Username      string
 	Password      string
 	CORS          *string
@@ -63,6 +64,11 @@ func GetAPIConfig(cfgPath string) (*APIConfig, error) {
 	}
 	enabled := api.(map[string]interface{})["Enabled"].(bool)
 	authenticated := api.(map[string]interface{})["Authenticated"].(bool)
+	allowedIPs := api.(map[string]interface{})["AllowedIPs"].([]interface{})
+	var allowedIPstrings []string
+	for _, ip := range allowedIPs {
+		allowedIPstrings = append(allowedIPstrings, ip.(string))
+	}
 	username := api.(map[string]interface{})["Username"].(string)
 	password := api.(map[string]interface{})["Password"].(string)
 	c := api.(map[string]interface{})["CORS"]
@@ -79,6 +85,7 @@ func GetAPIConfig(cfgPath string) (*APIConfig, error) {
 
 	apiConfig := &APIConfig{
 		Authenticated: authenticated,
+		AllowedIPs:    allowedIPstrings,
 		Username:      username,
 		Password:      password,
 		CORS:          cors,
