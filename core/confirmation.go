@@ -14,6 +14,8 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"time"
 )
 
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
@@ -28,6 +30,11 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		addr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
+
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	oc.Timestamp = ts
 
 	oc.RatingSignatures = []*pb.RatingSignature{}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -147,6 +154,10 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	}
 	rejectMsg := new(pb.OrderReject)
 	rejectMsg.OrderID = orderId
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64

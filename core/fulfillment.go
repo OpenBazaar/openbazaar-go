@@ -12,6 +12,8 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"time"
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
@@ -94,6 +96,11 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			break
 		}
 	}
+
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	fulfillment.Timestamp = ts
 
 	rs := new(pb.RatingSignature)
 	metadata := new(pb.RatingSignature_TransactionMetadata)
