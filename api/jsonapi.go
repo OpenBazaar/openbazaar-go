@@ -2284,15 +2284,15 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 
 func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request) {
 	type Tx struct {
-		Txid          string    `json:"Txid"`
-		Value         int64     `json:"Value"`
-		Address       string    `json:"Address"`
-		Status        string    `json:"Status"`
-		Memo          string    `json:"Memo"`
-		Timestamp     time.Time `json:"Timestamp"`
-		Confirmations int32     `json:"Confirmations"`
-		OrderId       string    `json:"OrderId"`
-		Thumbnail     string    `json:"Thumbnail"`
+		Txid          string    `json:"txid"`
+		Value         int64     `json:"value"`
+		Address       string    `json:"address"`
+		Status        string    `json:"status"`
+		Memo          string    `json:"memo"`
+		Timestamp     time.Time `json:"timestamp"`
+		Confirmations int32     `json:"confirmations"`
+		OrderId       string    `json:"orderId"`
+		Thumbnail     string    `json:"thumbnail"`
 	}
 	transactions, err := i.node.Wallet.Transactions()
 	if err != nil {
