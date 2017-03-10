@@ -2310,6 +2310,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		var confirmations int32
 		var status string
 		confs := int32(height) - t.Height
+		if t.Height <= 0 {
+			confs = t.Height
+		}
 		switch {
 		case confs < 0:
 			status = "DEAD"
