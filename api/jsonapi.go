@@ -37,8 +37,7 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
-	"gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"sync"
 )
@@ -1574,26 +1573,11 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		var mods []string
 		for _, p := range peerInfoList {
-			if len(p.Addrs) == 0 {
-				continue
-			}
-			addr := p.Addrs[0]
-			if addr.Protocols()[0].Code != multiaddr.P_IPFS {
-				continue
-			}
-			val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
+			id, err := core.ExtractIDFromPointer(p)
 			if err != nil {
 				continue
 			}
-			mh, err := multihash.FromB58String(val)
-			if err != nil {
-				continue
-			}
-			d, err := multihash.Decode(mh)
-			if err != nil {
-				continue
-			}
-			mods = append(mods, string(d.Digest))
+			mods = append(mods, id)
 		}
 		var resp string
 		removeDuplicates(mods)
@@ -1608,7 +1592,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						wg.Done()
 						return
 					}
-					resp := &pb.PeerAndProfile{mod, &profile}
+					resp := &pb.PeerAndProfile{m, &profile}
 					mar := jsonpb.Marshaler{
 						EnumsAsInts:  false,
 						EmitDefaults: true,
@@ -1671,34 +1655,19 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 
 			found := make(map[string]bool)
 			for p := range peerChan {
-				go func() {
-					if len(p.Addrs) == 0 {
-						return
-					}
-					addr := p.Addrs[0]
-					if addr.Protocols()[0].Code != multiaddr.P_IPFS {
-						return
-					}
-					val, err := addr.ValueForProtocol(multiaddr.P_IPFS)
+				go func(pi ps.PeerInfo) {
+					pid, err := core.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
-					mh, err := multihash.FromB58String(val)
-					if err != nil {
-						return
-					}
-					d, err := multihash.Decode(mh)
-					if err != nil {
-						return
-					}
-					if !found[string(d.Digest)] {
-						found[string(d.Digest)] = true
+					if !found[pid] {
+						found[pid] = true
 						if strings.ToLower(include) == "profile" {
-							profile, err := i.node.FetchProfile(string(d.Digest))
+							profile, err := i.node.FetchProfile(pid)
 							if err != nil {
 								return
 							}
-							resp := pb.PeerAndProfileWithID{id, string(d.Digest), &profile}
+							resp := pb.PeerAndProfileWithID{id, pid, &profile}
 							m := jsonpb.Marshaler{
 								EnumsAsInts:  false,
 								EmitDefaults: true,
@@ -1711,7 +1680,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 							}
 							i.node.Broadcast <- []byte(respJson)
 						} else {
-							resp := wsResp{id, string(d.Digest)}
+							resp := wsResp{id, pid}
 							respJson, err := json.MarshalIndent(resp, "", "    ")
 							if err != nil {
 								return
@@ -1719,7 +1688,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 							i.node.Broadcast <- []byte(respJson)
 						}
 					}
-				}()
+				}(p)
 			}
 		}()
 	}
