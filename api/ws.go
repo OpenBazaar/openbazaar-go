@@ -58,19 +58,21 @@ type wsHandler struct {
 	h             *hub
 	path          string
 	context       commands.Context
+	enabled       bool
 	authenticated bool
 	cookie        http.Cookie
 	username      string
 	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string) (*wsHandler, error) {
+func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, enabled bool, authenticated bool, authCookie http.Cookie, username, password string) (*wsHandler, error) {
 	hub := newHub()
 	go hub.run()
 	handler = wsHandler{
 		h:             hub,
 		path:          ctx.ConfigRoot,
 		context:       ctx,
+		enabled:       enabled,
 		authenticated: authenticated,
 		cookie:        authCookie,
 		username:      username,
@@ -83,6 +85,11 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error("Error upgrading to websockets:", err)
+		return
+	}
+	if !wsh.enabled {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
 	if wsh.authenticated {
