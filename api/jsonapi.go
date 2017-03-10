@@ -1007,7 +1007,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponse(w, fmt.Sprintf(`%.2f`, rate))
+		fmt.Fprintf(w, `%.2f`, rate)
 	}
 }
 
