@@ -103,6 +103,10 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, 
 	if err != nil {
 		return nil, err
 	}
+	_, err = service.datastore.Pointers().Get(pid)
+	if err != nil {
+		return nil, err
+	}
 	err = service.datastore.Pointers().Delete(pid)
 	if err != nil {
 		return nil, err
