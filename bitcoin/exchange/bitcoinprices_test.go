@@ -2,56 +2,55 @@ package exchange
 
 import (
 	"bytes"
-	"errors"
+	"encoding/json"
 	"io"
+	gonet "net"
+	"net/http"
 	"testing"
+	"time"
 )
 
-type testExchangeRateProvider struct {
-	err error
-}
-
-func (t *testExchangeRateProvider) fetch() error {
-	return t.err
+func setupBitcoinPriceFetcher() (b BitcoinPriceFetcher) {
+	b = BitcoinPriceFetcher{
+		cache: make(map[string]float64),
+	}
+	client := &http.Client{Transport: &http.Transport{Dial: gonet.Dial}, Timeout: time.Minute}
+	b.providers = []*ExchangeRateProvider{
+		{"https://ticker.openbazaar.org/api", b.cache, client, BitcoinAverageDecoder{}},
+		{"https://bitpay.com/api/rates", b.cache, client, BitPayDecoder{}},
+		{"https://blockchain.info/ticker", b.cache, client, BlockchainInfoDecoder{}},
+		{"https://api.bitcoincharts.com/v1/weighted_prices.json", b.cache, client, BitcoinChartsDecoder{}},
+	}
+	return b
 }
 
 func TestFetchCurrentRates(t *testing.T) {
-	b := BitcoinPriceFetcher{
-		cache: make(map[string]float64),
-	}
-	b.providers = []ExchangeRateProvider{&testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}}
+	b := setupBitcoinPriceFetcher()
 	err := b.fetchCurrentRates()
 	if err != nil {
 		t.Error("Failed to fetch bitcoin exchange rates")
 	}
-	b.providers = []ExchangeRateProvider{&testExchangeRateProvider{errors.New("Query fail")}, &testExchangeRateProvider{errors.New("Query fail")}, &testExchangeRateProvider{errors.New("Query fail")}}
-	err = b.fetchCurrentRates()
-	if err == nil {
-		t.Error("Failed to handle error when fetching exchange rates")
-	}
 }
 
-func TestGetLastRate(t *testing.T) {
-	b := BitcoinPriceFetcher{
-		cache: make(map[string]float64),
-	}
-	b.providers = []ExchangeRateProvider{&testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}}
+func TestGetLatestRate(t *testing.T) {
+	b := setupBitcoinPriceFetcher()
 	price, err := b.GetLatestRate("USD")
-	if err == nil || price != 0 {
-		t.Error("Incorrect return at GetLastRate")
+	if err != nil || price == 0 {
+		t.Error("Incorrect return at GetLatestRate (price, err)", price, err)
 	}
 	b.cache["USD"] = 650.00
+	price, ok := b.cache["USD"]
+	if !ok || price != 650 {
+		t.Error("Failed to fetch exchange rates from cache")
+	}
 	price, err = b.GetLatestRate("USD")
-	if err != nil || price != 650.00 {
-		t.Error("Incorrect return at GetLastRate")
+	if err != nil || price == 650.00 {
+		t.Error("Incorrect return at GetLatestRate (price, err)", price, err)
 	}
 }
 
 func TestGetAllRates(t *testing.T) {
-	b := BitcoinPriceFetcher{
-		cache: make(map[string]float64),
-	}
-	b.providers = []ExchangeRateProvider{&testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}, &testExchangeRateProvider{nil}}
+	b := setupBitcoinPriceFetcher()
 	b.cache["USD"] = 650.00
 	b.cache["EUR"] = 600.00
 	priceMap, err := b.GetAllRates()
@@ -69,9 +68,7 @@ func TestGetAllRates(t *testing.T) {
 }
 
 func TestGetExchangeRate(t *testing.T) {
-	b := BitcoinPriceFetcher{
-		cache: make(map[string]float64),
-	}
+	b := setupBitcoinPriceFetcher()
 	b.cache["usd"] = 650.00
 	r, err := b.GetExchangeRate("usd")
 	if err != nil {
@@ -95,6 +92,10 @@ func (r *req) Close() error {
 }
 
 func TestDecodeBitcoinAverage(t *testing.T) {
+	cache := make(map[string]float64)
+	bitcoinAverageDecoder := BitcoinAverageDecoder{}
+	var dataMap interface{}
+
 	response := `{
 	  "AED": {
 	    "ask": 2242.19,
@@ -124,15 +125,17 @@ func TestDecodeBitcoinAverage(t *testing.T) {
 	}`
 	// Test valid response
 	r := &req{bytes.NewReader([]byte(response))}
-	b := BitcoinAverage{
-		cache: make(map[string]float64),
+	decoder := json.NewDecoder(r)
+	err := decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
 	}
-	err := b.decode(r)
+	err = bitcoinAverageDecoder.decode(dataMap, cache)
 	if err != nil {
 		t.Error(err)
 	}
 	// Make sure it saved to cache
-	if len(b.cache) == 0 {
+	if len(cache) == 0 {
 		t.Error("Failed to response to cache")
 	}
 	resp := `{"ZWL": {
@@ -145,7 +148,12 @@ func TestDecodeBitcoinAverage(t *testing.T) {
 
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	err = decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
+	}
+	err = bitcoinAverageDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
@@ -160,73 +168,105 @@ func TestDecodeBitcoinAverage(t *testing.T) {
 
 	// Test invalid JSON
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	err = decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
+	}
+	err = bitcoinAverageDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 
 	// Test decode error
 	r = &req{bytes.NewReader([]byte(""))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitcoinAverageDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 }
 
 func TestDecodeBitPay(t *testing.T) {
+	cache := make(map[string]float64)
+	bitpayDecoder := BitPayDecoder{}
+	var dataMap interface{}
+
 	response := `[{"code":"BTC","name":"Bitcoin","rate":1},{"code":"USD","name":"US Dollar","rate":611.02},{"code":"EUR","name":"Eurozone Euro","rate":546.740696},{"code":"GBP","name":"Pound Sterling","rate":462.982074},{"code":"JPY","name":"Japanese Yen","rate":62479.23908}]`
 	// Test valid response
 	r := &req{bytes.NewReader([]byte(response))}
-	b := BitPay{
-		cache: make(map[string]float64),
+	decoder := json.NewDecoder(r)
+	err := decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
 	}
-	err := b.decode(r)
+	err = bitpayDecoder.decode(dataMap, cache)
 	if err != nil {
 		t.Error(err)
 	}
 	// Make sure it saved to cache
-	if len(b.cache) == 0 {
+	if len(cache) == 0 {
 		t.Error("Failed to response to cache")
 	}
 
 	resp := `[{"code":"BTC","name":"Bitcoin"},{"code":"USD","name":"US Dollar","rate":611.02},{"code":"EUR","name":"Eurozone Euro","rate":546.740696},{"code":"GBP","name":"Pound Sterling","rate":462.982074},{"code":"JPY","name":"Japanese Yen","rate":62479.23908}]`
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	err = decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
+	}
+	err = bitpayDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
+
 	resp = `[{"name":"Bitcoin","rate":611.02},{"code":"USD","name":"US Dollar","rate":611.02},{"code":"EUR","name":"Eurozone Euro","rate":546.740696},{"code":"GBP","name":"Pound Sterling","rate":462.982074},{"code":"JPY","name":"Japanese Yen","rate":62479.23908}]`
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	err = decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
+	}
+	err = bitpayDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 
 	// Test decode error
 	r = &req{bytes.NewReader([]byte(""))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitpayDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 }
 
 func TestDecodeBlockChainInfo(t *testing.T) {
+	cache := make(map[string]float64)
+	blockchainDecoder := BlockchainInfoDecoder{}
+	var dataMap interface{}
+
 	response := `{"USD" : {"15m" : 612.73, "last" : 612.73, "buy" : 611.1, "sell" : 612.72,  "symbol" : "$"},
   "ISK" : {"15m" : 74706.49, "last" : 74706.49, "buy" : 74507.76, "sell" : 74705.27,  "symbol" : "kr"},
   "HKD" : {"15m" : 4752.76, "last" : 4752.76, "buy" : 4740.11, "sell" : 4752.68,  "symbol" : "$"}}`
 	// Test valid response
 	r := &req{bytes.NewReader([]byte(response))}
-	b := BlockchainInfo{
-		cache: make(map[string]float64),
+	decoder := json.NewDecoder(r)
+	err := decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
 	}
-	err := b.decode(r)
+	err = blockchainDecoder.decode(dataMap, cache)
 	if err != nil {
 		t.Error(err)
 	}
 	// Make sure it saved to cache
-	if len(b.cache) == 0 {
+	if len(cache) == 0 {
 		t.Error("Failed to response to cache")
 	}
 
@@ -235,55 +275,76 @@ func TestDecodeBlockChainInfo(t *testing.T) {
   "HKD" : {"15m" : 4752.76, "last" : 4752.76, "buy" : 4740.11, "sell" : 4752.68,  "symbol" : "$"}}`
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = blockchainDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
+
 	resp = `{"USD" : {"15m" : 612.73, "buy" : 611.1, "sell" : 612.72,  "symbol" : "$"},
   "ISK" : {"15m" : 74706.49, "last" : 74706.49, "buy" : 74507.76, "sell" : 74705.27,  "symbol" : "kr"},
   "HKD" : {"15m" : 4752.76, "last" : 4752.76, "buy" : 4740.11, "sell" : 4752.68,  "symbol" : "$"}}`
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = blockchainDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 
 	// Test decode error
 	r = &req{bytes.NewReader([]byte(""))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = blockchainDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 }
 
 func TestDecodeBitcoinCharts(t *testing.T) {
+	cache := make(map[string]float64)
+	bitcoinChartsDecoder := BitcoinChartsDecoder{}
+	var dataMap interface{}
+
 	response := `{"USD": {"7d": "642.47", "30d": "656.26", "24h": "618.68"}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
 	// Test valid response
 	r := &req{bytes.NewReader([]byte(response))}
-	b := BitcoinCharts{
-		cache: make(map[string]float64),
+	decoder := json.NewDecoder(r)
+	err := decoder.Decode(&dataMap)
+	if err != nil {
+		t.Error(err)
 	}
-	err := b.decode(r)
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
 	if err != nil {
 		t.Error(err)
 	}
 	// Make sure it saved to cache
-	if len(b.cache) == 0 {
+	if len(cache) == 0 {
 		t.Error("Failed to response to cache")
 	}
 
 	resp := `{"USD": {"7d": "642.47", "30d": "656.26"}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
 	// Test missing JSON element
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	err = decoder.Decode(&dataMap)
 	if err != nil {
 		t.Error(err)
 	}
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
+	if err != nil {
+		t.Error(err)
+	}
+
 	resp = `{"USD": {"7d": "642.47", "30d": "656.26", "24h": 618.68}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
 	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
@@ -291,7 +352,9 @@ func TestDecodeBitcoinCharts(t *testing.T) {
 	resp = `{"USD": {"7d": "642.47", "30d": "656.26", "24h": "asdf"}, "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
 	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
@@ -299,14 +362,18 @@ func TestDecodeBitcoinCharts(t *testing.T) {
 	resp = `{"USD": [{"7d": "642.47", "30d": "656.26", "24h": "615.00"}], "IDR": {"7d": "8473454.17", "30d": "8611783.41", "24h": "8118676.19"}, "ILS": {"7d": "2486.06", "30d": "2595.67", "24h": "2351.95"}, "GBP": {"7d": "499.01", "30d": "508.06", "24h": "479.65"}}`
 	// Test malformatted JSON
 	r = &req{bytes.NewReader([]byte(resp))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
 
 	// Test decode error
 	r = &req{bytes.NewReader([]byte(""))}
-	err = b.decode(r)
+	decoder = json.NewDecoder(r)
+	decoder.Decode(&dataMap)
+	err = bitcoinChartsDecoder.decode(dataMap, cache)
 	if err == nil {
 		t.Error(err)
 	}
