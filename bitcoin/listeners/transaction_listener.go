@@ -3,12 +3,8 @@ package bitcoin
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
@@ -17,6 +13,9 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	"sync"
+	"time"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -218,39 +217,31 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 }
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
-	inventory, err := l.db.Inventory().GetAll()
-	if err != nil {
-		return
-	}
 	for _, item := range contract.BuyerOrder.Items {
-		var variants []string
-		for _, option := range item.Options {
-			variants = append(variants, option.Value)
+		listing, err := core.GetListingFromHash(item.ListingHash, contract)
+		if err != nil {
+			continue
 		}
-		for path, c := range inventory {
-			contains := true
-		vi:
-			for i := 0; i < len(variants); i++ {
-				if !strings.Contains(path, variants[i]) {
-					contains = false
-					break vi
-				}
-			}
-			if contains && c > 0 {
-				q := int(item.Quantity)
-				if c-q < 0 {
-					q = 0
-					orderId, err := calcOrderId(contract.BuyerOrder)
-					if err != nil {
-						continue
-					}
-					log.Warning("Order %s purchased more inventory for %s than we have on hand", orderId, path)
-					l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + path + `"`)
-				}
-				l.db.Inventory().Put(path, c-q)
-				log.Debugf("Adjusting inventory for %s to %d\n", path, c-q)
-			}
+		variant, err := core.GetSelectedSku(listing, item.Options)
+		if err != nil {
+			continue
 		}
+		c, err := l.db.Inventory().GetSpecific(listing.Slug, variant)
+		if err != nil {
+			continue
+		}
+		q := int(item.Quantity)
+		if c-q < 0 {
+			q = 0
+			orderId, err := calcOrderId(contract.BuyerOrder)
+			if err != nil {
+				continue
+			}
+			log.Warning("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
+			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
+		}
+		l.db.Inventory().Put(listing.Slug, variant, c-q)
+		log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, c-q)
 	}
 }
 

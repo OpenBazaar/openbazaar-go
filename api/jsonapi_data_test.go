@@ -272,270 +272,348 @@ const headerValidJSONResponse = `{
 //
 
 const listingJSON = `{
-	"listing": {
-		"slug": "ron_swanson_tshirt",
-		"vendorID": {
-			"guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
-			"blockchainID": "@urbanart",
-			"pubkeys": {
-				"guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
-				"bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+	"slug": "",
+	"metadata": {
+		"version": 1,
+		"contractType": "PHYSICAL_GOOD",
+		"format": "FIXED_PRICE",
+		"expiry": "2017-08-17T04:52:19.000Z",
+		"pricingCurrency": "tbtc"
+	},
+	"item": {
+		"title": "Ron Swanson Tshirt",
+		"description": "Kick ass ron swanson tshirt in yellow",
+		"processingTime": "1 to 2 Business days",
+		"price": 12000000,
+		"tags": [
+			"tshirts",
+			"clothing",
+			"ron swanson"
+		],
+		"images": [
+			{
+				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"filename": "swanson.jpg"
 			}
-		},
-		"metadata": {
-			"version": 1,
-			"contractType": "PHYSICAL_GOOD",
-			"format": "FIXED_PRICE",
-			"expiry": "2017-08-17T04:52:19.000Z",
-			"acceptedCurrency": "btc",
-			"pricingCurrency": "btc"
-		},
-		"item": {
-			"title": "Ron Swanson Tshirt",
-			"description": "Kick ass ron swanson tshirt in yellow",
-			"processingTime": "1 to 2 Business days",
-			"price": 12000000,
-			"tags": ["tshirts", "clothing", "ron swanson"],
-			"images": [{
-				"filename": "swanson.jpg",
-                "tiny": "QmbKPEBbzVwax8rnrdxLepfmNkdTqnw2RSfJE19iax3fLK",
-                "small": "QmQ77aAsYjs1rxcp7xZ5qUki1RGDGjQ99cok3ynUMF8Sc5",
-                "medium": "QmVoh493xbSaKYV9yLtEapaGQ7J31gdCiDQHGSd86PNo8B",
-                "large": "QmUWuTZhjUuY8VYWVZrcodsrsbQvckSZwTRxmJ3Avhnw1y",
-                "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8"
-			}],
-			"categories": ["clothing"],
-			"sku": "123-456-789",
-			"grams": 28,
-			"condition": "New",
-			"options": [{
+		],
+		"categories": [
+			"clothing"
+		],
+		"grams": 28,
+		"condition": "New",
+		"options": [
+			{
 				"name": "Size",
 				"description": "What size do you want your shirt?",
-				"variants": [{
-					"name": "Small"
-				}, {
-					"name": "Medium"
-				}, {
-					"name": "Large",
-					"priceModifier": 10000
-				}, {
-					"name": "XL",
-					"priceModifier": 10000
-				}]
-			}, {
+				"variants": ["Small", "Medium", "Large", "XL"]
+			},
+			{
 				"name": "Color",
 				"description": "What color do you want your shirt?",
-				"variants": [{
-					"name": "Red"
-				}, {
-					"name": "Yellow"
-				}]
-			}]
-		},
-		"shippingOptions": [{
-			"name": "Domestic Shipping",
-			"type": "FIXED_PRICE",
-			"regions": ["UNITED_STATES"],
-			"services": [{
+				"variants": ["Red", "Yellow"]
+			}
+		],
+		"skus": [
+			{
+				"variantCombo": [0,0],
+				"productID": "932-33-2945",
+				"surcharge": 0,
+				"quantity": 12
+			},
+			{
+				"variantCombo": [0,1],
+				"surcharge": 0,
+				"quantity": 100
+			},
+			{
+				"variantCombo": [1,0],
+				"productID": "123-99-1111",
+				"surcharge": 0,
+				"quantity": 44
+			},
+			{
+				"variantCombo": [1,1],
+				"productID": "229-00-3333",
+				"surcharge": 0,
+				"quantity": 19
+			},
+			{
+				"variantCombo": [2,0],
+				"productID": "987-54-3456",
+				"surcharge": 0,
+				"quantity": 7
+			},
+			{
+				"variantCombo": [2,1],
+				"surcharge": 0,
+				"quantity": 3
+			},
+			{
+				"variantCombo": [3,0],
+				"surcharge": 1000,
+				"quantity": 16
+			},
+			{
+				"variantCombo": [3,1],
+				"surcharge": 1000,
+				"quantity": 12
+			}
+		]
+	},
+	"shippingOptions": [
+	{
+		"name": "Domestic Shipping",
+		"type": "FIXED_PRICE",
+		"regions": [
+			"UNITED_STATES"
+		],
+		"services": [
+			{
 				"name": "Standard",
 				"price": 6000000,
 				"estimatedDelivery": "4-6 days"
-			}, {
+			},
+			{
 				"name": "Express",
 				"price": 12000000,
 				"estimatedDelivery": "1-3 days"
-			}]
-		}, {
-			"name": "International Shipping",
-			"type": "FIXED_PRICE",
-			"regions": ["ALL"],
-			"shippingRules": {
-				"rules": [{
-					"minRange": 5,
-					"maxRange": 10,
-					"price": 10000000
-				}, {
-					"minRange": 11,
-					"maxRange": 20,
-					"price": 200000
-				}]
-			},
-			"services": [{
+			}
+		]
+	},
+	{
+		"name": "International Shipping",
+		"type": "FIXED_PRICE",
+		"regions": [
+			"ALL"
+		],
+		"services": [
+			{
 				"name": "Standard",
 				"price": 8000000,
 				"estimatedDelivery": "6-8 days"
-			}, {
+			},
+			{
 				"name": "Express",
 				"price": 150000000,
 				"estimatedDelivery": "2-3 days"
-			}]
-		}],
-		"taxes": [{
-			"taxType": "Sales tax",
-			"taxRegions": ["UNITED_STATES"],
-			"taxShipping": true,
-			"percentage": 7
-		}],
-		"coupons": [{
-			"title": "10% off",
-			"hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
-			"percentDiscount": 10
-		}],
-		"moderators": ["QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"],
-		"termsAndConditions": "NA",
-		"refundPolicy": "No refuns for you. All sales are final."
-	},
-	"inventory": [{
-		"item": "/ron_swanson_tshirt/Small/Red",
-		"count": "12"
-	}, {
-		"item": "/ron_swanson_tshirt/Medium/Yellow",
-		"count": "10"
-	}, {
-		"item": "/ron_swanson_tshirt/Large/Red",
-		"count": "9"
-	}, {
-		"item": "/ron_swanson_tshirt/XL/Yellow",
-		"count": "16"
-	}]
-}`
+			}
+		],
+		"shippingRules": {
+			"ruleType": "QUANTITY_DISCOUNT",
+			"rules": [
+				{
+					"price": 10000000,
+					"minRange": 5,
+					"maxRange": 10
+				},
+				{
+					"price": 200000,
+					"minRange": 11,
+					"maxRange": 20
+				}
+			]
+		 }
+	}
+	],
+	"taxes": [
+	{
+		"taxType": "Sales tax",
+		"taxRegions": [
+			"UNITED_STATES"
+		],
+		"taxShipping": true,
+		"percentage": 7
+	}
+	],
+	"coupons": [
+	{
+		"title": "10% off",
+		"discountCode": "radio",
+		"percentDiscount": 10.0
+	}
+	],
+	"moderators": [],
+	"termsAndConditions": "NA",
+	"refundPolicy": "No refuns for you. All sales are final."
+}
+`
 
-const listingJSONResponse = `{"slug": "ron_swanson_tshirt"}`
+const listingJSONResponse = `{"slug": "ron-swanson-tshirt"}`
 
 const listingUpdateJSON = `{
-	"listing": {
-		"slug": "ron_swanson_tshirt",
-		"vendorID": {
-			"guid": "QmbP4QdAWjoYr2AyhNasZD7Ksjfh5mWWontFRTKX7Mq9ci",
-			"blockchainID": "@urbanart",
-			"pubkeys": {
-				"guid": "CAASpgQwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDaL9luqCnp7Pz3URXmtKrSY2Ae+AUfUz5plEri6O6TMzTqQlCVoeBHPJ9upRcbjHyA7jKT6ljm6Z7Fv4xbu6B0D20u9D3jT8Gh6+rr4IBQNmW9N2Gu7bm5D/kJ5jxh4TEd5R1a/IPYtXJJW/Uv0U4qpuhHoE6z2shQ6qJb2HzInKK79woT//vOGe6BjlB+ucFtwrqiMr6o3TJv3/sHiJHb2WkU1lpUgtl0fNbSkvwURvDE+V9d+BzlIldngjcbO9tTRbzVUeqiOvdti6ixd+lISMT9a9XQGM1x28pOpawTZI8fajgcHe2kRTNW30Faq3anG2IS5931znhzmls8cIhAbwiIE29PQMBMJSkKzvnQ0/GsocELKvuiq19MVYLZ2PV9xjIGQg0ubgXOL49OFADlRyFVugmwBAbzXHnkVrwXbg6+qxu2ZMZ9sXPjJ2p3zLLwIjx5d2Vnh0DG9d/yNv+VUnfXY53LpxQ3lZ/0qkPITgLUDge8EpbELRTbd3pnXP0L1F1ba3TcMmONG9QT5PXWInhiCvAl9SBBmBFIQ7uigkrUJcvKvAfNoVOaEo4BbLHOOfnmhAkIh2We41WnVHij1uLEoYcdN/6rN6nT/Ycw6QjFpnXIdBTbS+in3Z+vVnsmra2y/H3EBosIAw6Bb1ZojIdr6M90CwmHsijl64pXNwIDAQAB",
-				"bitcoin": "A1SBoi4xK3OxAtKl0t9Npc4TYgukd+dAK/sWfvImojfz"
+	"slug": "ron-swanson-tshirt",
+	"metadata": {
+		"version": 1,
+		"contractType": "PHYSICAL_GOOD",
+		"format": "FIXED_PRICE",
+		"expiry": "2017-08-17T04:52:19.000Z",
+		"pricingCurrency": "tbtc"
+	},
+	"item": {
+		"title": "Ron Swanson Tshirt",
+		"description": "Kick ass ron swanson tshirt in yellow",
+		"processingTime": "1 to 2 Business days",
+		"price": 12000000,
+		"tags": [
+			"tshirts",
+			"clothing",
+			"ron swanson"
+		],
+		"images": [
+			{
+				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"filename": "swanson.jpg"
 			}
-		},
-		"metadata": {
-			"version": 1,
-			"contractType": "PHYSICAL_GOOD",
-			"format": "FIXED_PRICE",
-			"expiry": "2017-08-17T04:52:19.000Z",
-			"acceptedCurrency": "btc",
-			"pricingCurrency": "btc"
-		},
-		"item": {
-			"title": "Ron Swanson Tshirt",
-			"description": "Kick ass ron swanson tshirt in yellow",
-			"processingTime": "1 to 2 Business days",
-			"price": 24000000,
-			"tags": ["tshirts", "clothing", "ron swanson"],
-			"images": [{
-				"filename": "swanson.jpg",
-                "tiny": "QmbKPEBbzVwax8rnrdxLepfmNkdTqnw2RSfJE19iax3fLK",
-                "small": "QmQ77aAsYjs1rxcp7xZ5qUki1RGDGjQ99cok3ynUMF8Sc5",
-                "medium": "QmVoh493xbSaKYV9yLtEapaGQ7J31gdCiDQHGSd86PNo8B",
-                "large": "QmUWuTZhjUuY8VYWVZrcodsrsbQvckSZwTRxmJ3Avhnw1y",
-                "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8"
-			}],
-			"categories": ["clothing"],
-			"sku": "123-456-789",
-			"grams": 28,
-			"condition": "New",
-			"options": [{
+		],
+		"categories": [
+			"clothing"
+		],
+		"grams": 28,
+		"condition": "New",
+		"options": [
+			{
 				"name": "Size",
 				"description": "What size do you want your shirt?",
-				"variants": [{
-					"name": "Small"
-				}, {
-					"name": "Medium"
-				}, {
-					"name": "Large",
-					"priceModifier": 10000
-				}, {
-					"name": "XL",
-					"priceModifier": 10000
-				}]
-			}, {
+				"variants": ["Small", "Medium", "Large", "XL"]
+			},
+			{
 				"name": "Color",
 				"description": "What color do you want your shirt?",
-				"variants": [{
-					"name": "Red"
-				}, {
-					"name": "Yellow"
-				}, {
-                    "name": "Black"
-                }]
-			}]
-		},
-		"shippingOptions": [{
-			"name": "Domestic Shipping",
-			"type": "FIXED_PRICE",
-			"regions": ["UNITED_STATES"],
-			"services": [{
+				"variants": ["Red", "Yellow"]
+			}
+		],
+		"skus": [
+			{
+				"variantCombo": [0,0],
+				"productID": "932-33-2945",
+				"surcharge": 0,
+				"quantity": 12
+			},
+			{
+				"variantCombo": [0,1],
+				"surcharge": 0,
+				"quantity": 100
+			},
+			{
+				"variantCombo": [1,0],
+				"productID": "123-99-1111",
+				"surcharge": 0,
+				"quantity": 44
+			},
+			{
+				"variantCombo": [1,1],
+				"productID": "229-00-3333",
+				"surcharge": 0,
+				"quantity": 19
+			},
+			{
+				"variantCombo": [2,0],
+				"productID": "987-54-3456",
+				"surcharge": 0,
+				"quantity": 7
+			},
+			{
+				"variantCombo": [2,1],
+				"surcharge": 0,
+				"quantity": 3
+			},
+			{
+				"variantCombo": [3,0],
+				"surcharge": 1000,
+				"quantity": 16
+			},
+			{
+				"variantCombo": [3,1],
+				"surcharge": 1000,
+				"quantity": 12
+			}
+		]
+	},
+	"shippingOptions": [
+	{
+		"name": "Domestic Shipping",
+		"type": "FIXED_PRICE",
+		"regions": [
+			"UNITED_STATES"
+		],
+		"services": [
+			{
 				"name": "Standard",
 				"price": 6000000,
 				"estimatedDelivery": "4-6 days"
-			}, {
+			},
+			{
 				"name": "Express",
 				"price": 12000000,
 				"estimatedDelivery": "1-3 days"
-			}, {
-				"name": "BTC Standard",
-				"price": 0,
-				"estimatedDelivery": "About 2 weeks"
-			}]
-		}, {
-			"name": "International Shipping",
-			"type": "FIXED_PRICE",
-			"regions": ["ALL"],
-			"shippingRules": {
-				"rules": [{
-					"minRange": 5,
-					"maxRange": 10,
-					"price": 10000000
-				}, {
-					"minRange": 11,
-					"maxRange": 20,
-					"price": 200000
-				}]
-			},
-			"services": [{
+			}
+		]
+	},
+	{
+		"name": "International Shipping",
+		"type": "FIXED_PRICE",
+		"regions": [
+			"ALL"
+		],
+		"services": [
+			{
 				"name": "Standard",
 				"price": 8000000,
 				"estimatedDelivery": "6-8 days"
-			}, {
+			},
+			{
 				"name": "Express",
 				"price": 150000000,
 				"estimatedDelivery": "2-3 days"
-			}]
-		}],
-		"taxes": [{
-			"taxType": "Sales tax",
-			"taxRegions": ["UNITED_STATES"],
-			"taxShipping": true,
-			"percentage": 7
-		}],
-		"coupons": [{
-			"title": "10% off",
-			"hash": "QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2",
-			"percentDiscount": 10
-		}],
-		"moderators": ["QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG"],
-		"termsAndConditions": "NA",
-		"refundPolicy": "No refunds for you. All sales are final."
-	},
-	"inventory": [{
-		"item": "/ron_swanson_tshirt/Small/Red",
-		"count": "12"
-	}, {
-		"item": "/ron_swanson_tshirt/Medium/Yellow",
-		"count": "10"
-	}, {
-		"item": "/ron_swanson_tshirt/Large/Red",
-		"count": "9"
-	}, {
-		"item": "/ron_swanson_tshirt/XL/Yellow",
-		"count": "16"
-	}]
-}`
+			}
+		],
+		"shippingRules": {
+			"ruleType": "QUANTITY_DISCOUNT",
+			"rules": [
+				{
+					"price": 10000000,
+					"minRange": 5,
+					"maxRange": 10
+				},
+				{
+					"price": 200000,
+					"minRange": 11,
+					"maxRange": 20
+				}
+			]
+		 }
+	}
+	],
+	"taxes": [
+	{
+		"taxType": "Sales tax",
+		"taxRegions": [
+			"UNITED_STATES"
+		],
+		"taxShipping": true,
+		"percentage": 7
+	}
+	],
+	"coupons": [
+	{
+		"title": "10% off",
+		"discountCode": "radio",
+		"percentDiscount": 10.0
+	}
+	],
+	"moderators": [],
+	"termsAndConditions": "NA",
+	"refundPolicy": "No refuns for you. All sales are final."
+}
+`
 
 const inventoryJSONResponse = `[
     {

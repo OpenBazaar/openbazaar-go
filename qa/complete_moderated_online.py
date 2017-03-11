@@ -57,8 +57,8 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        slug = listing_json["listing"]["slug"]
-        listing_json["listing"]["moderators"] = [moderatorId]
+        slug = listing_json["slug"]
+        listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code == 404:

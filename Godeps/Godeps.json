@@ -729,6 +729,10 @@
 			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
 		},
 		{
+			"ImportPath": "github.com/microcosm-cc/bluemonday",
+			"Rev": "e79763773ab6222ca1d5a7cbd9d62d83c1f77081"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/go-homedir",
 			"Rev": "981ab348d865cf048eb7d17e78ac7192632d8415"
 		},
@@ -868,6 +872,10 @@
 		},
 		{
 			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/edwards25519",
+			"Rev": "23356c88d8f3c27fc3e4d7009489e37994a2e7b8"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/extra25519",
 			"Rev": "23356c88d8f3c27fc3e4d7009489e37994a2e7b8"
 		},
 		{
