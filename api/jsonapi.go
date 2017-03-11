@@ -1100,7 +1100,8 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
-		SanitizedResponse(w, `[]`)
+		fmt.Fprint(w, `[]`)
+		return
 	}
 	for slug, m := range inventory {
 		for variant, count := range m {
@@ -1110,7 +1111,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
-		fmt.Fprintf(w, `[]`)
+		fmt.Fprint(w, `[]`)
 		return
 	}
 	SanitizedResponse(w, string(ret))

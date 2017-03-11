@@ -161,7 +161,7 @@ const profileJSON = `{
     "handle": "satoshi",
     "name": "Satoshi Nakamoto",
     "location": "Japan",
-    "about": "Bitcoin's Creator",
+    "about": "Bitcoins Creator",
     "shortDescription": "I make money",
     "contactInfo": {
 	    "website": "bitcoin.org",
@@ -182,8 +182,8 @@ const profileJSON = `{
 	    "followerCount": 1,
 	    "followingCount": 2,
 	    "listingCount": 3,
-	    "averageRating": 1,
-	    "ratingCount": 21000000
+	    "ratingCount": 21000000,
+	    "averageRating": 1
     },
     "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
@@ -635,7 +635,8 @@ const inventoryJSONResponse = `[
 ]`
 
 const inventoryUpdateJSON = `[{
-	"slug": "/ron_swanson_tshirt/red/xl",
+	"slug": "ron_swanson_tshirt",
+	"variant": 0,
 	"quantity": 17
 }]`
 

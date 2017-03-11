@@ -143,7 +143,7 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/listings", "", 200, `[]`},
 		{"GET", "/ob/inventory", "", 200, `[]`},
 
-		// TOOD: Add support for improved JSON matching to since contracts
+		// TODO: Add support for improved JSON matching to since contracts
 		// change each test run due to signatures
 
 		// Create/Get
@@ -152,7 +152,7 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/listing/ron-swanson-tshirt", "", 200, anyResponseJSON},
 		{"POST", "/ob/listing", listingUpdateJSON, 409, AlreadyExistsUsePUTJSON("Listing")},
 
-		// TOOD: Add support for improved JSON matching to since contracts
+		// TODO: Add support for improved JSON matching to since contracts
 		// change each test run due to signatures
 		{"GET", "/ob/listings", "", 200, anyResponseJSON},
 
