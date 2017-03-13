@@ -27,8 +27,7 @@ import (
 var log = logging.MustGetLogger("bitcoind")
 
 const (
-	FlagPrefix = 0x00
-	Account    = "OpenBazaar"
+	Account = "OpenBazaar"
 )
 
 type BitcoindWallet struct {

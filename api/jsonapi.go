@@ -2488,3 +2488,18 @@ func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request)
 	i.node.BanManager.RemoveBlockedId(pid)
 	SanitizedResponse(w, `{}`)
 }
+
+func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
+	_, txid := path.Split(r.URL.Path)
+	txHash, err := chainhash.NewHashFromStr(txid)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	newTxid, err := i.node.Wallet.BumpFee(*txHash)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))
+}
