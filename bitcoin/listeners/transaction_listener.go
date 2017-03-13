@@ -169,7 +169,11 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 		thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 		title = contract.VendorListings[0].Item.Title
 	}
-	l.db.TxMetadata().Put(repo.Metadata{chainHash.String(), "", title, orderId, thumbnail})
+	bumpable := false
+	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+		bumpable = true
+	}
+	l.db.TxMetadata().Put(repo.Metadata{chainHash.String(), "", title, orderId, thumbnail, bumpable})
 }
 
 func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {

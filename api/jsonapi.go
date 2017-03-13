@@ -820,11 +820,12 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid:      txid.String(),
-		Address:   snd.Address,
-		Memo:      memo,
-		OrderId:   orderId,
-		Thumbnail: thumbnail,
+		Txid:       txid.String(),
+		Address:    snd.Address,
+		Memo:       memo,
+		OrderId:    orderId,
+		Thumbnail:  thumbnail,
+		CanBumpFee: false,
 	}); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2262,6 +2263,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Confirmations int32     `json:"confirmations"`
 		OrderId       string    `json:"orderId"`
 		Thumbnail     string    `json:"thumbnail"`
+		CanBumpFee    bool      `json:"canBumpFee"`
 	}
 	transactions, err := i.node.Wallet.Transactions()
 	if err != nil {
@@ -2302,6 +2304,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			Timestamp:     t.Timestamp,
 			Confirmations: confirmations,
 			Status:        status,
+			CanBumpFee:    true,
 		}
 		m, ok := metadata[t.Txid]
 		if ok {
@@ -2309,6 +2312,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Memo = m.Memo
 			tx.OrderId = m.OrderId
 			tx.Thumbnail = m.Thumbnail
+			tx.CanBumpFee = m.CanBumpFee
 		}
 		txs = append(txs, tx)
 	}
@@ -2499,6 +2503,23 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	newTxid, err := i.node.Wallet.BumpFee(*txHash)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	m, _ := i.node.Datastore.TxMetadata().Get(txid)
+	m.CanBumpFee = false
+	if err := i.node.Datastore.TxMetadata().Put(m); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
+		Txid:       newTxid.String(),
+		Address:    "",
+		Memo:       fmt.Sprintf("Fee bump of %s", txid),
+		OrderId:    "",
+		Thumbnail:  "",
+		CanBumpFee: true,
+	}); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))

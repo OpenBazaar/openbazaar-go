@@ -67,11 +67,12 @@ type ChatConversation struct {
 }
 
 type Metadata struct {
-	Txid      string
-	Address   string
-	Memo      string
-	OrderId   string
-	Thumbnail string
+	Txid       string
+	Address    string
+	Memo       string
+	OrderId    string
+	Thumbnail  string
+	CanBumpFee bool
 }
 
 type Purchase struct {
