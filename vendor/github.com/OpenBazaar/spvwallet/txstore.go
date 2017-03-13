@@ -24,8 +24,8 @@ type TxStore struct {
 
 	Param *chaincfg.Params
 
-	masterPrivKey *hd.ExtendedKey
-	masterPubKey  *hd.ExtendedKey
+	internalKey *hd.ExtendedKey
+	externalKey *hd.ExtendedKey
 
 	listeners []func(TransactionCallback)
 
@@ -33,16 +33,33 @@ type TxStore struct {
 }
 
 func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) (*TxStore, error) {
-	mPubKey, err := masterPrivKey.Neuter()
+	// Derive keys using Bip44
+	fourtyFour, err := masterPrivKey.Child(hd.HardenedKeyStart + 44)
+	if err != nil {
+		return nil, err
+	}
+	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 0)
+	if err != nil {
+		return nil, err
+	}
+	account, err := bitcoin.Child(hd.HardenedKeyStart + 0)
+	if err != nil {
+		return nil, err
+	}
+	external, err := account.Child(0)
+	if err != nil {
+		return nil, err
+	}
+	internal, err := account.Child(1)
 	if err != nil {
 		return nil, err
 	}
 	txs := &TxStore{
-		Param:         p,
-		masterPrivKey: masterPrivKey,
-		masterPubKey:  mPubKey,
-		addrMutex:     new(sync.Mutex),
-		Datastore:     db,
+		Param:       p,
+		externalKey: external,
+		internalKey: internal,
+		addrMutex:   new(sync.Mutex),
+		Datastore:   db,
 	}
 	err = txs.PopulateAdrs()
 	if err != nil {
@@ -288,9 +305,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 {
-		_, h, timestamp, err := ts.Txns().Get(tx.TxHash())
+		_, txn, err := ts.Txns().Get(tx.TxHash())
 		if err != nil {
-			timestamp = time.Now()
+			txn.Timestamp = time.Now()
 			// Callback on listeners
 			for _, listener := range ts.listeners {
 				listener(cb)
@@ -299,8 +316,8 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
-		if h <= 0 {
-			ts.Txns().Put(tx, int(value), int(height), timestamp)
+		if txn.Height <= 0 {
+			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp)
 		}
 	}
 	return hits, err

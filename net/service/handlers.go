@@ -436,7 +436,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		err = service.node.Wallet.SweepMultisig(utxos, &refundAddress, buyerKey, redeemScript, spvwallet.NORMAL)
+		_, err = service.node.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}

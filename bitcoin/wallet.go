@@ -46,11 +46,14 @@ type BitcoinWallet interface {
 	// Send bitcoins to an external wallet
 	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error)
 
+	// Bump the fee for the given transaction
+	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)
+
 	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
 	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64
 
-	// Build and broadcast a transaction that sweeps all coins from a 1 of 2 multisig to an internal address (optionally provided)
-	SweepMultisig(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, reddemScript []byte, feeLevel spvwallet.FeeLevel) error
+	// Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
+	SweepAddress(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error)
 
 	// Create a signature for a multisig transaction
 	CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error)
