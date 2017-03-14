@@ -84,7 +84,7 @@ type Purchase struct {
 	VendorHandle       string    `json:"vendorHandle"`
 	ShippingName       string    `json:"shippingName"`
 	ShippingAddress    string    `json:"shippingAddress"`
-	State              string    `json:"status"`
+	State              string    `json:"state"`
 	Read               bool      `json:"read"`
 	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
