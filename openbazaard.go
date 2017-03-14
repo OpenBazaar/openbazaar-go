@@ -258,6 +258,9 @@ func (x *SetAPICreds) Execute(args []string) error {
 	apiCfg.Authenticated = true
 	h := sha256.Sum256([]byte(pw))
 	apiCfg.Password = hex.EncodeToString(h[:])
+	if len(apiCfg.AllowedIPs) == 0 {
+		apiCfg.AllowedIPs = []string{}
+	}
 
 	if err := r.SetConfigKey("JSON-API", apiCfg); err != nil {
 		return err
