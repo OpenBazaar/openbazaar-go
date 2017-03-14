@@ -47,7 +47,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, spvwallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var txn spvwallet.Txn
-	stmt, err := t.db.Prepare("select tx, value, height, timestamp watchOnly from txns where txid=?")
+	stmt, err := t.db.Prepare("select tx, value, height, timestamp, watchOnly from txns where txid=?")
 	if err != nil {
 		return nil, txn, err
 	}

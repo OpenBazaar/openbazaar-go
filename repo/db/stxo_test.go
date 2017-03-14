@@ -28,7 +28,7 @@ func init() {
 		AtHeight:     300000,
 		Value:        100000000,
 		ScriptPubkey: []byte("scriptpubkey"),
-		Freeze:       false,
+		WatchOnly:    false,
 	}
 	stxo = spvwallet.Stxo{
 		Utxo:        utxo,
