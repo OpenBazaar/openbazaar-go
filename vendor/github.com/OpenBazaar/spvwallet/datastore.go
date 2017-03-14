@@ -23,7 +23,7 @@ type Utxos interface {
 	GetAll() ([]Utxo, error)
 
 	// Make a utxo unspendable
-	Freeze(utxo Utxo) error
+	SetWatchOnly(utxo Utxo) error
 
 	// Delete a utxo from the db
 	Delete(utxo Utxo) error
@@ -42,13 +42,13 @@ type Stxos interface {
 
 type Txns interface {
 	// Put a new transaction to the database
-	Put(txn *wire.MsgTx, value, height int, timestamp time.Time) error
+	Put(txn *wire.MsgTx, value, height int, timestamp time.Time, watchOnly bool) error
 
 	// Fetch a raw tx and it's metadata given a hash
 	Get(txid chainhash.Hash) (*wire.MsgTx, Txn, error)
 
 	// Fetch all transactions from the db
-	GetAll() ([]Txn, error)
+	GetAll(includeWatchOnly bool) ([]Txn, error)
 
 	// Mark a transaction as dead
 	MarkAsDead(txid chainhash.Hash) error
@@ -117,7 +117,7 @@ type Utxo struct {
 	// If true this utxo will not be selected for spending. The primary
 	// purpose is track multisig UTXOs which must have separate handling
 	// to spend.
-	Freeze bool
+	WatchOnly bool
 }
 
 type Stxo struct {
@@ -143,4 +143,7 @@ type Txn struct {
 
 	// The time the transaction was first seen
 	Timestamp time.Time
+
+	// This transaction only involves a watch only address
+	WatchOnly bool
 }

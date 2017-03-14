@@ -278,9 +278,9 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table offlinemessages (url text primary key not null, timestamp integer);
 	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer, key text);
-	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, freeze int);
+	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly int);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, spendHeight integer, spendTxid text);
-	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, tx blob);
+	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);
 	create table txmetadata (txid text primary key not null, address text, memo text, orderID text, thumbnail text, canBumpFee integer);
 	create table inventory (slug text, variantIndex integer, count integer);
 	create index index_inventory on inventory (slug);

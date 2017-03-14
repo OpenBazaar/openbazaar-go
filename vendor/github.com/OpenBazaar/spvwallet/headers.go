@@ -215,13 +215,13 @@ func (h *HeaderDB) Height() (uint32, error) {
 func (h *HeaderDB) Print() {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	m := make(map[uint32]string)
+	m := make(map[uint32][]string)
 	h.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		bkt := tx.Bucket(BKTHeaders)
 		bkt.ForEach(func(k, v []byte) error {
 			sh, _ := deserializeHeader(v)
-			m[sh.height] = sh.header.BlockHash().String()
+			m[sh.height] = []string{sh.header.BlockHash().String(), sh.header.PrevBlock.String()}
 			return nil
 		})
 
@@ -233,7 +233,7 @@ func (h *HeaderDB) Print() {
 	}
 	sort.Ints(keys)
 	for _, k := range keys {
-		fmt.Println(k, m[uint32(k)])
+		fmt.Printf("Height: %d, Hash: %s, Parent: %s\n", k, m[uint32(k)][0], m[uint32(k)][1])
 	}
 }
 
