@@ -87,6 +87,15 @@ func (i *gatewayHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	if len(i.config.AllowedIPs) > 0 {
+		remoteAddr := strings.Split(r.RemoteAddr, ":")
+		if !i.config.AllowedIPs[remoteAddr[0]] {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
+
 	if i.config.Authenticated {
 		if i.config.Username == "" || i.config.Password == "" {
 			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
