@@ -56,6 +56,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTRefund(w, r)
 	case strings.HasPrefix(path, "/wallet/resyncblockchain"):
 		i.POSTResyncBlockchain(w, r)
+	case strings.HasPrefix(path, "/wallet/bumpfee"):
+		i.POSTBumpFee(w, r)
 	case strings.HasPrefix(path, "/ob/opendispute"):
 		i.POSTOpenDispute(w, r)
 	case strings.HasPrefix(path, "/ob/closedispute"):

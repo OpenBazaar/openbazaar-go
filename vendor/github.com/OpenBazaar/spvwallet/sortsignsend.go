@@ -111,6 +111,35 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) (*c
 	return &ch, nil
 }
 
+// Only CPFP for now
+func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+	_, txn, err := w.txstore.Txns().Get(txid)
+	if err != nil {
+		return nil, err
+	}
+	if txn.Height > 0 {
+		return nil, errors.New("Transaction is confirmed, cannot bump fee")
+	}
+	utxos, err := w.txstore.Utxos().GetAll()
+	if err != nil {
+		return nil, errors.New("No unspent transactions")
+	}
+	for _, u := range utxos {
+		if u.Op.Hash.IsEqual(&txid) {
+			key, err := w.txstore.GetKeyForScript(u.ScriptPubkey)
+			if err != nil {
+				return nil, err
+			}
+			transactionID, err := w.SweepAddress([]Utxo{u}, nil, key, nil, FEE_BUMP)
+			if err != nil {
+				return nil, err
+			}
+			return transactionID, nil
+		}
+	}
+	return nil, errors.New("Transaction either doesn't exist or has already been spent")
+}
+
 func (w *SPVWallet) EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64 {
 	tx := new(wire.MsgTx)
 	for _, out := range outs {
@@ -222,7 +251,7 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 	return nil
 }
 
-func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript []byte, feeLevel FeeLevel) error {
+func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -231,7 +260,7 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.Ex
 	}
 	script, err := txscript.PayToAddrScript(internalAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var val int64
@@ -270,9 +299,8 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.Ex
 	// Sign tx
 	privKey, err := key.ECPrivKey()
 	if err != nil {
-		return err
+		return nil, err
 	}
-
 	pk := privKey.PubKey().SerializeCompressed()
 	addressPub, err := btc.NewAddressPubKey(pk, w.params)
 
@@ -287,7 +315,10 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.Ex
 		return nil, false, errors.New("Not found")
 	})
 	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
-		return redeemScript, nil
+		if redeemScript == nil {
+			return []byte{}, nil
+		}
+		return *redeemScript, nil
 	})
 
 	for i, txIn := range tx.TxIn {
@@ -296,14 +327,15 @@ func (w *SPVWallet) SweepMultisig(utxos []Utxo, address *btc.Address, key *hd.Ex
 			tx, i, prevOutScript, txscript.SigHashAll, getKey,
 			getScript, txIn.SignatureScript)
 		if err != nil {
-			return errors.New("Failed to sign transaction")
+			return nil, errors.New("Failed to sign transaction")
 		}
 		txIn.SignatureScript = script
 	}
 
 	// broadcast
 	w.Broadcast(tx)
-	return nil
+	txid := tx.TxHash()
+	return &txid, nil
 }
 
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
@@ -431,6 +463,8 @@ func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
 			return w.normalFee
 		case ECONOMIC:
 			return w.economicFee
+		case FEE_BUMP:
+			return w.priorityFee * 2
 		default:
 			return w.normalFee
 		}
@@ -474,6 +508,12 @@ func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
 			return w.maxFee
 		} else {
 			return fees.HourFee
+		}
+	case FEE_BUMP:
+		if (fees.FastestFee*2) > w.maxFee || fees.FastestFee == 0 {
+			return w.maxFee * 2
+		} else {
+			return fees.FastestFee * 2
 		}
 	default:
 		return w.normalFee

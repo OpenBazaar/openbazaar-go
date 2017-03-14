@@ -12,6 +12,7 @@ const (
 	PRIOIRTY FeeLevel = 0
 	NORMAL            = 1
 	ECONOMIC          = 2
+	FEE_BUMP          = 3
 )
 
 // The end leaves on the HD wallet have only two possible values. External keys are those given

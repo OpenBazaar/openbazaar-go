@@ -576,7 +576,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	err = n.Wallet.SweepMultisig(utxos, &refundAddress, buyerKey, redeemScript, spvwallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, spvwallet.NORMAL)
 	if err != nil {
 		return err
 	}
