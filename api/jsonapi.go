@@ -2505,7 +2505,10 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	m, _ := i.node.Datastore.TxMetadata().Get(txid)
+	m, err := i.node.Datastore.TxMetadata().Get(txid)
+	if err != nil {
+		m = repo.Metadata{}
+	}
 	m.Txid = txid
 	m.CanBumpFee = false
 	if err := i.node.Datastore.TxMetadata().Put(m); err != nil {
