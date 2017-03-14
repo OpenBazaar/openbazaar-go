@@ -102,8 +102,8 @@ func TestPutPurchase(t *testing.T) {
 	if vendorBlockchainID != contract.VendorListings[0].VendorID.BlockchainID {
 		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.BlockchainID, vendorBlockchainID)
 	}
-	if title != strings.ToLower(contract.VendorListings[0].Item.Title) {
-		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.VendorListings[0].Item.Title), title)
+	if title != contract.VendorListings[0].Item.Title {
+		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].Item.Title, title)
 	}
 	if shippingName != strings.ToLower(contract.BuyerOrder.Shipping.ShipTo) {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.ShipTo), shippingName)
