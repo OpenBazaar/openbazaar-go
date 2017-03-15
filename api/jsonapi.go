@@ -864,11 +864,16 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	_, err = i.node.Datastore.Settings().Get()
 	if err == nil {
 		ErrorResponse(w, http.StatusConflict, "Settings is already set. Use PUT.")
 		return
 	}
+
 	if settings.MisPaymentBuffer == nil {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
@@ -899,6 +904,10 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&settings)
 	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -954,6 +963,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		default:
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
 		}
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if settings.StoreModerators != nil {
