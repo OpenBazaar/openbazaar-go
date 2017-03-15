@@ -70,10 +70,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	// ensure the message sender for this peer is updated with this stream, so we reply over it
 	ms := service.messageSenderForPeer(mPeer, &s)
 	defer s.Close()
-	i := 0 // REMOVE
 	for {
-		log.Info("inbound stream reuse count:", i)
-		i++
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
