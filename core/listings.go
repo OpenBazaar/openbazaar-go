@@ -559,7 +559,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	for variant, count := range inventory {
 		for i, s := range contract.VendorListings[0].Item.Skus {
 			if variant == i {
-				s.Quantity = uint64(count)
+				s.Quantity = int64(count)
 				break
 			}
 		}
