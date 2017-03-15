@@ -9,6 +9,7 @@ import (
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	"io"
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -59,9 +60,7 @@ func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
 
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	cr := ctxio.NewReader(service.ctx, s)
-	cw := ctxio.NewWriter(service.ctx, s)
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
-	w := ggio.NewDelimitedWriter(cw)
 	mPeer := s.Conn().RemotePeer()
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
@@ -69,7 +68,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	}
 
 	// ensure the message sender for this peer is updated with this stream, so we reply over it
-	service.messageSenderForPeer(mPeer, &s)
+	ms := service.messageSenderForPeer(mPeer, &s)
 	defer s.Close()
 	i := 0 // REMOVE
 	for {
@@ -78,7 +77,10 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			log.Errorf("Error unmarshaling data: %s", err)
+			if err != io.EOF {
+				// EOF error means the sender closed the stream
+				log.Errorf("Error unmarshaling data: %s", err)
+			}
 			return
 		}
 
@@ -102,8 +104,13 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		}
 
 		// Send out response msg
-		if err := w.WriteMsg(rpmes); err != nil {
+		if err := ms.SendMessage(service.ctx, pmes); err != nil {
 			log.Debugf("send response error: %s", err)
+			return
+		}
+		select {
+		// end loop on context close
+		case <-service.ctx.Done():
 			return
 		}
 	}
