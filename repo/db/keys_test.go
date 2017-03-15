@@ -216,13 +216,16 @@ func TestGetUnsed(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, i})
+		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.INTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	idx, err := kdb.GetUnused(spvwallet.EXTERNAL)
-	if err != nil || idx != 0 {
+	idx, err := kdb.GetUnused(spvwallet.INTERNAL)
+	if err != nil {
+		t.Error("Failed to fetch correct unused")
+	}
+	if len(idx) != 100 {
 		t.Error("Failed to fetch correct unused")
 	}
 }

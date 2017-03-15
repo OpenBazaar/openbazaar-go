@@ -175,6 +175,16 @@ func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) btc.Address {
 	return btc.Address(addr)
 }
 
+func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
+	i, _ := w.txstore.Keys().GetUnused(EXTERNAL)
+	key, _ := w.txstore.generateChildKey(EXTERNAL, uint32(i[1]))
+	addr, _ := key.Address(w.params)
+	script, _ := txscript.PayToAddrScript(btc.Address(addr))
+	w.txstore.Keys().MarkKeyAsUsed(script)
+	w.txstore.PopulateAdrs()
+	return btc.Address(addr)
+}
+
 func (w *SPVWallet) HasKey(addr btc.Address) bool {
 	script, err := txscript.PayToAddrScript(addr)
 	if err != nil {
