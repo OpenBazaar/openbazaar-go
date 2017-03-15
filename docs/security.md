@@ -77,7 +77,7 @@ http://username:password@localhost:8080/ob/
 As mentioned above, NEVER allow outside internet access without both enabling authentication and SSL as your authentication creditials will be sent to the remote node unencrypted otherwise.
 The instructions to set up SSL can be found in a separate [doc](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md). 
 
-### Restrict access by IP
+### Restrict Access By IP
 You can (and probably should) restrict access to the API to specific IP addresses. To do so you can either enter them in the config file:
 ```
 {
