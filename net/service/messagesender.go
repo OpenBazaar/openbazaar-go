@@ -14,14 +14,15 @@ import (
 )
 
 type messageSender struct {
-	s         inet.Stream
-	r         ggio.ReadCloser
-	w         ggio.WriteCloser
-	lk        sync.Mutex
-	p         peer.ID
-	service   *OpenBazaarService
-	protoc    protocol.ID
-	singleMes int
+	s             inet.Stream
+	r             ggio.ReadCloser
+	w             ggio.WriteCloser
+	lk            sync.Mutex
+	p             peer.ID
+	service       *OpenBazaarService
+	protoc        protocol.ID
+	singleMes     int
+	cancelHandler context.CancelFunc // for cancelling handling on this stream
 }
 
 var ReadMessageTimeout = time.Minute
@@ -63,7 +64,7 @@ func (ms *messageSender) prep() error {
 	if err != nil {
 		return err
 	}
-
+	ms.service.HandleNewStream(nstr) // listen for (unrelated) incoming messages on this stream
 	ms.r = ggio.NewDelimitedReader(nstr, inet.MessageSizeMax)
 	ms.w = ggio.NewDelimitedWriter(nstr)
 	ms.s = nstr
@@ -79,6 +80,24 @@ const streamReuseTries = 3
 func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
+	if err := ms.prep(); err != nil {
+		return err
+	}
+
+	if err := ms.writeMessage(pmes); err != nil {
+		return err
+	}
+
+	if ms.singleMes > streamReuseTries {
+		ms.s.Close()
+		ms.s = nil
+	}
+
+	return nil
+}
+
+// for use by streamhandler (which already has lock) only
+func (ms *messageSender) SendMessageWithoutLock(ctx context.Context, pmes *pb.Message) error {
 	if err := ms.prep(); err != nil {
 		return err
 	}
@@ -121,6 +140,10 @@ func (ms *messageSender) writeMessage(pmes *pb.Message) error {
 }
 
 func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
+	if ms.cancelHandler != nil {
+		// stop listening on this stream while we send request
+		ms.cancelHandler()
+	}
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	if err := ms.prep(); err != nil {

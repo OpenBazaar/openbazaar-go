@@ -58,33 +58,50 @@ func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
 	go service.handleNewMessage(s)
 }
 
+// listen on a stream until we need to send over it, then start listening again when sending is finished
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
-	cr := ctxio.NewReader(service.ctx, s)
-	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
-
+	var cr ctxio.Reader
+	var r ggio.ReadCloser
 	// ensure the message sender for this peer is updated with this stream, so we reply over it
 	ms := service.messageSenderForPeer(mPeer, &s)
+
 	defer s.Close()
 	for {
+		ctx, cancel := context.WithCancel(service.ctx)
+		defer cancel()
+		cr = ctxio.NewReader(ctx, s)
+		r = ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
+		ms.cancelHandler = cancel
 		// Receive msg
 		pmes := new(pb.Message)
-		if err := r.ReadMsg(pmes); err != nil {
-			if err != io.EOF {
-				// EOF error means the sender closed the stream
+		ms.lk.Lock()                            // prevent outbound messages or wait for them to complete before continuing
+		if err := r.ReadMsg(pmes); err != nil { // blocks until incoming or outgoing message
+			switch err {
+			case io.EOF:
+				// stream closed, end handler
+				ms.lk.Unlock()
+				return
+			case ctx.Err():
+				// we need to send a message, briefly stop handling incoming streams
+				ms.lk.Unlock()
+				continue
+			default:
+				ms.lk.Unlock()
 				log.Errorf("Error unmarshaling data: %s", err)
+				continue
 			}
-			return
 		}
 
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
 			log.Debug("Got back nil handler from handlerForMsgType")
+			ms.lk.Unlock()
 			return
 		}
 
@@ -92,19 +109,23 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
 			log.Debugf("handle message error: %s", err)
+			ms.lk.Unlock()
 			return
 		}
 
 		// If nil response, return it before serializing
 		if rpmes == nil {
+			ms.lk.Unlock()
 			continue
 		}
 
 		// Send out response msg
-		if err := ms.SendMessage(service.ctx, pmes); err != nil {
+		if err := ms.SendMessageWithoutLock(service.ctx, pmes); err != nil {
 			log.Debugf("send response error: %s", err)
+			ms.lk.Unlock()
 			return
 		}
+		ms.lk.Unlock() // allow message
 		select {
 		// end loop on context close
 		case <-service.ctx.Done():
