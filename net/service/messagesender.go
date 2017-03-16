@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	inet "gx/ipfs/QmQx1dHDDYENugYgqA22BaBrRfuv1coSsuPiM7rYh1wwGH/go-libp2p-net"
+	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"sync"
 	"time"
-
-	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
@@ -40,12 +38,14 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID, s *inet.Stream
 	}
 	if s != nil {
 		// replace old stream
+		ms.lk.Lock()
 		if ms.s != nil {
 			ms.s.Close()
 		}
 		ms.s = *s
 		ms.r = ggio.NewDelimitedReader(ms.s, inet.MessageSizeMax)
 		ms.w = ggio.NewDelimitedWriter(ms.s)
+		ms.lk.Unlock()
 	}
 	return ms
 }
@@ -76,7 +76,7 @@ func (ms *messageSender) prep() error {
 // behaviour.
 const streamReuseTries = 3
 
-func (ms *messageSender) SendMessage(ctx context.Context, pmes proto.Message) error {
+func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	if err := ms.prep(); err != nil {
@@ -95,7 +95,7 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes proto.Message) er
 	return nil
 }
 
-func (ms *messageSender) writeMessage(pmes proto.Message) error {
+func (ms *messageSender) writeMessage(pmes *pb.Message) error {
 	err := ms.w.WriteMsg(pmes)
 	if err != nil {
 		// If the other side isnt expecting us to be reusing streams, we're gonna
