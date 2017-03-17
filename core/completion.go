@@ -350,12 +350,14 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		newAvg := totalRatingVal / (profile.NumRatings + 1)
 		profile.AvgRating = newAvg
 		profile.NumRatings = profile.NumRatings + 1
-		err = n.UpdateProfile(&profile)
-		if err != nil {
+		if err := n.UpdateProfile(&profile); err != nil {
 			return err
 		}
-		err = n.updateRatingIndex(rating, ratingPath)
-		if err != nil {
+		if err := n.updateRatingIndex(rating, ratingPath); err != nil {
+			return err
+		}
+
+		if err := n.updateRatingInListingIndex(rating); err != nil {
 			return err
 		}
 	}
