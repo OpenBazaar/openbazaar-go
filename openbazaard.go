@@ -255,8 +255,12 @@ func (x *SetAPICreds) Execute(args []string) error {
 	} else if strings.Contains(username, "\n") {
 		apiCfg.Username = strings.Replace(username, "\n", "", -1)
 	}
+	apiCfg.Authenticated = true
 	h := sha256.Sum256([]byte(pw))
 	apiCfg.Password = hex.EncodeToString(h[:])
+	if len(apiCfg.AllowedIPs) == 0 {
+		apiCfg.AllowedIPs = []string{}
+	}
 
 	if err := r.SetConfigKey("JSON-API", apiCfg); err != nil {
 		return err
@@ -411,8 +415,19 @@ func (x *Start) Execute(args []string) error {
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
-		log.Error("Invalid database encryption password")
-		os.Exit(3)
+		sqliteDB.Close()
+		fmt.Print("Database is encrypted, enter your password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		pw := string(bytePassword)
+		sqliteDB, err = initializeRepo(repoPath, pw, "", isTestnet)
+		if err != nil && err != repo.ErrRepoExists {
+			return err
+		}
+		if sqliteDB.Config().IsEncrypted() {
+			log.Error("Invalid password")
+			os.Exit(3)
+		}
 	}
 
 	// Create authentication cookie
@@ -724,6 +739,9 @@ func (x *Start) Execute(args []string) error {
 	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
+	for _, ip := range x.AllowIP {
+		apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, ip)
+	}
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
@@ -927,7 +945,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

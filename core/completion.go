@@ -57,6 +57,11 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	oc.OrderId = orderId
 	oc.Ratings = []*pb.OrderCompletion_Rating{}
 
+	ts := new(timestamp.Timestamp)
+	ts.Seconds = time.Now().Unix()
+	ts.Nanos = 0
+	oc.Timestamp = ts
+
 	for _, r := range orderRatings.Ratings {
 		rating := new(pb.OrderCompletion_Rating)
 		rd := new(pb.OrderCompletion_Rating_RatingData)
@@ -345,12 +350,14 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		newAvg := totalRatingVal / (profile.NumRatings + 1)
 		profile.AvgRating = newAvg
 		profile.NumRatings = profile.NumRatings + 1
-		err = n.UpdateProfile(&profile)
-		if err != nil {
+		if err := n.UpdateProfile(&profile); err != nil {
 			return err
 		}
-		err = n.updateRatingIndex(rating, ratingPath)
-		if err != nil {
+		if err := n.updateRatingIndex(rating, ratingPath); err != nil {
+			return err
+		}
+
+		if err := n.updateRatingInListingIndex(rating); err != nil {
 			return err
 		}
 	}

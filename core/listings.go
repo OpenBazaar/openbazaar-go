@@ -51,20 +51,22 @@ type thumbnail struct {
 	Medium string `json:"medium"`
 }
 type listingData struct {
-	Hash         string    `json:"hash"`
-	Slug         string    `json:"slug"`
-	Title        string    `json:"title"`
-	Categories   []string  `json:"categories"`
-	ContractType string    `json:"contractType"`
-	Description  string    `json:"description"`
-	Thumbnail    thumbnail `json:"thumbnail"`
-	Price        price     `json:"price"`
-	ShipsTo      []string  `json:"shipsTo"`
-	FreeShipping []string  `json:"freeShipping"`
+	Hash          string    `json:"hash"`
+	Slug          string    `json:"slug"`
+	Title         string    `json:"title"`
+	Categories      []string  `json:"category"`
+	ContractType  string    `json:"contractType"`
+	Description   string    `json:"description"`
+	Thumbnail     thumbnail `json:"thumbnail"`
+	Price         price     `json:"price"`
+	ShipsTo       []string  `json:"shipsTo"`
+	FreeShipping  []string  `json:"freeShipping"`
+	Language      string    `json:"language"`
+	AverageRating float32   `json:"averageRating"`
+	RatingCount   uint32    `json:"ratingCount"`
 }
 
-// Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	slugFromTitle := func(title string) string {
 		l := TitleMaxCharacters
 		if len(title) < TitleMaxCharacters {
@@ -72,23 +74,29 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		}
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
 	}
+	counter := 1
+	slugBase := slugFromTitle(title)
+	slugToTry := slugBase
+	for {
+		_, err := n.GetListingFromSlug(slugToTry)
+		if os.IsNotExist(err) {
+			return slugToTry, nil
+		} else if err != nil {
+			return "", err
+		}
+		slugToTry = slugBase + strconv.Itoa(counter)
+		counter++
+	}
+}
+
+// Add our identity to the listing and sign it
+func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
+	// Set inventory to the default as it's not part of the contract
+	for _, s := range listing.Item.Skus {
+		s.Quantity = 0
+	}
 
 	c := new(pb.RicardianContract)
-	// If the slug is empty, create one from the title
-	if listing.Slug == "" {
-		counter := 1
-		slugBase := slugFromTitle(listing.Item.Title)
-		slugToTry := slugBase
-		for {
-			_, _, err := n.GetListingFromSlug(slugToTry)
-			if err != nil {
-				listing.Slug = slugToTry
-				break
-			}
-			slugToTry = slugBase + strconv.Itoa(counter)
-			counter++
-		}
-	}
 
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
@@ -178,68 +186,26 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
-func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*pb.Inventory) error {
-	// Format to remove leading and trailing path separator if one exists
-	for _, inv := range inventory {
-		if string(inv.Item[0]) == "/" {
-			inv.Item = inv.Item[1:]
-		}
-		if string(inv.Item[len(inv.Item)-1:len(inv.Item)]) == "/" {
-			inv.Item = inv.Item[:len(inv.Item)-1]
-		}
-		s := strings.Split(inv.Item, "/")
-		if s[0] != listing.Slug {
-			inv.Item = path.Join(listing.Slug, inv.Item)
-		}
-	}
-	// Grab the current inventory for this listing
+func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
+	// Grab current inventory
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
 		return err
 	}
-	/* Delete from currentInv any variants that are carrying forward.
-	   The remainder should be a map of variants that should be deleted. */
-	for _, i := range inventory {
-		for k := range currentInv {
-			if i.Item == k {
-				delete(currentInv, k)
-			}
+	// Update inventory
+	for i, s := range listing.Item.Skus {
+		err = n.Datastore.Inventory().Put(listing.Slug, i, int(s.Quantity))
+		if err != nil {
+			return err
+		}
+		_, ok := currentInv[i]
+		if ok {
+			delete(currentInv, i)
 		}
 	}
-	// Create a list of variants from the contract so we can check correct ordering
-	var variants [][]string = make([][]string, len(listing.Item.Options))
-	for i, option := range listing.Item.Options {
-		var name []string
-		for _, variant := range option.Variants {
-			name = append(name, variant.Name)
-		}
-		variants[i] = name
-	}
-	for _, inv := range inventory {
-		names := strings.Split(inv.Item, "/")
-		if names[0] != listing.Slug {
-			return errors.New("Slug must be first item in inventory string")
-		}
-		if len(names) != len(variants)+1 {
-			return errors.New("Incorrect number of variants in inventory string")
-		}
-
-		// Check ordering of inventory string matches options in listing item
-	outer:
-		for i, name := range names[1:] {
-			for _, n := range variants[i] {
-				if n == name {
-					continue outer
-				}
-			}
-			return fmt.Errorf("Inventory string in position %d is incorrect value", i+1)
-		}
-		// Put to database
-		n.Datastore.Inventory().Put(inv.Item, int(inv.Count))
-	}
-	// Delete any variants that do not carry forward
-	for k := range currentInv {
-		err := n.Datastore.Inventory().Delete(k)
+	// Delete anything that did not update
+	for i := range currentInv {
+		err = n.Datastore.Inventory().Delete(listing.Slug, i)
 		if err != nil {
 			return err
 		}
@@ -247,16 +213,24 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing, inventory []*p
 	return nil
 }
 
-// Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
+	ld, err := n.extractListingData(contract)
+	if err != nil {
+		return err
+	}
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	return n.updateListingOnDisk(index, ld, false)
+}
 
-	var index []listingData
+func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (listingData, error) {
+	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 
 	listingHash, err := ipfs.GetHash(n.Context, listingPath)
 	if err != nil {
-		return err
+		return listingData{}, err
 	}
 
 	descriptionLength := len(contract.VendorListings[0].Item.Description)
@@ -299,26 +273,43 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
 		ShipsTo:      shipsTo,
 		FreeShipping: freeShipping,
+		Language:     contract.VendorListings[0].Metadata.Language,
 	}
+	return ld, nil
+}
+
+func (n *OpenBazaarNode) getListingIndex() ([]listingData, error) {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	var index []listingData
 
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
-			return err
+			return index, err
 		}
 		err = json.Unmarshal(file, &index)
 		if err != nil {
-			return err
+			return index, err
 		}
 	}
+	return index, nil
+}
 
+// Update the index.json file in the listings directory
+func (n *OpenBazaarNode) updateListingOnDisk(index []listingData, ld listingData, updateRatings bool) error {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
+	var avgRating float32
+	var ratingCount uint32
 	for i, d := range index {
 		if d.Slug != ld.Slug {
 			continue
 		}
+		avgRating = d.AverageRating
+		ratingCount = d.RatingCount
 
 		if len(index) == 1 {
 			index = []listingData{}
@@ -328,6 +319,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 
 	// Append our listing with the new hash to the list
+	if !updateRatings {
+		ld.AverageRating = avgRating
+		ld.RatingCount = ratingCount
+	}
 	index = append(index, ld)
 
 	// Write it back to file
@@ -346,6 +341,30 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		return werr
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.OrderCompletion_Rating) error {
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	var ld listingData
+	exists := false
+	for _, l := range index {
+		if l.Slug != rating.RatingData.VendorSig.Metadata.ListingSlug {
+			continue
+		}
+		ld = l
+		exists = true
+	}
+	if !exists {
+		return errors.New("Listing for rating does not exist in index")
+	}
+	totalRating := ld.AverageRating * float32(ld.RatingCount)
+	totalRating += float32(rating.RatingData.Overall)
+	ld.AverageRating = totalRating / float32(ld.RatingCount+1)
+	ld.RatingCount++
+	return n.updateListingOnDisk(index, ld, true)
 }
 
 // Update the hashes in the index.json file
@@ -469,7 +488,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	var index []listingData
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	_, ferr := os.Stat(indexPath)
-	if !os.IsNotExist(ferr) { // FIXME: What if there is an error other than NotExist?
+	if !os.IsNotExist(ferr) {
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
@@ -539,19 +558,19 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	return file, nil
 }
 
-func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, []*pb.Inventory, error) {
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
 	// Read index.json
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Unmarshal the index
 	var index []listingData
 	err = json.Unmarshal(file, &index)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Extract slug that matches hash
@@ -564,41 +583,42 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	}
 
 	if slug == "" {
-		return nil, nil, errors.New("Listing does not exist")
+		return nil, errors.New("Listing does not exist")
 	}
 	return n.GetListingFromSlug(slug)
 }
 
-func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, []*pb.Inventory, error) {
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
 	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
 	file, err := ioutil.ReadFile(listingPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Unmarshal listing
 	contract := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(file), contract)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Get the listing inventory
-	inventory, err := n.Datastore.Inventory().Get(contract.VendorListings[0].Slug) // FIXME: Can this be simplified to Get(slug)?
+	inventory, err := n.Datastore.Inventory().Get(slug)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// Build the inventory list
-	var invList []*pb.Inventory
-	for k, v := range inventory {
-		inv := new(pb.Inventory)
-		inv.Item = k
-		inv.Count = uint64(v)
-		invList = append(invList, inv)
+	for variant, count := range inventory {
+		for i, s := range contract.VendorListings[0].Item.Skus {
+			if variant == i {
+				s.Quantity = int64(count)
+				break
+			}
+		}
 	}
-	return contract, invList, nil
+	return contract, nil
 }
 
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
@@ -647,6 +667,12 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if listing.Metadata.PricingCurrency == "" {
 		return errors.New("Listing pricing currency code must not be empty")
+	}
+	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
+		return fmt.Errorf("PricingCurrency is longer than the max of %d characters", WordMaxCharacters)
+	}
+	if len(listing.Metadata.Language) > WordMaxCharacters {
+		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
 	}
 
 	// Item
@@ -718,16 +744,15 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
 		}
 	}
-	if len(listing.Item.Sku) > WordMaxCharacters {
-		return fmt.Errorf("Sku length must be less than the max of %d", WordMaxCharacters)
-	}
 	if len(listing.Item.Condition) > SentenceMaxCharacters {
 		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
 	}
 	if len(listing.Item.Options) > MaxListItems {
 		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
 	}
-	for _, option := range listing.Item.Options {
+	maxCombos := 1
+	variantSizeMap := make(map[int]int)
+	for i, option := range listing.Item.Options {
 		if option.Name == "" {
 			return errors.New("Options titles must not be empty")
 		}
@@ -744,41 +769,44 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
 		}
 		for _, variant := range option.Variants {
-			if variant.Name == "" {
-				return errors.New("Variant names must not be empty")
-			}
-			if len(variant.Name) > WordMaxCharacters {
+			if len(variant) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
-			if variant.Image != nil {
-				_, err := mh.FromB58String(variant.Image.Tiny)
-				if err != nil {
-					return errors.New("Tiny image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Small)
-				if err != nil {
-					return errors.New("Small image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Medium)
-				if err != nil {
-					return errors.New("Medium image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Large)
-				if err != nil {
-					return errors.New("Large image hashes must be multihashes")
-				}
-				_, err = mh.FromB58String(variant.Image.Original)
-				if err != nil {
-					return errors.New("Original image hashes must be multihashes")
-				}
-				if variant.Image.Filename == "" {
-					return errors.New("Variant image file names must not be empty")
-				}
-				if len(variant.Image.Filename) > SentenceMaxCharacters {
-					return fmt.Errorf("Variant image filename length must be less than the max of %d", SentenceMaxCharacters)
-				}
+		}
+		variantSizeMap[i] = len(option.Variants)
+		maxCombos *= len(option.Variants)
+	}
+
+	if len(listing.Item.Skus) > maxCombos {
+		return errors.New("More skus than variant combinations")
+	}
+	comboMap := make(map[string]bool)
+	for _, sku := range listing.Item.Skus {
+		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
+			return errors.New("Skus must specifiy a variant combo when options are used")
+		}
+		if len(sku.ProductID) > WordMaxCharacters {
+			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
+		}
+		formatted, err := json.Marshal(sku.VariantCombo)
+		if err != nil {
+			return err
+		}
+		_, ok := comboMap[string(formatted)]
+		if !ok {
+			comboMap[string(formatted)] = true
+		} else {
+			return errors.New("Duplicate sku")
+		}
+		if len(sku.VariantCombo) != len(listing.Item.Options) {
+			return errors.New("Incorrect number of variants in sku combination")
+		}
+		for i, combo := range sku.VariantCombo {
+			if int(combo) > variantSizeMap[i] {
+				return errors.New("Invalid sku variant combination")
 			}
 		}
+
 	}
 
 	// ShippingOptions

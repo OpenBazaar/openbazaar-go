@@ -28,6 +28,7 @@ func init() {
 	id, _ := peer.IDFromBytes(h)
 	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
 	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
+	cancelID, _ := peer.IDB58Decode("QmbwSMS35CaYKdrYBvvR9aHU9FzeWhjJ7E3jLKeR2DWrs3")
 	pointer = ipfs.Pointer{
 		k,
 		ps.PeerInfo{
@@ -36,6 +37,7 @@ func init() {
 		},
 		ipfs.MESSAGE,
 		time.Now(),
+		&cancelID,
 	}
 }
 
@@ -46,7 +48,7 @@ func TestPointersPut(t *testing.T) {
 		t.Error(err)
 	}
 
-	stmt, _ := pdb.db.Prepare("select pointerID, key, address, purpose, timestamp from pointers where pointerID=?")
+	stmt, _ := pdb.db.Prepare("select pointerID, key, address, cancelID, purpose, timestamp from pointers where pointerID=?")
 	defer stmt.Close()
 
 	var pointerID string
@@ -54,11 +56,12 @@ func TestPointersPut(t *testing.T) {
 	var address string
 	var purpose int
 	var timestamp int
-	err = stmt.QueryRow(pointer.Value.ID.Pretty()).Scan(&pointerID, &key, &address, &purpose, &timestamp)
+	var cancelID string
+	err = stmt.QueryRow(pointer.Value.ID.Pretty()).Scan(&pointerID, &key, &address, &cancelID, &purpose, &timestamp)
 	if err != nil {
 		t.Error(err)
 	}
-	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != pointer.Cid.String() || purpose != 1 {
+	if pointerID != pointer.Value.ID.Pretty() || timestamp <= 0 || key != pointer.Cid.String() || purpose != 1 || cancelID != pointer.CancelID.Pretty() {
 		t.Error("Pointer returned incorrect values")
 	}
 	err = pdb.Put(pointer)
@@ -73,15 +76,11 @@ func TestDeletePointer(t *testing.T) {
 	if err != nil {
 		t.Error("Pointer delete failed")
 	}
-	stmt, _ := pdb.db.Prepare("select pointerID, key, address, purpose, timestamp from pointers where pointerID=?")
+	stmt, _ := pdb.db.Prepare("select pointerID from pointers where pointerID=?")
 	defer stmt.Close()
 
 	var pointerID string
-	var key string
-	var address string
-	var purpose int
-	var timestamp int
-	err = stmt.QueryRow(pointer.Value.ID.Pretty()).Scan(&pointerID, &key, &address, &purpose, &timestamp)
+	err = stmt.QueryRow(pointer.Value.ID.Pretty()).Scan(&pointerID)
 	if err == nil {
 		t.Error("Pointer delete failed")
 	}
@@ -95,15 +94,11 @@ func TestDeleteAllPointers(t *testing.T) {
 	if err != nil {
 		t.Error("Pointer delete failed")
 	}
-	stmt, _ := pdb.db.Prepare("select pointerID, key, address, purpose, timestamp from pointers where purpose=?")
+	stmt, _ := pdb.db.Prepare("select pointerID from pointers where purpose=?")
 	defer stmt.Close()
 
 	var pointerID string
-	var key string
-	var address string
-	var purpose int
-	var timestamp int
-	err = stmt.QueryRow(ipfs.MODERATOR).Scan(&pointerID, &key, &address, &purpose, &timestamp)
+	err = stmt.QueryRow(ipfs.MODERATOR).Scan(&pointerID)
 	if err == nil {
 		t.Error("Pointer delete all failed")
 	}
@@ -125,10 +120,13 @@ func TestGetAllPointers(t *testing.T) {
 		if !p.Cid.Equals(pointer.Cid) {
 			t.Error("Get all pointers returned incorrect data")
 		}
+		if p.CancelID.Pretty() != pointer.CancelID.Pretty() {
+			t.Error("Get all pointers returned incorrect data")
+		}
 	}
 }
 
-func TestGetPointers(t *testing.T) {
+func TestPointersDB_GetByPurpose(t *testing.T) {
 	pdb.Put(pointer)
 	randBytes := make([]byte, 32)
 	rand.Read(randBytes)
@@ -144,9 +142,10 @@ func TestGetPointers(t *testing.T) {
 		},
 		ipfs.MODERATOR,
 		time.Now(),
+		nil,
 	}
 	err := pdb.Put(m)
-	pointers, err := pdb.Get(ipfs.MODERATOR)
+	pointers, err := pdb.GetByPurpose(ipfs.MODERATOR)
 	if err != nil {
 		t.Error("Get pointers returned error")
 	}
@@ -163,5 +162,46 @@ func TestGetPointers(t *testing.T) {
 		if !p.Cid.Equals(m.Cid) {
 			t.Error("Get pointers returned incorrect data")
 		}
+		if p.CancelID != nil {
+			t.Error("Get pointers returned incorrect data")
+		}
+	}
+}
+
+func TestPointersDB_Get(t *testing.T) {
+	pdb.Put(pointer)
+	randBytes := make([]byte, 32)
+	rand.Read(randBytes)
+	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
+	id, _ := peer.IDFromBytes(h)
+	maAddr, _ := ma.NewMultiaddr("/ipfs/QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr/")
+	k, _ := cid.Decode("QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr")
+	m := ipfs.Pointer{
+		k,
+		ps.PeerInfo{
+			ID:    id,
+			Addrs: []ma.Multiaddr{maAddr},
+		},
+		ipfs.MODERATOR,
+		time.Now(),
+		nil,
+	}
+	err := pdb.Put(m)
+	p, err := pdb.Get(id)
+	if err != nil {
+		t.Error("Get pointers returned error")
+	}
+
+	if p.Purpose != m.Purpose {
+		t.Error("Get pointers returned incorrect data")
+	}
+	if p.Value.ID != m.Value.ID {
+		t.Error("Get pointers returned incorrect data")
+	}
+	if !p.Cid.Equals(m.Cid) {
+		t.Error("Get pointers returned incorrect data")
+	}
+	if p.CancelID != nil {
+		t.Error("Get pointers returned incorrect data")
 	}
 }

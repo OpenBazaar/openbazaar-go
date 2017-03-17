@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "7873b35c0eababd6fe4c2de5d639099cd5e6436e"
+			"Rev": "5fd6e69052c06cd6f893d19587001baccb350c5d"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -729,6 +729,10 @@
 			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
 		},
 		{
+			"ImportPath": "github.com/microcosm-cc/bluemonday",
+			"Rev": "e79763773ab6222ca1d5a7cbd9d62d83c1f77081"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/go-homedir",
 			"Rev": "981ab348d865cf048eb7d17e78ac7192632d8415"
 		},
@@ -868,6 +872,10 @@
 		},
 		{
 			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/edwards25519",
+			"Rev": "23356c88d8f3c27fc3e4d7009489e37994a2e7b8"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/extra25519",
 			"Rev": "23356c88d8f3c27fc3e4d7009489e37994a2e7b8"
 		},
 		{
@@ -1561,6 +1569,18 @@
 		{
 			"ImportPath": "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto/pb",
 			"Rev": "23356c88d8f3c27fc3e4d7009489e37994a2e7b8"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/errors",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/storage",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/util",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
 		}
 	]
 }

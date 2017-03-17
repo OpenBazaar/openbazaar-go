@@ -44,8 +44,8 @@ type Txns interface {
 	// Put a new transaction to the database
 	Put(txn *wire.MsgTx, value, height int, timestamp time.Time) error
 
-	// Fetch a tx, height, and timestamp given it's hash
-	Get(txid chainhash.Hash) (*wire.MsgTx, int32, time.Time, error)
+	// Fetch a raw tx and it's metadata given a hash
+	Get(txid chainhash.Hash) (*wire.MsgTx, Txn, error)
 
 	// Fetch all transactions from the db
 	GetAll() ([]Txn, error)

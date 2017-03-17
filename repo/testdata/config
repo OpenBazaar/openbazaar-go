@@ -49,11 +49,15 @@
     "PrivKey": "testKey"
   },
   "Ipns": {
+    "QuerySize": 0,
     "RecordLifetime": "7d",
     "RepublishPeriod": "24h",
     "ResolveCacheSize": 128
   },
   "JSON-API": {
+    "AllowedIPs": [
+      "127.0.0.1"
+    ],
     "Authenticated": true,
     "CORS": "*",
     "Enabled": true,

@@ -45,6 +45,7 @@ type Pointer struct {
 	Value     ps.PeerInfo
 	Purpose   Purpose
 	Timestamp time.Time
+	CancelID  *peer.ID
 }
 
 func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) (Pointer, error) {

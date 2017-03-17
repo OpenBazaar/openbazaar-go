@@ -62,17 +62,17 @@ func TestTxnsGet(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tx2, h, ts, err := txdb.Get(tx.TxHash())
+	tx2, txn, err := txdb.Get(tx.TxHash())
 	if err != nil {
 		t.Error(err)
 	}
 	if tx.TxHash().String() != tx2.TxHash().String() {
 		t.Error("Txn db get failed")
 	}
-	if h != 1 {
+	if txn.Height != 1 {
 		t.Error("Txn db failed to get height")
 	}
-	if now.Unix() != ts.Unix() {
+	if now.Equal(txn.Timestamp) {
 		t.Error("Txn db failed to return correct time")
 	}
 }
@@ -139,8 +139,8 @@ func TestTxnsDB_MarkAsDead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, height, _, err := txdb.Get(tx.TxHash())
-	if height != -1 {
+	_, txn, err := txdb.Get(tx.TxHash())
+	if txn.Height != -1 {
 		t.Error("Txn db failed to mark as dead")
 	}
 }

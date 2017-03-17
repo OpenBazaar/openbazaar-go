@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/gorilla/websocket"
 	"github.com/ipfs/go-ipfs/commands"
 	"net/http"
@@ -58,23 +59,31 @@ type wsHandler struct {
 	h             *hub
 	path          string
 	context       commands.Context
+	enabled       bool
 	authenticated bool
+	allowedIPs    map[string]bool
 	cookie        http.Cookie
 	username      string
 	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authenticated bool, authCookie http.Cookie, username, password string) (*wsHandler, error) {
+func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config repo.APIConfig) (*wsHandler, error) {
 	hub := newHub()
 	go hub.run()
+	allowedIps := make(map[string]bool)
+	for _, ip := range config.AllowedIPs {
+		allowedIps[ip] = true
+	}
 	handler = wsHandler{
 		h:             hub,
 		path:          ctx.ConfigRoot,
 		context:       ctx,
-		authenticated: authenticated,
+		enabled:       config.Enabled,
+		authenticated: config.Authenticated,
+		allowedIPs:    allowedIps,
 		cookie:        authCookie,
-		username:      username,
-		password:      password,
+		username:      config.Username,
+		password:      config.Password,
 	}
 	return &handler, nil
 }
@@ -84,6 +93,19 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("Error upgrading to websockets:", err)
 		return
+	}
+	if !wsh.enabled {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, "403 - Forbidden")
+		return
+	}
+	if len(wsh.allowedIPs) > 0 {
+		remoteAddr := strings.Split(r.RemoteAddr, ":")
+		if !wsh.allowedIPs[remoteAddr[0]] {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
 	}
 	if wsh.authenticated {
 		if wsh.username == "" || wsh.password == "" {

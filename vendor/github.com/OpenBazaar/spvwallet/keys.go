@@ -3,6 +3,7 @@ package spvwallet
 import (
 	"github.com/btcsuite/btcd/txscript"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/goleveldb/leveldb/errors"
 )
 
 const LOOKAHEADWINDOW = 100
@@ -12,8 +13,11 @@ type KeyPath struct {
 	Index   int
 }
 
-func (ts *TxStore) GetCurrentKey(purpose KeyPurpose) *hd.ExtendedKey {
-	i, _ := ts.Keys().GetUnused(purpose)
+func (ts *TxStore) GetCurrentKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
+	i, err := ts.Keys().GetUnused(purpose)
+	if err != nil {
+		return nil, err
+	}
 	return ts.generateChildKey(purpose, uint32(i))
 }
 
@@ -25,7 +29,13 @@ func (ts *TxStore) GetFreshKey(purpose KeyPurpose) *hd.ExtendedKey {
 	} else {
 		index += 1
 	}
-	childKey = ts.generateChildKey(purpose, uint32(index))
+	for {
+		childKey, err = ts.generateChildKey(purpose, uint32(index))
+		if err == nil {
+			break
+		}
+		index += 1
+	}
 	addr, _ := childKey.Address(ts.Param)
 	script, _ := txscript.PayToAddrScript(addr)
 	p := KeyPath{KeyPurpose(purpose), index}
@@ -40,7 +50,11 @@ func (ts *TxStore) GetKeys() []*hd.ExtendedKey {
 		return keys
 	}
 	for _, path := range keyPaths {
-		keys = append(keys, ts.generateChildKey(path.Purpose, uint32(path.Index)))
+		k, err := ts.generateChildKey(path.Purpose, uint32(path.Index))
+		if err != nil {
+			continue
+		}
+		keys = append(keys, k)
 	}
 	return keys
 }
@@ -62,14 +76,16 @@ func (ts *TxStore) GetKeyForScript(scriptPubKey []byte) (*hd.ExtendedKey, error)
 			true)
 		return hdKey, nil
 	}
-	return ts.generateChildKey(keyPath.Purpose, uint32(keyPath.Index)), nil
+	return ts.generateChildKey(keyPath.Purpose, uint32(keyPath.Index))
 }
 
-func (ts *TxStore) generateChildKey(purpose KeyPurpose, index uint32) *hd.ExtendedKey {
-	accountMK, _ := ts.masterPrivKey.Child(hd.HardenedKeyStart + 0)
-	purposeMK, _ := accountMK.Child(uint32(purpose))
-	childKey, _ := purposeMK.Child(index)
-	return childKey
+func (ts *TxStore) generateChildKey(purpose KeyPurpose, index uint32) (*hd.ExtendedKey, error) {
+	if purpose == EXTERNAL {
+		return ts.externalKey.Child(index)
+	} else if purpose == INTERNAL {
+		return ts.internalKey.Child(index)
+	}
+	return nil, errors.New("Unknown key purpose")
 }
 
 func (ts *TxStore) lookahead() {
