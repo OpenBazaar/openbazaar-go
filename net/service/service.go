@@ -11,6 +11,7 @@ import (
 	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -35,6 +36,8 @@ type OpenBazaarService struct {
 	node      *core.OpenBazaarNode
 	sender    map[peer.ID]*messageSender
 	senderlk  sync.Mutex
+	requests  map[int32]chan *pb.Message
+	requestlk sync.Mutex
 }
 
 func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
@@ -81,6 +84,27 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 			return
 		}
 
+		if pmes.IsResponse {
+			service.requestlk.Lock()
+			ch, ok := service.requests[pmes.RequestId]
+			if ok {
+				// this is a request response
+				select {
+				case ch <- pmes:
+					// message returned to requester
+				case <-time.After(time.Second):
+					// in case ch is closed on the other end - the lock should prevent this happening
+					log.Debug("request id was not removed from map on timeout")
+				}
+				close(ch)
+				delete(service.requests, pmes.RequestId)
+			} else {
+				log.Debug("received response message with unknown request id: requesting function may have timed out")
+			}
+			service.requestlk.Unlock()
+			continue
+		}
+
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
@@ -99,6 +123,10 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		if rpmes == nil {
 			continue
 		}
+
+		// give back request id
+		rpmes.RequestId = pmes.RequestId
+		rpmes.IsResponse = true
 
 		// Send out response msg
 		if err := ms.SendMessage(service.ctx, pmes); err != nil {

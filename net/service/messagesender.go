@@ -7,6 +7,7 @@ import (
 	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 
 type messageSender struct {
 	s         inet.Stream
-	r         ggio.ReadCloser
 	w         ggio.WriteCloser
 	lk        sync.Mutex
 	p         peer.ID
@@ -43,7 +43,6 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID, s *inet.Stream
 			ms.s.Close()
 		}
 		ms.s = *s
-		ms.r = ggio.NewDelimitedReader(ms.s, inet.MessageSizeMax)
 		ms.w = ggio.NewDelimitedWriter(ms.s)
 		ms.lk.Unlock()
 	}
@@ -63,8 +62,8 @@ func (ms *messageSender) prep() error {
 	if err != nil {
 		return err
 	}
+	ms.service.HandleNewStream(nstr)
 
-	ms.r = ggio.NewDelimitedReader(nstr, inet.MessageSizeMax)
 	ms.w = ggio.NewDelimitedWriter(nstr)
 	ms.s = nstr
 
@@ -121,18 +120,27 @@ func (ms *messageSender) writeMessage(pmes *pb.Message) error {
 }
 
 func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
-	ms.lk.Lock()
-	defer ms.lk.Unlock()
-	if err := ms.prep(); err != nil {
-		return nil, err
-	}
+	pmes.RequestId = rand.Int31()
+	returnChan := make(chan *pb.Message)
+	ms.service.requestlk.Lock()
+	ms.service.requests[pmes.RequestId] = returnChan
+	ms.service.requestlk.Unlock()
+	defer func() {
+		ms.service.requestlk.Lock()
+		ch, ok := ms.service.requests[pmes.RequestId]
+		if ok {
+			close(ch)
+			delete(ms.service.requests, pmes.RequestId)
+		}
+		ms.service.requestlk.Unlock()
+	}()
 
-	if err := ms.writeMessage(pmes); err != nil {
+	if err := ms.SendMessage(ctx, pmes); err != nil {
 		return nil, err
 	}
 
 	mes := new(pb.Message)
-	if err := ms.ctxReadMsg(ctx, mes); err != nil {
+	if err := ms.ctxReadMsg(ctx, returnChan, mes); err != nil {
 		ms.s.Close()
 		ms.s = nil
 		return nil, err
@@ -146,18 +154,13 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	return mes, nil
 }
 
-func (ms *messageSender) ctxReadMsg(ctx context.Context, mes *pb.Message) error {
-	errc := make(chan error, 1)
-	go func(r ggio.ReadCloser) {
-		errc <- r.ReadMsg(mes)
-	}(ms.r)
-
+func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Message, mes *pb.Message) error {
 	t := time.NewTimer(ReadMessageTimeout)
 	defer t.Stop()
 
 	select {
-	case err := <-errc:
-		return err
+	case mes = <-returnChan:
+		return nil
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-t.C:
