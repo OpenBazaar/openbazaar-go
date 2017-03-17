@@ -125,26 +125,20 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	ms.service.requestlk.Lock()
 	ms.service.requests[pmes.RequestId] = returnChan
 	ms.service.requestlk.Unlock()
-	defer func() {
-		ms.service.requestlk.Lock()
-		ch, ok := ms.service.requests[pmes.RequestId]
-		if ok {
-			close(ch)
-			delete(ms.service.requests, pmes.RequestId)
-		}
-		ms.service.requestlk.Unlock()
-	}()
 
 	if err := ms.SendMessage(ctx, pmes); err != nil {
+		ms.closeRequest(pmes.RequestId)
 		return nil, err
 	}
 
 	mes := new(pb.Message)
 	if err := ms.ctxReadMsg(ctx, returnChan, mes); err != nil {
+		ms.closeRequest(pmes.RequestId)
 		ms.s.Close()
 		ms.s = nil
 		return nil, err
 	}
+	// no need to close request here, it will have been done in the stream handler
 
 	if ms.singleMes > streamReuseTries {
 		ms.s.Close()
@@ -152,6 +146,17 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	}
 
 	return mes, nil
+}
+
+// stop listening for responses
+func (ms *messageSender) closeRequest(id int32) {
+	ms.service.requestlk.Lock()
+	ch, ok := ms.service.requests[id]
+	if ok {
+		close(ch)
+		delete(ms.service.requests, id)
+	}
+	ms.service.requestlk.Unlock()
 }
 
 func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Message, mes *pb.Message) error {
