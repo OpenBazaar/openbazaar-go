@@ -1,4 +1,5 @@
-// Copyright (c) 2014-2016 The btcsuite developers
+// Copyright (c) 2014-2017 The btcsuite developers
+// Copyright (c) 2015-2017 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -248,6 +249,42 @@ func (c *Client) GetDifficultyAsync() FutureGetDifficultyResult {
 // minimum difficulty.
 func (c *Client) GetDifficulty() (float64, error) {
 	return c.GetDifficultyAsync().Receive()
+}
+
+// FutureGetBlockChainInfoResult is a promise to deliver the result of a
+// GetBlockChainInfoAsync RPC invocation (or an applicable error).
+type FutureGetBlockChainInfoResult chan *response
+
+// Receive waits for the response promised by the future and returns chain info
+// result provided by the server.
+func (r FutureGetBlockChainInfoResult) Receive() (*btcjson.GetBlockChainInfoResult, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var chainInfo btcjson.GetBlockChainInfoResult
+	if err := json.Unmarshal(res, &chainInfo); err != nil {
+		return nil, err
+	}
+	return &chainInfo, nil
+}
+
+// GetBlockChainInfoAsync returns an instance of a type that can be used to get
+// the result of the RPC at some future time by invoking the Receive function
+// on the returned instance.
+//
+// See GetBlockChainInfo for the blocking version and more details.
+func (c *Client) GetBlockChainInfoAsync() FutureGetBlockChainInfoResult {
+	cmd := btcjson.NewGetBlockChainInfoCmd()
+	return c.sendCmd(cmd)
+}
+
+// GetBlockChainInfo returns information related to the processing state of
+// various chain-specific details such as the current difficulty from the tip
+// of the main chain.
+func (c *Client) GetBlockChainInfo() (*btcjson.GetBlockChainInfoResult, error) {
+	return c.GetBlockChainInfoAsync().Receive()
 }
 
 // FutureGetBlockHashResult is a future promise to deliver the result of a
@@ -617,4 +654,59 @@ func (c *Client) GetTxOutAsync(txHash *chainhash.Hash, index uint32, mempool boo
 // nil, otherwise.
 func (c *Client) GetTxOut(txHash *chainhash.Hash, index uint32, mempool bool) (*btcjson.GetTxOutResult, error) {
 	return c.GetTxOutAsync(txHash, index, mempool).Receive()
+}
+
+// FutureRescanBlocksResult is a future promise to deliver the result of a
+// RescanBlocksAsync RPC invocation (or an applicable error).
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+type FutureRescanBlocksResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// discovered rescanblocks data.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (r FutureRescanBlocksResult) Receive() ([]btcjson.RescannedBlock, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	var rescanBlocksResult []btcjson.RescannedBlock
+	err = json.Unmarshal(res, &rescanBlocksResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return rescanBlocksResult, nil
+}
+
+// RescanBlocksAsync returns an instance of a type that can be used to get the
+// result of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See RescanBlocks for the blocking version and more details.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) RescanBlocksAsync(blockHashes []chainhash.Hash) FutureRescanBlocksResult {
+	strBlockHashes := make([]string, len(blockHashes))
+	for i := range blockHashes {
+		strBlockHashes[i] = blockHashes[i].String()
+	}
+
+	cmd := btcjson.NewRescanBlocksCmd(strBlockHashes)
+	return c.sendCmd(cmd)
+}
+
+// RescanBlocks rescans the blocks identified by blockHashes, in order, using
+// the client's loaded transaction filter.  The blocks do not need to be on the
+// main chain, but they do need to be adjacent to each other.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) RescanBlocks(blockHashes []chainhash.Hash) ([]btcjson.RescannedBlock, error) {
+	return c.RescanBlocksAsync(blockHashes).Receive()
 }

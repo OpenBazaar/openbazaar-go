@@ -1,4 +1,4 @@
-// Copyright (c) 2015-2016 The btcsuite developers
+// Copyright (c) 2015-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"time"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -1063,7 +1064,7 @@ func deserializeBestChainState(serializedData []byte) (bestChainState, error) {
 func dbPutBestState(dbTx database.Tx, snapshot *BestState, workSum *big.Int) error {
 	// Serialize the current best chain state.
 	serializedData := serializeBestChainState(bestChainState{
-		hash:      *snapshot.Hash,
+		hash:      snapshot.Hash,
 		height:    uint32(snapshot.Height),
 		totalTxns: snapshot.TotalTxns,
 		workSum:   workSum,
@@ -1085,14 +1086,14 @@ func (b *BlockChain) createChainState() error {
 	b.bestNode = node
 
 	// Add the new node to the index which is used for faster lookups.
-	b.index[*node.hash] = node
+	b.index.AddNode(node)
 
 	// Initialize the state related to the best block.  Since it is the
 	// genesis block, use its timestamp for the median time.
 	numTxns := uint64(len(genesisBlock.MsgBlock().Transactions))
 	blockSize := uint64(genesisBlock.MsgBlock().SerializeSize())
 	b.stateSnapshot = newBestState(b.bestNode, blockSize, numTxns, numTxns,
-		b.bestNode.timestamp)
+		time.Unix(b.bestNode.timestamp, 0))
 
 	// Create the initial the database chain state including creating the
 	// necessary index buckets and inserting the genesis block.
@@ -1128,7 +1129,7 @@ func (b *BlockChain) createChainState() error {
 
 		// Add the genesis block hash to height and height to hash
 		// mappings to the index.
-		err = dbPutBlockIndex(dbTx, b.bestNode.hash, b.bestNode.height)
+		err = dbPutBlockIndex(dbTx, &b.bestNode.hash, b.bestNode.height)
 		if err != nil {
 			return err
 		}
@@ -1185,13 +1186,11 @@ func (b *BlockChain) initChainState() error {
 		node.workSum = state.workSum
 		b.bestNode = node
 
-		// Add the new node to the indices for faster lookups.
-		prevHash := node.parentHash
-		b.index[*node.hash] = node
-		b.depNodes[*prevHash] = append(b.depNodes[*prevHash], node)
+		// Add the new node to the block index.
+		b.index.AddNode(node)
 
 		// Calculate the median time for the block.
-		medianTime, err := b.calcPastMedianTime(node)
+		medianTime, err := b.index.CalcPastMedianTime(node)
 		if err != nil {
 			return err
 		}
@@ -1909,7 +1908,7 @@ func (b *BlockChain) initThresholdCaches() error {
 	// accessing b.bestNode.parent directly as it will dynamically create
 	// previous block nodes as needed.  This helps allow only the pieces of
 	// the chain that are needed to remain in memory.
-	prevNode, err := b.getPrevNodeFromNode(b.bestNode)
+	prevNode, err := b.index.PrevNodeFromNode(b.bestNode)
 	if err != nil {
 		return err
 	}
