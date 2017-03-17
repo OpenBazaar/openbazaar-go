@@ -54,7 +54,7 @@ type listingData struct {
 	Hash          string    `json:"hash"`
 	Slug          string    `json:"slug"`
 	Title         string    `json:"title"`
-	Categories      []string  `json:"category"`
+	Categories    []string  `json:"category"`
 	ContractType  string    `json:"contractType"`
 	Description   string    `json:"description"`
 	Thumbnail     thumbnail `json:"thumbnail"`
