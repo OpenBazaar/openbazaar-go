@@ -103,6 +103,13 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, 
 	if err != nil {
 		return nil, err
 	}
+	pointer, err := service.datastore.Pointers().Get(pid)
+	if err != nil {
+		return nil, err
+	}
+	if pointer.CancelID == nil || pointer.CancelID.Pretty() != p.Pretty() {
+		return nil, errors.New("Peer is not authorized to delete pointer")
+	}
 	err = service.datastore.Pointers().Delete(pid)
 	if err != nil {
 		return nil, err
@@ -436,7 +443,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		err = service.node.Wallet.SweepMultisig(utxos, &refundAddress, buyerKey, redeemScript, spvwallet.NORMAL)
+		_, err = service.node.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}

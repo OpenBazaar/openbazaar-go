@@ -101,13 +101,13 @@ func TestPutSale(t *testing.T) {
 	if buyerBlockchainID != contract.BuyerOrder.BuyerID.BlockchainID {
 		t.Errorf(`Expected %s got %s`, contract.BuyerOrder.BuyerID.BlockchainID, buyerBlockchainID)
 	}
-	if title != strings.ToLower(contract.VendorListings[0].Item.Title) {
+	if title != contract.VendorListings[0].Item.Title {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.VendorListings[0].Item.Title), title)
 	}
-	if shippingName != strings.ToLower(contract.BuyerOrder.Shipping.ShipTo) {
+	if shippingName != contract.BuyerOrder.Shipping.ShipTo {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.ShipTo), shippingName)
 	}
-	if shippingAddress != strings.ToLower(contract.BuyerOrder.Shipping.Address) {
+	if shippingAddress != contract.BuyerOrder.Shipping.Address {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.Address), shippingAddress)
 	}
 }

@@ -193,6 +193,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 
 	var a APIConfig = APIConfig{
 		Enabled:     true,
+		AllowedIPs:  []string{},
 		HTTPHeaders: nil,
 	}
 

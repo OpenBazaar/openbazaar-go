@@ -46,6 +46,7 @@ type JsonAPIConfig struct {
 	Enabled       bool
 	Cors          *string
 	Authenticated bool
+	AllowedIPs    map[string]bool
 	Cookie        http.Cookie
 	Username      string
 	Password      string
@@ -57,13 +58,17 @@ type jsonAPIHandler struct {
 }
 
 func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
-
+	allowedIPs := make(map[string]bool)
+	for _, ip := range config.AllowedIPs {
+		allowedIPs[ip] = true
+	}
 	i := &jsonAPIHandler{
 		config: JsonAPIConfig{
 			Enabled:       config.Enabled,
 			Cors:          config.CORS,
 			Headers:       config.HTTPHeaders,
 			Authenticated: config.Authenticated,
+			AllowedIPs:    allowedIPs,
 			Cookie:        authCookie,
 			Username:      config.Username,
 			Password:      config.Password,
@@ -79,6 +84,15 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
+	if len(i.config.AllowedIPs) > 0 {
+		remoteAddr := strings.Split(r.RemoteAddr, ":")
+		if !i.config.AllowedIPs[remoteAddr[0]] {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
+
 	if i.config.Cors != nil {
 		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
 		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
@@ -817,11 +831,12 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid:      txid.String(),
-		Address:   snd.Address,
-		Memo:      memo,
-		OrderId:   orderId,
-		Thumbnail: thumbnail,
+		Txid:       txid.String(),
+		Address:    snd.Address,
+		Memo:       memo,
+		OrderId:    orderId,
+		Thumbnail:  thumbnail,
+		CanBumpFee: false,
 	}); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -846,11 +861,16 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	_, err = i.node.Datastore.Settings().Get()
 	if err == nil {
 		ErrorResponse(w, http.StatusConflict, "Settings is already set. Use PUT.")
 		return
 	}
+
 	if settings.MisPaymentBuffer == nil {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
@@ -881,6 +901,10 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&settings)
 	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -936,6 +960,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		default:
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
 		}
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if settings.StoreModerators != nil {
@@ -2264,6 +2292,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Confirmations int32     `json:"confirmations"`
 		OrderId       string    `json:"orderId"`
 		Thumbnail     string    `json:"thumbnail"`
+		CanBumpFee    bool      `json:"canBumpFee"`
 	}
 	transactions, err := i.node.Wallet.Transactions()
 	if err != nil {
@@ -2304,6 +2333,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			Timestamp:     t.Timestamp,
 			Confirmations: confirmations,
 			Status:        status,
+			CanBumpFee:    true,
 		}
 		m, ok := metadata[t.Txid]
 		if ok {
@@ -2311,6 +2341,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Memo = m.Memo
 			tx.OrderId = m.OrderId
 			tx.Thumbnail = m.Thumbnail
+			tx.CanBumpFee = m.CanBumpFee
 		}
 		txs = append(txs, tx)
 	}
@@ -2489,4 +2520,40 @@ func (i *jsonAPIHandler) DELETEBlockNode(w http.ResponseWriter, r *http.Request)
 	}
 	i.node.BanManager.RemoveBlockedId(pid)
 	SanitizedResponse(w, `{}`)
+}
+
+func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
+	_, txid := path.Split(r.URL.Path)
+	txHash, err := chainhash.NewHashFromStr(txid)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	newTxid, err := i.node.Wallet.BumpFee(*txHash)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	m, err := i.node.Datastore.TxMetadata().Get(txid)
+	if err != nil {
+		m = repo.Metadata{}
+	}
+	m.Txid = txid
+	m.CanBumpFee = false
+	if err := i.node.Datastore.TxMetadata().Put(m); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
+		Txid:       newTxid.String(),
+		Address:    "",
+		Memo:       fmt.Sprintf("Fee bump of %s", txid),
+		OrderId:    "",
+		Thumbnail:  "",
+		CanBumpFee: true,
+	}); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))
 }

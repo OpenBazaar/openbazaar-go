@@ -51,17 +51,19 @@ type thumbnail struct {
 	Medium string `json:"medium"`
 }
 type listingData struct {
-	Hash         string    `json:"hash"`
-	Slug         string    `json:"slug"`
-	Title        string    `json:"title"`
-	Category     []string  `json:"category"`
-	ContractType string    `json:"contractType"`
-	Description  string    `json:"description"`
-	Thumbnail    thumbnail `json:"thumbnail"`
-	Price        price     `json:"price"`
-	ShipsTo      []string  `json:"shipsTo"`
-	FreeShipping []string  `json:"freeShipping"`
-	Language     string    `json:"language"`
+	Hash          string    `json:"hash"`
+	Slug          string    `json:"slug"`
+	Title         string    `json:"title"`
+	Category      []string  `json:"category"`
+	ContractType  string    `json:"contractType"`
+	Description   string    `json:"description"`
+	Thumbnail     thumbnail `json:"thumbnail"`
+	Price         price     `json:"price"`
+	ShipsTo       []string  `json:"shipsTo"`
+	FreeShipping  []string  `json:"freeShipping"`
+	Language      string    `json:"language"`
+	AverageRating float32   `json:"averageRating"`
+	RatingCount   uint32    `json:"ratingCount"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -211,16 +213,24 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	return nil
 }
 
-// Update the index.json file in the listings directory
 func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
-	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
+	ld, err := n.extractListingData(contract)
+	if err != nil {
+		return err
+	}
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	return n.updateListingOnDisk(index, ld, false)
+}
 
-	var index []listingData
+func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (listingData, error) {
+	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
 
 	listingHash, err := ipfs.GetHash(n.Context, listingPath)
 	if err != nil {
-		return err
+		return listingData{}, err
 	}
 
 	descriptionLength := len(contract.VendorListings[0].Item.Description)
@@ -265,25 +275,41 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		FreeShipping: freeShipping,
 		Language:     contract.VendorListings[0].Metadata.Language,
 	}
+	return ld, nil
+}
+
+func (n *OpenBazaarNode) getListingIndex() ([]listingData, error) {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+
+	var index []listingData
 
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
 		// Read existing file
 		file, err := ioutil.ReadFile(indexPath)
 		if err != nil {
-			return err
+			return index, err
 		}
 		err = json.Unmarshal(file, &index)
 		if err != nil {
-			return err
+			return index, err
 		}
 	}
+	return index, nil
+}
 
+// Update the index.json file in the listings directory
+func (n *OpenBazaarNode) updateListingOnDisk(index []listingData, ld listingData, updateRatings bool) error {
+	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
+	var avgRating float32
+	var ratingCount uint32
 	for i, d := range index {
 		if d.Slug != ld.Slug {
 			continue
 		}
+		avgRating = d.AverageRating
+		ratingCount = d.RatingCount
 
 		if len(index) == 1 {
 			index = []listingData{}
@@ -293,6 +319,10 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	}
 
 	// Append our listing with the new hash to the list
+	if !updateRatings {
+		ld.AverageRating = avgRating
+		ld.RatingCount = ratingCount
+	}
 	index = append(index, ld)
 
 	// Write it back to file
@@ -311,6 +341,30 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 		return werr
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.OrderCompletion_Rating) error {
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	var ld listingData
+	exists := false
+	for _, l := range index {
+		if l.Slug != rating.RatingData.VendorSig.Metadata.ListingSlug {
+			continue
+		}
+		ld = l
+		exists = true
+	}
+	if !exists {
+		return errors.New("Listing for rating does not exist in index")
+	}
+	totalRating := ld.AverageRating * float32(ld.RatingCount)
+	totalRating += float32(rating.RatingData.Overall)
+	ld.AverageRating = totalRating / float32(ld.RatingCount+1)
+	ld.RatingCount++
+	return n.updateListingOnDisk(index, ld, true)
 }
 
 // Update the hashes in the index.json file
@@ -559,7 +613,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	for variant, count := range inventory {
 		for i, s := range contract.VendorListings[0].Item.Skus {
 			if variant == i {
-				s.Quantity = uint64(count)
+				s.Quantity = int64(count)
 				break
 			}
 		}

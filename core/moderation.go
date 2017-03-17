@@ -64,7 +64,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	}
 
 	// Publish pointer
-	pointers, err := n.Datastore.Pointers().Get(ipfs.MODERATOR)
+	pointers, err := n.Datastore.Pointers().GetByPurpose(ipfs.MODERATOR)
 	ctx := context.Background()
 	if err != nil || len(pointers) == 0 {
 		b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)

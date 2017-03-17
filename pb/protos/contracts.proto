@@ -75,7 +75,7 @@ message Listing {
             repeated uint32 variantCombo = 1;
             string productID             = 2;
             int64 surcharge              = 3;
-            uint64 quantity              = 4; // Not saved with listing
+            int64 quantity               = 4; // Not saved with listing
         }
 
         message Image {
@@ -205,17 +205,19 @@ message Order {
 
 message OrderConfirmation {
     string orderID                            = 1;
+    google.protobuf.Timestamp timestamp       = 2;
     // Direct payments only
-    string paymentAddress                     = 2;
-    uint64 requestedAmount                    = 3;
-    uint64 payoutFee                          = 4;
+    string paymentAddress                     = 3;
+    uint64 requestedAmount                    = 4;
+    uint64 payoutFee                          = 5;
 
-    repeated RatingSignature ratingSignatures = 5;
+    repeated RatingSignature ratingSignatures = 6;
 }
 
 message OrderReject {
-    string orderID                 = 1;
-    repeated BitcoinSignature sigs = 2;
+    string orderID                      = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    repeated BitcoinSignature sigs      = 3;
 }
 
 message RatingSignature {
@@ -239,16 +241,18 @@ message OrderFulfillment {
 
     string slug                                = 2;
 
+    google.protobuf.Timestamp timestamp        = 3;
+
     // Physical goods only
-    repeated PhysicalDelivery physicalDelivery = 3;
+    repeated PhysicalDelivery physicalDelivery = 4;
 
     //Digital goods only
-    repeated DigitalDelivery digitalDelivery   = 4;
+    repeated DigitalDelivery digitalDelivery   = 5;
 
     // Moderated payments only
-    Payout payout                              = 5;
+    Payout payout                              = 6;
 
-    RatingSignature ratingSignature            = 6;
+    RatingSignature ratingSignature            = 7;
 
     message PhysicalDelivery {
         string shipper            = 1;
@@ -269,8 +273,9 @@ message OrderFulfillment {
 
 message OrderCompletion {
     string orderId                       = 1;
-    repeated BitcoinSignature payoutSigs = 2;
-    repeated Rating ratings              = 3;
+    google.protobuf.Timestamp timestamp  = 2;
+    repeated BitcoinSignature payoutSigs = 3;
+    repeated Rating ratings              = 4;
 
     message Rating {
         RatingData ratingData = 1;
@@ -332,9 +337,10 @@ message Outpoint {
 }
 
 message Refund {
-    string orderID                 = 1;
-    repeated BitcoinSignature sigs = 2;
-    string memo                    = 3;
+    string orderID                      = 1;
+    google.protobuf.Timestamp timestamp = 2;
+    repeated BitcoinSignature sigs      = 3;
+    string memo                         = 4;
 }
 
 message ID {

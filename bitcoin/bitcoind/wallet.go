@@ -27,8 +27,7 @@ import (
 var log = logging.MustGetLogger("bitcoind")
 
 const (
-	FlagPrefix = 0x00
-	Account    = "OpenBazaar"
+	Account = "OpenBazaar"
 )
 
 type BitcoindWallet struct {
@@ -234,6 +233,57 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 	return w.rpcClient.SendFrom(Account, addr, amt)
 }
 
+func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+	tx, err := w.rpcClient.GetTransaction(&txid, false)
+	if err != nil {
+		return nil, err
+	}
+	if tx.Confirmations > 0 {
+		return nil, errors.New("Transaction is confirmed, cannot bump fee")
+	}
+	unspent, err := w.rpcClient.ListUnspent()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range unspent {
+		if u.TxID == txid.String() {
+			if u.Confirmations > 0 {
+				return nil, errors.New("Transaction is confirmed, cannot bump fee")
+			}
+			h, err := chainhash.NewHashFromStr(u.TxID)
+			if err != nil {
+				continue
+			}
+			op := wire.NewOutPoint(h, u.Vout)
+			script, err := hex.DecodeString(u.ScriptPubKey)
+			if err != nil {
+				continue
+			}
+			utxo := spvwallet.Utxo{
+				Op:           *op,
+				Value:        int64(u.Amount / 100000000),
+				ScriptPubkey: script,
+			}
+			addr, err := btc.DecodeAddress(u.Address, w.params)
+			if err != nil {
+				continue
+			}
+			key, err := w.rpcClient.DumpPrivKey(addr)
+			if err != nil {
+				continue
+			}
+			hdKey := hd.NewExtendedKey(w.Params().HDPrivateKeyID[:], key.PrivKey.Serialize(), make([]byte, 32), make([]byte, 4), 0, 0, true)
+			transactionID, err := w.SweepAddress([]spvwallet.Utxo{utxo}, nil, hdKey, nil, spvwallet.FEE_BUMP)
+			if err != nil {
+				return nil, err
+			}
+			return transactionID, nil
+
+		}
+	}
+	return nil, errors.New("Transaction either doesn't exist or has already been spent")
+}
+
 func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
 	defautlFee := uint64(50)
 	var nBlocks json.RawMessage
@@ -376,7 +426,7 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	return nil
 }
 
-func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript []byte, feeLevel spvwallet.FeeLevel) error {
+func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -385,7 +435,7 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Addr
 	}
 	script, err := txscript.PayToAddrScript(internalAddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var val int64
@@ -405,11 +455,11 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Addr
 	b := json.RawMessage([]byte(`1`))
 	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{b})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	feePerKb, err := strconv.Atoi(string(resp))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if feePerKb <= 0 {
 		feePerKb = 50000
@@ -445,7 +495,10 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Addr
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
 	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
-		return redeemScript, nil
+		if redeemScript == nil {
+			return []byte{}, nil
+		}
+		return *redeemScript, nil
 	})
 
 	for i, txIn := range tx.TxIn {
@@ -454,7 +507,7 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Addr
 			tx, i, prevOutScript, txscript.SigHashAll, getKey,
 			getScript, txIn.SignatureScript)
 		if err != nil {
-			return errors.New("Failed to sign transaction")
+			return nil, errors.New("Failed to sign transaction")
 		}
 		txIn.SignatureScript = script
 	}
@@ -462,9 +515,10 @@ func (w *BitcoindWallet) SweepMultisig(utxos []spvwallet.Utxo, address *btc.Addr
 	// Broadcast
 	_, err = w.rpcClient.SendRawTransaction(tx, false)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	txid := tx.TxHash()
+	return &txid, nil
 }
 
 func (w *BitcoindWallet) Params() *chaincfg.Params {

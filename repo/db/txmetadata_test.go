@@ -15,7 +15,7 @@ func init() {
 	metDB = TxMetadataDB{
 		db: conn,
 	}
-	m = repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS"}
+	m = repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
 }
 
 func TestTxMetadataDB_Put(t *testing.T) {
@@ -23,10 +23,11 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := metDB.db.Prepare("select txid, address, memo, orderID, thumbnail from txmetadata where txid=?")
+	stmt, err := metDB.db.Prepare("select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata where txid=?")
 	defer stmt.Close()
 	var txid, addr, memo, orderId, thumbnail string
-	err = stmt.QueryRow(m.Txid).Scan(&txid, &addr, &memo, &orderId, &thumbnail)
+	var canBumpFee int
+	err = stmt.QueryRow(m.Txid).Scan(&txid, &addr, &memo, &orderId, &thumbnail, &canBumpFee)
 	if err != nil {
 		t.Error(err)
 	}
@@ -44,6 +45,9 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	}
 	if thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to put image hash")
+	}
+	if canBumpFee > 0 {
+		t.Error("TxMetadataDB failed to put canBumpFee")
 	}
 }
 
@@ -70,6 +74,9 @@ func TestTxMetadataDB_Get(t *testing.T) {
 	}
 	if ret.Thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to get image hash")
+	}
+	if ret.CanBumpFee != m.CanBumpFee {
+		t.Error("TxMetadataDB failed to get canBumpFee")
 	}
 }
 
@@ -103,6 +110,9 @@ func TestTxMetadataDB_GetAll(t *testing.T) {
 	}
 	if ret.Thumbnail != m.Thumbnail {
 		t.Error("TxMetadataDB failed to get image hash")
+	}
+	if ret.CanBumpFee != m.CanBumpFee {
+		t.Error("TxMetadataDB failed to get canBumpFee")
 	}
 }
 

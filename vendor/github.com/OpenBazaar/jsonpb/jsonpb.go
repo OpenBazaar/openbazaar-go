@@ -501,11 +501,11 @@ func (m *Marshaler) marshalValue(out *errWriter, prop *proto.Properties, v refle
 	}
 	var bigInt bool
 	if v.Kind() == reflect.Int64 {
-		if v.Int() > int64(1<<32) {
+		if v.Int() > int64(1<<53) {
 			bigInt = true
 		}
 	} else if v.Kind() == reflect.Uint64 {
-		if v.Uint() > uint64(1<<32) {
+		if v.Uint() > uint64(1<<53) {
 			bigInt = true
 		}
 	}

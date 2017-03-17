@@ -9,7 +9,6 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -68,7 +67,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		contract.VendorListings[0].Item.Images[0].Tiny,
 		contract.VendorListings[0].VendorID.Guid,
 		blockchainID,
-		strings.ToLower(contract.VendorListings[0].Item.Title),
+		contract.VendorListings[0].Item.Title,
 		shippingName,
 		shippingAddress,
 		paymentAddr,

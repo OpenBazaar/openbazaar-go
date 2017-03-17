@@ -258,6 +258,9 @@ func (x *SetAPICreds) Execute(args []string) error {
 	apiCfg.Authenticated = true
 	h := sha256.Sum256([]byte(pw))
 	apiCfg.Password = hex.EncodeToString(h[:])
+	if len(apiCfg.AllowedIPs) == 0 {
+		apiCfg.AllowedIPs = []string{}
+	}
 
 	if err := r.SetConfigKey("JSON-API", apiCfg); err != nil {
 		return err
@@ -736,6 +739,9 @@ func (x *Start) Execute(args []string) error {
 	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
+	for _, ip := range x.AllowIP {
+		apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, ip)
+	}
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
@@ -939,7 +945,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, config.Authenticated, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(node.Resolver, config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

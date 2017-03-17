@@ -77,6 +77,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	}
 	if m.MessageType != pb.Message_OFFLINE_ACK {
 		pointer.Purpose = ipfs.MESSAGE
+		pointer.CancelID = &p
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err

@@ -24,6 +24,9 @@ func TestGetApiConfig(t *testing.T) {
 	if !config.Authenticated {
 		t.Error("Expected Authenticated = true")
 	}
+	if len(config.AllowedIPs) != 1 || config.AllowedIPs[0] != "127.0.0.1" {
+		t.Error("Expected AllowedIPs = [127.0.0.1]")
+	}
 	if config.CORS == nil {
 		t.Error("Cors is not set")
 	}
