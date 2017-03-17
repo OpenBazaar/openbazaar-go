@@ -51,6 +51,7 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 		datastore: datastore,
 		node:      node,
 		sender:    make(map[peer.ID]*messageSender),
+		requests:  make(map[int32]chan *pb.Message),
 	}
 	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, service.HandleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
