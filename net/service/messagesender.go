@@ -22,6 +22,8 @@ type messageSender struct {
 	service   *OpenBazaarService
 	protoc    protocol.ID
 	singleMes int
+	requests  map[int32]chan *pb.Message
+	requestlk sync.Mutex
 }
 
 var ReadMessageTimeout = time.Minute
@@ -50,7 +52,12 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID, s *inet.Stream
 }
 
 func (service *OpenBazaarService) newMessageSender(p peer.ID) *messageSender {
-	return &messageSender{p: p, service: service, protoc: ProtocolOpenBazaar}
+	return &messageSender{
+		p:        p,
+		service:  service,
+		protoc:   ProtocolOpenBazaar,
+		requests: make(map[int32]chan *pb.Message, 2), // low initial capacity
+	}
 }
 
 func (ms *messageSender) prep() error {
@@ -122,9 +129,9 @@ func (ms *messageSender) writeMessage(pmes *pb.Message) error {
 func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
 	pmes.RequestId = rand.Int31()
 	returnChan := make(chan *pb.Message)
-	ms.service.requestlk.Lock()
-	ms.service.requests[pmes.RequestId] = returnChan
-	ms.service.requestlk.Unlock()
+	ms.requestlk.Lock()
+	ms.requests[pmes.RequestId] = returnChan
+	ms.requestlk.Unlock()
 
 	if err := ms.SendMessage(ctx, pmes); err != nil {
 		ms.closeRequest(pmes.RequestId)
@@ -150,13 +157,13 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 
 // stop listening for responses
 func (ms *messageSender) closeRequest(id int32) {
-	ms.service.requestlk.Lock()
-	ch, ok := ms.service.requests[id]
+	ms.requestlk.Lock()
+	ch, ok := ms.requests[id]
 	if ok {
 		close(ch)
-		delete(ms.service.requests, id)
+		delete(ms.requests, id)
 	}
-	ms.service.requestlk.Unlock()
+	ms.requestlk.Unlock()
 }
 
 func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Message, mes *pb.Message) error {

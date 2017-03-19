@@ -36,8 +36,6 @@ type OpenBazaarService struct {
 	node      *core.OpenBazaarNode
 	sender    map[peer.ID]*messageSender
 	senderlk  sync.Mutex
-	requests  map[int32]chan *pb.Message
-	requestlk sync.Mutex
 }
 
 func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
@@ -51,7 +49,6 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 		datastore: datastore,
 		node:      node,
 		sender:    make(map[peer.ID]*messageSender),
-		requests:  make(map[int32]chan *pb.Message),
 	}
 	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, service.HandleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)
@@ -86,8 +83,8 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		}
 
 		if pmes.IsResponse {
-			service.requestlk.Lock()
-			ch, ok := service.requests[pmes.RequestId]
+			ms.requestlk.Lock()
+			ch, ok := ms.requests[pmes.RequestId]
 			if ok {
 				// this is a request response
 				select {
@@ -98,11 +95,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 					log.Debug("request id was not removed from map on timeout")
 				}
 				close(ch)
-				delete(service.requests, pmes.RequestId)
+				delete(ms.requests, pmes.RequestId)
 			} else {
 				log.Debug("received response message with unknown request id: requesting function may have timed out")
 			}
-			service.requestlk.Unlock()
+			ms.requestlk.Unlock()
 			continue
 		}
 
