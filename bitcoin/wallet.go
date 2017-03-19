@@ -28,6 +28,9 @@ type BitcoinWallet interface {
 	// Get the current address for the given purpose
 	CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address
 
+	// Returns a fresh address that has never been returned by this function
+	NewAddress(purpose spvwallet.KeyPurpose) btc.Address
+
 	// Returns if the wallet has the key for the given address
 	HasKey(addr btc.Address) bool
 

@@ -27,7 +27,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 	if addressRequest {
-		addr := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+		addr := n.Wallet.NewAddress(spvwallet.EXTERNAL)
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
 

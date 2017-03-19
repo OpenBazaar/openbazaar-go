@@ -79,8 +79,8 @@ type Keys interface {
 	// Returns an imported private key given a script
 	GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error)
 
-	// Get the first unused index for the given purpose
-	GetUnused(purpose KeyPurpose) (int, error)
+	// Get a list of unused key indexes for the given purpose
+	GetUnused(purpose KeyPurpose) ([]int, error)
 
 	// Fetch all key paths
 	GetAll() ([]KeyPath, error)
