@@ -1,11 +1,14 @@
-// Copyright (c) 2014-2015 The btcsuite developers
+// Copyright (c) 2014-2017 The btcsuite developers
+// Copyright (c) 2015-2017 The Decred developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package btcrpcclient
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -232,6 +235,76 @@ func (c *Client) GetCurrentNet() (wire.BitcoinNet, error) {
 	return c.GetCurrentNetAsync().Receive()
 }
 
+// FutureGetHeadersResult is a future promise to deliver the result of a
+// getheaders RPC invocation (or an applicable error).
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+type FutureGetHeadersResult chan *response
+
+// Receive waits for the response promised by the future and returns the
+// getheaders result.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (r FutureGetHeadersResult) Receive() ([]wire.BlockHeader, error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a slice of strings.
+	var result []string
+	err = json.Unmarshal(res, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	// Deserialize the []string into []wire.BlockHeader.
+	headers := make([]wire.BlockHeader, len(result))
+	for i, headerHex := range result {
+		serialized, err := hex.DecodeString(headerHex)
+		if err != nil {
+			return nil, err
+		}
+		err = headers[i].Deserialize(bytes.NewReader(serialized))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return headers, nil
+}
+
+// GetHeadersAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the returned instance.
+//
+// See GetHeaders for the blocking version and more details.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) GetHeadersAsync(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) FutureGetHeadersResult {
+	locators := make([]string, len(blockLocators))
+	for i := range blockLocators {
+		locators[i] = blockLocators[i].String()
+	}
+	hash := ""
+	if hashStop != nil {
+		hash = hashStop.String()
+	}
+	cmd := btcjson.NewGetHeadersCmd(locators, hash)
+	return c.sendCmd(cmd)
+}
+
+// GetHeaders mimics the wire protocol getheaders and headers messages by
+// returning all headers on the main chain after the first known block in the
+// locators, up until a block hash matches hashStop.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) GetHeaders(blockLocators []chainhash.Hash, hashStop *chainhash.Hash) ([]wire.BlockHeader, error) {
+	return c.GetHeadersAsync(blockLocators, hashStop).Receive()
+}
+
 // FutureExportWatchingWalletResult is a future promise to deliver the result of
 // an ExportWatchingWalletAsync RPC invocation (or an applicable error).
 type FutureExportWatchingWalletResult chan *response
@@ -347,4 +420,54 @@ func (c *Client) SessionAsync() FutureSessionResult {
 // NOTE: This is a btcsuite extension.
 func (c *Client) Session() (*btcjson.SessionResult, error) {
 	return c.SessionAsync().Receive()
+}
+
+// FutureVersionResult is a future promise to delivere the result of a version
+// RPC invocation (or an applicable error).
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+type FutureVersionResult chan *response
+
+// Receive waits for the response promised by the future and returns the version
+// result.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (r FutureVersionResult) Receive() (map[string]btcjson.VersionResult,
+	error) {
+	res, err := receiveFuture(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unmarshal result as a version result object.
+	var vr map[string]btcjson.VersionResult
+	err = json.Unmarshal(res, &vr)
+	if err != nil {
+		return nil, err
+	}
+
+	return vr, nil
+}
+
+// VersionAsync returns an instance of a type that can be used to get the result
+// of the RPC at some future time by invoking the Receive function on the
+// returned instance.
+//
+// See Version for the blocking version and more details.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) VersionAsync() FutureVersionResult {
+	cmd := btcjson.NewVersionCmd()
+	return c.sendCmd(cmd)
+}
+
+// Version returns information about the server's JSON-RPC API versions.
+//
+// NOTE: This is a btcsuite extension ported from
+// github.com/decred/dcrrpcclient.
+func (c *Client) Version() (map[string]btcjson.VersionResult, error) {
+	return c.VersionAsync().Receive()
 }

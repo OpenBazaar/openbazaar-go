@@ -5,6 +5,7 @@ import (
 	"net/smtp"
 	"strings"
 
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -99,4 +100,12 @@ func sendEmail(conf *repo.SMTPSettings, body []byte) error {
 	auth := smtp.PlainAuth("", conf.SenderEmail, conf.Password, host)
 	recipients := []string{conf.RecipientEmail}
 	return smtp.SendMail(conf.ServerAddress, auth, conf.SenderEmail, recipients, body)
+}
+
+func validateSMTPSettings(s repo.SettingsData) error {
+	if s.SMTPSettings != nil && s.SMTPSettings.Notifications &&
+		(s.SMTPSettings.Password == "" || s.SMTPSettings.Username == "" || s.SMTPSettings.RecipientEmail == "" || s.SMTPSettings.SenderEmail == "" || s.SMTPSettings.ServerAddress == "") {
+		return errors.New("SMTP fields must be set if notifications are turned on")
+	}
+	return nil
 }

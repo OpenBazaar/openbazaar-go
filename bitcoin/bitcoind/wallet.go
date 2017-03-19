@@ -164,6 +164,11 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 	return addr
 }
 
+func (w *BitcoindWallet) NewAddress(purpose spvwallet.KeyPurpose) btc.Address {
+	addr, _ := w.rpcClient.GetNewAddress(Account)
+	return addr
+}
+
 func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 	_, err := w.rpcClient.DumpPrivKey(addr)
 	if err != nil {
@@ -210,7 +215,8 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 }
 
 func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
-	resp, err := w.rpcClient.GetTransaction(&txid, true)
+	includeWatchOnly := true
+	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
 		return 0, err
 	}
@@ -234,7 +240,8 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwalle
 }
 
 func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	tx, err := w.rpcClient.GetTransaction(&txid, false)
+	includeWatchOnly := false
+	tx, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
 		return nil, err
 	}

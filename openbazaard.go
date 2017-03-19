@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	manet "gx/ipfs/QmT6Cp31887FpAc25z25YHgpFJohZedrYLWPPspRtj1Brp/go-multiaddr-net"
-	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	manet "gx/ipfs/QmVCNGTyD4EkvNYaAp253uMQ9Rjsjy2oGMvcdJJUoVRfja/go-multiaddr-net"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"net"
 	"os"
@@ -65,15 +65,16 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	p2phost "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
-	addrutil "gx/ipfs/QmVDnc2zvyQm8LhT72n22THcshvH7j3qPMnhvjerQER62T/go-addr-util"
-	metrics "gx/ipfs/QmY2otvyPM2sTaDsczo7Yuosg98sUMCJ9qx1gpPaAPTS9B/go-libp2p-metrics"
-	"gx/ipfs/Qmbiq2d2ZMi34A6V22kNY3b4GgPGFztmRCQZ931TJkYWp7/go-libp2p-swarm"
-	recpb "gx/ipfs/QmdM4ohF7cr4MvAECVeD3hRA3HtZrk1ngaek4n8ojVT87h/go-libp2p-record/pb"
-	p2pbhost "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/host/basic"
-	pstore "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	addrutil "gx/ipfs/QmPB5aAzt2wo5Xk8SoZi6y2oFN7shQMvYWgduMATojkdpj/go-addr-util"
+	"gx/ipfs/QmRSTPtUUt4fHYqJ3gwyeRGvqSwR9quD9zDC148oYYycKV/go-libp2p-interface-pnet"
+	swarm "gx/ipfs/QmTU8NWsDYNShMA3hjPfEZTg3pD7YgX62sFmZdEgbjtWq2/go-libp2p-swarm"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	p2phost "gx/ipfs/QmXzeAcmKDTfNZQBiyF22hQKuTK7P5z6MBBQLTk9bbiSUc/go-libp2p-host"
+	metrics "gx/ipfs/QmaMSrAXMpMhsrbGZYmGXE4X1ttkFv7KZSpGa5AKYTUpPD/go-libp2p-metrics"
+	recpb "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record/pb"
+	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	p2pbhost "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/host/basic"
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
 	"syscall"
 )
 
@@ -258,6 +259,9 @@ func (x *SetAPICreds) Execute(args []string) error {
 	apiCfg.Authenticated = true
 	h := sha256.Sum256([]byte(pw))
 	apiCfg.Password = hex.EncodeToString(h[:])
+	if len(apiCfg.AllowedIPs) == 0 {
+		apiCfg.AllowedIPs = []string{}
+	}
 
 	if err := r.SetConfigKey("JSON-API", apiCfg); err != nil {
 		return err
@@ -571,21 +575,21 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport) (p2phost.Host, error) {
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector) (p2phost.Host, error) {
 
-		// No addresses to begin with. we'll start later.
-		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, nil, tpt, bwr)
+		// no addresses to begin with. we'll start later.
+		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
 		if err != nil {
 			return nil, err
 		}
 
 		network := (*swarm.Network)(swrm)
-
 		network.Swarm().AddTransport(onionTransport)
 
 		for _, f := range fs {
 			network.Swarm().Filters.AddDialFilter(f)
 		}
+
 		var host *p2pbhost.BasicHost
 		if usingTor && !usingClearnet {
 			host = p2pbhost.New(network)

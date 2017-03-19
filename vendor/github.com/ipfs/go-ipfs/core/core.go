@@ -10,6 +10,7 @@ interfaces and how core/... fits into the bigger IPFS picture, see:
 package core
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -27,6 +28,7 @@ import (
 	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap"
 	bsnet "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	rp "github.com/ipfs/go-ipfs/exchange/reprovide"
+	filestore "github.com/ipfs/go-ipfs/filestore"
 	mount "github.com/ipfs/go-ipfs/fuse/mount"
 	merkledag "github.com/ipfs/go-ipfs/merkledag"
 	mfs "github.com/ipfs/go-ipfs/mfs"
@@ -40,34 +42,35 @@ import (
 	offroute "github.com/ipfs/go-ipfs/routing/offline"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
-	dht "github.com/ipfs/go-ipfs/routing/dht"
-	p2phost "gx/ipfs/QmPsRtodRuBUir32nz5v4zuSBTSszrR1d3fA6Ahb6eaejj/go-libp2p-host"
+	addrutil "gx/ipfs/QmPB5aAzt2wo5Xk8SoZi6y2oFN7shQMvYWgduMATojkdpj/go-addr-util"
+	ic "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
+	mplex "gx/ipfs/QmQ3UABWTgK78utKeiVXaH9BrjC7Ydn1pRuwqnWHT3p4zh/go-smux-multiplex"
+	pnet "gx/ipfs/QmRPFbahurzFXhEcDJHjkAT3TiN8XktDZhgrteHSeAWiuz/go-libp2p-pnet"
+	ipnet "gx/ipfs/QmRSTPtUUt4fHYqJ3gwyeRGvqSwR9quD9zDC148oYYycKV/go-libp2p-interface-pnet"
 	mssmux "gx/ipfs/QmRVYfZ7tWNHPBzWiG6KWGzvT2hcGems8srihsQE29x1U5/go-smux-multistream"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	mamask "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter"
+	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
 	b58 "gx/ipfs/QmT8rehPR3F6bmwL6zjUN8XpiDBFFpMP2myPdC6ApsWfJf/go-base58"
-	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
-	addrutil "gx/ipfs/QmVDnc2zvyQm8LhT72n22THcshvH7j3qPMnhvjerQER62T/go-addr-util"
-	spdy "gx/ipfs/QmWUNsat6Jb19nC5CiJCDXepTkxjdxi3eZqeoB6mrmmaGu/go-smux-spdystream"
-	floodsub "gx/ipfs/QmX3L7GWQ2HfvdwUM7kFJrtKfycamfhricAFSshyHtCB3h/floodsub"
-	metrics "gx/ipfs/QmY2otvyPM2sTaDsczo7Yuosg98sUMCJ9qx1gpPaAPTS9B/go-libp2p-metrics"
-	u "gx/ipfs/Qmb912gdngC1UWwTkhuW8knyRbcWeu5kqkxBpveLmW8bSr/go-ipfs-util"
-	mplex "gx/ipfs/QmbPSoTDH3JFKkSxsCQDyVMFT76KcQz7ELWEetyyg3aeDA/go-smux-multiplex"
-	swarm "gx/ipfs/Qmbiq2d2ZMi34A6V22kNY3b4GgPGFztmRCQZ931TJkYWp7/go-libp2p-swarm"
-	routing "gx/ipfs/QmbkGVaN9W6RYJK4Ws5FvMKXKDqdRQ5snhtaa92qP6L8eU/go-libp2p-routing"
+	swarm "gx/ipfs/QmTU8NWsDYNShMA3hjPfEZTg3pD7YgX62sFmZdEgbjtWq2/go-libp2p-swarm"
+	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	p2phost "gx/ipfs/QmXzeAcmKDTfNZQBiyF22hQKuTK7P5z6MBBQLTk9bbiSUc/go-libp2p-host"
+	floodsub "gx/ipfs/QmZMqv6hzUGd6uA2E7SarfkhA6SLfJAoNaHmjz6VdK9qHV/floodsub"
+	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
+	metrics "gx/ipfs/QmaMSrAXMpMhsrbGZYmGXE4X1ttkFv7KZSpGa5AKYTUpPD/go-libp2p-metrics"
+	dht "github.com/ipfs/go-ipfs/routing/dht"
 	yamux "gx/ipfs/Qmbn7RYyWzBVXiUp9jZ1dA4VADHy9DtS7iZLwfhEUQvm3U/go-smux-yamux"
-	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
-	discovery "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/discovery"
-	p2pbhost "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/host/basic"
-	rhost "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/host/routed"
-	identify "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/protocol/identify"
-	ping "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/protocol/ping"
-	pstore "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
+	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	discovery "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/discovery"
+	p2pbhost "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/host/basic"
+	rhost "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/host/routed"
+	identify "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/protocol/identify"
+	ping "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/protocol/ping"
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
-	ic "gx/ipfs/QmfWDLQjGjVe4fr5CoztYW2DYYjRysMJrFe1RCsXLPTf46/go-libp2p-crypto"
 )
 
 const IpnsValidatorTag = "ipns"
@@ -100,13 +103,17 @@ type IpfsNode struct {
 	Repo repo.Repo
 
 	// Local node
-	Pinning    pin.Pinner // the pinning manager
-	Mounts     Mounts     // current mount state, if any.
-	PrivateKey ic.PrivKey // the local node's private Key
+	Pinning        pin.Pinner // the pinning manager
+	Mounts         Mounts     // current mount state, if any.
+	PrivateKey     ic.PrivKey // the local node's private Key
+	PNetFingerpint []byte     // fingerprint of private network
 
 	// Services
 	Peerstore  pstore.Peerstore     // storage for other Peer instances
 	Blockstore bstore.GCBlockstore  // the block store (lower level)
+	Filestore  *filestore.Filestore // the filestore blockstore
+	BaseBlocks bstore.Blockstore    // the raw blockstore, no filestore wrapping
+	GCLocker   bstore.GCLocker      // the locker used to protect the blockstore during gc
 	Blocks     bserv.BlockService   // the block service, get/add blocks.
 	DAG        merkledag.DAGService // the merkle dag service, get/add objects.
 	Resolver   *path.Resolver       // the path resolution system
@@ -174,7 +181,40 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 
 	tpt := makeSmuxTransport(mplex)
 
-	peerhost, err := hostOption(ctx, n.Identity, n.Peerstore, n.Reporter, addrfilter, tpt)
+	swarmkey, err := n.Repo.SwarmKey()
+	if err != nil {
+		return err
+	}
+
+	var protec ipnet.Protector
+	if swarmkey != nil {
+		protec, err = pnet.NewProtector(bytes.NewReader(swarmkey))
+		if err != nil {
+			return err
+		}
+		n.PNetFingerpint = protec.Fingerprint()
+		go func() {
+			t := time.NewTicker(30 * time.Second)
+			<-t.C // swallow one tick
+			for {
+				select {
+				case <-t.C:
+					if ph := n.PeerHost; ph != nil {
+						if len(ph.Network().Peers()) == 0 {
+							log.Warning("We are in private network and have no peers.")
+							log.Warning("This might be configuration mistake.")
+						}
+					}
+				case <-n.Process().Closing():
+					t.Stop()
+					return
+				}
+			}
+		}()
+	}
+
+	peerhost, err := hostOption(ctx, n.Identity, n.Peerstore, n.Reporter,
+		addrfilter, tpt, protec)
 	if err != nil {
 		return err
 	}
@@ -239,8 +279,6 @@ func makeSmuxTransport(mplexExp bool) smux.Transport {
 	}
 
 	mstpt.AddTransport("/yamux/1.0.0", ymxtpt)
-
-	mstpt.AddTransport("/spdy/3.1.0", spdy.Transport)
 
 	if mplexExp {
 		mstpt.AddTransport("/mplex/6.7.0", mplex.DefaultTransport)
@@ -671,15 +709,15 @@ func listenAddresses(cfg *config.Config) ([]ma.Multiaddr, error) {
 	return listen, nil
 }
 
-type HostOption func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport) (p2phost.Host, error)
+type HostOption func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protc ipnet.Protector) (p2phost.Host, error)
 
 var DefaultHostOption HostOption = constructPeerHost
 
 // isolates the complex initialization steps
-func constructPeerHost(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport) (p2phost.Host, error) {
+func constructPeerHost(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector) (p2phost.Host, error) {
 
 	// no addresses to begin with. we'll start later.
-	swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, nil, tpt, bwr)
+	swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
 	if err != nil {
 		return nil, err
 	}

@@ -10,9 +10,9 @@ import (
 	decision "github.com/ipfs/go-ipfs/exchange/bitswap/decision"
 
 	"gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
-	u "gx/ipfs/Qmb912gdngC1UWwTkhuW8knyRbcWeu5kqkxBpveLmW8bSr/go-ipfs-util"
-	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
 )
 
 var BitswapCmd = &cmds.Command{
@@ -159,6 +159,9 @@ var bitswapStatCmd = &cmds.Command{
 			fmt.Fprintln(buf, "bitswap status")
 			fmt.Fprintf(buf, "\tprovides buffer: %d / %d\n", out.ProvideBufLen, bitswap.HasBlockBufferSize)
 			fmt.Fprintf(buf, "\tblocks received: %d\n", out.BlocksReceived)
+			fmt.Fprintf(buf, "\tblocks sent: %d\n", out.BlocksSent)
+			fmt.Fprintf(buf, "\tdata received: %d\n", out.DataReceived)
+			fmt.Fprintf(buf, "\tdata sent: %d\n", out.DataSent)
 			fmt.Fprintf(buf, "\tdup blocks received: %d\n", out.DupBlksReceived)
 			fmt.Fprintf(buf, "\tdup data received: %s\n", humanize.Bytes(out.DupDataReceived))
 			fmt.Fprintf(buf, "\twantlist [%d keys]\n", len(out.Wantlist))

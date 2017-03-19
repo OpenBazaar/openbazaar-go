@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	mh "gx/ipfs/QmYDds3421prZgqKbLpEK7T9Aa2eVdQ7o3YarX1LVLdP2J/go-multihash"
+	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -37,8 +37,8 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	ps "gx/ipfs/QmeXj9VAjmYQZxpmVz7VzccbJrpmr8qkCDSjfVNsPTWTYU/go-libp2p-peerstore"
-	peer "gx/ipfs/QmfMmLGoKzCHDN7cGgk64PJr4iipzidDRME8HABSJqvmhC/go-libp2p-peer"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 	"sync"
 )
 
@@ -864,11 +864,16 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	_, err = i.node.Datastore.Settings().Get()
 	if err == nil {
 		ErrorResponse(w, http.StatusConflict, "Settings is already set. Use PUT.")
 		return
 	}
+
 	if settings.MisPaymentBuffer == nil {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
@@ -899,6 +904,10 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&settings)
 	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -954,6 +963,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		default:
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
 		}
+		return
+	}
+	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if settings.StoreModerators != nil {

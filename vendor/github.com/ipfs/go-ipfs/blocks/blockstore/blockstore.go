@@ -15,7 +15,7 @@ import (
 	dsns "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/namespace"
 	dsq "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/query"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
 )
 
 var log = logging.Logger("blockstore")
@@ -163,7 +163,11 @@ func (bs *blockstore) Has(k *cid.Cid) (bool, error) {
 }
 
 func (s *blockstore) DeleteBlock(k *cid.Cid) error {
-	return s.datastore.Delete(dshelp.CidToDsKey(k))
+	err := s.datastore.Delete(dshelp.CidToDsKey(k))
+	if err == ds.ErrNotFound {
+		return ErrNotFound
+	}
+	return err
 }
 
 // AllKeysChan runs a query for keys from the blockstore.

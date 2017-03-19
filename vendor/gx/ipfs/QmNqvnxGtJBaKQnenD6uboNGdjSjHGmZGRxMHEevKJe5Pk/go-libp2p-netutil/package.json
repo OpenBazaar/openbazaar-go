@@ -1,0 +1,36 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-libp2p-netutil"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-libp2p-netutil"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVtMT3fD7DzQNW7hdm6Xe6KPstzcggrhNpeVZ4422UpKK",
+      "name": "go-libp2p-net",
+      "version": "1.6.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSwXLW21S3TsFHsNELc4a4Y7Kp8wToqnBBXWYvggBVLQY",
+      "name": "go-testutil",
+      "version": "1.1.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTU8NWsDYNShMA3hjPfEZTg3pD7YgX62sFmZdEgbjtWq2",
+      "name": "go-libp2p-swarm",
+      "version": "1.6.12"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "",
+  "name": "go-libp2p-netutil",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.13"
+}
+
