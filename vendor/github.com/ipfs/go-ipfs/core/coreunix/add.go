@@ -23,11 +23,11 @@ import (
 	"github.com/ipfs/go-ipfs/pin"
 	unixfs "github.com/ipfs/go-ipfs/unixfs"
 
-	node "gx/ipfs/QmRSU5EqqWVZSNdbU51yXmVoF1uNw3JgTNB6RaiL7DZM16/go-ipld-node"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	syncds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/sync"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
 )
 
 var log = logging.Logger("coreunix")
@@ -103,6 +103,7 @@ type Adder struct {
 	RawLeaves  bool
 	Silent     bool
 	Wrap       bool
+	NoCopy     bool
 	Chunker    string
 	root       node.Node
 	mr         *mfs.Root
@@ -124,6 +125,7 @@ func (adder Adder) add(reader io.Reader) (node.Node, error) {
 		Dagserv:   adder.dagService,
 		RawLeaves: adder.RawLeaves,
 		Maxlinks:  ihelper.DefaultLinksPerBlock,
+		NoCopy:    adder.NoCopy,
 	}
 
 	if adder.Trickle {

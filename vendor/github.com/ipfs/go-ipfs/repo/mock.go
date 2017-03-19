@@ -3,10 +3,11 @@ package repo
 import (
 	"errors"
 
+	filestore "github.com/ipfs/go-ipfs/filestore"
 	keystore "github.com/ipfs/go-ipfs/keystore"
 	"github.com/ipfs/go-ipfs/repo/config"
 
-	ma "gx/ipfs/QmUAQaWbKxGCUTuoQVvvicbQNZ9APF5pDGWyAZSe93AtKH/go-multiaddr"
+	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 )
 
 var errTODO = errors.New("TODO: mock repo")
@@ -44,3 +45,9 @@ func (m *Mock) Close() error { return errTODO }
 func (m *Mock) SetAPIAddr(addr ma.Multiaddr) error { return errTODO }
 
 func (m *Mock) Keystore() keystore.Keystore { return nil }
+
+func (m *Mock) SwarmKey() ([]byte, error) {
+	return nil, nil
+}
+
+func (m *Mock) FileManager() *filestore.FileManager { return nil }

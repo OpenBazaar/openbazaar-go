@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -671,9 +671,9 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 
 		// Ensure the timestamp for the block header is after the
 		// median time of the last several blocks (medianTimeBlocks).
-		medianTime, err := b.calcPastMedianTime(prevNode)
+		medianTime, err := b.index.CalcPastMedianTime(prevNode)
 		if err != nil {
-			log.Errorf("calcPastMedianTime: %v", err)
+			log.Errorf("CalcPastMedianTime: %v", err)
 			return err
 		}
 		if !header.Timestamp.After(medianTime) {
@@ -968,7 +968,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	}
 
 	// Ensure the view is for the node being checked.
-	if !view.BestHash().IsEqual(node.parentHash) {
+	if !view.BestHash().IsEqual(&node.parentHash) {
 		return AssertError(fmt.Sprintf("inconsistent view when "+
 			"checking block connection: best hash is %v instead "+
 			"of expected %v", view.BestHash(), node.hash))
@@ -1011,7 +1011,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// "standard" type.  The rules for this BIP only apply to transactions
 	// after the timestamp defined by txscript.Bip16Activation.  See
 	// https://en.bitcoin.it/wiki/BIP_0016 for more details.
-	enforceBIP0016 := node.timestamp.After(txscript.Bip16Activation)
+	enforceBIP0016 := node.timestamp >= txscript.Bip16Activation.Unix()
 
 	// The number of signature operations must be less than the maximum
 	// allowed per block.  Note that the preliminary sanity checks on a
@@ -1107,7 +1107,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// will therefore be detected by the next checkpoint).  This is a huge
 	// optimization because running the scripts is the most time consuming
 	// portion of block handling.
-	checkpoint := b.latestCheckpoint()
+	checkpoint := b.LatestCheckpoint()
 	runScripts := !b.noVerify
 	if checkpoint != nil && node.height <= checkpoint.Height {
 		runScripts = false
@@ -1146,7 +1146,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 
 	// Update the best hash for view to include this block since all of its
 	// transactions have been connected.
-	view.SetBestHash(node.hash)
+	view.SetBestHash(&node.hash)
 
 	return nil
 }
@@ -1173,6 +1173,6 @@ func (b *BlockChain) CheckConnectBlock(block *btcutil.Block) error {
 	// Leave the spent txouts entry nil in the state since the information
 	// is not needed and thus extra work can be avoided.
 	view := NewUtxoViewpoint()
-	view.SetBestHash(prevNode.hash)
+	view.SetBestHash(&prevNode.hash)
 	return b.checkConnectBlock(newNode, block, view, nil)
 }
