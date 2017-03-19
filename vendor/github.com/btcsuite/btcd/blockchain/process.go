@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -42,8 +42,8 @@ const (
 //
 // This function MUST be called with the chain state lock held (for reads).
 func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
-	// Check memory chain first (could be main chain or side chain blocks).
-	if _, ok := b.index[*hash]; ok {
+	// Check block index first (could be main chain or side chain blocks).
+	if b.index.HaveBlock(hash) {
 		return true, nil
 	}
 
@@ -52,6 +52,24 @@ func (b *BlockChain) blockExists(hash *chainhash.Hash) (bool, error) {
 	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		exists, err = dbTx.HasBlock(hash)
+		if err != nil || !exists {
+			return err
+		}
+
+		// Ignore side chain blocks in the database.  This is necessary
+		// because there is not currently any record of the associated
+		// block index data such as its block height, so it's not yet
+		// possible to efficiently load the block and do anything useful
+		// with it.
+		//
+		// Ultimately the entire block index should be serialized
+		// instead of only the current main chain so it can be consulted
+		// directly.
+		_, err = dbFetchHeightByHash(dbTx, hash)
+		if isNotInMainChainErr(err) {
+			exists = false
+			return nil
+		}
 		return err
 	})
 	return exists, err

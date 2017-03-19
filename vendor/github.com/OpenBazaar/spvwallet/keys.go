@@ -18,7 +18,10 @@ func (ts *TxStore) GetCurrentKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ts.generateChildKey(purpose, uint32(i))
+	if len(i) == 0 {
+		return nil, errors.New("No unused keys in database")
+	}
+	return ts.generateChildKey(purpose, uint32(i[0]))
 }
 
 func (ts *TxStore) GetFreshKey(purpose KeyPurpose) *hd.ExtendedKey {

@@ -9,7 +9,7 @@ import (
 	core "github.com/ipfs/go-ipfs/core"
 	coreapi "github.com/ipfs/go-ipfs/core/coreapi"
 	config "github.com/ipfs/go-ipfs/repo/config"
-	id "gx/ipfs/QmdzDdLZ7nj133QvNHypyS9Y39g35bMFk5DJ2pmX7YqtKU/go-libp2p/p2p/protocol/identify"
+	id "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/protocol/identify"
 )
 
 type GatewayConfig struct {
@@ -36,6 +36,7 @@ func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, allowedIPs
 		for _, ip := range allowedIPs {
 			ipMap[ip] = true
 		}
+
 
 		gateway := newGatewayHandler(n, GatewayConfig{
 			Headers:       cfg.Gateway.HTTPHeaders,

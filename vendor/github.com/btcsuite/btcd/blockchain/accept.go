@@ -1,10 +1,13 @@
-// Copyright (c) 2013-2016 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
 package blockchain
 
-import "github.com/btcsuite/btcutil"
+import (
+	"github.com/btcsuite/btcd/database"
+	"github.com/btcsuite/btcutil"
+)
 
 // maybeAcceptBlock potentially accepts a block into the block chain and, if
 // accepted, returns whether or not it is on the main chain.  It performs
@@ -25,9 +28,9 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 
 	// Get a block node for the block previous to this one.  Will be nil
 	// if this is the genesis block.
-	prevNode, err := b.getPrevNodeFromBlock(block)
+	prevNode, err := b.index.PrevNodeFromBlock(block)
 	if err != nil {
-		log.Errorf("getPrevNodeFromBlock: %v", err)
+		log.Errorf("PrevNodeFromBlock: %v", err)
 		return false, err
 	}
 
@@ -42,6 +45,22 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// The block must pass all of the validation rules which depend on the
 	// position of the block within the block chain.
 	err = b.checkBlockContext(block, prevNode, flags)
+	if err != nil {
+		return false, err
+	}
+
+	// Insert the block into the database if it's not already there.  Even
+	// though it is possible the block will ultimately fail to connect, it
+	// has already passed all proof-of-work and validity tests which means
+	// it would be prohibitively expensive for an attacker to fill up the
+	// disk with a bunch of blocks that fail to connect.  This is necessary
+	// since it allows block download to be decoupled from the much more
+	// expensive connection logic.  It also has some other nice properties
+	// such as making blocks that never become part of the main chain or
+	// blocks that fail to connect available for further analysis.
+	err = b.db.Update(func(dbTx database.Tx) error {
+		return dbMaybeStoreBlock(dbTx, block)
+	})
 	if err != nil {
 		return false, err
 	}

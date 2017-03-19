@@ -3,7 +3,7 @@ package bitswap
 import (
 	"sort"
 
-	cid "gx/ipfs/QmcTcsTvfaeEBRFo1TkFgT8sRmgi1n1LTZpecfVP8fzpGD/go-cid"
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
 )
 
 type Stat struct {
@@ -11,6 +11,9 @@ type Stat struct {
 	Wantlist        []*cid.Cid
 	Peers           []string
 	BlocksReceived  int
+	DataReceived    uint64
+	BlocksSent      int
+	DataSent        uint64
 	DupBlksReceived int
 	DupDataReceived uint64
 }
@@ -23,6 +26,9 @@ func (bs *Bitswap) Stat() (*Stat, error) {
 	st.BlocksReceived = bs.blocksRecvd
 	st.DupBlksReceived = bs.dupBlocksRecvd
 	st.DupDataReceived = bs.dupDataRecvd
+	st.BlocksSent = bs.blocksSent
+	st.DataSent = bs.dataSent
+	st.DataReceived = bs.dataRecvd
 	bs.counterLk.Unlock()
 
 	for _, p := range bs.engine.Peers() {

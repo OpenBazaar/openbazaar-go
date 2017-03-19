@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The btcsuite developers
+// Copyright (c) 2016-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -103,20 +103,20 @@ type thresholdStateCache struct {
 
 // Lookup returns the threshold state associated with the given hash along with
 // a boolean that indicates whether or not it is valid.
-func (c *thresholdStateCache) Lookup(hash chainhash.Hash) (ThresholdState, bool) {
-	state, ok := c.entries[hash]
+func (c *thresholdStateCache) Lookup(hash *chainhash.Hash) (ThresholdState, bool) {
+	state, ok := c.entries[*hash]
 	return state, ok
 }
 
 // Update updates the cache to contain the provided hash to threshold state
 // mapping while properly tracking needed updates flush changes to the database.
-func (c *thresholdStateCache) Update(hash chainhash.Hash, state ThresholdState) {
-	if existing, ok := c.entries[hash]; ok && existing == state {
+func (c *thresholdStateCache) Update(hash *chainhash.Hash, state ThresholdState) {
+	if existing, ok := c.entries[*hash]; ok && existing == state {
 		return
 	}
 
-	c.dbUpdates[hash] = state
-	c.entries[hash] = state
+	c.dbUpdates[*hash] = state
+	c.entries[*hash] = state
 }
 
 // MarkFlushed marks all of the current udpates as flushed to the database.
@@ -158,7 +158,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 	// window in order to get its threshold state.  This can be done because
 	// the state is the same for all blocks within a given window.
 	var err error
-	prevNode, err = b.ancestorNode(prevNode, prevNode.height-
+	prevNode, err = b.index.AncestorNode(prevNode, prevNode.height-
 		(prevNode.height+1)%confirmationWindow)
 	if err != nil {
 		return ThresholdFailed, err
@@ -170,13 +170,13 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 	for prevNode != nil {
 		// Nothing more to do if the state of the block is already
 		// cached.
-		if _, ok := cache.Lookup(*prevNode.hash); ok {
+		if _, ok := cache.Lookup(&prevNode.hash); ok {
 			break
 		}
 
 		// The start and expiration times are based on the median block
 		// time, so calculate it now.
-		medianTime, err := b.calcPastMedianTime(prevNode)
+		medianTime, err := b.index.CalcPastMedianTime(prevNode)
 		if err != nil {
 			return ThresholdFailed, err
 		}
@@ -184,7 +184,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		// The state is simply defined if the start time hasn't been
 		// been reached yet.
 		if uint64(medianTime.Unix()) < checker.BeginTime() {
-			cache.Update(*prevNode.hash, ThresholdDefined)
+			cache.Update(&prevNode.hash, ThresholdDefined)
 			break
 		}
 
@@ -194,7 +194,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 
 		// Get the ancestor that is the last block of the previous
 		// confirmation window.
-		prevNode, err = b.ancestorNode(prevNode, prevNode.height-
+		prevNode, err = b.index.AncestorNode(prevNode, prevNode.height-
 			confirmationWindow)
 		if err != nil {
 			return ThresholdFailed, err
@@ -206,7 +206,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 	state := ThresholdDefined
 	if prevNode != nil {
 		var ok bool
-		state, ok = cache.Lookup(*prevNode.hash)
+		state, ok = cache.Lookup(&prevNode.hash)
 		if !ok {
 			return ThresholdFailed, AssertError(fmt.Sprintf(
 				"thresholdState: cache lookup failed for %v",
@@ -223,7 +223,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		case ThresholdDefined:
 			// The deployment of the rule change fails if it expires
 			// before it is accepted and locked in.
-			medianTime, err := b.calcPastMedianTime(prevNode)
+			medianTime, err := b.index.CalcPastMedianTime(prevNode)
 			if err != nil {
 				return ThresholdFailed, err
 			}
@@ -243,7 +243,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		case ThresholdStarted:
 			// The deployment of the rule change fails if it expires
 			// before it is accepted and locked in.
-			medianTime, err := b.calcPastMedianTime(prevNode)
+			medianTime, err := b.index.CalcPastMedianTime(prevNode)
 			if err != nil {
 				return ThresholdFailed, err
 			}
@@ -272,7 +272,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 				// previous block nodes as needed.  This helps
 				// allow only the pieces of the chain that are
 				// needed to remain in memory.
-				countNode, err = b.getPrevNodeFromNode(countNode)
+				countNode, err = b.index.PrevNodeFromNode(countNode)
 				if err != nil {
 					return ThresholdFailed, err
 				}
@@ -298,14 +298,14 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 
 		// Update the cache to avoid recalculating the state in the
 		// future.
-		cache.Update(*prevNode.hash, state)
+		cache.Update(&prevNode.hash, state)
 	}
 
 	return state, nil
 }
 
 // ThresholdState returns the current rule change threshold state of the given
-// deployment ID for the block AFTER then end of the current best chain.
+// deployment ID for the block AFTER the end of the current best chain.
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error) {
