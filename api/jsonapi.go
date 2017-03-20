@@ -1344,8 +1344,11 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err = i.node.GetProfile()
-		if err != nil {
+		if err != nil && err == core.ErrorProfileNotFound {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		} else if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {

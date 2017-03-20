@@ -18,11 +18,13 @@ import (
 	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
+var ErrorProfileNotFound error = errors.New("Profie not found")
+
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
 	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
 	if err != nil {
-		return profile, err
+		return profile, ErrorProfileNotFound
 	}
 	defer f.Close()
 	err = jsonpb.Unmarshal(f, &profile)
