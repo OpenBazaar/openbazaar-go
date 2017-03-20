@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
