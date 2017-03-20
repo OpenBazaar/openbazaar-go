@@ -20,6 +20,10 @@ import (
 	"encoding/hex"
 
 	"crypto/sha256"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	"sync"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -31,15 +35,13 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
-	"sync"
 )
 
 type JsonAPIConfig struct {
@@ -1965,16 +1967,18 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t := time.Now()
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = t.Unix()
+	ts, err := ptypes.TimestampProto(t)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	var flag pb.Chat_Flag
 	if chat.Message == "" {
 		flag = pb.Chat_TYPING
 	} else {
 		flag = pb.Chat_MESSAGE
 	}
-	tss := strconv.Itoa(int(ts.Seconds))
-	h := sha256.Sum256([]byte(chat.Message + chat.Subject + tss))
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + ptypes.TimestampString(ts)))
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())

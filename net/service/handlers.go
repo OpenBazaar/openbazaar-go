@@ -5,6 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -18,11 +23,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	"strconv"
-	"time"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -942,11 +942,13 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		if chat.Timestamp == nil {
 			return nil, errors.New("Invalid timestamp")
 		}
-		t = time.Unix(chat.Timestamp.Seconds, 0)
+		t, err = ptypes.Timestamp(chat.Timestamp)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	tss := strconv.Itoa(int(chat.Timestamp.Seconds))
-	h := sha256.Sum256([]byte(chat.Message + chat.Subject + tss))
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + ptypes.TimestampString(chat.Timestamp)))
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
 		return nil, err
