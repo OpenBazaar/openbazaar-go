@@ -20,18 +20,18 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	tx, _ := u.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey, freeze) values(?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into utxos(outpoint, value, height, scriptPubKey, watchOnly) values(?,?,?,?,?)")
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
-	freezeInt := 0
-	if utxo.Freeze {
-		freezeInt = 1
+	watchOnlyInt := 0
+	if utxo.WatchOnly {
+		watchOnlyInt = 1
 	}
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), freezeInt)
+	_, err = stmt.Exec(outpoint, int(utxo.Value), int(utxo.AtHeight), hex.EncodeToString(utxo.ScriptPubkey), watchOnlyInt)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -44,7 +44,7 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 	u.lock.RLock()
 	defer u.lock.RUnlock()
 	var ret []spvwallet.Utxo
-	stm := "select outpoint, value, height, scriptPubKey, freeze from utxos"
+	stm := "select outpoint, value, height, scriptPubKey, watchOnly from utxos"
 	rows, err := u.db.Query(stm)
 	if err != nil {
 		return ret, err
@@ -55,8 +55,8 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 		var value int
 		var height int
 		var scriptPubKey string
-		var freezeInt int
-		if err := rows.Scan(&outpoint, &value, &height, &scriptPubKey, &freezeInt); err != nil {
+		var watchOnlyInt int
+		if err := rows.Scan(&outpoint, &value, &height, &scriptPubKey, &watchOnlyInt); err != nil {
 			continue
 		}
 		s := strings.Split(outpoint, ":")
@@ -72,26 +72,26 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 		if err != nil {
 			continue
 		}
-		freeze := false
-		if freezeInt == 1 {
-			freeze = true
+		watchOnly := false
+		if watchOnlyInt == 1 {
+			watchOnly = true
 		}
 		ret = append(ret, spvwallet.Utxo{
 			Op:           *wire.NewOutPoint(shaHash, uint32(index)),
 			AtHeight:     int32(height),
 			Value:        int64(value),
 			ScriptPubkey: scriptBytes,
-			Freeze:       freeze,
+			WatchOnly:    watchOnly,
 		})
 	}
 	return ret, nil
 }
 
-func (u *UtxoDB) Freeze(utxo spvwallet.Utxo) error {
+func (u *UtxoDB) SetWatchOnly(utxo spvwallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	_, err := u.db.Exec("update utxos set freeze=? where outpoint=?", 1, outpoint)
+	_, err := u.db.Exec("update utxos set watchOnly=? where outpoint=?", 1, outpoint)
 	if err != nil {
 		return err
 	}

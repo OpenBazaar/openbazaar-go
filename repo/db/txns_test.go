@@ -26,27 +26,31 @@ func TestTxnsPut(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 5, 1, time.Now())
+	err := txdb.Put(tx, 5, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := txdb.db.Prepare("select tx, value, height from txns where txid=?")
+	stmt, err := txdb.db.Prepare("select tx, value, height, watchOnly from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
 	var val int
 	var height int
-	err = stmt.QueryRow(tx.TxHash().String()).Scan(&ret, &val, &height)
+	var watchOnly int
+	err = stmt.QueryRow(tx.TxHash().String()).Scan(&ret, &val, &height, &watchOnly)
 	if err != nil {
 		t.Error(err)
 	}
 	if hex.EncodeToString(ret) != txHex {
-		t.Error("Txn db put failed")
+		t.Error("Txns db put failed")
 	}
 	if val != 5 {
-		t.Error("Txn db failed to put value")
+		t.Error("Txns db failed to put value")
 	}
 	if height != 1 {
-		t.Error("Tns db failed to put height")
+		t.Error("Txns db failed to put height")
+	}
+	if watchOnly != 0 {
+		t.Error("Txns db failed to put watchOnly")
 	}
 }
 
@@ -58,7 +62,7 @@ func TestTxnsGet(t *testing.T) {
 	tx.Deserialize(r)
 
 	now := time.Now()
-	err := txdb.Put(tx, 0, 1, now)
+	err := txdb.Put(tx, 0, 1, now, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,6 +79,9 @@ func TestTxnsGet(t *testing.T) {
 	if now.Equal(txn.Timestamp) {
 		t.Error("Txn db failed to return correct time")
 	}
+	if txn.WatchOnly != false {
+		t.Error("Txns db failed to put watchOnly")
+	}
 }
 
 func TestTxnsGetAll(t *testing.T) {
@@ -84,11 +91,11 @@ func TestTxnsGetAll(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 1, 5, time.Now())
+	err := txdb.Put(tx, 1, 5, time.Now(), true)
 	if err != nil {
 		t.Error(err)
 	}
-	txns, err := txdb.GetAll()
+	txns, err := txdb.GetAll(true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -104,7 +111,7 @@ func TestDeleteTxns(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 0, 1, time.Now())
+	err := txdb.Put(tx, 0, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,7 +120,7 @@ func TestDeleteTxns(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	txns, err := txdb.GetAll()
+	txns, err := txdb.GetAll(true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -131,7 +138,7 @@ func TestTxnsDB_MarkAsDead(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 0, 1, time.Now())
+	err := txdb.Put(tx, 0, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}

@@ -231,6 +231,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	// Iterate through all outputs of this tx, see if we gain
 	cb := TransactionCallback{Txid: cachedSha.CloneBytes()}
 	value := int64(0)
+	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
 		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
@@ -245,7 +246,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Value:        txout.Value,
 					ScriptPubkey: txout.PkScript,
 					Op:           newop,
-					Freeze:       false,
+					WatchOnly:    false,
 				}
 				value += newu.Value
 				ts.Utxos().Put(newu)
@@ -265,10 +266,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Value:        txout.Value,
 					ScriptPubkey: txout.PkScript,
 					Op:           newop,
-					Freeze:       true,
+					WatchOnly:    true,
 				}
 				ts.Utxos().Put(newu)
-				hits++
+				matchesWatchOnly = true
 			}
 		}
 		cb.Outputs = append(cb.Outputs, out)
@@ -280,7 +281,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	for _, txin := range tx.TxIn {
 		for i, u := range utxos {
 			if outPointsEqual(txin.PreviousOutPoint, u.Op) {
-				hits++
 				st := Stxo{
 					Utxo:        u,
 					SpendHeight: height,
@@ -289,7 +289,12 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				ts.Stxos().Put(st)
 				ts.Utxos().Delete(u)
 				utxos = append(utxos[:i], utxos[i+1:]...)
-				value -= u.Value
+				if !u.WatchOnly {
+					value -= u.Value
+					hits++
+				} else {
+					matchesWatchOnly = true
+				}
 
 				in := TransactionInput{
 					OutpointHash:       u.Op.Hash.CloneBytes(),
@@ -304,7 +309,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	}
 
 	// If hits is nonzero it's a relevant tx and we should store it
-	if hits > 0 {
+	if hits > 0 || matchesWatchOnly {
 		_, txn, err := ts.Txns().Get(tx.TxHash())
 		if err != nil {
 			txn.Timestamp = time.Now()
@@ -317,7 +322,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
-			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp)
+			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp, hits == 0)
 		}
 	}
 	return hits, err

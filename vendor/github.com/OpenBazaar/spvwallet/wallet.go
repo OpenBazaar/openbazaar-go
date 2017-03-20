@@ -201,7 +201,7 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	stxos, _ := w.txstore.Stxos().GetAll()
 	for _, utxo := range utxos {
-		if !utxo.Freeze {
+		if !utxo.WatchOnly {
 			if utxo.AtHeight > 0 {
 				confirmed += utxo.Value
 			} else {
@@ -217,7 +217,7 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *SPVWallet) Transactions() ([]Txn, error) {
-	return w.txstore.Txns().GetAll()
+	return w.txstore.Txns().GetAll(false)
 }
 
 func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {

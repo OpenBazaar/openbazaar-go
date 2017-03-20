@@ -27,7 +27,7 @@ func init() {
 		AtHeight:     300000,
 		Value:        100000000,
 		ScriptPubkey: []byte("scriptpubkey"),
-		Freeze:       false,
+		WatchOnly:    false,
 	}
 }
 
@@ -88,25 +88,25 @@ func TestUtxoGetAll(t *testing.T) {
 	}
 }
 
-func TestFreezeUtxo(t *testing.T) {
+func TestSetWatchOnlyUtxo(t *testing.T) {
 	err := uxdb.Put(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	err = uxdb.Freeze(utxo)
+	err = uxdb.SetWatchOnly(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := uxdb.db.Prepare("select freeze from utxos where outpoint=?")
+	stmt, _ := uxdb.db.Prepare("select watchOnly from utxos where outpoint=?")
 	defer stmt.Close()
 
-	var freeze int
+	var watchOnlyInt int
 	o := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
-	err = stmt.QueryRow(o).Scan(&freeze)
+	err = stmt.QueryRow(o).Scan(&watchOnlyInt)
 	if err != nil {
 		t.Error(err)
 	}
-	if freeze != 1 {
+	if watchOnlyInt != 1 {
 		t.Error("Utxo freeze failed")
 	}
 
