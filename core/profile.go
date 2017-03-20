@@ -9,12 +9,14 @@ import (
 	"path"
 	"time"
 
+	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/imdario/mergo"
 	ipnspath "github.com/ipfs/go-ipfs/path"
+	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 )
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
@@ -41,6 +43,9 @@ func (n *OpenBazaarNode) FetchProfile(peerId string) (pb.Profile, error) {
 	if err != nil {
 		return pb.Profile{}, err
 	}
+	if err := ValidateProfile(&pro); err != nil {
+		return pb.Profile{}, err
+	}
 	return pro, nil
 }
 
@@ -49,6 +54,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if err != nil {
 		return err
 	}
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
+
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -177,4 +186,118 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 		return err
 	}
 	return n.UpdateProfile(profile)
+}
+
+func ValidateProfile(profile *pb.Profile) error {
+	start := time.Now()
+	if len(profile.Handle) > WordMaxCharacters {
+		return fmt.Errorf("Handle character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.Name) > WordMaxCharacters {
+		return fmt.Errorf("Name character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.Location) > WordMaxCharacters {
+		return fmt.Errorf("Location character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.About) > AboutMaxCharacteres {
+		return fmt.Errorf("About character length is greater than the max of %d", AboutMaxCharacteres)
+	}
+	if len(profile.ShortDescription) > ShortDescriptionLength {
+		return fmt.Errorf("Short description character length is greater than the max of %d", ShortDescriptionLength)
+	}
+	if len(profile.Website) > URLMaxCharacters {
+		return fmt.Errorf("Website character length is greater than the max of %d", URLMaxCharacters)
+	}
+	if len(profile.Email) > SentenceMaxCharacters {
+		return fmt.Errorf("Email character length is greater than the max of %d", SentenceMaxCharacters)
+	}
+	if len(profile.PhoneNumber) > WordMaxCharacters {
+		return fmt.Errorf("Phone number character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.Social) > MaxListItems {
+		return fmt.Errorf("Number of social accounts is greater than the max of %d", MaxListItems)
+	}
+	for _, s := range profile.Social {
+		if len(s.Username) > WordMaxCharacters {
+			return fmt.Errorf("Social username character length is greater than the max of %d", WordMaxCharacters)
+		}
+		if len(s.Type) > WordMaxCharacters {
+			return fmt.Errorf("Social account type character length is greater than the max of %d", WordMaxCharacters)
+		}
+		if len(s.Proof) > URLMaxCharacters {
+			return fmt.Errorf("Social proof character length is greater than the max of %d", WordMaxCharacters)
+		}
+	}
+	if profile.ModInfo != nil {
+		if len(profile.ModInfo.Description) > AboutMaxCharacteres {
+			return fmt.Errorf("Moderator description character length is greater than the max of %d", AboutMaxCharacteres)
+		}
+		if len(profile.ModInfo.TermsAndConditions) > PolicyMaxCharacters {
+			return fmt.Errorf("Moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
+		}
+		if len(profile.ModInfo.Languages) > MaxListItems {
+			return fmt.Errorf("Moderator number of languages greater than the max of %d", MaxListItems)
+		}
+		for _, l := range profile.ModInfo.Languages {
+			if len(l) > WordMaxCharacters {
+				return fmt.Errorf("Moderator language character length is greater than the max of %d", WordMaxCharacters)
+			}
+		}
+		if profile.ModInfo.Fee != nil {
+			if profile.ModInfo.Fee.FixedFee != nil {
+				if len(profile.ModInfo.Fee.FixedFee.CurrencyCode) > WordMaxCharacters {
+					return fmt.Errorf("Moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
+				}
+			}
+		}
+	}
+	if profile.AvatarHashes != nil {
+		_, err := mh.FromB58String(profile.AvatarHashes.Tiny)
+		if err != nil {
+			return errors.New("Tiny image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.AvatarHashes.Small)
+		if err != nil {
+			return errors.New("Small image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.AvatarHashes.Medium)
+		if err != nil {
+			return errors.New("Medium image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.AvatarHashes.Large)
+		if err != nil {
+			return errors.New("Large image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.AvatarHashes.Original)
+		if err != nil {
+			return errors.New("Original image hashes must be multihashes")
+		}
+	}
+	if profile.HeaderHashes != nil {
+		_, err := mh.FromB58String(profile.HeaderHashes.Tiny)
+		if err != nil {
+			return errors.New("Tiny image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.HeaderHashes.Small)
+		if err != nil {
+			return errors.New("Small image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.HeaderHashes.Medium)
+		if err != nil {
+			return errors.New("Medium image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.HeaderHashes.Large)
+		if err != nil {
+			return errors.New("Large image hashes must be multihashes")
+		}
+		_, err = mh.FromB58String(profile.HeaderHashes.Original)
+		if err != nil {
+			return errors.New("Original image hashes must be multihashes")
+		}
+	}
+	if len(profile.BitcoinPubkey) > 66 {
+		return fmt.Errorf("Bitcoin public key character length is greater than the max of %d", 66)
+	}
+	log.Notice("Profile validated in", time.Since(start))
+	return nil
 }
