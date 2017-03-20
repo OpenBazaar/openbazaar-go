@@ -79,7 +79,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 				// EOF error means the sender closed the stream
 				log.Errorf("Error unmarshaling data: %s", err)
 			}
-			return
+			continue
 		}
 
 		if pmes.IsResponse {
@@ -107,14 +107,14 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
 			log.Debug("Got back nil handler from handlerForMsgType")
-			return
+			continue
 		}
 
 		// Dispatch handler
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
 			log.Debugf("handle message error: %s", err)
-			return
+			continue
 		}
 
 		// If nil response, return it before serializing
@@ -129,7 +129,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		// Send out response msg
 		if err := ms.SendMessage(service.ctx, pmes); err != nil {
 			log.Debugf("send response error: %s", err)
-			return
+			continue
 		}
 		select {
 		// end loop on context close
