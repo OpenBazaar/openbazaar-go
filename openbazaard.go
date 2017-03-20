@@ -603,6 +603,9 @@ func (x *Start) Execute(args []string) error {
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
+		ExtraOpts: map[string]bool{
+			"mplex": true,
+		},
 	}
 
 	if onionTransport != nil {

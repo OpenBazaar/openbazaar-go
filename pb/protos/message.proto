@@ -8,6 +8,8 @@ import "google/protobuf/timestamp.proto";
 message Message {
     MessageType messageType     = 1;
     google.protobuf.Any payload = 2;
+    int32 requestId             = 3; // optional
+    bool isResponse             = 4; // optional
 
     enum MessageType {
         PING                    = 0;
