@@ -189,7 +189,6 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 }
 
 func ValidateProfile(profile *pb.Profile) error {
-	start := time.Now()
 	if len(profile.Handle) > WordMaxCharacters {
 		return fmt.Errorf("Handle character length is greater than the max of %d", WordMaxCharacters)
 	}
@@ -298,6 +297,8 @@ func ValidateProfile(profile *pb.Profile) error {
 	if len(profile.BitcoinPubkey) > 66 {
 		return fmt.Errorf("Bitcoin public key character length is greater than the max of %d", 66)
 	}
-	log.Notice("Profile validated in", time.Since(start))
+	if profile.AvgRating > 5 {
+		return fmt.Errorf("Average rating cannot be greater than %d", 5)
+	}
 	return nil
 }
