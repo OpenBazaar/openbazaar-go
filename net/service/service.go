@@ -56,10 +56,10 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
-	go service.handleNewMessage(s)
+	go service.handleNewMessage(s, true)
 }
 
-func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
+func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
 	cr := ctxio.NewReader(service.ctx, s)
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
@@ -67,9 +67,14 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
-
-	// ensure the message sender for this peer is updated with this stream, so we reply over it
-	ms := service.messageSenderForPeer(mPeer, &s)
+	var ms *messageSender
+	if incoming {
+		// if this is an inbound stream
+		// ensure the message sender for this peer is updated with this stream, so we reply over it
+		ms = service.messageSenderForPeer(mPeer, &s)
+	} else {
+		ms = service.messageSenderForPeer(mPeer, nil)
+	}
 	defer s.Close()
 	for {
 		// Receive msg
