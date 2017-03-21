@@ -21,7 +21,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes"
 )
 
 const (
@@ -57,9 +57,10 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	oc.OrderId = orderId
 	oc.Ratings = []*pb.OrderCompletion_Rating{}
 
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
 	oc.Timestamp = ts
 
 	for _, r := range orderRatings.Ratings {
@@ -90,9 +91,10 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		rd.DeliverySpeed = uint32(r.DeliverySpeed)
 		rd.Review = r.Review
 
-		ts := new(timestamp.Timestamp)
-		ts.Seconds = time.Now().Unix()
-		ts.Nanos = 0
+		ts, err := ptypes.TimestampProto(time.Now())
+		if err != nil {
+			return err
+		}
 		rd.Timestamp = ts
 		rating.RatingData = rd
 

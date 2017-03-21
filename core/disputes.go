@@ -19,7 +19,7 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
 )
@@ -37,9 +37,10 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	dispute := new(pb.Dispute)
 
 	// Create timestamp
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
 	dispute.Timestamp = ts
 
 	// Add claim
@@ -346,9 +347,10 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	d := new(pb.DisputeResolution)
 
 	// Add timestamp
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
 	d.Timestamp = ts
 
 	// Add orderId
