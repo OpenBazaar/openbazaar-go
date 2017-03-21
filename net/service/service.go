@@ -75,10 +75,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
 				// EOF error means the sender closed the stream
-				log.Errorf("Error unmarshaling data: %s", err)
+				return
 			}
+			log.Errorf("Error unmarshaling data: %s", err)
 			continue
 		}
 
