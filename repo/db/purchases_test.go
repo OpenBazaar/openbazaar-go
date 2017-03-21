@@ -2,14 +2,15 @@ package db
 
 import (
 	"database/sql"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"strings"
-	"testing"
-	"time"
+	"github.com/golang/protobuf/ptypes"
 )
 
 var purdb PurchasesDB
@@ -43,8 +44,10 @@ func init() {
 	shipping.Address = "1234 test ave."
 	shipping.ShipTo = "buyer name"
 	order.Shipping = shipping
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return
+	}
 	order.Timestamp = ts
 	payment := new(pb.Order_Payment)
 	payment.Amount = 10

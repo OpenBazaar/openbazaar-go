@@ -36,7 +36,6 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
@@ -1883,9 +1882,11 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := new(pb.CaseRespApi)
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = int64(date.Unix())
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(date)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract
 	resp.BuyerOpened = buyerOpened
@@ -1895,6 +1896,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 	resp.Claim = claim
 	resp.Resolution = resolution
+	resp.Timestamp = ts
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
