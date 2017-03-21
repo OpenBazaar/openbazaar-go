@@ -69,7 +69,7 @@ func (ms *messageSender) prep() error {
 	if err != nil {
 		return err
 	}
-	ms.service.HandleNewStream(nstr)
+	go ms.service.handleNewMessage(nstr, false)
 
 	ms.w = ggio.NewDelimitedWriter(nstr)
 	ms.s = nstr
