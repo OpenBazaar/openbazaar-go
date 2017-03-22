@@ -30,6 +30,10 @@ type messageWrapper struct {
 	Message Data `json:"message"`
 }
 
+type walletWrapper struct {
+	Message Data `json:"wallet"`
+}
+
 type messageReadWrapper struct {
 	MessageRead interface{} `json:"messageRead"`
 }
@@ -163,6 +167,19 @@ type ChatTyping struct {
 	Subject string `json:"subject"`
 }
 
+type IncomingTransaction struct {
+	Txid          string    `json:"txid"`
+	Value         int64     `json:"value"`
+	Address       string    `json:"address"`
+	Status        string    `json:"status"`
+	Memo          string    `json:"memo"`
+	Timestamp     time.Time `json:"timestamp"`
+	Confirmations int32     `json:"confirmations"`
+	OrderId       string    `json:"orderId"`
+	Thumbnail     string    `json:"thumbnail"`
+	CanBumpFee    bool      `json:"canBumpFee"`
+}
+
 func Serialize(i interface{}) []byte {
 	var n notificationWrapper
 	switch i.(type) {
@@ -261,6 +278,12 @@ func Serialize(i interface{}) []byte {
 	case ChatTyping:
 		m := messageTypingWrapper{
 			i.(ChatTyping),
+		}
+		b, _ := json.MarshalIndent(m, "", "    ")
+		return b
+	case IncomingTransaction:
+		m := walletWrapper{
+			i.(IncomingTransaction),
 		}
 		b, _ := json.MarshalIndent(m, "", "    ")
 		return b

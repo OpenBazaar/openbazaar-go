@@ -313,6 +313,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		_, txn, err := ts.Txns().Get(tx.TxHash())
 		if err != nil {
 			txn.Timestamp = time.Now()
+			cb.Timestamp = txn.Timestamp
+			cb.Value = value
+			cb.WatchOnly = (hits == 0)
 			// Callback on listeners
 			for _, listener := range ts.listeners {
 				listener(cb)

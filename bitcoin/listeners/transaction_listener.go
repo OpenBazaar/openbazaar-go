@@ -110,6 +110,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			}
 		}
 	}
+
 }
 
 func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {

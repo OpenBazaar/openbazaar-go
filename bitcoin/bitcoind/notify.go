@@ -6,6 +6,7 @@ import (
 	"github.com/btcsuite/btcrpcclient"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 type NotificationListener struct {
@@ -27,6 +28,11 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	watchOnly := false
+	txInfo, err := l.client.GetTransaction(hash, &watchOnly)
+	if err != nil {
+		watchOnly = true
+	}
 	var outputs []spvwallet.TransactionOutput
 	for i, txout := range tx.MsgTx().TxOut {
 		out := spvwallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
@@ -44,7 +50,16 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		in.Value = prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].Value
 		inputs = append(inputs, in)
 	}
-	cb := spvwallet.TransactionCallback{Txid: tx.Hash().CloneBytes(), Inputs: inputs, Outputs: outputs}
+	cb := spvwallet.TransactionCallback{
+		Txid:    tx.Hash().CloneBytes(),
+		Inputs:  inputs,
+		Outputs: outputs,
+	}
+	if !watchOnly {
+		cb.Value = int64(txInfo.Amount / 100000000)
+		cb.Timestamp = time.Unix(txInfo.TimeReceived, 0)
+		cb.WatchOnly = false
+	}
 	for _, lis := range l.listeners {
 		lis(cb)
 	}
