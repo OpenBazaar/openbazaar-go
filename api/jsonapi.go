@@ -2286,6 +2286,16 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 }
 
 func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request) {
+	l := r.URL.Query().Get("limit")
+	if l == "" {
+		l = "-1"
+	}
+	limit, err := strconv.Atoi(l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
 		Txid          string    `json:"txid"`
 		Value         int64     `json:"value"`
@@ -2310,7 +2320,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	}
 	height := i.node.Wallet.ChainTip()
 	var txs []Tx
-	for _, t := range transactions {
+	passedOffset := false
+	for i := len(transactions) - 1; i >= 0; i-- {
+		t := transactions[i]
 		var confirmations int32
 		var status string
 		confs := int32(height) - t.Height
@@ -2347,7 +2359,15 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
 		}
-		txs = append(txs, tx)
+		if offsetID == "" || passedOffset {
+			txs = append(txs, tx)
+		}
+		if t.Txid == offsetID {
+			passedOffset = true
+		}
+		if len(txs) >= limit && limit != -1 {
+			break
+		}
 	}
 	ret, err := json.MarshalIndent(txs, "", "    ")
 	if err != nil {
