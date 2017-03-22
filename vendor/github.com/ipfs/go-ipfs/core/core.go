@@ -42,6 +42,7 @@ import (
 	offroute "github.com/ipfs/go-ipfs/routing/offline"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
+	dht "github.com/ipfs/go-ipfs/routing/dht"
 	addrutil "gx/ipfs/QmPB5aAzt2wo5Xk8SoZi6y2oFN7shQMvYWgduMATojkdpj/go-addr-util"
 	ic "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
 	mplex "gx/ipfs/QmQ3UABWTgK78utKeiVXaH9BrjC7Ydn1pRuwqnWHT3p4zh/go-smux-multiplex"
@@ -62,7 +63,6 @@ import (
 	floodsub "gx/ipfs/QmZMqv6hzUGd6uA2E7SarfkhA6SLfJAoNaHmjz6VdK9qHV/floodsub"
 	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
 	metrics "gx/ipfs/QmaMSrAXMpMhsrbGZYmGXE4X1ttkFv7KZSpGa5AKYTUpPD/go-libp2p-metrics"
-	dht "github.com/ipfs/go-ipfs/routing/dht"
 	yamux "gx/ipfs/Qmbn7RYyWzBVXiUp9jZ1dA4VADHy9DtS7iZLwfhEUQvm3U/go-smux-yamux"
 	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 	discovery "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/discovery"

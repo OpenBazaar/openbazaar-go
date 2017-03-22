@@ -139,7 +139,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		rpmes.IsResponse = true
 
 		// Send out response msg
-		if err := ms.SendMessage(service.ctx, pmes); err != nil {
+		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
 			log.Debugf("send response error: %s", err)
 			continue
 		}
