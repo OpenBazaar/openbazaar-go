@@ -77,6 +77,12 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 	}
 	defer s.Close()
 	for {
+		select {
+		// end loop on context close
+		case <-service.ctx.Done():
+			return
+		default:
+		}
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
@@ -136,11 +142,6 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		if err := ms.SendMessage(service.ctx, pmes); err != nil {
 			log.Debugf("send response error: %s", err)
 			continue
-		}
-		select {
-		// end loop on context close
-		case <-service.ctx.Done():
-			return
 		}
 	}
 }
