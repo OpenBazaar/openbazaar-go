@@ -292,8 +292,10 @@ func ValidateProfile(profile *pb.Profile) error {
 	if len(profile.BitcoinPubkey) > 66 {
 		return fmt.Errorf("Bitcoin public key character length is greater than the max of %d", 66)
 	}
-	if profile.Stats.AverageRating > 5 {
-		return fmt.Errorf("Average rating cannot be greater than %d", 5)
+	if profile.Stats != nil {
+		if profile.Stats.AverageRating > 5 {
+			return fmt.Errorf("Average rating cannot be greater than %d", 5)
+		}
 	}
 	return nil
 }
