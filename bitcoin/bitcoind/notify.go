@@ -51,14 +51,12 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		inputs = append(inputs, in)
 	}
 	cb := spvwallet.TransactionCallback{
-		Txid:    tx.Hash().CloneBytes(),
-		Inputs:  inputs,
-		Outputs: outputs,
-	}
-	if !watchOnly {
-		cb.Value = int64(txInfo.Amount / 100000000)
-		cb.Timestamp = time.Unix(txInfo.TimeReceived, 0)
-		cb.WatchOnly = false
+		Txid:      tx.Hash().CloneBytes(),
+		Inputs:    inputs,
+		Outputs:   outputs,
+		WatchOnly: watchOnly,
+		Value:     int64(txInfo.Amount / 100000000),
+		Timestamp: time.Unix(txInfo.TimeReceived, 0),
 	}
 	for _, lis := range l.listeners {
 		lis(cb)
