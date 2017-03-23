@@ -2369,13 +2369,15 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			break
 		}
 	}
-	ret, err := json.MarshalIndent(txs, "", "    ")
+	type txWithCount struct {
+		Transactions []Tx `json:"transactions"`
+		Count        int  `json:"count"`
+	}
+	txns := txWithCount{txs, len(transactions)}
+	ret, err := json.MarshalIndent(txns, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
-	}
-	if string(ret) == "null" {
-		ret = []byte("[]")
 	}
 	SanitizedResponse(w, string(ret))
 }
