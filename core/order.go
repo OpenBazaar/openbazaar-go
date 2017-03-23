@@ -1040,6 +1040,9 @@ collectListings:
 	for listingHash, listing := range listingMap {
 		for _, item := range contract.BuyerOrder.Items {
 			if item.ListingHash == listingHash {
+				if listing.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD {
+					continue
+				}
 				// Check selected option exists
 				var option *pb.Listing_ShippingOption
 				for _, shippingOption := range listing.ShippingOptions {
@@ -1331,7 +1334,7 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 }
 
 func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (int, error) {
-	if len(itemOptions) == 0 && len(listing.Item.Skus) == 1 {
+	if len(itemOptions) == 0 && (len(listing.Item.Skus) == 1 || len(listing.Item.Skus) == 0) {
 		// Default sku
 		return 0, nil
 	}

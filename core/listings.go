@@ -203,6 +203,17 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 			delete(currentInv, i)
 		}
 	}
+	// If SKUs were omitted, set a default with unlimited inventry
+	if len(listing.Item.Skus) == 0 {
+		err = n.Datastore.Inventory().Put(listing.Slug, 0, -1)
+		if err != nil {
+			return err
+		}
+		_, ok := currentInv[0]
+		if ok {
+			delete(currentInv, 0)
+		}
+	}
 	// Delete anything that did not update
 	for i := range currentInv {
 		err = n.Datastore.Inventory().Delete(listing.Slug, i)
