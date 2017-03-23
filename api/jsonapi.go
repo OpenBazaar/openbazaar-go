@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -20,6 +19,10 @@ import (
 	"encoding/hex"
 
 	"crypto/sha256"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	"sync"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -31,15 +34,12 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
-	"sync"
 )
 
 type JsonAPIConfig struct {
@@ -238,7 +238,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Maybe set as moderator
 	if profile.Moderator {
-		if err := i.node.SetSelfAsModerator(profile.ModInfo); err != nil {
+		if err := i.node.SetSelfAsModerator(profile.ModeratorInfo); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -348,21 +348,19 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read JSON from r.Body and decode into map
-	patch := make(map[string]interface{})
-	patchBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = json.Unmarshal(patchBytes, &patch)
+	// Read json data into interface
+	d := json.NewDecoder(r.Body)
+	d.UseNumber()
+
+	var patch interface{}
+	err := d.Decode(&patch)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Apply patch
-	err = i.node.PatchProfile(patch)
+	err = i.node.PatchProfile(patch.(map[string]interface{}))
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1131,7 +1129,8 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
-		SanitizedResponse(w, `[]`)
+		fmt.Fprint(w, `[]`)
+		return
 	}
 	for slug, m := range inventory {
 		for variant, count := range m {
@@ -1141,7 +1140,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
-		fmt.Fprintf(w, `[]`)
+		fmt.Fprint(w, `[]`)
 		return
 	}
 	SanitizedResponse(w, string(ret))
@@ -1218,7 +1217,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	profile.Moderator = false
-	profile.ModInfo = nil
+	profile.ModeratorInfo = nil
 	err = i.node.UpdateProfile(&profile)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1346,8 +1345,11 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err = i.node.GetProfile()
-		if err != nil {
+		if err != nil && err == core.ErrorProfileNotFound {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		} else if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
@@ -1360,6 +1362,10 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		profile, err = i.node.FetchProfile(peerId)
 		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if profile.PeerID != peerId {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
@@ -1881,9 +1887,11 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := new(pb.CaseRespApi)
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = int64(date.Unix())
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(date)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	resp.BuyerContract = buyerContract
 	resp.VendorContract = vendorContract
 	resp.BuyerOpened = buyerOpened
@@ -1893,6 +1901,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 	resp.Claim = claim
 	resp.Resolution = resolution
+	resp.Timestamp = ts
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1965,16 +1974,18 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	t := time.Now()
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = t.Unix()
+	ts, err := ptypes.TimestampProto(t)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	var flag pb.Chat_Flag
 	if chat.Message == "" {
 		flag = pb.Chat_TYPING
 	} else {
 		flag = pb.Chat_MESSAGE
 	}
-	tss := strconv.Itoa(int(ts.Seconds))
-	h := sha256.Sum256([]byte(chat.Message + chat.Subject + tss))
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + ptypes.TimestampString(ts)))
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -2280,6 +2291,16 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 }
 
 func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request) {
+	l := r.URL.Query().Get("limit")
+	if l == "" {
+		l = "-1"
+	}
+	limit, err := strconv.Atoi(l)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
 		Txid          string    `json:"txid"`
 		Value         int64     `json:"value"`
@@ -2304,7 +2325,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	}
 	height := i.node.Wallet.ChainTip()
 	var txs []Tx
-	for _, t := range transactions {
+	passedOffset := false
+	for i := len(transactions) - 1; i >= 0; i-- {
+		t := transactions[i]
 		var confirmations int32
 		var status string
 		confs := int32(height) - t.Height
@@ -2341,15 +2364,25 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
 		}
-		txs = append(txs, tx)
+		if offsetID == "" || passedOffset {
+			txs = append(txs, tx)
+		}
+		if t.Txid == offsetID {
+			passedOffset = true
+		}
+		if len(txs) >= limit && limit != -1 {
+			break
+		}
 	}
-	ret, err := json.MarshalIndent(txs, "", "    ")
+	type txWithCount struct {
+		Transactions []Tx `json:"transactions"`
+		Count        int  `json:"count"`
+	}
+	txns := txWithCount{txs, len(transactions)}
+	ret, err := json.MarshalIndent(txns, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
-	}
-	if string(ret) == "null" {
-		ret = []byte("[]")
 	}
 	SanitizedResponse(w, string(ret))
 }

@@ -76,7 +76,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 		go w.startChainDownload(p)
 	}
 	if w.blockchain.ChainState() == WAITING {
-		txns, err := w.txstore.Txns().GetAll()
+		txns, err := w.txstore.Txns().GetAll(false)
 		if err != nil {
 			log.Error(err)
 			return

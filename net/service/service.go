@@ -56,10 +56,10 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
-	go service.handleNewMessage(s)
+	go service.handleNewMessage(s, true)
 }
 
-func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
+func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
 	cr := ctxio.NewReader(service.ctx, s)
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
@@ -67,18 +67,30 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
-
-	// ensure the message sender for this peer is updated with this stream, so we reply over it
-	ms := service.messageSenderForPeer(mPeer, &s)
+	var ms *messageSender
+	if incoming {
+		// if this is an inbound stream
+		// ensure the message sender for this peer is updated with this stream, so we reply over it
+		ms = service.messageSenderForPeer(mPeer, &s)
+	} else {
+		ms = service.messageSenderForPeer(mPeer, nil)
+	}
 	defer s.Close()
 	for {
+		select {
+		// end loop on context close
+		case <-service.ctx.Done():
+			return
+		default:
+		}
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
 				// EOF error means the sender closed the stream
-				log.Errorf("Error unmarshaling data: %s", err)
+				return
 			}
+			log.Errorf("Error unmarshaling data: %s", err)
 			continue
 		}
 
@@ -127,14 +139,9 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		rpmes.IsResponse = true
 
 		// Send out response msg
-		if err := ms.SendMessage(service.ctx, pmes); err != nil {
+		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
 			log.Debugf("send response error: %s", err)
 			continue
-		}
-		select {
-		// end loop on context close
-		case <-service.ctx.Done():
-			return
 		}
 	}
 }

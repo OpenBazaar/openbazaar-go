@@ -5,6 +5,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	crypto "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
+	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -16,13 +22,7 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	ipfspath "github.com/ipfs/go-ipfs/path"
-	crypto "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	"strings"
-	"time"
 )
 
 type option struct {
@@ -104,9 +104,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	id.BitcoinSig = sig.Serialize()
 	order.BuyerID = id
 
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return "", "", 0, false, err
+	}
 	order.Timestamp = ts
 	order.AlternateContactInfo = data.AlternateContactInfo
 
@@ -1039,6 +1040,9 @@ collectListings:
 	for listingHash, listing := range listingMap {
 		for _, item := range contract.BuyerOrder.Items {
 			if item.ListingHash == listingHash {
+				if listing.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD {
+					continue
+				}
 				// Check selected option exists
 				var option *pb.Listing_ShippingOption
 				for _, shippingOption := range listing.ShippingOptions {
@@ -1330,7 +1334,7 @@ func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listin
 }
 
 func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (int, error) {
-	if len(itemOptions) == 0 && len(listing.Item.Skus) == 1 {
+	if len(itemOptions) == 0 && (len(listing.Item.Skus) == 1 || len(listing.Item.Skus) == 0) {
 		// Default sku
 		return 0, nil
 	}

@@ -88,11 +88,8 @@ class ChatTest(OpenBazaarTestFramework):
             raise TestFailure("ChatTest - FAIL: Did not record new conversation")
 
         # bob mark as read
-        message = {
-            "peerId": alice_id
-        }
-        api_url = bob["gateway_url"] + "ob/markchatasread"
-        r = requests.post(api_url, data=json.dumps(message, indent=4))
+        api_url = bob["gateway_url"] + "ob/markchatasread/" + alice_id
+        r = requests.post(api_url)
         if r.status_code == 404:
             raise TestFailure("ChatTest - FAIL: Chat markasread post endpoint not found")
         elif r.status_code != 200:

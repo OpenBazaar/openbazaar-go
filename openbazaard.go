@@ -847,7 +847,9 @@ func (x *Start) Execute(args []string) error {
 		if !x.DisableWallet {
 			MR.Wait()
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
+			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
 			wallet.AddTransactionListener(TL.OnTransactionReceived)
+			wallet.AddTransactionListener(WL.OnTransactionReceived)
 			log.Info("Starting bitcoin wallet")
 			go wallet.Start()
 		}

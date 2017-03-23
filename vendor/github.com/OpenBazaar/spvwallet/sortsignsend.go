@@ -80,7 +80,7 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
 	for _, u := range utxos {
-		if u.Freeze {
+		if u.WatchOnly {
 			continue
 		}
 		var confirmations int32

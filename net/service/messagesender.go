@@ -69,7 +69,7 @@ func (ms *messageSender) prep() error {
 	if err != nil {
 		return err
 	}
-	ms.service.HandleNewStream(nstr)
+	go ms.service.handleNewMessage(nstr, false)
 
 	ms.w = ggio.NewDelimitedWriter(nstr)
 	ms.s = nstr
@@ -138,8 +138,8 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 		return nil, err
 	}
 
-	mes := new(pb.Message)
-	if err := ms.ctxReadMsg(ctx, returnChan, mes); err != nil {
+	mes, err := ms.ctxReadMsg(ctx, returnChan)
+	if err != nil {
 		ms.closeRequest(pmes.RequestId)
 		ms.s.Close()
 		ms.s = nil
@@ -151,7 +151,6 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 		ms.s.Close()
 		ms.s = nil
 	}
-
 	return mes, nil
 }
 
@@ -166,16 +165,16 @@ func (ms *messageSender) closeRequest(id int32) {
 	ms.requestlk.Unlock()
 }
 
-func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Message, mes *pb.Message) error {
+func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Message) (*pb.Message, error) {
 	t := time.NewTimer(ReadMessageTimeout)
 	defer t.Stop()
 
 	select {
-	case mes = <-returnChan:
-		return nil
+	case mes := <-returnChan:
+		return mes, nil
 	case <-ctx.Done():
-		return ctx.Err()
+		return nil, ctx.Err()
 	case <-t.C:
-		return ErrReadTimeout
+		return nil, ErrReadTimeout
 	}
 }

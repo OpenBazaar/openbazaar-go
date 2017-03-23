@@ -1,29 +1,31 @@
 package core
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-	"path"
-	"time"
-
 	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	"io/ioutil"
+	"os"
+	"path"
+	"time"
 )
+
+var ErrorProfileNotFound error = errors.New("Profie not found")
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
 	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
 	if err != nil {
-		return profile, err
+		return profile, ErrorProfileNotFound
 	}
 	defer f.Close()
 	err = jsonpb.Unmarshal(f, &profile)
@@ -85,33 +87,19 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	profilePath := path.Join(n.RepoPath, "root", "profile")
 
 	// Read stored profile data
-	profile := make(map[string]interface{})
-	profileBytes, err := ioutil.ReadFile(profilePath)
+	file, err := os.Open(profilePath)
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(profileBytes, &profile); err != nil {
+	d := json.NewDecoder(file)
+	d.UseNumber()
+
+	var i interface{}
+	err = d.Decode(&i)
+	if err != nil {
 		return err
 	}
-
-	formatModeratorAmount := func(modInfo interface{}) {
-		fee, ok := modInfo.(map[string]interface{})["fee"]
-		if ok {
-			fixedFee, ok := fee.(map[string]interface{})["fixedFee"]
-			if ok {
-				amt := fixedFee.(map[string]interface{})["amount"].(float64)
-				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
-			}
-		}
-	}
-	modInfo, ok := patch["modInfo"]
-	if ok {
-		formatModeratorAmount(modInfo)
-	}
-	modInfo, ok = profile["modInfo"]
-	if ok {
-		formatModeratorAmount(modInfo)
-	}
+	profile := i.(map[string]interface{})
 
 	patchMod, pok := patch["moderator"]
 	storedMod, sok := profile["moderator"]
@@ -146,20 +134,25 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
 	p := new(pb.Profile)
-	if err := jsonpb.UnmarshalString(string(newProfile), p); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err
 	}
 	return n.UpdateProfile(p)
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
-	profile.ListingCount = uint32(n.GetListingCount())
-	profile.FollowerCount = uint32(n.Datastore.Followers().Count())
-	profile.FollowingCount = uint32(n.Datastore.Following().Count())
+	profile.PeerID = n.IpfsNode.Identity.Pretty()
+	if profile.Stats == nil {
+		profile.Stats = new(pb.Profile_Stats)
+	}
+	profile.Stats.ListingCount = uint32(n.GetListingCount())
+	profile.Stats.FollowerCount = uint32(n.Datastore.Followers().Count())
+	profile.Stats.FollowingCount = uint32(n.Datastore.Following().Count())
 
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
-	ts.Nanos = 0
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return nil, err
+	}
 	profile.LastModified = ts
 	return profile, nil
 }
@@ -204,47 +197,49 @@ func ValidateProfile(profile *pb.Profile) error {
 	if len(profile.ShortDescription) > ShortDescriptionLength {
 		return fmt.Errorf("Short description character length is greater than the max of %d", ShortDescriptionLength)
 	}
-	if len(profile.Website) > URLMaxCharacters {
-		return fmt.Errorf("Website character length is greater than the max of %d", URLMaxCharacters)
-	}
-	if len(profile.Email) > SentenceMaxCharacters {
-		return fmt.Errorf("Email character length is greater than the max of %d", SentenceMaxCharacters)
-	}
-	if len(profile.PhoneNumber) > WordMaxCharacters {
-		return fmt.Errorf("Phone number character length is greater than the max of %d", WordMaxCharacters)
-	}
-	if len(profile.Social) > MaxListItems {
-		return fmt.Errorf("Number of social accounts is greater than the max of %d", MaxListItems)
-	}
-	for _, s := range profile.Social {
-		if len(s.Username) > WordMaxCharacters {
-			return fmt.Errorf("Social username character length is greater than the max of %d", WordMaxCharacters)
+	if profile.ContactInfo != nil {
+		if len(profile.ContactInfo.Website) > URLMaxCharacters {
+			return fmt.Errorf("Website character length is greater than the max of %d", URLMaxCharacters)
 		}
-		if len(s.Type) > WordMaxCharacters {
-			return fmt.Errorf("Social account type character length is greater than the max of %d", WordMaxCharacters)
+		if len(profile.ContactInfo.Email) > SentenceMaxCharacters {
+			return fmt.Errorf("Email character length is greater than the max of %d", SentenceMaxCharacters)
 		}
-		if len(s.Proof) > URLMaxCharacters {
-			return fmt.Errorf("Social proof character length is greater than the max of %d", WordMaxCharacters)
+		if len(profile.ContactInfo.PhoneNumber) > WordMaxCharacters {
+			return fmt.Errorf("Phone number character length is greater than the max of %d", WordMaxCharacters)
+		}
+		if len(profile.ContactInfo.Social) > MaxListItems {
+			return fmt.Errorf("Number of social accounts is greater than the max of %d", MaxListItems)
+		}
+		for _, s := range profile.ContactInfo.Social {
+			if len(s.Username) > WordMaxCharacters {
+				return fmt.Errorf("Social username character length is greater than the max of %d", WordMaxCharacters)
+			}
+			if len(s.Type) > WordMaxCharacters {
+				return fmt.Errorf("Social account type character length is greater than the max of %d", WordMaxCharacters)
+			}
+			if len(s.Proof) > URLMaxCharacters {
+				return fmt.Errorf("Social proof character length is greater than the max of %d", WordMaxCharacters)
+			}
 		}
 	}
-	if profile.ModInfo != nil {
-		if len(profile.ModInfo.Description) > AboutMaxCharacteres {
+	if profile.ModeratorInfo != nil {
+		if len(profile.ModeratorInfo.Description) > AboutMaxCharacteres {
 			return fmt.Errorf("Moderator description character length is greater than the max of %d", AboutMaxCharacteres)
 		}
-		if len(profile.ModInfo.TermsAndConditions) > PolicyMaxCharacters {
+		if len(profile.ModeratorInfo.TermsAndConditions) > PolicyMaxCharacters {
 			return fmt.Errorf("Moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
 		}
-		if len(profile.ModInfo.Languages) > MaxListItems {
+		if len(profile.ModeratorInfo.Languages) > MaxListItems {
 			return fmt.Errorf("Moderator number of languages greater than the max of %d", MaxListItems)
 		}
-		for _, l := range profile.ModInfo.Languages {
+		for _, l := range profile.ModeratorInfo.Languages {
 			if len(l) > WordMaxCharacters {
 				return fmt.Errorf("Moderator language character length is greater than the max of %d", WordMaxCharacters)
 			}
 		}
-		if profile.ModInfo.Fee != nil {
-			if profile.ModInfo.Fee.FixedFee != nil {
-				if len(profile.ModInfo.Fee.FixedFee.CurrencyCode) > WordMaxCharacters {
+		if profile.ModeratorInfo.Fee != nil {
+			if profile.ModeratorInfo.Fee.FixedFee != nil {
+				if len(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) > WordMaxCharacters {
 					return fmt.Errorf("Moderator fee currency code character length is greater than the max of %d", WordMaxCharacters)
 				}
 			}
@@ -297,7 +292,7 @@ func ValidateProfile(profile *pb.Profile) error {
 	if len(profile.BitcoinPubkey) > 66 {
 		return fmt.Errorf("Bitcoin public key character length is greater than the max of %d", 66)
 	}
-	if profile.AvgRating > 5 {
+	if profile.Stats.AverageRating > 5 {
 		return fmt.Errorf("Average rating cannot be greater than %d", 5)
 	}
 	return nil

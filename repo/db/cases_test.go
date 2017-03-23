@@ -3,12 +3,13 @@ package db
 import (
 	"bytes"
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes"
 )
 
 var casesdb CasesDB
@@ -44,8 +45,10 @@ func init() {
 	shipping.Address = "1234 test ave."
 	shipping.ShipTo = "buyer name"
 	order.Shipping = shipping
-	ts := new(timestamp.Timestamp)
-	ts.Seconds = time.Now().Unix()
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return
+	}
 	order.Timestamp = ts
 	payment := new(pb.Order_Payment)
 	payment.Amount = 10
