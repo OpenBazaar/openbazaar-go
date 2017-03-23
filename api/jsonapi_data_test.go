@@ -157,28 +157,35 @@ const settingsAlreadyExistsJSON = `{
 //
 
 const profileJSON = `{
-	"about": "Bitcoins Creator",
-	"avgRating": 1,
-	"bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053",
-	"email": "satoshi@gmx.com",
-	"followerCount": 1,
-	"followingCount": 2,
-	"handle": "satoshi",
-	"highlightColor": "#123ABC",
-	"highlightTextColor": "#DEAD00",
-	"listingCount": 3,
-	"location": "Japan",
-	"moderator": false,
-	"name": "Satoshi Nakamoto",
-	"nsfw": true,
-	"numRatings": 21000000,
-	"phoneNumber": "5551234567",
-	"primaryColor": "#000000",
-	"secondaryColor": "#FFD700",
-	"shortDescription": "I make money",
-	"textColor": "#ffffff",
-	"vendor": true,
-	"website": "bitcoin.org"
+    "peerID": "",
+    "handle": "satoshi",
+    "name": "Satoshi Nakamoto",
+    "location": "Japan",
+    "about": "Bitcoins Creator",
+    "shortDescription": "I make money",
+    "contactInfo": {
+	    "website": "bitcoin.org",
+	    "email": "satoshi@gmx.com",
+	    "phoneNumber": "5551234567"
+    },
+    "nsfw": true,
+    "vendor": true,
+    "moderator": false,
+    "colors": {
+	    "primary": "#000000",
+	    "secondary": "#FFD700",
+	    "text": "#ffffff",
+	    "highlight": "#123ABC",
+	    "highlightText": "#DEAD00"
+    },
+    "stats": {
+	    "followerCount": 1,
+	    "followingCount": 2,
+	    "listingCount": 3,
+	    "ratingCount": 21000000,
+	    "averageRating": 1
+    },
+    "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
 
 const profileUpdateJSON = `{
@@ -188,28 +195,16 @@ const profileUpdateJSON = `{
 }`
 
 const profileUpdatedJSON = `{
+    "peerID": "",
     "handle": "satoshi",
     "name": "Craig Wright",
     "location": "Austrailia",
     "about": "",
     "shortDescription": "",
-    "website": "",
-    "email": "",
-    "phoneNumber": "",
-    "avgRating": 0,
-    "numRatings": 0,
     "nsfw": false,
     "vendor": false,
     "moderator": false,
-    "primaryColor": "",
-    "secondaryColor": "",
-    "textColor": "",
-    "highlightColor": "",
-    "highlightTextColor": "",
-    "followerCount": 0,
-    "followingCount": 0,
-    "listingCount": 0,
-	"bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
+    "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
 
 //
@@ -640,7 +635,8 @@ const inventoryJSONResponse = `[
 ]`
 
 const inventoryUpdateJSON = `[{
-	"slug": "/ron_swanson_tshirt/red/xl",
+	"slug": "ron_swanson_tshirt",
+	"variant": 0,
 	"quantity": 17
 }]`
 

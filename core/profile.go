@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	"bytes"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -17,11 +18,13 @@ import (
 	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
+var ErrorProfileNotFound error = errors.New("Profie not found")
+
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
 	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
 	if err != nil {
-		return profile, err
+		return profile, ErrorProfileNotFound
 	}
 	defer f.Close()
 	err = jsonpb.Unmarshal(f, &profile)
@@ -76,33 +79,19 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	profilePath := path.Join(n.RepoPath, "root", "profile")
 
 	// Read stored profile data
-	profile := make(map[string]interface{})
-	profileBytes, err := ioutil.ReadFile(profilePath)
+	file, err := os.Open(profilePath)
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(profileBytes, &profile); err != nil {
+	d := json.NewDecoder(file)
+	d.UseNumber()
+
+	var i interface{}
+	err = d.Decode(&i)
+	if err != nil {
 		return err
 	}
-
-	formatModeratorAmount := func(modInfo interface{}) {
-		fee, ok := modInfo.(map[string]interface{})["fee"]
-		if ok {
-			fixedFee, ok := fee.(map[string]interface{})["fixedFee"]
-			if ok {
-				amt := fixedFee.(map[string]interface{})["amount"].(float64)
-				fixedFee.(map[string]interface{})["amount"] = uint64(amt)
-			}
-		}
-	}
-	modInfo, ok := patch["modInfo"]
-	if ok {
-		formatModeratorAmount(modInfo)
-	}
-	modInfo, ok = profile["modInfo"]
-	if ok {
-		formatModeratorAmount(modInfo)
-	}
+	profile := i.(map[string]interface{})
 
 	patchMod, pok := patch["moderator"]
 	storedMod, sok := profile["moderator"]
@@ -137,16 +126,20 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
 	p := new(pb.Profile)
-	if err := jsonpb.UnmarshalString(string(newProfile), p); err != nil {
+	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err
 	}
 	return n.UpdateProfile(p)
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
-	profile.ListingCount = uint32(n.GetListingCount())
-	profile.FollowerCount = uint32(n.Datastore.Followers().Count())
-	profile.FollowingCount = uint32(n.Datastore.Following().Count())
+	profile.PeerID = n.IpfsNode.Identity.Pretty()
+	if profile.Stats == nil {
+		profile.Stats = new(pb.Profile_Stats)
+	}
+	profile.Stats.ListingCount = uint32(n.GetListingCount())
+	profile.Stats.FollowerCount = uint32(n.Datastore.Followers().Count())
+	profile.Stats.FollowingCount = uint32(n.Datastore.Following().Count())
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
