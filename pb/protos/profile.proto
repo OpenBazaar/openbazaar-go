@@ -6,44 +6,40 @@ import "google/protobuf/timestamp.proto";
 import "moderator.proto";
 
 message Profile {
-    string handle                          = 1;
-    string name                            = 2;
-    string location                        = 3;
-    string about                           = 4;
-    string shortDescription                = 5;
-    string website                         = 6;
-    string email                           = 7;
-    string phoneNumber                     = 8;
-    repeated SocialAccount social          = 9;
+    string peerID                          = 1;
+    string handle                          = 2;
+    string name                            = 3;
+    string location                        = 4;
+    string about                           = 5;
+    string shortDescription                = 6;
 
-    uint32 avgRating                       = 10;
-    uint32 numRatings                      = 11;
+    bool nsfw                              = 7;
+    bool vendor                            = 8;
+    bool moderator                         = 9;
+    Moderator moderatorInfo                = 10;
 
-    bool nsfw                              = 12;
-    bool vendor                            = 13;
-    bool moderator                         = 14;
-    Moderator modInfo                      = 15;
-
-    string primaryColor                    = 16;
-    string secondaryColor                  = 17;
-    string textColor                       = 18;
-    string highlightColor                  = 19;
-    string highlightTextColor              = 20;
+    Contact contactInfo                    = 11;
+    Colors colors                          = 12;
 
     // The following data is added to the profile
     // automatically by the server and may be omitted
     // when setting the profile via API.
 
-    Image avatarHashes                     = 21;
-    Image headerHashes                     = 22;
+    Image avatarHashes                     = 13;
+    Image headerHashes                     = 14;
 
-    uint32 followerCount                   = 23;
-    uint32 followingCount                  = 24;
-    uint32 listingCount                    = 25;
+    Stats stats                            = 15;
 
-    string bitcoinPubkey                   = 26;
+    string bitcoinPubkey                   = 16;
 
-    google.protobuf.Timestamp lastModified = 27;
+    google.protobuf.Timestamp lastModified = 17;
+
+    message Contact {
+        string website                = 1;
+        string email                  = 2;
+        string phoneNumber            = 3;
+        repeated SocialAccount social = 4;
+    }
 
     message SocialAccount {
         string type     = 1;
@@ -57,5 +53,21 @@ message Profile {
         string medium   = 3;
         string large    = 4;
         string original = 5;
+    }
+
+    message Colors {
+        string primary       = 1;
+        string secondary     = 2;
+        string text          = 3;
+        string highlight     = 4;
+        string highlightText = 5;
+    }
+
+    message Stats {
+        uint32 followerCount  = 1;
+        uint32 followingCount = 2;
+        uint32 listingCount   = 3;
+        uint32 ratingCount    = 4;
+        float averageRating   = 5;
     }
 }

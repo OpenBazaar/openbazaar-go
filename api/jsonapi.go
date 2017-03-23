@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -239,7 +238,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Maybe set as moderator
 	if profile.Moderator {
-		if err := i.node.SetSelfAsModerator(profile.ModInfo); err != nil {
+		if err := i.node.SetSelfAsModerator(profile.ModeratorInfo); err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -349,21 +348,19 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read JSON from r.Body and decode into map
-	patch := make(map[string]interface{})
-	patchBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	err = json.Unmarshal(patchBytes, &patch)
+	// Read json data into interface
+	d := json.NewDecoder(r.Body)
+	d.UseNumber()
+
+	var patch interface{}
+	err := d.Decode(&patch)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Apply patch
-	err = i.node.PatchProfile(patch)
+	err = i.node.PatchProfile(patch.(map[string]interface{}))
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1132,7 +1129,8 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	var invList []inv
 	inventory, err := i.node.Datastore.Inventory().GetAll()
 	if err != nil {
-		SanitizedResponse(w, `[]`)
+		fmt.Fprint(w, `[]`)
+		return
 	}
 	for slug, m := range inventory {
 		for variant, count := range m {
@@ -1142,7 +1140,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 	ret, _ := json.MarshalIndent(invList, "", "    ")
 	if string(ret) == "null" {
-		fmt.Fprintf(w, `[]`)
+		fmt.Fprint(w, `[]`)
 		return
 	}
 	SanitizedResponse(w, string(ret))
@@ -1219,7 +1217,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	profile.Moderator = false
-	profile.ModInfo = nil
+	profile.ModeratorInfo = nil
 	err = i.node.UpdateProfile(&profile)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1347,8 +1345,11 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	var err error
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err = i.node.GetProfile()
-		if err != nil {
+		if err != nil && err == core.ErrorProfileNotFound {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		} else if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	} else {
@@ -1361,6 +1362,10 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		profile, err = i.node.FetchProfile(peerId)
 		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if profile.PeerID != peerId {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
