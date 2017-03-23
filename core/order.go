@@ -82,13 +82,13 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		id.BlockchainID = profile.Handle
 	}
 
-	id.Guid = n.IpfsNode.Identity.Pretty()
+	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
 		return "", "", 0, false, err
 	}
 	keys := new(pb.ID_Pubkeys)
-	keys.Guid = pubkey
+	keys.Identity = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
 		return "", "", 0, false, err
@@ -100,7 +100,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	sig, err := ecPrivKey.Sign([]byte(id.Guid))
+	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
 	order.BuyerID = id
 
@@ -325,11 +325,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 
 		// Send to order vendor
-		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
+		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil { // Vendor offline
 			// Send using offline messaging
-			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
-			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.Guid)
+			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
+			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -341,7 +341,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				MessageType: pb.Message_ORDER,
 				Payload:     any,
 			}
-			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -402,7 +402,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		}
 
 		// Send to order vendor and request a payment address
-		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.Guid, contract)
+		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil { // Vendor offline
 			// Change payment code to direct
 			payment.Method = pb.Order_Payment_DIRECT
@@ -461,8 +461,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 
 			// Send using offline messaging
-			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.Guid)
-			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.Guid)
+			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
+			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -474,7 +474,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 				MessageType: pb.Message_ORDER,
 				Payload:     any,
 			}
-			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -581,7 +581,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	err = n.SendCancel(contract.VendorListings[0].VendorID.Guid, orderId)
+	err = n.SendCancel(contract.VendorListings[0].VendorID.PeerID, orderId)
 	if err != nil {
 		return err
 	}
@@ -853,10 +853,10 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	if err := verifyMessageSignature(
 		contract.BuyerOrder,
-		contract.BuyerOrder.BuyerID.Pubkeys.Guid,
+		contract.BuyerOrder.BuyerID.Pubkeys.Identity,
 		contract.Signatures,
 		pb.Signature_ORDER,
-		contract.BuyerOrder.BuyerID.Guid,
+		contract.BuyerOrder.BuyerID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
@@ -873,7 +873,7 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 	if err := verifyBitcoinSignature(
 		contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
 		contract.BuyerOrder.BuyerID.BitcoinSig,
-		contract.BuyerOrder.BuyerID.Guid,
+		contract.BuyerOrder.BuyerID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case invalidSigError:
@@ -1276,11 +1276,11 @@ func validateVendorID(rc *pb.RicardianContract) error {
 	if rc.VendorListings[0].VendorID.Pubkeys == nil {
 		return errors.New("Vendor pubkeys is nil")
 	}
-	vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Guid)
+	vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.Guid)
+	vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.PeerID)
 	if err != nil {
 		return err
 	}

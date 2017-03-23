@@ -108,7 +108,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
-	id.Guid = n.IpfsNode.Identity.Pretty()
+	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
 		return c, err
@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 		id.BlockchainID = profile.Handle
 	}
 	p := new(pb.ID_Pubkeys)
-	p.Guid = pubkey
+	p.Identity = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
 		return c, err
@@ -132,7 +132,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	if err != nil {
 		return c, err
 	}
-	sig, err := ecPrivKey.Sign([]byte(id.Guid))
+	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
 
 	// Set crypto currency
@@ -974,10 +974,10 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		// Verify identity signature on listing
 		if err := verifyMessageSignature(
 			listing,
-			listing.VendorID.Pubkeys.Guid,
+			listing.VendorID.Pubkeys.Identity,
 			contract.Signatures,
 			pb.Signature_LISTING,
-			listing.VendorID.Guid,
+			listing.VendorID.PeerID,
 		); err != nil {
 			switch err.(type) {
 			case noSigError:
@@ -995,7 +995,7 @@ func verifySignaturesOnListing(contract *pb.RicardianContract) error {
 		if err := verifyBitcoinSignature(
 			listing.VendorID.Pubkeys.Bitcoin,
 			listing.VendorID.BitcoinSig,
-			listing.VendorID.Guid,
+			listing.VendorID.PeerID,
 		); err != nil {
 			switch err.(type) {
 			case invalidSigError:
