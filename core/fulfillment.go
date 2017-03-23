@@ -18,6 +18,9 @@ import (
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+	if fulfillment.Slug == "" && len(contract.VendorListings) == 1 {
+		fulfillment.Slug = contract.VendorListings[0].Slug
+	}
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
