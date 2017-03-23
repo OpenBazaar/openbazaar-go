@@ -38,7 +38,7 @@ const (
 	SentenceMaxCharacters    = 70
 	CouponTitleMaxCharacters = 70
 	PolicyMaxCharacters      = 10000
-	AboutMaxCharacteres      = 10000
+	AboutMaxCharacters       = 10000
 	URLMaxCharacters         = 2000
 	MaxCountryCodes          = 255
 )

@@ -196,8 +196,8 @@ func ValidateProfile(profile *pb.Profile) error {
 	if len(profile.Location) > WordMaxCharacters {
 		return fmt.Errorf("Location character length is greater than the max of %d", WordMaxCharacters)
 	}
-	if len(profile.About) > AboutMaxCharacteres {
-		return fmt.Errorf("About character length is greater than the max of %d", AboutMaxCharacteres)
+	if len(profile.About) > AboutMaxCharacters {
+		return fmt.Errorf("About character length is greater than the max of %d", AboutMaxCharacters)
 	}
 	if len(profile.ShortDescription) > ShortDescriptionLength {
 		return fmt.Errorf("Short description character length is greater than the max of %d", ShortDescriptionLength)
