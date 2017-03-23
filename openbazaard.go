@@ -675,6 +675,9 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+	if x.Regtest && strings.ToLower(walletCfg.Type) == "spvwallet" && walletCfg.TrustedPeer == "" {
+		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
+	}
 
 	w3 := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
