@@ -56,6 +56,7 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
+	log.Notice("New incoming stream")
 	go service.handleNewMessage(s, true)
 }
 

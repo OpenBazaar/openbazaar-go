@@ -228,8 +228,8 @@ func ValidateProfile(profile *pb.Profile) error {
 		}
 	}
 	if profile.ModeratorInfo != nil {
-		if len(profile.ModeratorInfo.Description) > AboutMaxCharacteres {
-			return fmt.Errorf("Moderator description character length is greater than the max of %d", AboutMaxCharacteres)
+		if len(profile.ModeratorInfo.Description) > AboutMaxCharacters {
+			return fmt.Errorf("Moderator description character length is greater than the max of %d", AboutMaxCharacters)
 		}
 		if len(profile.ModeratorInfo.TermsAndConditions) > PolicyMaxCharacters {
 			return fmt.Errorf("Moderator terms and conditions character length is greater than the max of %d", PolicyMaxCharacters)
