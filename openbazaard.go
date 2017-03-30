@@ -860,6 +860,8 @@ func (x *Start) Execute(args []string) error {
 			wallet.AddTransactionListener(TL.OnTransactionReceived)
 			wallet.AddTransactionListener(WL.OnTransactionReceived)
 			log.Info("Starting bitcoin wallet")
+			su := bitcoin.NewStatusUpdater(wallet, core.Node.Broadcast, nd.Context())
+			go su.Start()
 			go wallet.Start()
 		}
 		core.Node.UpdateFollow()

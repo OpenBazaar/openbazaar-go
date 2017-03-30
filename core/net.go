@@ -313,6 +313,7 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 	if err != nil {
 		return err
 	}
+	log.Notice(a.TypeUrl)
 	m := pb.Message{
 		MessageType: pb.Message_CHAT,
 		Payload:     a,
