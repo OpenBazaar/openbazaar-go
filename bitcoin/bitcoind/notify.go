@@ -59,6 +59,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		WatchOnly: watchOnly,
 		Value:     int64(txInfo.Amount * 100000000),
 		Timestamp: time.Unix(txInfo.TimeReceived, 0),
+		Height:    int32(txInfo.BlockIndex),
 	}
 	for _, lis := range l.listeners {
 		lis(cb)

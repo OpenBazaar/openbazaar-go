@@ -21,16 +21,23 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 	if !cb.WatchOnly && cb.Value > 0 {
 		txid := hex.EncodeToString(cb.Txid)
 		metadata, _ := l.db.TxMetadata().Get(txid)
+		status := "UNCONFIRMED"
+		if cb.Height > 0 && cb.Height < 6 {
+			status = "PENDING"
+		} else if cb.Height >= 6 {
+			status = "CONFIRMED"
+		}
 		n := notifications.IncomingTransaction{
 			Txid:          hex.EncodeToString(cb.Txid),
 			Value:         cb.Value,
 			Address:       metadata.Address,
-			Status:        "UNCONFIRMED",
+			Status:        status,
 			Memo:          metadata.Memo,
 			Timestamp:     cb.Timestamp,
 			Confirmations: 0,
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
+			Height:        cb.Height,
 			CanBumpFee:    true,
 		}
 		l.broadcast <- n

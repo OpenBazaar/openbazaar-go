@@ -177,6 +177,7 @@ type IncomingTransaction struct {
 	Confirmations int32     `json:"confirmations"`
 	OrderId       string    `json:"orderId"`
 	Thumbnail     string    `json:"thumbnail"`
+	Height        int32     `json:"height"`
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 

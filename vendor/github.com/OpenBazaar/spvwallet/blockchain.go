@@ -1,7 +1,6 @@
 package spvwallet
 
 import (
-	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
