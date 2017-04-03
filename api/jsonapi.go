@@ -776,7 +776,7 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": "%d", "unconfirmed": "%d"}`, int(confirmed), int(unconfirmed)))
+	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
