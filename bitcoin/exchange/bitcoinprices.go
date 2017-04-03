@@ -98,7 +98,6 @@ func (b *BitcoinPriceFetcher) fetchCurrentRates() error {
 	for _, provider := range b.providers {
 		err := provider.fetch()
 		if err == nil {
-			log.Notice("Fetched current Bitcoin rates from " + provider.fetchUrl)
 			return nil
 		}
 	}
@@ -111,7 +110,6 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 		err = errors.New("Provider has no fetchUrl")
 		return err
 	}
-	log.Info("Fetching rates at " + provider.fetchUrl)
 	resp, err := provider.client.Get(provider.fetchUrl)
 	if err != nil {
 		log.Error("Failed to fetch from "+provider.fetchUrl, err)
