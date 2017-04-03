@@ -150,6 +150,7 @@ func (h *HeaderDB) Prune() error {
 	})
 }
 
+
 func (h *HeaderDB) GetPreviousHeader(header wire.BlockHeader) (sh StoredHeader, err error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
@@ -215,25 +216,36 @@ func (h *HeaderDB) Height() (uint32, error) {
 func (h *HeaderDB) Print() {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-	m := make(map[uint32][]string)
+	m := make(map[float64][]string)
 	h.db.View(func(tx *bolt.Tx) error {
 		// Assume bucket exists and has keys
 		bkt := tx.Bucket(BKTHeaders)
 		bkt.ForEach(func(k, v []byte) error {
 			sh, _ := deserializeHeader(v)
-			m[sh.height] = []string{sh.header.BlockHash().String(), sh.header.PrevBlock.String()}
+			h := float64(sh.height)
+			_, ok := m[h]
+			if ok {
+				for {
+					h += .1
+					_, ok := m[h]
+					if !ok {
+						break
+					}
+				}
+			}
+			m[h] = []string{sh.header.BlockHash().String(), sh.header.PrevBlock.String()}
 			return nil
 		})
 
 		return nil
 	})
-	var keys []int
+	var keys []float64
 	for k := range m {
-		keys = append(keys, int(k))
+		keys = append(keys, float64(k))
 	}
-	sort.Ints(keys)
+	sort.Float64s(keys)
 	for _, k := range keys {
-		fmt.Printf("Height: %d, Hash: %s, Parent: %s\n", k, m[uint32(k)][0], m[uint32(k)][1])
+		fmt.Printf("Height: %.1f, Hash: %s, Parent: %s\n", k, m[k][0], m[k][1])
 	}
 }
 

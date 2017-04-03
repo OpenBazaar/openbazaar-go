@@ -88,6 +88,7 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	if err != nil {
 		return nil, err
 	}
+
 	w.blockchain, err = NewBlockchain(w.repoPath, w.params)
 	if err != nil {
 		return nil, err

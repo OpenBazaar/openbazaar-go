@@ -43,7 +43,7 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 }
 
 func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
-	if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer().ID() == p.ID() {
+	if w.blockchain.ChainState() == SYNCING && w.PeerManager.DownloadPeer() != nil && w.PeerManager.DownloadPeer().ID() == p.ID() {
 		queueHash := <-w.blockQueue
 		headerHash := m.Header.BlockHash()
 		if !headerHash.IsEqual(&queueHash) {
@@ -58,7 +58,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 		p.Disconnect()
 		return
 	}
-	newBlock, height, err := w.blockchain.CommitHeader(m.Header)
+	newBlock, reorg, height, err := w.blockchain.CommitHeader(m.Header)
 	if err != nil {
 		log.Warning(err)
 		return
@@ -66,6 +66,19 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 	if !newBlock {
 		return
 	}
+
+	// We hit a reorg. Rollback the transactions and resync from the reorg point.
+	if reorg != nil {
+		err := w.txstore.processReorg(reorg.height)
+		if err != nil {
+			log.Error(err)
+		}
+		w.blockchain.SetChainState(SYNCING)
+		w.blockchain.db.Put(*reorg, true)
+		go w.startChainDownload(p)
+		return
+	}
+
 	for _, txid := range txids {
 		w.mutex.Lock()
 		w.toDownload[*txid] = int32(height)

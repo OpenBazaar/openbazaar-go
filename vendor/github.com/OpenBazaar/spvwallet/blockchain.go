@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -89,14 +90,15 @@ func NewBlockchain(filePath string, params *chaincfg.Params) (*Blockchain, error
 	return b, nil
 }
 
-func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, uint32, error) {
+func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, *StoredHeader, uint32, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	newTip := false
+	var lastGoodHeader *StoredHeader
 	// Fetch our current best header from the db
 	bestHeader, err := b.db.GetBestHeader()
 	if err != nil {
-		return false, 0, err
+		return false, nil, 0, err
 	}
 	tipHash := bestHeader.header.BlockHash()
 	var parentHeader StoredHeader
@@ -108,17 +110,17 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, uint32, error)
 	} else {
 		parentHeader, err = b.db.GetPreviousHeader(header)
 		if err != nil {
-			return false, 0, fmt.Errorf("Header %s does not extend any known headers", header.BlockHash().String())
+			return false, nil, 0, fmt.Errorf("Header %s does not extend any known headers", header.BlockHash().String())
 		}
 	}
 	valid := b.CheckHeader(header, parentHeader)
 	if !valid {
-		return false, 0, nil
+		return false, nil, 0, nil
 	}
 	// If this block is already the tip, return
 	headerHash := header.BlockHash()
 	if tipHash.IsEqual(&headerHash) {
-		return newTip, 0, nil
+		return newTip, nil, 0, nil
 	}
 	// Add the work of this header to the total work stored at the previous header
 	cumulativeWork := new(big.Int).Add(parentHeader.totalWork, blockchain.CalcWork(header.Bits))
@@ -131,6 +133,10 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, uint32, error)
 		// If this header is not extending the previous best header then we have a reorg.
 		if !tipHash.IsEqual(&prevHash) {
 			log.Warning("REORG!!! REORG!!! REORG!!!")
+			lastGoodHeader, err = b.GetLastGoodHeader(StoredHeader{header: header}, bestHeader)
+			if err != nil {
+				return newTip, lastGoodHeader, 0, err
+			}
 		}
 	}
 	newHeight := parentHeader.height + 1
@@ -141,13 +147,12 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, uint32, error)
 		totalWork: cumulativeWork,
 	}, newTip)
 	if err != nil {
-		return newTip, 0, err
+		return newTip, lastGoodHeader, 0, err
 	}
-	return newTip, newHeight, nil
+	return newTip, lastGoodHeader, newHeight, nil
 }
 
 func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeader) bool {
-
 	// Get hash of n-1 header
 	prevHash := prevHeader.header.BlockHash()
 	height := prevHeader.height
@@ -290,6 +295,30 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 		start += 1
 	}
 	return ret
+}
+
+// Returns last header before reorg point
+func (b *Blockchain) GetLastGoodHeader(bestHeader, prevBestHeader StoredHeader) (*StoredHeader, error) {
+	majority, err := b.db.GetPreviousHeader(bestHeader.header)
+	if err != nil {
+		return nil, err
+	}
+	minority := prevBestHeader
+	for {
+		majorityHash := majority.header.BlockHash()
+		minorityHash := minority.header.BlockHash()
+		if majorityHash.IsEqual(&minorityHash) {
+			return &majority, nil
+		}
+		majority, err = b.db.GetPreviousHeader(majority.header)
+		if err != nil {
+			return nil, err
+		}
+		minority, err = b.db.GetPreviousHeader(minority.header)
+		if err != nil {
+			return nil, err
+		}
+	}
 }
 
 func (b *Blockchain) ChainState() ChainState {

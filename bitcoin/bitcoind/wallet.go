@@ -16,9 +16,9 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"io/ioutil"
+	//"io/ioutil"
 	"os/exec"
-	"path"
+	//"path"
 	"strconv"
 	"strings"
 	"time"
@@ -63,10 +63,6 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 	connCfg.User = username
 	connCfg.Pass = password
 
-	// TODO: need to make a similar script for windows
-	script := []byte("#!/bin/bash\ncurl -d $1 http://localhost:8330/")
-	ioutil.WriteFile(path.Join(repoPath, "notify.sh"), script, 0777)
-
 	if trustedPeer != "" {
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
@@ -85,11 +81,12 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 }
 
 func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
-	args := []string{"-walletnotify='" + path.Join(w.repoPath, "notify.sh") + " %s'", "-server"}
+	notify := `curl -d %s http://localhost:8330/`
+	args := []string{"-walletnotify=" + notify, "-server"}
 	if rescan {
 		args = append(args, "-rescan")
 	}
-	args = append(args, []string{"-torcontrol=127.0.0.1:" + strconv.Itoa(w.controlPort)}...)
+	args = append(args, "-torcontrol=127.0.0.1:"+strconv.Itoa(w.controlPort))
 
 	if w.params.Name == chaincfg.TestNet3Params.Name {
 		args = append(args, "-testnet")

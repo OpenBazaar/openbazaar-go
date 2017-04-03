@@ -22,10 +22,12 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	txid := string(b)
 	hash, err := chainhash.NewHashFromStr(txid)
 	if err != nil {
+		log.Error(err)
 		return
 	}
 	tx, err := l.client.GetRawTransaction(hash)
 	if err != nil {
+		log.Error(err)
 		return
 	}
 	watchOnly := false
@@ -55,7 +57,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		Inputs:    inputs,
 		Outputs:   outputs,
 		WatchOnly: watchOnly,
-		Value:     int64(txInfo.Amount / 100000000),
+		Value:     int64(txInfo.Amount * 100000000),
 		Timestamp: time.Unix(txInfo.TimeReceived, 0),
 	}
 	for _, lis := range l.listeners {

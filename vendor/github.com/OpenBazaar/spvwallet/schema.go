@@ -30,12 +30,11 @@ const (
 
 // This callback is passed to any registered transaction listeners when a transaction is detected
 // for the wallet.
-// TODO: we can maybe get rid of this and just use the btcd msgTx, but we do need the linked scriptPubkey
-// TODO: which is not included in that object. We could possibly re-purpose the signature field.
 type TransactionCallback struct {
 	Txid      []byte
 	Outputs   []TransactionOutput
 	Inputs    []TransactionInput
+	Height    int32
 	Timestamp time.Time
 	Value     int64
 	WatchOnly bool
