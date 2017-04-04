@@ -18,15 +18,14 @@ func NewWalletListener(db repo.Datastore, broadcast chan interface{}) *WalletLis
 }
 
 func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
-	log.Notice(cb.WatchOnly, cb.Value)
 	if !cb.WatchOnly && cb.Value > 0 {
 		txid := hex.EncodeToString(cb.Txid)
 		metadata, _ := l.db.TxMetadata().Get(txid)
 		status := "UNCONFIRMED"
-		if cb.Height > 0 && cb.Height < 6 {
+		confirmations := 0
+		if cb.Height > 0 {
 			status = "PENDING"
-		} else if cb.Height >= 6 {
-			status = "CONFIRMED"
+			confirmations = 1
 		}
 		n := notifications.IncomingTransaction{
 			Txid:          hex.EncodeToString(cb.Txid),
@@ -35,7 +34,7 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 			Status:        status,
 			Memo:          metadata.Memo,
 			Timestamp:     cb.Timestamp,
-			Confirmations: 0,
+			Confirmations: confirmations,
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
