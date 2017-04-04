@@ -18,6 +18,7 @@ func NewWalletListener(db repo.Datastore, broadcast chan interface{}) *WalletLis
 }
 
 func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
+	log.Notice(cb.WatchOnly, cb.Value)
 	if !cb.WatchOnly && cb.Value > 0 {
 		txid := hex.EncodeToString(cb.Txid)
 		metadata, _ := l.db.TxMetadata().Get(txid)
