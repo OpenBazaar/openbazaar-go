@@ -34,7 +34,7 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 			Status:        status,
 			Memo:          metadata.Memo,
 			Timestamp:     cb.Timestamp,
-			Confirmations: confirmations,
+			Confirmations: int32(confirmations),
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
