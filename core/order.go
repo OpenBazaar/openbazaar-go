@@ -510,6 +510,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
+			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			script, err := txscript.PayToAddrScript(addr)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			n.Wallet.AddWatchedScript(script)
 			orderId, err := n.CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
