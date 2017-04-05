@@ -174,6 +174,7 @@ func (w *SPVWallet) onGetData(p *peer.Peer, m *wire.MsgGetData) {
 			tx, _, err := w.txstore.Txns().Get(thing.Hash)
 			if err != nil {
 				log.Errorf("Error getting tx %s: %s", thing.Hash.String(), err.Error())
+				continue
 			}
 			p.QueueMessage(tx, nil)
 			sent++
