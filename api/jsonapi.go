@@ -861,7 +861,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Txid:               txid.String(),
 		ConfirmedBalance:   confirmed,
 		UnconfirmedBalance: unconfirmed,
-		Amount:             txn.Value,
+		Amount:             -(txn.Value),
 		Timestamp:          txn.Timestamp,
 	}
 	ser, err := json.MarshalIndent(resp, "", "    ")
