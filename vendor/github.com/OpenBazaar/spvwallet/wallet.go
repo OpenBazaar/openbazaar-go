@@ -221,6 +221,11 @@ func (w *SPVWallet) Transactions() ([]Txn, error) {
 	return w.txstore.Txns().GetAll(false)
 }
 
+func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (Txn, error) {
+	_, txn, err := w.txstore.Txns().Get(txid)
+	return txn, err
+}
+
 func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
 	_, txn, err := w.txstore.Txns().Get(txid)
 	if err != nil {

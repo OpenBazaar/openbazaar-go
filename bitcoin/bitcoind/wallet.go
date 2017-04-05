@@ -211,6 +211,21 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 	return ret, nil
 }
 
+func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (spvwallet.Txn, error) {
+	includeWatchOnly := false
+	t := spvwallet.Txn{}
+	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
+	if err != nil {
+		return t, err
+	}
+	t.Txid = resp.TxID
+	t.Value = int64(resp.Amount * 100000000)
+	t.Height = int32(resp.BlockIndex)
+	t.Timestamp = time.Unix(resp.TimeReceived, 0)
+	t.WatchOnly = false
+	return t, nil
+}
+
 func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
 	includeWatchOnly := true
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)

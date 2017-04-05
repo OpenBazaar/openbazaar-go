@@ -842,7 +842,36 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, txid.String()))
+	type response struct {
+		Txid               string    `json:"txid"`
+		Amount             int64     `json:"amount"`
+		ConfirmedBalance   int64     `json:"confirmedBalance"`
+		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+		Timestamp          time.Time `json:"timestamp"`
+	}
+	confirmed, unconfirmed := i.node.Wallet.Balance()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	txn, err := i.node.Wallet.GetTransaction(*txid)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp := &response{
+		Txid:               txid.String(),
+		ConfirmedBalance:   confirmed,
+		UnconfirmedBalance: unconfirmed,
+		Amount:             txn.Value,
+		Timestamp:          txn.Timestamp,
+	}
+	ser, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ser))
 	return
 }
 

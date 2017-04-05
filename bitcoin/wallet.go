@@ -40,6 +40,9 @@ type BitcoinWallet interface {
 	// Returns a list of transactions for this wallet
 	Transactions() ([]spvwallet.Txn, error)
 
+	// Get info on a specific transaction
+	GetTransaction(txid chainhash.Hash) (spvwallet.Txn, error)
+
 	// Get the height of the blockchain
 	ChainTip() uint32
 
