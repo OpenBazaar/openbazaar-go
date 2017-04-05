@@ -801,6 +801,8 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		feeLevel = spvwallet.NORMAL
 	case "ECONOMIC":
 		feeLevel = spvwallet.ECONOMIC
+	default:
+		feeLevel = spvwallet.NORMAL
 	}
 	addr, err := btc.DecodeAddress(snd.Address, i.node.Wallet.Params())
 	if err != nil {
@@ -850,10 +852,6 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Timestamp          time.Time `json:"timestamp"`
 	}
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	txn, err := i.node.Wallet.GetTransaction(*txid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
