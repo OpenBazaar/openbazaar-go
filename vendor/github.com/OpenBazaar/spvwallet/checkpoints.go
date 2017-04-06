@@ -9,7 +9,7 @@ import (
 
 const (
 	MAINNET_CHECKPOINT_HEIGHT  = 443520
-	TESTNET3_CHECKPOINT_HEIGHT = 1058400
+	TESTNET3_CHECKPOINT_HEIGHT = 1114848
 	REGTEST_CHECKPOINT_HEIGHT  = 0
 )
 
@@ -29,15 +29,15 @@ func init() {
 		Nonce:      251583942,
 	}
 
-	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000008471ccf356a18dd48aa12506ef0b6162cb8f98a8d8bb0465902")
-	testnet3Merk, _ := chainhash.NewHashFromStr("a2bd975d9ac68eb1a7bc00df593c55a64e81ac0c9b8f535bb06b390d3010816f")
+	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000016abe4e7c10ddb658bb089b2ef3b1de3f3329097cf679eedf2b5")
+	testnet3Merk, _ := chainhash.NewHashFromStr("ba732d7a0e4b0b46351b1b476e1628ff03f399ce07f888a257982240b36e2ed2")
 	testnet3Checkpoint = wire.BlockHeader{
 		Version:    536870912,
 		PrevBlock:  *testnet3Prev,
 		MerkleRoot: *testnet3Merk,
-		Timestamp:  time.Unix(1481479754, 0),
-		Bits:       436861323,
-		Nonce:      3058617296,
+		Timestamp:  time.Unix(1491041521, 0),
+		Bits:       438809536,
+		Nonce:      2732625067,
 	}
 	regtestCheckpoint = chaincfg.RegressionNetParams.GenesisBlock.Header
 }

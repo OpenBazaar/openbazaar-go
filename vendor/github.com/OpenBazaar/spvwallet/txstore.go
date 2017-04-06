@@ -309,7 +309,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 			}
 		}
 	}
-	cb.Value = value
 
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 || matchesWatchOnly {
