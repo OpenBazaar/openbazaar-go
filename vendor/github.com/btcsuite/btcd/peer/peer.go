@@ -1764,6 +1764,7 @@ out:
 					p.statsMtx.Unlock()
 				}
 			}
+
 			p.stallControl <- stallControlMsg{sccSendMessage, msg.msg}
 			if err := p.writeMessage(msg.msg); err != nil {
 				p.Disconnect()
