@@ -782,8 +782,36 @@ func validateListing(listing *pb.Listing) (err error) {
 			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
 		}
 		for _, variant := range option.Variants {
-			if len(variant) > WordMaxCharacters {
+			if len(variant.Name) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
+			}
+			if variant.Image != nil {
+				_, err := mh.FromB58String(variant.Image.Tiny)
+				if err != nil {
+					return errors.New("Tiny image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Small)
+				if err != nil {
+					return errors.New("Small image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Medium)
+				if err != nil {
+					return errors.New("Medium image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Large)
+				if err != nil {
+					return errors.New("Large image hashes must be multihashes")
+				}
+				_, err = mh.FromB58String(variant.Image.Original)
+				if err != nil {
+					return errors.New("Original image hashes must be multihashes")
+				}
+				if variant.Image.Filename == "" {
+					return errors.New("Image file names must not be nil")
+				}
+				if len(variant.Image.Filename) > FilenameMaxCharacters {
+					return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+				}
 			}
 		}
 		variantSizeMap[i] = len(option.Variants)

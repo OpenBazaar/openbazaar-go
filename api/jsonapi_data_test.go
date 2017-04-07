@@ -309,12 +309,40 @@ const listingJSON = `{
 			{
 				"name": "Size",
 				"description": "What size do you want your shirt?",
-				"variants": ["Small", "Medium", "Large", "XL"]
+				"variants": [
+					{
+						"name": "Small",
+						"image": {
+							"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+							"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+							"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+							"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+							"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+							"filename": "swanson.jpg"
+						}
+					},
+					{
+						"name": "Medium"
+					},
+					{
+						"name": "Large"
+					},
+					{
+						"name": "XL"
+					}
+				]
 			},
 			{
 				"name": "Color",
 				"description": "What color do you want your shirt?",
-				"variants": ["Red", "Yellow"]
+				"variants": [
+					{
+						"name": "Red"
+					},
+					{
+						"name": "Yellow"
+					}
+				]
 			}
 		],
 		"skus": [
@@ -482,12 +510,40 @@ const listingUpdateJSON = `{
 			{
 				"name": "Size",
 				"description": "What size do you want your shirt?",
-				"variants": ["Small", "Medium", "Large", "XL"]
+				"variants": [
+					{
+						"name": "Small",
+						"image": {
+							"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+							"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+							"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
+							"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
+							"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+							"filename": "swanson.jpg"
+						}
+					},
+					{
+						"name": "Medium"
+					},
+					{
+						"name": "Large"
+					},
+					{
+						"name": "XL"
+					}
+				]
 			},
 			{
 				"name": "Color",
 				"description": "What color do you want your shirt?",
-				"variants": ["Red", "Yellow"]
+				"variants": [
+					{
+						"name": "Red"
+					},
+					{
+						"name": "Yellow"
+					}
+				]
 			}
 		],
 		"skus": [
