@@ -581,8 +581,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector) (p2phost.Host, error) {
-
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
 		// no addresses to begin with. we'll start later.
 		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
 		if err != nil {
@@ -600,7 +599,11 @@ func (x *Start) Execute(args []string) error {
 		if usingTor && !usingClearnet {
 			host = p2pbhost.New(network)
 		} else {
-			host = p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+			hostOpts := []interface{}{bwr}
+			if !opts.DisableNatPortMap {
+				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
+			}
+			host = p2pbhost.New(network, hostOpts...)
 		}
 
 		return host, nil

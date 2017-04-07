@@ -47,7 +47,7 @@ func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, allowedIPs
 			Cookie:        authCookie,
 			Username:      username,
 			Password:      password,
-		}, coreapi.NewUnixfsAPI(n))
+		}, coreapi.NewCoreAPI(n))
 
 		for _, p := range paths {
 			mux.Handle(p+"/", gateway)

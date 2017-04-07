@@ -150,7 +150,6 @@ func (h *HeaderDB) Prune() error {
 	})
 }
 
-
 func (h *HeaderDB) GetPreviousHeader(header wire.BlockHeader) (sh StoredHeader, err error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
