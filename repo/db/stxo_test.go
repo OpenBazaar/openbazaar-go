@@ -42,7 +42,7 @@ func TestStxoPut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := sxdb.db.Prepare("select outpoint, value, height, scriptPubKey, spendHeight, spendTxid from stxos where outpoint=?")
+	stmt, _ := sxdb.db.Prepare("select outpoint, value, height, watchOnly, scriptPubKey, spendHeight, spendTxid from stxos where outpoint=?")
 	defer stmt.Close()
 
 	var outpoint string
@@ -51,8 +51,9 @@ func TestStxoPut(t *testing.T) {
 	var scriptPubkey string
 	var spendHeight int
 	var spendTxid string
+	var watchOnly int
 	o := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
-	err = stmt.QueryRow(o).Scan(&outpoint, &value, &height, &scriptPubkey, &spendHeight, &spendTxid)
+	err = stmt.QueryRow(o).Scan(&outpoint, &value, &height, &watchOnly, &scriptPubkey, &spendHeight, &spendTxid)
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,6 +74,9 @@ func TestStxoPut(t *testing.T) {
 	}
 	if spendTxid != stxo.SpendTxid.String() {
 		t.Error("Stxo db returned wrong spend txid")
+	}
+	if watchOnly != 0{
+		t.Error("Stxo db returned wrong watch only bool")
 	}
 }
 
@@ -105,6 +109,9 @@ func TestStxoGetAll(t *testing.T) {
 	}
 	if stxos[0].SpendTxid.String() != stxo.SpendTxid.String() {
 		t.Error("Stxo db returned wrong spend txid")
+	}
+	if stxos[0].Utxo.WatchOnly != stxo.Utxo.WatchOnly {
+		t.Error("Stxo db returned wrong watch only bool")
 	}
 }
 

@@ -340,14 +340,29 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 }
 
 func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
-	utxos, err := ts.Utxos().GetAll()
-	if err != nil {
-		return err
-	}
 	stxos, err := ts.Stxos().GetAll()
 	if err != nil {
 		return err
 	}
+	// If an stxo is marked dead, move it back into the utxo table
+	for _, s := range stxos {
+		if txid.IsEqual(&s.SpendTxid) {
+			err := ts.Stxos().Delete(s)
+			if err != nil {
+				return err
+			}
+			ts.Txns().MarkAsDead(txid)
+			err = ts.Utxos().Put(s.Utxo)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	utxos, err := ts.Utxos().GetAll()
+	if err != nil {
+		return err
+	}
+	// Dead utxos and just be deleted
 	for _, u := range utxos {
 		if txid.IsEqual(&u.Op.Hash) {
 			err := ts.Utxos().Delete(u)
@@ -355,19 +370,6 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 				return err
 			}
 			ts.Txns().MarkAsDead(txid)
-		}
-	}
-	for _, s := range stxos {
-		if txid.IsEqual(&s.Utxo.Op.Hash) {
-			err := ts.Stxos().Delete(s)
-			if err != nil {
-				return err
-			}
-			ts.Txns().MarkAsDead(txid)
-			err = ts.markAsDead(s.SpendTxid)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
