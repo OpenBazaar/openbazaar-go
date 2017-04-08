@@ -2,7 +2,6 @@ package spvwallet
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -115,14 +114,21 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 // GetDoubleSpends takes a transaction and compares it with
 // all transactions in the db.  It returns a slice of all txids in the db
 // which are double spent by the received tx.
-func CheckDoubleSpends(argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*chainhash.Hash, error) {
+func (ts *TxStore) CheckDoubleSpends(argTx *wire.MsgTx) ([]*chainhash.Hash, error) {
 	var dubs []*chainhash.Hash // slice of all double-spent txs
 	argTxid := argTx.TxHash()
+	txs, err := ts.Txns().GetAll(true)
+	if err != nil {
+		return dubs, err
+	}
 	for _, compTx := range txs {
-		compTxid := compTx.TxHash()
+		r := bytes.NewReader(compTx.Bytes)
+		msgTx := wire.NewMsgTx(1)
+		msgTx.BtcDecode(r, 1)
+		compTxid := msgTx.TxHash()
 		for _, argIn := range argTx.TxIn {
 			// iterate through inputs of compTx
-			for _, compIn := range compTx.TxIn {
+			for _, compIn := range msgTx.TxIn {
 				if outPointsEqual(argIn.PreviousOutPoint, compIn.PreviousOutPoint) && !compTxid.IsEqual(&argTxid) {
 					// found double spend
 					dubs = append(dubs, &compTxid)
@@ -209,9 +215,22 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		return hits, err
 	}
 
-	// TODO check for double spends
-	// If doublespend && height==0 return // first seen rule
-	// If doublespend && height>0  mark double spend as dead
+	// Check to see if this is a double spend
+	doubleSpends, err := ts.CheckDoubleSpends(tx)
+	if  err != nil {
+		return hits, err
+	}
+	if len(doubleSpends) > 0 {
+		// First seen rule
+		if height == 0 {
+			return 0, nil
+		} else {
+			// Mark any unconfirmed doubles as dead
+			for _, double := range doubleSpends {
+				ts.markAsDead(*double)
+			}
+		}
+	}
 
 	// Generate PKscripts for all addresses
 	ts.addrMutex.Lock()

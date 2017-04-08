@@ -146,4 +146,6 @@ type Txn struct {
 
 	// This transaction only involves a watch only address
 	WatchOnly bool
+
+	Bytes []byte
 }

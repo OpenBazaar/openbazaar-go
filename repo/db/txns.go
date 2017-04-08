@@ -109,7 +109,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]spvwallet.Txn, error) {
 			watchOnly = true
 		}
 
-		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly}
+		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly, tx}
 		ret = append(ret, txn)
 	}
 	return ret, nil
