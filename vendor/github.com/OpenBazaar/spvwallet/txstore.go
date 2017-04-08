@@ -343,6 +343,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 		if shouldCallback {
 			// Callback on listeners
+			cb.Value = value
 			for _, listener := range ts.listeners {
 				listener(cb)
 			}
