@@ -50,8 +50,8 @@ type Txns interface {
 	// Fetch all transactions from the db
 	GetAll(includeWatchOnly bool) ([]Txn, error)
 
-	// Mark a transaction as dead
-	MarkAsDead(txid chainhash.Hash) error
+	// Update the height of a transaction
+	UpdateHeight(txid chainhash.Hash, height int) error
 
 	// Delete a transactions from the db
 	Delete(txid *chainhash.Hash) error

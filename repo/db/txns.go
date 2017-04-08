@@ -125,19 +125,19 @@ func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 	return nil
 }
 
-func (t *TxnsDB) MarkAsDead(txid chainhash.Hash) error {
+func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tx, err := t.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update txns set height=-1 where txid=?")
+	stmt, err := tx.Prepare("update txns set height=? where txid=?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(txid.String())
+	_, err = stmt.Exec(height, txid.String())
 	if err != nil {
 		tx.Rollback()
 		return err

@@ -131,7 +131,7 @@ func TestDeleteTxns(t *testing.T) {
 	}
 }
 
-func TestTxnsDB_MarkAsDead(t *testing.T) {
+func TestTxnsDB_UpdateHeight(t *testing.T) {
 	tx := wire.NewMsgTx(wire.TxVersion)
 	txHex := "0100000001cbfe4948ebc9113244b802a96e4940fa063c0455a16ca1f39a1e1db03837d9c701000000da004830450221008994e3dba54cb0ea23ca008d0e361b4339ee7b44b5e9101f6837e6a1a89ce044022051be859c68a547feaf60ffacc43f528cf2963c088bde33424d859274505e3f450147304402206cd4ef92cc7f2862c67810479013330fcafe4d468f1370563d4dff6be5bcbedc02207688a09163e615bc82299a29e987e1d718cb99a91d46a1ab13d18c0f6e616a1601475221024760c9ba5fa6241da6ee8601f0266f0e0592f53735703f0feaae23eda6673ae821038cfa8e97caaafbe21455803043618440c28c501ec32d6ece6865003165a0d4d152aeffffffff029ae2c700000000001976a914f72f20a739ec3c3df1a1fd7eff122d13bd5ca39188acb64784240000000017a9140be09225644b4cfdbb472028d8ccaf6df736025c8700000000"
 	raw, _ := hex.DecodeString(txHex)
@@ -142,12 +142,12 @@ func TestTxnsDB_MarkAsDead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = txdb.MarkAsDead(tx.TxHash())
+	err = txdb.UpdateHeight(tx.TxHash(), -1)
 	if err != nil {
 		t.Error(err)
 	}
 	_, txn, err := txdb.Get(tx.TxHash())
 	if txn.Height != -1 {
-		t.Error("Txn db failed to mark as dead")
+		t.Error("Txn db failed to update height")
 	}
 }

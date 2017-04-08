@@ -43,7 +43,7 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
-			CanBumpFee:    true,
+			CanBumpFee:    cb.Value > 0,
 		}
 		l.broadcast <- n
 	}
