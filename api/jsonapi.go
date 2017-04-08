@@ -2391,6 +2391,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
 		}
+		if status == "DEAD" {
+			tx.CanBumpFee = false
+		}
 		if offsetID == "" || passedOffset {
 			txs = append(txs, tx)
 		}

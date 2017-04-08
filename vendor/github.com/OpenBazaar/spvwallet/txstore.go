@@ -324,6 +324,21 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 	}
 
+	// Update height of any stxos
+	if height > 0 {
+		stxos, err := ts.Stxos().GetAll()
+		if err != nil {
+			return 0, err
+		}
+		for _, stxo := range stxos {
+			if stxo.SpendTxid.IsEqual(&cachedSha) {
+				stxo.SpendHeight = height
+				ts.Stxos().Put(stxo)
+				break
+			}
+		}
+	}
+
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 || matchesWatchOnly {
 		ts.cbMutex.Lock()
