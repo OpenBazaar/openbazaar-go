@@ -115,24 +115,15 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 // GetDoubleSpends takes a transaction and compares it with
 // all transactions in the db.  It returns a slice of all txids in the db
 // which are double spent by the received tx.
-func CheckDoubleSpends(
-	argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*chainhash.Hash, error) {
-
+func CheckDoubleSpends(argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*chainhash.Hash, error) {
 	var dubs []*chainhash.Hash // slice of all double-spent txs
 	argTxid := argTx.TxHash()
-
 	for _, compTx := range txs {
 		compTxid := compTx.TxHash()
-		// check if entire tx is dup
-		if argTxid.IsEqual(&compTxid) {
-			return nil, fmt.Errorf("tx %s is dup", argTxid.String())
-		}
-		// not dup, iterate through inputs of argTx
 		for _, argIn := range argTx.TxIn {
 			// iterate through inputs of compTx
 			for _, compIn := range compTx.TxIn {
-				if outPointsEqual(
-					argIn.PreviousOutPoint, compIn.PreviousOutPoint) {
+				if outPointsEqual(argIn.PreviousOutPoint, compIn.PreviousOutPoint) && !compTxid.IsEqual(&argTxid) {
 					// found double spend
 					dubs = append(dubs, &compTxid)
 					break // back to argIn loop
@@ -217,6 +208,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	if err != nil {
 		return hits, err
 	}
+
+	// TODO check for double spends
+	// If doublespend && height==0 return // first seen rule
+	// If doublespend && height>0  mark double spend as dead
 
 	// Generate PKscripts for all addresses
 	ts.addrMutex.Lock()
@@ -344,16 +339,30 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 	if err != nil {
 		return err
 	}
-	// If an stxo is marked dead, move it back into the utxo table
+	markStxoAsDead := func(s Stxo) error {
+		err := ts.Stxos().Delete(s)
+		if err != nil {
+			return err
+		}
+		err = ts.Txns().MarkAsDead(txid)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	for _, s := range stxos {
+		// If an stxo is marked dead, move it back into the utxo table
 		if txid.IsEqual(&s.SpendTxid) {
-			err := ts.Stxos().Delete(s)
-			if err != nil {
+			if err := markStxoAsDead(s); err != nil {
 				return err
 			}
-			ts.Txns().MarkAsDead(txid)
-			err = ts.Utxos().Put(s.Utxo)
-			if err != nil {
+		}
+		// If an dependency of the spend is dead then mark the spend as dead
+		if txid.IsEqual(&s.Utxo.Op.Hash) {
+			if err := markStxoAsDead(s); err != nil {
+				return err
+			}
+			if err := ts.markAsDead(s.SpendTxid); err != nil {
 				return err
 			}
 		}
@@ -362,7 +371,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 	if err != nil {
 		return err
 	}
-	// Dead utxos and just be deleted
+	// Dead utxos should just be deleted
 	for _, u := range utxos {
 		if txid.IsEqual(&u.Op.Hash) {
 			err := ts.Utxos().Delete(u)
@@ -380,9 +389,9 @@ func (ts *TxStore) processReorg(lastGoodHeight uint32) error {
 	if err != nil {
 		return err
 	}
-	for _, tx := range txns {
-		if tx.Height > int32(lastGoodHeight) {
-			txid, err := chainhash.NewHashFromStr(tx.Txid)
+	for i := len(txns) - 1; i >= 0; i-- {
+		if txns[i].Height > int32(lastGoodHeight) {
+			txid, err := chainhash.NewHashFromStr(txns[i].Txid)
 			if err != nil {
 				log.Error(err)
 				continue

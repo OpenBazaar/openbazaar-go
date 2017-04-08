@@ -75,7 +75,7 @@ func TestStxoPut(t *testing.T) {
 	if spendTxid != stxo.SpendTxid.String() {
 		t.Error("Stxo db returned wrong spend txid")
 	}
-	if watchOnly != 0{
+	if watchOnly != 0 {
 		t.Error("Stxo db returned wrong watch only bool")
 	}
 }
