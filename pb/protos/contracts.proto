@@ -344,14 +344,14 @@ message Refund {
 }
 
 message ID {
-    string guid         = 1;
+    string peerID       = 1;
     string blockchainID = 2;
     Pubkeys pubkeys     = 3;
-    bytes bitcoinSig    = 4; // Bitcoin signature covering GUID
+    bytes bitcoinSig    = 4; // Bitcoin signature covering peerID
 
     message Pubkeys {
-        bytes guid    = 1; // IPFS public key
-        bytes bitcoin = 2; // Bitcoin public key
+        bytes identity = 1; // IPFS public key
+        bytes bitcoin  = 2; // Bitcoin public key
     }
 }
 

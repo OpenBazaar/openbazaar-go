@@ -216,7 +216,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 		if contract != nil {
 			if len(contract.VendorListings) > 0 {
 				if contract.VendorListings[0].VendorID != nil {
-					vendorId = contract.VendorListings[0].VendorID.Guid
+					vendorId = contract.VendorListings[0].VendorID.PeerID
 					vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
 				}
 				if contract.VendorListings[0].Item != nil {
@@ -228,7 +228,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 			}
 			if contract.BuyerOrder != nil {
 				if contract.BuyerOrder.BuyerID != nil {
-					buyerId = contract.BuyerOrder.BuyerID.Guid
+					buyerId = contract.BuyerOrder.BuyerID.PeerID
 					buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
 				}
 				if contract.BuyerOrder.Payment != nil {

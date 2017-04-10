@@ -84,7 +84,7 @@ type disputeCloseWrapper struct {
 
 type OrderNotification struct {
 	Title             string `json:"title"`
-	BuyerGuid         string `json:"buyerGuid"`
+	BuyerId           string `json:"buyerId"`
 	BuyerBlockchainId string `json:"buyerBlockchainId"`
 	Thumbnail         string `json:"thumbnail"`
 	Timestamp         int    `json:"timestamp"`
@@ -307,7 +307,7 @@ func Describe(i interface{}) (string, string) {
 		if n.BuyerBlockchainId != "" {
 			buyer = n.BuyerBlockchainId
 		} else {
-			buyer = n.BuyerGuid
+			buyer = n.BuyerId
 		}
 		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail: %s\nTimestamp: %d"
 		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail, n.Timestamp)

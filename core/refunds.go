@@ -115,7 +115,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	if err != nil {
 		return err
 	}
-	n.SendRefund(contract.BuyerOrder.BuyerID.Guid, contract)
+	n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
 	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_REFUNDED, true)
 	return nil
 }
@@ -142,10 +142,10 @@ func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.Ricardi
 func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract) error {
 	if err := verifyMessageSignature(
 		contract.Refund,
-		contract.VendorListings[0].VendorID.Pubkeys.Guid,
+		contract.VendorListings[0].VendorID.Pubkeys.Identity,
 		contract.Signatures,
 		pb.Signature_REFUND,
-		contract.VendorListings[0].VendorID.Guid,
+		contract.VendorListings[0].VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
