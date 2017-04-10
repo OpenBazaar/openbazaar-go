@@ -56,7 +56,7 @@ type listingData struct {
 	Hash          string    `json:"hash"`
 	Slug          string    `json:"slug"`
 	Title         string    `json:"title"`
-	Category      []string  `json:"category"`
+	Categories    []string  `json:"categories"`
 	ContractType  string    `json:"contractType"`
 	Description   string    `json:"description"`
 	Thumbnail     thumbnail `json:"thumbnail"`
@@ -279,7 +279,7 @@ func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (lis
 		Hash:         listingHash,
 		Slug:         contract.VendorListings[0].Slug,
 		Title:        contract.VendorListings[0].Item.Title,
-		Category:     contract.VendorListings[0].Item.Categories,
+		Categories:   contract.VendorListings[0].Item.Categories,
 		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
 		Description:  contract.VendorListings[0].Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
