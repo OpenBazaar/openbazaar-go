@@ -2618,3 +2618,20 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))
 }
+
+func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
+	fl := r.URL.Query().Get("feeLevel")
+	var feeLevel spvwallet.FeeLevel
+	switch strings.ToUpper(fl) {
+	case "PRIORITY":
+		feeLevel = spvwallet.PRIOIRTY
+	case "NORMAL":
+		feeLevel = spvwallet.NORMAL
+	case "ECONOMIC":
+		feeLevel = spvwallet.ECONOMIC
+	default:
+		feeLevel = spvwallet.NORMAL
+	}
+	fmt.Fprintf(w, "%d", int(i.node.Wallet.GetFeePerByte(feeLevel)))
+	return
+}
