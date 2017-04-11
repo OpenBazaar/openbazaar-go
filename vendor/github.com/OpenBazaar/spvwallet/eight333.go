@@ -95,7 +95,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 			return
 		}
 		now := time.Now()
-		for i:=len(txns)-1; i>=0; i-- {
+		for i := len(txns) - 1; i >= 0; i-- {
 			if now.After(txns[i].Timestamp.Add(MAX_UNCONFIRMED_TIME)) && txns[i].Height == int32(0) {
 				log.Noticef("Marking tx as dead %s", txns[i].Txid)
 				h, err := chainhash.NewHashFromStr(txns[i].Txid)
