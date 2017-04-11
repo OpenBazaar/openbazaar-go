@@ -3,10 +3,6 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"golang.org/x/net/context"
 	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	multihash "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	"io/ioutil"
@@ -14,6 +10,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"golang.org/x/net/context"
 )
 
 var ModeratorPointerID multihash.Multihash
@@ -79,7 +80,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, ModeratorPointerID, 64, addr)
+		pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, ModeratorPointerID, 64, addr, []byte(n.IpfsNode.Identity.Pretty()))
 		if err != nil {
 			return err
 		}
