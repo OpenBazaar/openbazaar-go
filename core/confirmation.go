@@ -136,6 +136,9 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
 		_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return err
@@ -216,7 +219,9 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-
+		if err != nil {
+			return err
+		}
 		signatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return err
