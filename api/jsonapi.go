@@ -2336,6 +2336,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Memo          string    `json:"memo"`
 		Timestamp     time.Time `json:"timestamp"`
 		Confirmations int32     `json:"confirmations"`
+		Height        int32     `json:"height"`
 		OrderId       string    `json:"orderId"`
 		Thumbnail     string    `json:"thumbnail"`
 		CanBumpFee    bool      `json:"canBumpFee"`
@@ -2380,6 +2381,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			Value:         t.Value,
 			Timestamp:     t.Timestamp,
 			Confirmations: confirmations,
+			Height:        t.Height,
 			Status:        status,
 			CanBumpFee:    true,
 		}
