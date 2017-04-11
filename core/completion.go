@@ -67,13 +67,33 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		rating := new(pb.OrderCompletion_Rating)
 		rd := new(pb.OrderCompletion_Rating_RatingData)
 
-		// TODO: when this is a closing of a disputed order we need to use the rating signature
-		// from the order confirmation and add the moderators signature
 		var rs *pb.RatingSignature
-		for _, fulfillment := range contract.VendorOrderFulfillment {
-			if fulfillment.RatingSignature.Metadata.ListingSlug == r.Slug {
-				rs = fulfillment.RatingSignature
-				break
+		if contract.DisputeResolution != nil {
+			for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
+				if sig.Metadata.ListingSlug == r.Slug {
+					rs = sig
+					break
+				}
+			}
+			for i, l := range contract.VendorListings {
+				if l.Slug == r.Slug && i <= len(contract.DisputeResolution.ModeratorRatingSigs)-1 {
+					rd.ModeratorSig = contract.DisputeResolution.ModeratorRatingSigs[i]
+					break
+				}
+			}
+			moderatorID := &pb.ID{
+				PeerID: contract.BuyerOrder.Payment.Moderator,
+				Pubkeys: &pb.ID_Pubkeys{
+					Identity: rs.Metadata.ModeratorKey,
+				},
+			}
+			rd.ModeratorID = moderatorID
+		} else {
+			for _, fulfillment := range contract.VendorOrderFulfillment {
+				if fulfillment.RatingSignature.Metadata.ListingSlug == r.Slug {
+					rs = fulfillment.RatingSignature
+					break
+				}
 			}
 		}
 

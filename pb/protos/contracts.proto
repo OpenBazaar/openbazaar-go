@@ -315,6 +315,7 @@ message DisputeResolution {
     string proposedBy                   = 3;
     string resolution                   = 4;
     Payout payout                       = 5;
+    repeated bytes moderatorRatingSigs  = 6; // Used in ratings
 
     message Payout {
             repeated BitcoinSignature sigs = 1;
