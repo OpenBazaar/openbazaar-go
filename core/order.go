@@ -677,6 +677,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
 					itemTotal += uint64((float32(itemTotal) * (tax.Percentage / 100)))
+					break
 				}
 			}
 		}
@@ -694,131 +695,130 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	var combinedOptions []combinedShipping
 
 	var shippingTotal uint64
-	for listingHash, listing := range physicalGoods {
-		for _, item := range contract.BuyerOrder.Items {
-			if item.ListingHash == listingHash {
-				var itemShipping uint64
-				// Check selected option exists
-				var option *pb.Listing_ShippingOption
-				for _, shippingOption := range listing.ShippingOptions {
-					if shippingOption.Name == item.ShippingOption.Name {
-						option = shippingOption
-						break
-					}
-				}
-				if option == nil {
-					return 0, errors.New("Shipping option not found in listing")
-				}
+	for _, item := range contract.BuyerOrder.Items {
+		listing, ok := physicalGoods[item.ListingHash]
+		if !ok {
+			return 0, fmt.Errorf("Listing %s not found in contract", item.ListingHash)
+		}
+		var itemShipping uint64
+		// Check selected option exists
+		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
+		for _, so := range listing.ShippingOptions {
+			shippingOptions[strings.ToLower(so.Name)] = so
+		}
+		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
+		if !ok {
+			return 0, errors.New("Shipping option not found in listing")
+		}
 
-				// Check that this option ships to us
-				shipsToMe := false
-				for _, country := range option.Regions {
-					if country == contract.BuyerOrder.Shipping.Country || country == pb.CountryCode_ALL {
-						shipsToMe = true
-						break
-					}
-				}
-				if !shipsToMe {
-					return 0, errors.New("Listing does ship to selected country")
-				}
+		// Check that this option ships to us
+		regions := make(map[pb.CountryCode]bool)
+		for _, country := range option.Regions {
+			regions[country] = true
+		}
+		_, shipsToMe := regions[contract.BuyerOrder.Shipping.Country]
+		_, shipsToAll := regions[pb.CountryCode_ALL]
+		if !shipsToMe && !shipsToAll {
+			return 0, errors.New("Listing does ship to selected country")
+		}
 
-				// Check service exists
-				var service *pb.Listing_ShippingOption_Service
-				for _, shippingService := range option.Services {
-					if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
-						service = shippingService
-					}
-				}
-				if service == nil {
-					return 0, errors.New("Shipping service not found in listing")
-				}
-				shippingSatoshi, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
-				if err != nil {
-					return 0, err
-				}
-				shippingPrice := uint64(item.Quantity) * shippingSatoshi
-				itemShipping += shippingPrice
-				shippingTaxPercentage := float32(0)
+		// Check service exists
+		services := make(map[string]*pb.Listing_ShippingOption_Service)
+		for _, shippingService := range option.Services {
+			services[strings.ToLower(shippingService.Name)] = shippingService
+		}
+		service, ok := services[strings.ToLower(item.ShippingOption.Service)]
+		if !ok {
+			return 0, errors.New("Shipping service not found in listing")
+		}
+		shippingSatoshi, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
+		if err != nil {
+			return 0, err
+		}
+		shippingPrice := uint64(item.Quantity) * shippingSatoshi
+		itemShipping += shippingPrice
+		shippingTaxPercentage := float32(0)
 
-				// Calculate tax percentage
-				for _, tax := range listing.Taxes {
-					for _, taxRegion := range tax.TaxRegions {
-						if contract.BuyerOrder.Shipping.Country == taxRegion && tax.TaxShipping {
-							shippingTaxPercentage = tax.Percentage / 100
-						}
-					}
-				}
-
-				// Apply shipping rules
-				if option.ShippingRules != nil {
-					for _, rule := range option.ShippingRules.Rules {
-						switch option.ShippingRules.RuleType {
-						case pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT:
-							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
-								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-								if err != nil {
-									return 0, err
-								}
-								itemShipping -= rulePrice
-							}
-						case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE:
-							if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
-								itemShipping -= shippingPrice
-								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-								if err != nil {
-									return 0, err
-								}
-								itemShipping += rulePrice
-							}
-						case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE:
-							weight := listing.Item.Grams * float32(item.Quantity)
-							if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
-								itemShipping -= shippingPrice
-								rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-								if err != nil {
-									return 0, err
-								}
-								itemShipping += rulePrice
-							}
-						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
-							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
-							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
-							if err != nil {
-								return 0, err
-							}
-							cs := combinedShipping{
-								quantity: int(item.Quantity),
-								price:    shippingSatoshi,
-								add:      true,
-								modifier: rulePrice,
-							}
-							combinedOptions = append(combinedOptions, cs)
-
-						case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
-							itemShipping -= shippingPrice
-							rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-							rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
-							shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
-							if err != nil {
-								return 0, err
-							}
-							cs := combinedShipping{
-								quantity: int(item.Quantity),
-								price:    shippingSatoshi,
-								add:      false,
-								modifier: rulePrice,
-							}
-							combinedOptions = append(combinedOptions, cs)
-						}
-					}
-				}
-				// Apply tax
-				itemShipping += uint64(float32(itemShipping) * shippingTaxPercentage)
-				shippingTotal += itemShipping
+		// Calculate tax percentage
+		for _, tax := range listing.Taxes {
+			regions := make(map[pb.CountryCode]bool)
+			for _, taxRegion := range tax.TaxRegions {
+				regions[taxRegion] = true
+			}
+			_, ok := regions[contract.BuyerOrder.Shipping.Country]
+			if ok && tax.TaxShipping {
+				shippingTaxPercentage = tax.Percentage / 100
 			}
 		}
+
+		// Apply shipping rules
+		if option.ShippingRules != nil {
+			for _, rule := range option.ShippingRules.Rules {
+				switch option.ShippingRules.RuleType {
+				case pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT:
+					if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
+						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping -= rulePrice
+					}
+				case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE:
+					if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
+						itemShipping -= shippingPrice
+						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping += rulePrice
+					}
+				case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE:
+					weight := listing.Item.Grams * float32(item.Quantity)
+					if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
+						itemShipping -= shippingPrice
+						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemShipping += rulePrice
+					}
+				case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
+					itemShipping -= shippingPrice
+					rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
+					rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
+					shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
+					if err != nil {
+						return 0, err
+					}
+					cs := combinedShipping{
+						quantity: int(item.Quantity),
+						price:    shippingSatoshi,
+						add:      true,
+						modifier: rulePrice,
+					}
+					combinedOptions = append(combinedOptions, cs)
+
+				case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
+					itemShipping -= shippingPrice
+					rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
+					rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
+					shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
+					if err != nil {
+						return 0, err
+					}
+					cs := combinedShipping{
+						quantity: int(item.Quantity),
+						price:    shippingSatoshi,
+						add:      false,
+						modifier: rulePrice,
+					}
+					combinedOptions = append(combinedOptions, cs)
+				}
+			}
+		}
+		// Apply tax
+		itemShipping += uint64(float32(itemShipping) * shippingTaxPercentage)
+		shippingTotal += itemShipping
 	}
 
 	// Process combined shipping rules
