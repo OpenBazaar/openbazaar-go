@@ -276,28 +276,28 @@ message OrderCompletion {
     google.protobuf.Timestamp timestamp  = 2;
     repeated BitcoinSignature payoutSigs = 3;
     repeated Rating ratings              = 4;
+}
 
-    message Rating {
-        RatingData ratingData = 1;
-        bytes signature       = 2;
+message Rating {
+    RatingData ratingData = 1;
+    bytes signature       = 2;
 
-        message RatingData {
-            bytes ratingKey                     = 1;
-            ID vendorID                         = 2;
-            ID buyerID                          = 3; // optional
-            ID moderatorID                      = 4; // only if a dispute was won
-            RatingSignature vendorSig           = 5;
-            bytes moderatorSig                  = 6; // only if a dispute was won
+    message RatingData {
+        bytes ratingKey                     = 1;
+        ID vendorID                         = 2;
+        ID buyerID                          = 3; // optional
+        ID moderatorID                      = 4; // only if a dispute was won
+        RatingSignature vendorSig           = 5;
+        bytes moderatorSig                  = 6; // only if a dispute was won
 
-            google.protobuf.Timestamp timestamp = 7;
+        google.protobuf.Timestamp timestamp = 7;
 
-            uint32 overall                      = 8;
-            uint32 quality                      = 9;
-            uint32 description                  = 10;
-            uint32 deliverySpeed                = 11;
-            uint32 customerService              = 12;
-            string review                       = 13;
-        }
+        uint32 overall                      = 8;
+        uint32 quality                      = 9;
+        uint32 description                  = 10;
+        uint32 deliverySpeed                = 11;
+        uint32 customerService              = 12;
+        string review                       = 13;
     }
 }
 

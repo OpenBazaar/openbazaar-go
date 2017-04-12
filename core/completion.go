@@ -42,7 +42,7 @@ type RatingData struct {
 	Description     int    `json:"description"`
 	DeliverySpeed   int    `json:"deliverySpeed"`
 	CustomerService int    `json:"customerService"`
-	Review          string `json:"rewview"`
+	Review          string `json:"review"`
 	Anonymous       bool   `json:"anonymous"`
 }
 
@@ -55,7 +55,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 	oc := new(pb.OrderCompletion)
 	oc.OrderId = orderId
-	oc.Ratings = []*pb.OrderCompletion_Rating{}
+	oc.Ratings = []*pb.Rating{}
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
@@ -64,8 +64,8 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	oc.Timestamp = ts
 
 	for _, r := range orderRatings.Ratings {
-		rating := new(pb.OrderCompletion_Rating)
-		rd := new(pb.OrderCompletion_Rating_RatingData)
+		rating := new(pb.Rating)
+		rd := new(pb.Rating_RatingData)
 
 		var rs *pb.RatingSignature
 		if contract.DisputeResolution != nil {
@@ -140,8 +140,8 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		oc.Ratings = append(oc.Ratings, rating)
 	}
 
-	// Payout order if moderated
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	// Payout order if moderated and not disputed
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -237,7 +237,6 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	if err != nil {
 		return err
 	}
-
 	contract.BuyerOrderCompletion = oc
 	for _, sig := range rc.Signatures {
 		if sig.Section == pb.Signature_ORDER_COMPLETION {
@@ -364,17 +363,16 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		}
 
 		profile, err := n.GetProfile()
-		if err != nil {
-			return err
-		}
-		totalRatingVal := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
-		totalRatingVal += float32(rating.RatingData.Overall)
-		newAvg := totalRatingVal / float32(profile.Stats.RatingCount+1)
-		profile.Stats.AverageRating = newAvg
-		profile.Stats.RatingCount = profile.Stats.RatingCount + 1
-		err = n.UpdateProfile(&profile)
-		if err != nil {
-			return err
+		if err == nil {
+			totalRatingVal := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
+			totalRatingVal += float32(rating.RatingData.Overall)
+			newAvg := totalRatingVal / float32(profile.Stats.RatingCount+1)
+			profile.Stats.AverageRating = newAvg
+			profile.Stats.RatingCount = profile.Stats.RatingCount + 1
+			err = n.UpdateProfile(&profile)
+			if err != nil {
+				return err
+			}
 		}
 		if err := n.updateRatingIndex(rating, ratingPath); err != nil {
 			return err
@@ -387,7 +385,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 	return nil
 }
 
-func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ratingPath string) error {
+func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string) error {
 	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
 
 	type ratingShort struct {

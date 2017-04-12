@@ -162,12 +162,17 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         # bob send order completion
         oc = {
             "orderId": orderId,
-            "overall": 4,
-            "quality": 5,
-            "description": 5,
-            "customerService": 4,
-            "deliverySpeed": 3,
-            "Review": "I love it!"
+            "ratings": [
+                {
+                    "slug": slug,
+                    "overall": 4,
+                    "quality": 5,
+                    "description": 5,
+                    "customerService": 4,
+                    "deliverySpeed": 3,
+                    "Review": "I love it!"
+                }
+            ]
         }
         api_url = bob["gateway_url"] + "ob/ordercompletion"
         r = requests.post(api_url, data=json.dumps(oc, indent=4))
@@ -178,7 +183,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Completion POST failed. Reason: %s", resp["reason"])
         time.sleep(4)
 
-        # check alice received fulfillment
+        # check alice received completion
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
@@ -187,7 +192,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         if resp["state"] != "COMPLETE":
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect order completion")
 
-        # check bob set fulfillment correctly
+        # check bob set completion correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:

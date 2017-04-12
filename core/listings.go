@@ -356,7 +356,7 @@ func (n *OpenBazaarNode) updateListingOnDisk(index []listingData, ld listingData
 	return nil
 }
 
-func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.OrderCompletion_Rating) error {
+func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	index, err := n.getListingIndex()
 	if err != nil {
 		return err

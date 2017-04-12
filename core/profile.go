@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-var ErrorProfileNotFound error = errors.New("Profie not found")
+var ErrorProfileNotFound error = errors.New("Profile not found")
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
