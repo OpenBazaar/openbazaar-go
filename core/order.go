@@ -59,176 +59,10 @@ type PurchaseData struct {
 }
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
-	contract := new(pb.RicardianContract)
-	order := new(pb.Order)
-	if data.RefundAddress != nil {
-		order.RefundAddress = *(data.RefundAddress)
-	} else {
-		order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.INTERNAL).EncodeAddress()
-	}
-	shipping := &pb.Order_Shipping{
-		ShipTo:     data.ShipTo,
-		Address:    data.Address,
-		City:       data.City,
-		State:      data.State,
-		PostalCode: data.PostalCode,
-		Country:    pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
-	}
-	order.Shipping = shipping
-
-	id := new(pb.ID)
-	profile, err := n.GetProfile()
-	if err == nil {
-		id.BlockchainID = profile.Handle
-	}
-
-	id.PeerID = n.IpfsNode.Identity.Pretty()
-	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	keys := new(pb.ID_Pubkeys)
-	keys.Identity = pubkey
-	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	keys.Bitcoin = ecPubKey.SerializeCompressed()
-	id.Pubkeys = keys
-	// Sign the GUID with the Bitcoin key
-	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
-	id.BitcoinSig = sig.Serialize()
-	order.BuyerID = id
-
-	ts, err := ptypes.TimestampProto(time.Now())
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	order.Timestamp = ts
-	order.AlternateContactInfo = data.AlternateContactInfo
-
-	var ratingKeys [][]byte
-	for range data.Items {
-		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
-		// Also the fix for this will also need to be included in the rating signing code.
-		ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		ecRatingKey, err := ratingKey.ECPubKey()
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
-	}
-	order.RatingKeys = ratingKeys
-
-	addedListings := make(map[string]*pb.Listing)
-	for _, item := range data.Items {
-		i := new(pb.Order_Item)
-
-		/* It is possible that multiple items could refer to the same listing if the buyer is ordering
-		   multiple items with different variants. If it is multiple items of the same variant they can just
-		   use the quantity field. But different variants require two separate item entries. However,
-		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
-		   So let's check to see if that's the case here and handle it. */
-		_, exists := addedListings[item.ListingHash]
-
-		listing := new(pb.Listing)
-		if !exists {
-			// Let's fetch the listing, should be cached
-			b, err := ipfs.Cat(n.Context, item.ListingHash)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			rc := new(pb.RicardianContract)
-			err = jsonpb.UnmarshalString(string(b), rc)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			if err := validateVersionNumber(rc); err != nil {
-				return "", "", 0, false, err
-			}
-			if err := validateVendorID(rc); err != nil {
-				return "", "", 0, false, err
-			}
-			if err := validateListing(rc.VendorListings[0]); err != nil {
-				return "", "", 0, false, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
-			}
-			if err := verifySignaturesOnListing(rc); err != nil {
-				return "", "", 0, false, err
-			}
-			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
-			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
-			addedListings[item.ListingHash] = rc.VendorListings[0]
-			listing = rc.VendorListings[0]
-		} else {
-			listing = addedListings[item.ListingHash]
-		}
-
-		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
-			return "", "", 0, false, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
-		}
-
-		// Remove any duplicate coupons
-		couponMap := make(map[string]bool)
-		var coupons []string
-		for _, c := range item.Coupons {
-			if !couponMap[c] {
-				couponMap[c] = true
-				coupons = append(coupons, c)
-			}
-		}
-
-		// Validate the selected options
-		listingOptions := make(map[string]*pb.Listing_Item_Option)
-		for _, opt := range listing.Item.Options {
-			listingOptions[strings.ToLower(opt.Name)] = opt
-		}
-		for _, uopt := range item.Options {
-			_, ok := listingOptions[strings.ToLower(uopt.Name)]
-			if !ok {
-				return "", "", 0, false, errors.New("Selected variant not in listing")
-			}
-			delete(listingOptions, strings.ToLower(uopt.Name))
-		}
-		if len(listingOptions) > 0 {
-			return "", "", 0, false, errors.New("Not all options were selected")
-		}
-
-		ser, err := proto.Marshal(listing)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		listingMH, err := EncodeMultihash(ser)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		i.ListingHash = listingMH.B58String()
-		i.Quantity = uint32(item.Quantity)
-
-		for _, option := range item.Options {
-			o := &pb.Order_Item_Option{
-				Name:  option.Name,
-				Value: option.Value,
-			}
-			i.Options = append(i.Options, o)
-		}
-		so := &pb.Order_Item_ShippingOption{
-			Name:    item.Shipping.Name,
-			Service: item.Shipping.Service,
-		}
-		i.ShippingOption = so
-		i.Memo = item.Memo
-		i.CouponCodes = coupons
-		order.Items = append(order.Items, i)
-	}
-
-	contract.BuyerOrder = order
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
@@ -527,6 +361,188 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
+}
+
+func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.RicardianContract, error) {
+	contract := new(pb.RicardianContract)
+	order := new(pb.Order)
+	if data.RefundAddress != nil {
+		order.RefundAddress = *(data.RefundAddress)
+	} else {
+		order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.INTERNAL).EncodeAddress()
+	}
+	shipping := &pb.Order_Shipping{
+		ShipTo:     data.ShipTo,
+		Address:    data.Address,
+		City:       data.City,
+		State:      data.State,
+		PostalCode: data.PostalCode,
+		Country:    pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
+	}
+	order.Shipping = shipping
+
+	id := new(pb.ID)
+	profile, err := n.GetProfile()
+	if err == nil {
+		id.BlockchainID = profile.Handle
+	}
+
+	id.PeerID = n.IpfsNode.Identity.Pretty()
+	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, err
+	}
+	keys := new(pb.ID_Pubkeys)
+	keys.Identity = pubkey
+	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+	keys.Bitcoin = ecPubKey.SerializeCompressed()
+	id.Pubkeys = keys
+	// Sign the GUID with the Bitcoin key
+	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	if err != nil {
+		return nil, err
+	}
+	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
+	id.BitcoinSig = sig.Serialize()
+	order.BuyerID = id
+
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return nil, err
+	}
+	order.Timestamp = ts
+	order.AlternateContactInfo = data.AlternateContactInfo
+
+	var ratingKeys [][]byte
+	for range data.Items {
+		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
+		// Also the fix for this will also need to be included in the rating signing code.
+		ratingKey, err := n.Wallet.MasterPublicKey().Child(uint32(ts.Seconds))
+		if err != nil {
+			return nil, err
+		}
+		ecRatingKey, err := ratingKey.ECPubKey()
+		if err != nil {
+			return nil, err
+		}
+		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
+	}
+	order.RatingKeys = ratingKeys
+
+	addedListings := make(map[string]*pb.Listing)
+	for _, item := range data.Items {
+		i := new(pb.Order_Item)
+
+		/* It is possible that multiple items could refer to the same listing if the buyer is ordering
+		   multiple items with different variants. If it is multiple items of the same variant they can just
+		   use the quantity field. But different variants require two separate item entries. However,
+		   in this case we do not need to add the listing to the contract twice. Just once is sufficient.
+		   So let's check to see if that's the case here and handle it. */
+		_, exists := addedListings[item.ListingHash]
+
+		listing := new(pb.Listing)
+		if !exists {
+			// Let's fetch the listing, should be cached
+			b, err := ipfs.Cat(n.Context, item.ListingHash)
+			if err != nil {
+				return nil, err
+			}
+			rc := new(pb.RicardianContract)
+			err = jsonpb.UnmarshalString(string(b), rc)
+			if err != nil {
+				return nil, err
+			}
+			if err := validateVersionNumber(rc); err != nil {
+				return nil, err
+			}
+			if err := validateVendorID(rc); err != nil {
+				return nil, err
+			}
+			if err := validateListing(rc.VendorListings[0]); err != nil {
+				return nil, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
+			}
+			if err := verifySignaturesOnListing(rc); err != nil {
+				return nil, err
+			}
+			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
+			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
+			addedListings[item.ListingHash] = rc.VendorListings[0]
+			listing = rc.VendorListings[0]
+		} else {
+			listing = addedListings[item.ListingHash]
+		}
+
+		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
+			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
+		}
+
+		// Remove any duplicate coupons
+		couponMap := make(map[string]bool)
+		var coupons []string
+		for _, c := range item.Coupons {
+			if !couponMap[c] {
+				couponMap[c] = true
+				coupons = append(coupons, c)
+			}
+		}
+
+		// Validate the selected options
+		listingOptions := make(map[string]*pb.Listing_Item_Option)
+		for _, opt := range listing.Item.Options {
+			listingOptions[strings.ToLower(opt.Name)] = opt
+		}
+		for _, uopt := range item.Options {
+			_, ok := listingOptions[strings.ToLower(uopt.Name)]
+			if !ok {
+				return nil, errors.New("Selected variant not in listing")
+			}
+			delete(listingOptions, strings.ToLower(uopt.Name))
+		}
+		if len(listingOptions) > 0 {
+			return nil, errors.New("Not all options were selected")
+		}
+
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			return nil, err
+		}
+		listingMH, err := EncodeMultihash(ser)
+		if err != nil {
+			return nil, err
+		}
+		i.ListingHash = listingMH.B58String()
+		i.Quantity = uint32(item.Quantity)
+
+		for _, option := range item.Options {
+			o := &pb.Order_Item_Option{
+				Name:  option.Name,
+				Value: option.Value,
+			}
+			i.Options = append(i.Options, o)
+		}
+		so := &pb.Order_Item_ShippingOption{
+			Name:    item.Shipping.Name,
+			Service: item.Shipping.Service,
+		}
+		i.ShippingOption = so
+		i.Memo = item.Memo
+		i.CouponCodes = coupons
+		order.Items = append(order.Items, i)
+	}
+
+	contract.BuyerOrder = order
+	return contract, nil
+}
+
+func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) {
+	contract, err := n.createContractWithOrder(data)
+	if err != nil {
+		return 0, err
+	}
+	return n.CalculateOrderTotal(contract)
 }
 
 func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {

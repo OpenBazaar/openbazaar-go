@@ -2637,3 +2637,20 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	fmt.Fprintf(w, "%d", int(i.node.Wallet.GetFeePerByte(feeLevel)))
 	return
 }
+
+func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var data core.PurchaseData
+	err := decoder.Decode(&data)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	amount, err := i.node.EstimateOrderTotal(&data)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprintf(w, "%d", int(amount))
+	return
+}
