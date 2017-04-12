@@ -209,9 +209,8 @@ message OrderConfirmation {
     // Direct payments only
     string paymentAddress                     = 3;
     uint64 requestedAmount                    = 4;
-    uint64 payoutFee                          = 5;
 
-    repeated RatingSignature ratingSignatures = 6;
+    repeated RatingSignature ratingSignatures = 5;
 }
 
 message OrderReject {
