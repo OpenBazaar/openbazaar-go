@@ -2,14 +2,12 @@ package ipfs
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"strconv"
 	"sync"
 
-	"github.com/ipfs/go-ipfs/core"
 	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 	host "gx/ipfs/QmXzeAcmKDTfNZQBiyF22hQKuTK7P5z6MBBQLTk9bbiSUc/go-libp2p-host"
@@ -17,11 +15,14 @@ import (
 	multihash "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 
+	"github.com/ipfs/go-ipfs/core"
+
+	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	"time"
+
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	ctxio "github.com/jbenet/go-context/io"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	"time"
 )
 
 const MAGIC string = "000000000000000000000000"
@@ -48,14 +49,16 @@ type Pointer struct {
 	CancelID  *peer.ID
 }
 
-func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr) (Pointer, error) {
+// entropy is a sequence of bytes that should be deterministic based on the content of the pointer
+// it is hashed and used to fill the remaining 20 bytes of the magic id
+func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr, entropy []byte) (Pointer, error) {
 	keyhash := createKey(mhKey, prefixLen)
 	k, err := cid.Decode(keyhash.B58String())
 	if err != nil {
 		return Pointer{}, err
 	}
 
-	magicID, err := getMagicID()
+	magicID, err := getMagicID(entropy)
 	if err != nil {
 		return Pointer{}, err
 	}
@@ -163,14 +166,15 @@ func createKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
 	return keyHash
 }
 
-func getMagicID() (peer.ID, error) {
+func getMagicID(entropy []byte) (peer.ID, error) {
 	magicBytes, err := hex.DecodeString(MAGIC)
 	if err != nil {
 		return "", err
 	}
-	randBytes := make([]byte, 20)
-	rand.Read(randBytes)
-	magicBytes = append(magicBytes, randBytes[:]...)
+	hash := sha256.New()
+	hash.Write(entropy)
+	hashedEntropy := hash.Sum(nil)
+	magicBytes = append(magicBytes, hashedEntropy[:20]...)
 	h, err := multihash.Encode(magicBytes, multihash.SHA2_256)
 	if err != nil {
 		return "", err
