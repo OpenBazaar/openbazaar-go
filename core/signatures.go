@@ -32,31 +32,35 @@ func (matchKeyError) Error() string {
 //     - invalidSigError (signature is invalid);
 //     - matchKeyError (GUID does not match public key).
 // Example usage can be seen in verifySignaturesOnOrder() in 'core/order.go'.
-func verifyMessageSignature(msg proto.Message, pk []byte, sigs []*pb.Signature, sigType pb.Signature_Section, guid string) error {
-	ser, err := proto.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	guidPubkey, err := crypto.UnmarshalPublicKey(pk)
-	if err != nil {
-		return err
-	}
+func verifyMessageSignature(msg proto.Message, pk []byte, sigs []*pb.Signature, sigType pb.Signature_Section, peerID string) error {
 	sig, err := selectSignature(sigs, sigType)
 	if err != nil {
 		return err
 	}
-	valid, err := guidPubkey.Verify(ser, sig.SignatureBytes)
+	return verifySignature(msg, pk, sig.SignatureBytes, peerID)
+}
+
+func verifySignature(msg proto.Message, pk []byte, signature []byte, peerID string) error {
+	ser, err := proto.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	pubkey, err := crypto.UnmarshalPublicKey(pk)
+	if err != nil {
+		return err
+	}
+	valid, err := pubkey.Verify(ser, signature)
 	if err != nil {
 		return err
 	}
 	if !valid {
 		return invalidSigError{}
 	}
-	pid, err := peer.IDB58Decode(guid)
+	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
-	if !pid.MatchesPublicKey(guidPubkey) {
+	if !pid.MatchesPublicKey(pubkey) {
 		return matchKeyError{}
 	}
 	return nil

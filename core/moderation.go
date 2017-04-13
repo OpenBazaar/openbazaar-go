@@ -179,12 +179,12 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			rc := new(pb.RicardianContract)
-			err = jsonpb.UnmarshalString(string(file), rc)
+			sl := new(pb.SignedListing)
+			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
 			}
-			rc.VendorListings[0].Moderators = moderators
+			sl.Listing.Moderators = moderators
 			m := jsonpb.Marshaler{
 				EnumsAsInts:  false,
 				EmitDefaults: false,
@@ -195,20 +195,20 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
-			out, err := m.MarshalToString(rc)
+			out, err := m.MarshalToString(sl)
 			if err != nil {
 				return err
 			}
 			if _, err := fi.WriteString(out); err != nil {
 				return err
 			}
-			hash, err := ipfs.GetHash(n.Context, p)
+			hash, err := ipfs.GetHashOfFile(n.Context, p)
 			if err != nil {
 				return err
 			}
-			hashes[rc.VendorListings[0].Slug] = hash
+			hashes[sl.Listing.Slug] = hash
 
-			return n.UpdateListingIndex(rc)
+			return n.UpdateListingIndex(sl)
 		}
 		return nil
 	}

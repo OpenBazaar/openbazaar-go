@@ -223,7 +223,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 	for _, item := range contract.BuyerOrder.Items {
-		listing, err := core.GetListingFromHash(item.ListingHash, contract)
+		listing, err := core.ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			continue
 		}

@@ -8,6 +8,16 @@
 			"Rev": "8ab4f574207fb0853dc9fea1ae87a58dab34e7a4"
 		},
 		{
+			"ImportPath": "github.com/OpenBazaar/go-ipfs/core/coreapi",
+			"Comment": "v0.4.8-1-g3ce1654",
+			"Rev": "3ce1654e367500449cd01ad1d1881cda149595c0"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/go-ipfs/merkledag",
+			"Comment": "v0.4.8-1-g3ce1654",
+			"Rev": "3ce1654e367500449cd01ad1d1881cda149595c0"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/go-onion-transport",
 			"Rev": "668c679b3ea7a7389ac57b132063460a560baef4"
 		},
@@ -804,10 +814,6 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
-			"Rev": "459e26527287adbc2adcc5d0d49abff9a5f315a7"
-		},
-		{
-			"ImportPath": "golang.org/x/crypto/scrypt",
 			"Rev": "459e26527287adbc2adcc5d0d49abff9a5f315a7"
 		},
 		{

@@ -36,6 +36,7 @@ It has these top-level messages:
 	Refund
 	ID
 	Signature
+	SignedListing
 	Message
 	Envelope
 	Chat
