@@ -33,7 +33,7 @@ be returned and will thrown an error if it sees an altcoin address. The changes 
 OpenBazaar has a convenience option to display prices in the user's domestic fiat currency and to price listings in fiat to avoid exchange rate 
 fluctuations. This functionality is provided by the a package implementing the [ExchangeRates](https://github.com/OpenBazaar/openbazaar-go/blob/master/bitcoin/exchangerates.go) interface.
 
-Basically it's just querying an external API to get the exchange rates and returning the results. If you want your altcoin implementation to allowing pricing and displaying prices
+Basically it's just querying an external API to get the exchange rates and returning the results. If you want your altcoin implementation to allow pricing and displaying prices
 in fiat, you will need to swap out the default exchange rate implementation with one that returns the exchange rates for your altcoin. If you don't wish to enable
 this functionality then you should explicitly disable the exchange rate provider as it will continue to return Bitcoin exchange rates if you do not. 
 
