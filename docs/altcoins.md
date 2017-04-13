@@ -26,7 +26,7 @@ used as an example of how to integrate an altcoin. It should just be a matter of
 
 Most likely you will need to fork the [btcrpcclient](https://github.com/btcsuite/btcrpcclient) to make it work with your altcoin as that library expects the data
 returned by the JSON-RPC interface to be formatted in a very specific way. For example, `rpcClient.GetNewAddress()` expects a properly formatted Bitcoin address to 
-be returned and will thrown an error if it sees an altcoin addresses. The changes you would need to make to the library should be fairly minimal.
+be returned and will thrown an error if it sees an altcoin address. The changes you would need to make to the library should be fairly minimal.
 
 ### Exchange rates
 
