@@ -698,13 +698,14 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	var wallet bitcoin.BitcoinWallet
-	if strings.ToLower(walletCfg.Type) == "spvwallet" {
+	switch strings.ToLower(walletCfg.Type) {
+	case "spvwallet":
 		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, torDialer, ml)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
-	} else if strings.ToLower(walletCfg.Type) == "bitcoind" {
+	case "bitcoind":
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
@@ -713,7 +714,7 @@ func (x *Start) Execute(args []string) error {
 			usetor = true
 		}
 		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
-	} else {
+	default:
 		log.Fatal("Unknown wallet type")
 	}
 
