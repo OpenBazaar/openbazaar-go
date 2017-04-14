@@ -75,7 +75,7 @@ For a user perspective, switching out Bitcoin for an altcoin should just be a ma
 If you wanted to use Zcash, say, you'd set it this:
 ```json
 "Wallet": {
-  "Binary": "/bin/zcashd",
+  "Binary": "/usr/bin/zcashd",
   "RPCUser": "alice",
   "RPCPassword": "letmein",
   "TrustedPeer": "",
