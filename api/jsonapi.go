@@ -915,7 +915,9 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
-	go i.node.NotifyModerators(*settings.StoreModerators)
+	if settings.StoreModerators != nil {
+		go i.node.NotifyModerators(*settings.StoreModerators)
+	}
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
