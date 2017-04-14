@@ -850,6 +850,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ConfirmedBalance   int64     `json:"confirmedBalance"`
 		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
 		Timestamp          time.Time `json:"timestamp"`
+		Memo               string    `json:"memo"`
 	}
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	txn, err := i.node.Wallet.GetTransaction(*txid)
@@ -863,6 +864,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		UnconfirmedBalance: unconfirmed,
 		Amount:             -(txn.Value),
 		Timestamp:          txn.Timestamp,
+		Memo:               memo,
 	}
 	ser, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
@@ -2618,7 +2620,34 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))
+	type response struct {
+		Txid               string    `json:"txid"`
+		Amount             int64     `json:"amount"`
+		ConfirmedBalance   int64     `json:"confirmedBalance"`
+		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+		Timestamp          time.Time `json:"timestamp"`
+		Memo               string    `json:"memo"`
+	}
+	confirmed, unconfirmed := i.node.Wallet.Balance()
+	txn, err := i.node.Wallet.GetTransaction(*newTxid)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp := &response{
+		Txid:               newTxid.String(),
+		ConfirmedBalance:   confirmed,
+		UnconfirmedBalance: unconfirmed,
+		Amount:             -(txn.Value),
+		Timestamp:          txn.Timestamp,
+		Memo:               fmt.Sprintf("Fee bump of %s", txid),
+	}
+	ser, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ser))
 }
 
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
