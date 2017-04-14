@@ -72,7 +72,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		ipnsPath := ipfspath.FromString(data.Moderator + "/profile")
 		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 		if err != nil {
-			return "", "", 0, false, err
+			return "", "", 0, false, errors.New("Moderator could not be found")
 		}
 		profile := new(pb.Profile)
 		err = jsonpb.UnmarshalString(string(profileBytes), profile)
@@ -82,6 +82,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 		if err != nil {
 			return "", "", 0, false, err
+		}
+		if !profile.Moderator || profile.ModeratorInfo == nil || strings.ToLower(profile.ModeratorInfo.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
+			return "", "", 0, false, errors.New("Moderator is not capabale of moderating this transaction")
 		}
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
