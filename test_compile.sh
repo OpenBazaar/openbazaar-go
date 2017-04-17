@@ -7,6 +7,7 @@ go test -coverprofile=api.cover.out ./api/notifications
 go test -coverprofile=bitcoin.cover.out ./bitcoin
 go test -coverprofile=bitcoin.cover.out ./bitcoin/exchange
 go test -coverprofile=bitcoin.cover.out ./bitcoin/listeners
+go test -coverprofile=bitcoin.cover.out ./bitcoin/bitcoind
 go test -coverprofile=core.cover.out ./core
 go test -coverprofile=ipfs.cover.out ./ipfs
 go test -coverprofile=net.cover.out ./net

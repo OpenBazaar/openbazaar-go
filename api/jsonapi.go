@@ -2360,7 +2360,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		t := transactions[i]
 		var confirmations int32
 		var status string
-		confs := int32(height) - t.Height
+		confs := int32(height) - t.Height + 1
 		if t.Height <= 0 {
 			confs = t.Height
 		}
