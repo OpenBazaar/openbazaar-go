@@ -542,13 +542,14 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	// Calculate total fee
 	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
-	feePerOutput := txFee / uint64(len(outputs))
 
-	// Subtract fee from each output
+	// Subtract fee from each output in proportion to output value
 	var outs []spvwallet.TransactionOutput
 	for _, output := range outputs {
+		outPercentage := float64(output.Value) / float64(totalOut)
+		outputShareOfFee := outPercentage * float64(txFee)
 		o := spvwallet.TransactionOutput{
-			Value:        output.Value - int64(feePerOutput),
+			Value:        output.Value - int64(outputShareOfFee),
 			ScriptPubKey: output.ScriptPubKey,
 			Index:        output.Index,
 		}
@@ -605,13 +606,16 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
 	if buyerPayout {
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: buyerValue - feePerOutput}
+		outputShareOfFee := (float64(buyerValue) / float64(totalOut)) * float64(txFee)
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: buyerValue - uint64(outputShareOfFee)}
 	}
 	if vendorPayout {
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: vendorValue - feePerOutput}
+		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: vendorValue - uint64(outputShareOfFee)}
 	}
 	if moderatorPayout {
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: modValue - feePerOutput}
+		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: modValue - uint64(outputShareOfFee)}
 	}
 
 	d.Payout = payout
