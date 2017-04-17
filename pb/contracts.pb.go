@@ -1346,8 +1346,7 @@ type OrderConfirmation struct {
 	// Direct payments only
 	PaymentAddress   string             `protobuf:"bytes,3,opt,name=paymentAddress" json:"paymentAddress,omitempty"`
 	RequestedAmount  uint64             `protobuf:"varint,4,opt,name=requestedAmount" json:"requestedAmount,omitempty"`
-	PayoutFee        uint64             `protobuf:"varint,5,opt,name=payoutFee" json:"payoutFee,omitempty"`
-	RatingSignatures []*RatingSignature `protobuf:"bytes,6,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
+	RatingSignatures []*RatingSignature `protobuf:"bytes,5,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
 }
 
 func (m *OrderConfirmation) Reset()                    { *m = OrderConfirmation{} }
@@ -1379,13 +1378,6 @@ func (m *OrderConfirmation) GetPaymentAddress() string {
 func (m *OrderConfirmation) GetRequestedAmount() uint64 {
 	if m != nil {
 		return m.RequestedAmount
-	}
-	return 0
-}
-
-func (m *OrderConfirmation) GetPayoutFee() uint64 {
-	if m != nil {
-		return m.PayoutFee
 	}
 	return 0
 }

@@ -56,6 +56,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
+		moderator.AcceptedCurrency = n.Wallet.CurrencyCode()
 		profile.Moderator = true
 		profile.ModeratorInfo = moderator
 		err = n.UpdateProfile(&profile)
