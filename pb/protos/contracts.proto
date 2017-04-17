@@ -369,3 +369,9 @@ message Signature {
         REFUND             = 7;
     }
 }
+
+message SignedListing {
+    Listing listing     = 1;
+    string hash         = 2;
+    bytes signature     = 3;
+}

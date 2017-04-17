@@ -403,7 +403,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	}
 	keys.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = keys
-	// Sign the GUID with the Bitcoin key
+	// Sign the PeerID with the Bitcoin key
 	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
 	if err != nil {
 		return nil, err
@@ -453,27 +453,30 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			if err != nil {
 				return nil, err
 			}
-			rc := new(pb.RicardianContract)
-			err = jsonpb.UnmarshalString(string(b), rc)
+			sl := new(pb.SignedListing)
+			err = jsonpb.UnmarshalString(string(b), sl)
 			if err != nil {
 				return nil, err
 			}
-			if err := validateVersionNumber(rc); err != nil {
+			if err := validateVersionNumber(sl.Listing); err != nil {
 				return nil, err
 			}
-			if err := validateVendorID(rc); err != nil {
+			if err := validateVendorID(sl.Listing); err != nil {
 				return nil, err
 			}
-			if err := validateListing(rc.VendorListings[0]); err != nil {
+			if err := validateListing(sl.Listing); err != nil {
 				return nil, fmt.Errorf("Listing failed to validate, reason: %q", err.Error())
 			}
-			if err := verifySignaturesOnListing(rc); err != nil {
+			if err := verifySignaturesOnListing(sl); err != nil {
 				return nil, err
 			}
-			contract.VendorListings = append(contract.VendorListings, rc.VendorListings[0])
-			contract.Signatures = append(contract.Signatures, rc.Signatures[0])
-			addedListings[item.ListingHash] = rc.VendorListings[0]
-			listing = rc.VendorListings[0]
+			contract.VendorListings = append(contract.VendorListings, sl.Listing)
+			s := new(pb.Signature)
+			s.Section = pb.Signature_LISTING
+			s.SignatureBytes = sl.Signature
+			contract.Signatures = append(contract.Signatures, s)
+			addedListings[item.ListingHash] = sl.Listing
+			listing = sl.Listing
 		} else {
 			listing = addedListings[item.ListingHash]
 		}
@@ -639,7 +642,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
 		var itemTotal uint64
-		l, err := GetListingFromHash(item.ListingHash, contract)
+		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
 		}
@@ -1293,22 +1296,22 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	return contract, nil
 }
 
-func validateVendorID(rc *pb.RicardianContract) error {
+func validateVendorID(listing *pb.Listing) error {
 
-	if len(rc.VendorListings) == 0 {
-		return errors.New("Contract does not contain a listing")
+	if listing == nil {
+		return errors.New("Listing is nil")
 	}
-	if rc.VendorListings[0].VendorID == nil {
+	if listing.VendorID == nil {
 		return errors.New("VendorID is nil")
 	}
-	if rc.VendorListings[0].VendorID.Pubkeys == nil {
+	if listing.VendorID.Pubkeys == nil {
 		return errors.New("Vendor pubkeys is nil")
 	}
-	vendorPubKey, err := crypto.UnmarshalPublicKey(rc.VendorListings[0].VendorID.Pubkeys.Identity)
+	vendorPubKey, err := crypto.UnmarshalPublicKey(listing.VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	vendorId, err := peer.IDB58Decode(rc.VendorListings[0].VendorID.PeerID)
+	vendorId, err := peer.IDB58Decode(listing.VendorID.PeerID)
 	if err != nil {
 		return err
 	}
@@ -1318,14 +1321,14 @@ func validateVendorID(rc *pb.RicardianContract) error {
 	return nil
 }
 
-func validateVersionNumber(rc *pb.RicardianContract) error {
-	if len(rc.VendorListings) == 0 {
-		return errors.New("Contract does not contain a listing")
+func validateVersionNumber(listing *pb.Listing) error {
+	if listing == nil {
+		return errors.New("Listing is nil")
 	}
-	if rc.VendorListings[0].Metadata == nil {
-		return errors.New("Contract does not contain listing metadata")
+	if listing.Metadata == nil {
+		return errors.New("Listing does not contain metadata")
 	}
-	if rc.VendorListings[0].Metadata.Version > ListingVersion {
+	if listing.Metadata.Version > ListingVersion {
 		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
 	}
 	return nil
@@ -1344,7 +1347,7 @@ func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount ui
 	return true
 }
 
-func GetListingFromHash(hash string, contract *pb.RicardianContract) (*pb.Listing, error) {
+func ParseContractForListing(hash string, contract *pb.RicardianContract) (*pb.Listing, error) {
 	for _, listing := range contract.VendorListings {
 		ser, err := proto.Marshal(listing)
 		if err != nil {
