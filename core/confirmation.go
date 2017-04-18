@@ -67,7 +67,6 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 			oc.RatingSignatures = append(oc.RatingSignatures, rs)
 		}
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
-		oc.PayoutFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 	}
 
 	oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
@@ -136,12 +135,15 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
 		_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, spvwallet.NORMAL)
 		if err != nil {
 			return err
 		}
 	}
-	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.Guid, contract)
+	err = n.SendOrderConfirmation(contract.BuyerOrder.BuyerID.PeerID, contract)
 	if err != nil {
 		return err
 	}
@@ -216,7 +218,9 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-
+		if err != nil {
+			return err
+		}
 		signatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return err
@@ -228,7 +232,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		rejectMsg.Sigs = sigs
 	}
-	err = n.SendReject(contract.BuyerOrder.BuyerID.Guid, rejectMsg)
+	err = n.SendReject(contract.BuyerOrder.BuyerID.PeerID, rejectMsg)
 	if err != nil {
 		return err
 	}
@@ -266,7 +270,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			if !exists {
 				return errors.New("Rating signatures do not cover all purchased listings")
 			}
-			pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+			pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 			if err != nil {
 				return err
 			}
@@ -326,10 +330,10 @@ func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (
 func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	if err := verifyMessageSignature(
 		contract.VendorOrderConfirmation,
-		contract.VendorListings[0].VendorID.Pubkeys.Guid,
+		contract.VendorListings[0].VendorID.Pubkeys.Identity,
 		contract.Signatures,
 		pb.Signature_ORDER_CONFIRMATION,
-		contract.VendorListings[0].VendorID.Guid,
+		contract.VendorListings[0].VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case noSigError:

@@ -581,8 +581,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector) (p2phost.Host, error) {
-
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
 		// no addresses to begin with. we'll start later.
 		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
 		if err != nil {
@@ -600,7 +599,11 @@ func (x *Start) Execute(args []string) error {
 		if usingTor && !usingClearnet {
 			host = p2pbhost.New(network)
 		} else {
-			host = p2pbhost.New(network, p2pbhost.NATPortMap, bwr)
+			hostOpts := []interface{}{bwr}
+			if !opts.DisableNatPortMap {
+				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
+			}
+			host = p2pbhost.New(network, hostOpts...)
 		}
 
 		return host, nil
@@ -695,13 +698,14 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 	var wallet bitcoin.BitcoinWallet
-	if strings.ToLower(walletCfg.Type) == "spvwallet" {
+	switch strings.ToLower(walletCfg.Type) {
+	case "spvwallet":
 		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, torDialer, ml)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
-	} else if strings.ToLower(walletCfg.Type) == "bitcoind" {
+	case "bitcoind":
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
@@ -710,7 +714,7 @@ func (x *Start) Execute(args []string) error {
 			usetor = true
 		}
 		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
-	} else {
+	default:
 		log.Fatal("Unknown wallet type")
 	}
 

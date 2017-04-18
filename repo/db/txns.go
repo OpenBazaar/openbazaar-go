@@ -109,7 +109,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]spvwallet.Txn, error) {
 			watchOnly = true
 		}
 
-		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly}
+		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly, tx}
 		ret = append(ret, txn)
 	}
 	return ret, nil
@@ -125,19 +125,19 @@ func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 	return nil
 }
 
-func (t *TxnsDB) MarkAsDead(txid chainhash.Hash) error {
+func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	tx, err := t.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update txns set height=-1 where txid=?")
+	stmt, err := tx.Prepare("update txns set height=? where txid=?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(txid.String())
+	_, err = stmt.Exec(height, txid.String())
 	if err != nil {
 		tx.Rollback()
 		return err

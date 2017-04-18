@@ -2,7 +2,6 @@ package spvwallet
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -115,24 +114,22 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 // GetDoubleSpends takes a transaction and compares it with
 // all transactions in the db.  It returns a slice of all txids in the db
 // which are double spent by the received tx.
-func CheckDoubleSpends(
-	argTx *wire.MsgTx, txs []*wire.MsgTx) ([]*chainhash.Hash, error) {
-
+func (ts *TxStore) CheckDoubleSpends(argTx *wire.MsgTx) ([]*chainhash.Hash, error) {
 	var dubs []*chainhash.Hash // slice of all double-spent txs
 	argTxid := argTx.TxHash()
-
+	txs, err := ts.Txns().GetAll(true)
+	if err != nil {
+		return dubs, err
+	}
 	for _, compTx := range txs {
-		compTxid := compTx.TxHash()
-		// check if entire tx is dup
-		if argTxid.IsEqual(&compTxid) {
-			return nil, fmt.Errorf("tx %s is dup", argTxid.String())
-		}
-		// not dup, iterate through inputs of argTx
+		r := bytes.NewReader(compTx.Bytes)
+		msgTx := wire.NewMsgTx(1)
+		msgTx.BtcDecode(r, 1)
+		compTxid := msgTx.TxHash()
 		for _, argIn := range argTx.TxIn {
 			// iterate through inputs of compTx
-			for _, compIn := range compTx.TxIn {
-				if outPointsEqual(
-					argIn.PreviousOutPoint, compIn.PreviousOutPoint) {
+			for _, compIn := range msgTx.TxIn {
+				if outPointsEqual(argIn.PreviousOutPoint, compIn.PreviousOutPoint) && !compTxid.IsEqual(&argTxid) {
 					// found double spend
 					dubs = append(dubs, &compTxid)
 					break // back to argIn loop
@@ -216,6 +213,23 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	err = blockchain.CheckTransactionSanity(utilTx)
 	if err != nil {
 		return hits, err
+	}
+
+	// Check to see if this is a double spend
+	doubleSpends, err := ts.CheckDoubleSpends(tx)
+	if err != nil {
+		return hits, err
+	}
+	if len(doubleSpends) > 0 {
+		// First seen rule
+		if height == 0 {
+			return 0, nil
+		} else {
+			// Mark any unconfirmed doubles as dead
+			for _, double := range doubleSpends {
+				ts.markAsDead(*double)
+			}
+		}
 	}
 
 	// Generate PKscripts for all addresses
@@ -310,20 +324,38 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 	}
 
+	// Update height of any stxos
+	if height > 0 {
+		stxos, err := ts.Stxos().GetAll()
+		if err != nil {
+			return 0, err
+		}
+		for _, stxo := range stxos {
+			if stxo.SpendTxid.IsEqual(&cachedSha) {
+				stxo.SpendHeight = height
+				ts.Stxos().Put(stxo)
+				break
+			}
+		}
+	}
+
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 || matchesWatchOnly {
 		ts.cbMutex.Lock()
 		_, txn, err := ts.Txns().Get(tx.TxHash())
 		shouldCallback := false
 		if err != nil {
+			cb.Value = value
 			txn.Timestamp = time.Now()
 			shouldCallback = true
+			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp, hits == 0)
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
-			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp, hits == 0)
+			ts.Txns().UpdateHeight(tx.TxHash(), int(height))
 			if height > 0 {
+				cb.Value = txn.Value
 				shouldCallback = true
 			}
 		}
@@ -340,34 +372,53 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 }
 
 func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
-	utxos, err := ts.Utxos().GetAll()
-	if err != nil {
-		return err
-	}
 	stxos, err := ts.Stxos().GetAll()
 	if err != nil {
 		return err
 	}
+	markStxoAsDead := func(s Stxo) error {
+		err := ts.Stxos().Delete(s)
+		if err != nil {
+			return err
+		}
+		err = ts.Txns().UpdateHeight(txid, -1)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	for _, s := range stxos {
+		// If an stxo is marked dead, move it back into the utxo table
+		if txid.IsEqual(&s.SpendTxid) {
+			if err := markStxoAsDead(s); err != nil {
+				return err
+			}
+			if err := ts.Utxos().Put(s.Utxo); err != nil {
+				return err
+			}
+		}
+		// If an dependency of the spend is dead then mark the spend as dead
+		if txid.IsEqual(&s.Utxo.Op.Hash) {
+			if err := markStxoAsDead(s); err != nil {
+				return err
+			}
+			if err := ts.markAsDead(s.SpendTxid); err != nil {
+				return err
+			}
+		}
+	}
+	utxos, err := ts.Utxos().GetAll()
+	if err != nil {
+		return err
+	}
+	// Dead utxos should just be deleted
 	for _, u := range utxos {
 		if txid.IsEqual(&u.Op.Hash) {
 			err := ts.Utxos().Delete(u)
 			if err != nil {
 				return err
 			}
-			ts.Txns().MarkAsDead(txid)
-		}
-	}
-	for _, s := range stxos {
-		if txid.IsEqual(&s.Utxo.Op.Hash) {
-			err := ts.Stxos().Delete(s)
-			if err != nil {
-				return err
-			}
-			ts.Txns().MarkAsDead(txid)
-			err = ts.markAsDead(s.SpendTxid)
-			if err != nil {
-				return err
-			}
+			ts.Txns().UpdateHeight(txid, -1)
 		}
 	}
 	return nil
@@ -378,9 +429,9 @@ func (ts *TxStore) processReorg(lastGoodHeight uint32) error {
 	if err != nil {
 		return err
 	}
-	for _, tx := range txns {
-		if tx.Height > int32(lastGoodHeight) {
-			txid, err := chainhash.NewHashFromStr(tx.Txid)
+	for i := len(txns) - 1; i >= 0; i-- {
+		if txns[i].Height > int32(lastGoodHeight) {
+			txid, err := chainhash.NewHashFromStr(txns[i].Txid)
 			if err != nil {
 				log.Error(err)
 				continue

@@ -1372,8 +1372,7 @@ type OrderConfirmation struct {
 	// Direct payments only
 	PaymentAddress   string             `protobuf:"bytes,3,opt,name=paymentAddress" json:"paymentAddress,omitempty"`
 	RequestedAmount  uint64             `protobuf:"varint,4,opt,name=requestedAmount" json:"requestedAmount,omitempty"`
-	PayoutFee        uint64             `protobuf:"varint,5,opt,name=payoutFee" json:"payoutFee,omitempty"`
-	RatingSignatures []*RatingSignature `protobuf:"bytes,6,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
+	RatingSignatures []*RatingSignature `protobuf:"bytes,5,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
 }
 
 func (m *OrderConfirmation) Reset()                    { *m = OrderConfirmation{} }
@@ -1405,13 +1404,6 @@ func (m *OrderConfirmation) GetPaymentAddress() string {
 func (m *OrderConfirmation) GetRequestedAmount() uint64 {
 	if m != nil {
 		return m.RequestedAmount
-	}
-	return 0
-}
-
-func (m *OrderConfirmation) GetPayoutFee() uint64 {
-	if m != nil {
-		return m.PayoutFee
 	}
 	return 0
 }
@@ -2109,7 +2101,7 @@ func (m *Refund) GetMemo() string {
 }
 
 type ID struct {
-	Guid         string      `protobuf:"bytes,1,opt,name=guid" json:"guid,omitempty"`
+	PeerID       string      `protobuf:"bytes,1,opt,name=peerID" json:"peerID,omitempty"`
 	BlockchainID string      `protobuf:"bytes,2,opt,name=blockchainID" json:"blockchainID,omitempty"`
 	Pubkeys      *ID_Pubkeys `protobuf:"bytes,3,opt,name=pubkeys" json:"pubkeys,omitempty"`
 	BitcoinSig   []byte      `protobuf:"bytes,4,opt,name=bitcoinSig,proto3" json:"bitcoinSig,omitempty"`
@@ -2120,9 +2112,9 @@ func (m *ID) String() string            { return proto.CompactTextString(m) }
 func (*ID) ProtoMessage()               {}
 func (*ID) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13} }
 
-func (m *ID) GetGuid() string {
+func (m *ID) GetPeerID() string {
 	if m != nil {
-		return m.Guid
+		return m.PeerID
 	}
 	return ""
 }
@@ -2149,8 +2141,8 @@ func (m *ID) GetBitcoinSig() []byte {
 }
 
 type ID_Pubkeys struct {
-	Guid    []byte `protobuf:"bytes,1,opt,name=guid,proto3" json:"guid,omitempty"`
-	Bitcoin []byte `protobuf:"bytes,2,opt,name=bitcoin,proto3" json:"bitcoin,omitempty"`
+	Identity []byte `protobuf:"bytes,1,opt,name=identity,proto3" json:"identity,omitempty"`
+	Bitcoin  []byte `protobuf:"bytes,2,opt,name=bitcoin,proto3" json:"bitcoin,omitempty"`
 }
 
 func (m *ID_Pubkeys) Reset()                    { *m = ID_Pubkeys{} }
@@ -2158,9 +2150,9 @@ func (m *ID_Pubkeys) String() string            { return proto.CompactTextString
 func (*ID_Pubkeys) ProtoMessage()               {}
 func (*ID_Pubkeys) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13, 0} }
 
-func (m *ID_Pubkeys) GetGuid() []byte {
+func (m *ID_Pubkeys) GetIdentity() []byte {
 	if m != nil {
-		return m.Guid
+		return m.Identity
 	}
 	return nil
 }
@@ -2192,6 +2184,38 @@ func (m *Signature) GetSection() Signature_Section {
 func (m *Signature) GetSignatureBytes() []byte {
 	if m != nil {
 		return m.SignatureBytes
+	}
+	return nil
+}
+
+type SignedListing struct {
+	Listing   *Listing `protobuf:"bytes,1,opt,name=listing" json:"listing,omitempty"`
+	Hash      string   `protobuf:"bytes,2,opt,name=hash" json:"hash,omitempty"`
+	Signature []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *SignedListing) Reset()                    { *m = SignedListing{} }
+func (m *SignedListing) String() string            { return proto.CompactTextString(m) }
+func (*SignedListing) ProtoMessage()               {}
+func (*SignedListing) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{15} }
+
+func (m *SignedListing) GetListing() *Listing {
+	if m != nil {
+		return m.Listing
+	}
+	return nil
+}
+
+func (m *SignedListing) GetHash() string {
+	if m != nil {
+		return m.Hash
+	}
+	return ""
+}
+
+func (m *SignedListing) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
 	}
 	return nil
 }
@@ -2238,6 +2262,7 @@ func init() {
 	proto.RegisterType((*ID)(nil), "ID")
 	proto.RegisterType((*ID_Pubkeys)(nil), "ID.Pubkeys")
 	proto.RegisterType((*Signature)(nil), "Signature")
+	proto.RegisterType((*SignedListing)(nil), "SignedListing")
 	proto.RegisterEnum("Listing_Metadata_ContractType", Listing_Metadata_ContractType_name, Listing_Metadata_ContractType_value)
 	proto.RegisterEnum("Listing_Metadata_Format", Listing_Metadata_Format_name, Listing_Metadata_Format_value)
 	proto.RegisterEnum("Listing_ShippingOption_ShippingType", Listing_ShippingOption_ShippingType_name, Listing_ShippingOption_ShippingType_value)

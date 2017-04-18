@@ -29,7 +29,7 @@ func init() {
 	item.Title = "Test listing"
 	listing.Item = item
 	vendorID := new(pb.ID)
-	vendorID.Guid = "vendor guid"
+	vendorID.PeerID = "vendor id"
 	vendorID.BlockchainID = "@testvendor"
 	listing.VendorID = vendorID
 	image := new(pb.Listing_Item_Image)
@@ -38,7 +38,7 @@ func init() {
 	contract.VendorListings = []*pb.Listing{listing}
 	order := new(pb.Order)
 	buyerID := new(pb.ID)
-	buyerID.Guid = "buyer guid"
+	buyerID.PeerID = "buyer id"
 	buyerID.BlockchainID = "@testbuyer"
 	order.BuyerID = buyerID
 	shipping := new(pb.Order_Shipping)

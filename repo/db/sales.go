@@ -66,7 +66,7 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		int(contract.BuyerOrder.Timestamp.Seconds),
 		int(contract.BuyerOrder.Payment.Amount),
 		contract.VendorListings[0].Item.Images[0].Tiny,
-		contract.BuyerOrder.BuyerID.Guid,
+		contract.BuyerOrder.BuyerID.PeerID,
 		blockchainID,
 		contract.VendorListings[0].Item.Title,
 		shippingName,

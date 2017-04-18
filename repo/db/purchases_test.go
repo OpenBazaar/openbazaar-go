@@ -28,7 +28,7 @@ func init() {
 	item.Title = "Test listing"
 	listing.Item = item
 	vendorID := new(pb.ID)
-	vendorID.Guid = "vendor guid"
+	vendorID.PeerID = "vendor id"
 	vendorID.BlockchainID = "@testvendor"
 	listing.VendorID = vendorID
 	image := new(pb.Listing_Item_Image)
@@ -37,7 +37,7 @@ func init() {
 	contract.VendorListings = []*pb.Listing{listing}
 	order := new(pb.Order)
 	buyerID := new(pb.ID)
-	buyerID.Guid = "buyer guid"
+	buyerID.PeerID = "buyer id"
 	buyerID.BlockchainID = "@testbuyer"
 	order.BuyerID = buyerID
 	shipping := new(pb.Order_Shipping)
@@ -99,8 +99,8 @@ func TestPutPurchase(t *testing.T) {
 	if thumbnail != contract.VendorListings[0].Item.Images[0].Tiny {
 		t.Errorf("Expected %s got %s", contract.VendorListings[0].Item.Images[0].Tiny, thumbnail)
 	}
-	if vendorID != contract.VendorListings[0].VendorID.Guid {
-		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.Guid, vendorID)
+	if vendorID != contract.VendorListings[0].VendorID.PeerID {
+		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.PeerID, vendorID)
 	}
 	if vendorBlockchainID != contract.VendorListings[0].VendorID.BlockchainID {
 		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.BlockchainID, vendorBlockchainID)

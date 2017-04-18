@@ -5,6 +5,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type WalletListener struct {
@@ -18,7 +19,7 @@ func NewWalletListener(db repo.Datastore, broadcast chan interface{}) *WalletLis
 }
 
 func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
-	if !cb.WatchOnly && cb.Value > 0 {
+	if !cb.WatchOnly {
 		txid := hex.EncodeToString(cb.Txid)
 		metadata, _ := l.db.TxMetadata().Get(txid)
 		status := "UNCONFIRMED"
@@ -27,8 +28,12 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 			status = "PENDING"
 			confirmations = 1
 		}
+		ch, err := chainhash.NewHash(cb.Txid)
+		if err != nil {
+			return
+		}
 		n := notifications.IncomingTransaction{
-			Txid:          hex.EncodeToString(cb.Txid),
+			Txid:          ch.String(),
 			Value:         cb.Value,
 			Address:       metadata.Address,
 			Status:        status,
@@ -38,7 +43,7 @@ func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback)
 			OrderId:       metadata.OrderId,
 			Thumbnail:     metadata.Thumbnail,
 			Height:        cb.Height,
-			CanBumpFee:    true,
+			CanBumpFee:    cb.Value > 0,
 		}
 		l.broadcast <- n
 	}

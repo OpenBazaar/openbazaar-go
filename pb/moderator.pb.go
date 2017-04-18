@@ -41,7 +41,8 @@ type Moderator struct {
 	Description        string         `protobuf:"bytes,1,opt,name=description" json:"description,omitempty"`
 	TermsAndConditions string         `protobuf:"bytes,2,opt,name=termsAndConditions" json:"termsAndConditions,omitempty"`
 	Languages          []string       `protobuf:"bytes,3,rep,name=languages" json:"languages,omitempty"`
-	Fee                *Moderator_Fee `protobuf:"bytes,4,opt,name=fee" json:"fee,omitempty"`
+	AcceptedCurrency   string         `protobuf:"bytes,4,opt,name=acceptedCurrency" json:"acceptedCurrency,omitempty"`
+	Fee                *Moderator_Fee `protobuf:"bytes,5,opt,name=fee" json:"fee,omitempty"`
 }
 
 func (m *Moderator) Reset()                    { *m = Moderator{} }
@@ -68,6 +69,13 @@ func (m *Moderator) GetLanguages() []string {
 		return m.Languages
 	}
 	return nil
+}
+
+func (m *Moderator) GetAcceptedCurrency() string {
+	if m != nil {
+		return m.AcceptedCurrency
+	}
+	return ""
 }
 
 func (m *Moderator) GetFee() *Moderator_Fee {

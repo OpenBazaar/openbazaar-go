@@ -133,11 +133,11 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	if err != nil {
 		return err
 	}
-	buyerkey, err := crypto.UnmarshalPublicKey(contract.BuyerOrder.BuyerID.Pubkeys.Guid)
+	buyerkey, err := crypto.UnmarshalPublicKey(contract.BuyerOrder.BuyerID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.Guid, &buyerkey, rc)
+	err = n.SendOrderFulfillment(contract.BuyerOrder.BuyerID.PeerID, &buyerkey, rc)
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return errors.New("Rating key in vendor's rating signature is invalid")
 	}
 
-	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+	pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
@@ -257,10 +257,10 @@ func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
 	for _, fulfil := range contract.VendorOrderFulfillment {
 		if err := verifyMessageSignature(
 			fulfil,
-			contract.VendorListings[0].VendorID.Pubkeys.Guid,
+			contract.VendorListings[0].VendorID.Pubkeys.Identity,
 			contract.Signatures,
 			pb.Signature_ORDER_FULFILLMENT,
-			contract.VendorListings[0].VendorID.Guid,
+			contract.VendorListings[0].VendorID.PeerID,
 		); err != nil {
 			switch err.(type) {
 			case noSigError:

@@ -142,7 +142,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 
 			n := notifications.OrderNotification{
 				contract.VendorListings[0].Item.Title,
-				contract.BuyerOrder.BuyerID.Guid,
+				contract.BuyerOrder.BuyerID.PeerID,
 				contract.BuyerOrder.BuyerID.BlockchainID,
 				contract.VendorListings[0].Item.Images[0].Tiny,
 				int(contract.BuyerOrder.Timestamp.Seconds),
@@ -223,7 +223,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 	for _, item := range contract.BuyerOrder.Items {
-		listing, err := core.GetListingFromHash(item.ListingHash, contract)
+		listing, err := core.ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			continue
 		}

@@ -71,7 +71,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	}
 	/* TODO: We are just using a default prefix length for now. Eventually we will want to customize this,
 	   but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
-	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, DefaultPointerPrefixLength, addr)
+	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, DefaultPointerPrefixLength, addr, ciphertext)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.Ricar
 		MessageType: pb.Message_ORDER_CONFIRMATION,
 		Payload:     a,
 	}
-	k, err := libp2p.UnmarshalPublicKey(contract.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid)
+	k, err := libp2p.UnmarshalPublicKey(contract.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
 	} else {
-		k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Guid)
+		k, err := libp2p.UnmarshalPublicKey(order.GetVendorListings()[0].GetVendorID().GetPubkeys().Identity)
 		if err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
 	} else {
-		k, err := libp2p.UnmarshalPublicKey(order.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid)
+		k, err := libp2p.UnmarshalPublicKey(order.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 		if err != nil {
 			return err
 		}
@@ -237,7 +237,7 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 		MessageType: pb.Message_REFUND,
 		Payload:     a,
 	}
-	k, err := libp2p.UnmarshalPublicKey(refundMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Guid)
+	k, err := libp2p.UnmarshalPublicKey(refundMessage.GetBuyerOrder().GetBuyerID().GetPubkeys().Identity)
 	if err != nil {
 		return err
 	}

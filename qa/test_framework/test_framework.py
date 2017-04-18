@@ -20,9 +20,9 @@ TEST_SWARM_PORT = randint(1024, 65535)
 TEST_GATEWAY_PORT = randint(1024, 65535)
 
 BOOTSTRAP_NODES = [
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/QmZkcxKxq9pZzqvXHhhsAQuNM9Fj5gx1ecpdzCb8w2NSGE",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmS5svqgGwFxwY9W5nXBUh1GJ7x8tqpkYfD4kB3MG7mPRv",
-    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/QmchsHCcVAjoCiAQCd8mWcVtS5cwpwRFvyCnAcdoQcfyM7"
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 0) + "/ipfs/Qmdo6RpKtSqk73gUwaiaPkq6gWk49y3NCPCQbVsM9XTma3",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 1) + "/ipfs/QmVQzkdi3Fq6LRFG9UNqDZfSry67weCZV6ZL26QVx64UFy",
+    "/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + 2) + "/ipfs/Qmd5qDpcYkHCmkj9pMXU9TKBqEDWgEmtoHD5xjdJgumaHg"
 ]
 
 BOOTSTAP_MNEMONICS = [

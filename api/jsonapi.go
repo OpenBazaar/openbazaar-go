@@ -23,6 +23,7 @@ import (
 	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 	"sync"
 
+	"bytes"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -522,12 +523,12 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	contract, err := i.node.SignListing(ld)
+	signedListing, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	listingPath = path.Join(i.node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
+	listingPath = path.Join(i.node.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
 	f, err := os.Create(listingPath)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -539,7 +540,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(contract)
+	out, err := m.MarshalToString(signedListing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -549,7 +550,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.UpdateListingIndex(contract)
+	err = i.node.UpdateListingIndex(signedListing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -564,7 +565,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, contract.VendorListings[0].Slug))
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, signedListing.Listing.Slug))
 	return
 }
 
@@ -586,7 +587,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	contract, err := i.node.SignListing(ld)
+	signedListing, err := i.node.SignListing(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -602,7 +603,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(contract)
+	out, err := m.MarshalToString(signedListing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -612,7 +613,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = i.node.UpdateListingIndex(contract)
+	err = i.node.UpdateListingIndex(signedListing)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -850,6 +851,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ConfirmedBalance   int64     `json:"confirmedBalance"`
 		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
 		Timestamp          time.Time `json:"timestamp"`
+		Memo               string    `json:"memo"`
 	}
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	txn, err := i.node.Wallet.GetTransaction(*txid)
@@ -863,6 +865,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		UnconfirmedBalance: unconfirmed,
 		Amount:             -(txn.Value),
 		Timestamp:          txn.Timestamp,
+		Memo:               memo,
 	}
 	ser, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
@@ -878,7 +881,7 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
 		testnet = true
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"guid": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet))
+	SanitizedResponse(w, fmt.Sprintf(`{"peerID": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet))
 }
 
 func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
@@ -914,7 +917,9 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		}
 		i.node.BanManager.SetBlockedIds(blockedIds)
 	}
-	go i.node.NotifyModerators(*settings.StoreModerators)
+	if settings.StoreModerators != nil {
+		go i.node.NotifyModerators(*settings.StoreModerators)
+	}
 	err = i.node.Datastore.Settings().Put(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1298,30 +1303,41 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	urlPath, listingId := path.Split(r.URL.Path)
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
-		contract := new(pb.RicardianContract)
+		sl := new(pb.SignedListing)
 		_, err := mh.FromB58String(listingId)
 		if err == nil {
-			contract, err = i.node.GetListingFromHash(listingId)
+			sl, err = i.node.GetListingFromHash(listingId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+				return
+			}
+			sl.Hash = listingId
 		} else {
-			contract, err = i.node.GetListingFromSlug(listingId)
+			sl, err = i.node.GetListingFromSlug(listingId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+				return
+			}
+			hash, err := ipfs.GetHashOfFile(i.node.Context, path.Join(i.node.RepoPath, "root", "listings", listingId+".json"))
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			sl.Hash = hash
 		}
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-			return
-		}
-		m := jsonpb.Marshaler{
-			EnumsAsInts:  false,
-			EmitDefaults: false,
-			Indent:       "    ",
-			OrigName:     false,
-		}
-		savedCoupons, err := i.node.Datastore.Coupons().Get(contract.VendorListings[0].Slug)
+		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		for _, coupon := range contract.VendorListings[0].Coupons {
+		for _, coupon := range sl.Listing.Coupons {
 			for _, c := range savedCoupons {
 				if coupon.GetHash() == c.Hash {
 					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
@@ -1330,22 +1346,24 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		out, err := m.MarshalToString(contract)
+		out, err := m.MarshalToString(sl)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, string(out), new(pb.RicardianContract))
+		SanitizedResponseM(w, string(out), new(pb.SignedListing))
 		return
 	} else {
-		var listingsBytes []byte
+		var listingBytes []byte
+		var hash string
 		_, err := mh.FromB58String(listingId)
 		if err == nil {
-			listingsBytes, err = ipfs.Cat(i.node.Context, listingId)
+			listingBytes, err = ipfs.Cat(i.node.Context, listingId)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
+			hash = listingId
 			w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 		} else {
 			if strings.HasPrefix(peerId, "@") {
@@ -1355,14 +1373,31 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 			}
-			listingsBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
+			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
+			hash, err = ipfs.GetHash(i.node.Context, bytes.NewReader(listingBytes))
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 			w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 		}
-		SanitizedResponseM(w, string(listingsBytes), new(pb.RicardianContract))
+		sl := new(pb.SignedListing)
+		err = jsonpb.UnmarshalString(string(listingBytes), sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		sl.Hash = hash
+		out, err := m.MarshalToString(sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponseM(w, out, new(pb.SignedListing))
 	}
 }
 
@@ -2336,6 +2371,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Memo          string    `json:"memo"`
 		Timestamp     time.Time `json:"timestamp"`
 		Confirmations int32     `json:"confirmations"`
+		Height        int32     `json:"height"`
 		OrderId       string    `json:"orderId"`
 		Thumbnail     string    `json:"thumbnail"`
 		CanBumpFee    bool      `json:"canBumpFee"`
@@ -2357,7 +2393,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		t := transactions[i]
 		var confirmations int32
 		var status string
-		confs := int32(height) - t.Height
+		confs := int32(height) - t.Height + 1
 		if t.Height <= 0 {
 			confs = t.Height
 		}
@@ -2380,6 +2416,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			Value:         t.Value,
 			Timestamp:     t.Timestamp,
 			Confirmations: confirmations,
+			Height:        t.Height,
 			Status:        status,
 			CanBumpFee:    true,
 		}
@@ -2390,6 +2427,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.OrderId = m.OrderId
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
+		}
+		if status == "DEAD" {
+			tx.CanBumpFee = false
 		}
 		if offsetID == "" || passedOffset {
 			txs = append(txs, tx)
@@ -2613,5 +2653,66 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"txid": "%s"}`, newTxid.String()))
+	type response struct {
+		Txid               string    `json:"txid"`
+		Amount             int64     `json:"amount"`
+		ConfirmedBalance   int64     `json:"confirmedBalance"`
+		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+		Timestamp          time.Time `json:"timestamp"`
+		Memo               string    `json:"memo"`
+	}
+	confirmed, unconfirmed := i.node.Wallet.Balance()
+	txn, err := i.node.Wallet.GetTransaction(*newTxid)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp := &response{
+		Txid:               newTxid.String(),
+		ConfirmedBalance:   confirmed,
+		UnconfirmedBalance: unconfirmed,
+		Amount:             -(txn.Value),
+		Timestamp:          txn.Timestamp,
+		Memo:               fmt.Sprintf("Fee bump of %s", txid),
+	}
+	ser, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ser))
+}
+
+func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
+	fl := r.URL.Query().Get("feeLevel")
+	var feeLevel spvwallet.FeeLevel
+	switch strings.ToUpper(fl) {
+	case "PRIORITY":
+		feeLevel = spvwallet.PRIOIRTY
+	case "NORMAL":
+		feeLevel = spvwallet.NORMAL
+	case "ECONOMIC":
+		feeLevel = spvwallet.ECONOMIC
+	default:
+		feeLevel = spvwallet.NORMAL
+	}
+	fmt.Fprintf(w, "%d", int(i.node.Wallet.GetFeePerByte(feeLevel)))
+	return
+}
+
+func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var data core.PurchaseData
+	err := decoder.Decode(&data)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	amount, err := i.node.EstimateOrderTotal(&data)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fmt.Fprintf(w, "%d", int(amount))
+	return
 }

@@ -209,11 +209,11 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	if err != nil {
 		return err
 	}
-	vendorkey, err := libp2p.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Guid)
+	vendorkey, err := libp2p.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 	if err != nil {
 		return err
 	}
-	err = n.SendOrderCompletion(contract.VendorListings[0].VendorID.Guid, &vendorkey, rc)
+	err = n.SendOrderCompletion(contract.VendorListings[0].VendorID.PeerID, &vendorkey, rc)
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ra
 
 	var index []ratingShort
 
-	ratingHash, err := ipfs.GetHash(n.Context, ratingPath)
+	ratingHash, err := ipfs.GetHashOfFile(n.Context, ratingPath)
 	if err != nil {
 		return err
 	}
@@ -436,10 +436,10 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.OrderCompletion_Rating, ra
 func verifySignaturesOnOrderCompletion(contract *pb.RicardianContract) error {
 	if err := verifyMessageSignature(
 		contract.BuyerOrderCompletion,
-		contract.BuyerOrder.BuyerID.Pubkeys.Guid,
+		contract.BuyerOrder.BuyerID.Pubkeys.Identity,
 		contract.Signatures,
 		pb.Signature_ORDER_COMPLETION,
-		contract.BuyerOrder.BuyerID.Guid,
+		contract.BuyerOrder.BuyerID.PeerID,
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
