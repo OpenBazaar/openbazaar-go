@@ -2665,7 +2665,15 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	newTxid, err := i.node.Wallet.BumpFee(*txHash)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		if err == spvwallet.BumpFeeAlreadyConfirmedError {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+		} else if err == spvwallet.BumpFeeTransactionDeadError {
+			ErrorResponse(w, http.StatusMethodNotAllowed, err.Error())
+		} else if err == spvwallet.BumpFeeNotFoundError {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+		} else {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	m, err := i.node.Datastore.TxMetadata().Get(txid)

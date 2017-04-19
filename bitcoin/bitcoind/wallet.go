@@ -258,7 +258,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 		return nil, err
 	}
 	if tx.Confirmations > 0 {
-		return nil, errors.New("Transaction is confirmed, cannot bump fee")
+		return nil, spvwallet.BumpFeeAlreadyConfirmedError
 	}
 	unspent, err := w.rpcClient.ListUnspent()
 	if err != nil {
@@ -267,7 +267,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	for _, u := range unspent {
 		if u.TxID == txid.String() {
 			if u.Confirmations > 0 {
-				return nil, errors.New("Transaction is confirmed, cannot bump fee")
+				return nil, spvwallet.BumpFeeAlreadyConfirmedError
 			}
 			h, err := chainhash.NewHashFromStr(u.TxID)
 			if err != nil {
@@ -300,7 +300,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 
 		}
 	}
-	return nil, errors.New("Transaction either doesn't exist or has already been spent")
+	return nil, spvwallet.BumpFeeNotFoundError
 }
 
 func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
