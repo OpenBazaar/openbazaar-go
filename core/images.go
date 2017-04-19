@@ -15,39 +15,8 @@ import (
 	"github.com/nfnt/resize"
 )
 
-type Images struct {
-	Tiny     string `json:"tiny"`
-	Small    string `json:"small"`
-	Medium   string `json:"medium"`
-	Large    string `json:"large"`
-	Original string `json:"original"`
-}
-
-func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error) {
-	img, imgCfg, err := decodeImageData(base64ImageData)
-	if err != nil {
-		return nil, err
-	}
-
-	imgPath := path.Join(n.RepoPath, "root", "images")
-
-	t, err := n.addResizedImage(img, imgCfg, 50, 50, path.Join(imgPath, "tiny", "avatar"))
-	if err != nil {
-		return nil, err
-	}
-	s, err := n.addResizedImage(img, imgCfg, 100, 100, path.Join(imgPath, "small", "avatar"))
-	if err != nil {
-		return nil, err
-	}
-	m, err := n.addResizedImage(img, imgCfg, 140, 140, path.Join(imgPath, "medium", "avatar"))
-	if err != nil {
-		return nil, err
-	}
-	l, err := n.addResizedImage(img, imgCfg, 280, 280, path.Join(imgPath, "large", "avatar"))
-	if err != nil {
-		return nil, err
-	}
-	o, err := n.addImage(img, path.Join(imgPath, "original", "avatar"))
+func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*pb.Profile_Image, error) {
+	imageHashes, err := n.resizeImage(base64ImageData, "avatar", 60, 60)
 	if err != nil {
 		return nil, err
 	}
@@ -56,67 +25,39 @@ func (n *OpenBazaarNode) SetAvatarImages(base64ImageData string) (*Images, error
 	if err != nil {
 		return nil, err
 	}
-	i := new(pb.Profile_Image)
-	i.Tiny = t
-	i.Small = s
-	i.Medium = m
-	i.Large = l
-	i.Original = o
-	profile.AvatarHashes = i
+
+	profile.AvatarHashes = imageHashes
 	err = n.UpdateProfile(&profile)
 	if err != nil {
 		return nil, err
 	}
-	return &Images{t, s, m, l, o}, nil
+	return imageHashes, nil
 }
 
-func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*Images, error) {
-	img, imgCfg, err := decodeImageData(base64ImageData)
+func (n *OpenBazaarNode) SetHeaderImages(base64ImageData string) (*pb.Profile_Image, error) {
+	imageHashes, err := n.resizeImage(base64ImageData, "header", 315, 90)
 	if err != nil {
 		return nil, err
 	}
 
-	imgPath := path.Join(n.RepoPath, "root", "images")
-
-	t, err := n.addResizedImage(img, imgCfg, 304, 87, path.Join(imgPath, "tiny", "header"))
-	if err != nil {
-		return nil, err
-	}
-	s, err := n.addResizedImage(img, imgCfg, 608, 174, path.Join(imgPath, "small", "header"))
-	if err != nil {
-		return nil, err
-	}
-	m, err := n.addResizedImage(img, imgCfg, 1225, 350, path.Join(imgPath, "medium", "header"))
-	if err != nil {
-		return nil, err
-	}
-	l, err := n.addResizedImage(img, imgCfg, 2450, 700, path.Join(imgPath, "large", "header"))
-	if err != nil {
-		return nil, err
-	}
-	o, err := n.addImage(img, path.Join(imgPath, "original", "header"))
-	if err != nil {
-		return nil, err
-	}
 	profile, err := n.GetProfile()
 	if err != nil {
 		return nil, err
 	}
-	i := new(pb.Profile_Image)
-	i.Tiny = t
-	i.Small = s
-	i.Medium = m
-	i.Large = l
-	i.Original = o
-	profile.HeaderHashes = i
+
+	profile.HeaderHashes = imageHashes
 	err = n.UpdateProfile(&profile)
 	if err != nil {
 		return nil, err
 	}
-	return &Images{t, s, m, l, o}, nil
+	return imageHashes, nil
 }
 
-func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Images, error) {
+func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*pb.Profile_Image, error) {
+	return n.resizeImage(base64ImageData, filename, 120, 120)
+}
+
+func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth, baseHeight uint) (*pb.Profile_Image, error) {
 	img, imgCfg, err := decodeImageData(base64ImageData)
 	if err != nil {
 		return nil, err
@@ -124,19 +65,19 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 
 	imgPath := path.Join(n.RepoPath, "root", "images")
 
-	t, err := n.addResizedImage(img, imgCfg, 60, 60, path.Join(imgPath, "tiny", filename))
+	t, err := n.addResizedImage(img, imgCfg, 1 * baseWidth, 1 * baseHeight, path.Join(imgPath, "tiny", filename))
 	if err != nil {
 		return nil, err
 	}
-	s, err := n.addResizedImage(img, imgCfg, 228, 228, path.Join(imgPath, "small", filename))
+	s, err := n.addResizedImage(img, imgCfg, 2 * baseWidth, 2 * baseHeight, path.Join(imgPath, "small", filename))
 	if err != nil {
 		return nil, err
 	}
-	m, err := n.addResizedImage(img, imgCfg, 500, 500, path.Join(imgPath, "medium", filename))
+	m, err := n.addResizedImage(img, imgCfg, 4 * baseWidth, 4 * baseHeight, path.Join(imgPath, "medium", filename))
 	if err != nil {
 		return nil, err
 	}
-	l, err := n.addResizedImage(img, imgCfg, 1000, 1000, path.Join(imgPath, "large", filename))
+	l, err := n.addResizedImage(img, imgCfg, 8 * baseWidth, 8 * baseHeight, path.Join(imgPath, "large", filename))
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +86,7 @@ func (n *OpenBazaarNode) SetProductImages(base64ImageData, filename string) (*Im
 		return nil, err
 	}
 
-	return &Images{t, s, m, l, o}, nil
+	return &pb.Profile_Image{t, s, m, l, o}, nil
 }
 
 func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, error) {
