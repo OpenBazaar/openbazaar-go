@@ -1449,12 +1449,12 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	SanitizedResponse(w, fmt.Sprintf(`{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId)))
+	SanitizedResponse(w, fmt.Sprintf(`{"followsMe": %t}`, i.node.Datastore.Followers().FollowsMe(peerId)))
 }
 
 func (i *jsonAPIHandler) GETIsFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	SanitizedResponse(w, fmt.Sprintf(`{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId)))
+	SanitizedResponse(w, fmt.Sprintf(`{"isFollowing": %t}`, i.node.Datastore.Following().IsFollowing(peerId)))
 }
 
 func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Request) {
@@ -2243,6 +2243,42 @@ func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, imageHash, time.Now(), dr)
 }
 
+func (i *jsonAPIHandler) GETAvatar(w http.ResponseWriter, r *http.Request) {
+	urlPath, size := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+	query := "/ipns/" + peerId + "/images/" + size + "/avatar"
+	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, query)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer dr.Close()
+	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	w.Header().Del("Content-Type")
+	http.ServeContent(w, r, query, time.Now(), dr)
+}
+
+func (i *jsonAPIHandler) GETHeader(w http.ResponseWriter, r *http.Request) {
+	urlPath, size := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	defer cancel()
+	query := "/ipns/" + peerId + "/images/" + size + "/header"
+	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, query)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer dr.Close()
+	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	w.Header().Del("Content-Type")
+	http.ServeContent(w, r, query, time.Now(), dr)
+}
+
 func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("async")
 	async, _ := strconv.ParseBool(query)
@@ -2629,7 +2665,15 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	newTxid, err := i.node.Wallet.BumpFee(*txHash)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		if err == spvwallet.BumpFeeAlreadyConfirmedError {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+		} else if err == spvwallet.BumpFeeTransactionDeadError {
+			ErrorResponse(w, http.StatusMethodNotAllowed, err.Error())
+		} else if err == spvwallet.BumpFeeNotFoundError {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+		} else {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	m, err := i.node.Datastore.TxMetadata().Get(txid)

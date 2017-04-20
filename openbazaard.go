@@ -93,7 +93,7 @@ var encryptedDatabaseError = errors.New("could not decrypt the database")
 type Init struct {
 	Password string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
 	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	Mnemonic string `short:"m" long:"mnemonic" description:"speficy a mnemonic seed to use to derive the keychain"`
+	Mnemonic string `short:"m" long:"mnemonic" description:"specify a mnemonic seed to use to derive the keychain"`
 	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
 	Force    bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
 }

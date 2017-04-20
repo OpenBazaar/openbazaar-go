@@ -182,7 +182,7 @@ var Signature_Section_value = map[string]int32{
 func (x Signature_Section) String() string {
 	return proto.EnumName(Signature_Section_name, int32(x))
 }
-func (Signature_Section) EnumDescriptor() ([]byte, []int) { return fileDescriptor1, []int{14, 0} }
+func (Signature_Section) EnumDescriptor() ([]byte, []int) { return fileDescriptor1, []int{15, 0} }
 
 type RicardianContract struct {
 	VendorListings          []*Listing          `protobuf:"bytes,1,rep,name=vendorListings" json:"vendorListings,omitempty"`
@@ -1684,7 +1684,7 @@ type OrderCompletion struct {
 	OrderId    string                     `protobuf:"bytes,1,opt,name=orderId" json:"orderId,omitempty"`
 	Timestamp  *google_protobuf.Timestamp `protobuf:"bytes,2,opt,name=timestamp" json:"timestamp,omitempty"`
 	PayoutSigs []*BitcoinSignature        `protobuf:"bytes,3,rep,name=payoutSigs" json:"payoutSigs,omitempty"`
-	Ratings    []*OrderCompletion_Rating  `protobuf:"bytes,4,rep,name=ratings" json:"ratings,omitempty"`
+	Ratings    []*Rating                  `protobuf:"bytes,4,rep,name=ratings" json:"ratings,omitempty"`
 }
 
 func (m *OrderCompletion) Reset()                    { *m = OrderCompletion{} }
@@ -1713,38 +1713,38 @@ func (m *OrderCompletion) GetPayoutSigs() []*BitcoinSignature {
 	return nil
 }
 
-func (m *OrderCompletion) GetRatings() []*OrderCompletion_Rating {
+func (m *OrderCompletion) GetRatings() []*Rating {
 	if m != nil {
 		return m.Ratings
 	}
 	return nil
 }
 
-type OrderCompletion_Rating struct {
-	RatingData *OrderCompletion_Rating_RatingData `protobuf:"bytes,1,opt,name=ratingData" json:"ratingData,omitempty"`
-	Signature  []byte                             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+type Rating struct {
+	RatingData *Rating_RatingData `protobuf:"bytes,1,opt,name=ratingData" json:"ratingData,omitempty"`
+	Signature  []byte             `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 }
 
-func (m *OrderCompletion_Rating) Reset()                    { *m = OrderCompletion_Rating{} }
-func (m *OrderCompletion_Rating) String() string            { return proto.CompactTextString(m) }
-func (*OrderCompletion_Rating) ProtoMessage()               {}
-func (*OrderCompletion_Rating) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{8, 0} }
+func (m *Rating) Reset()                    { *m = Rating{} }
+func (m *Rating) String() string            { return proto.CompactTextString(m) }
+func (*Rating) ProtoMessage()               {}
+func (*Rating) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{9} }
 
-func (m *OrderCompletion_Rating) GetRatingData() *OrderCompletion_Rating_RatingData {
+func (m *Rating) GetRatingData() *Rating_RatingData {
 	if m != nil {
 		return m.RatingData
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating) GetSignature() []byte {
+func (m *Rating) GetSignature() []byte {
 	if m != nil {
 		return m.Signature
 	}
 	return nil
 }
 
-type OrderCompletion_Rating_RatingData struct {
+type Rating_RatingData struct {
 	RatingKey       []byte                     `protobuf:"bytes,1,opt,name=ratingKey,proto3" json:"ratingKey,omitempty"`
 	VendorID        *ID                        `protobuf:"bytes,2,opt,name=vendorID" json:"vendorID,omitempty"`
 	BuyerID         *ID                        `protobuf:"bytes,3,opt,name=buyerID" json:"buyerID,omitempty"`
@@ -1760,98 +1760,96 @@ type OrderCompletion_Rating_RatingData struct {
 	Review          string                     `protobuf:"bytes,13,opt,name=review" json:"review,omitempty"`
 }
 
-func (m *OrderCompletion_Rating_RatingData) Reset()         { *m = OrderCompletion_Rating_RatingData{} }
-func (m *OrderCompletion_Rating_RatingData) String() string { return proto.CompactTextString(m) }
-func (*OrderCompletion_Rating_RatingData) ProtoMessage()    {}
-func (*OrderCompletion_Rating_RatingData) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{8, 0, 0}
-}
+func (m *Rating_RatingData) Reset()                    { *m = Rating_RatingData{} }
+func (m *Rating_RatingData) String() string            { return proto.CompactTextString(m) }
+func (*Rating_RatingData) ProtoMessage()               {}
+func (*Rating_RatingData) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{9, 0} }
 
-func (m *OrderCompletion_Rating_RatingData) GetRatingKey() []byte {
+func (m *Rating_RatingData) GetRatingKey() []byte {
 	if m != nil {
 		return m.RatingKey
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetVendorID() *ID {
+func (m *Rating_RatingData) GetVendorID() *ID {
 	if m != nil {
 		return m.VendorID
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetBuyerID() *ID {
+func (m *Rating_RatingData) GetBuyerID() *ID {
 	if m != nil {
 		return m.BuyerID
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetModeratorID() *ID {
+func (m *Rating_RatingData) GetModeratorID() *ID {
 	if m != nil {
 		return m.ModeratorID
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetVendorSig() *RatingSignature {
+func (m *Rating_RatingData) GetVendorSig() *RatingSignature {
 	if m != nil {
 		return m.VendorSig
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetModeratorSig() []byte {
+func (m *Rating_RatingData) GetModeratorSig() []byte {
 	if m != nil {
 		return m.ModeratorSig
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetTimestamp() *google_protobuf.Timestamp {
+func (m *Rating_RatingData) GetTimestamp() *google_protobuf.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
 	return nil
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetOverall() uint32 {
+func (m *Rating_RatingData) GetOverall() uint32 {
 	if m != nil {
 		return m.Overall
 	}
 	return 0
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetQuality() uint32 {
+func (m *Rating_RatingData) GetQuality() uint32 {
 	if m != nil {
 		return m.Quality
 	}
 	return 0
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetDescription() uint32 {
+func (m *Rating_RatingData) GetDescription() uint32 {
 	if m != nil {
 		return m.Description
 	}
 	return 0
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetDeliverySpeed() uint32 {
+func (m *Rating_RatingData) GetDeliverySpeed() uint32 {
 	if m != nil {
 		return m.DeliverySpeed
 	}
 	return 0
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetCustomerService() uint32 {
+func (m *Rating_RatingData) GetCustomerService() uint32 {
 	if m != nil {
 		return m.CustomerService
 	}
 	return 0
 }
 
-func (m *OrderCompletion_Rating_RatingData) GetReview() string {
+func (m *Rating_RatingData) GetReview() string {
 	if m != nil {
 		return m.Review
 	}
@@ -1869,7 +1867,7 @@ type Dispute struct {
 func (m *Dispute) Reset()                    { *m = Dispute{} }
 func (m *Dispute) String() string            { return proto.CompactTextString(m) }
 func (*Dispute) ProtoMessage()               {}
-func (*Dispute) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{9} }
+func (*Dispute) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{10} }
 
 func (m *Dispute) GetTimestamp() *google_protobuf.Timestamp {
 	if m != nil {
@@ -1907,17 +1905,18 @@ func (m *Dispute) GetSerializedContract() []byte {
 }
 
 type DisputeResolution struct {
-	Timestamp  *google_protobuf.Timestamp `protobuf:"bytes,1,opt,name=timestamp" json:"timestamp,omitempty"`
-	OrderId    string                     `protobuf:"bytes,2,opt,name=orderId" json:"orderId,omitempty"`
-	ProposedBy string                     `protobuf:"bytes,3,opt,name=proposedBy" json:"proposedBy,omitempty"`
-	Resolution string                     `protobuf:"bytes,4,opt,name=resolution" json:"resolution,omitempty"`
-	Payout     *DisputeResolution_Payout  `protobuf:"bytes,5,opt,name=payout" json:"payout,omitempty"`
+	Timestamp           *google_protobuf.Timestamp `protobuf:"bytes,1,opt,name=timestamp" json:"timestamp,omitempty"`
+	OrderId             string                     `protobuf:"bytes,2,opt,name=orderId" json:"orderId,omitempty"`
+	ProposedBy          string                     `protobuf:"bytes,3,opt,name=proposedBy" json:"proposedBy,omitempty"`
+	Resolution          string                     `protobuf:"bytes,4,opt,name=resolution" json:"resolution,omitempty"`
+	Payout              *DisputeResolution_Payout  `protobuf:"bytes,5,opt,name=payout" json:"payout,omitempty"`
+	ModeratorRatingSigs [][]byte                   `protobuf:"bytes,6,rep,name=moderatorRatingSigs,proto3" json:"moderatorRatingSigs,omitempty"`
 }
 
 func (m *DisputeResolution) Reset()                    { *m = DisputeResolution{} }
 func (m *DisputeResolution) String() string            { return proto.CompactTextString(m) }
 func (*DisputeResolution) ProtoMessage()               {}
-func (*DisputeResolution) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{10} }
+func (*DisputeResolution) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{11} }
 
 func (m *DisputeResolution) GetTimestamp() *google_protobuf.Timestamp {
 	if m != nil {
@@ -1954,6 +1953,13 @@ func (m *DisputeResolution) GetPayout() *DisputeResolution_Payout {
 	return nil
 }
 
+func (m *DisputeResolution) GetModeratorRatingSigs() [][]byte {
+	if m != nil {
+		return m.ModeratorRatingSigs
+	}
+	return nil
+}
+
 type DisputeResolution_Payout struct {
 	Sigs            []*BitcoinSignature              `protobuf:"bytes,1,rep,name=sigs" json:"sigs,omitempty"`
 	Inputs          []*Outpoint                      `protobuf:"bytes,2,rep,name=inputs" json:"inputs,omitempty"`
@@ -1965,7 +1971,7 @@ type DisputeResolution_Payout struct {
 func (m *DisputeResolution_Payout) Reset()                    { *m = DisputeResolution_Payout{} }
 func (m *DisputeResolution_Payout) String() string            { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout) ProtoMessage()               {}
-func (*DisputeResolution_Payout) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{10, 0} }
+func (*DisputeResolution_Payout) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{11, 0} }
 
 func (m *DisputeResolution_Payout) GetSigs() []*BitcoinSignature {
 	if m != nil {
@@ -2011,7 +2017,7 @@ func (m *DisputeResolution_Payout_Output) Reset()         { *m = DisputeResoluti
 func (m *DisputeResolution_Payout_Output) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout_Output) ProtoMessage()    {}
 func (*DisputeResolution_Payout_Output) Descriptor() ([]byte, []int) {
-	return fileDescriptor1, []int{10, 0, 0}
+	return fileDescriptor1, []int{11, 0, 0}
 }
 
 func (m *DisputeResolution_Payout_Output) GetScript() string {
@@ -2037,7 +2043,7 @@ type Outpoint struct {
 func (m *Outpoint) Reset()                    { *m = Outpoint{} }
 func (m *Outpoint) String() string            { return proto.CompactTextString(m) }
 func (*Outpoint) ProtoMessage()               {}
-func (*Outpoint) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{11} }
+func (*Outpoint) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{12} }
 
 func (m *Outpoint) GetHash() string {
 	if m != nil {
@@ -2070,7 +2076,7 @@ type Refund struct {
 func (m *Refund) Reset()                    { *m = Refund{} }
 func (m *Refund) String() string            { return proto.CompactTextString(m) }
 func (*Refund) ProtoMessage()               {}
-func (*Refund) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{12} }
+func (*Refund) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13} }
 
 func (m *Refund) GetOrderID() string {
 	if m != nil {
@@ -2110,7 +2116,7 @@ type ID struct {
 func (m *ID) Reset()                    { *m = ID{} }
 func (m *ID) String() string            { return proto.CompactTextString(m) }
 func (*ID) ProtoMessage()               {}
-func (*ID) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13} }
+func (*ID) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{14} }
 
 func (m *ID) GetPeerID() string {
 	if m != nil {
@@ -2148,7 +2154,7 @@ type ID_Pubkeys struct {
 func (m *ID_Pubkeys) Reset()                    { *m = ID_Pubkeys{} }
 func (m *ID_Pubkeys) String() string            { return proto.CompactTextString(m) }
 func (*ID_Pubkeys) ProtoMessage()               {}
-func (*ID_Pubkeys) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{13, 0} }
+func (*ID_Pubkeys) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{14, 0} }
 
 func (m *ID_Pubkeys) GetIdentity() []byte {
 	if m != nil {
@@ -2172,7 +2178,7 @@ type Signature struct {
 func (m *Signature) Reset()                    { *m = Signature{} }
 func (m *Signature) String() string            { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()               {}
-func (*Signature) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{14} }
+func (*Signature) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{15} }
 
 func (m *Signature) GetSection() Signature_Section {
 	if m != nil {
@@ -2197,7 +2203,7 @@ type SignedListing struct {
 func (m *SignedListing) Reset()                    { *m = SignedListing{} }
 func (m *SignedListing) String() string            { return proto.CompactTextString(m) }
 func (*SignedListing) ProtoMessage()               {}
-func (*SignedListing) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{15} }
+func (*SignedListing) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{16} }
 
 func (m *SignedListing) GetListing() *Listing {
 	if m != nil {
@@ -2251,8 +2257,8 @@ func init() {
 	proto.RegisterType((*OrderFulfillment_DigitalDelivery)(nil), "OrderFulfillment.DigitalDelivery")
 	proto.RegisterType((*OrderFulfillment_Payout)(nil), "OrderFulfillment.Payout")
 	proto.RegisterType((*OrderCompletion)(nil), "OrderCompletion")
-	proto.RegisterType((*OrderCompletion_Rating)(nil), "OrderCompletion.Rating")
-	proto.RegisterType((*OrderCompletion_Rating_RatingData)(nil), "OrderCompletion.Rating.RatingData")
+	proto.RegisterType((*Rating)(nil), "Rating")
+	proto.RegisterType((*Rating_RatingData)(nil), "Rating.RatingData")
 	proto.RegisterType((*Dispute)(nil), "Dispute")
 	proto.RegisterType((*DisputeResolution)(nil), "DisputeResolution")
 	proto.RegisterType((*DisputeResolution_Payout)(nil), "DisputeResolution.Payout")

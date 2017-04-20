@@ -112,17 +112,24 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) (*c
 }
 
 // Only CPFP for now
+var BumpFeeAlreadyConfirmedError = errors.New("Transaction is confirmed, cannot bump fee")
+var BumpFeeTransactionDeadError = errors.New("Cannot bump fee of dead transaction")
+var BumpFeeNotFoundError = errors.New("Transaction either doesn't exist or has already been spent")
+
 func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	_, txn, err := w.txstore.Txns().Get(txid)
 	if err != nil {
 		return nil, err
 	}
 	if txn.Height > 0 {
-		return nil, errors.New("Transaction is confirmed, cannot bump fee")
+		return nil, BumpFeeAlreadyConfirmedError
+	}
+	if txn.Height < 0 {
+		return nil, BumpFeeTransactionDeadError
 	}
 	utxos, err := w.txstore.Utxos().GetAll()
 	if err != nil {
-		return nil, errors.New("No unspent transactions")
+		return nil, BumpFeeNotFoundError
 	}
 	for _, u := range utxos {
 		if u.Op.Hash.IsEqual(&txid) {
@@ -137,7 +144,7 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			return transactionID, nil
 		}
 	}
-	return nil, errors.New("Transaction either doesn't exist or has already been spent")
+	return nil, BumpFeeNotFoundError
 }
 
 func (w *SPVWallet) EstimateFee(ins []TransactionInput, outs []TransactionOutput, feePerByte uint64) uint64 {
