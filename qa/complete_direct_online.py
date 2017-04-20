@@ -170,7 +170,7 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
                     "description": 5,
                     "customerService": 4,
                     "deliverySpeed": 3,
-                    "Review": "I love it!"
+                    "review": "I love it!"
                 }
             ]
         }
