@@ -698,7 +698,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
 	}
-
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_RESOLVED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
