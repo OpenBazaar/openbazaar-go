@@ -1449,12 +1449,12 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETFollowsMe(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	SanitizedResponse(w, fmt.Sprintf(`{"followsMe": "%t"}`, i.node.Datastore.Followers().FollowsMe(peerId)))
+	SanitizedResponse(w, fmt.Sprintf(`{"followsMe": %t}`, i.node.Datastore.Followers().FollowsMe(peerId)))
 }
 
 func (i *jsonAPIHandler) GETIsFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	SanitizedResponse(w, fmt.Sprintf(`{"isFollowing": "%t"}`, i.node.Datastore.Following().IsFollowing(peerId)))
+	SanitizedResponse(w, fmt.Sprintf(`{"isFollowing": %t}`, i.node.Datastore.Following().IsFollowing(peerId)))
 }
 
 func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Request) {
