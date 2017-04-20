@@ -68,7 +68,12 @@ message Listing {
         message Option {
             string name                = 1;
             string description         = 2;
-            repeated string variants   = 3;
+            repeated Variant variants  = 3;
+
+            message Variant {
+                string name = 1;
+                Image image = 2;
+            }
         }
 
         message Sku {

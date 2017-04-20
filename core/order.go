@@ -1042,7 +1042,7 @@ collectListings:
 				if strings.ToLower(o.Name) == strings.ToLower(checkOpt.Name) {
 					var validVariant bool = false
 					for _, v := range o.Variants {
-						if strings.ToLower(v) == strings.ToLower(checkOpt.Value) {
+						if strings.ToLower(v.Name) == strings.ToLower(checkOpt.Value) {
 							validVariant = true
 						}
 					}
@@ -1375,7 +1375,7 @@ func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (i
 		for _, o := range itemOptions {
 			if o.Name == s.Name {
 				for i, va := range s.Variants {
-					if va == o.Value {
+					if va.Name == o.Value {
 						selected = append(selected, i)
 						break optionsLoop
 					}
