@@ -40,7 +40,7 @@ class SMTPTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("SMTPTest - FAIL: Settings POST failed. Reason: %s", resp["reason"])
-        time.sleep(1)
+        time.sleep(4)
 
         # check SMTP settings
         api_url = alice["gateway_url"] + "ob/settings"

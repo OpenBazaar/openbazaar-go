@@ -1346,8 +1346,7 @@ type OrderConfirmation struct {
 	// Direct payments only
 	PaymentAddress   string             `protobuf:"bytes,3,opt,name=paymentAddress" json:"paymentAddress,omitempty"`
 	RequestedAmount  uint64             `protobuf:"varint,4,opt,name=requestedAmount" json:"requestedAmount,omitempty"`
-	PayoutFee        uint64             `protobuf:"varint,5,opt,name=payoutFee" json:"payoutFee,omitempty"`
-	RatingSignatures []*RatingSignature `protobuf:"bytes,6,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
+	RatingSignatures []*RatingSignature `protobuf:"bytes,5,rep,name=ratingSignatures" json:"ratingSignatures,omitempty"`
 }
 
 func (m *OrderConfirmation) Reset()                    { *m = OrderConfirmation{} }
@@ -1379,13 +1378,6 @@ func (m *OrderConfirmation) GetPaymentAddress() string {
 func (m *OrderConfirmation) GetRequestedAmount() uint64 {
 	if m != nil {
 		return m.RequestedAmount
-	}
-	return 0
-}
-
-func (m *OrderConfirmation) GetPayoutFee() uint64 {
-	if m != nil {
-		return m.PayoutFee
 	}
 	return 0
 }
@@ -2176,6 +2168,38 @@ func (m *Signature) GetSignatureBytes() []byte {
 	return nil
 }
 
+type SignedListing struct {
+	Listing   *Listing `protobuf:"bytes,1,opt,name=listing" json:"listing,omitempty"`
+	Hash      string   `protobuf:"bytes,2,opt,name=hash" json:"hash,omitempty"`
+	Signature []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+}
+
+func (m *SignedListing) Reset()                    { *m = SignedListing{} }
+func (m *SignedListing) String() string            { return proto.CompactTextString(m) }
+func (*SignedListing) ProtoMessage()               {}
+func (*SignedListing) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{15} }
+
+func (m *SignedListing) GetListing() *Listing {
+	if m != nil {
+		return m.Listing
+	}
+	return nil
+}
+
+func (m *SignedListing) GetHash() string {
+	if m != nil {
+		return m.Hash
+	}
+	return ""
+}
+
+func (m *SignedListing) GetSignature() []byte {
+	if m != nil {
+		return m.Signature
+	}
+	return nil
+}
+
 func init() {
 	proto.RegisterType((*RicardianContract)(nil), "RicardianContract")
 	proto.RegisterType((*Listing)(nil), "Listing")
@@ -2217,6 +2241,7 @@ func init() {
 	proto.RegisterType((*ID)(nil), "ID")
 	proto.RegisterType((*ID_Pubkeys)(nil), "ID.Pubkeys")
 	proto.RegisterType((*Signature)(nil), "Signature")
+	proto.RegisterType((*SignedListing)(nil), "SignedListing")
 	proto.RegisterEnum("Listing_Metadata_ContractType", Listing_Metadata_ContractType_name, Listing_Metadata_ContractType_value)
 	proto.RegisterEnum("Listing_Metadata_Format", Listing_Metadata_Format_name, Listing_Metadata_Format_value)
 	proto.RegisterEnum("Listing_ShippingOption_ShippingType", Listing_ShippingOption_ShippingType_name, Listing_ShippingOption_ShippingType_value)

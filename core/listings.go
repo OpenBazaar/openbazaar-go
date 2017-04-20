@@ -92,17 +92,17 @@ func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 }
 
 // Add our identity to the listing and sign it
-func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, error) {
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
 		s.Quantity = 0
 	}
 
-	c := new(pb.RicardianContract)
+	sl := new(pb.SignedListing)
 
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
-		return c, err
+		return sl, err
 	}
 
 	// Set listing version
@@ -113,7 +113,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
-		return c, err
+		return sl, err
 	}
 	profile, err := n.GetProfile()
 	if err == nil {
@@ -123,7 +123,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	p.Identity = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
-		return c, err
+		return sl, err
 	}
 	p.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = p
@@ -132,7 +132,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	// Sign the GUID with the Bitcoin key
 	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
 	if err != nil {
-		return c, err
+		return sl, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
@@ -151,11 +151,11 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 			h := sha256.Sum256([]byte(code))
 			encoded, err := mh.Encode(h[:], mh.SHA2_256)
 			if err != nil {
-				return c, err
+				return sl, err
 			}
 			couponMH, err := mh.Cast(encoded)
 			if err != nil {
-				return c, err
+				return sl, err
 			}
 
 			listing.Coupons[i].Code = &pb.Listing_Coupon_Hash{couponMH.B58String()}
@@ -166,24 +166,21 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.RicardianContract
 	}
 	err = n.Datastore.Coupons().Put(couponsToStore)
 	if err != nil {
-		return c, err
+		return sl, err
 	}
 
 	// Sign listing
-	s := new(pb.Signature)
-	s.Section = pb.Signature_LISTING
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
-		return c, err
+		return sl, err
 	}
-	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedListing)
+	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedListing)
 	if err != nil {
-		return c, err
+		return sl, err
 	}
-	s.SignatureBytes = guidSig
-	c.VendorListings = append(c.VendorListings, listing)
-	c.Signatures = append(c.Signatures, s)
-	return c, nil
+	sl.Listing = listing
+	sl.Signature = idSig
+	return sl, nil
 }
 
 /* Sets the inventory for the listing in the database. Does some basic validation
@@ -226,8 +223,8 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) error {
-	ld, err := n.extractListingData(contract)
+func (n *OpenBazaarNode) UpdateListingIndex(listing *pb.SignedListing) error {
+	ld, err := n.extractListingData(listing)
 	if err != nil {
 		return err
 	}
@@ -238,15 +235,15 @@ func (n *OpenBazaarNode) UpdateListingIndex(contract *pb.RicardianContract) erro
 	return n.updateListingOnDisk(index, ld, false)
 }
 
-func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (listingData, error) {
-	listingPath := path.Join(n.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json")
+func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (listingData, error) {
+	listingPath := path.Join(n.RepoPath, "root", "listings", listing.Listing.Slug+".json")
 
-	listingHash, err := ipfs.GetHash(n.Context, listingPath)
+	listingHash, err := ipfs.GetHashOfFile(n.Context, listingPath)
 	if err != nil {
 		return listingData{}, err
 	}
 
-	descriptionLength := len(contract.VendorListings[0].Item.Description)
+	descriptionLength := len(listing.Listing.Item.Description)
 	if descriptionLength > ShortDescriptionLength {
 		descriptionLength = ShortDescriptionLength
 	}
@@ -262,7 +259,7 @@ func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (lis
 
 	shipsTo := []string{}
 	freeShipping := []string{}
-	for _, shippingOption := range contract.VendorListings[0].ShippingOptions {
+	for _, shippingOption := range listing.Listing.ShippingOptions {
 		for _, region := range shippingOption.Regions {
 			if !contains(shipsTo, region.String()) {
 				shipsTo = append(shipsTo, region.String())
@@ -277,16 +274,16 @@ func (n *OpenBazaarNode) extractListingData(contract *pb.RicardianContract) (lis
 
 	ld := listingData{
 		Hash:         listingHash,
-		Slug:         contract.VendorListings[0].Slug,
-		Title:        contract.VendorListings[0].Item.Title,
-		Categories:   contract.VendorListings[0].Item.Categories,
-		ContractType: contract.VendorListings[0].Metadata.ContractType.String(),
-		Description:  contract.VendorListings[0].Item.Description[:descriptionLength],
-		Thumbnail:    thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small, contract.VendorListings[0].Item.Images[0].Medium},
-		Price:        price{contract.VendorListings[0].Metadata.PricingCurrency, contract.VendorListings[0].Item.Price},
+		Slug:         listing.Listing.Slug,
+		Title:        listing.Listing.Item.Title,
+		Categories:   listing.Listing.Item.Categories,
+		ContractType: listing.Listing.Metadata.ContractType.String(),
+		Description:  listing.Listing.Item.Description[:descriptionLength],
+		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
+		Price:        price{listing.Listing.Metadata.PricingCurrency, listing.Listing.Item.Price},
 		ShipsTo:      shipsTo,
 		FreeShipping: freeShipping,
-		Language:     contract.VendorListings[0].Metadata.Language,
+		Language:     listing.Listing.Metadata.Language,
 	}
 	return ld, nil
 }
@@ -473,13 +470,13 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 			log.Error(err)
 			return false
 		}
-		c := new(pb.RicardianContract)
-		err = jsonpb.UnmarshalString(string(b), c)
+		sl := new(pb.SignedListing)
+		err = jsonpb.UnmarshalString(string(b), sl)
 		if err != nil {
 			log.Error(err)
 			return false
 		}
-		ser, err := proto.Marshal(c.VendorListings[0])
+		ser, err := proto.Marshal(sl.Listing)
 		if err != nil {
 			log.Error(err)
 			return false
@@ -571,7 +568,7 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	return file, nil
 }
 
-func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, error) {
 	// Read index.json
 	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
 	file, err := ioutil.ReadFile(indexPath)
@@ -601,7 +598,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.RicardianContract,
 	return n.GetListingFromSlug(slug)
 }
 
-func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, error) {
 	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
 	file, err := ioutil.ReadFile(listingPath)
@@ -610,8 +607,8 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 	}
 
 	// Unmarshal listing
-	contract := new(pb.RicardianContract)
-	err = jsonpb.UnmarshalString(string(file), contract)
+	sl := new(pb.SignedListing)
+	err = jsonpb.UnmarshalString(string(file), sl)
 	if err != nil {
 		return nil, err
 	}
@@ -624,14 +621,14 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.RicardianContract,
 
 	// Build the inventory list
 	for variant, count := range inventory {
-		for i, s := range contract.VendorListings[0].Item.Skus {
+		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
 				s.Quantity = int64(count)
 				break
 			}
 		}
 	}
-	return contract, nil
+	return sl, nil
 }
 
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
@@ -971,40 +968,37 @@ func validateListing(listing *pb.Listing) (err error) {
 	return nil
 }
 
-func verifySignaturesOnListing(contract *pb.RicardianContract) error {
-	for _, listing := range contract.VendorListings {
-		// Verify identity signature on listing
-		if err := verifyMessageSignature(
-			listing,
-			listing.VendorID.Pubkeys.Identity,
-			contract.Signatures,
-			pb.Signature_LISTING,
-			listing.VendorID.PeerID,
-		); err != nil {
-			switch err.(type) {
-			case noSigError:
-				return errors.New("Contract does not contain listing signature")
-			case invalidSigError:
-				return errors.New("Buyer's guid signature on contact failed to verify")
-			case matchKeyError:
-				return errors.New("Public key in order does not match reported buyer ID")
-			default:
-				return err
-			}
+func verifySignaturesOnListing(sl *pb.SignedListing) error {
+	// Verify identity signature on listing
+	if err := verifySignature(
+		sl.Listing,
+		sl.Listing.VendorID.Pubkeys.Identity,
+		sl.Signature,
+		sl.Listing.VendorID.PeerID,
+	); err != nil {
+		switch err.(type) {
+		case noSigError:
+			return errors.New("Contract does not contain listing signature")
+		case invalidSigError:
+			return errors.New("Buyer's guid signature on contact failed to verify")
+		case matchKeyError:
+			return errors.New("Public key in order does not match reported buyer ID")
+		default:
+			return err
 		}
+	}
 
-		// Verify the bitcoin signature in the ID
-		if err := verifyBitcoinSignature(
-			listing.VendorID.Pubkeys.Bitcoin,
-			listing.VendorID.BitcoinSig,
-			listing.VendorID.PeerID,
-		); err != nil {
-			switch err.(type) {
-			case invalidSigError:
-				return errors.New("Vendor's bitcoin signature on GUID failed to verify")
-			default:
-				return err
-			}
+	// Verify the bitcoin signature in the ID
+	if err := verifyBitcoinSignature(
+		sl.Listing.VendorID.Pubkeys.Bitcoin,
+		sl.Listing.VendorID.BitcoinSig,
+		sl.Listing.VendorID.PeerID,
+	); err != nil {
+		switch err.(type) {
+		case invalidSigError:
+			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
+		default:
+			return err
 		}
 	}
 	return nil

@@ -67,7 +67,6 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 			oc.RatingSignatures = append(oc.RatingSignatures, rs)
 		}
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
-		oc.PayoutFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 	}
 
 	oc.RequestedAmount, err = n.CalculateOrderTotal(contract)

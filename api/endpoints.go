@@ -76,6 +76,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTBlockNode(w, r)
 	case strings.HasPrefix(path, "/ob/shutdown"):
 		i.POSTShutdown(w, r)
+	case strings.HasPrefix(path, "/ob/estimatetotal"):
+		i.POSTEstimateTotal(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -131,8 +133,12 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETChatConversations(w, r)
 	case strings.HasPrefix(path, "/ob/notifications"):
 		i.GETNotifications(w, r)
-	case strings.HasPrefix(path, "/ob/images"):
+	case strings.HasPrefix(path, "/ob/image"):
 		i.GETImage(w, r)
+	case strings.HasPrefix(path, "/ob/avatar"):
+		i.GETAvatar(w, r)
+	case strings.HasPrefix(path, "/ob/header"):
+		i.GETHeader(w, r)
 	case strings.HasPrefix(path, "/ob/purchases"):
 		i.GETPurchases(w, r)
 	case strings.HasPrefix(path, "/ob/sales"):

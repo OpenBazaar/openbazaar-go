@@ -96,20 +96,17 @@ class ChatOfflineTest(OpenBazaarTestFramework):
         if resp[0]["peerId"] != alice_id:
             raise TestFailure("ChatOfflineTest - FAIL: Did not record new conversation")
 
-        # alice mark as read
-        message = {
-            "peerId": bob_id
-        }
-        api_url = alice["gateway_url"] + "ob/markchatasread"
-        r = requests.post(api_url, data=json.dumps(message, indent=4))
+        # bob mark as read
+        api_url = bob["gateway_url"] + "ob/markchatasread/" + alice_id
+        r = requests.post(api_url)
         if r.status_code == 404:
             raise TestFailure("ChatOfflineTest - FAIL: Chat markasread post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("ChatOfflineTest - FAIL: Chat markasread POST failed. Reason: %s", resp["reason"])
 
-        # check alice marked as read correctly
-        api_url = alice["gateway_url"] + "ob/chatconversations/" + bob_id
+        # check bob marked as read correctly
+        api_url = bob["gateway_url"] + "ob/chatconversations/" + alice_id
         r = requests.get(api_url)
         if r.status_code == 404:
             raise TestFailure("ChatOfflineTest - FAIL: Chat conversations GET endpoint not found")

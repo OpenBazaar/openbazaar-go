@@ -8,7 +8,8 @@ message Moderator {
     string description        = 1;
     string termsAndConditions = 2;
     repeated string languages = 3;
-    Fee fee                   = 4;
+    string acceptedCurrency   = 4;
+    Fee fee                   = 5;
 
     message Fee {
         Price fixedFee   = 1;
