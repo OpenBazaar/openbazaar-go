@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ipfs/go-ipfs/routing/dht/util"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
 	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
@@ -20,8 +21,6 @@ import (
 
 // The number of closer peers to send on requests.
 var CloserPeerCount = KValue
-
-const MAGIC string = "000000000000000000000000"
 
 // dhthandler specifies the signature of functions that handle DHT messages.
 type dhtHandler func(context.Context, peer.ID, *pb.Message) (*pb.Message, error)
@@ -127,7 +126,7 @@ func (dht *IpfsDHT) checkLocalDatastore(k string) (*recpb.Record, error) {
 		recordIsBad = true
 	}
 
-	if time.Now().Sub(recvtime) > MaxRecordAge {
+	if time.Now().Sub(recvtime) > util.MaxRecordAge {
 		log.Debug("old record found, tossing.")
 		recordIsBad = true
 	}
@@ -284,11 +283,11 @@ func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.M
 		}
 
 		log.Infof("received provider %s for %s (addrs: %s)", p, c, pi.Addrs)
-		if pi.ID != dht.self && !isPointer(pi.ID) { // dont add own addrs.
+		if pi.ID != dht.self && !util.IsPointer(pi.ID) { // dont add own addrs.
 			// add the received addresses to our peerstore.
 			dht.peerstore.AddAddrs(pi.ID, pi.Addrs, pstore.ProviderAddrTTL)
-		} else if isPointer(pi.ID) {
-			dht.peerstore.AddAddrs(pi.ID, pi.Addrs, time.Hour*24*7)
+		} else if util.IsPointer(pi.ID) {
+			dht.peerstore.AddAddrs(pi.ID, pi.Addrs, util.PointerAddrTTL)
 		}
 		dht.providers.AddProvider(ctx, c, pi.ID)
 	}
@@ -298,9 +297,4 @@ func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.M
 
 func convertToDsKey(s string) ds.Key {
 	return ds.NewKey(base32.RawStdEncoding.EncodeToString([]byte(s)))
-}
-
-func isPointer(id peer.ID) bool {
-	hexID := peer.IDHexEncode(id)
-	return hexID[4:28] == MAGIC
 }
