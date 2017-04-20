@@ -30,6 +30,7 @@ It has these top-level messages:
 	BitcoinSignature
 	OrderFulfillment
 	OrderCompletion
+	Rating
 	Dispute
 	DisputeResolution
 	Outpoint
