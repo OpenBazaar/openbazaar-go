@@ -113,6 +113,7 @@ type Start struct {
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
 	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
 	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
 	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
@@ -468,7 +469,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Create user-agent file
-	userAgentBytes := []byte(core.USERAGENT)
+	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
 	// IPFS node setup
