@@ -65,19 +65,19 @@ func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth
 
 	imgPath := path.Join(n.RepoPath, "root", "images")
 
-	t, err := n.addResizedImage(img, imgCfg, 1 * baseWidth, 1 * baseHeight, path.Join(imgPath, "tiny", filename))
+	t, err := n.addResizedImage(img, imgCfg, 1*baseWidth, 1*baseHeight, path.Join(imgPath, "tiny", filename))
 	if err != nil {
 		return nil, err
 	}
-	s, err := n.addResizedImage(img, imgCfg, 2 * baseWidth, 2 * baseHeight, path.Join(imgPath, "small", filename))
+	s, err := n.addResizedImage(img, imgCfg, 2*baseWidth, 2*baseHeight, path.Join(imgPath, "small", filename))
 	if err != nil {
 		return nil, err
 	}
-	m, err := n.addResizedImage(img, imgCfg, 4 * baseWidth, 4 * baseHeight, path.Join(imgPath, "medium", filename))
+	m, err := n.addResizedImage(img, imgCfg, 4*baseWidth, 4*baseHeight, path.Join(imgPath, "medium", filename))
 	if err != nil {
 		return nil, err
 	}
-	l, err := n.addResizedImage(img, imgCfg, 8 * baseWidth, 8 * baseHeight, path.Join(imgPath, "large", filename))
+	l, err := n.addResizedImage(img, imgCfg, 8*baseWidth, 8*baseHeight, path.Join(imgPath, "large", filename))
 	if err != nil {
 		return nil, err
 	}
