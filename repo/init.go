@@ -185,9 +185,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		Type:             "spvwallet",
 		MaxFee:           2000,
 		FeeAPI:           "https://bitcoinfees.21.co/api/v1/fees/recommended",
-		HighFeeDefault:   60,
-		MediumFeeDefault: 40,
-		LowFeeDefault:    20,
+		HighFeeDefault:   160,
+		MediumFeeDefault: 140,
+		LowFeeDefault:    120,
 		TrustedPeer:      "",
 	}
 
