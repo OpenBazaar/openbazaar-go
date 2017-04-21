@@ -6,7 +6,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
@@ -42,22 +41,22 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	walletCfg, err := repo.GetWalletConfig(repository.ConfigFile())
-	if err != nil {
-		return nil, err
+	spvwalletConfig := &spvwallet.Config{
+		Mnemonic:    mnemonic,
+		Params:      &chaincfg.TestNet3Params,
+		MaxFee:      50000,
+		LowFee:      8000,
+		MediumFee:   16000,
+		HighFee:     24000,
+		RepoPath:    repository.Path,
+		DB:          repository.DB,
+		UserAgent:   "OpenBazaar",
+		TrustedPeer: nil,
+		Proxy:       nil,
+		Logger:      NewLogger(),
 	}
 
-	wallet, err := spvwallet.NewSPVWallet(
-		mnemonic,
-		&chaincfg.TestNet3Params, 50000, 8000, 16000, 24000, walletCfg.FeeAPI,
-		repository.Path,
-		repository.DB,
-		"OpenBazaar-Test",
-		walletCfg.TrustedPeer,
-		nil,
-		NewLogger(),
-	)
+	wallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
 	if err != nil {
 		return nil, err
 	}

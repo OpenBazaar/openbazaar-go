@@ -701,17 +701,20 @@ func (x *Start) Execute(args []string) error {
 	var wallet bitcoin.BitcoinWallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
-		tp, err := net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
-		if err != nil {
-			log.Error(err)
-			return err
+		var tp net.Addr
+		if walletCfg.TrustedPeer != "" {
+			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 		}
 		feeApi, err := url.Parse(walletCfg.FeeAPI)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
-		walletConfig := &spvwallet.Config{
+		spvwalletConfig := &spvwallet.Config{
 			Mnemonic:    mn,
 			Params:      &params,
 			MaxFee:      uint64(walletCfg.MaxFee),
@@ -726,7 +729,7 @@ func (x *Start) Execute(args []string) error {
 			Proxy:       torDialer,
 			Logger:      ml,
 		}
-		wallet, err = spvwallet.NewSPVWallet(walletConfig)
+		wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
 			log.Error(err)
 			return err
