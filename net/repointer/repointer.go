@@ -6,8 +6,11 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 )
+
+var log = logging.MustGetLogger("service")
 
 type PointerRepublisher struct {
 	ipfsNode    *core.IpfsNode
@@ -36,6 +39,7 @@ func (r *PointerRepublisher) Republish() {
 	republishModerator := r.isModerator()
 	pointers, err := r.db.Pointers().GetAll()
 	if err != nil {
+		log.Error(err)
 		return
 	}
 	ctx := context.Background()
