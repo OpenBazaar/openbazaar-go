@@ -185,6 +185,8 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		return
 	}
 
+	m.node.Peerstore.AddPubKey(id, pubkey)
+
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
 		m.sendAck(id.Pretty(), pid)
