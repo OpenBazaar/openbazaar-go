@@ -1,48 +1,152 @@
+[![Build Status](https://travis-ci.org/OpenBazaar/spvwallet.svg?branch=master)](https://travis-ci.org/OpenBazaar/spvwallet)
+[![Coverage Status](https://coveralls.io/repos/github/OpenBazaar/spvwallet/badge.svg?branch=master)](https://coveralls.io/github/OpenBazaar/spvwallet?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/OpenBazaar/spvwallet)](https://goreportcard.com/report/github.com/OpenBazaar/spvwallet)
+
 # spvwallet
 
-Lightweight p2p SPV wallet in Go. It connects directly to the bitcoin p2p network to fetch headers, merkle blocks, and transactions.
-It mostly utilizes utilities from btcd and is partially based on https://github.com/LightningNetwork/lnd/tree/master/uspv.
+Lightweight p2p SPV wallet and library in Go. It connects directly to the bitcoin p2p network to fetch headers, merkle blocks, and transactions.
 
-## Interfaces
-These are the used interfaces:
+It uses a number of utilities from btcsuite but natively handles blockchain and wallet.
 
-#### Database
+Library Usage:
+```go
+// Create a new config
+config := spvwallet.NewDefaultConfig()
 
-A sqlite implementation is included for testing but you should probably implement your own custom solution. Note there is no encryption in the example db.
+// Select network
+config.Params = &chaincfg.TestNet3Params
 
-* Keys
+// Select wallet datastore
+sqliteDatastore, _ := db.Create(config.RepoPath)
+config.DB = sqliteDatastore
 
-The wallet manages an hd keychain (m/0'/change/index/) and stores they keys in this database. Used keys are marked in the db and a lookahead window is maintained to ensure all transactions can be recovered when restoring from seed.
+// Create the wallet
+wallet, _ := spvwallet.NewSPVWallet(config)
 
-* Utxos
+// Start it!
+go wallet.Start()
+```
 
-Stores all the utxos.  The goal of bitcoin is to get lots of utxos, earning a high score.
+Easy peasy
 
-* Stxos
+The wallet implements the following interface:
+```go
+type BitcoinWallet interface {
 
-For record keeping. Stores what used to be utxos, but are no longer "u"txos, and are spent outpoints.  It references the spending txid.
+	// Start the wallet
+	Start()
 
-* Txns
+	// Return the network parameters
+	Params() *chaincfg.Params
 
-This bucket stores full serialized transactions which are refenced in the Stxos bucket.  These can be used to re-play transactions in the case of re-orgs.
+	// Returns the type of crytocurrency this wallet implements
+	CurrencyCode() string
 
-* State
+	// Get the master private key
+	MasterPrivateKey() *hd.ExtendedKey
 
-This has describes some miscellaneous global state variables of the database, such as what height it has synchronized up to.
+	// Get the master public key
+	MasterPublicKey() *hd.ExtendedKey
 
-#### Header file (currently headers.bin)
+	// Get the current address for the given purpose
+	CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address
 
-This is currently a bolt db which stores the chain of headers as well as orphans. A separate bucks tracks the tip of the chain. Cumulative work is calculated for each header and enables us to smoothly handle reorgs.
+	// Returns a fresh address that has never been returned by this function
+	NewAddress(purpose spvwallet.KeyPurpose) btc.Address
 
-## Synchronization overview
+	// Returns if the wallet has the key for the given address
+	HasKey(addr btc.Address) bool
 
-At startup addresses are gathered from the DNS seeds and it will maintain one or more connections (determined by the MAX_PEERS constant).  It first asks for headers, providing the last known header, then loops through asking for headers until it receives an empty header message, which signals that headers are fully synchronized.
+	// Get the confirmed and unconfirmed balances
+	Balance() (confirmed, unconfirmed int64)
 
-After header synchronization is complete, it requests merkle blocks starting at the last db height recorded in state. If the height is zero it requests from the last checkpoiint. Bloom filters are generated for the addresses and utxos known to the wallet.  If too many false positives are received, a new filter is generated and sent. Once the merkle blocks have been received up to the header height, the wallet is considered synchronized and it will listen for new inv messages from the remote node.
+	// Returns a list of transactions for this wallet
+	Transactions() ([]spvwallet.Txn, error)
 
-## TODO
+	// Get info on a specific transaction
+	GetTransaction(txid chainhash.Hash) (spvwallet.Txn, error)
 
-* Evict confirmed transactions from the db when a reorg is triggered.
-* Cache peer addresses and request more using getaddr. Only use the DNS seeds if we absolutely need to.
-* General refactoring, comments, and clean up.
-* Unit tests.
+	// Get the height of the blockchain
+	ChainTip() uint32
+
+	// Get the current fee per byte
+	GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64
+
+	// Send bitcoins to an external wallet
+	Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error)
+
+	// Bump the fee for the given transaction
+	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)
+
+	// Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
+	EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64
+
+	// Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
+	SweepAddress(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error)
+
+	// Create a signature for a multisig transaction
+	CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error)
+
+	// Combine signatures and optionally broadcast
+	Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error)
+
+	// Generate a multisig script from public keys
+	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error)
+
+	// Add a script to the wallet and get notifications back when coins are received or spent from it
+	AddWatchedScript(script []byte) error
+
+	// Add a callback for incoming transactions
+	AddTransactionListener(func(spvwallet.TransactionCallback))
+
+	// Use this to re-download merkle blocks in case of missed transactions
+	ReSyncBlockchain(fromHeight int32)
+
+	// Return the number of confirmations for a transaction
+	GetConfirmations(txid chainhash.Hash) (uint32, error)
+
+	// Cleanly disconnect from the wallet
+	Close()
+}
+```
+
+To create a wallet binary:
+```
+make install
+```
+
+Usage:
+```
+Usage:
+  spvwallet [OPTIONS] <command>
+
+Help Options:
+  -h, --help  Show this help message
+
+Available commands:
+  addwatchedscript         add a script to watch
+  balance                  get the wallet balance
+  bumpfee                  bump the tx fee
+  chaintip                 return the height of the chain
+  createmultisigsignature  create a p2sh multisig signature
+  currentaddress           get the current bitcoin address
+  estimatefee              estimate the fee for a tx
+  getconfirmations         get the number of confirmations for a tx
+  getfeeperbyte            get the current bitcoin fee
+  gettransaction           get a specific transaction
+  haskey                   does key exist
+  masterprivatekey         get the wallet's master private key
+  masterpublickey          get the wallet's master public key
+  multisign                combine multisig signatures
+  newaddress               get a new bitcoin address
+  peers                    get info about peers
+  resyncblockchain         re-download the chain of headers
+  spend                    send bitcoins
+  start                    start the wallet
+  stop                     stop the wallet
+  sweepaddress             sweep all coins from an address
+  transactions             get a list of transactions
+  version                  print the version number
+```
+
+Finally a gRPC API is available on port 8234. The same interface is exposed via the API plus a streaming wallet notifier which fires when a new transaction (either incoming or outgoing) is recorded then again when it gains its first confirmation.

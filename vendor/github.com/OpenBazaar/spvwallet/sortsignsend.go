@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -41,7 +42,7 @@ func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
 	}
 
 	log.Debugf("Broadcasting tx %s to peers", tx.TxHash().String())
-	for _, peer := range s.PeerManager.ConnectedPeers() {
+	for _, peer := range s.peerManager.ConnectedPeers() {
 		peer.QueueMessage(invMsg, nil)
 		s.updateFilterAndSend(peer)
 	}
@@ -88,7 +89,7 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 			confirmations = int32(height) - u.AtHeight
 		}
 		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
-		key, err := w.txstore.GetKeyForScript(u.ScriptPubkey)
+		key, err := w.keyManager.GetKeyForScript(u.ScriptPubkey)
 		if err != nil {
 			continue
 		}
@@ -111,7 +112,6 @@ func (w *SPVWallet) Spend(amount int64, addr btc.Address, feeLevel FeeLevel) (*c
 	return &ch, nil
 }
 
-// Only CPFP for now
 var BumpFeeAlreadyConfirmedError = errors.New("Transaction is confirmed, cannot bump fee")
 var BumpFeeTransactionDeadError = errors.New("Cannot bump fee of dead transaction")
 var BumpFeeNotFoundError = errors.New("Transaction either doesn't exist or has already been spent")
@@ -127,13 +127,63 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	if txn.Height < 0 {
 		return nil, BumpFeeTransactionDeadError
 	}
-	utxos, err := w.txstore.Utxos().GetAll()
-	if err != nil {
-		return nil, BumpFeeNotFoundError
-	}
+	// Check stxos for RBF opportunity
+	/*stxos, _ := w.txstore.Stxos().GetAll()
+	for _, s := range stxos {
+		if s.SpendTxid.IsEqual(&txid) {
+			r := bytes.NewReader(txn.Bytes)
+			msgTx := wire.NewMsgTx(1)
+			msgTx.BtcDecode(r, 1)
+			for i, output := range msgTx.TxOut {
+				key, err := w.txstore.GetKeyForScript(output.PkScript)
+				if key != nil && err == nil { // This is our change output
+					// Calculate change - additional fee
+					feePerByte := w.GetFeePerByte(PRIOIRTY)
+					estimatedSize := EstimateSerializeSize(len(msgTx.TxIn), msgTx.TxOut, false)
+					fee := estimatedSize * int(feePerByte)
+					newValue := output.Value - int64(fee)
+
+					// Check if still above dust value
+					if newValue <= 0 || txrules.IsDustAmount(btc.Amount(newValue), len(output.PkScript), txrules.DefaultRelayFeePerKb) {
+						msgTx.TxOut = append(msgTx.TxOut[:i], msgTx.TxOut[i+1:]...)
+					} else {
+						output.Value = newValue
+					}
+
+					// Bump sequence number
+					optInRBF := false
+					for _, input := range msgTx.TxIn {
+						if input.Sequence < 4294967294 {
+							input.Sequence++
+							optInRBF = true
+						}
+					}
+					if !optInRBF {
+						break
+					}
+
+					//TODO: Re-sign transaction
+
+					// Mark original tx as dead
+					if err = w.txstore.markAsDead(txid); err != nil {
+						return nil, err
+					}
+
+					// Broadcast new tx
+					if err := w.Broadcast(msgTx); err != nil {
+						return nil, err
+					}
+					newTxid := msgTx.TxHash()
+					return &newTxid, nil
+				}
+			}
+		}
+	}*/
+	// Check utxos for CPFP
+	utxos, _ := w.txstore.Utxos().GetAll()
 	for _, u := range utxos {
-		if u.Op.Hash.IsEqual(&txid) {
-			key, err := w.txstore.GetKeyForScript(u.ScriptPubkey)
+		if u.Op.Hash.IsEqual(&txid) && u.AtHeight == 0 {
+			key, err := w.keyManager.GetKeyForScript(u.ScriptPubkey)
 			if err != nil {
 				return nil, err
 			}
@@ -191,7 +241,7 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 		return sigs, err
 	}
 
-	for i, _ := range tx.TxIn {
+	for i := range tx.TxIn {
 		sig, err := txscript.RawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey)
 		if err != nil {
 			continue
@@ -202,12 +252,12 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 	return sigs, nil
 }
 
-func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte uint64) error {
+func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 	tx := new(wire.MsgTx)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
 		input := wire.NewTxIn(outpoint, []byte{})
@@ -249,13 +299,17 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 		builder.AddData(redeemScript)
 		scriptSig, err := builder.Script()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		input.SignatureScript = scriptSig
 	}
 	// broadcast
-	w.Broadcast(tx)
-	return nil
+	if broadcast {
+		w.Broadcast(tx)
+	}
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, 1)
+	return buf.Bytes(), nil
 }
 
 func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error) {

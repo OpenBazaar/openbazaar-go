@@ -5,12 +5,14 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/boltdb/bolt"
-	"github.com/btcsuite/btcd/wire"
+	"io"
 	"math/big"
 	"path"
 	"sort"
 	"sync"
+
+	"github.com/boltdb/bolt"
+	"github.com/btcsuite/btcd/wire"
 )
 
 const MAX_HEADERS = 2000
@@ -38,7 +40,7 @@ type Headers interface {
 	Close()
 
 	// Print all headers
-	Print()
+	Print(io.Writer)
 }
 
 type StoredHeader struct {
@@ -212,7 +214,7 @@ func (h *HeaderDB) Height() (uint32, error) {
 	return height, nil
 }
 
-func (h *HeaderDB) Print() {
+func (h *HeaderDB) Print(w io.Writer) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 	m := make(map[float64][]string)
@@ -244,7 +246,7 @@ func (h *HeaderDB) Print() {
 	}
 	sort.Float64s(keys)
 	for _, k := range keys {
-		fmt.Printf("Height: %.1f, Hash: %s, Parent: %s\n", k, m[k][0], m[k][1])
+		fmt.Fprintf(w, "Height: %.1f, Hash: %s, Parent: %s\n", k, m[k][0], m[k][1])
 	}
 }
 

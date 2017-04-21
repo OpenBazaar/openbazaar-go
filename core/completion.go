@@ -216,7 +216,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		err = n.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		_, err = n.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
 		if err != nil {
 			return err
 		}

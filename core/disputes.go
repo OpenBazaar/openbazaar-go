@@ -1048,7 +1048,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		moderatorSigs = append(moderatorSigs, s)
 	}
 
-	err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0)
+	_, err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
 	if err != nil {
 		return err
 	}

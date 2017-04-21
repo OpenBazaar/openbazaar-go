@@ -19,6 +19,7 @@ import (
 	//"io/ioutil"
 	"os/exec"
 	//"path"
+	"bytes"
 	"strconv"
 	"strings"
 	"time"
@@ -386,12 +387,12 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 	return sigs, nil
 }
 
-func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64) error {
+func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
-			return err
+			return nil, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
 		input := wire.NewTxIn(outpoint, []byte{})
@@ -433,16 +434,20 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		builder.AddData(redeemScript)
 		scriptSig, err := builder.Script()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		input.SignatureScript = scriptSig
 	}
 	// Broadcast
-	_, err := w.rpcClient.SendRawTransaction(tx, false)
-	if err != nil {
-		return err
+	if broadcast {
+		_, err := w.rpcClient.SendRawTransaction(tx, false)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return nil
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, 1)
+	return buf.Bytes(), nil
 }
 
 func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {

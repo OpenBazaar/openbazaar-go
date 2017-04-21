@@ -198,16 +198,20 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 			} else { // Otherwise return the difficulty of the last block not using special difficulty rules
 				for {
 					var err error = nil
+					fmt.Println(err, prevHeader.height, prevHeader.header.Bits)
 					for err == nil && int32(prevHeader.height)%epochLength != 0 && prevHeader.header.Bits == b.params.PowLimitBits {
 						var sh StoredHeader
 						sh, err = b.db.GetPreviousHeader(prevHeader.header)
 						// Error should only be non-nil if prevHeader is the checkpoint.
 						// In that case we should just return checkpoint bits
+						fmt.Println("**", sh.height, err)
 						if err == nil {
 							prevHeader = sh
+							fmt.Println("here")
 						}
 
 					}
+					fmt.Println(prevHeader.height)
 					return prevHeader.header.Bits, nil
 				}
 			}
@@ -278,7 +282,7 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 	step := 1
 	start := 0
 	for {
-		if start >= 10 {
+		if start >= 9 {
 			step *= 2
 			start = 0
 		}
@@ -376,7 +380,7 @@ func calcDiffAdjust(start, end wire.BlockHeader, p *chaincfg.Params) uint32 {
 
 	// calculation of new 32-byte difficulty target
 	// first turn the previous target into a big int
-	prevTarget := blockchain.CompactToBig(start.Bits)
+	prevTarget := blockchain.CompactToBig(end.Bits)
 	// new target is old * duration...
 	newTarget := new(big.Int).Mul(prevTarget, big.NewInt(duration))
 	// divided by 2 weeks

@@ -3,19 +3,19 @@ package spvwallet
 import (
 	"fmt"
 
+	"errors"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 )
 
-func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) *chainhash.Hash {
+func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) (*chainhash.Hash, error) {
 	// dupes can screw things up; CVE-2012-2459. check for them
 	if left != nil && right != nil && left.IsEqual(right) {
-		fmt.Printf("DUP HASH CRASH")
-		return nil
+		return nil, errors.New("DUP HASH CRASH")
 	}
 	// if left child is nil, output nil.  Need this for hard mode.
 	if left == nil {
-		return nil
+		return nil, errors.New("Left child is nil")
 	}
 	// if right is nil, hash left with itself
 	if right == nil {
@@ -28,7 +28,7 @@ func MakeMerkleParent(left *chainhash.Hash, right *chainhash.Hash) *chainhash.Ha
 	copy(sha[32:], right[:])
 
 	newSha := chainhash.DoubleHashH(sha[:])
-	return &newSha
+	return &newSha, nil
 }
 
 type merkleNode struct {
@@ -54,7 +54,7 @@ func inDeadZone(pos, size uint32) bool {
 	msb := nextPowerOfTwo(size)
 	last := size - 1      // last valid position is 1 less than size
 	if pos > (msb<<1)-2 { // greater than root; not even in the tree
-		fmt.Printf(" ?? greater than root ")
+		log.Debug(" ?? greater than root ")
 		return true
 	}
 	h := msb
@@ -100,7 +100,11 @@ func checkMBlock(m *wire.MsgMerkleBlock) ([]*chainhash.Hash, error) {
 		// is current position in the tree's dead zone? partial parent
 		if inDeadZone(pos, m.Transactions) {
 			// create merkle parent from single side (left)
-			s[tip-1].h = MakeMerkleParent(s[tip].h, nil)
+			h, err := MakeMerkleParent(s[tip].h, nil)
+			if err != nil {
+				return r, err
+			}
+			s[tip-1].h = h
 			s = s[:tip]          // remove 1 from stack
 			pos = s[tip-1].p | 1 // move position to parent's sibling
 			continue
@@ -110,7 +114,11 @@ func checkMBlock(m *wire.MsgMerkleBlock) ([]*chainhash.Hash, error) {
 			//fmt.Printf("nodes %d and %d combine into %d\n",
 			//	s[tip-1].p, s[tip].p, s[tip-2].p)
 			// combine two filled nodes into parent node
-			s[tip-2].h = MakeMerkleParent(s[tip-1].h, s[tip].h)
+			h, err := MakeMerkleParent(s[tip-1].h, s[tip].h)
+			if err != nil {
+				return r, err
+			}
+			s[tip-2].h = h
 			// remove children
 			s = s[:tip-1]
 			// move position to parent's sibling

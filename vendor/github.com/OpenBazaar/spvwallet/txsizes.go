@@ -69,11 +69,12 @@ func EstimateSerializeSize(inputCount int, txOuts []*wire.TxOut, addChangeOutput
 	return 8 + wire.VarIntSerializeSize(uint64(inputCount)) +
 		wire.VarIntSerializeSize(uint64(outputCount)) +
 		inputCount*RedeemP2PKHInputSize +
-		sumOutputSerializeSizes(txOuts) +
+		SumOutputSerializeSizes(txOuts) +
 		changeSize
 }
 
-func sumOutputSerializeSizes(outputs []*wire.TxOut) (serializeSize int) {
+// SumOutputSerializeSizes sums up the serialized size of the supplied outputs.
+func SumOutputSerializeSizes(outputs []*wire.TxOut) (serializeSize int) {
 	for _, txOut := range outputs {
 		serializeSize += txOut.SerializeSize()
 	}

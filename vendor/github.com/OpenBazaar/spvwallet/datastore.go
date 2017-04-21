@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"bytes"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -120,6 +121,34 @@ type Utxo struct {
 	WatchOnly bool
 }
 
+func (utxo *Utxo) IsEqual(alt *Utxo) bool {
+	if alt == nil {
+		return utxo == nil
+	}
+
+	if !utxo.Op.Hash.IsEqual(&alt.Op.Hash) {
+		return false
+	}
+
+	if utxo.Op.Index != alt.Op.Index {
+		return false
+	}
+
+	if utxo.AtHeight != alt.AtHeight {
+		return false
+	}
+
+	if utxo.Value != alt.Value {
+		return false
+	}
+
+	if bytes.Compare(utxo.ScriptPubkey, alt.ScriptPubkey) != 0 {
+		return false
+	}
+
+	return true
+}
+
 type Stxo struct {
 	// When it used to be a UTXO
 	Utxo Utxo
@@ -129,6 +158,26 @@ type Stxo struct {
 
 	// The tx that consumed it
 	SpendTxid chainhash.Hash
+}
+
+func (stxo *Stxo) IsEqual(alt *Stxo) bool {
+	if alt == nil {
+		return stxo == nil
+	}
+
+	if !stxo.Utxo.IsEqual(&alt.Utxo) {
+		return false
+	}
+
+	if stxo.SpendHeight != alt.SpendHeight {
+		return false
+	}
+
+	if !stxo.SpendTxid.IsEqual(&alt.SpendTxid) {
+		return false
+	}
+
+	return true
 }
 
 type Txn struct {

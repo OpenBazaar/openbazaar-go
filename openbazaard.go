@@ -701,7 +701,32 @@ func (x *Start) Execute(args []string) error {
 	var wallet bitcoin.BitcoinWallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
-		wallet, err = spvwallet.NewSPVWallet(mn, &params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, sqliteDB, "OpenBazaar", walletCfg.TrustedPeer, torDialer, ml)
+		tp, err := net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		feeApi, err := url.Parse(walletCfg.FeeAPI)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		walletConfig := &spvwallet.Config{
+			Mnemonic:    mn,
+			Params:      &params,
+			MaxFee:      uint64(walletCfg.MaxFee),
+			LowFee:      uint64(walletCfg.LowFeeDefault),
+			MediumFee:   uint64(walletCfg.MediumFeeDefault),
+			HighFee:     uint64(walletCfg.HighFeeDefault),
+			FeeAPI:      *feeApi,
+			RepoPath:    repoPath,
+			DB:          sqliteDB,
+			UserAgent:   "OpenBazaar",
+			TrustedPeer: tp,
+			Proxy:       torDialer,
+			Logger:      ml,
+		}
+		wallet, err = spvwallet.NewSPVWallet(walletConfig)
 		if err != nil {
 			log.Error(err)
 			return err

@@ -9,8 +9,6 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"golang.org/x/net/proxy"
-	"net"
 	"os"
 	"path"
 	"sync"
@@ -32,7 +30,8 @@ type SPVWallet struct {
 
 	blockchain  *Blockchain
 	txstore     *TxStore
-	PeerManager *PeerManager
+	peerManager *PeerManager
+	keyManager  *KeyManager
 
 	fPositives    chan *peer.Peer
 	stopChan      chan int
@@ -43,21 +42,31 @@ type SPVWallet struct {
 
 	running bool
 
-	config *Config
+	config *PeerManagerConfig
 }
 
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
 
-func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFee uint64, mediumFee uint64, highFee uint64, feeApi,
-	repoPath string, db Datastore, userAgent string, trustedPeer string, proxy proxy.Dialer, logger logging.LeveledBackend) (*SPVWallet, error) {
+func NewSPVWallet(config *Config) (*SPVWallet, error) {
 
-	log.SetBackend(logger)
+	log.SetBackend(logging.AddModuleLevel(config.Logger))
 
-	seed := b39.NewSeed(mnemonic, "")
+	if config.Mnemonic == "" {
+		ent, err := b39.NewEntropy(128)
+		if err != nil {
+			return nil, err
+		}
+		mnemonic, err := b39.NewMnemonic(ent)
+		if err != nil {
+			return nil, err
+		}
+		config.Mnemonic = mnemonic
+	}
+	seed := b39.NewSeed(config.Mnemonic, "")
 
-	mPrivKey, err := hd.NewMaster(seed, params)
+	mPrivKey, err := hd.NewMaster(seed, config.Params)
 	if err != nil {
 		return nil, err
 	}
@@ -65,17 +74,16 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 	if err != nil {
 		return nil, err
 	}
-
 	w := &SPVWallet{
-		repoPath:         repoPath,
+		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
-		params:           params,
-		maxFee:           maxFee,
-		priorityFee:      highFee,
-		normalFee:        mediumFee,
-		economicFee:      lowFee,
-		feeAPI:           feeApi,
+		params:           config.Params,
+		maxFee:           config.MaxFee,
+		priorityFee:      config.HighFee,
+		normalFee:        config.MediumFee,
+		economicFee:      config.LowFee,
+		feeAPI:           config.FeeAPI.String(),
 		fPositives:       make(chan *peer.Peer),
 		stopChan:         make(chan int),
 		fpAccumulator:    make(map[int32]int32),
@@ -84,7 +92,9 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 		mutex:            new(sync.RWMutex),
 	}
 
-	w.txstore, err = NewTxStore(w.params, db, w.masterPrivateKey)
+	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)
+
+	w.txstore, err = NewTxStore(w.params, config.DB, w.keyManager)
 	if err != nil {
 		return nil, err
 	}
@@ -114,27 +124,23 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 		return &hash, int32(height), nil
 	}
 
-	w.config = &Config{
-		UserAgentName:      userAgent,
+	w.config = &PeerManagerConfig{
+		UserAgentName:      config.UserAgent,
 		UserAgentVersion:   WALLET_VERSION,
 		Params:             w.params,
-		AddressCacheDir:    repoPath,
+		AddressCacheDir:    config.RepoPath,
 		GetFilter:          w.txstore.GimmeFilter,
 		StartChainDownload: w.startChainDownload,
 		GetNewestBlock:     getNewestBlock,
 		Listeners:          listeners,
-		Proxy:              proxy,
+		Proxy:              config.Proxy,
 	}
 
-	if trustedPeer != "" {
-		addr, err := net.ResolveTCPAddr("tcp", trustedPeer)
-		if err != nil {
-			return nil, err
-		}
-		w.config.TrustedPeer = addr
+	if config.TrustedPeer != nil {
+		w.config.TrustedPeer = config.TrustedPeer
 	}
 
-	w.PeerManager, err = NewPeerManager(w.config)
+	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +149,9 @@ func NewSPVWallet(mnemonic string, params *chaincfg.Params, maxFee uint64, lowFe
 }
 
 func (w *SPVWallet) Start() {
-	go w.PeerManager.Start()
-	go w.fPositiveHandler(w.stopChan)
 	w.running = true
+	go w.peerManager.Start()
+	w.fPositiveHandler(w.stopChan)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -170,15 +176,19 @@ func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
+func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
+	return w.peerManager.ConnectedPeers()
+}
+
 func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) btc.Address {
-	key, _ := w.txstore.GetCurrentKey(purpose)
+	key, _ := w.keyManager.GetCurrentKey(purpose)
 	addr, _ := key.Address(w.params)
 	return btc.Address(addr)
 }
 
 func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
-	i, _ := w.txstore.Keys().GetUnused(EXTERNAL)
-	key, _ := w.txstore.generateChildKey(EXTERNAL, uint32(i[1]))
+	i, _ := w.txstore.Keys().GetUnused(purpose)
+	key, _ := w.keyManager.generateChildKey(purpose, uint32(i[1]))
 	addr, _ := key.Address(w.params)
 	script, _ := txscript.PayToAddrScript(btc.Address(addr))
 	w.txstore.Keys().MarkKeyAsUsed(script)
@@ -191,7 +201,7 @@ func (w *SPVWallet) HasKey(addr btc.Address) bool {
 	if err != nil {
 		return false
 	}
-	_, err = w.txstore.GetKeyForScript(script)
+	_, err = w.keyManager.GetKeyForScript(script)
 	if err != nil {
 		return false
 	}
@@ -268,7 +278,7 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 	err := w.txstore.WatchedScripts().Put(script)
 	w.txstore.PopulateAdrs()
 
-	for _, peer := range w.PeerManager.ConnectedPeers() {
+	for _, peer := range w.peerManager.ConnectedPeers() {
 		w.updateFilterAndSend(peer)
 	}
 	return err
@@ -301,7 +311,7 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int)
 func (w *SPVWallet) Close() {
 	if w.running {
 		log.Info("Disconnecting from peers and shutting down")
-		w.PeerManager.Stop()
+		w.peerManager.Stop()
 		w.blockchain.Close()
 		w.stopChan <- 1
 		w.running = false
@@ -316,7 +326,7 @@ func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 		return
 	}
 	w.blockchain = blockchain
-	w.PeerManager, err = NewPeerManager(w.config)
+	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return
 	}

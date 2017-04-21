@@ -9,60 +9,34 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/bloom"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"sync"
 	"time"
 )
 
-const FlagPrefix = 0x00
-
 type TxStore struct {
-	Adrs           []btcutil.Address
+	adrs           []btcutil.Address
 	watchedScripts [][]byte
 	addrMutex      *sync.Mutex
 	cbMutex        *sync.Mutex
 
-	Param *chaincfg.Params
+	keyManager *KeyManager
 
-	internalKey *hd.ExtendedKey
-	externalKey *hd.ExtendedKey
+	params *chaincfg.Params
 
 	listeners []func(TransactionCallback)
 
 	Datastore
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, masterPrivKey *hd.ExtendedKey) (*TxStore, error) {
-	// Derive keys using Bip44
-	fourtyFour, err := masterPrivKey.Child(hd.HardenedKeyStart + 44)
-	if err != nil {
-		return nil, err
-	}
-	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 0)
-	if err != nil {
-		return nil, err
-	}
-	account, err := bitcoin.Child(hd.HardenedKeyStart + 0)
-	if err != nil {
-		return nil, err
-	}
-	external, err := account.Child(0)
-	if err != nil {
-		return nil, err
-	}
-	internal, err := account.Child(1)
-	if err != nil {
-		return nil, err
-	}
+func NewTxStore(p *chaincfg.Params, db Datastore, keyManager *KeyManager) (*TxStore, error) {
 	txs := &TxStore{
-		Param:       p,
-		externalKey: external,
-		internalKey: internal,
-		addrMutex:   new(sync.Mutex),
-		cbMutex:     new(sync.Mutex),
-		Datastore:   db,
+		params:     p,
+		keyManager: keyManager,
+		addrMutex:  new(sync.Mutex),
+		cbMutex:    new(sync.Mutex),
+		Datastore:  db,
 	}
-	err = txs.PopulateAdrs()
+	err := txs.PopulateAdrs()
 	if err != nil {
 		return nil, err
 	}
@@ -84,12 +58,12 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 		return nil, err
 	}
 	ts.addrMutex.Lock()
-	elem := uint32(len(ts.Adrs) + len(allUtxos) + len(allStxos))
+	elem := uint32(len(ts.adrs) + len(allUtxos) + len(allStxos))
 	f := bloom.NewFilter(elem, 0, 0.0001, wire.BloomUpdateAll)
 
 	// note there could be false positives since we're just looking
 	// for the 20 byte PKH without the opcodes.
-	for _, a := range ts.Adrs { // add 20-byte pubkeyhash
+	for _, a := range ts.adrs { // add 20-byte pubkeyhash
 		f.Add(a.ScriptAddress())
 	}
 	ts.addrMutex.Unlock()
@@ -101,7 +75,7 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 		f.AddOutPoint(&s.Utxo.Op)
 	}
 	for _, w := range ts.watchedScripts {
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(w, ts.Param)
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(w, ts.params)
 		if err != nil {
 			continue
 		}
@@ -186,16 +160,15 @@ func (ts *TxStore) GetPendingInv() (*wire.MsgInv, error) {
 
 // PopulateAdrs just puts a bunch of adrs in ram; it doesn't touch the DB
 func (ts *TxStore) PopulateAdrs() error {
-	ts.lookahead()
-	keys := ts.GetKeys()
+	keys := ts.keyManager.GetKeys()
 	ts.addrMutex.Lock()
-	ts.Adrs = []btcutil.Address{}
+	ts.adrs = []btcutil.Address{}
 	for _, k := range keys {
-		addr, err := k.Address(ts.Param)
+		addr, err := k.Address(ts.params)
 		if err != nil {
 			continue
 		}
-		ts.Adrs = append(ts.Adrs, addr)
+		ts.adrs = append(ts.adrs, addr)
 	}
 	ts.watchedScripts, _ = ts.WatchedScripts().GetAll()
 	ts.addrMutex.Unlock()
@@ -234,10 +207,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// Generate PKscripts for all addresses
 	ts.addrMutex.Lock()
-	PKscripts := make([][]byte, len(ts.Adrs))
-	for i, _ := range ts.Adrs {
+	PKscripts := make([][]byte, len(ts.adrs))
+	for i := range ts.adrs {
 		// Iterate through all our addresses
-		PKscripts[i], err = txscript.PayToAddrScript(ts.Adrs[i])
+		PKscripts[i], err = txscript.PayToAddrScript(ts.adrs[i])
 		if err != nil {
 			return hits, err
 		}
@@ -252,7 +225,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
 			if bytes.Equal(txout.PkScript, script) { // new utxo found
-				ts.Keys().MarkKeyAsUsed(txout.PkScript)
+				ts.keyManager.MarkKeyAsUsed(txout.PkScript)
 				newop := wire.OutPoint{
 					Hash:  cachedSha,
 					Index: uint32(i),
