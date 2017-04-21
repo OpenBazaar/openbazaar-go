@@ -881,7 +881,7 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
 		testnet = true
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"peerID": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), i.node.Wallet.CurrencyCode(), testnet))
+	SanitizedResponse(w, fmt.Sprintf(`{"peerID": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), strings.ToUpper(i.node.Wallet.CurrencyCode()), testnet))
 }
 
 func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {

@@ -138,7 +138,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	id.BitcoinSig = sig.Serialize()
 
 	// Set crypto currency
-	listing.Metadata.AcceptedCurrency = n.Wallet.CurrencyCode()
+	listing.Metadata.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
 
 	// Update coupon db
 	n.Datastore.Coupons().Delete(listing.Slug)
