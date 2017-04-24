@@ -1,4 +1,4 @@
-FROM openbazaar/openbazaard:latest
+FROM ob1company/openbazaard:latest
 MAINTAINER OpenBazaar Developers
 
 COPY ./run.sh /opt/run.sh
