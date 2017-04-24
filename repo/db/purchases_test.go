@@ -264,26 +264,59 @@ func TestPurchasesGetByOrderId(t *testing.T) {
 
 func TestPurchasesDB_GetAll(t *testing.T) {
 	purdb.Put("orderID", *contract, 0, false)
-	purdb.Put("orderID2", *contract, 0, false)
-	purchases, err := purdb.GetAll("", -1)
+	purdb.Put("orderID2", *contract, 1, false)
+	purdb.Put("orderID3", *contract, 1, false)
+	// Test no offset no limit
+	purchases, err := purdb.GetAll("", -1, []pb.OrderState{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 3 {
+		t.Error("Returned incorrect number of purchases")
+	}
+
+	// Test no offset limit 1
+	purchases, err = purdb.GetAll("", 1, []pb.OrderState{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 1 {
+		t.Error("Returned incorrect number of purchases")
+	}
+
+	// Test offset no limit
+	purchases, err = purdb.GetAll("orderID", -1, []pb.OrderState{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(purchases) != 2 {
 		t.Error("Returned incorrect number of purchases")
 	}
-	purchases, err = purdb.GetAll("", 1)
+
+	// Test no offset no limit with state filter
+	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(purchases) != 2 {
+		t.Error("Returned incorrect number of purchases")
+	}
+
+	// Test offset no limit with state filter
+	purchases, err = purdb.GetAll("orderID2", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(purchases) != 1 {
 		t.Error("Returned incorrect number of purchases")
 	}
-	purchases, err = purdb.GetAll("orderID", -1)
+
+	// Test no offset no limit with multiple state filters
+	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED})
 	if err != nil {
 		t.Error(err)
 	}
-	if len(purchases) != 1 {
+	if len(purchases) != 3 {
 		t.Error("Returned incorrect number of purchases")
 	}
 }

@@ -262,26 +262,59 @@ func TestSalesGetByOrderId(t *testing.T) {
 
 func TestSalesDB_GetAll(t *testing.T) {
 	saldb.Put("orderID", *contract, 0, false)
-	saldb.Put("orderID2", *contract, 0, false)
-	sales, err := saldb.GetAll("", -1)
+	saldb.Put("orderID2", *contract, 1, false)
+	saldb.Put("orderID3", *contract, 1, false)
+	// Test no offset no limit
+	sales, err := saldb.GetAll("", -1, []pb.OrderState{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 3 {
+		t.Error("Returned incorrect number of sales")
+	}
+
+	// Test no offset limit 1
+	sales, err = saldb.GetAll("", 1, []pb.OrderState{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 1 {
+		t.Error("Returned incorrect number of sales")
+	}
+
+	// Test offset no limit
+	sales, err = saldb.GetAll("orderID", -1, []pb.OrderState{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(sales) != 2 {
 		t.Error("Returned incorrect number of sales")
 	}
-	sales, err = saldb.GetAll("", 1)
+
+	// Test no offset no limit with state filter
+	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 2 {
+		t.Error("Returned incorrect number of sales")
+	}
+
+	// Test offset no limit with state filter
+	sales, err = saldb.GetAll("orderID2", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(sales) != 1 {
 		t.Error("Returned incorrect number of sales")
 	}
-	sales, err = saldb.GetAll("orderID", -1)
+
+	// Test no offset no limit with multiple state filters
+	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED})
 	if err != nil {
 		t.Error(err)
 	}
-	if len(sales) != 1 {
+	if len(sales) != 3 {
 		t.Error("Returned incorrect number of sales")
 	}
 }

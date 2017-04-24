@@ -2501,7 +2501,18 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	offsetId := r.URL.Query().Get("offsetId")
-	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l)
+	stateQuery := r.URL.Query().Get("state")
+	var orderStates []pb.OrderState
+	states := strings.Split(stateQuery, ",")
+	for _, s := range states {
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		orderStates = append(orderStates, pb.OrderState(i))
+	}
+	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l, orderStates)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2536,7 +2547,18 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	offsetId := r.URL.Query().Get("offsetId")
-	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l)
+	stateQuery := r.URL.Query().Get("state")
+	var orderStates []pb.OrderState
+	states := strings.Split(stateQuery, ",")
+	for _, s := range states {
+		i, err := strconv.Atoi(s)
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		orderStates = append(orderStates, pb.OrderState(i))
+	}
+	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l, orderStates)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

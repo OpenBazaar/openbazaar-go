@@ -9,6 +9,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -119,17 +120,43 @@ func (p *PurchasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) GetAll(offsetId string, limit int) ([]repo.Purchase, error) {
+func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]repo.Purchase, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
+	stateFilterClause := ""
+	var states []int
+	if len(stateFilter) > 0 {
+		stateFilterClauseParts := make([]string, 0, len(stateFilter))
+
+		for i := 0; i < len(stateFilter); i++ {
+			states = append(states, int(stateFilter[i]))
+			stateFilterClauseParts = append(stateFilterClauseParts, "?")
+		}
+
+		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
+	}
+
+	var i []interface{}
 	var stm string
 	if offsetId != "" {
-		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?) limit " + strconv.Itoa(limit) + " ;"
+		i = append(i, offsetId)
+		var filter string
+		if stateFilterClause != "" {
+			filter = " and " + stateFilterClause
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?)" + filter + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases limit " + strconv.Itoa(limit) + ";"
+		var filter string
+		if stateFilterClause != "" {
+			filter = " where " + stateFilterClause
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases" + filter + " limit " + strconv.Itoa(limit) + ";"
 	}
-	rows, err := p.db.Query(stm, offsetId)
+	for _, s := range states {
+		i = append(i, s)
+	}
+	rows, err := p.db.Query(stm, i...)
 	if err != nil {
 		return nil, err
 	}
