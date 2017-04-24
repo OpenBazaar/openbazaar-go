@@ -1108,6 +1108,7 @@ collectListings:
 				if service == nil {
 					return errors.New("Shipping service not found in listing")
 				}
+				break
 			}
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -172,18 +173,44 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
+func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]repo.Case, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	var stm string
-	if offsetId != "" {
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?) limit " + strconv.Itoa(limit) + " ;"
-	} else {
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases limit " + strconv.Itoa(limit) + ";"
+	stateFilterClause := ""
+	var states []int
+	if len(stateFilter) > 0 {
+		stateFilterClauseParts := make([]string, 0, len(stateFilter))
+
+		for i := 0; i < len(stateFilter); i++ {
+			states = append(states, int(stateFilter[i]))
+			stateFilterClauseParts = append(stateFilterClauseParts, "?")
+		}
+
+		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
 	}
 
-	rows, err := c.db.Query(stm, offsetId)
+	var i []interface{}
+	var stm string
+	if offsetId != "" {
+		i = append(i, offsetId)
+		var filter string
+		if stateFilterClause != "" {
+			filter = " and " + stateFilterClause
+		}
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?)" + filter + " limit " + strconv.Itoa(limit) + " ;"
+	} else {
+		var filter string
+		if stateFilterClause != "" {
+			filter = " where " + stateFilterClause
+		}
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases" + filter + " limit " + strconv.Itoa(limit) + ";"
+	}
+
+	for _, s := range states {
+		i = append(i, s)
+	}
+	rows, err := c.db.Query(stm, i...)
 	if err != nil {
 		return nil, err
 	}

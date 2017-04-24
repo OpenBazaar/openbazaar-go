@@ -381,7 +381,7 @@ func TestMarkAsClosed(t *testing.T) {
 }
 
 func TestCasesDB_GetAll(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 5, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -393,7 +393,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.Put("caseID2", 0, true, "blah")
+	err = casesdb.Put("caseID2", 6, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -405,25 +405,46 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cases, err := casesdb.GetAll("", -1)
+	cases, err := casesdb.GetAll("", -1, []pb.OrderState{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 2 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", 1)
+	cases, err = casesdb.GetAll("", 1, []pb.OrderState{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("caseID", -1)
+	cases, err = casesdb.GetAll("caseID", -1, []pb.OrderState{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DECIDED})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 2 {
 		t.Error("Returned incorrect number of cases")
 	}
 }
