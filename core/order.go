@@ -1099,15 +1099,18 @@ collectListings:
 				}
 
 				// Check service exists
-				var service *pb.Listing_ShippingOption_Service
-				for _, shippingService := range option.Services {
-					if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
-						service = shippingService
+				if option.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
+					var service *pb.Listing_ShippingOption_Service
+					for _, shippingService := range option.Services {
+						if strings.ToLower(shippingService.Name) == strings.ToLower(item.ShippingOption.Service) {
+							service = shippingService
+						}
+					}
+					if service == nil {
+						return errors.New("Shipping service not found in listing")
 					}
 				}
-				if service == nil {
-					return errors.New("Shipping service not found in listing")
-				}
+				break
 			}
 		}
 	}
