@@ -253,6 +253,9 @@ func wrapType(i interface{}) interface{} {
 
 func Serialize(i interface{}) []byte {
 	w := wrapType(Wrap(i))
+	if _, ok := w.([]byte); ok {
+		return w.([]byte)
+	}
 	b, _ := json.MarshalIndent(w, "", "    ")
 	return b
 }
