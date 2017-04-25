@@ -719,8 +719,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	var shippingTotal uint64
 	for _, item := range contract.BuyerOrder.Items {
 		listing, ok := physicalGoods[item.ListingHash]
-		if !ok {
-			return 0, fmt.Errorf("Listing %s not found in contract", item.ListingHash)
+		if !ok { // Not physical good no need to calculate shipping
+			continue
 		}
 		var itemShipping uint64
 		// Check selected option exists
