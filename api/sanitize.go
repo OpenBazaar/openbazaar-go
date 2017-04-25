@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -22,13 +21,12 @@ func SanitizeJSON(s []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := sanitize(i); err != nil {
-		return nil, err
-	}
+	sanitize(i)
+
 	return json.MarshalIndent(i, "", "    ")
 }
 
-func sanitize(data interface{}) error {
+func sanitize(data interface{}) {
 	switch d := data.(type) {
 	case map[string]interface{}:
 		for k, v := range d {
@@ -36,9 +34,11 @@ func sanitize(data interface{}) error {
 			case string:
 				d[k] = sanitizer.Sanitize(v.(string))
 			case map[string]interface{}:
-				return sanitize(v)
+				sanitize(v)
 			case []interface{}:
-				return sanitize(v)
+				sanitize(v)
+			case nil:
+				delete(d, k)
 			}
 		}
 	case []interface{}:
@@ -50,16 +50,13 @@ func sanitize(data interface{}) error {
 				}
 			case map[string]interface{}:
 				for _, t := range d {
-					return sanitize(t)
+					sanitize(t)
 				}
 			case []interface{}:
 				for _, t := range d {
-					return sanitize(t)
+					sanitize(t)
 				}
 			}
 		}
-	default:
-		return fmt.Errorf("Unsupported type: %t", d)
 	}
-	return nil
 }
