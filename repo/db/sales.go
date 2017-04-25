@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -121,7 +122,7 @@ func (s *SalesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]repo.Sale, error) {
+func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]repo.Sale, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -140,23 +141,37 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 
 	var i []interface{}
 	var stm string
+	var search string
+	tables := `('orderID' || 'timestamp' || 'total' || 'title' || 'thumbnail' || 'buyerID' || 'buyerBlockchainID' || 'shippingName' || 'shippingAddress')`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		var filter string
 		if stateFilterClause != "" {
 			filter = " and " + stateFilterClause
 		}
-		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID=?)" + filter + " limit " + strconv.Itoa(limit) + " ;"
+		if searchTerm != "" {
+			search = " and " + tables + " like '%?%'"
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		var filter string
 		if stateFilterClause != "" {
 			filter = " where " + stateFilterClause
 		}
-		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales" + filter + " limit " + strconv.Itoa(limit) + ";"
+		if searchTerm != "" {
+			if filter == "" {
+				search = " where " + tables + " like '%?%'"
+			} else {
+				search = " and " + tables + " like '%?%'"
+			}
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales" + filter + search + " limit " + strconv.Itoa(limit) + ";"
 	}
+	fmt.Println(stm)
 	for _, s := range states {
 		i = append(i, s)
 	}
+	i = append(i, searchTerm)
 	rows, err := s.db.Query(stm, i...)
 	if err != nil {
 		return nil, err

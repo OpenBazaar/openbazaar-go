@@ -120,7 +120,7 @@ func (p *PurchasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]repo.Purchase, error) {
+func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]repo.Purchase, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -139,23 +139,34 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 
 	var i []interface{}
 	var stm string
+	var filter string
+	var search string
 	if offsetId != "" {
 		i = append(i, offsetId)
-		var filter string
 		if stateFilterClause != "" {
 			filter = " and " + stateFilterClause
 		}
-		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?)" + filter + " limit " + strconv.Itoa(limit) + " ;"
+		if searchTerm != "" {
+			search = " and * like '%?%'"
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		var filter string
 		if stateFilterClause != "" {
 			filter = " where " + stateFilterClause
 		}
-		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases" + filter + " limit " + strconv.Itoa(limit) + ";"
+		if searchTerm != "" {
+			if filter == "" {
+				search = " where * like '%?%'"
+			} else {
+				search = " and * like '%?%'"
+			}
+		}
+		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases" + filter + search + " limit " + strconv.Itoa(limit) + ";"
 	}
 	for _, s := range states {
 		i = append(i, s)
 	}
+	i = append(i, searchTerm)
 	rows, err := p.db.Query(stm, i...)
 	if err != nil {
 		return nil, err
