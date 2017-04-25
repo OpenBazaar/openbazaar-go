@@ -173,7 +173,7 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]repo.Case, error) {
+func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]repo.Case, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -192,24 +192,37 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 
 	var i []interface{}
 	var stm string
+	var search string
+	tables := `(caseID || timestamp || buyerContract || vendorContract || claim || disputeResolution)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		var filter string
 		if stateFilterClause != "" {
 			filter = " and " + stateFilterClause
 		}
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?)" + filter + " limit " + strconv.Itoa(limit) + " ;"
+		if searchTerm != "" {
+			search = " and " + tables + " like ?"
+		}
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
 		var filter string
 		if stateFilterClause != "" {
 			filter = " where " + stateFilterClause
 		}
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases" + filter + " limit " + strconv.Itoa(limit) + ";"
+		if searchTerm != "" {
+			if filter == "" {
+				search = " where " + tables + " like ?"
+			} else {
+				search = " and " + tables + " like ?"
+			}
+		}
+		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases" + filter + search + " limit " + strconv.Itoa(limit) + ";"
 	}
 
 	for _, s := range states {
 		i = append(i, s)
 	}
+	i = append(i, "%"+searchTerm+"%")
 	rows, err := c.db.Query(stm, i...)
 	if err != nil {
 		return nil, err

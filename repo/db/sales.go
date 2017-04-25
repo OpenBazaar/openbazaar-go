@@ -142,7 +142,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	var i []interface{}
 	var stm string
 	var search string
-	tables := `('orderID' || 'timestamp' || 'total' || 'title' || 'thumbnail' || 'buyerID' || 'buyerBlockchainID' || 'shippingName' || 'shippingAddress')`
+	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		var filter string
@@ -150,7 +150,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 			filter = " and " + stateFilterClause
 		}
 		if searchTerm != "" {
-			search = " and " + tables + " like '%?%'"
+			search = " and " + tables + " like ?"
 		}
 		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
@@ -160,9 +160,9 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		}
 		if searchTerm != "" {
 			if filter == "" {
-				search = " where " + tables + " like '%?%'"
+				search = " where " + tables + " like ?"
 			} else {
-				search = " and " + tables + " like '%?%'"
+				search = " and " + tables + " like ?"
 			}
 		}
 		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales" + filter + search + " limit " + strconv.Itoa(limit) + ";"
@@ -171,7 +171,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	for _, s := range states {
 		i = append(i, s)
 	}
-	i = append(i, searchTerm)
+	i = append(i, "%"+searchTerm+"%")
 	rows, err := s.db.Query(stm, i...)
 	if err != nil {
 		return nil, err

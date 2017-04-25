@@ -2514,7 +2514,8 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 			orderStates = append(orderStates, pb.OrderState(i))
 		}
 	}
-	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l, orderStates, "")
+	search := r.URL.Query().Get("search")
+	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l, orderStates, search)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2609,7 +2610,8 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		}
 		orderStates = append(orderStates, pb.OrderState(i))
 	}
-	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l, orderStates)
+	search := r.URL.Query().Get("search")
+	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l, orderStates, search)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

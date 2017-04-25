@@ -141,13 +141,14 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 	var stm string
 	var filter string
 	var search string
+	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		if stateFilterClause != "" {
 			filter = " and " + stateFilterClause
 		}
 		if searchTerm != "" {
-			search = " and * like '%?%'"
+			search = " and " + tables + " like ?"
 		}
 		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where rowid>(select rowid from purchases where orderID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
 	} else {
@@ -156,9 +157,9 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 		}
 		if searchTerm != "" {
 			if filter == "" {
-				search = " where * like '%?%'"
+				search = " where " + tables + " like ?"
 			} else {
-				search = " and * like '%?%'"
+				search = " and " + tables + " like ?"
 			}
 		}
 		stm = "select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases" + filter + search + " limit " + strconv.Itoa(limit) + ";"
@@ -166,7 +167,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 	for _, s := range states {
 		i = append(i, s)
 	}
-	i = append(i, searchTerm)
+	i = append(i, "%"+searchTerm+"%")
 	rows, err := p.db.Query(stm, i...)
 	if err != nil {
 		return nil, err

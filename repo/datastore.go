@@ -216,7 +216,7 @@ type Cases interface {
 	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
 
 	// Return the metadata for all cases
-	GetAll(offsetId string, limit int, stateFilter []pb.OrderState) ([]Case, error)
+	GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]Case, error)
 }
 
 type Chat interface {
