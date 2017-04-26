@@ -108,3 +108,14 @@ func (n *NotficationsDB) Delete(notifID int) error {
 	n.db.Exec("delete from notifications where rowid=?", notifID)
 	return nil
 }
+
+func (n *NotficationsDB) GetUnreadCount() (int, error) {
+	stm := "select Count(*) from notifications where read=0;"
+	row := n.db.QueryRow(stm)
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}

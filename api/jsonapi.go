@@ -25,6 +25,7 @@ import (
 
 	"bytes"
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -2184,17 +2185,27 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
+	type notifData struct {
+		Unread        int                          `json:"unread"`
+		Notifications []notifications.Notification `json:"notifications"`
+	}
 	notifs := i.node.Datastore.Notifications().GetAll(offsetId, int(l))
-
-	ret, err := json.MarshalIndent(notifs, "", "    ")
+	unread, err := i.node.Datastore.Notifications().GetUnreadCount()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if string(ret) == "null" {
-		ret = []byte("[]")
+
+	ret, err := json.MarshalIndent(notifData{unread, notifs}, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	SanitizedResponse(w, string(ret))
+	retString := string(ret)
+	if strings.Contains(retString, "null") {
+		retString = strings.Replace(retString, "null", "[]", -1)
+	}
+	SanitizedResponse(w, retString)
 	return
 }
 

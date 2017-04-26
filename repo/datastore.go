@@ -256,6 +256,9 @@ type Notifications interface {
 	// Fetch notifications from database
 	GetAll(offsetID int, limit int) []notif.Notification
 
+	// Returns the unread count for all notifications
+	GetUnreadCount() (int, error)
+
 	// Delete a notification
 	Delete(notifID int) error
 }
