@@ -265,7 +265,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	saldb.Put("orderID2", *contract, 1, false)
 	saldb.Put("orderID3", *contract, 1, false)
 	// Test no offset no limit
-	sales, err := saldb.GetAll("", -1, []pb.OrderState{})
+	sales, err := saldb.GetAll("", -1, []pb.OrderState{}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -274,7 +274,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset limit 1
-	sales, err = saldb.GetAll("", 1, []pb.OrderState{})
+	sales, err = saldb.GetAll("", 1, []pb.OrderState{}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -283,7 +283,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit
-	sales, err = saldb.GetAll("orderID", -1, []pb.OrderState{})
+	sales, err = saldb.GetAll("orderID", -1, []pb.OrderState{}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -292,7 +292,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with state filter
-	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
+	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -301,7 +301,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit with state filter
-	sales, err = saldb.GetAll("orderID2", -1, []pb.OrderState{pb.OrderState_CONFIRMED})
+	sales, err = saldb.GetAll("orderID2", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -310,11 +310,20 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with multiple state filters
-	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED})
+	sales, err = saldb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED}, "")
 	if err != nil {
 		t.Error(err)
 	}
 	if len(sales) != 3 {
+		t.Error("Returned incorrect number of sales")
+	}
+
+	// Test no offset no limit with search term
+	sales, err = saldb.GetAll("", -1, []pb.OrderState{}, "orderid2")
+	if err != nil {
+		t.Error(err)
+	}
+	if len(sales) != 1 {
 		t.Error("Returned incorrect number of sales")
 	}
 }

@@ -193,7 +193,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	var i []interface{}
 	var stm string
 	var search string
-	tables := `(caseID || timestamp || buyerContract || vendorContract || claim || disputeResolution)`
+	tables := `(caseID || timestamp || claim)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		var filter string
@@ -218,7 +218,6 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		}
 		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases" + filter + search + " limit " + strconv.Itoa(limit) + ";"
 	}
-
 	for _, s := range states {
 		i = append(i, s)
 	}

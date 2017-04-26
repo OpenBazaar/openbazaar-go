@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -142,7 +141,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	var i []interface{}
 	var stm string
 	var search string
-	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress)`
+	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress || paymentAddr)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		var filter string
@@ -167,7 +166,6 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		}
 		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales" + filter + search + " limit " + strconv.Itoa(limit) + ";"
 	}
-	fmt.Println(stm)
 	for _, s := range states {
 		i = append(i, s)
 	}

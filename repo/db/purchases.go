@@ -141,7 +141,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 	var stm string
 	var filter string
 	var search string
-	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress)`
+	tables := `(orderID || timestamp || total || title || thumbnail || vendorID || vendorBlockchainID || shippingName || shippingAddress || paymentAddr)`
 	if offsetId != "" {
 		i = append(i, offsetId)
 		if stateFilterClause != "" {
