@@ -1373,12 +1373,14 @@ func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (i
 		return 0, nil
 	}
 	var selected []int
+	log.Notice(listing.Item.Options)
+	log.Notice(itemOptions)
 	for _, s := range listing.Item.Options {
 	optionsLoop:
 		for _, o := range itemOptions {
-			if o.Name == s.Name {
+			if strings.ToLower(o.Name) == strings.ToLower(s.Name) {
 				for i, va := range s.Variants {
-					if va.Name == o.Value {
+					if strings.ToLower(va.Name) == strings.ToLower(o.Value) {
 						selected = append(selected, i)
 						break optionsLoop
 					}
