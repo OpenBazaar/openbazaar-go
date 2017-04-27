@@ -1714,6 +1714,9 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			resp = string(res)
 		}
+		if resp == "null" {
+			resp = "[]"
+		}
 		SanitizedResponse(w, resp)
 	} else {
 		idBytes := make([]byte, 16)
