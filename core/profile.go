@@ -11,22 +11,22 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	"io/ioutil"
 	"os"
 	"path"
-	"time"
 	"strings"
+	"time"
 )
 
 const (
-	cachePrefix = "IPNSPERSISENTCACHE_"
-	CachedProfileTime   = time.Hour * 24 * 7
+	cachePrefix       = "IPNSPERSISENTCACHE_"
+	CachedProfileTime = time.Hour * 24 * 7
 )
 
 var ErrorProfileNotFound error = errors.New("Profile not found")
@@ -132,7 +132,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		if err != nil {
 			return
 		}
-		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix + peerId), v)
+		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix+peerId), v)
 	}()
 	return pro, nil
 }
