@@ -1406,6 +1406,9 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	var profile pb.Profile
 	var err error
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
+
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err = i.node.GetProfile()
 		if err != nil && err == core.ErrorProfileNotFound {
@@ -1423,7 +1426,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		profile, err = i.node.FetchProfile(peerId)
+		profile, err = i.node.FetchProfile(peerId, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1432,7 +1435,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		w.Header().Set("Cache-Control", "public, max-age=2592000, immutable")
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -1684,7 +1687,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			for _, mod := range mods {
 				wg.Add(1)
 				go func(m string) {
-					profile, err := i.node.FetchProfile(m)
+					profile, err := i.node.FetchProfile(m, false)
 					if err != nil {
 						wg.Done()
 						return
@@ -1760,7 +1763,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					if !found[pid] {
 						found[pid] = true
 						if strings.ToLower(include) == "profile" {
-							profile, err := i.node.FetchProfile(pid)
+							profile, err := i.node.FetchProfile(pid, false)
 							if err != nil {
 								return
 							}
@@ -2293,6 +2296,8 @@ func (i *jsonAPIHandler) GETHeader(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("async")
 	async, _ := strconv.ParseBool(query)
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
 
 	var pids []string
 	decoder := json.NewDecoder(r.Body)
@@ -2307,7 +2312,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		for _, p := range pids {
 			wg.Add(1)
 			go func(pid string) {
-				pro, err := i.node.FetchProfile(pid)
+				pro, err := i.node.FetchProfile(pid, useCache)
 				if err != nil {
 					wg.Done()
 					return
@@ -2365,7 +2370,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 			}
 			for _, p := range pids {
 				go func(pid string) {
-					pro, err := i.node.FetchProfile(pid)
+					pro, err := i.node.FetchProfile(pid, useCache)
 					if err != nil {
 						e := profileError{pid, "Not found"}
 						ret, err := json.MarshalIndent(e, "", "    ")
