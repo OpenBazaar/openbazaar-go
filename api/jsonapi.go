@@ -189,28 +189,12 @@ func SanitizedResponse(w http.ResponseWriter, response string) {
 }
 
 func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message) {
-	ret, err := SanitizeJSON([]byte(response))
+	out, err := SanitizeProtobuf(response, m)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = jsonpb.UnmarshalString(string(ret), m)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	marshaler := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := marshaler.MarshalToString(m)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	fmt.Fprint(w, out)
+	fmt.Fprintf(w, string(out))
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
@@ -1775,7 +1759,11 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 							if err != nil {
 								return
 							}
-							i.node.Broadcast <- []byte(respJson)
+							b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+							if err != nil {
+								return
+							}
+							i.node.Broadcast <- b
 						} else {
 							resp := wsResp{id, pid}
 							respJson, err := json.MarshalIndent(resp, "", "    ")
@@ -2392,7 +2380,17 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						i.node.Broadcast <- ret
 						return
 					}
-					i.node.Broadcast <- []byte(respJson)
+					b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+					if err != nil {
+						e := profileError{pid, "Error Marshalling to JSON"}
+						ret, err := json.MarshalIndent(e, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- ret
+						return
+					}
+					i.node.Broadcast <- b
 				}(p)
 			}
 		}()

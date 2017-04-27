@@ -3,6 +3,8 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/golang/protobuf/proto"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -24,6 +26,28 @@ func SanitizeJSON(s []byte) ([]byte, error) {
 	sanitize(i)
 
 	return json.MarshalIndent(i, "", "    ")
+}
+
+func SanitizeProtobuf(jsonEncodedProtobuf string, m proto.Message) ([]byte, error) {
+	ret, err := SanitizeJSON([]byte(jsonEncodedProtobuf))
+	if err != nil {
+		return nil, err
+	}
+	err = jsonpb.UnmarshalString(string(ret), m)
+	if err != nil {
+		return nil, err
+	}
+	marshaler := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := marshaler.MarshalToString(m)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(out), nil
 }
 
 func sanitize(data interface{}) {
