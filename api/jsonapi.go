@@ -2452,10 +2452,10 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			status = "UNCONFIRMED"
 		case confs == 0 && time.Since(t.Timestamp) > time.Hour*6:
 			status = "STUCK"
-		case confs > 0 && confs < 7:
+		case confs > 0 && confs < 6:
 			status = "PENDING"
 			confirmations = confs
-		case confs > 6:
+		case confs > 5:
 			status = "CONFIRMED"
 			confirmations = confs
 		}
