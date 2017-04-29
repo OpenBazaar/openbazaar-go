@@ -1824,6 +1824,10 @@
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/seelog",
 			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/icrowley/fake",
+			"Rev": "84bff6d01560fb0b5a396ba29534e93fd00d09c6"
 		}
 	]
 }
