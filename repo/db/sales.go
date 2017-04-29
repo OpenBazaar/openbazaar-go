@@ -8,8 +8,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -121,58 +119,23 @@ func (s *SalesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]repo.Sale, error) {
+func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]repo.Sale, int, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-
-	stateFilterClause := ""
-	var states []int
-	if len(stateFilter) > 0 {
-		stateFilterClauseParts := make([]string, 0, len(stateFilter))
-
-		for i := 0; i < len(stateFilter); i++ {
-			states = append(states, int(stateFilter[i]))
-			stateFilterClauseParts = append(stateFilterClauseParts, "?")
-		}
-
-		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
+	q := query{
+		table:         "sales",
+		columns:       []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "state", "read"},
+		offsetId:      offsetId,
+		stateFilter:   stateFilter,
+		searchTerm:    searchTerm,
+		searchColumns: []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		ascending:     ascending,
+		limit:         limit,
 	}
-
-	var i []interface{}
-	var stm string
-	var search string
-	tables := `(orderID || timestamp || total || title || thumbnail || buyerID || buyerBlockchainID || shippingName || shippingAddress || paymentAddr)`
-	if offsetId != "" {
-		i = append(i, offsetId)
-		var filter string
-		if stateFilterClause != "" {
-			filter = " and " + stateFilterClause
-		}
-		if searchTerm != "" {
-			search = " and " + tables + " like ?"
-		}
-		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales where rowid>(select rowid from sales where orderID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
-	} else {
-		var filter string
-		if stateFilterClause != "" {
-			filter = " where " + stateFilterClause
-		}
-		if searchTerm != "" {
-			if filter == "" {
-				search = " where " + tables + " like ?"
-			} else {
-				search = " and " + tables + " like ?"
-			}
-		}
-		stm = "select orderID, timestamp, total, title, thumbnail, buyerID, buyerBlockchainID, shippingName, shippingAddress, state, read from sales" + filter + search + " limit " + strconv.Itoa(limit) + ";"
-	}
-	for _, s := range states {
-		i = append(i, s)
-	}
-	i = append(i, "%"+searchTerm+"%")
-	rows, err := s.db.Query(stm, i...)
+	stm, args := filterQuery(q)
+	rows, err := s.db.Query(stm, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	var ret []repo.Sale
@@ -180,7 +143,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		var orderID, title, thumbnail, buyerID, buyerHandle, shippingName, shippingAddr string
 		var timestamp, total, stateInt, readInt int
 		if err := rows.Scan(&orderID, &timestamp, &total, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
-			return ret, err
+			return ret, 0, err
 		}
 		read := false
 		if readInt > 0 {
@@ -201,7 +164,17 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 			Read:            read,
 		})
 	}
-	return ret, nil
+	q.columns = []string{"Count(*)"}
+	q.offsetId = ""
+	q.limit = -1
+	stm, args = filterQuery(q)
+	row := s.db.QueryRow(stm, args...)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return ret, 0, err
+	}
+	return ret, count, nil
 }
 
 func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
@@ -261,4 +234,13 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 	var records []*spvwallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, read, nil
+}
+
+func (s *SalesDB) Count() int {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	row := s.db.QueryRow("select Count(*) from sales")
+	var count int
+	row.Scan(&count)
+	return count
 }

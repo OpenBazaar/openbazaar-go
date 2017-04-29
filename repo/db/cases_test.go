@@ -393,6 +393,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	time.Sleep(time.Second)
 	err = casesdb.Put("caseID2", 6, true, "asdf")
 	if err != nil {
 		t.Error(err)
@@ -405,49 +406,49 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cases, err := casesdb.GetAll("", -1, []pb.OrderState{}, "")
+	cases, err := casesdb.GetAll("", -1, []pb.OrderState{}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 2 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", 1, []pb.OrderState{}, "")
+	cases, err = casesdb.GetAll("", 1, []pb.OrderState{}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("caseID", -1, []pb.OrderState{}, "")
+	cases, err = casesdb.GetAll("caseID", -1, []pb.OrderState{}, "", true)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED}, "")
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DECIDED}, "")
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DECIDED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED}, "")
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 2 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", -1, []pb.OrderState{}, "caseID2")
+	cases, err = casesdb.GetAll("", -1, []pb.OrderState{}, "caseID2", false)
 	if err != nil {
 		t.Error(err)
 	}

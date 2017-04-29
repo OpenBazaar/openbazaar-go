@@ -263,11 +263,20 @@ func TestPurchasesGetByOrderId(t *testing.T) {
 }
 
 func TestPurchasesDB_GetAll(t *testing.T) {
-	purdb.Put("orderID", *contract, 0, false)
-	purdb.Put("orderID2", *contract, 1, false)
-	purdb.Put("orderID3", *contract, 1, false)
+	c0 := *contract
+	ts, _ := ptypes.TimestampProto(time.Now())
+	c0.BuyerOrder.Timestamp = ts
+	purdb.Put("orderID", c0, 0, false)
+	c1 := *contract
+	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Minute))
+	c1.BuyerOrder.Timestamp = ts
+	purdb.Put("orderID2", c1, 1, false)
+	c2 := *contract
+	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Hour))
+	c2.BuyerOrder.Timestamp = ts
+	purdb.Put("orderID3", c2, 1, false)
 	// Test no offset no limit
-	purchases, err := purdb.GetAll("", -1, []pb.OrderState{}, "")
+	purchases, err := purdb.GetAll("", -1, []pb.OrderState{}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -276,7 +285,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset limit 1
-	purchases, err = purdb.GetAll("", 1, []pb.OrderState{}, "")
+	purchases, err = purdb.GetAll("", 1, []pb.OrderState{}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -285,7 +294,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit
-	purchases, err = purdb.GetAll("orderID", -1, []pb.OrderState{}, "")
+	purchases, err = purdb.GetAll("orderID", -1, []pb.OrderState{}, "", true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -294,7 +303,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with state filter
-	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "")
+	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -303,7 +312,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit with state filter
-	purchases, err = purdb.GetAll("orderID2", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "")
+	purchases, err = purdb.GetAll("orderID3", -1, []pb.OrderState{pb.OrderState_CONFIRMED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -312,7 +321,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with multiple state filters
-	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED}, "")
+	purchases, err = purdb.GetAll("", -1, []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED}, "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -321,7 +330,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with search term
-	purchases, err = purdb.GetAll("", -1, []pb.OrderState{}, "orderid2")
+	purchases, err = purdb.GetAll("", -1, []pb.OrderState{}, "orderid2", false)
 	if err != nil {
 		t.Error(err)
 	}

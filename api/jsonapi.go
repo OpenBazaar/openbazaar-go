@@ -2491,31 +2491,12 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
-	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "-1"
-	}
-	l, err := strconv.Atoi(limit)
+	searchTerm, offsetID, orderStates, ascending, limit, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	offsetId := r.URL.Query().Get("offsetId")
-	stateQuery := r.URL.Query().Get("state")
-	var orderStates []pb.OrderState
-	states := strings.Split(stateQuery, ",")
-	for _, s := range states {
-		if s != "" {
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				ErrorResponse(w, http.StatusBadRequest, err.Error())
-				return
-			}
-			orderStates = append(orderStates, pb.OrderState(i))
-		}
-	}
-	search := r.URL.Query().Get("search")
-	purchases, err := i.node.Datastore.Purchases().GetAll(offsetId, l, orderStates, search)
+	purchases, _, err := i.node.Datastore.Purchases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2540,31 +2521,12 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
-	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "-1"
-	}
-	l, err := strconv.Atoi(limit)
+	searchTerm, offsetID, orderStates, ascending, limit, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	offsetId := r.URL.Query().Get("offsetId")
-	stateQuery := r.URL.Query().Get("state")
-	var orderStates []pb.OrderState
-	states := strings.Split(stateQuery, ",")
-	for _, s := range states {
-		if s != "" {
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				ErrorResponse(w, http.StatusBadRequest, err.Error())
-				return
-			}
-			orderStates = append(orderStates, pb.OrderState(i))
-		}
-	}
-	search := r.URL.Query().Get("search")
-	sales, err := i.node.Datastore.Sales().GetAll(offsetId, l, orderStates, search)
+	sales, queryCount, err := i.node.Datastore.Sales().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2576,7 +2538,15 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 		}
 		s.UnreadChatMessages = unread
 	}
-	ret, err := json.MarshalIndent(sales, "", "    ")
+	count := i.node.Datastore.Sales().Count()
+	type salesResponse struct {
+		TotalCount int         `json:"totalCount"`
+		QueryCount int         `json:"queryCount"`
+		Sales      []repo.Sale `json:"sales"`
+	}
+	sr := salesResponse{count, queryCount, sales}
+
+	ret, err := json.MarshalIndent(sr, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2589,29 +2559,12 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
-	limit := r.URL.Query().Get("limit")
-	if limit == "" {
-		limit = "-1"
-	}
-	l, err := strconv.Atoi(limit)
+	searchTerm, offsetID, orderStates, ascending, limit, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	offsetId := r.URL.Query().Get("offsetId")
-	stateQuery := r.URL.Query().Get("state")
-	var orderStates []pb.OrderState
-	states := strings.Split(stateQuery, ",")
-	for _, s := range states {
-		i, err := strconv.Atoi(s)
-		if err != nil {
-			ErrorResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		orderStates = append(orderStates, pb.OrderState(i))
-	}
-	search := r.URL.Query().Get("search")
-	cases, err := i.node.Datastore.Cases().GetAll(offsetId, l, orderStates, search)
+	cases, _, err := i.node.Datastore.Cases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

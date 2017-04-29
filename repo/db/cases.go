@@ -6,8 +6,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -173,58 +171,24 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string) ([]repo.Case, error) {
+func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]repo.Case, int, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	stateFilterClause := ""
-	var states []int
-	if len(stateFilter) > 0 {
-		stateFilterClauseParts := make([]string, 0, len(stateFilter))
-
-		for i := 0; i < len(stateFilter); i++ {
-			states = append(states, int(stateFilter[i]))
-			stateFilterClauseParts = append(stateFilterClauseParts, "?")
-		}
-
-		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
+	q := query{
+		table:         "cases",
+		columns:       []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
+		offsetId:      offsetId,
+		stateFilter:   stateFilter,
+		searchTerm:    searchTerm,
+		searchColumns: []string{"caseID", "timestamp", "claim"},
+		ascending:     ascending,
+		limit:         limit,
 	}
-
-	var i []interface{}
-	var stm string
-	var search string
-	tables := `(caseID || timestamp || claim)`
-	if offsetId != "" {
-		i = append(i, offsetId)
-		var filter string
-		if stateFilterClause != "" {
-			filter = " and " + stateFilterClause
-		}
-		if searchTerm != "" {
-			search = " and " + tables + " like ?"
-		}
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?)" + filter + search + " limit " + strconv.Itoa(limit) + " ;"
-	} else {
-		var filter string
-		if stateFilterClause != "" {
-			filter = " where " + stateFilterClause
-		}
-		if searchTerm != "" {
-			if filter == "" {
-				search = " where " + tables + " like ?"
-			} else {
-				search = " and " + tables + " like ?"
-			}
-		}
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases" + filter + search + " limit " + strconv.Itoa(limit) + ";"
-	}
-	for _, s := range states {
-		i = append(i, s)
-	}
-	i = append(i, "%"+searchTerm+"%")
-	rows, err := c.db.Query(stm, i...)
+	stm, args := filterQuery(q)
+	rows, err := c.db.Query(stm, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	var ret []repo.Case
@@ -233,7 +197,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		var buyerContract, vendorContract []byte
 		var timestamp, buyerOpenedInt, stateInt, readInt int
 		if err := rows.Scan(&caseID, &timestamp, &buyerContract, &vendorContract, &buyerOpenedInt, &stateInt, &readInt); err != nil {
-			return ret, err
+			return ret, 0, err
 		}
 		read := false
 		if readInt > 0 {
@@ -291,7 +255,17 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 			Read:         read,
 		})
 	}
-	return ret, nil
+	q.columns = []string{"Count(*)"}
+	q.offsetId = ""
+	q.limit = -1
+	stm, args = filterQuery(q)
+	row := c.db.QueryRow(stm, args...)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return ret, 0, err
+	}
+	return ret, count, nil
 }
 
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
@@ -425,4 +399,13 @@ func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract
 		return ret
 	}
 	return brc, vrc, buyerAddr, vendorAddr, toPointer(buyerOutpointsOut), toPointer(vendorOutpointsOut), pb.OrderState(stateInt), nil
+}
+
+func (c *CasesDB) Count() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	row := c.db.QueryRow("select Count(*) from cases")
+	var count int
+	row.Scan(&count)
+	return count
 }
