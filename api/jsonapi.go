@@ -2496,7 +2496,7 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	purchases, _, err := i.node.Datastore.Purchases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
+	purchases, queryCount, err := i.node.Datastore.Purchases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2508,7 +2508,14 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		}
 		p.UnreadChatMessages = unread
 	}
-	ret, err := json.MarshalIndent(purchases, "", "    ")
+	count := i.node.Datastore.Purchases().Count()
+	type purchasesResponse struct {
+		TotalCount int             `json:"totalCount"`
+		QueryCount int             `json:"queryCount"`
+		Purchases  []repo.Purchase `json:"purchases"`
+	}
+	pr := purchasesResponse{count, queryCount, purchases}
+	ret, err := json.MarshalIndent(pr, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2564,7 +2571,7 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	cases, _, err := i.node.Datastore.Cases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
+	cases, queryCount, err := i.node.Datastore.Cases().GetAll(offsetID, limit, orderStates, searchTerm, ascending)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2576,7 +2583,14 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		}
 		c.UnreadChatMessages = unread
 	}
-	ret, err := json.MarshalIndent(cases, "", "    ")
+	count := i.node.Datastore.Cases().Count()
+	type casesResponse struct {
+		TotalCount int         `json:"totalCount"`
+		QueryCount int         `json:"queryCount"`
+		Cases      []repo.Case `json:"cases"`
+	}
+	cr := casesResponse{count, queryCount, cases}
+	ret, err := json.MarshalIndent(cr, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
