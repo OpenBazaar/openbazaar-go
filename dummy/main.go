@@ -14,6 +14,10 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
+
+	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
@@ -28,7 +32,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	ipath "github.com/ipfs/go-ipfs/path"
@@ -39,15 +43,17 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/config"
 
-	recpb "gx/ipfs/QmdM4ohF7cr4MvAECVeD3hRA3HtZrk1ngaek4n8ojVT87h/go-libp2p-record/pb"
+	recpb "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record/pb"
 
-	bstk "github.com/OpenBazaar/go-blockstackclient"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	homedir "github.com/mitchellh/go-homedir"
 )
 
-const testNet = true
+const (
+	testnet          = true
+	imageConcurrency = 30
+)
 
 var fileLogFormat = logging.MustStringFormatter(`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`)
 
@@ -59,14 +65,14 @@ func main() {
 	var err error
 	repoPath := *repoPathFlag
 	if repoPath == "" {
-		repoPath, err = getRepoPath(testNet)
+		repoPath, err = getRepoPath(testnet)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	// Create repo structure
-	sqliteDB, err := initializeRepo(repoPath, "", "", testNet)
+	sqliteDB, err := initializeRepo(repoPath, "", "", testnet)
 	if err != repo.ErrRepoExists {
 		if err != nil {
 			log.Fatal(err)
@@ -84,9 +90,37 @@ func main() {
 
 	log.Print("Peer ID: ", node.IpfsNode.Identity.Pretty())
 
+	// Start getting images.
+	randomImages := make(chan *randomImage, imageConcurrency)
+	stopGettingImages := make(chan struct{})
+	for i := 0; i < imageConcurrency; i++ {
+		go func() {
+			for {
+				select {
+				case <-stopGettingImages:
+					return
+				default:
+					image, err := newRandomImage(node)
+					if err != nil {
+						log.Fatal(err)
+					}
+					randomImages <- image
+					log.Print("Loaded random image")
+
+					var reloadImage func()
+					reloadImage = func() {
+						randomImages <- image
+						time.AfterFunc(2*time.Second, reloadImage)
+					}
+					time.AfterFunc(2*time.Second, reloadImage)
+				}
+			}
+		}()
+	}
+
 	// Set fake data
 	log.Print("Creating profile")
-	profile, err := setFakeProfile(node)
+	profile, err := setFakeProfile(node, randomImages)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -95,12 +129,14 @@ func main() {
 		listingCount := rand.Intn(1000)
 		log.Printf("Creating %d listings", listingCount)
 		for i := 0; i < listingCount; i++ {
-			err = addFakeListing(node)
+			err = addFakeListing(node, randomImages)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
+
+	close(stopGettingImages)
 
 	// Publish data to IPFS
 	log.Print("Publishing to IPFS")
@@ -127,7 +163,7 @@ func getRepoPath(isTestnet bool) (string, error) {
 	}
 
 	// Append testnet flag if on testnet
-	if testNet {
+	if testnet {
 		directoryName += "-testnet"
 	}
 
@@ -143,7 +179,7 @@ func getRepoPath(isTestnet bool) (string, error) {
 
 func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLiteDatastore, error) {
 	// Database
-	sqliteDB, err := db.Create(dataDir, password, testNet)
+	sqliteDB, err := db.Create(dataDir, password, testnet)
 	if err != nil {
 		return sqliteDB, err
 	}
@@ -164,8 +200,7 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 		return nil, err
 	}
 
-	cctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cctx := context.Background()
 
 	// Get config and identity info
 	cfg, err := r.Config()
@@ -252,6 +287,8 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 		return nil, err
 	}
 
+	var torDialer proxy.Dialer
+
 	core.Node = &core.OpenBazaarNode{
 		Context:            ctx,
 		IpfsNode:           nd,
@@ -259,16 +296,16 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 		RepoPath:           repoPath,
 		Datastore:          db,
 		Wallet:             wallet,
-		Resolver:           bstk.NewBlockStackClient(resolverURL),
-		ExchangeRates:      exchange.NewBitcoinPriceFetcher(),
-		MessageStorage:     selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls),
+		Resolver:           bstk.NewBlockStackClient(resolverURL, torDialer),
+		ExchangeRates:      exchange.NewBitcoinPriceFetcher(torDialer),
+		MessageStorage:     selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer),
 		CrosspostGateways:  gatewayUrls,
 		UserAgent:          core.USERAGENT,
-		PointerRepublisher: rep.NewPointerRepublisher(nd, db),
+		PointerRepublisher: rep.NewPointerRepublisher(nd, db, func() bool { return false }),
 	}
 
 	core.Node.Service = service.New(core.Node, ctx, db)
-	core.Node.MessageRetriever = ret.NewMessageRetriever(db, ctx, nd, core.Node.Service, 16, core.Node.SendOfflineAck)
+	core.Node.MessageRetriever = ret.NewMessageRetriever(db, ctx, nd, nil, core.Node.Service, 16, torDialer, core.Node.SendOfflineAck)
 
 	go core.Node.MessageRetriever.Run()
 	go core.Node.PointerRepublisher.Run()
@@ -294,7 +331,19 @@ func newWallet(repoPath string, db *db.SQLiteDatastore) (*spvwallet.SPVWallet, e
 		MaxAge:     1,
 	}, "", 0), fileLogFormat))
 
-	wallet, err := spvwallet.NewSPVWallet(mn, &chaincfg.TestNet3Params, uint64(walletCfg.MaxFee), uint64(walletCfg.LowFeeDefault), uint64(walletCfg.MediumFeeDefault), uint64(walletCfg.HighFeeDefault), walletCfg.FeeAPI, repoPath, db, "OpenBazaar", walletCfg.TrustedPeer, nil, ml)
+	walletConf := &spvwallet.Config{
+		DB:        db,
+		Params:    &chaincfg.TestNet3Params,
+		Mnemonic:  mn,
+		UserAgent: "OpenBazaar",
+		RepoPath:  repoPath,
+		LowFee:    uint64(walletCfg.LowFeeDefault),
+		MediumFee: uint64(walletCfg.MediumFeeDefault),
+		HighFee:   uint64(walletCfg.HighFeeDefault),
+		MaxFee:    uint64(walletCfg.MaxFee),
+		Logger:    ml,
+	}
+	wallet, err := spvwallet.NewSPVWallet(walletConf)
 	if err != nil {
 		return nil, err
 	}
@@ -302,8 +351,8 @@ func newWallet(repoPath string, db *db.SQLiteDatastore) (*spvwallet.SPVWallet, e
 	return wallet, nil
 }
 
-func setFakeProfile(node *core.OpenBazaarNode) (*pb.Profile, error) {
-	profile := newRandomProfile()
+func setFakeProfile(node *core.OpenBazaarNode, randomImages chan (*randomImage)) (*pb.Profile, error) {
+	profile := newRandomProfile(randomImages)
 	err := node.UpdateProfile(profile)
 	if err != nil {
 		return nil, err
@@ -311,23 +360,23 @@ func setFakeProfile(node *core.OpenBazaarNode) (*pb.Profile, error) {
 	return profile, nil
 }
 
-func addFakeListing(node *core.OpenBazaarNode) error {
-	ld := newRandomListing()
+func addFakeListing(node *core.OpenBazaarNode, randomImages chan (*randomImage)) error {
+	ld := newRandomListing(randomImages)
 
 	// Sign
-	contract, err := node.SignListing(ld.Listing)
+	contract, err := node.SignListing(ld)
 	if err != nil {
 		return err
 	}
 
 	// Update inventory
-	err = node.SetListingInventory(ld.Listing, ld.Inventory)
+	err = node.SetListingInventory(ld)
 	if err != nil {
 		return err
 	}
 
 	// Write file to disk
-	f, err := os.Create(path.Join(node.RepoPath, "root", "listings", contract.VendorListings[0].Slug+".json"))
+	f, err := os.Create(path.Join(node.RepoPath, "root", "listings", contract.Listing.Slug+".json"))
 	if err != nil {
 		return err
 	}
@@ -344,12 +393,6 @@ func addFakeListing(node *core.OpenBazaarNode) error {
 	}
 
 	if _, err := f.WriteString(out); err != nil {
-		return err
-	}
-
-	// Update index
-	err = node.UpdateListingIndex(contract)
-	if err != nil {
 		return err
 	}
 

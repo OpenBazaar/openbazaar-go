@@ -28,10 +28,12 @@ protos:
 ##
 ## docker
 ##
-DOCKER_PROFILE ?= openbazaar
+
+# The `openbazaar` org name is taken on dockerhub and `ob1company` is the best I could get.
+DOCKER_PROFILE ?= ob1company
 DOCKER_IMAGE_NAME ?= $(DOCKER_PROFILE)/openbazaard
 
-build_docker:
+build_docker: build_linux
 	docker build -t $(DOCKER_IMAGE_NAME) .
 
 push_docker:

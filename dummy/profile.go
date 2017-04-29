@@ -7,14 +7,10 @@ import (
 	"github.com/icrowley/fake"
 )
 
-func newRandomProfile() *pb.Profile {
+func newRandomProfile(randomImages chan (*randomImage)) *pb.Profile {
 	name := "🤖" + fake.Company()
 
 	vendor := true
-	if rand.Intn(3) == 0 {
-		vendor = false
-		name = fake.FullName()
-	}
 
 	moderator := false
 	modInfo := pb.Moderator{}
@@ -35,28 +31,57 @@ func newRandomProfile() *pb.Profile {
 		}
 	}
 
+	avatar := <-randomImages
+	header := <-randomImages
+
 	return &pb.Profile{
-		Handle:           "@" + fake.UserName(),
 		Name:             name,
 		Location:         fake.City() + ", " + fake.Country(),
 		About:            fake.Paragraphs(),
-		Email:            fake.EmailAddress(),
-		ShortDescription: "I am a robot.\n\n" + fake.Sentences(),
+		ShortDescription: fake.Sentences(),
+		ContactInfo: &pb.Profile_Contact{
+			Website:     fake.Word() + ".example.com",
+			Email:       fake.EmailAddress(),
+			PhoneNumber: "555-5555",
+		},
 
-		Vendor:    vendor,
-		Nsfw:      isNSFW(),
-		Moderator: moderator,
-		ModInfo:   &modInfo,
+		Vendor:        vendor,
+		Nsfw:          isNSFW(),
+		Moderator:     moderator,
+		ModeratorInfo: &modInfo,
 
-		FollowerCount:  uint32(rand.Intn(9999)),
-		FollowingCount: uint32(rand.Intn(9999)),
-		AvgRating:      uint32(rand.Intn(5)),
-		NumRatings:     uint32(rand.Intn(9999)),
+		Stats: &pb.Profile_Stats{
+			FollowerCount:  uint32(rand.Intn(9999)),
+			FollowingCount: uint32(rand.Intn(9999)),
+			AverageRating:  rand.Float32() * 5,
+			RatingCount:    uint32(rand.Intn(9999)),
 
-		PrimaryColor:       "#" + fake.HexColor(),
-		SecondaryColor:     "#" + fake.HexColor(),
-		TextColor:          "#" + fake.HexColor(),
-		HighlightColor:     "#" + fake.HexColor(),
-		HighlightTextColor: "#" + fake.HexColor(),
+			// TODO
+			// ListingsCount
+		},
+
+		Colors: &pb.Profile_Colors{
+			Primary:       "#" + fake.HexColor(),
+			Secondary:     "#" + fake.HexColor(),
+			Text:          "#" + fake.HexColor(),
+			Highlight:     "#" + fake.HexColor(),
+			HighlightText: "#" + fake.HexColor(),
+		},
+
+		AvatarHashes: &pb.Profile_Image{
+			Tiny:     avatar.Tiny,
+			Small:    avatar.Small,
+			Medium:   avatar.Medium,
+			Large:    avatar.Large,
+			Original: avatar.Original,
+		},
+
+		HeaderHashes: &pb.Profile_Image{
+			Tiny:     header.Tiny,
+			Small:    header.Small,
+			Medium:   header.Medium,
+			Large:    header.Large,
+			Original: header.Original,
+		},
 	}
 }
