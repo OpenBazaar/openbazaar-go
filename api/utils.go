@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []pb.OrderState, ascending bool, limit int, err error) {
+func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []pb.OrderState, sortByAscending, sortByRead bool, limit int, err error) {
 	limitStr := q.Get("limit")
 	if limitStr == "" {
 		limitStr = "-1"
 	}
 	limit, err = strconv.Atoi(limitStr)
 	if err != nil {
-		return "", "", []pb.OrderState{}, false, 0, err
+		return "", "", []pb.OrderState{}, false, false, 0, err
 	}
 	offsetID = q.Get("offsetId")
 	stateQuery := q.Get("state")
@@ -23,14 +23,22 @@ func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []
 		if s != "" {
 			i, err := strconv.Atoi(s)
 			if err != nil {
-				return "", "", []pb.OrderState{}, false, 0, err
+				return "", "", []pb.OrderState{}, false, false, 0, err
 			}
 			orderStates = append(orderStates, pb.OrderState(i))
 		}
 	}
 	searchTerm = q.Get("search")
-	if q.Get("sortBy") == "date-asc" {
-		ascending = true
+	sortTerms := strings.Split(q.Get("sortBy"), ",")
+	if len(sortTerms) > 0 {
+		for _, term := range sortTerms {
+			switch strings.ToLower(term) {
+			case "data-asc":
+				sortByAscending = true
+			case "read":
+				sortByRead = true
+			}
+		}
 	}
-	return searchTerm, offsetID, orderStates, ascending, limit, nil
+	return searchTerm, offsetID, orderStates, sortByAscending, sortByRead, limit, nil
 }

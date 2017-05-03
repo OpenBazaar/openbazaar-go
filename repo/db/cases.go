@@ -178,11 +178,9 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	q := query{
 		table:         "cases",
 		columns:       []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
-		offsetId:      offsetId,
 		stateFilter:   stateFilter,
 		searchTerm:    searchTerm,
 		searchColumns: []string{"caseID", "timestamp", "claim"},
-		ascending:     ascending,
 		limit:         limit,
 	}
 	stm, args := filterQuery(q)
@@ -256,7 +254,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offsetId = ""
+	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := c.db.QueryRow(stm, args...)

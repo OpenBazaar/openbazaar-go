@@ -119,18 +119,19 @@ func (s *SalesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]repo.Sale, int, error) {
+func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, offset int, limit int) ([]repo.Sale, int, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	q := query{
-		table:         "sales",
-		columns:       []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		offsetId:      offsetId,
-		stateFilter:   stateFilter,
-		searchTerm:    searchTerm,
-		searchColumns: []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
-		ascending:     ascending,
-		limit:         limit,
+		table:           "sales",
+		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "state", "read"},
+		stateFilter:     stateFilter,
+		searchTerm:      searchTerm,
+		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		sortByAscending: sortByAscending,
+		sortByRead:      sortByRead,
+		offset:          offset,
+		limit:           limit,
 	}
 	stm, args := filterQuery(q)
 	rows, err := s.db.Query(stm, args...)
@@ -165,7 +166,7 @@ func (s *SalesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offsetId = ""
+	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := s.db.QueryRow(stm, args...)

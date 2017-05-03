@@ -7,14 +7,15 @@ import (
 )
 
 type query struct {
-	table         string
-	columns       []string
-	offsetId      string
-	stateFilter   []pb.OrderState
-	searchTerm    string
-	searchColumns []string
-	ascending     bool
-	limit         int
+	table           string
+	columns         []string
+	stateFilter     []pb.OrderState
+	searchTerm      string
+	searchColumns   []string
+	sortByAscending bool
+	sortByRead      bool
+	offset          int
+	limit           int
 }
 
 func filterQuery(q query) (stm string, args []interface{}) {
@@ -32,10 +33,8 @@ func filterQuery(q query) (stm string, args []interface{}) {
 		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
 	}
 	order := "desc"
-	operator := "<"
-	if q.ascending {
+	if q.sortByAscending {
 		order = "asc"
-		operator = ">"
 	}
 
 	var filter string
@@ -58,33 +57,28 @@ func filterQuery(q query) (stm string, args []interface{}) {
 		}
 	}
 
-	searchTableSortBy := "orderID"
-	if q.table == "cases" {
-		searchTableSortBy = "caseID"
+	var readSort string
+	if q.sortByRead {
+		readSort = "read asc, "
 	}
 
-	if q.offsetId != "" {
-		args = append(args, q.offsetId)
-		if stateFilterClause != "" {
-			filter = " and " + stateFilterClause
-		}
-		if q.searchTerm != "" {
+	var offsetString string
+	if q.offset > 0 {
+		offsetString = " offset " + strconv.Itoa(q.offset)
+	}
+
+	if stateFilterClause != "" {
+		filter = " where " + stateFilterClause
+	}
+	if q.searchTerm != "" {
+		if filter == "" {
+			search = " where " + searchFilter + " like ?"
+		} else {
 			search = " and " + searchFilter + " like ?"
 		}
-		stm = "select " + queryColumns + " from " + q.table + " where timestamp" + operator + "(select timestamp from " + q.table + " where " + searchTableSortBy + "=?)" + filter + search + " order by timestamp " + order + " limit " + strconv.Itoa(q.limit) + ";"
-	} else {
-		if stateFilterClause != "" {
-			filter = " where " + stateFilterClause
-		}
-		if q.searchTerm != "" {
-			if filter == "" {
-				search = " where " + searchFilter + " like ?"
-			} else {
-				search = " and " + searchFilter + " like ?"
-			}
-		}
-		stm = "select " + queryColumns + " from " + q.table + filter + search + " order by timestamp " + order + " limit " + strconv.Itoa(q.limit) + ";"
 	}
+	stm = "select " + queryColumns + " from " + q.table + filter + search + " order by " + readSort + "timestamp " + order + " limit " + strconv.Itoa(q.limit) + offsetString + ";"
+
 	for _, s := range states {
 		args = append(args, s)
 	}

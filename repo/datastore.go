@@ -190,7 +190,7 @@ type Sales interface {
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
 	// Return the metadata for all sales. Also returns the original size of the query.
-	GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]Sale, int, error)
+	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, offset int, limit int) ([]Sale, int, error)
 
 	// Return the number of sales in the database
 	Count() int

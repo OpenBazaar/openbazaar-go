@@ -125,11 +125,9 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 	q := query{
 		table:         "purchases",
 		columns:       []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		offsetId:      offsetId,
 		stateFilter:   stateFilter,
 		searchTerm:    searchTerm,
 		searchColumns: []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
-		ascending:     ascending,
 		limit:         limit,
 	}
 	stm, args := filterQuery(q)
@@ -165,7 +163,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offsetId = ""
+	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := p.db.QueryRow(stm, args...)
