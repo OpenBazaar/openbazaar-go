@@ -1143,14 +1143,8 @@ collectListings:
 		if contract.BuyerOrder.Shipping.Address == "" {
 			return errors.New("Shipping address is empty")
 		}
-		if contract.BuyerOrder.Shipping.City == "" {
-			return errors.New("Shipping city is empty")
-		}
 		if contract.BuyerOrder.Shipping.ShipTo == "" {
 			return errors.New("Ship to name is empty")
-		}
-		if contract.BuyerOrder.Shipping.State == "" {
-			return errors.New("Shipping state is empty")
 		}
 	}
 
