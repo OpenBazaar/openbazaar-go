@@ -488,6 +488,15 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(ld.Moderators) == 0 {
+		sd, err := i.node.Datastore.Settings().Get()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		ld.Moderators = *sd.StoreModerators
+	}
+
 	// If the listing already exists tell them to use PUT
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
 	if ld.Slug != "" {
@@ -560,6 +569,14 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if len(ld.Moderators) == 0 {
+		sd, err := i.node.Datastore.Settings().Get()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		ld.Moderators = *sd.StoreModerators
 	}
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
 	_, ferr := os.Stat(listingPath)
