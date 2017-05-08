@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []pb.OrderState, sortByAscending, sortByRead bool, limit int, err error) {
+func parseSearchTerms(q url.Values) (searchTerm, orderStates []pb.OrderState, sortByAscending, sortByRead bool, limit int, exclude []string, err error) {
 	limitStr := q.Get("limit")
 	if limitStr == "" {
 		limitStr = "-1"
@@ -16,7 +16,6 @@ func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []
 	if err != nil {
 		return "", "", []pb.OrderState{}, false, false, 0, err
 	}
-	offsetID = q.Get("offsetId")
 	stateQuery := q.Get("state")
 	states := strings.Split(stateQuery, ",")
 	for _, s := range states {
@@ -40,5 +39,7 @@ func parseSearchTerms(q url.Values) (searchTerm, offsetID string, orderStates []
 			}
 		}
 	}
-	return searchTerm, offsetID, orderStates, sortByAscending, sortByRead, limit, nil
+	excludeQuery := q.Get("exclude")
+	exclude = strings.Split(excludeQuery, ",")
+	return searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, nil
 }

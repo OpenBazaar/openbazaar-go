@@ -2491,12 +2491,12 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
-	searchTerm, offsetID, orderStates, sortByAscending, _, limit, err := parseSearchTerms(r.URL.Query())
+	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	purchases, queryCount, err := i.node.Datastore.Purchases().GetAll(offsetID, limit, orderStates, searchTerm, sortByAscending)
+	purchases, queryCount, err := i.node.Datastore.Purchases().GetAll(orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2528,12 +2528,12 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
-	searchTerm, offsetID, orderStates, sortByAscending, _, limit, err := parseSearchTerms(r.URL.Query())
+	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	sales, queryCount, err := i.node.Datastore.Sales().GetAll(offsetID, limit, orderStates, searchTerm, sortByAscending)
+	sales, queryCount, err := i.node.Datastore.Sales().GetAll(orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2566,12 +2566,12 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
-	searchTerm, offsetID, orderStates, sortByAscending, _, limit, err := parseSearchTerms(r.URL.Query())
+	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	cases, queryCount, err := i.node.Datastore.Cases().GetAll(offsetID, limit, orderStates, searchTerm, sortByAscending)
+	cases, queryCount, err := i.node.Datastore.Cases().GetAll(orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

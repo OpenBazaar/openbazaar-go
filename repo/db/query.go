@@ -14,7 +14,8 @@ type query struct {
 	searchColumns   []string
 	sortByAscending bool
 	sortByRead      bool
-	offset          int
+	id              string
+	exclude         []string
 	limit           int
 }
 
@@ -32,6 +33,15 @@ func filterQuery(q query) (stm string, args []interface{}) {
 
 		stateFilterClause = "state in (" + strings.Join(stateFilterClauseParts, ",") + ")"
 	}
+	var exclude string
+	if len(q.exclude) > 0 {
+		excludeFilterClauseParts := make([]string, 0, len(q.exclude))
+		for i := 0; i < len(q.exclude); i++ {
+			excludeFilterClauseParts = append(excludeFilterClauseParts, "?")
+		}
+		exclude = q.id + " not in (" + strings.Join(excludeFilterClauseParts, ",") + ")"
+	}
+
 	order := "desc"
 	if q.sortByAscending {
 		order = "asc"
@@ -62,11 +72,6 @@ func filterQuery(q query) (stm string, args []interface{}) {
 		readSort = "read asc, "
 	}
 
-	var offsetString string
-	if q.offset > 0 {
-		offsetString = " offset " + strconv.Itoa(q.offset)
-	}
-
 	if stateFilterClause != "" {
 		filter = " where " + stateFilterClause
 	}
@@ -77,13 +82,25 @@ func filterQuery(q query) (stm string, args []interface{}) {
 			search = " and " + searchFilter + " like ?"
 		}
 	}
-	stm = "select " + queryColumns + " from " + q.table + filter + search + " order by " + readSort + "timestamp " + order + " limit " + strconv.Itoa(q.limit) + offsetString + ";"
+	if exclude != "" {
+		if filter != "" || search != "" {
+			exclude = " and " + exclude
+		} else {
+			exclude = " where " + exclude
+		}
+	}
+	stm = "select " + queryColumns + " from " + q.table + filter + search + exclude + " order by " + readSort + "timestamp " + order + " limit " + strconv.Itoa(q.limit) + ";"
 
 	for _, s := range states {
 		args = append(args, s)
 	}
 	if q.searchTerm != "" {
 		args = append(args, "%"+q.searchTerm+"%")
+	}
+	if len(q.exclude) > 0 {
+		for _, s := range q.exclude {
+			args = append(args, s)
+		}
 	}
 	return stm, args
 }

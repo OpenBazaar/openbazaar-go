@@ -6,85 +6,138 @@ import (
 )
 
 func Test_filterQuery(t *testing.T) {
+
+	// Test search term
 	stm, args := filterQuery(query{
 		table:           "purchases",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		offset:          5,
+		columns:         []string{"orderID", "timestamp"},
 		stateFilter:     []pb.OrderState{},
 		searchTerm:      "test",
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		searchColumns:   []string{"orderID", "timestamp", "title"},
+		id:              "orderID",
 		sortByAscending: false,
 		limit:           -1,
 	})
-	if stm != `select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where (orderID || timestamp || total || title || thumbnail || vendorID || vendorBlockchainID || shippingName || shippingAddress || paymentAddr) like ? order by timestamp desc limit -1 offset 5;` {
-		t.Error("Returned invalid query string")
+	if stm != "select orderID, timestamp from purchases where (orderID || timestamp || title) like ? order by timestamp desc limit -1;" {
+		t.Error("Incorrect statement")
 	}
 	if len(args) != 1 {
-		t.Error("Incorrect number of args returned")
+		t.Error("Incorrect args")
 	}
 
+	// Test excluded ids
 	stm, args = filterQuery(query{
 		table:           "purchases",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		offset:          0,
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING},
-		searchTerm:      "test",
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{},
+		searchTerm:      "",
+		searchColumns:   []string{},
+		id:              "orderID",
+		exclude:         []string{"abc", "xyz"},
+		sortByAscending: false,
+		limit:           -1,
+	})
+	if stm != "select orderID, timestamp from purchases where orderID not in (?,?) order by timestamp desc limit -1;" {
+		t.Error("Incorrect statement")
+	}
+	if len(args) != 2 {
+		t.Error("Incorrect args")
+	}
+
+	// Test state filter
+	stm, args = filterQuery(query{
+		table:           "purchases",
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		searchTerm:      "",
+		searchColumns:   []string{},
+		id:              "orderID",
+		exclude:         []string{},
+		sortByAscending: false,
+		limit:           -1,
+	})
+	if stm != "select orderID, timestamp from purchases where state in (?,?) order by timestamp desc limit -1;" {
+		t.Error("Incorrect statement")
+	}
+	if len(args) != 2 {
+		t.Error("Incorrect args")
+	}
+
+	// Test ascending
+	stm, args = filterQuery(query{
+		table:           "purchases",
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		searchTerm:      "",
+		searchColumns:   []string{},
+		id:              "orderID",
+		exclude:         []string{},
 		sortByAscending: true,
 		limit:           -1,
 	})
-	if stm != `select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where state in (?) and (orderID || timestamp || total || title || thumbnail || vendorID || vendorBlockchainID || shippingName || shippingAddress || paymentAddr) like ? order by timestamp asc limit -1;` {
-		t.Error("Returned invalid query string")
+	if stm != "select orderID, timestamp from purchases where state in (?,?) order by timestamp asc limit -1;" {
+		t.Error("Incorrect statement")
 	}
 	if len(args) != 2 {
-		t.Error("Incorrect number of args returned")
+		t.Error("Incorrect args")
 	}
+
+	// Test sort by read
 	stm, args = filterQuery(query{
 		table:           "purchases",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING},
-		searchTerm:      "test",
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		searchTerm:      "",
+		searchColumns:   []string{},
+		id:              "orderID",
+		exclude:         []string{},
 		sortByAscending: true,
 		sortByRead:      true,
-		offset:          10,
 		limit:           -1,
 	})
-	if stm != `select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where state in (?) and (orderID || timestamp || total || title || thumbnail || vendorID || vendorBlockchainID || shippingName || shippingAddress || paymentAddr) like ? order by read asc, timestamp asc limit -1 offset 10;` {
-		t.Error("Returned invalid query string")
+	if stm != "select orderID, timestamp from purchases where state in (?,?) order by read asc, timestamp asc limit -1;" {
+		t.Error("Incorrect statement")
 	}
 	if len(args) != 2 {
-		t.Error("Incorrect number of args returned")
-	}
-	stm, args = filterQuery(query{
-		table:           "purchases",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING},
-		searchTerm:      "",
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
-		sortByAscending: true,
-		limit:           -1,
-	})
-	if stm != `select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where state in (?) order by timestamp asc limit -1;` {
-		t.Error("Returned invalid query string")
-	}
-	if len(args) != 1 {
-		t.Error("Incorrect number of args returned")
+		t.Error("Incorrect args")
 	}
 
+	// Test state filter and exclude
 	stm, args = filterQuery(query{
 		table:           "purchases",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		stateFilter:     []pb.OrderState{},
-		searchTerm:      "asdf",
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
-		sortByAscending: true,
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		searchTerm:      "",
+		searchColumns:   []string{},
+		id:              "orderID",
+		exclude:         []string{"abc", "xyz"},
+		sortByAscending: false,
 		limit:           -1,
 	})
-	if stm != `select orderID, timestamp, total, title, thumbnail, vendorID, vendorBlockchainID, shippingName, shippingAddress, state, read from purchases where (orderID || timestamp || total || title || thumbnail || vendorID || vendorBlockchainID || shippingName || shippingAddress || paymentAddr) like ? order by timestamp asc limit -1;` {
-		t.Error("Returned invalid query string")
+	if stm != "select orderID, timestamp from purchases where state in (?,?) and orderID not in (?,?) order by timestamp desc limit -1;" {
+		t.Error("Incorrect statement")
 	}
-	if len(args) != 1 {
-		t.Error("Incorrect number of args returned")
+	if len(args) != 4 {
+		t.Error("Incorrect args")
 	}
+
+	// Test search and state filter
+	stm, args = filterQuery(query{
+		table:           "purchases",
+		columns:         []string{"orderID", "timestamp"},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		searchTerm:      "hello",
+		searchColumns:   []string{"orderID", "timestamp", "title"},
+		id:              "orderID",
+		exclude:         []string{},
+		sortByAscending: false,
+		limit:           -1,
+	})
+	if stm != "select orderID, timestamp from purchases where state in (?,?) and (orderID || timestamp || title) like ? order by timestamp desc limit -1;" {
+		t.Error("Incorrect statement")
+	}
+	if len(args) != 3 {
+		t.Error("Incorrect args")
+	}
+
 }

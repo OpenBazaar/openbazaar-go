@@ -254,7 +254,6 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := c.db.QueryRow(stm, args...)

@@ -163,7 +163,6 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := p.db.QueryRow(stm, args...)

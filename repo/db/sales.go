@@ -130,7 +130,6 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
 		sortByAscending: sortByAscending,
 		sortByRead:      sortByRead,
-		offset:          offset,
 		limit:           limit,
 	}
 	stm, args := filterQuery(q)
@@ -166,7 +165,6 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		})
 	}
 	q.columns = []string{"Count(*)"}
-	q.offset = 0
 	q.limit = -1
 	stm, args = filterQuery(q)
 	row := s.db.QueryRow(stm, args...)
