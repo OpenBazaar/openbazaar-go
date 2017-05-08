@@ -24,8 +24,6 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	switch {
 	case strings.HasPrefix(path, "/ob/listing"):
 		i.POSTListing(w, r)
-	case strings.HasPrefix(path, "/ob/purchase"):
-		i.POSTPurchase(w, r)
 	case strings.HasPrefix(path, "/ob/follow"):
 		i.POSTFollow(w, r)
 	case strings.HasPrefix(path, "/ob/unfollow"):
@@ -82,6 +80,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTSales(w, r)
 	case strings.HasPrefix(path, "/ob/purchases"):
 		i.POSTPurchases(w, r)
+	case strings.HasPrefix(path, "/ob/purchase"):
+		i.POSTPurchase(w, r)
 	case strings.HasPrefix(path, "/ob/cases"):
 		i.POSTCases(w, r)
 	default:
