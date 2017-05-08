@@ -42,6 +42,7 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	"io/ioutil"
 )
 
 type JsonAPIConfig struct {
@@ -2776,4 +2777,49 @@ func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Reques
 	}
 	fmt.Fprintf(w, "%d", int(amount))
 	return
+}
+
+func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
+	//include := r.URL.Query().Get("include")
+	urlPath, slug := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+
+	var indexBytes []bytes
+	var err error
+	if peerId != i.node.IpfsNode.Identity.Pretty() {
+		indexBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+	} else {
+		indexBytes, err = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+	}
+	var ratingList []core.SavedRating
+	err = json.Unmarshal(indexBytes, &ratingList)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var rating *core.SavedRating
+	for _, r := range ratingList {
+		if r.Slug == slug {
+			rating = &r
+			break
+		}
+	}
+	if rating == nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	ret, err := json.MarshalIndent(rating, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, ret)
 }
