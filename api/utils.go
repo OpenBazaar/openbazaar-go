@@ -9,7 +9,7 @@ import (
 
 type TransactionQuery struct {
 	OrderStates     []int    `json:"states"`
-	SearchTerm      string   `json:"amount"`
+	SearchTerm      string   `json:"search"`
 	SortByAscending bool     `json:"sortByAscending"`
 	SortByRead      bool     `json:"sortByRead"`
 	Limit           int      `json:"limit"`
