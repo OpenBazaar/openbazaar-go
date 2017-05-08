@@ -78,6 +78,12 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTShutdown(w, r)
 	case strings.HasPrefix(path, "/ob/estimatetotal"):
 		i.POSTEstimateTotal(w, r)
+	case strings.HasPrefix(path, "/ob/sales"):
+		i.POSTSales(w, r)
+	case strings.HasPrefix(path, "/ob/purchases"):
+		i.POSTPurchases(w, r)
+	case strings.HasPrefix(path, "/ob/cases"):
+		i.POSTCases(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
