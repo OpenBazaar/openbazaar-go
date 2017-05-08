@@ -292,6 +292,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			n.Wallet.AddWatchedScript(script)
 
+			// Remove signature and resign
+			contract.Signatures = []*pb.Signature{contract.Signatures[0]}
 			contract, err = n.SignOrder(contract)
 			if err != nil {
 				return "", "", 0, false, err
@@ -719,8 +721,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	var shippingTotal uint64
 	for _, item := range contract.BuyerOrder.Items {
 		listing, ok := physicalGoods[item.ListingHash]
-		if !ok {
-			return 0, fmt.Errorf("Listing %s not found in contract", item.ListingHash)
+		if !ok { // Not physical good no need to calculate shipping
+			continue
 		}
 		var itemShipping uint64
 		// Check selected option exists
@@ -893,7 +895,7 @@ func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
 		case noSigError:
 			return errors.New("Contract does not contain a signature for the order")
 		case invalidSigError:
-			return errors.New("Buyer's guid signature on contact failed to verify")
+			return errors.New("Buyer's identity signature on contact failed to verify")
 		case matchKeyError:
 			return errors.New("Public key in order does not match reported buyer ID")
 		default:
@@ -1141,14 +1143,8 @@ collectListings:
 		if contract.BuyerOrder.Shipping.Address == "" {
 			return errors.New("Shipping address is empty")
 		}
-		if contract.BuyerOrder.Shipping.City == "" {
-			return errors.New("Shipping city is empty")
-		}
 		if contract.BuyerOrder.Shipping.ShipTo == "" {
 			return errors.New("Ship to name is empty")
-		}
-		if contract.BuyerOrder.Shipping.State == "" {
-			return errors.New("Shipping state is empty")
 		}
 	}
 
@@ -1290,11 +1286,11 @@ func (n *OpenBazaarNode) SignOrder(contract *pb.RicardianContract) (*pb.Ricardia
 	if err != nil {
 		return contract, err
 	}
-	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
+	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedOrder)
 	if err != nil {
 		return contract, err
 	}
-	s.SignatureBytes = guidSig
+	s.SignatureBytes = idSig
 	contract.Signatures = append(contract.Signatures, s)
 	return contract, nil
 }
@@ -1376,9 +1372,9 @@ func GetSelectedSku(listing *pb.Listing, itemOptions []*pb.Order_Item_Option) (i
 	for _, s := range listing.Item.Options {
 	optionsLoop:
 		for _, o := range itemOptions {
-			if o.Name == s.Name {
+			if strings.ToLower(o.Name) == strings.ToLower(s.Name) {
 				for i, va := range s.Variants {
-					if va.Name == o.Value {
+					if strings.ToLower(va.Name) == strings.ToLower(o.Value) {
 						selected = append(selected, i)
 						break optionsLoop
 					}

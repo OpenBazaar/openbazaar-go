@@ -1008,7 +1008,7 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		case noSigError:
 			return errors.New("Contract does not contain listing signature")
 		case invalidSigError:
-			return errors.New("Buyer's guid signature on contact failed to verify")
+			return errors.New("Vendor's identity signature on contact failed to verify")
 		case matchKeyError:
 			return errors.New("Public key in order does not match reported buyer ID")
 		default:

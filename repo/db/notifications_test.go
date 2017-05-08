@@ -119,3 +119,34 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 		t.Error("Failed to mark message as read")
 	}
 }
+
+func TestNotificationDB_GetUnreadCount(t *testing.T) {
+	n := notif.FollowNotification{"abc"}
+	err := notifDB.Put(n, time.Now())
+	if err != nil {
+		t.Error(err)
+	}
+	err = notifDB.MarkAsRead(1)
+	if err != nil {
+		t.Error(err)
+	}
+	n = notif.FollowNotification{"xyz"}
+	err = notifDB.Put(n, time.Now())
+	if err != nil {
+		t.Error(err)
+	}
+	all := notifDB.GetAll(0, -1)
+	var c int
+	for _, a := range all {
+		if !a.Read {
+			c++
+		}
+	}
+	count, err := notifDB.GetUnreadCount()
+	if err != nil {
+		t.Error(err)
+	}
+	if count != c {
+		t.Error("GetUnreadCount returned incorrect count")
+	}
+}

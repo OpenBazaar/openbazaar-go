@@ -1,12 +1,18 @@
 package notifications
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestSerialization(t *testing.T) {
 	notif := StatusNotification{"some status string"}
 	val := string(Serialize(notif))
-	str := `{"status":"some status string"}`
-	if val != str {
+	j, err := json.MarshalIndent(notif, "", "    ")
+	if err != nil {
+		t.Error(err)
+	}
+	if string(val) != string(j) {
 		t.Error("Incorrect serialization")
 	}
 }

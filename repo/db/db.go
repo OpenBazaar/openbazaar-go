@@ -294,6 +294,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
 	create index index_chat on chat (peerID, subject, read, timestamp);
 	create table notifications (serializedNotification blob, timestamp integer, read integer);
+	create index index_notifications on notifications (read);
 	create table coupons (slug text, code text, hash text);
 	create index index_coupons on coupons (slug);
 	create table moderatedstores (peerID text primary key not null);

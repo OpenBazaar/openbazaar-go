@@ -352,7 +352,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Send notification to websocket
 	n := notifications.OrderConfirmationNotification{orderId}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -521,7 +521,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Send notification to websocket
 	n := notifications.OrderCancelNotification{rejectMsg.OrderID}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -629,7 +629,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	// Send notification to websocket
 	n := notifications.RefundNotification{contract.Refund.OrderID}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -668,7 +668,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Send notification to websocket
 	n := notifications.FulfillmentNotification{rc.VendorOrderFulfillment[0].OrderId}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -758,7 +758,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Send notification to websocket
 	n := notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -827,7 +827,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	// Send notification to websocket
 	n := notifications.DisputeUpdateNotification{update.OrderId}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 
 	return nil, nil
 }
@@ -886,7 +886,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	// Send notification to websocket
 	n := notifications.DisputeCloseNotification{rc.DisputeResolution.OrderId}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, time.Now())
+	service.datastore.Notifications().Put(notifications.Wrap(n), time.Now())
 	return nil, nil
 }
 

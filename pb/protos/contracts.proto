@@ -195,10 +195,9 @@ message Order {
         Method method       = 1;
         string moderator    = 2;
         uint64 amount       = 3; // Satoshis
-        uint64 exchangeRate = 4;
-        string chaincode    = 6; // Hex encoded
-        string address      = 7; // B58check encoded
-        string redeemScript = 8; // Hex encoded
+        string chaincode    = 4; // Hex encoded
+        string address      = 5; // B58check encoded
+        string redeemScript = 6; // Hex encoded
 
         enum Method {
             ADDRESS_REQUEST = 0;
@@ -257,6 +256,8 @@ message OrderFulfillment {
     Payout payout                              = 6;
 
     RatingSignature ratingSignature            = 7;
+
+    string note                                = 8;
 
     message PhysicalDelivery {
         string shipper            = 1;

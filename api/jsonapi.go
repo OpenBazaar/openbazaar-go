@@ -25,6 +25,7 @@ import (
 
 	"bytes"
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -188,28 +189,12 @@ func SanitizedResponse(w http.ResponseWriter, response string) {
 }
 
 func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message) {
-	ret, err := SanitizeJSON([]byte(response))
+	out, err := SanitizeProtobuf(response, m)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	err = jsonpb.UnmarshalString(string(ret), m)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	marshaler := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: true,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := marshaler.MarshalToString(m)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	fmt.Fprint(w, out)
+	fmt.Fprintf(w, string(out))
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
@@ -1405,6 +1390,9 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	var profile pb.Profile
 	var err error
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
+
 	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		profile, err = i.node.GetProfile()
 		if err != nil && err == core.ErrorProfileNotFound {
@@ -1422,7 +1410,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		profile, err = i.node.FetchProfile(peerId)
+		profile, err = i.node.FetchProfile(peerId, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1683,7 +1671,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			for _, mod := range mods {
 				wg.Add(1)
 				go func(m string) {
-					profile, err := i.node.FetchProfile(m)
+					profile, err := i.node.FetchProfile(m, false)
 					if err != nil {
 						wg.Done()
 						return
@@ -1729,6 +1717,9 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			}
 			resp = string(res)
 		}
+		if resp == "null" {
+			resp = "[]"
+		}
 		SanitizedResponse(w, resp)
 	} else {
 		idBytes := make([]byte, 16)
@@ -1759,7 +1750,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					if !found[pid] {
 						found[pid] = true
 						if strings.ToLower(include) == "profile" {
-							profile, err := i.node.FetchProfile(pid)
+							profile, err := i.node.FetchProfile(pid, false)
 							if err != nil {
 								return
 							}
@@ -1774,7 +1765,11 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 							if err != nil {
 								return
 							}
-							i.node.Broadcast <- []byte(respJson)
+							b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+							if err != nil {
+								return
+							}
+							i.node.Broadcast <- b
 						} else {
 							resp := wsResp{id, pid}
 							respJson, err := json.MarshalIndent(resp, "", "    ")
@@ -2184,17 +2179,27 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
+	type notifData struct {
+		Unread        int                          `json:"unread"`
+		Notifications []notifications.Notification `json:"notifications"`
+	}
 	notifs := i.node.Datastore.Notifications().GetAll(offsetId, int(l))
-
-	ret, err := json.MarshalIndent(notifs, "", "    ")
+	unread, err := i.node.Datastore.Notifications().GetUnreadCount()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if string(ret) == "null" {
-		ret = []byte("[]")
+
+	ret, err := json.MarshalIndent(notifData{unread, notifs}, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	SanitizedResponse(w, string(ret))
+	retString := string(ret)
+	if strings.Contains(retString, "null") {
+		retString = strings.Replace(retString, "null", "[]", -1)
+	}
+	SanitizedResponse(w, retString)
 	return
 }
 
@@ -2282,6 +2287,8 @@ func (i *jsonAPIHandler) GETHeader(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("async")
 	async, _ := strconv.ParseBool(query)
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
 
 	var pids []string
 	decoder := json.NewDecoder(r.Body)
@@ -2296,7 +2303,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		for _, p := range pids {
 			wg.Add(1)
 			go func(pid string) {
-				pro, err := i.node.FetchProfile(pid)
+				pro, err := i.node.FetchProfile(pid, useCache)
 				if err != nil {
 					wg.Done()
 					return
@@ -2354,7 +2361,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 			}
 			for _, p := range pids {
 				go func(pid string) {
-					pro, err := i.node.FetchProfile(pid)
+					pro, err := i.node.FetchProfile(pid, useCache)
 					if err != nil {
 						e := profileError{pid, "Not found"}
 						ret, err := json.MarshalIndent(e, "", "    ")
@@ -2381,7 +2388,17 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						i.node.Broadcast <- ret
 						return
 					}
-					i.node.Broadcast <- []byte(respJson)
+					b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+					if err != nil {
+						e := profileError{pid, "Error Marshalling to JSON"}
+						ret, err := json.MarshalIndent(e, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- ret
+						return
+					}
+					i.node.Broadcast <- b
 				}(p)
 			}
 		}()
@@ -2440,10 +2457,10 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			status = "UNCONFIRMED"
 		case confs == 0 && time.Since(t.Timestamp) > time.Hour*6:
 			status = "STUCK"
-		case confs > 0 && confs < 7:
+		case confs > 0 && confs < 6:
 			status = "PENDING"
 			confirmations = confs
-		case confs > 6:
+		case confs > 5:
 			status = "CONFIRMED"
 			confirmations = confs
 		}

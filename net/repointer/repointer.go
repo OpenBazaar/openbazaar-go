@@ -44,14 +44,21 @@ func (r *PointerRepublisher) Republish() {
 	}
 	ctx := context.Background()
 	for _, p := range pointers {
-		if p.Purpose != ipfs.MESSAGE {
-			ipfs.RePublishPointer(r.ipfsNode, ctx, p)
-		} else if p.Purpose != ipfs.MODERATOR || republishModerator {
+		switch p.Purpose {
+		case ipfs.MESSAGE:
 			if time.Now().Sub(p.Timestamp) > time.Hour*24*30 {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				ipfs.RePublishPointer(r.ipfsNode, ctx, p)
 			}
+		case ipfs.MODERATOR:
+			if republishModerator {
+				ipfs.RePublishPointer(r.ipfsNode, ctx, p)
+			} else {
+				r.db.Pointers().Delete(p.Value.ID)
+			}
+		default:
+			continue
 		}
 	}
 }

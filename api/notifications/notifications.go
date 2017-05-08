@@ -181,118 +181,82 @@ type IncomingTransaction struct {
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 
-func Serialize(i interface{}) []byte {
-	var n notificationWrapper
+func Wrap(i interface{}) interface{} {
 	switch i.(type) {
 	case OrderNotification:
-		n = notificationWrapper{
-			orderWrapper{
-				OrderNotification: i.(OrderNotification),
-			},
-		}
+		return orderWrapper{OrderNotification: i.(OrderNotification)}
 	case PaymentNotification:
-		n = notificationWrapper{
-			paymentWrapper{
-				PaymentNotification: i.(PaymentNotification),
-			},
-		}
+		return paymentWrapper{PaymentNotification: i.(PaymentNotification)}
 	case OrderConfirmationNotification:
-		n = notificationWrapper{
-			orderConfirmationWrapper{
-				OrderConfirmationNotification: i.(OrderConfirmationNotification),
-			},
-		}
+		return orderConfirmationWrapper{OrderConfirmationNotification: i.(OrderConfirmationNotification)}
 	case OrderCancelNotification:
-		n = notificationWrapper{
-			orderCancelWrapper{
-				OrderCancelNotification: i.(OrderCancelNotification),
-			},
-		}
+		return orderCancelWrapper{OrderCancelNotification: i.(OrderCancelNotification)}
 	case RefundNotification:
-		n = notificationWrapper{
-			refundWrapper{
-				RefundNotification: i.(RefundNotification),
-			},
-		}
+		return refundWrapper{RefundNotification: i.(RefundNotification)}
 	case FulfillmentNotification:
-		n = notificationWrapper{
-			fulfillmentWrapper{
-				FulfillmentNotification: i.(FulfillmentNotification),
-			},
-		}
+		return fulfillmentWrapper{FulfillmentNotification: i.(FulfillmentNotification)}
 	case CompletionNotification:
-		n = notificationWrapper{
-			completionWrapper{
-				CompletionNotification: i.(CompletionNotification),
-			},
-		}
+		return completionWrapper{CompletionNotification: i.(CompletionNotification)}
 	case DisputeOpenNotification:
-		n = notificationWrapper{
-			disputeOpenWrapper{
-				DisputeOpenNotification: i.(DisputeOpenNotification),
-			},
-		}
+		return disputeOpenWrapper{DisputeOpenNotification: i.(DisputeOpenNotification)}
 	case DisputeUpdateNotification:
-		n = notificationWrapper{
-			disputeUpdateWrapper{
-				DisputeUpdateNotification: i.(DisputeUpdateNotification),
-			},
-		}
+		return disputeUpdateWrapper{DisputeUpdateNotification: i.(DisputeUpdateNotification)}
 	case DisputeCloseNotification:
-		n = notificationWrapper{
-			disputeCloseWrapper{
-				DisputeCloseNotification: i.(DisputeCloseNotification),
-			},
-		}
-	case FollowNotification:
-		n = notificationWrapper{
-			i.(FollowNotification),
-		}
-	case UnfollowNotification:
-		n = notificationWrapper{
-			i.(UnfollowNotification),
-		}
-	case ModeratorAddNotification:
-		n = notificationWrapper{
-			i.(ModeratorAddNotification),
-		}
-	case ModeratorRemoveNotification:
-		n = notificationWrapper{
-			i.(ModeratorRemoveNotification),
-		}
-	case StatusNotification:
-		s := i.(StatusNotification)
-		b, _ := json.Marshal(s)
-		return b
-	case ChatMessage:
-		m := messageWrapper{
-			i.(ChatMessage),
-		}
-		b, _ := json.MarshalIndent(m, "", "    ")
-		return b
-	case ChatRead:
-		m := messageReadWrapper{
-			i.(ChatRead),
-		}
-		b, _ := json.MarshalIndent(m, "", "    ")
-		return b
-	case ChatTyping:
-		m := messageTypingWrapper{
-			i.(ChatTyping),
-		}
-		b, _ := json.MarshalIndent(m, "", "    ")
-		return b
-	case IncomingTransaction:
-		m := walletWrapper{
-			i.(IncomingTransaction),
-		}
-		b, _ := json.MarshalIndent(m, "", "    ")
-		return b
-	case []byte:
-		return i.([]byte)
+		return disputeCloseWrapper{DisputeCloseNotification: i.(DisputeCloseNotification)}
+	default:
+		return i
 	}
+}
 
-	b, _ := json.MarshalIndent(n, "", "    ")
+func wrapType(i interface{}) interface{} {
+	switch i.(type) {
+	case orderWrapper:
+		return notificationWrapper{i}
+	case paymentWrapper:
+		return notificationWrapper{i}
+	case orderConfirmationWrapper:
+		return notificationWrapper{i}
+	case orderCancelWrapper:
+		return notificationWrapper{i}
+	case refundWrapper:
+		return notificationWrapper{i}
+	case fulfillmentWrapper:
+		return notificationWrapper{i}
+	case completionWrapper:
+		return notificationWrapper{i}
+	case disputeOpenWrapper:
+		return notificationWrapper{i}
+	case disputeUpdateWrapper:
+		return notificationWrapper{i}
+	case disputeCloseWrapper:
+		return notificationWrapper{i}
+	case FollowNotification:
+		return notificationWrapper{i}
+	case UnfollowNotification:
+		return notificationWrapper{i}
+	case ModeratorAddNotification:
+		return notificationWrapper{i}
+	case ModeratorRemoveNotification:
+		return notificationWrapper{i}
+	case ChatMessage:
+		return messageWrapper{i.(ChatMessage)}
+	case ChatRead:
+		return messageReadWrapper{i.(ChatRead)}
+	case ChatTyping:
+		return messageTypingWrapper{i.(ChatTyping)}
+	case IncomingTransaction:
+		return walletWrapper{i.(IncomingTransaction)}
+	default:
+		return i
+	}
+}
+
+func Serialize(i interface{}) []byte {
+	w := wrapType(Wrap(i))
+	if _, ok := w.([]byte); ok {
+		return w.([]byte)
+	}
+	b, _ := json.MarshalIndent(w, "", "    ")
 	return b
 }
 

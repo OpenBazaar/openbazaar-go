@@ -108,7 +108,7 @@ func (ms *messageSender) writeMessage(pmes *pb.Message) error {
 		// end up erroring here. To make sure things work seamlessly, lets retry once
 		// before continuing
 
-		log.Infof("error writing message: ", err)
+		log.Infof("error writing message: %s", err.Error())
 		ms.s.Close()
 		ms.s = nil
 		if err := ms.prep(); err != nil {
