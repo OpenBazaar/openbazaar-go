@@ -10,5 +10,5 @@
   "language": "go",
   "license": "MIT",
   "name": "openbazaar-go",
-  "version": "0.5.6"
+  "version": "0.5.7"
 }
