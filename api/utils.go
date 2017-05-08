@@ -8,7 +8,7 @@ import (
 )
 
 type TransactionQuery struct {
-	OrderStates     []string `json:"states"`
+	OrderStates     []int    `json:"states"`
 	SearchTerm      string   `json:"amount"`
 	SortByAscending bool     `json:"sortByAscending"`
 	SortByRead      bool     `json:"sortByRead"`
@@ -51,16 +51,10 @@ func parseSearchTerms(q url.Values) (orderStates []pb.OrderState, searchTerm str
 	return orderStates, searchTerm, sortByAscending, sortByRead, limit, nil
 }
 
-func convertOrderStates(states []string) []pb.OrderState {
+func convertOrderStates(states []int) []pb.OrderState {
 	var orderStates []pb.OrderState
-	for _, s := range states {
-		if s != "" {
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				return orderStates
-			}
-			orderStates = append(orderStates, pb.OrderState(i))
-		}
+	for _, i := range states {
+		orderStates = append(orderStates, pb.OrderState(i))
 	}
 	return orderStates
 }
