@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-func parseSearchTerms(q url.Values) (searchTerm, orderStates []pb.OrderState, sortByAscending, sortByRead bool, limit int, exclude []string, err error) {
+func parseSearchTerms(q url.Values) (orderStates []pb.OrderState, searchTerm string, sortByAscending, sortByRead bool, limit int, exclude []string, err error) {
 	limitStr := q.Get("limit")
 	if limitStr == "" {
 		limitStr = "-1"
 	}
 	limit, err = strconv.Atoi(limitStr)
 	if err != nil {
-		return "", "", []pb.OrderState{}, false, false, 0, err
+		return orderStates, searchTerm, false, false, 0, exclude, err
 	}
 	stateQuery := q.Get("state")
 	states := strings.Split(stateQuery, ",")
@@ -22,7 +22,7 @@ func parseSearchTerms(q url.Values) (searchTerm, orderStates []pb.OrderState, so
 		if s != "" {
 			i, err := strconv.Atoi(s)
 			if err != nil {
-				return "", "", []pb.OrderState{}, false, false, 0, err
+				return orderStates, searchTerm, false, false, 0, exclude, err
 			}
 			orderStates = append(orderStates, pb.OrderState(i))
 		}
@@ -41,5 +41,5 @@ func parseSearchTerms(q url.Values) (searchTerm, orderStates []pb.OrderState, so
 	}
 	excludeQuery := q.Get("exclude")
 	exclude = strings.Split(excludeQuery, ",")
-	return searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, nil
+	return orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude, nil
 }

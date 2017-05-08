@@ -118,17 +118,21 @@ func (p *PurchasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]repo.Purchase, int, error) {
+func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]repo.Purchase, int, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	q := query{
-		table:         "purchases",
-		columns:       []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
-		stateFilter:   stateFilter,
-		searchTerm:    searchTerm,
-		searchColumns: []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
-		limit:         limit,
+		table:           "purchases",
+		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
+		stateFilter:     stateFilter,
+		searchTerm:      searchTerm,
+		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		sortByAscending: sortByAscending,
+		sortByRead:      sortByRead,
+		id:              "orderID",
+		exclude:         exclude,
+		limit:           limit,
 	}
 	stm, args := filterQuery(q)
 	rows, err := p.db.Query(stm, args...)
@@ -164,6 +168,7 @@ func (p *PurchasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderS
 	}
 	q.columns = []string{"Count(*)"}
 	q.limit = -1
+	q.exclude = []string{}
 	stm, args = filterQuery(q)
 	row := p.db.QueryRow(stm, args...)
 	var count int

@@ -171,17 +171,21 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState, searchTerm string, ascending bool) ([]repo.Case, int, error) {
+func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]repo.Case, int, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
 	q := query{
-		table:         "cases",
-		columns:       []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
-		stateFilter:   stateFilter,
-		searchTerm:    searchTerm,
-		searchColumns: []string{"caseID", "timestamp", "claim"},
-		limit:         limit,
+		table:           "cases",
+		columns:         []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
+		stateFilter:     stateFilter,
+		searchTerm:      searchTerm,
+		searchColumns:   []string{"caseID", "timestamp", "claim"},
+		sortByAscending: sortByAscending,
+		sortByRead:      sortByRead,
+		id:              "caseID",
+		exclude:         exclude,
+		limit:           limit,
 	}
 	stm, args := filterQuery(q)
 	rows, err := c.db.Query(stm, args...)
@@ -255,6 +259,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int, stateFilter []pb.OrderState
 	}
 	q.columns = []string{"Count(*)"}
 	q.limit = -1
+	q.exclude = []string{}
 	stm, args = filterQuery(q)
 	row := c.db.QueryRow(stm, args...)
 	var count int

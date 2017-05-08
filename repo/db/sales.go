@@ -119,7 +119,7 @@ func (s *SalesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, offset int, limit int) ([]repo.Sale, int, error) {
+func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]repo.Sale, int, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	q := query{
@@ -130,6 +130,8 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
 		sortByAscending: sortByAscending,
 		sortByRead:      sortByRead,
+		id:              "orderID",
+		exclude:         exclude,
 		limit:           limit,
 	}
 	stm, args := filterQuery(q)
@@ -166,6 +168,7 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 	}
 	q.columns = []string{"Count(*)"}
 	q.limit = -1
+	q.exclude = []string{}
 	stm, args = filterQuery(q)
 	row := s.db.QueryRow(stm, args...)
 	var count int

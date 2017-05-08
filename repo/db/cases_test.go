@@ -417,7 +417,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cases, ct, err := casesdb.GetAll("", -1, []pb.OrderState{}, "", false)
+	cases, ct, err := casesdb.GetAll([]pb.OrderState{}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -427,7 +427,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 2 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("", 1, []pb.OrderState{}, "", false)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "", false, false, 1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -437,7 +437,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 2 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("caseID", -1, []pb.OrderState{}, "", true)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "", true, false, -1, []string{"caseID"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -447,7 +447,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 2 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED}, "", false)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DISPUTED}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -457,7 +457,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 1 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DECIDED}, "", false)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DECIDED}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -467,7 +467,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 1 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("", -1, []pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED}, "", false)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -477,7 +477,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if ct != 2 {
 		t.Error("Returned incorrect number of query cases")
 	}
-	cases, ct, err = casesdb.GetAll("", -1, []pb.OrderState{}, "caseID2", false)
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "caseid2", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}

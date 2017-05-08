@@ -2491,7 +2491,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
-	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
+	orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -2508,13 +2508,11 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		}
 		p.UnreadChatMessages = unread
 	}
-	count := i.node.Datastore.Purchases().Count()
 	type purchasesResponse struct {
-		TotalCount int             `json:"totalCount"`
 		QueryCount int             `json:"queryCount"`
 		Purchases  []repo.Purchase `json:"purchases"`
 	}
-	pr := purchasesResponse{count, queryCount, purchases}
+	pr := purchasesResponse{queryCount, purchases}
 	ret, err := json.MarshalIndent(pr, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -2528,7 +2526,7 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
-	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
+	orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -2545,13 +2543,11 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 		}
 		s.UnreadChatMessages = unread
 	}
-	count := i.node.Datastore.Sales().Count()
 	type salesResponse struct {
-		TotalCount int         `json:"totalCount"`
 		QueryCount int         `json:"queryCount"`
 		Sales      []repo.Sale `json:"sales"`
 	}
-	sr := salesResponse{count, queryCount, sales}
+	sr := salesResponse{queryCount, sales}
 
 	ret, err := json.MarshalIndent(sr, "", "    ")
 	if err != nil {
@@ -2566,7 +2562,7 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
-	searchTerm, orderStates, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
+	orderStates, searchTerm, sortByAscending, sortByRead, limit, exclude, err := parseSearchTerms(r.URL.Query())
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
@@ -2583,13 +2579,11 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		}
 		c.UnreadChatMessages = unread
 	}
-	count := i.node.Datastore.Cases().Count()
 	type casesResponse struct {
-		TotalCount int         `json:"totalCount"`
 		QueryCount int         `json:"queryCount"`
 		Cases      []repo.Case `json:"cases"`
 	}
-	cr := casesResponse{count, queryCount, cases}
+	cr := casesResponse{queryCount, cases}
 	ret, err := json.MarshalIndent(cr, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
