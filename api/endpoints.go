@@ -125,8 +125,6 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETOrder(w, r)
 	case strings.HasPrefix(path, "/ob/moderators"):
 		i.GETModerators(w, r)
-	case strings.HasPrefix(path, "/ob/case"):
-		i.GETCase(w, r)
 	case strings.HasPrefix(path, "/ob/chatmessages"):
 		i.GETChatMessages(w, r)
 	case strings.HasPrefix(path, "/ob/chatconversations"):
@@ -145,6 +143,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETSales(w, r)
 	case strings.HasPrefix(path, "/ob/cases"):
 		i.GETCases(w, r)
+	case strings.HasPrefix(path, "/ob/case"):
+		i.GETCase(w, r)
 	case strings.HasPrefix(path, "/wallet/estimatefee"):
 		i.GETEstimateFee(w, r)
 	default:
