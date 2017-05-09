@@ -163,8 +163,11 @@ type Purchases interface {
 	// Return a purchase given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the metadata for all purchases
-	GetAll(offsetId string, limit int) ([]Purchase, error)
+	// Return the metadata for all purchases. Also returns the original size of the query.
+	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Purchase, int, error)
+
+	// Return the number of purchases in the database
+	Count() int
 }
 
 type Sales interface {
@@ -186,8 +189,11 @@ type Sales interface {
 	// Return a sale given the order ID
 	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
 
-	// Return the metadata for all sales
-	GetAll(offsetId string, limit int) ([]Sale, error)
+	// Return the metadata for all sales. Also returns the original size of the query.
+	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Sale, int, error)
+
+	// Return the number of sales in the database
+	Count() int
 }
 
 type Cases interface {
@@ -215,8 +221,11 @@ type Cases interface {
 	// Return the dispute payout data for a case
 	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
 
-	// Return the metadata for all cases
-	GetAll(offsetId string, limit int) ([]Case, error)
+	// Return the metadata for all cases given the search terms. Also returns the original size of the query.
+	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Case, int, error)
+
+	// Return the number of cases in the database
+	Count() int
 }
 
 type Chat interface {
