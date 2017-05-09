@@ -218,8 +218,10 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		if err != nil {
 			jsonpb.UnmarshalString(string(vendorContract), contract)
 		}
+		var slug string
 		if contract != nil {
 			if len(contract.VendorListings) > 0 {
+				slug = contract.VendorListings[0].Slug
 				if contract.VendorListings[0].VendorID != nil {
 					vendorId = contract.VendorListings[0].VendorID.PeerID
 					vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
@@ -232,6 +234,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 				}
 			}
 			if contract.BuyerOrder != nil {
+				slug = contract.VendorListings[0].Slug
 				if contract.BuyerOrder.BuyerID != nil {
 					buyerId = contract.BuyerOrder.BuyerID.PeerID
 					buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
@@ -244,6 +247,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 
 		ret = append(ret, repo.Case{
 			CaseId:       caseID,
+			Slug:         slug,
 			Timestamp:    time.Unix(int64(timestamp), 0),
 			Title:        title,
 			Thumbnail:    thumbnail,

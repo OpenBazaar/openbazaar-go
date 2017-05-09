@@ -124,7 +124,7 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 	defer s.lock.RUnlock()
 	q := query{
 		table:           "sales",
-		columns:         []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "state", "read"},
+		columns:         []string{"orderID", "contract", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "state", "read"},
 		stateFilter:     stateFilter,
 		searchTerm:      searchTerm,
 		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "buyerID", "buyerBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
@@ -144,7 +144,8 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 	for rows.Next() {
 		var orderID, title, thumbnail, buyerID, buyerHandle, shippingName, shippingAddr string
 		var timestamp, total, stateInt, readInt int
-		if err := rows.Scan(&orderID, &timestamp, &total, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
+		var contract []byte
+		if err := rows.Scan(&orderID, &contract, &timestamp, &total, &title, &thumbnail, &buyerID, &buyerHandle, &shippingName, &shippingAddr, &stateInt, &readInt); err != nil {
 			return ret, 0, err
 		}
 		read := false
@@ -152,8 +153,18 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			read = true
 		}
 
+		rc := new(pb.RicardianContract)
+		if err := jsonpb.UnmarshalString(string(contract), rc); err != nil {
+			return ret, 0, err
+		}
+		var slug string
+		if len(rc.VendorListings) > 0 {
+			slug = rc.VendorListings[0].Slug
+		}
+
 		ret = append(ret, repo.Sale{
 			OrderId:         orderID,
+			Slug:            slug,
 			Timestamp:       time.Unix(int64(timestamp), 0),
 			Title:           title,
 			Thumbnail:       thumbnail,
