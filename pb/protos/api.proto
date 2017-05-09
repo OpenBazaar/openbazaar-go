@@ -55,3 +55,9 @@ message PeerAndProfileWithID {
     string peerId   = 2;
     Profile profile = 3;
 }
+
+message RatingWithID {
+    string id       = 1;
+    string ratingId = 2;
+    Rating rating   = 3;
+}

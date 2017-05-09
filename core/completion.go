@@ -106,7 +106,14 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 		rd.RatingKey = rs.Metadata.RatingKey
 		if !r.Anonymous {
+			profile, _ := n.GetProfile()
 			rd.BuyerID = contract.BuyerOrder.BuyerID
+			rd.BuyerName = profile.Name
+			sig, err := n.IpfsNode.PrivateKey.Sign(rd.RatingKey)
+			if err != nil {
+				return err
+			}
+			rd.BuyerSig = sig
 		}
 		rd.VendorID = contract.VendorListings[0].VendorID
 		rd.VendorSig = rs
@@ -433,7 +440,7 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string)
 	if !exists {
 		rs := SavedRating{
 			Slug:    rating.RatingData.VendorSig.Metadata.ListingSlug,
-			Average: int(rating.RatingData.Overall),
+			Average: float32(rating.RatingData.Overall),
 			Count:   1,
 			Ratings: []string{ratingHash},
 		}
