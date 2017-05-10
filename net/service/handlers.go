@@ -212,7 +212,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse("Error building order confirmation"), nil
 		}
-		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
+		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -240,7 +240,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		total, err := service.node.CalculateOrderTotal(contract)
@@ -278,7 +278,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse("Error building order confirmation"), nil
 		}
-		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_CONFIRMED, false)
+		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -306,7 +306,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		return nil, nil
 	}
 	log.Error("Unrecognized payment type")
@@ -327,7 +327,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	contract, _, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
 		return nil, err
 	}
@@ -346,8 +346,13 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		}
 	}
 
-	// Set message state to confirmed
-	service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_CONFIRMED, false)
+	if funded {
+		// Set message state to AWAITING_FULFILLMENT
+		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+	} else {
+		// Set message state to AWAITING_PAYMENT
+		service.datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	}
 
 	// Send notification to websocket
 	n := notifications.OrderConfirmationNotification{orderId}
@@ -516,7 +521,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Set message state to rejected
-	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_REJECTED, false)
+	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_DECIDED, false)
 
 	// Send notification to websocket
 	n := notifications.OrderCancelNotification{rejectMsg.OrderID}
@@ -663,6 +668,8 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Set message state to fulfilled if all listings have a matching fulfillment message
 	if service.node.IsFulfilled(contract) {
 		service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_FULFILLED, false)
+	} else {
+		service.datastore.Purchases().Put(rc.VendorOrderFulfillment[0].OrderId, *contract, pb.OrderState_PARTIALLY_FULFILLED, false)
 	}
 
 	// Send notification to websocket
@@ -753,7 +760,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Set message state to complete
-	service.datastore.Sales().Put(rc.BuyerOrderCompletion.OrderId, *contract, pb.OrderState_COMPLETE, false)
+	service.datastore.Sales().Put(rc.BuyerOrderCompletion.OrderId, *contract, pb.OrderState_COMPLETED, false)
 
 	// Send notification to websocket
 	n := notifications.CompletionNotification{rc.BuyerOrderCompletion.OrderId}

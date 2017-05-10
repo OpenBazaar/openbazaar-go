@@ -103,9 +103,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
-			if state == pb.OrderState_CONFIRMED {
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
-			} else if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		}
@@ -135,8 +133,11 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 		if funding >= requestedAmount {
 			log.Debugf("Recieved payment for order %s", orderId)
 			funded = true
-			if state == pb.OrderState_CONFIRMED {
-				l.db.Sales().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+
+			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
+				l.db.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+			} else if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation == nil { // Unconfirmed orders go into PENDING
+				l.db.Sales().Put(orderId, *contract, pb.OrderState_PENDING, false)
 			}
 			l.adjustInventory(contract)
 
@@ -199,8 +200,10 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		if funding >= requestedAmount {
 			log.Debugf("Payment for purchase %s detected", orderId)
 			funded = true
-			if state == pb.OrderState_CONFIRMED {
-				l.db.Purchases().Put(orderId, *contract, pb.OrderState_FUNDED, false)
+			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
+			} else if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation == nil { // Unconfirmed go into PENDING
+				l.db.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
 			}
 		}
 		n := notifications.PaymentNotification{
