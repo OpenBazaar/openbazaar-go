@@ -82,7 +82,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "PENDING":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
@@ -112,6 +112,8 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
+        if resp["state"] != "PENDING":
+            raise TestFailure("RejectDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # generate one more block containing this tx
         self.send_bitcoin_cmd("generate", 1)
@@ -140,8 +142,8 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "REJECTED":
-            raise TestFailure("RejectDirectOfflineTest - FAIL: Alice failed to save as rejected")
+        if resp["state"] != "DECLINED":
+            raise TestFailure("RejectDirectOfflineTest - FAIL: Alice failed to save as declined")
         if len(resp["transactions"]) != 2:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Alice failed to detect outgoing payment")
 
@@ -151,8 +153,8 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "REJECTED":
-            raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to save as rejected")
+        if resp["state"] != "DECLINED":
+            raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to save as declined")
         if len(resp["transactions"]) != 2:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 

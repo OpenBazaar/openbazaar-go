@@ -100,7 +100,7 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Bob incorrectly saved as funded")
@@ -111,7 +111,7 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Alice incorrectly saved as funded")
@@ -137,7 +137,7 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Bob incorrectly saved as unfunded")
@@ -148,7 +148,7 @@ class PurchaseModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseModeratedOnlineTest - FAIL: Alice incorrectly saved as unfunded")

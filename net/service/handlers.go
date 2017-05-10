@@ -521,7 +521,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Set message state to rejected
-	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_DECIDED, false)
+	service.datastore.Purchases().Put(rejectMsg.OrderID, *contract, pb.OrderState_DECLINED, false)
 
 	// Send notification to websocket
 	n := notifications.OrderCancelNotification{rejectMsg.OrderID}

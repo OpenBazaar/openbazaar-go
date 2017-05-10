@@ -109,7 +109,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "PENDING":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("RejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as funded")
@@ -139,6 +139,8 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as unfunded")
+        if resp["state"] != "PENDING":
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob purchase saved in incorrect state")
 
         # generate one more block containing this tx
         self.send_bitcoin_cmd("generate", 1)
@@ -167,8 +169,8 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "REJECTED":
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to save as rejected")
+        if resp["state"] != "DECLINED":
+            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to save as declined")
         if len(resp["transactions"]) != 2:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to detect outgoing payment")
 
@@ -178,8 +180,8 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "REJECTED":
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to save as rejected")
+        if resp["state"] != "DECLINED":
+            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to save as declined")
         if len(resp["transactions"]) != 2:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to detect outgoing payment")
 

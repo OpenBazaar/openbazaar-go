@@ -82,7 +82,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "PENDING":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
@@ -112,6 +112,8 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
+        if resp["state"] != "PENDING":
+            raise TestFailure("CancelDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
 
         # bob cancel order
         api_url = bob["gateway_url"] + "ob/ordercancel"
