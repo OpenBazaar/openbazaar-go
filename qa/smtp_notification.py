@@ -26,7 +26,7 @@ class SMTPTest(OpenBazaarTestFramework):
         smtp = {
             "smtpSettings" : {
                 "notifications": True,
-                "serverAddress": "0.0.0.0:1025",
+                "serverAddress": "0.0.0.0:1024",
                 "username": "usr",
                 "password": "passwd",
                 "senderEmail": "openbazaar@test.org",
@@ -52,7 +52,7 @@ class SMTPTest(OpenBazaarTestFramework):
             raise TestFailure("SMTPTest - FAIL: Settings GET failed. Reason: %s", resp["reason"])
 
         # check notifications
-        addr = "0.0.0.0:1025"
+        addr = "0.0.0.0:1024"
         class_name = "test_framework.smtp_server.SMTPTestServer"
         proc = subprocess.Popen(["python", "-m", "smtpd", "-n", "-c", class_name, addr])
 
@@ -140,7 +140,10 @@ Timestamp: 1487699826
         expected_lines = [e for e in expected.splitlines() if not e.startswith('Timestamp:') and not e.startswith('Order ID:')]
         with open(SMTP_DUMPFILE, 'r') as f:
             res_lines = [l.strip() for l in f.readlines() if not l.startswith('Timestamp') and not l.startswith('Order ID:')]
+            print(res_lines)
+            print(expected_lines)
             if res_lines != expected_lines:
+                #os.remove(SMTP_DUMPFILE)
                 raise TestFailure("SMTPTest - FAIL: Incorrect mail data received")
         os.remove(SMTP_DUMPFILE)
         print("SMTPTest - PASS")

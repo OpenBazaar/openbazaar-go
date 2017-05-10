@@ -323,7 +323,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with state filter
-	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_CONFIRMED}, "", false, false, -1, []string{})
+	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_AWAITING_PAYMENT}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -335,7 +335,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit with state filter
-	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_CONFIRMED}, "", false, false, -1, []string{"orderID3"})
+	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_AWAITING_PAYMENT}, "", false, false, -1, []string{"orderID3"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -347,7 +347,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with multiple state filters
-	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_CONFIRMED, pb.OrderState_PENDING}, "", false, false, -1, []string{})
+	purchases, ct, err = purdb.GetAll([]pb.OrderState{pb.OrderState_AWAITING_PAYMENT, pb.OrderState_PENDING}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}

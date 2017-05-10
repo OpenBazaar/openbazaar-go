@@ -48,7 +48,7 @@ func Test_filterQuery(t *testing.T) {
 	stm, args = filterQuery(query{
 		table:           "purchases",
 		columns:         []string{"orderID", "timestamp"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT},
 		searchTerm:      "",
 		searchColumns:   []string{},
 		id:              "orderID",
@@ -67,7 +67,7 @@ func Test_filterQuery(t *testing.T) {
 	stm, args = filterQuery(query{
 		table:           "purchases",
 		columns:         []string{"orderID", "timestamp"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT},
 		searchTerm:      "",
 		searchColumns:   []string{},
 		id:              "orderID",
@@ -86,7 +86,7 @@ func Test_filterQuery(t *testing.T) {
 	stm, args = filterQuery(query{
 		table:           "purchases",
 		columns:         []string{"orderID", "timestamp"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT},
 		searchTerm:      "",
 		searchColumns:   []string{},
 		id:              "orderID",
@@ -106,7 +106,7 @@ func Test_filterQuery(t *testing.T) {
 	stm, args = filterQuery(query{
 		table:           "purchases",
 		columns:         []string{"orderID", "timestamp"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT},
 		searchTerm:      "",
 		searchColumns:   []string{},
 		id:              "orderID",
@@ -125,7 +125,7 @@ func Test_filterQuery(t *testing.T) {
 	stm, args = filterQuery(query{
 		table:           "purchases",
 		columns:         []string{"orderID", "timestamp"},
-		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_FUNDED},
+		stateFilter:     []pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT},
 		searchTerm:      "hello",
 		searchColumns:   []string{"orderID", "timestamp", "title"},
 		id:              "orderID",

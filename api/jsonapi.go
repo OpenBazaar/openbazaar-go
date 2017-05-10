@@ -490,7 +490,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 
 	if len(ld.Moderators) == 0 {
 		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil {
+		if err == nil && sd.StoreModerators != nil {
 			ld.Moderators = *sd.StoreModerators
 		}
 	}
