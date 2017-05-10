@@ -58,6 +58,17 @@ func init() {
 	contract.BuyerOrder = order
 }
 
+func TestCasesDB_Count(t *testing.T) {
+	err := casesdb.Put("caseID", 5, true, "blah")
+	if err != nil {
+		t.Error(err)
+	}
+	i := casesdb.Count()
+	if i != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+}
+
 func TestPutCase(t *testing.T) {
 	err := casesdb.Put("caseID", 0, true, "blah")
 	if err != nil {
@@ -381,7 +392,7 @@ func TestMarkAsClosed(t *testing.T) {
 }
 
 func TestCasesDB_GetAll(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 5, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -393,7 +404,8 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.Put("caseID2", 0, true, "blah")
+	time.Sleep(time.Second)
+	err = casesdb.Put("caseID2", 6, true, "asdf")
 	if err != nil {
 		t.Error(err)
 	}
@@ -405,25 +417,74 @@ func TestCasesDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	cases, err := casesdb.GetAll("", -1)
+	cases, ct, err := casesdb.GetAll([]pb.OrderState{}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 2 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("", 1)
+	if ct != 2 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "", false, false, 1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
 	}
-	cases, err = casesdb.GetAll("caseID", -1)
+	if ct != 2 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "", true, false, -1, []string{"caseID"})
 	if err != nil {
 		t.Error(err)
 	}
 	if len(cases) != 1 {
 		t.Error("Returned incorrect number of cases")
+	}
+	if ct != 2 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DISPUTED}, "", false, false, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	if ct != 1 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DECIDED}, "", false, false, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	if ct != 1 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{pb.OrderState_DISPUTED, pb.OrderState_DECIDED}, "", false, false, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 2 {
+		t.Error("Returned incorrect number of cases")
+	}
+	if ct != 2 {
+		t.Error("Returned incorrect number of query cases")
+	}
+	cases, ct, err = casesdb.GetAll([]pb.OrderState{}, "caseid2", false, false, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
+	if len(cases) != 1 {
+		t.Error("Returned incorrect number of cases")
+	}
+	if ct != 1 {
+		t.Error("Returned incorrect number of query cases")
 	}
 }

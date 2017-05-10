@@ -285,11 +285,12 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table inventory (slug text, variantIndex integer, count integer);
 	create index index_inventory on inventory (slug);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create index index_purchases on purchases (paymentAddr);
+	create index index_purchases on purchases (paymentAddr, timestamp);
 	create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create index index_sales on sales (paymentAddr);
+	create index index_sales on sales (paymentAddr, timestamp);
 	create table watchedscripts (scriptPubKey text primary key not null);
 	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);
+	create index index_cases on cases (timestamp);
 	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
 	create index index_chat on chat (peerID, subject, read, timestamp);
 	create table notifications (serializedNotification blob, timestamp integer, read integer);

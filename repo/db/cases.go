@@ -6,7 +6,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -172,20 +171,26 @@ func (c *CasesDB) Delete(orderID string) error {
 	return nil
 }
 
-func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
+func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]repo.Case, int, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	var stm string
-	if offsetId != "" {
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases where rowid>(select rowid from cases where caseID=?) limit " + strconv.Itoa(limit) + " ;"
-	} else {
-		stm = "select caseID, timestamp, buyerContract, vendorContract, buyerOpened, state, read from cases limit " + strconv.Itoa(limit) + ";"
+	q := query{
+		table:           "cases",
+		columns:         []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
+		stateFilter:     stateFilter,
+		searchTerm:      searchTerm,
+		searchColumns:   []string{"caseID", "timestamp", "claim"},
+		sortByAscending: sortByAscending,
+		sortByRead:      sortByRead,
+		id:              "caseID",
+		exclude:         exclude,
+		limit:           limit,
 	}
-
-	rows, err := c.db.Query(stm, offsetId)
+	stm, args := filterQuery(q)
+	rows, err := c.db.Query(stm, args...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 	var ret []repo.Case
@@ -194,7 +199,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 		var buyerContract, vendorContract []byte
 		var timestamp, buyerOpenedInt, stateInt, readInt int
 		if err := rows.Scan(&caseID, &timestamp, &buyerContract, &vendorContract, &buyerOpenedInt, &stateInt, &readInt); err != nil {
-			return ret, err
+			return ret, 0, err
 		}
 		read := false
 		if readInt > 0 {
@@ -213,8 +218,10 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 		if err != nil {
 			jsonpb.UnmarshalString(string(vendorContract), contract)
 		}
+		var slug string
 		if contract != nil {
 			if len(contract.VendorListings) > 0 {
+				slug = contract.VendorListings[0].Slug
 				if contract.VendorListings[0].VendorID != nil {
 					vendorId = contract.VendorListings[0].VendorID.PeerID
 					vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
@@ -227,6 +234,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 				}
 			}
 			if contract.BuyerOrder != nil {
+				slug = contract.VendorListings[0].Slug
 				if contract.BuyerOrder.BuyerID != nil {
 					buyerId = contract.BuyerOrder.BuyerID.PeerID
 					buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
@@ -239,6 +247,7 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 
 		ret = append(ret, repo.Case{
 			CaseId:       caseID,
+			Slug:         slug,
 			Timestamp:    time.Unix(int64(timestamp), 0),
 			Title:        title,
 			Thumbnail:    thumbnail,
@@ -252,7 +261,17 @@ func (c *CasesDB) GetAll(offsetId string, limit int) ([]repo.Case, error) {
 			Read:         read,
 		})
 	}
-	return ret, nil
+	q.columns = []string{"Count(*)"}
+	q.limit = -1
+	q.exclude = []string{}
+	stm, args = filterQuery(q)
+	row := c.db.QueryRow(stm, args...)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return ret, 0, err
+	}
+	return ret, count, nil
 }
 
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
@@ -386,4 +405,13 @@ func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract
 		return ret
 	}
 	return brc, vrc, buyerAddr, vendorAddr, toPointer(buyerOutpointsOut), toPointer(vendorOutpointsOut), pb.OrderState(stateInt), nil
+}
+
+func (c *CasesDB) Count() int {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	row := c.db.QueryRow("select Count(*) from cases")
+	var count int
+	row.Scan(&count)
+	return count
 }

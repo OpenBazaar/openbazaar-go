@@ -77,6 +77,7 @@ type Metadata struct {
 
 type Purchase struct {
 	OrderId            string    `json:"orderId"`
+	Slug               string    `json:"slug"`
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
@@ -92,6 +93,7 @@ type Purchase struct {
 
 type Sale struct {
 	OrderId            string    `json:"orderId"`
+	Slug               string    `json:"slug"`
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
@@ -107,6 +109,7 @@ type Sale struct {
 
 type Case struct {
 	CaseId             string    `json:"caseId"`
+	Slug               string    `json:"slug"`
 	Timestamp          time.Time `json:"timestamp"`
 	Title              string    `json:"title"`
 	Thumbnail          string    `json:"thumbnail"`
