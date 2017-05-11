@@ -46,6 +46,13 @@ type RatingData struct {
 	Anonymous       bool   `json:"anonymous"`
 }
 
+type SavedRating struct {
+	Slug    string   `json:"slug"`
+	Count   int      `json:"count"`
+	Average float32  `json:"average"`
+	Ratings []string `json:"ratings"`
+}
+
 func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
 
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
@@ -99,7 +106,14 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 		rd.RatingKey = rs.Metadata.RatingKey
 		if !r.Anonymous {
+			profile, _ := n.GetProfile()
 			rd.BuyerID = contract.BuyerOrder.BuyerID
+			rd.BuyerName = profile.Name
+			sig, err := n.IpfsNode.PrivateKey.Sign(rd.RatingKey)
+			if err != nil {
+				return err
+			}
+			rd.BuyerSig = sig
 		}
 		rd.VendorID = contract.VendorListings[0].VendorID
 		rd.VendorSig = rs
@@ -388,21 +402,11 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string) error {
 	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
 
-	type ratingShort struct {
-		Hash string `json:"hash"`
-		Slug string `json:"slug"`
-	}
-
-	var index []ratingShort
+	var index []SavedRating
 
 	ratingHash, err := ipfs.GetHashOfFile(n.Context, ratingPath)
 	if err != nil {
 		return err
-	}
-
-	rs := ratingShort{
-		Hash: ratingHash,
-		Slug: rating.RatingData.VendorSig.Metadata.ListingSlug,
 	}
 
 	_, ferr := os.Stat(indexPath)
@@ -418,21 +422,30 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string)
 		}
 	}
 
-	// Check to see if the rating we are adding already exists in the list. If so delete it.
-	for i, d := range index {
-		if d.Hash != rs.Hash {
-			continue
-		}
-
-		if len(index) == 1 {
-			index = []ratingShort{}
+	// Check to see if the rating we are adding already exists in the list. If so update it.
+	exists := false
+	for _, d := range index {
+		if rating.RatingData.VendorSig.Metadata.ListingSlug == d.Slug {
+			d.Ratings = append(d.Ratings, ratingHash)
+			total := d.Average * float32(d.Count)
+			total += float32(rating.RatingData.Overall)
+			d.Count += 1
+			d.Average = total / float32(d.Count)
+			exists = true
 			break
 		}
-		index = append(index[:i], index[i+1:]...)
 	}
 
-	// Append our rating with the new hash to the list
-	index = append(index, rs)
+	// If it doesn't exist create a new one
+	if !exists {
+		rs := SavedRating{
+			Slug:    rating.RatingData.VendorSig.Metadata.ListingSlug,
+			Average: float32(rating.RatingData.Overall),
+			Count:   1,
+			Ratings: []string{ratingHash},
+		}
+		index = append(index, rs)
+	}
 
 	// Write it back to file
 	f, err := os.Create(indexPath)

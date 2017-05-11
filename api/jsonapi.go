@@ -42,6 +42,7 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	"io/ioutil"
 )
 
 type JsonAPIConfig struct {
@@ -2369,19 +2370,25 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		SanitizedResponse(w, string(respJson))
 		go func() {
 			type profileError struct {
+				ID     string `json:"id"`
 				PeerId string `json:"peerId"`
 				Error  string `json:"error"`
 			}
 			for _, p := range pids {
 				go func(pid string) {
-					pro, err := i.node.FetchProfile(pid, useCache)
-					if err != nil {
-						e := profileError{pid, "Not found"}
+					respondWithError := func(errorMsg string) {
+						e := profileError{id, pid, errorMsg}
 						ret, err := json.MarshalIndent(e, "", "    ")
 						if err != nil {
 							return
 						}
 						i.node.Broadcast <- ret
+						return
+					}
+
+					pro, err := i.node.FetchProfile(pid, useCache)
+					if err != nil {
+						respondWithError("Not found")
 						return
 					}
 					obj := pb.PeerAndProfileWithID{id, pid, &pro}
@@ -2393,22 +2400,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					}
 					respJson, err := m.MarshalToString(&obj)
 					if err != nil {
-						e := profileError{pid, "Error Marshalling to JSON"}
-						ret, err := json.MarshalIndent(e, "", "    ")
-						if err != nil {
-							return
-						}
-						i.node.Broadcast <- ret
+						respondWithError("Error Marshalling to JSON")
 						return
 					}
 					b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
 					if err != nil {
-						e := profileError{pid, "Error Marshalling to JSON"}
-						ret, err := json.MarshalIndent(e, "", "    ")
-						if err != nil {
-							return
-						}
-						i.node.Broadcast <- ret
+						respondWithError("Error Marshalling to JSON")
 						return
 					}
 					i.node.Broadcast <- b
@@ -2902,4 +2899,212 @@ func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Reques
 	}
 	fmt.Fprintf(w, "%d", int(amount))
 	return
+}
+
+func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
+	urlPath, slug := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+
+	var indexBytes []byte
+	var err error
+	if peerId != i.node.IpfsNode.Identity.Pretty() {
+		indexBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+	} else {
+		indexBytes, err = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+	}
+	var ratingList []core.SavedRating
+	err = json.Unmarshal(indexBytes, &ratingList)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var rating *core.SavedRating
+	for _, r := range ratingList {
+		if r.Slug == slug {
+			rating = &r
+			break
+		}
+	}
+	if rating == nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	ret, err := json.MarshalIndent(rating, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ret))
+}
+
+func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {
+	_, ratingID := path.Split(r.URL.Path)
+
+	ratingBytes, err := ipfs.Cat(i.node.Context, ratingID)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	rating := new(pb.Rating)
+	err = jsonpb.UnmarshalString(string(ratingBytes), rating)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !core.ValidateRating(rating) {
+		ErrorResponse(w, http.StatusExpectationFailed, "Bad/forged rating")
+		return
+	}
+	ret, err := json.MarshalIndent(rating, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ret))
+}
+
+func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request) {
+	type ratingPost struct {
+		Ids []string `json:"ids"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var rp ratingPost
+	err := decoder.Decode(&rp)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	query := r.URL.Query().Get("async")
+	async, _ := strconv.ParseBool(query)
+
+	if !async {
+		var wg sync.WaitGroup
+		var ret []string
+		for _, id := range rp.Ids {
+			wg.Add(1)
+			go func(rid string) {
+				ratingBytes, err := ipfs.Cat(i.node.Context, rid)
+				if err != nil {
+					return
+				}
+				rating := new(pb.Rating)
+				err = jsonpb.UnmarshalString(string(ratingBytes), rating)
+				if err != nil {
+					return
+				}
+				if !core.ValidateRating(rating) {
+					return
+				}
+				m := jsonpb.Marshaler{
+					EnumsAsInts:  false,
+					EmitDefaults: true,
+					Indent:       "    ",
+					OrigName:     false,
+				}
+				respJson, err := m.MarshalToString(rating)
+				if err != nil {
+					return
+				}
+				ret = append(ret, respJson)
+				wg.Done()
+			}(id)
+		}
+		wg.Wait()
+		resp := "[\n"
+		max := len(ret)
+		for i, r := range ret {
+			lines := strings.Split(r, "\n")
+			maxx := len(lines)
+			for x, s := range lines {
+				resp += "    "
+				resp += s
+				if x != maxx-1 {
+					resp += "\n"
+				}
+			}
+			if i != max-1 {
+				resp += ",\n"
+			}
+		}
+		resp += "\n]"
+		SanitizedResponse(w, resp)
+	} else {
+		idBytes := make([]byte, 16)
+		rand.Read(idBytes)
+		id := base58.Encode(idBytes)
+
+		type resp struct {
+			Id string `json:"id"`
+		}
+		response := resp{id}
+		respJson, _ := json.MarshalIndent(response, "", "    ")
+		w.WriteHeader(http.StatusAccepted)
+		SanitizedResponse(w, string(respJson))
+		for _, r := range rp.Ids {
+			go func(rid string) {
+				type ratingError struct {
+					ID       string `json:"id"`
+					RatingID string `json:"ratingId"`
+					Error    string `json:"error"`
+				}
+				respondWithError := func(errorMsg string) {
+					e := ratingError{id, rid, "Not found"}
+					ret, err := json.MarshalIndent(e, "", "    ")
+					if err != nil {
+						return
+					}
+					i.node.Broadcast <- ret
+					return
+				}
+				ratingBytes, err := ipfs.Cat(i.node.Context, rid)
+				if err != nil {
+					respondWithError("Not Found")
+					return
+				}
+
+				rating := new(pb.Rating)
+				err = jsonpb.UnmarshalString(string(ratingBytes), rating)
+				if err != nil {
+					respondWithError("Invalid rating")
+					return
+				}
+				if !core.ValidateRating(rating) {
+					respondWithError("Rating is forged and/or corrupt")
+					return
+				}
+				resp := new(pb.RatingWithID)
+				resp.Id = id
+				resp.RatingId = rid
+				resp.Rating = rating
+				m := jsonpb.Marshaler{
+					EnumsAsInts:  false,
+					EmitDefaults: true,
+					Indent:       "    ",
+					OrigName:     false,
+				}
+				out, err := m.MarshalToString(resp)
+				if err != nil {
+					respondWithError("Error marshalling rating")
+					return
+				}
+				b, err := SanitizeProtobuf(out, new(pb.RatingWithID))
+				if err != nil {
+					respondWithError("Error marshalling rating")
+					return
+				}
+				i.node.Broadcast <- b
+			}(r)
+		}
+	}
 }
