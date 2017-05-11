@@ -689,7 +689,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 				if multihash.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
-						satoshis, err := n.getPriceInSatoshi(discount, l.Item.Price)
+						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
 						if err != nil {
 							return 0, err
 						}
