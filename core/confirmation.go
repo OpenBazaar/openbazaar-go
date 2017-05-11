@@ -40,8 +40,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 
 	oc.RatingSignatures = []*pb.RatingSignature{}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		for i, listing := range contract.VendorListings {
-			buyerKey := contract.BuyerOrder.RatingKeys[i]
+		for _, listing := range contract.VendorListings {
 			moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
 			if err != nil {
 				return nil, err
@@ -49,7 +48,6 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 			metadata := new(pb.RatingSignature_TransactionMetadata)
 			metadata.ListingSlug = listing.Slug
 			metadata.ModeratorKey = moderatorKey
-			metadata.RatingKey = buyerKey
 
 			ser, err := proto.Marshal(metadata)
 			if err != nil {
