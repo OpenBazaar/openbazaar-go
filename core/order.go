@@ -689,13 +689,18 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 				if multihash.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
-						itemTotal -= discount
+						satoshis, err := n.getPriceInSatoshi(discount, l.Item.Price)
+						if err != nil {
+							return 0, err
+						}
+						itemTotal -= satoshis
 					} else if discount := vendorCoupon.GetPercentDiscount(); discount > 0 {
 						itemTotal -= uint64((float32(itemTotal) * (discount / 100)))
 					}
 				}
 			}
 		}
+		log.Notice(itemTotal)
 		// Apply tax
 		for _, tax := range l.Taxes {
 			for _, taxRegion := range tax.TaxRegions {
