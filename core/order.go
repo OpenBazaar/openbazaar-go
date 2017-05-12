@@ -700,7 +700,6 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 			}
 		}
-		log.Notice(itemTotal)
 		// Apply tax
 		for _, tax := range l.Taxes {
 			for _, taxRegion := range tax.TaxRegions {

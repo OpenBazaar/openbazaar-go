@@ -250,19 +250,12 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		keyExists := func(a []byte, list [][]byte) bool {
-			for _, b := range list {
-				if bytes.Equal(b, a) {
-					return true
-				}
-			}
-			return false
-		}
 		for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 			exists := false
 			for _, listing := range contract.VendorListings {
 				if sig.Metadata.ListingSlug == listing.Slug {
 					exists = true
+					break
 				}
 			}
 			if !exists {
@@ -275,9 +268,6 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
 			if err != nil {
 				return err
-			}
-			if !keyExists(sig.Metadata.RatingKey, contract.BuyerOrder.RatingKeys) {
-				return errors.New("Not all ratings keys are signed by ratings signatures")
 			}
 
 			if !bytes.Equal(sig.Metadata.ModeratorKey, moderatorKey) {
