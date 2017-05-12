@@ -158,8 +158,12 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 			return ret, 0, err
 		}
 		var slug string
+		var moderated bool
 		if len(rc.VendorListings) > 0 {
 			slug = rc.VendorListings[0].Slug
+		}
+		if rc.BuyerOrder != nil && rc.BuyerOrder.Payment != nil && rc.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+			moderated = true
 		}
 
 		ret = append(ret, repo.Purchase{
@@ -174,6 +178,7 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 			ShippingName:    shippingName,
 			ShippingAddress: shippingAddr,
 			State:           pb.OrderState(stateInt).String(),
+			Moderated:       moderated,
 			Read:            read,
 		})
 	}
