@@ -1077,7 +1077,7 @@ collectListings:
 	for listingHash, listing := range listingMap {
 		for _, item := range contract.BuyerOrder.Items {
 			if item.ListingHash == listingHash {
-				if listing.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD {
+				if listing.Metadata.ContractType != pb.Listing_Metadata_PHYSICAL_GOOD {
 					continue
 				}
 				// Check selected option exists
