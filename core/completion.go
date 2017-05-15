@@ -257,7 +257,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			contract.Signatures = append(contract.Signatures, sig)
 		}
 	}
-	err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_COMPLETE, true)
+	err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_COMPLETED, true)
 	if err != nil {
 		return err
 	}

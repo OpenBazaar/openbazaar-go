@@ -101,7 +101,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob incorrectly saved as funded")
@@ -112,7 +112,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice incorrectly saved as funded")
@@ -138,7 +138,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob incorrectly saved as unfunded")
@@ -149,7 +149,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Alice incorrectly saved as unfunded")

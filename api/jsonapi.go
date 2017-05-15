@@ -491,7 +491,7 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 
 	if len(ld.Moderators) == 0 {
 		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil {
+		if err == nil && sd.StoreModerators != nil {
 			ld.Moderators = *sd.StoreModerators
 		}
 	}
@@ -1517,8 +1517,8 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_PENDING {
-		ErrorResponse(w, http.StatusBadRequest, "order has already been confirmed")
+	if state != pb.OrderState_PENDING || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING and only a direct payment to cancel")
 		return
 	}
 	err = i.node.CancelOfflineOrder(contract, records)
@@ -1632,8 +1632,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if (state != pb.OrderState_FUNDED) && (state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "order must be funded and not complete or disputed before refunding")
+	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED && state != pb.OrderState_DISPUTED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, PARTIALLY_FULFILLED, or DISPUTED to refund")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)
@@ -1812,8 +1812,8 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_FUNDED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be funded before fulfilling")
+	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be in state AWAITING_FULFILLMENT or PARTIALLY_FULFILLED to fulfill")
 		return
 	}
 	err = i.node.FulfillOrder(&fulfill, contract, records)
@@ -1904,12 +1904,12 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if isSale && (state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either funded or fulfilled to start a dispute")
+	if isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT or FULFILLED to start a dispute")
 		return
 	}
-	if !isSale && (state != pb.OrderState_CONFIRMED && state != pb.OrderState_FUNDED && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either confirmed, funded, or fulfilled to start a dispute")
+	if !isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PENDING, or FULFILLED to start a dispute")
 		return
 	}
 

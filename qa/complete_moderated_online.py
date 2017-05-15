@@ -102,7 +102,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Bob incorrectly saved as funded")
@@ -113,7 +113,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "CONFIRMED":
+        if resp["state"] != "AWAITING_PAYMENT":
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice incorrectly saved as funded")
@@ -139,7 +139,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Bob incorrectly saved as unfunded")
@@ -150,7 +150,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "FUNDED":
+        if resp["state"] != "AWAITING_FULFILLMENT":
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice incorrectly saved as unfunded")
@@ -207,7 +207,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
-        if resp["state"] != "COMPLETE":
+        if resp["state"] != "COMPLETED":
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Alice failed to detect order completion")
 
         # check bob set fulfillment correctly
@@ -216,7 +216,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if resp["state"] != "COMPLETE":
+        if resp["state"] != "COMPLETED":
             raise TestFailure("CompleteDirectOnlineTest - FAIL: Bob failed to order completion")
 
         # Check the funds moved into alice's wallet

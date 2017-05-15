@@ -145,7 +145,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	if err != nil {
 		return err
 	}
-	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_FUNDED, false)
+	n.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_FULFILLMENT, false)
 	return nil
 }
 
@@ -234,7 +234,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_REJECTED, true)
+	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DECLINED, true)
 	return nil
 }
 

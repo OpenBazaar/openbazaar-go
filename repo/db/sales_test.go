@@ -321,7 +321,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with state filter
-	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_CONFIRMED}, "", false, false, -1, []string{})
+	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_AWAITING_PAYMENT}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -333,7 +333,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test offset no limit with state filter
-	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_CONFIRMED}, "", false, false, -1, []string{"orderID"})
+	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_AWAITING_PAYMENT}, "", false, false, -1, []string{"orderID"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -345,7 +345,7 @@ func TestSalesDB_GetAll(t *testing.T) {
 	}
 
 	// Test no offset no limit with multiple state filters
-	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_PENDING, pb.OrderState_CONFIRMED}, "", false, false, -1, []string{})
+	sales, ct, err = saldb.GetAll([]pb.OrderState{pb.OrderState_PENDING, pb.OrderState_AWAITING_PAYMENT}, "", false, false, -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}

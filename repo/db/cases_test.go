@@ -392,7 +392,7 @@ func TestMarkAsClosed(t *testing.T) {
 }
 
 func TestCasesDB_GetAll(t *testing.T) {
-	err := casesdb.Put("caseID", 5, true, "blah")
+	err := casesdb.Put("caseID", 10, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
@@ -405,7 +405,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = casesdb.Put("caseID2", 6, true, "asdf")
+	err = casesdb.Put("caseID2", 11, true, "asdf")
 	if err != nil {
 		t.Error(err)
 	}
