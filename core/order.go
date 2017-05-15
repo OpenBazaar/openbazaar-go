@@ -84,7 +84,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 		if !profile.Moderator || profile.ModeratorInfo == nil || strings.ToLower(profile.ModeratorInfo.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
-			return "", "", 0, false, errors.New("Moderator is not capabale of moderating this transaction")
+			return "", "", 0, false, errors.New("Moderator is not capable of moderating this transaction")
 		}
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
