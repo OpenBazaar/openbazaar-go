@@ -37,7 +37,6 @@ type SPVWallet struct {
 	stopChan      chan int
 	fpAccumulator map[int32]int32
 	blockQueue    chan chainhash.Hash
-	toDownload    map[chainhash.Hash]int32
 	mutex         *sync.RWMutex
 
 	running bool
@@ -88,7 +87,6 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		stopChan:         make(chan int),
 		fpAccumulator:    make(map[int32]int32),
 		blockQueue:       make(chan chainhash.Hash, 32),
-		toDownload:       make(map[chainhash.Hash]int32),
 		mutex:            new(sync.RWMutex),
 	}
 

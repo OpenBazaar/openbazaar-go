@@ -30,7 +30,7 @@ type Headers interface {
 	// Returns all information about the previous header
 	GetPreviousHeader(header wire.BlockHeader) (StoredHeader, error)
 
-	// Retreive the best header from the database
+	// Retrieve the best header from the database
 	GetBestHeader() (StoredHeader, error)
 
 	// Get the height of chain

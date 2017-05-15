@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"errors"
 	"github.com/btcsuite/btcd/addrmgr"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -78,8 +79,9 @@ type PeerManager struct {
 	connectedPeers map[uint64]*peer.Peer
 	peerMutex      *sync.RWMutex
 
-	trustedPeer  net.Addr
-	downloadPeer *peer.Peer
+	trustedPeer    net.Addr
+	downloadPeer   *peer.Peer
+	downloadQueues map[int32]map[chainhash.Hash]int32
 
 	getFilter          func() (*bloom.Filter, error)
 	startChainDownload func(*peer.Peer)
@@ -98,6 +100,7 @@ func NewPeerManager(config *PeerManagerConfig) (*PeerManager, error) {
 		addrManager:        addrmgr.New(config.AddressCacheDir, nil),
 		peerMutex:          new(sync.RWMutex),
 		connectedPeers:     make(map[uint64]*peer.Peer),
+		downloadQueues:     make(map[int32]map[chainhash.Hash]int32),
 		sourceAddr:         wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), defaultPort, 0),
 		trustedPeer:        config.TrustedPeer,
 		getFilter:          config.GetFilter,
@@ -254,6 +257,10 @@ func (pm *PeerManager) onDisconnection(req *connmgr.ConnReq) {
 	if ok {
 		log.Debugf("Peer%d disconnected", peer.ID())
 		delete(pm.connectedPeers, req.ID())
+		_, ok := pm.downloadQueues[peer.ID()]
+		if ok {
+			delete(pm.downloadQueues, peer.ID())
+		}
 	}
 	pm.connManager.Disconnect(req.ID())
 
@@ -274,6 +281,32 @@ func (pm *PeerManager) setDownloadPeer(peer *peer.Peer) {
 	if pm.startChainDownload != nil {
 		go pm.startChainDownload(pm.downloadPeer)
 	}
+}
+
+func (pm *PeerManager) QueueTxForDownload(peer *peer.Peer, txid chainhash.Hash, height int32) {
+	pm.peerMutex.Lock()
+	defer pm.peerMutex.Unlock()
+	queue, ok := pm.downloadQueues[peer.ID()]
+	if !ok {
+		queue = make(map[chainhash.Hash]int32)
+		pm.downloadQueues[peer.ID()] = queue
+	}
+	queue[txid] = height
+}
+
+func (pm *PeerManager) DequeueTx(peer *peer.Peer, txid chainhash.Hash) (int32, error) {
+	pm.peerMutex.Lock()
+	defer pm.peerMutex.Unlock()
+	queue, ok := pm.downloadQueues[peer.ID()]
+	if !ok {
+		return 0, errors.New("Transaction not found")
+	}
+	height, ok := queue[txid]
+	if !ok {
+		return 0, errors.New("Transaction not found")
+	}
+	delete(queue, txid)
+	return height, nil
 }
 
 // Iterates over our peers and sees if any are reporting a height

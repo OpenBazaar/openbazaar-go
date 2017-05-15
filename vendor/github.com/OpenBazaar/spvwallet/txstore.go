@@ -16,6 +16,7 @@ import (
 type TxStore struct {
 	adrs           []btcutil.Address
 	watchedScripts [][]byte
+	txids          map[string]int32
 	addrMutex      *sync.Mutex
 	cbMutex        *sync.Mutex
 
@@ -34,6 +35,7 @@ func NewTxStore(p *chaincfg.Params, db Datastore, keyManager *KeyManager) (*TxSt
 		keyManager: keyManager,
 		addrMutex:  new(sync.Mutex),
 		cbMutex:    new(sync.Mutex),
+		txids:      make(map[string]int32),
 		Datastore:  db,
 	}
 	err := txs.PopulateAdrs()
@@ -169,6 +171,10 @@ func (ts *TxStore) PopulateAdrs() error {
 		ts.adrs = append(ts.adrs, addr)
 	}
 	ts.watchedScripts, _ = ts.WatchedScripts().GetAll()
+	txns, _ := ts.Txns().GetAll(true)
+	for _, t := range txns {
+		ts.txids[t.Txid] = t.Height
+	}
 	ts.addrMutex.Unlock()
 	return nil
 }
@@ -184,6 +190,12 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	err = blockchain.CheckTransactionSanity(utilTx)
 	if err != nil {
 		return hits, err
+	}
+
+	// Check to see if we've already processed this tx. If so, return.
+	sh, ok := ts.txids[tx.TxHash().String()]
+	if ok && (sh > 0 || (sh == 0 && height == 0)) {
+		return 1, nil
 	}
 
 	// Check to see if this is a double spend
@@ -214,8 +226,9 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 	}
 	ts.addrMutex.Unlock()
-	cachedSha := tx.TxHash()
+
 	// Iterate through all outputs of this tx, see if we gain
+	cachedSha := tx.TxHash()
 	cb := TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
 	value := int64(0)
 	matchesWatchOnly := false
@@ -320,11 +333,13 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 			txn.Timestamp = time.Now()
 			shouldCallback = true
 			ts.Txns().Put(tx, int(value), int(height), txn.Timestamp, hits == 0)
+			ts.txids[tx.TxHash().String()] = height
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
 			ts.Txns().UpdateHeight(tx.TxHash(), int(height))
+			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				cb.Value = txn.Value
 				shouldCallback = true

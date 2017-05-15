@@ -48,6 +48,8 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 }
 
 func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 	if w.blockchain.ChainState() == SYNCING && w.peerManager.DownloadPeer() != nil && w.peerManager.DownloadPeer().ID() == p.ID() {
 		queueHash := <-w.blockQueue
 		headerHash := m.Header.BlockHash()
@@ -85,10 +87,9 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 	}
 
 	for _, txid := range txids {
-		w.mutex.Lock()
-		w.toDownload[*txid] = int32(height)
-		w.mutex.Unlock()
+		w.peerManager.QueueTxForDownload(p, *txid, int32(height))
 	}
+
 	log.Debugf("Received Merkle Block %s at height %d\n", m.Header.BlockHash().String(), height)
 	if len(w.blockQueue) == 0 && w.blockchain.ChainState() == SYNCING {
 		go w.startChainDownload(p)
@@ -119,9 +120,13 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 }
 
 func (w *SPVWallet) onTx(p *peer.Peer, m *wire.MsgTx) {
-	w.mutex.RLock()
-	height := w.toDownload[m.TxHash()]
-	w.mutex.RUnlock()
+	w.mutex.Lock()
+	height, err := w.peerManager.DequeueTx(p, m.TxHash())
+	if err != nil {
+		w.mutex.Unlock()
+		return
+	}
+	w.mutex.Unlock()
 	hits, err := w.txstore.Ingest(m, height)
 	if err != nil {
 		log.Errorf("Error ingesting tx: %s\n", err.Error())
@@ -133,10 +138,7 @@ func (w *SPVWallet) onTx(p *peer.Peer, m *wire.MsgTx) {
 		return
 	}
 	w.updateFilterAndSend(p)
-	log.Infof("Tx %s from Peer%d ingested and matches %d utxo/adrs.", m.TxHash().String(), p.ID(), hits)
-
-	// FIXME: right now the hash stays in memory forever. We need to delete it but the way the code works,
-	// FIXME: doing so will cause the height to get reset to zero if a peer relays the tx to us again.
+	log.Infof("Tx %s from Peer%d ingested at height %d", m.TxHash().String(), p.ID(), height)
 }
 
 func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
@@ -160,6 +162,7 @@ func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 					w.blockQueue <- inv.Hash
 				}
 			case wire.InvTypeTx:
+				w.peerManager.QueueTxForDownload(p, inv.Hash, 0)
 				gData := wire.NewMsgGetData()
 				gData.AddInvVect(inv)
 				p.QueueMessage(gData, nil)

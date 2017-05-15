@@ -21,19 +21,15 @@ import (
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
-	txid := tx.TxHash()
-	// assign height of zero for txs we create
 
-	s.mutex.Lock()
-	s.toDownload[txid] = 0
-	s.mutex.Unlock()
-
-	// our own tx; don't keep track of false positives
+	// Our own tx; don't keep track of false positives
 	_, err := s.txstore.Ingest(tx, 0)
 	if err != nil {
 		return err
 	}
-	// make an inv message instead of a tx message to be polite
+
+	// Make an inv message instead of a tx message to be polite
+	txid := tx.TxHash()
 	iv1 := wire.NewInvVect(wire.InvTypeTx, &txid)
 	invMsg := wire.NewMsgInv()
 	err = invMsg.AddInvVect(iv1)

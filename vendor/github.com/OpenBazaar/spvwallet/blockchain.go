@@ -170,7 +170,7 @@ func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeade
 			return false
 		}
 		if header.Bits != diffTarget {
-			log.Warningf("Block %d %s incorrect difficuly.  Read %d, expect %d\n",
+			log.Warningf("Block %d %s incorrect difficulty.  Read %d, expect %d\n",
 				height+1, header.BlockHash().String(), header.Bits, diffTarget)
 			return false
 		}

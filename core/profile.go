@@ -170,6 +170,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
 	}
+	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	out, err := m.MarshalToString(profile)
 	if err != nil {
 		return err
@@ -244,7 +245,6 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 }
 
 func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
-	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	if profile.Stats == nil {
 		profile.Stats = new(pb.Profile_Stats)
 	}
