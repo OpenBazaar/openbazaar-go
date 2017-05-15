@@ -83,7 +83,12 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config
 }
 
 func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if !i.config.Enabled {
+	u, err := url.Parse(r.URL.Path)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if !i.config.Enabled && !gatewayAllowedPath(u.Path, r.Method) {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, "403 - Forbidden")
 		return
@@ -149,10 +154,6 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	u, err := url.Parse(r.URL.Path)
-	if err != nil {
-		panic(err)
-	}
 	w.Header().Add("Content-Type", "application/json")
 	switch r.Method {
 	case "GET":

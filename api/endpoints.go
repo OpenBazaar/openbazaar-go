@@ -193,3 +193,22 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
 }
+
+func gatewayAllowedPath(path, method string) bool {
+	allowedGets := []string{"/ob/exchangerate", "/ob/followers", "/ob/following", "/ob/profile", "/ob/listing", "/ob/listings", "/ob/image", "/ob/avatar", "/ob/header", "/ob/rating", "/ob/ratings"}
+	allowedPosts := []string{"/ob/fetchprofiles", "/ob/fetchratings"}
+	if method == "GET" {
+		for _, p := range allowedGets {
+			if strings.HasPrefix(path, p) {
+				return true
+			}
+		}
+	} else if method == "POST" {
+		for _, p := range allowedPosts {
+			if strings.HasPrefix(path, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
