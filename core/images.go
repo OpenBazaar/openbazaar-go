@@ -12,7 +12,16 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/ipfs/go-ipfs/core/coreunix"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipnspath "github.com/ipfs/go-ipfs/path"
+	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
+	"golang.org/x/net/context"
+	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
+	"time"
 )
 
 type Images struct {
@@ -190,4 +199,100 @@ func getImageAttributes(targetWidth, targetHeight, imgWidth, imgHeight uint) (wi
 		h = float32(targetWidth) * (float32(imgHeight) / float32(imgWidth))
 	}
 	return uint(w), uint(h)
+}
+
+func (n *OpenBazaarNode) FetchAvatar(peerId string, size string, useCache bool) (io.DagReader, error) {
+	return n.FetchImage(peerId, "avatar", size, useCache)
+}
+
+func (n *OpenBazaarNode) FetchHeader(peerId string, size string, useCache bool) (io.DagReader, error) {
+	return n.FetchImage(peerId, "header", size, useCache)
+}
+
+func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string, useCache bool) (io.DagReader, error) {
+	fetch := func(rootHash string) (io.DagReader, error) {
+		var dr io.DagReader
+		var err error
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+		defer cancel()
+		if rootHash == "" {
+			query := "/ipns/" + peerId + "/images/" + size + "/" + imageType
+			dr, err = coreunix.Cat(ctx, n.IpfsNode, query)
+			if err != nil {
+				return dr, err
+			}
+		} else {
+			query := "/ipfs/" + rootHash + "/images/" + size + "/" + imageType
+			dr, err = coreunix.Cat(ctx, n.IpfsNode, query)
+			if err != nil {
+				return dr, err
+			}
+		}
+		return dr, nil
+	}
+
+	var dr io.DagReader
+	var err error
+	var recordAvailable bool
+	var val interface{}
+	if useCache {
+		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+		if err != nil { // No record in datastore
+			dr, err = fetch("")
+			if err != nil {
+				return dr, err
+			}
+		} else { // Record available, let's see how old it is
+			entry := new(ipnspb.IpnsEntry)
+			err = proto.Unmarshal(val.([]byte), entry)
+			if err != nil {
+				return dr, err
+			}
+			p, err := ipnspath.ParsePath(string(entry.GetValue()))
+			if err != nil {
+				return dr, err
+			}
+			eol, ok := checkEOL(entry)
+			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
+				dr, err = fetch("")
+			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
+				dr, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
+				// Let's now try to get the latest record in a new goroutine so it's available next time
+				go fetch("")
+			}
+			if err != nil {
+				return dr, err
+			}
+			recordAvailable = true
+		}
+	} else {
+		dr, err = fetch("")
+		if err != nil {
+			return dr, err
+		}
+		recordAvailable = false
+	}
+
+	// Update the record with a new EOL
+	go func() {
+		if !recordAvailable {
+			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+			if err != nil {
+				return
+			}
+		}
+		entry := new(ipnspb.IpnsEntry)
+		err = proto.Unmarshal(val.([]byte), entry)
+		if err != nil {
+			return
+		}
+		entry.Validity = []byte(u.FormatRFC3339(time.Now().Add(CachedProfileTime)))
+		v, err := proto.Marshal(entry)
+		if err != nil {
+			return
+		}
+		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix+peerId), v)
+	}()
+	return dr, nil
 }

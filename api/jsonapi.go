@@ -2267,36 +2267,36 @@ func (i *jsonAPIHandler) GETAvatar(w http.ResponseWriter, r *http.Request) {
 	urlPath, size := path.Split(r.URL.Path)
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
-	defer cancel()
-	query := "/ipns/" + peerId + "/images/" + size + "/avatar"
-	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, query)
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
+
+	dr, err := i.node.FetchAvatar(peerId, size, useCache)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer dr.Close()
-	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	w.Header().Del("Content-Type")
-	http.ServeContent(w, r, query, time.Now(), dr)
+	http.ServeContent(w, r, path.Join("ipns", peerId, "images", size, "avatar"), time.Now(), dr)
 }
 
 func (i *jsonAPIHandler) GETHeader(w http.ResponseWriter, r *http.Request) {
 	urlPath, size := path.Split(r.URL.Path)
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
-	defer cancel()
-	query := "/ipns/" + peerId + "/images/" + size + "/header"
-	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, query)
+	cacheBool := r.URL.Query().Get("usecache")
+	useCache, _ := strconv.ParseBool(cacheBool)
+
+	dr, err := i.node.FetchHeader(peerId, size, useCache)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer dr.Close()
-	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	w.Header().Set("Cache-Control", "public, max-age=600, immutable")
 	w.Header().Del("Content-Type")
-	http.ServeContent(w, r, query, time.Now(), dr)
+	http.ServeContent(w, r, path.Join("ipns", peerId, "images", size, "header"), time.Now(), dr)
 }
 
 func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Request) {

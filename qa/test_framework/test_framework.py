@@ -195,7 +195,7 @@ class OpenBazaarTestFramework(object):
             failure = True
 
         if not failure:
-            self.teardown(True)
+            self.teardown(False)
         else:
             self.teardown(True)
 
