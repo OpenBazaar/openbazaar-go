@@ -38,6 +38,10 @@
     }
   },
   "Dropbox-api-token": "dropbox123",
+  "Experimental": {
+    "FilestoreEnabled": false,
+    "ShardingEnabled": false
+  },
   "Gateway": {
     "HTTPHeaders": null,
     "PathPrefixes": [],
@@ -82,7 +86,8 @@
   },
   "Swarm": {
     "AddrFilters": null,
-    "DisableBandwidthMetrics": false
+    "DisableBandwidthMetrics": false,
+    "DisableNatPortMap": false
   },
   "Tour": {
     "Last": ""
