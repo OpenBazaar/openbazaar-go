@@ -114,9 +114,9 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 
 	var stm string
 	if offsetId != "" {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " and timestamp<(select timestamp from chat where messageID='" + offsetId + "') order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+		stm = "select messageID, peerID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " and timestamp<(select timestamp from chat where messageID='" + offsetId + "') order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		stm = "select messageID, peerID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
 	rows, err := c.db.Query(stm)
 	if err != nil {
@@ -125,11 +125,12 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 	}
 	for rows.Next() {
 		var msgID string
+		var pid string
 		var message string
 		var readInt int
 		var timestampInt int
 		var outgoingInt int
-		if err := rows.Scan(&msgID, &message, &readInt, &timestampInt, &outgoingInt); err != nil {
+		if err := rows.Scan(&msgID, &pid, &message, &readInt, &timestampInt, &outgoingInt); err != nil {
 			continue
 		}
 		var read bool
@@ -142,7 +143,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 		}
 		timestamp := time.Unix(int64(timestampInt), 0)
 		chatMessage := repo.ChatMessage{
-			PeerId:    peerID,
+			PeerId:    pid,
 			MessageId: msgID,
 			Subject:   subject,
 			Message:   message,
