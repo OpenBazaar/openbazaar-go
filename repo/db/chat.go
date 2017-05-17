@@ -107,11 +107,16 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 	defer c.lock.RUnlock()
 	var ret []repo.ChatMessage
 
+	var peerStm string
+	if peerID == "" {
+		peerStm = " and peerID='" + peerID + "'"
+	}
+
 	var stm string
 	if offsetId != "" {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' and timestamp<(select timestamp from chat where messageID='" + offsetId + "') order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
+		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " and timestamp<(select timestamp from chat where messageID='" + offsetId + "') order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "' and peerID='" + peerID + "' order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		stm = "select messageID, message, read, timestamp, outgoing from chat where subject='" + subject + "'" + peerStm + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
 	rows, err := c.db.Query(stm)
 	if err != nil {

@@ -55,7 +55,7 @@ type orderConfirmationWrapper struct {
 }
 
 type orderCancelWrapper struct {
-	OrderCancelNotification `json:"orderConfirmation"`
+	OrderCancelNotification `json:"orderCancel"`
 }
 
 type refundWrapper struct {
