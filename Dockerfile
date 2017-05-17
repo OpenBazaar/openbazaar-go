@@ -1,14 +1,14 @@
-FROM ubuntu
-MAINTAINER OpenBazaar Developers
+# Build stage - Create static binary
+FROM golang:1.8.1
+WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
+COPY . .
+RUN go build --ldflags '-extldflags "-static"' -o /opt/openbazaard .
 
-RUN apt-get update && apt-get install -y ca-certificates
-
-EXPOSE 4001
-EXPOSE 4002
-EXPOSE 8080
-
-VOLUME /var/openbazaar
-
-COPY ./dist/openbazaar-go-linux-amd64 /opt/openbazaard
-
-CMD ["/opt/openbazaard", "start", "-t", "-d", "/var/openbazaar"]
+# Run stage - Import static binary, expose ports, set up volume, and run server
+FROM scratch
+EXPOSE 4001 4002 9005
+VOLUME /var/lib/openbazaar
+COPY --from=0 /opt/openbazaard /opt/openbazaard
+COPY --from=0 /etc/ssl/certs/ /etc/ssl/certs/
+ENTRYPOINT ["/opt/openbazaard"]
+CMD ["start", "-d", "/var/lib/openbazaar", ">", "/var/log/openbazaar/openbazaar.log", "2>", "/var/log/openbazaar/error.log"]
