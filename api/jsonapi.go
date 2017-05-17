@@ -2095,6 +2095,9 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
+	if strings.ToLower(peerId) == "chatmessages" {
+		peerId = ""
+	}
 	limit := r.URL.Query().Get("limit")
 	if limit == "" {
 		limit = "-1"
