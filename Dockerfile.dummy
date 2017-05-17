@@ -1,0 +1,12 @@
+# Build stage
+FROM golang:1.8.1
+WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
+COPY . .
+RUN go build -o /opt/dummy ./dummy
+
+# Run stage
+FROM openbazaar/server
+COPY ./run.sh /opt/run.sh
+COPY --from=0 /opt/dummy /opt/dummy
+ENTRYPOINT ["/bin/sh"]
+CMD ["/opt/run.sh"]
