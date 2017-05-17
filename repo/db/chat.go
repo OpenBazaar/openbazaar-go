@@ -108,7 +108,7 @@ func (c *ChatDB) GetMessages(peerID string, subject string, offsetId string, lim
 	var ret []repo.ChatMessage
 
 	var peerStm string
-	if peerID == "" {
+	if peerID != "" {
 		peerStm = " and peerID='" + peerID + "'"
 	}
 
