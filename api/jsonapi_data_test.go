@@ -157,7 +157,7 @@ const settingsAlreadyExistsJSON = `{
 //
 
 const profileJSON = `{
-    "peerID": "",
+    "peerID": "QmSpuEe2XZy5DNYQHgL5uhe6DiaJWDiDkH2q1yjhoFd9PP",
     "handle": "satoshi",
     "name": "Satoshi Nakamoto",
     "location": "Japan",
@@ -195,7 +195,7 @@ const profileUpdateJSON = `{
 }`
 
 const profileUpdatedJSON = `{
-    "peerID": "",
+    "peerID": "QmSpuEe2XZy5DNYQHgL5uhe6DiaJWDiDkH2q1yjhoFd9PP",
     "handle": "satoshi",
     "name": "Craig Wright",
     "location": "Austrailia",

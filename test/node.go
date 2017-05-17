@@ -8,6 +8,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/tyler-smith/go-bip39"
+	"gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
 	"gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 )
 
@@ -29,6 +31,24 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	seed := bip39.NewSeed(GetPassword(), "Secret Passphrase")
+	privKey, err := ipfs.IdentityKeyFromSeed(seed, 256)
+	if err != nil {
+		return nil, err
+	}
+
+	sk, err := crypto.UnmarshalPrivateKey(privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := peer.IDFromPublicKey(sk.GetPublic())
+	if err != nil {
+		return nil, err
+	}
+
+	ipfsNode.Identity = id
 
 	// Create test context
 	ctx, err := ipfs.MockCmdsCtx()
