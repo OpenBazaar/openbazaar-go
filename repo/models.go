@@ -58,6 +58,12 @@ type ChatMessage struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+type GroupChatMessage struct {
+	PeerIds []string `json:"peerIds"`
+	Subject string   `json:"subject"`
+	Message string   `json:"message"`
+}
+
 type ChatConversation struct {
 	PeerId    string    `json:"peerId"`
 	Unread    int       `json:"unread"`

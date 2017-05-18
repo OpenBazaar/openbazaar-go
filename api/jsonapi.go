@@ -2093,6 +2093,77 @@ func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (i *jsonAPIHandler) POSTGroupChat(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var chat repo.GroupChatMessage
+	err := decoder.Decode(&chat)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(chat.Subject) > 500 {
+		ErrorResponse(w, http.StatusBadRequest, "Subject line is too long")
+		return
+	}
+	if len(chat.Subject) <= 0 {
+		ErrorResponse(w, http.StatusBadRequest, "Group chats must include a unquie subject to be used as the groupd chat ID")
+		return
+	}
+	if len(chat.Message) > 20000 {
+		ErrorResponse(w, http.StatusBadRequest, "Message is too long")
+		return
+	}
+
+	t := time.Now()
+	ts, err := ptypes.TimestampProto(t)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var flag pb.Chat_Flag
+	if chat.Message == "" {
+		flag = pb.Chat_TYPING
+	} else {
+		flag = pb.Chat_MESSAGE
+	}
+	h := sha256.Sum256([]byte(chat.Message + chat.Subject + ptypes.TimestampString(ts)))
+	encoded, err := mh.Encode(h[:], mh.SHA2_256)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	msgId, err := mh.Cast(encoded)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	chatPb := &pb.Chat{
+		MessageId: msgId.B58String(),
+		Subject:   chat.Subject,
+		Message:   chat.Message,
+		Timestamp: ts,
+		Flag:      flag,
+	}
+	for _, pid := range chat.PeerIds {
+		err = i.node.SendChat(pid, chatPb)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	// Put to database
+	if chatPb.Flag == pb.Chat_MESSAGE {
+		err = i.node.Datastore.Chat().Put(msgId.B58String(), "", chat.Subject, chat.Message, t, false, true)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	SanitizedResponse(w, fmt.Sprintf(`{"messageId": "%s"}`, msgId.B58String()))
+	return
+}
+
 func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	if strings.ToLower(peerId) == "chatmessages" {

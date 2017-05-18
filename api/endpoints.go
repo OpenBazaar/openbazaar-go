@@ -64,6 +64,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTReleaseFunds(w, r)
 	case strings.HasPrefix(path, "/ob/chat"):
 		i.POSTChat(w, r)
+	case strings.HasPrefix(path, "/ob/groupchat"):
+		i.POSTGroupChat(w, r)
 	case strings.HasPrefix(path, "/ob/markchatasread"):
 		i.POSTMarkChatAsRead(w, r)
 	case strings.HasPrefix(path, "/ob/marknotificationasread"):
