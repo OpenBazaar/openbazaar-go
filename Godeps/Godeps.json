@@ -1680,6 +1680,154 @@
 			"ImportPath": "github.com/ipfs/go-ipfs/routing/dht/util",
 			"Comment": "v0.4.8-54-gfccba25",
 			"Rev": "fccba258590e257c147f899f7fb4569f0924a2e9"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/boltdb/bolt",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/addrmgr",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/blockchain",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/btcec",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/chaincfg",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/chaincfg/chainhash",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/connmgr",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/peer",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/txscript",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/wire",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil/bloom",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil/coinset",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil/hdkeychain",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil/txsort",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcwallet/wallet/txauthor",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcwallet/wallet/txrules",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/goleveldb/leveldb/errors",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/mitchellh/go-homedir",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/op/go-logging",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/tyler-smith/go-bip39",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/golang.org/x/net/proxy",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/golang.org/x/sys/unix",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btclog",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcd/database",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/go-socks/socks",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/davecgh/go-spew/spew",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/golangcrypto/ripemd160",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcutil/base58",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/fastsha256",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcwallet/internal/helpers",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/btcwallet/wallet/internal/txsizes",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/goleveldb/leveldb/storage",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/goleveldb/leveldb/util",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/golang.org/x/crypto/pbkdf2",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/vendor/github.com/btcsuite/seelog",
+			"Rev": "f4d7c911615e06b353731658421a7c1e2fd7e698"
+		},
+		{
+			"ImportPath": "github.com/icrowley/fake",
+			"Rev": "84bff6d01560fb0b5a396ba29534e93fd00d09c6"
 		}
 	]
 }
