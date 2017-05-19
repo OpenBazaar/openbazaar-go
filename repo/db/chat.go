@@ -184,8 +184,20 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=? and timestamp<=(select timestamp from chat where messageID=?)")
 		_, err = stmt.Exec(peerID, subject, outgoingInt, messageId)
 	} else {
-		stm := "select messageID from chat where peerID=? and subject=? and outgoing=? and read=0 limit 1"
-		rows, err := c.db.Query(stm, peerID, subject, outgoingInt)
+		var peerStm string
+		if peerID != "" {
+			peerStm = " and peerID=?"
+		}
+
+		stm := "select messageID from chat where subject=?" + peerStm + " and outgoing=? and read=0 limit 1"
+		var rows *sql.Rows
+		var err error
+		if peerID != "" {
+			rows, err = c.db.Query(stm, subject, peerID, outgoingInt)
+		} else {
+			rows, err = c.db.Query(stm, subject, outgoingInt)
+		}
+
 		if err != nil {
 			return "", updated, err
 		}
@@ -197,8 +209,12 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		if err != nil {
 			return "", updated, err
 		}
-		stmt, _ = tx.Prepare("update chat set read=1 where peerID=? and subject=? and outgoing=?")
-		_, err = stmt.Exec(peerID, subject, outgoingInt)
+		stmt, _ = tx.Prepare("update chat set read=1 where subject=?" + peerStm + " and outgoing=?")
+		if peerID != "" {
+			_, err = stmt.Exec(subject, peerID, outgoingInt)
+		} else {
+			_, err = stmt.Exec(subject, outgoingInt)
+		}
 	}
 	defer stmt.Close()
 	if err != nil {

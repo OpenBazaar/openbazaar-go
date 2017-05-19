@@ -2214,7 +2214,7 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if updated {
+	if updated && peerId != "" {
 		chatPb := &pb.Chat{
 			MessageId: lastId,
 			Subject:   r.URL.Query().Get("subject"),
