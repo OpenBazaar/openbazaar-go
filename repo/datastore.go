@@ -151,6 +151,9 @@ type Purchases interface {
 	// Mark an order as read in the database
 	MarkAsRead(orderID string) error
 
+	// Mark an order as unread in the database
+	MarkAsUnread(orderID string) error
+
 	// Update the funding level for the contract
 	UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error
 
@@ -176,6 +179,9 @@ type Sales interface {
 
 	// Mark an order as read in the database
 	MarkAsRead(orderID string) error
+
+	// Mark an order as unread in the database
+	MarkAsUnread(orderID string) error
 
 	// Update the funding level for the contract
 	UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error
@@ -208,6 +214,9 @@ type Cases interface {
 
 	// Mark a case as read in the database
 	MarkAsRead(caseID string) error
+
+	// Mark a case as unread in the database
+	MarkAsUnread(caseID string) error
 
 	// Mark a case as closed in the database
 	MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error

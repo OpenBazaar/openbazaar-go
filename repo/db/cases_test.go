@@ -167,6 +167,32 @@ func TestMarkCaseAsRead(t *testing.T) {
 	}
 }
 
+func TestMarkCaseAsUnread(t *testing.T) {
+	err := casesdb.Put("caseID", 0, true, "blah")
+	if err != nil {
+		t.Error(err)
+	}
+	err = casesdb.MarkAsRead("caseID")
+	if err != nil {
+		t.Error(err)
+	}
+	err = casesdb.MarkAsUnread("caseID")
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := casesdb.db.Prepare("select read from cases where caseID=?")
+	defer stmt.Close()
+
+	var read int
+	err = stmt.QueryRow("caseID").Scan(&read)
+	if err != nil {
+		t.Error("Case query failed")
+	}
+	if read != 0 {
+		t.Error("Failed to mark case as read")
+	}
+}
+
 func TestUpdateBuyerInfo(t *testing.T) {
 	err := casesdb.Put("caseID", 0, true, "blah")
 	if err != nil {

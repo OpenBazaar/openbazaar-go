@@ -1580,6 +1580,13 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 
 	resp.Transactions = txs
 
+	unread, err := i.node.Datastore.Chat().GetUnreadCount(orderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp.UnreadChatMessages = uint64(unread)
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -1975,6 +1982,13 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 	resp.Resolution = resolution
 	resp.Timestamp = ts
 
+	unread, err := i.node.Datastore.Chat().GetUnreadCount(orderId)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resp.UnreadChatMessages = uint64(unread)
+
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -2214,10 +2228,11 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	subject := r.URL.Query().Get("subject")
 	if updated && peerId != "" {
 		chatPb := &pb.Chat{
 			MessageId: lastId,
-			Subject:   r.URL.Query().Get("subject"),
+			Subject:   subject,
 			Flag:      pb.Chat_READ,
 		}
 		err = i.node.SendChat(peerId, chatPb)
@@ -2225,6 +2240,13 @@ func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Reque
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+	if subject != "" {
+		go func() {
+			i.node.Datastore.Purchases().MarkAsRead(subject)
+			i.node.Datastore.Sales().MarkAsRead(subject)
+			i.node.Datastore.Cases().MarkAsRead(subject)
+		}()
 	}
 	SanitizedResponse(w, `{}`)
 }

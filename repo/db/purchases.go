@@ -89,6 +89,16 @@ func (p *PurchasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
+func (p *PurchasesDB) MarkAsUnread(orderID string) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	_, err := p.db.Exec("update purchases set read=? where orderID=?", 0, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
