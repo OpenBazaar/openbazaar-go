@@ -784,7 +784,9 @@ func validateListing(listing *pb.Listing) (err error) {
 			if len(variant.Name) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
-			if variant.Image != nil {
+			if variant.Image != nil && (variant.Image.Filename != "" ||
+				variant.Image.Large != "" || variant.Image.Medium != "" || variant.Image.Small != "" ||
+				variant.Image.Tiny != "" || variant.Image.Original != "") {
 				_, err := mh.FromB58String(variant.Image.Tiny)
 				if err != nil {
 					return errors.New("Tiny image hashes must be multihashes")
