@@ -2223,12 +2223,15 @@ func (i *jsonAPIHandler) GETChatConversations(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) POSTMarkChatAsRead(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	lastId, updated, err := i.node.Datastore.Chat().MarkAsRead(peerId, r.URL.Query().Get("subject"), false, "")
+	if strings.ToLower(peerId) == "markchatasread" {
+		peerId = ""
+	}
+	subject := r.URL.Query().Get("subject")
+	lastId, updated, err := i.node.Datastore.Chat().MarkAsRead(peerId, subject, false, "")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	subject := r.URL.Query().Get("subject")
 	if updated && peerId != "" {
 		chatPb := &pb.Chat{
 			MessageId: lastId,
