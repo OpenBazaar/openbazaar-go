@@ -185,6 +185,21 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if err != nil {
 				return err
 			}
+			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			couponMap := make(map[string]string)
+			for _, c := range coupons {
+				couponMap[c.Hash] = c.Code
+			}
+			for _, coupon := range sl.Listing.Coupons {
+				code, ok := couponMap[coupon.GetHash()]
+				if ok {
+					coupon.Code = &pb.Listing_Coupon_DiscountCode{code}
+				}
+			}
+
 			sl.Listing.Moderators = moderators
 			sl, err = n.SignListing(sl.Listing)
 			if err != nil {
