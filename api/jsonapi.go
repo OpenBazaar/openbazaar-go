@@ -2628,12 +2628,12 @@ func (i *jsonAPIHandler) GETPurchases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, p := range purchases {
+	for n, p := range purchases {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
 		if err != nil {
 			continue
 		}
-		p.UnreadChatMessages = unread
+		purchases[n].UnreadChatMessages = unread
 	}
 	type purchasesResponse struct {
 		QueryCount int             `json:"queryCount"`
@@ -2663,12 +2663,12 @@ func (i *jsonAPIHandler) GETSales(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, s := range sales {
+	for n, s := range sales {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
 		if err != nil {
 			continue
 		}
-		s.UnreadChatMessages = unread
+		sales[n].UnreadChatMessages = unread
 	}
 	type salesResponse struct {
 		QueryCount int         `json:"queryCount"`
@@ -2699,12 +2699,12 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, c := range cases {
+	for n, c := range cases {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
 		if err != nil {
 			continue
 		}
-		c.UnreadChatMessages = unread
+		cases[n].UnreadChatMessages = unread
 	}
 	type casesResponse struct {
 		QueryCount int         `json:"queryCount"`
@@ -2736,12 +2736,12 @@ func (i *jsonAPIHandler) POSTPurchases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, p := range purchases {
+	for n, p := range purchases {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
 		if err != nil {
 			continue
 		}
-		p.UnreadChatMessages = unread
+		purchases[n].UnreadChatMessages = unread
 	}
 	type purchasesResponse struct {
 		QueryCount int             `json:"queryCount"`
@@ -2773,12 +2773,12 @@ func (i *jsonAPIHandler) POSTSales(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, s := range sales {
+	for n, s := range sales {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
 		if err != nil {
 			continue
 		}
-		s.UnreadChatMessages = unread
+		sales[n].UnreadChatMessages = unread
 	}
 	type salesResponse struct {
 		QueryCount int         `json:"queryCount"`
@@ -2811,12 +2811,12 @@ func (i *jsonAPIHandler) POSTCases(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	for _, c := range cases {
+	for n, c := range cases {
 		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
 		if err != nil {
 			continue
 		}
-		c.UnreadChatMessages = unread
+		cases[n].UnreadChatMessages = unread
 	}
 	type casesResponse struct {
 		QueryCount int         `json:"queryCount"`
