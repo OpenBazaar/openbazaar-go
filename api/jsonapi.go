@@ -46,7 +46,7 @@ import (
 )
 
 type JsonAPIConfig struct {
-	Headers       map[string][]string
+	Headers       map[string]interface{}
 	Enabled       bool
 	Cors          *string
 	Authenticated bool
@@ -109,7 +109,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for k, v := range i.config.Headers {
-		w.Header()[k] = v
+		w.Header()[k] = v.([]string)
 	}
 
 	if i.config.Authenticated {

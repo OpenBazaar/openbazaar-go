@@ -22,7 +22,7 @@ type APIConfig struct {
 	Password      string
 	CORS          *string
 	Enabled       bool
-	HTTPHeaders   map[string][]string
+	HTTPHeaders   map[string]interface{}
 	SSL           bool
 	SSLCert       string
 	SSLKey        string
@@ -55,12 +55,12 @@ func GetAPIConfig(cfgPath string) (*APIConfig, error) {
 	json.Unmarshal(file, &cfg)
 
 	api := cfg.(map[string]interface{})["JSON-API"]
-	headers := make(map[string][]string)
+	headers := make(map[string]interface{})
 	h := api.(map[string]interface{})["HTTPHeaders"]
 	if h == nil {
 		headers = nil
 	} else {
-		headers = h.(map[string][]string)
+		headers = h.(map[string]interface{})
 	}
 	enabled := api.(map[string]interface{})["Enabled"].(bool)
 	authenticated := api.(map[string]interface{})["Authenticated"].(bool)
