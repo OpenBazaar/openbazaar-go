@@ -197,7 +197,6 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 		} else {
 			rows, err = c.db.Query(stm, subject, outgoingInt)
 		}
-
 		if err != nil {
 			return "", updated, err
 		}
@@ -223,14 +222,22 @@ func (c *ChatDB) MarkAsRead(peerID string, subject string, outgoing bool, messag
 	}
 	tx.Commit()
 
-	stmt2, err := c.db.Prepare("select max(timestamp), messageID from chat where peerID=? and subject=? and outgoing=?")
+	var peerStm string
+	if peerID != "" {
+		peerStm = " and peerID=?"
+	}
+	stmt2, err := c.db.Prepare("select max(timestamp), messageID from chat where subject=?" + peerStm + " and outgoing=?")
 	if err != nil {
 		return "", updated, err
 	}
 	defer stmt2.Close()
 	var ts int
 	var msgId string
-	err = stmt2.QueryRow(peerID, subject, outgoingInt).Scan(&ts, &msgId)
+	if peerID != "" {
+		err = stmt2.QueryRow(subject, peerID, outgoingInt).Scan(&ts, &msgId)
+	} else {
+		err = stmt2.QueryRow(subject, outgoingInt).Scan(&ts, &msgId)
+	}
 	if err != nil {
 		return "", updated, err
 	}
