@@ -166,6 +166,30 @@ func TestMarkPurchaseAsRead(t *testing.T) {
 	}
 }
 
+func TestMarkPurchaseAsUnread(t *testing.T) {
+	purdb.Put("orderID", *contract, 0, false)
+	err := purdb.MarkAsRead("orderID")
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = purdb.MarkAsUnread("orderID")
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := purdb.db.Prepare("select read from purchases where orderID=?")
+	defer stmt.Close()
+
+	var read int
+	err = stmt.QueryRow("orderID").Scan(&read)
+	if err != nil {
+		t.Error("Purchase query failed")
+	}
+	if read != 0 {
+		t.Error("Failed to mark purchase as read")
+	}
+}
+
 func TestUpdatePurchaseFunding(t *testing.T) {
 	err := purdb.Put("orderID", *contract, 1, false)
 	if err != nil {

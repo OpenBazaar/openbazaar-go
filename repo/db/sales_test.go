@@ -164,6 +164,29 @@ func TestMarkSaleAsRead(t *testing.T) {
 	}
 }
 
+func TestMarkSaleAsUnread(t *testing.T) {
+	saldb.Put("orderID", *contract, 0, false)
+	err := saldb.MarkAsRead("orderID")
+	if err != nil {
+		t.Error(err)
+	}
+	err = saldb.MarkAsUnread("orderID")
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := saldb.db.Prepare("select read from sales where orderID=?")
+	defer stmt.Close()
+
+	var read int
+	err = stmt.QueryRow("orderID").Scan(&read)
+	if err != nil {
+		t.Error("Sale query failed")
+	}
+	if read != 0 {
+		t.Error("Failed to mark sale as read")
+	}
+}
+
 func TestUpdateSaleFunding(t *testing.T) {
 	err := saldb.Put("orderID", *contract, 1, false)
 	if err != nil {

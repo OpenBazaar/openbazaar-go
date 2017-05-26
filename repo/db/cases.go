@@ -137,6 +137,16 @@ func (c *CasesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
+func (c *CasesDB) MarkAsUnread(orderID string) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	_, err := c.db.Exec("update cases set read=? where caseID=?", 0, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error {
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,

@@ -90,6 +90,16 @@ func (s *SalesDB) MarkAsRead(orderID string) error {
 	return nil
 }
 
+func (s *SalesDB) MarkAsUnread(orderID string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	_, err := s.db.Exec("update sales set read=? where orderID=?", 0, orderID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *SalesDB) UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()

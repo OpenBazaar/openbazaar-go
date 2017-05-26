@@ -958,6 +958,14 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		return nil, err
 	}
 
+	if chat.Subject != "" {
+		go func() {
+			service.datastore.Purchases().MarkAsUnread(chat.Subject)
+			service.datastore.Sales().MarkAsUnread(chat.Subject)
+			service.datastore.Cases().MarkAsUnread(chat.Subject)
+		}()
+	}
+
 	// Push to websocket
 	n := notifications.ChatMessage{
 		MessageId: chat.MessageId,

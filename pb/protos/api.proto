@@ -23,7 +23,8 @@ message OrderRespApi {
     OrderState state                        = 2;
     bool read                               = 3;
     bool funded                             = 4;
-    repeated TransactionRecord transactions = 5;
+    uint64 unreadChatMessages               = 5;
+    repeated TransactionRecord transactions = 6;
 }
 
 message CaseRespApi {
@@ -36,7 +37,8 @@ message CaseRespApi {
     bool read                                      = 7;
     bool buyerOpened                               = 8;
     string claim                                   = 9;
-    DisputeResolution resolution                   = 10;
+    uint64 unreadChatMessages                      = 10;
+    DisputeResolution resolution                   = 11;
 }
 
 message TransactionRecord {
