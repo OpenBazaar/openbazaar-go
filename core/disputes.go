@@ -194,6 +194,13 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return err
 	}
 
+	var thumbnailTiny string
+	var thumbnailSmall string
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
+		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
+	}
+
 	// Figure out what role we have in this dispute and process it
 	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
 		validationErrors := n.ValidateCaseContract(contract)
@@ -324,9 +331,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("We are not involved in this dispute")
 	}
 
-	notif := notifications.DisputeOpenNotification{orderId}
+	notif := notifications.DisputeOpenNotification{"disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().Put(notifications.Wrap(notif), time.Now())
+	n.Datastore.Notifications().Put(notif, time.Now())
 
 	return nil
 }
