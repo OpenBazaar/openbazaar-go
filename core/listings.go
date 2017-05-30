@@ -878,6 +878,14 @@ func validateListing(listing *pb.Listing) (err error) {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
+		for _, region := range shippingOption.Regions {
+			if int(region) == 0 {
+				return errors.New("Shipping region cannot be NA")
+			} else if int(region) > 246 {
+				return errors.New("Invalid shipping region")
+			}
+
+		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
 		}
