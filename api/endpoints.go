@@ -70,6 +70,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTMarkChatAsRead(w, r)
 	case strings.HasPrefix(path, "/ob/marknotificationasread"):
 		i.POSTMarkNotificationAsRead(w, r)
+	case strings.HasPrefix(path, "/ob/marknotificationsasread"):
+		i.POSTMarkNotificationsAsRead(w, r)
 	case strings.HasPrefix(path, "/ob/fetchprofiles"):
 		i.POSTFetchProfiles(w, r)
 	case strings.HasPrefix(path, "/ob/blocknode"):
