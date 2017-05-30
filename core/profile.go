@@ -348,7 +348,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 	}
-	if profile.AvatarHashes != nil {
+	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
+		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
 		_, err := mh.FromB58String(profile.AvatarHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be multihashes")
@@ -370,7 +371,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			return errors.New("Original image hashes must be multihashes")
 		}
 	}
-	if profile.HeaderHashes != nil {
+	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
+		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
 		_, err := mh.FromB58String(profile.HeaderHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be multihashes")
