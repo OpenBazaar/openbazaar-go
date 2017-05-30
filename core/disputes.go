@@ -333,7 +333,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 	notif := notifications.DisputeOpenNotification{"disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().Put(notif, time.Now())
+	n.Datastore.Notifications().Put(notif, notif.Type, time.Now())
 
 	return nil
 }

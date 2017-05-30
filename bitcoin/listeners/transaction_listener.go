@@ -152,7 +152,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().Put(n, time.Now())
+			l.db.Notifications().Put(n, n.Type, time.Now())
 		}
 	}
 
@@ -213,7 +213,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			uint64(funding),
 		}
 		l.broadcast <- n
-		l.db.Notifications().Put(n, time.Now())
+		l.db.Notifications().Put(n, n.Type, time.Now())
 	}
 
 	record := &spvwallet.TransactionRecord{
