@@ -221,7 +221,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, true)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	} else { // Direct payment
@@ -362,7 +362,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, true)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
