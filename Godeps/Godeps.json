@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/OpenBazaar/openbazaar-go",
 	"GoVersion": "go1.7",
-	"GodepVersion": "v74",
+	"GodepVersion": "v79",
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "d567f3e124756c9f37e607127ccd38bc40ab3c9e"
+			"Rev": "b56e1e2711d6bd5210715d36e3820484a43433ca"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
