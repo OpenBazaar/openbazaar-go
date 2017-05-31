@@ -416,7 +416,7 @@ const listingJSON = `{
 		"name": "International Shipping",
 		"type": "FIXED_PRICE",
 		"regions": [
-			"ALL"
+			"UNITED_STATES"
 		],
 		"services": [
 			{
@@ -617,7 +617,7 @@ const listingUpdateJSON = `{
 		"name": "International Shipping",
 		"type": "FIXED_PRICE",
 		"regions": [
-			"ALL"
+			"UNITED_STATES"
 		],
 		"services": [
 			{
