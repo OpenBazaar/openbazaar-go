@@ -111,6 +111,7 @@ type Sale struct {
 	ShippingAddress    string    `json:"shippingAddress"`
 	State              string    `json:"state"`
 	Read               bool      `json:"read"`
+	Moderated          bool      `json:"moderated"`
 	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
 

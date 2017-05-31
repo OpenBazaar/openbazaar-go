@@ -172,6 +172,11 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			slug = rc.VendorListings[0].Slug
 		}
 
+		var moderated bool
+		if rc.BuyerOrder != nil && rc.BuyerOrder.Payment != nil && rc.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+			moderated = true
+		}
+
 		ret = append(ret, repo.Sale{
 			OrderId:         orderID,
 			Slug:            slug,
@@ -185,6 +190,7 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			ShippingAddress: shippingAddr,
 			State:           pb.OrderState(stateInt).String(),
 			Read:            read,
+			Moderated:       moderated,
 		})
 	}
 	q.columns = []string{"Count(*)"}
