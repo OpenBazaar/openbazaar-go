@@ -109,11 +109,11 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		}
 		recordAvailable = false
 	}
-	/*TODO: re-enable when client adds support for this
+
 	if err := ValidateProfile(&pro); err != nil {
 		return pb.Profile{}, err
 	}
-	*/
+
 	// Update the record with a new EOL
 	go func() {
 		if !recordAvailable {
@@ -153,12 +153,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if err != nil {
 		return err
 	}
-	/*
-		TODO: re-enable when client adds support for this
-		if err := ValidateProfile(profile); err != nil {
-			return err
-		}
-	*/
+
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	m := jsonpb.Marshaler{
