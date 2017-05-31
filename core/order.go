@@ -66,6 +66,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
+		if data.Moderator == n.IpfsNode.Identity.Pretty() {
+			return "", "", 0, false, errors.New("Cannot select self as moderator")
+		}
+		if data.Moderator == contract.VendorListings[0].VendorID.PeerID {
+			return "", "", 0, false, errors.New("Cannot select vendor as moderator")
+		}
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
