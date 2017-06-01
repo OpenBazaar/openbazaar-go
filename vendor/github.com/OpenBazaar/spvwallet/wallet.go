@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"errors"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
@@ -192,6 +193,25 @@ func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
 	w.txstore.Keys().MarkKeyAsUsed(script)
 	w.txstore.PopulateAdrs()
 	return btc.Address(addr)
+}
+
+func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
+	return btc.DecodeAddress(addr, w.params)
+}
+
+func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("unknown script")
+	}
+	return addrs[0], nil
+}
+
+func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
 }
 
 func (w *SPVWallet) HasKey(addr btc.Address) bool {

@@ -1,6 +1,7 @@
 package bitcoind
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,10 +17,7 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	//"io/ioutil"
 	"os/exec"
-	//"path"
-	"bytes"
 	"strconv"
 	"strings"
 	"time"
@@ -165,6 +163,25 @@ func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Addres
 func (w *BitcoindWallet) NewAddress(purpose spvwallet.KeyPurpose) btc.Address {
 	addr, _ := w.rpcClient.GetNewAddress(Account)
 	return addr
+}
+
+func (w *BitcoindWallet) DecodeAddress(addr string) (btc.Address, error) {
+	return btc.DecodeAddress(addr, w.params)
+}
+
+func (w *BitcoindWallet) ScriptToAddress(script []byte) (btc.Address, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("unknown script")
+	}
+	return addrs[0], nil
+}
+
+func (w *BitcoindWallet) AddressToScript(addr btc.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
 }
 
 func (w *BitcoindWallet) HasKey(addr btc.Address) bool {

@@ -31,6 +31,15 @@ type BitcoinWallet interface {
 	// Returns a fresh address that has never been returned by this function
 	NewAddress(purpose spvwallet.KeyPurpose) btc.Address
 
+	// Parse the address string and return an address interface
+	DecodeAddress(addr string) (btc.Address, error)
+
+	// Turn the given output script into an address
+	ScriptToAddress(script []byte) (btc.Address, error)
+
+	// Turn the given address into an output script
+	AddressToScript(addr btc.Address) ([]byte, error)
+
 	// Returns if the wallet has the key for the given address
 	HasKey(addr btc.Address) bool
 
