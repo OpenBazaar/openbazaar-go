@@ -89,6 +89,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		}
 
 		record := &spvwallet.TransactionRecord{
+			Timestamp:    time.Now(),
 			Txid:         chainHash.String(),
 			Index:        input.OutpointIndex,
 			Value:        -input.Value,
@@ -156,6 +157,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	}
 
 	record := &spvwallet.TransactionRecord{
+		Timestamp:    time.Now(),
 		Txid:         chainHash.String(),
 		Index:        output.Index,
 		Value:        output.Value,

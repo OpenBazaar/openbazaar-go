@@ -1581,6 +1581,11 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		tx := new(pb.TransactionRecord)
 		tx.Txid = r.Txid
 		tx.Value = r.Value
+		ts, err := ptypes.TimestampProto(r.Timestamp)
+		if err != nil {
+			continue
+		}
+		tx.Timestamp = ts
 		ch, err := chainhash.NewHashFromStr(tx.Txid)
 		if err != nil {
 			continue

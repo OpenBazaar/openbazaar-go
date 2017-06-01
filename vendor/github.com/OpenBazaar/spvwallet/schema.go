@@ -63,6 +63,7 @@ type TransactionRecord struct {
 	Value        int64
 	ScriptPubKey string
 	Spent        bool
+	Timestamp    time.Time
 }
 
 // This object contains a single signature for a multisig transaction. InputIndex specifies

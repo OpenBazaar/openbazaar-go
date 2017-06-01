@@ -42,9 +42,10 @@ message CaseRespApi {
 }
 
 message TransactionRecord {
-    string txid          = 1;
-    int64 value          = 2;
-    uint32 confirmations = 3;
+    string txid                         = 1;
+    int64 value                         = 2;
+    uint32 confirmations                = 3;
+    google.protobuf.Timestamp timestamp = 4;
 }
 
 message PeerAndProfile {
