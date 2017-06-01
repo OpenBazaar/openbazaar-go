@@ -881,7 +881,7 @@ func validateListing(listing *pb.Listing) (err error) {
 		for _, region := range shippingOption.Regions {
 			if int(region) == 0 {
 				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 246 {
+			} else if int(region) > 246 && int(region) != 500 {
 				return errors.New("Invalid shipping region")
 			}
 
