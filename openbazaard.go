@@ -888,7 +888,7 @@ func (x *Start) Execute(args []string) error {
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {
 			MR.Wait()
-			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet.Params())
+			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
 			wallet.AddTransactionListener(TL.OnTransactionReceived)
 			wallet.AddTransactionListener(WL.OnTransactionReceived)

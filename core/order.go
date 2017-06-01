@@ -16,9 +16,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -156,7 +154,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := n.Wallet.AddressToScript(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -292,7 +290,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			payment.RedeemScript = hex.EncodeToString(redeemScript)
 			payment.Chaincode = hex.EncodeToString(chaincode)
 
-			script, err := txscript.PayToAddrScript(addr)
+			script, err := n.Wallet.AddressToScript(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -355,11 +353,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+			addr, err := n.Wallet.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			script, err := txscript.PayToAddrScript(addr)
+			script, err := n.Wallet.AddressToScript(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -612,7 +610,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-	refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, n.Wallet.Params())
+	refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 	if err != nil {
 		return err
 	}

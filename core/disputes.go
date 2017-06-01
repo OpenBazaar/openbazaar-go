@@ -15,7 +15,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
@@ -478,7 +477,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return err
 	}
 	if modValue > 0 {
-		modOutputScript, err = txscript.PayToAddrScript(modAddr)
+		modOutputScript, err = n.Wallet.AddressToScript(modAddr)
 		if err != nil {
 			return err
 		}
@@ -494,12 +493,12 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	var buyerValue uint64
 	var buyerOutputScript []byte
 	if buyerPayout {
-		buyerAddr, err = btcutil.DecodeAddress(buyerPayoutAddress, n.Wallet.Params())
+		buyerAddr, err = n.Wallet.DecodeAddress(buyerPayoutAddress)
 		if err != nil {
 			return err
 		}
 		buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
-		buyerOutputScript, err = txscript.PayToAddrScript(buyerAddr)
+		buyerOutputScript, err = n.Wallet.AddressToScript(buyerAddr)
 		if err != nil {
 			return err
 		}
@@ -513,12 +512,12 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	var vendorValue uint64
 	var vendorOutputScript []byte
 	if vendorPayout {
-		vendorAddr, err = btcutil.DecodeAddress(vendorPayoutAddress, n.Wallet.Params())
+		vendorAddr, err = n.Wallet.DecodeAddress(vendorPayoutAddress)
 		if err != nil {
 			return err
 		}
 		vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
-		vendorOutputScript, err = txscript.PayToAddrScript(vendorAddr)
+		vendorOutputScript, err = n.Wallet.AddressToScript(vendorAddr)
 		if err != nil {
 			return err
 		}
@@ -889,11 +888,11 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 		if err != nil {
 			return err
 		}
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(scriptBytes, n.Wallet.Params())
+		addr, err := n.Wallet.ScriptToAddress(scriptBytes)
 		if err != nil {
 			return err
 		}
-		if !n.Wallet.HasKey(addrs[0]) {
+		if !n.Wallet.HasKey(addr) {
 			return errors.New("Moderator payout sends coins to an address we don't control")
 		}
 		return nil

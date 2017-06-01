@@ -17,8 +17,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -170,12 +168,12 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			}
 		}
 
-		payoutAddress, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress, n.Wallet.Params())
+		payoutAddress, err := n.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
 		if err != nil {
 			return err
 		}
 		var output spvwallet.TransactionOutput
-		outputScript, err := txscript.PayToAddrScript(payoutAddress)
+		outputScript, err := n.Wallet.AddressToScript(payoutAddress)
 		if err != nil {
 			return err
 		}

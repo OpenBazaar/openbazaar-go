@@ -14,9 +14,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -224,12 +222,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := service.node.Wallet.AddressToScript(addr)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -257,12 +255,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := service.node.Wallet.AddressToScript(addr)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -290,12 +288,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, service.node.Wallet.Params())
+		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := service.node.Wallet.AddressToScript(addr)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -442,7 +440,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -465,12 +463,12 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
 		var output spvwallet.TransactionOutput
-		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -564,12 +562,12 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, service.node.Wallet.Params())
+		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
 		var output spvwallet.TransactionOutput
-		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -720,12 +718,12 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			}
 		}
 
-		payoutAddress, err := btcutil.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress, service.node.Wallet.Params())
+		payoutAddress, err := service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
 		if err != nil {
 			return nil, err
 		}
 		var output spvwallet.TransactionOutput
-		outputScript, err := txscript.PayToAddrScript(payoutAddress)
+		outputScript, err := service.node.Wallet.AddressToScript(payoutAddress)
 		if err != nil {
 			return nil, err
 		}

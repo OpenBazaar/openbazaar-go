@@ -4,13 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
@@ -23,12 +22,12 @@ var log = logging.MustGetLogger("transaction-listener")
 type TransactionListener struct {
 	db        repo.Datastore
 	broadcast chan interface{}
-	params    *chaincfg.Params
+	wallet    bitcoin.BitcoinWallet
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, params *chaincfg.Params) *TransactionListener {
-	l := &TransactionListener{db, broadcast, params, new(sync.Mutex)}
+func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, wallet bitcoin.BitcoinWallet) *TransactionListener {
+	l := &TransactionListener{db, broadcast, wallet, new(sync.Mutex)}
 	return l
 }
 
@@ -36,16 +35,16 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(output.ScriptPubKey, l.params)
-		if err != nil || len(addrs) == 0 {
+		addr, err := l.wallet.ScriptToAddress(output.ScriptPubKey)
+		if err != nil {
 			continue
 		}
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addr)
 		if err == nil {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
-		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addr)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
 			continue
@@ -56,14 +55,14 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 		if err != nil {
 			continue
 		}
-		_, addrs, _, err := txscript.ExtractPkScriptAddrs(input.LinkedScriptPubKey, l.params)
-		if err != nil || len(addrs) == 0 {
+		addr, err := l.wallet.ScriptToAddress(input.LinkedScriptPubKey)
+		if err != nil {
 			continue
 		}
 		isForSale := true
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addrs[0])
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addr)
 		if err != nil {
-			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addrs[0])
+			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addr)
 			if err != nil {
 				continue
 			}
