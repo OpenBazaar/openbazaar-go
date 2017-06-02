@@ -430,7 +430,7 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string)
 			total := index[i].Average * float32(index[i].Count)
 			total += float32(rating.RatingData.Overall)
 			index[i].Count += 1
-			index[i].Average = total / float32(d.Count)
+			index[i].Average = total / float32(index[i].Count)
 			exists = true
 			break
 		}
