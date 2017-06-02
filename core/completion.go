@@ -369,6 +369,8 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		}
 		defer f.Close()
 
+		go ipfs.AddFile(n.Context, ratingPath)
+
 		_, werr := f.Write([]byte(ratingJson))
 		if werr != nil {
 			return werr
