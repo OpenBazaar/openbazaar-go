@@ -3090,8 +3090,9 @@ func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if !core.ValidateRating(rating) {
-		ErrorResponse(w, http.StatusExpectationFailed, "Bad/forged rating")
+	valid, err := core.ValidateRating(rating)
+	if !valid || err != nil {
+		ErrorResponse(w, http.StatusExpectationFailed, err.Error())
 		return
 	}
 	ret, err := json.MarshalIndent(rating, "", "    ")
@@ -3133,7 +3134,8 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 				if err != nil {
 					return
 				}
-				if !core.ValidateRating(rating) {
+				valid, err := core.ValidateRating(rating)
+				if !valid || err != nil {
 					return
 				}
 				m := jsonpb.Marshaler{
@@ -3209,8 +3211,9 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("Invalid rating")
 					return
 				}
-				if !core.ValidateRating(rating) {
-					respondWithError("Rating is forged and/or corrupt")
+				valid, err := core.ValidateRating(rating)
+				if !valid || err != nil {
+					respondWithError(err.Error())
 					return
 				}
 				resp := new(pb.RatingWithID)
