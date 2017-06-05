@@ -70,6 +70,7 @@ type listingData struct {
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
+	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
 		l := TitleMaxCharacters
 		if len(title) < TitleMaxCharacters {
@@ -659,6 +660,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if strings.Contains(listing.Slug, " ") {
 		return errors.New("Slugs cannot contain spaces")
+	}
+	if strings.Contains(listing.Slug, "/") {
+		return errors.New("Slugs cannot contain file separators")
 	}
 
 	// Metadata
