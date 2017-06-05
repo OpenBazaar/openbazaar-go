@@ -283,8 +283,14 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 }
 
 func ValidateProfile(profile *pb.Profile) error {
+	if strings.Contains(profile.Handle, "@") {
+		return errors.New("Handle should not contain @")
+	}
 	if len(profile.Handle) > WordMaxCharacters {
 		return fmt.Errorf("Handle character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.Name) == 0 {
+		return errors.New("Profile name not set")
 	}
 	if len(profile.Name) > WordMaxCharacters {
 		return fmt.Errorf("Name character length is greater than the max of %d", WordMaxCharacters)
