@@ -3104,12 +3104,8 @@ func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request) {
-	type ratingPost struct {
-		Ids []string `json:"ids"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
-	var rp ratingPost
+	var rp []string
 	err := decoder.Decode(&rp)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -3122,7 +3118,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 	if !async {
 		var wg sync.WaitGroup
 		var ret []string
-		for _, id := range rp.Ids {
+		for _, id := range rp {
 			wg.Add(1)
 			go func(rid string) {
 				ratingBytes, err := ipfs.Cat(i.node.Context, rid)
@@ -3183,7 +3179,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		respJson, _ := json.MarshalIndent(response, "", "    ")
 		w.WriteHeader(http.StatusAccepted)
 		SanitizedResponse(w, string(respJson))
-		for _, r := range rp.Ids {
+		for _, r := range rp {
 			go func(rid string) {
 				type ratingError struct {
 					ID       string `json:"id"`
