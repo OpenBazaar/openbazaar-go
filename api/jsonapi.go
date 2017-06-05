@@ -1589,10 +1589,11 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		confirmations, err := i.node.Wallet.GetConfirmations(*ch)
+		confirmations, height, err := i.node.Wallet.GetConfirmations(*ch)
 		if err != nil {
 			continue
 		}
+		tx.Height = height
 		tx.Confirmations = confirmations
 		txs = append(txs, tx)
 	}

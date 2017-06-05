@@ -33,7 +33,7 @@ var ErrExpiredRecord = errors.New("expired record")
 var ErrUnrecognizedValidity = errors.New("unrecognized validity type")
 
 const PublishPutValTimeout = time.Minute
-const DefaultRecordTTL = time.Hour * 24 * 7
+const DefaultRecordTTL = 24 * time.Hour
 
 var DefaultPublishLifetime = time.Hour * 24 * 7
 

@@ -3,7 +3,6 @@ package spvwallet
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -15,9 +14,6 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
-	"net"
-	"net/http"
-	"time"
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
@@ -492,87 +488,6 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel, o
 	return authoredTx.Tx, nil
 }
 
-type feeCache struct {
-	fees        *Fees
-	lastUpdated time.Time
-}
-
-type Fees struct {
-	FastestFee  uint64
-	HalfHourFee uint64
-	HourFee     uint64
-}
-
-var cache *feeCache = &feeCache{}
-
 func (w *SPVWallet) GetFeePerByte(feeLevel FeeLevel) uint64 {
-	dial := net.Dial
-	if w.config.Proxy != nil {
-		dial = w.config.Proxy.Dial
-	}
-	tbTransport := &http.Transport{Dial: dial}
-	httpClient := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
-	defaultFee := func() uint64 {
-		switch feeLevel {
-		case PRIOIRTY:
-			return w.priorityFee
-		case NORMAL:
-			return w.normalFee
-		case ECONOMIC:
-			return w.economicFee
-		case FEE_BUMP:
-			return w.priorityFee * 2
-		default:
-			return w.normalFee
-		}
-	}
-	if w.feeAPI == "" {
-		return defaultFee()
-	}
-	fees := new(Fees)
-	if time.Since(cache.lastUpdated) > time.Minute {
-		resp, err := httpClient.Get(w.feeAPI)
-		if err != nil {
-			return defaultFee()
-		}
-
-		defer resp.Body.Close()
-
-		err = json.NewDecoder(resp.Body).Decode(&fees)
-		if err != nil {
-			return defaultFee()
-		}
-		cache.lastUpdated = time.Now()
-		cache.fees = fees
-	} else {
-		fees = cache.fees
-	}
-	switch feeLevel {
-	case PRIOIRTY:
-		if fees.FastestFee > w.maxFee || fees.FastestFee == 0 {
-			return w.maxFee
-		} else {
-			return fees.FastestFee
-		}
-	case NORMAL:
-		if fees.HalfHourFee > w.maxFee || fees.HalfHourFee == 0 {
-			return w.maxFee
-		} else {
-			return fees.HalfHourFee
-		}
-	case ECONOMIC:
-		if fees.HourFee > w.maxFee || fees.HourFee == 0 {
-			return w.maxFee
-		} else {
-			return fees.HourFee
-		}
-	case FEE_BUMP:
-		if (fees.FastestFee*2) > w.maxFee || fees.FastestFee == 0 {
-			return w.maxFee * 2
-		} else {
-			return fees.FastestFee * 2
-		}
-	default:
-		return w.normalFee
-	}
+	return w.feeProvider.GetFeePerByte(feeLevel)
 }

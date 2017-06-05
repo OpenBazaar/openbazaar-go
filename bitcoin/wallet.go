@@ -88,8 +88,8 @@ type BitcoinWallet interface {
 	// Use this to re-download merkle blocks in case of missed transactions
 	ReSyncBlockchain(fromHeight int32)
 
-	// Return the number of confirmations for a transaction
-	GetConfirmations(txid chainhash.Hash) (uint32, error)
+	// Return the number of confirmations and the height for a transaction
+	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
 
 	// Cleanly disconnect from the wallet
 	Close()

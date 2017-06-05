@@ -248,13 +248,13 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (spvwallet.Txn, err
 	return t, nil
 }
 
-func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
+func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
 	includeWatchOnly := true
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	return uint32(resp.Confirmations), nil
+	return uint32(resp.Confirmations), uint32(resp.BlockIndex), nil
 }
 
 func (w *BitcoindWallet) ChainTip() uint32 {

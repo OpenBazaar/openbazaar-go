@@ -45,7 +45,8 @@ message TransactionRecord {
     string txid                         = 1;
     int64 value                         = 2;
     uint32 confirmations                = 3;
-    google.protobuf.Timestamp timestamp = 4;
+    uint32 height                       = 4;
+    google.protobuf.Timestamp timestamp = 5;
 }
 
 message PeerAndProfile {
