@@ -19,12 +19,13 @@ message Coupon {
 }
 
 message OrderRespApi {
-    RicardianContract contract              = 1;
-    OrderState state                        = 2;
-    bool read                               = 3;
-    bool funded                             = 4;
-    uint64 unreadChatMessages               = 5;
-    repeated TransactionRecord transactions = 6;
+    RicardianContract contract                            = 1;
+    OrderState state                                      = 2;
+    bool read                                             = 3;
+    bool funded                                           = 4;
+    uint64 unreadChatMessages                             = 5;
+    repeated TransactionRecord paymentAddressTransactions = 6;
+    TransactionRecord refundAddressTransaction            = 7;
 }
 
 message CaseRespApi {

@@ -1575,40 +1575,13 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.Read = read
 	resp.State = state
 
-	txMap := make(map[string]*pb.TransactionRecord)
-	for _, r := range records {
-		record, ok := txMap[r.Txid]
-		if ok {
-			record.Value += r.Value
-			txMap[r.Txid] = record
-		} else {
-			tx := new(pb.TransactionRecord)
-			tx.Txid = r.Txid
-			tx.Value = r.Value
-			ts, err := ptypes.TimestampProto(r.Timestamp)
-			if err != nil {
-				continue
-			}
-			tx.Timestamp = ts
-			ch, err := chainhash.NewHashFromStr(tx.Txid)
-			if err != nil {
-				continue
-			}
-			confirmations, height, err := i.node.Wallet.GetConfirmations(*ch)
-			if err != nil {
-				continue
-			}
-			tx.Height = height
-			tx.Confirmations = confirmations
-			txMap[r.Txid] = tx
-		}
+	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
 	}
-	txs := []*pb.TransactionRecord{}
-	for _, rec := range txMap {
-		txs = append(txs, rec)
-	}
-
-	resp.Transactions = txs
+	resp.PaymentAddressTransactions = paymentTxs
+	resp.RefundAddressTransaction = refundTx
 
 	unread, err := i.node.Datastore.Chat().GetUnreadCount(orderId)
 	if err != nil {
