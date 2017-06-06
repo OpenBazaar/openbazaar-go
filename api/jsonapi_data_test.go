@@ -216,11 +216,11 @@ const avatarValidJSON = `{
 }`
 
 const avatarValidJSONResponse = `{
-    "tiny": "QmUhqSh3TA2scn74ii2RTw1EWi28nafsZRCCD4BHmfHJYy",
-    "small": "QmURikfNwrRoEW64hc8RRT2gTibF2nzqS6PC5nywmYmGoV",
-    "medium": "QmRFzKGf9NbzuB7fXGWqUbTQw8CWEUr8FxJvpoosKW7ZNz",
-    "large": "QmSuU1n61MDu8mrWajPrMAVBzWy8oTX3G7t5qWH5kBck1m",
-    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8"
+    "large": "QmaPwqUMAdWoGBQo8G6DNM2qa15BqDd5hLP7heLPk5gAkx",
+    "medium": "QmZcPEpeS5rWZCVHhjX1xdo7AEuEcTQHW2BqizGXhnzZjq",
+    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8",
+    "small": "QmT6ihQa2EY1ByiNmtuu1AWMSm7PdFoK77KN8N7Hy6EqUj",
+    "tiny": "QmQRjmW6EAXeXjDtvLWKLvbBoageEycVN6bXUwwkBeLU4s"
 }`
 
 const avatarUnexpectedEOFJSON = `{
@@ -245,14 +245,14 @@ const imageValidJSON = `[{
 }]`
 
 const imageValidJSONResponse = `[{
-    "filename": "blue_tshirt.jpg",
-    "hashes": {
-        "tiny": "QmepkbsBnAunnynvmHGpA9E9wijwyEVGHfikhbAV7jYBhh",
-        "small": "QmWtReAeQVbzRFNkhMcHqz3LfxiCVMtrKN8nVH3Z4c4Jer",
-        "medium": "Qmc4UYuHhdy9kJVT37bc55wrZftLSRnuwQNKiKYB8oLvtX",
-        "large": "QmVDF9Th6dyk8mwso8PraC47cB1rg8gRqvGPDUQZbenJvX",
-        "original": "Qme5EXQZ5P87YjJApgSAedBpUhRwLX2sTQFgynoj77zTEd"
-    }
+        "filename": "blue_tshirt.jpg",
+        "hashes": {
+            "large": "QmPwg3VK1xdMpPxQ9omSAAdd4GuRPpucaWcUsZZK2j1EJZ",
+            "medium": "QmQZKAS1rHrawNSB63WfgEaHeabuNz5h3hTQEAcn4AC9oC",
+            "original": "Qme5EXQZ5P87YjJApgSAedBpUhRwLX2sTQFgynoj77zTEd",
+            "small": "QmYetHRdJRdEDt8ZNTHKdq5gUXDPB4u8R6FFyU1Jk8jC67",
+            "tiny": "QmeW3HU2zGDRLynbkhcB3KVkTRoKUifW48rjgkktGwUbY9"
+        }
 }]`
 
 const headerValidJSON = `{
@@ -260,11 +260,11 @@ const headerValidJSON = `{
 }`
 
 const headerValidJSONResponse = `{
-    "tiny": "QmbKPEBbzVwax8rnrdxLepfmNkdTqnw2RSfJE19iax3fLK",
-    "small": "QmQ77aAsYjs1rxcp7xZ5qUki1RGDGjQ99cok3ynUMF8Sc5",
-    "medium": "QmVoh493xbSaKYV9yLtEapaGQ7J31gdCiDQHGSd86PNo8B",
-    "large": "QmUWuTZhjUuY8VYWVZrcodsrsbQvckSZwTRxmJ3Avhnw1y",
-    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8"
+    "large": "QmSMNeymDVp1w6r9KomxCSHUfwt4pNDKRfkddmFdcDybis",
+    "medium": "QmWxunFtgUjAeYDYuuuzDGHbdu7odEQzRNWL2QLpMiB5f5",
+    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8",
+    "small": "QmXgkkdnxVdKCoqxexFKwT9hGSZdZTU9xGy8Fcwgfij5dV",
+    "tiny": "QmWm6Qkry7ekJiBsR77jWk7yRMhsSQDRCXxauHVN1PpcD2"
 }`
 
 //
