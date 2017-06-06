@@ -459,8 +459,8 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type retImage struct {
-		Filename string      `json:"filename"`
-		Hashes   core.Images `json:"hashes"`
+		Filename string           `json:"filename"`
+		Hashes   pb.Profile_Image `json:"hashes"`
 	}
 	var retData []retImage
 	for _, img := range images {
