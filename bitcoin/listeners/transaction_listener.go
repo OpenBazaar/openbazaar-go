@@ -220,6 +220,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		Index:        output.Index,
 		Value:        output.Value,
 		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
+		Timestamp:    time.Now(),
 	}
 	records = append(records, record)
 	l.db.Purchases().UpdateFunding(orderId, funded, records)
