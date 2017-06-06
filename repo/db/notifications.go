@@ -116,20 +116,8 @@ func (n *NotficationsDB) MarkAsRead(notifID int) error {
 func (n *NotficationsDB) MarkAllAsRead() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	tx, err := n.db.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, _ := tx.Prepare("update notifications set read=1")
-
-	defer stmt.Close()
-	_, err = stmt.Exec()
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	tx.Commit()
-	return nil
+	_, err := n.db.Exec("update notifications set read=1")
+	return err
 }
 
 func (n *NotficationsDB) Delete(notifID int) error {
