@@ -94,7 +94,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			for _, rec := range payments {
 				if rec.Value < 0 {
 					refundRecord.Txid = rec.Txid
-					refundRecord.Value = rec.Value
+					refundRecord.Value = -rec.Value
 					refundRecord.Confirmations = rec.Confirmations
 					refundRecord.Height = rec.Height
 					refundRecord.Timestamp = rec.Timestamp
