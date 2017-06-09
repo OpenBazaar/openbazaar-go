@@ -383,6 +383,18 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	// Set message state to canceled
 	service.datastore.Sales().Put(orderId, *contract, pb.OrderState_CANCELED, false)
 
+	var thumbnailTiny string
+	var thumbnailSmall string
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
+		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
+	}
+
+	// Send notification to websocket
+	n := notifications.OrderCancelNotification{"canceled", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
+	service.broadcast <- n
+	service.datastore.Notifications().Put(n, n.Type, time.Now())
+
 	return nil, nil
 }
 
@@ -538,7 +550,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Send notification to websocket
-	n := notifications.OrderCancelNotification{"cancel", rejectMsg.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
+	n := notifications.OrderDeclinedNotification{"declined", rejectMsg.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
 

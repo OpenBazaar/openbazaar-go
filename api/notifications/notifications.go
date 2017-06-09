@@ -69,6 +69,12 @@ type OrderConfirmationNotification struct {
 	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
+type OrderDeclinedNotification struct {
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
+}
+
 type OrderCancelNotification struct {
 	Type      string    `json:"type"`
 	OrderId   string    `json:"orderId"`
