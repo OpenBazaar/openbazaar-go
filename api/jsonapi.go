@@ -1532,8 +1532,9 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_PENDING || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING and only a direct payment to cancel")
+
+	if !(state == pb.OrderState_AWAITING_PAYMENT && len(records) > 0) || state != pb.OrderState_PENDING || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING or partially funded and only a direct payment to cancel")
 		return
 	}
 	err = i.node.CancelOfflineOrder(contract, records)
