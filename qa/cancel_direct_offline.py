@@ -108,7 +108,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if len(resp["transactions"]) <= 0:
+        if len(resp["paymentAddressTransactions"]) <= 0:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
@@ -134,7 +134,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "CANCELED":
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to save as canceled")
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
         # startup alice again
