@@ -11,4 +11,4 @@ VOLUME /var/lib/openbazaar
 COPY --from=0 /opt/openbazaard /opt/openbazaard
 COPY --from=0 /etc/ssl/certs/ /etc/ssl/certs/
 ENTRYPOINT ["/opt/openbazaard"]
-CMD ["start", "-d", "/var/lib/openbazaar", ">", "/var/log/openbazaar/openbazaar.log", "2>", "/var/log/openbazaar/error.log"]
+CMD ["start", "-d", "/var/lib/openbazaar"]
