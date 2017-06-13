@@ -274,7 +274,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteDisputedTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to record payout transaction")
         if resp["state"] != "RESOLVED":
             raise TestFailure("CompleteDisputedTest - FAIL: Bob failed to set state to RESOLVED")
@@ -285,7 +285,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("CompleteDisputedTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text, object_pairs_hook=OrderedDict)
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("CompleteDisputedTest - FAIL: Alice failed to record payout transaction")
         if resp["state"] != "RESOLVED":
             raise TestFailure("CompleteDisputedTest - FAIL: Alice failed to set state to RESOLVED")

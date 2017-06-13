@@ -135,7 +135,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if len(resp["transactions"]) <= 0:
+        if len(resp["paymentAddressTransactions"]) <= 0:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("RejectModeratedOffline - FAIL: Bob incorrectly saved as unfunded")
@@ -171,7 +171,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "DECLINED":
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to save as declined")
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to detect outgoing payment")
 
         # bob check order rejected correctly
@@ -182,7 +182,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "DECLINED":
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to save as declined")
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to detect outgoing payment")
 
         # Check the funds moved into bob's wallet
