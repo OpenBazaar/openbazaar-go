@@ -743,6 +743,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			return 0, errors.New("Shipping option not found in listing")
 		}
 
+		if option.Type == pb.Listing_ShippingOption_LOCAL_PICKUP {
+			continue
+		}
+
 		// Check that this option ships to us
 		regions := make(map[pb.CountryCode]bool)
 		for _, country := range option.Regions {
