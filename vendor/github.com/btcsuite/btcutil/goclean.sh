@@ -4,9 +4,10 @@
 # 2. goimports     (https://github.com/bradfitz/goimports)
 # 3. golint        (https://github.com/golang/lint)
 # 4. go vet        (http://golang.org/cmd/vet)
-# 5. unconvert     (https://github.com/mdempsky/unconvert)
-# 6. race detector (http://blog.golang.org/race-detector)
-# 7. test coverage (http://blog.golang.org/cover)
+# 5. gosimple      (https://github.com/dominikh/go-simple)
+# 6. unconvert     (https://github.com/mdempsky/unconvert)
+# 7. race detector (http://blog.golang.org/race-detector)
+# 8. test coverage (http://blog.golang.org/cover)
 #
 # gometalint (github.com/alecthomas/gometalinter) is used to run each each
 # static checker.
@@ -19,6 +20,7 @@ test -z "$(gometalinter --disable-all \
 --enable=goimports \
 --enable=golint \
 --enable=vet \
+--enable=gosimple \
 --enable=unconvert \
 --deadline=120s ./... | grep -v 'ExampleNew' 2>&1 | tee /dev/stderr)"
 env GORACE="halt_on_error=1" go test -race ./...

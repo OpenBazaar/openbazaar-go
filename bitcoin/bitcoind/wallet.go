@@ -1,6 +1,7 @@
 package bitcoind
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,10 +17,7 @@ import (
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	//"io/ioutil"
 	"os/exec"
-	//"path"
-	"bytes"
 	"strconv"
 	"strings"
 	"time"
@@ -167,6 +165,25 @@ func (w *BitcoindWallet) NewAddress(purpose spvwallet.KeyPurpose) btc.Address {
 	return addr
 }
 
+func (w *BitcoindWallet) DecodeAddress(addr string) (btc.Address, error) {
+	return btc.DecodeAddress(addr, w.params)
+}
+
+func (w *BitcoindWallet) ScriptToAddress(script []byte) (btc.Address, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("unknown script")
+	}
+	return addrs[0], nil
+}
+
+func (w *BitcoindWallet) AddressToScript(addr btc.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
+}
+
 func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 	_, err := w.rpcClient.DumpPrivKey(addr)
 	if err != nil {
@@ -201,10 +218,14 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 			return ret, err
 		}
 		ts := time.Unix(r.TimeReceived, 0)
+		height := int32(0)
+		if r.BlockIndex != nil {
+			height = int32(*r.BlockIndex)
+		}
 		t := spvwallet.Txn{
 			Txid:      r.TxID,
 			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height:    int32(*r.BlockIndex),
+			Height:    height,
 			Timestamp: ts,
 		}
 		ret = append(ret, t)
@@ -227,13 +248,13 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (spvwallet.Txn, err
 	return t, nil
 }
 
-func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
+func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
 	includeWatchOnly := true
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
-	return uint32(resp.Confirmations), nil
+	return uint32(resp.Confirmations), uint32(resp.BlockIndex), nil
 }
 
 func (w *BitcoindWallet) ChainTip() uint32 {

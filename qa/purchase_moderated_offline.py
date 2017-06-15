@@ -136,7 +136,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
-        if len(resp["transactions"]) <= 0:
+        if len(resp["paymentAddressTransactions"]) <= 0:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Bob incorrectly saved as unfunded")

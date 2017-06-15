@@ -11,9 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -176,13 +174,13 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			}
 		}
 
-		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, n.Wallet.Params())
+		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
 		var output spvwallet.TransactionOutput
 
-		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		outputScript, err := n.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return err
 		}
@@ -284,7 +282,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		}
 	}
 	if validateAddress {
-		_, err = btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+		_, err = n.Wallet.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
 		if err != nil {
 			return err
 		}

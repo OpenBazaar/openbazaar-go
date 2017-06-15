@@ -19,12 +19,13 @@ message Coupon {
 }
 
 message OrderRespApi {
-    RicardianContract contract              = 1;
-    OrderState state                        = 2;
-    bool read                               = 3;
-    bool funded                             = 4;
-    uint64 unreadChatMessages               = 5;
-    repeated TransactionRecord transactions = 6;
+    RicardianContract contract                            = 1;
+    OrderState state                                      = 2;
+    bool read                                             = 3;
+    bool funded                                           = 4;
+    uint64 unreadChatMessages                             = 5;
+    repeated TransactionRecord paymentAddressTransactions = 6;
+    TransactionRecord refundAddressTransaction            = 7;
 }
 
 message CaseRespApi {
@@ -42,9 +43,11 @@ message CaseRespApi {
 }
 
 message TransactionRecord {
-    string txid          = 1;
-    int64 value          = 2;
-    uint32 confirmations = 3;
+    string txid                         = 1;
+    int64 value                         = 2;
+    uint32 confirmations                = 3;
+    uint32 height                       = 4;
+    google.protobuf.Timestamp timestamp = 5;
 }
 
 message PeerAndProfile {

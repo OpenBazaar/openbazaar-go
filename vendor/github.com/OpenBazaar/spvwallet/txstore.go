@@ -367,7 +367,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(txid, -1)
+		err = ts.Txns().UpdateHeight(s.SpendTxid, -1)
 		if err != nil {
 			return err
 		}
@@ -383,7 +383,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 				return err
 			}
 		}
-		// If an dependency of the spend is dead then mark the spend as dead
+		// If a dependency of the spend is dead then mark the spend as dead
 		if txid.IsEqual(&s.Utxo.Op.Hash) {
 			if err := markStxoAsDead(s); err != nil {
 				return err
@@ -404,9 +404,9 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			if err != nil {
 				return err
 			}
-			ts.Txns().UpdateHeight(txid, -1)
 		}
 	}
+	ts.Txns().UpdateHeight(txid, -1)
 	return nil
 }
 

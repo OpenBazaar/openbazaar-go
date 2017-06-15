@@ -173,8 +173,10 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Alice failed to save as rejected")
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("RefundModeratedTest - FAIL: Alice failed to detect outgoing payment")
+        if "refundAddressTransaction" not in resp or resp["refundAddressTransaction"] == {}:
+            raise TestFailure("RefundModeratedTest - FAIL: Alice failed to detect refund payment")
 
         # bob check order refunded correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -184,8 +186,10 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundModeratedTest - FAIL: Bob failed to save as rejected")
-        if len(resp["transactions"]) != 2:
+        if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("RefundModeratedTest - FAIL: Bob failed to detect outgoing payment")
+        if "refundAddressTransaction" not in resp or resp["refundAddressTransaction"] == {}:
+            raise TestFailure("RefundModeratedTest - FAIL: Alice failed to detect refund payment")
 
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"

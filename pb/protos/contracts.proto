@@ -349,7 +349,13 @@ message Refund {
     string orderID                      = 1;
     google.protobuf.Timestamp timestamp = 2;
     repeated BitcoinSignature sigs      = 3;
-    string memo                         = 4;
+    TransactionInfo refundTransaction   = 4;
+    string memo                         = 5;
+
+    message TransactionInfo {
+        string txid  = 1;
+        uint64 value = 2;
+    }
 }
 
 message ID {

@@ -109,11 +109,11 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		}
 		recordAvailable = false
 	}
-	/*TODO: re-enable when client adds support for this
+
 	if err := ValidateProfile(&pro); err != nil {
 		return pb.Profile{}, err
 	}
-	*/
+
 	// Update the record with a new EOL
 	go func() {
 		if !recordAvailable {
@@ -153,12 +153,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if err != nil {
 		return err
 	}
-	/*
-		TODO: re-enable when client adds support for this
-		if err := ValidateProfile(profile); err != nil {
-			return err
-		}
-	*/
+
+	if err := ValidateProfile(profile); err != nil {
+		return err
+	}
 
 	profile.BitcoinPubkey = hex.EncodeToString(mPubkey.SerializeCompressed())
 	m := jsonpb.Marshaler{
@@ -285,8 +283,14 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 }
 
 func ValidateProfile(profile *pb.Profile) error {
+	if strings.Contains(profile.Handle, "@") {
+		return errors.New("Handle should not contain @")
+	}
 	if len(profile.Handle) > WordMaxCharacters {
 		return fmt.Errorf("Handle character length is greater than the max of %d", WordMaxCharacters)
+	}
+	if len(profile.Name) == 0 {
+		return errors.New("Profile name not set")
 	}
 	if len(profile.Name) > WordMaxCharacters {
 		return fmt.Errorf("Name character length is greater than the max of %d", WordMaxCharacters)
@@ -348,7 +352,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			}
 		}
 	}
-	if profile.AvatarHashes != nil {
+	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
+		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
 		_, err := mh.FromB58String(profile.AvatarHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be multihashes")
@@ -370,7 +375,8 @@ func ValidateProfile(profile *pb.Profile) error {
 			return errors.New("Original image hashes must be multihashes")
 		}
 	}
-	if profile.HeaderHashes != nil {
+	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
+		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
 		_, err := mh.FromB58String(profile.HeaderHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be multihashes")

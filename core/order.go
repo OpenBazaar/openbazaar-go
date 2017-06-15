@@ -16,9 +16,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -66,6 +64,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
+		if data.Moderator == n.IpfsNode.Identity.Pretty() {
+			return "", "", 0, false, errors.New("Cannot select self as moderator")
+		}
+		if data.Moderator == contract.VendorListings[0].VendorID.PeerID {
+			return "", "", 0, false, errors.New("Cannot select vendor as moderator")
+		}
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
@@ -150,7 +154,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := n.Wallet.AddressToScript(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -221,7 +225,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, true)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	} else { // Direct payment
@@ -286,7 +290,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			payment.RedeemScript = hex.EncodeToString(redeemScript)
 			payment.Chaincode = hex.EncodeToString(chaincode)
 
-			script, err := txscript.PayToAddrScript(addr)
+			script, err := n.Wallet.AddressToScript(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -349,11 +353,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			addr, err := btcutil.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress, n.Wallet.Params())
+			addr, err := n.Wallet.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			script, err := txscript.PayToAddrScript(addr)
+			script, err := n.Wallet.AddressToScript(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -362,7 +366,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, true)
+			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
@@ -606,7 +610,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
-	refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, n.Wallet.Params())
+	refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 	if err != nil {
 		return err
 	}
@@ -737,6 +741,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		option, ok := shippingOptions[strings.ToLower(item.ShippingOption.Name)]
 		if !ok {
 			return 0, errors.New("Shipping option not found in listing")
+		}
+
+		if option.Type == pb.Listing_ShippingOption_LOCAL_PICKUP {
+			continue
 		}
 
 		// Check that this option ships to us

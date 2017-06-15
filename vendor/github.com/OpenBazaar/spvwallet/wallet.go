@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"errors"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
@@ -20,11 +21,7 @@ type SPVWallet struct {
 	masterPrivateKey *hd.ExtendedKey
 	masterPublicKey  *hd.ExtendedKey
 
-	maxFee      uint64
-	priorityFee uint64
-	normalFee   uint64
-	economicFee uint64
-	feeAPI      string
+	feeProvider *FeeProvider
 
 	repoPath string
 
@@ -78,16 +75,19 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
 		params:           config.Params,
-		maxFee:           config.MaxFee,
-		priorityFee:      config.HighFee,
-		normalFee:        config.MediumFee,
-		economicFee:      config.LowFee,
-		feeAPI:           config.FeeAPI.String(),
-		fPositives:       make(chan *peer.Peer),
-		stopChan:         make(chan int),
-		fpAccumulator:    make(map[int32]int32),
-		blockQueue:       make(chan chainhash.Hash, 32),
-		mutex:            new(sync.RWMutex),
+		feeProvider: NewFeeProvider(
+			config.MaxFee,
+			config.HighFee,
+			config.MediumFee,
+			config.LowFee,
+			config.FeeAPI.String(),
+			config.Proxy,
+		),
+		fPositives:    make(chan *peer.Peer),
+		stopChan:      make(chan int),
+		fpAccumulator: make(map[int32]int32),
+		blockQueue:    make(chan chainhash.Hash, 32),
+		mutex:         new(sync.RWMutex),
 	}
 
 	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)
@@ -194,6 +194,25 @@ func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
 	return btc.Address(addr)
 }
 
+func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
+	return btc.DecodeAddress(addr, w.params)
+}
+
+func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("unknown script")
+	}
+	return addrs[0], nil
+}
+
+func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
+	return txscript.PayToAddrScript(addr)
+}
+
 func (w *SPVWallet) HasKey(addr btc.Address) bool {
 	script, err := txscript.PayToAddrScript(addr)
 	if err != nil {
@@ -234,16 +253,16 @@ func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (Txn, error) {
 	return txn, err
 }
 
-func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, error) {
+func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
 	_, txn, err := w.txstore.Txns().Get(txid)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	if txn.Height == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
 	chainTip := w.ChainTip()
-	return chainTip - uint32(txn.Height), nil
+	return chainTip - uint32(txn.Height), uint32(txn.Height), nil
 }
 
 func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {

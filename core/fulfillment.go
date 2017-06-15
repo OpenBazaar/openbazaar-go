@@ -10,8 +10,6 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -42,13 +40,13 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			}
 		}
 
-		refundAddress, err := btcutil.DecodeAddress(contract.BuyerOrder.RefundAddress, n.Wallet.Params())
+		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
 		var output spvwallet.TransactionOutput
 
-		outputScript, err := txscript.PayToAddrScript(refundAddress)
+		outputScript, err := n.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return err
 		}
@@ -225,7 +223,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		if fulfillment.Payout == nil {
 			return errors.New("Payout object for multisig is nil")
 		}
-		_, err := btcutil.DecodeAddress(fulfillment.Payout.PayoutAddress, n.Wallet.Params())
+		_, err := n.Wallet.DecodeAddress(fulfillment.Payout.PayoutAddress)
 		if err != nil {
 			return errors.New("Invalid payout address")
 		}
