@@ -64,7 +64,7 @@ func (m *notificationManager) getNotifiers() []notifier {
 
 	// SMTP notifier
 	conf := settings.SMTPSettings
-	if conf.Notifications {
+	if conf != nil && conf.Notifications {
 		notifiers = append(notifiers, &smtpNotifier{settings: conf})
 	}
 	return notifiers
