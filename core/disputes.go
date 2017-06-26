@@ -1051,5 +1051,21 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
+
+	// Update database
+	orderID, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+	var isPurchase bool
+	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
+		isPurchase = true
+	}
+	if isPurchase {
+		n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_RESOLVED, true)
+	} else {
+		n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_RESOLVED, true)
+	}
+
 	return nil
 }
