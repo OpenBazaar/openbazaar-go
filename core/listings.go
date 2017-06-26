@@ -695,6 +695,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	if listing.Item.Title == "" {
 		return errors.New("Listing must have a title")
 	}
+	if listing.Item.Price == 0 {
+		return errors.New("Zero price listings are not allowed")
+	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
 		return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)
 	}
