@@ -158,6 +158,8 @@ class RefundDirectTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Alice failed to save as rejected")
+        if "refundAddressTransaction" not in resp:
+            raise TestFailure("RefundDirectTest - FAIL: Alice failed to record refund payment")
 
         # bob check order refunded correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -167,6 +169,8 @@ class RefundDirectTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if resp["state"] != "REFUNDED":
             raise TestFailure("RefundDirectTest - FAIL: Bob failed to save as rejected")
+        if "refundAddressTransaction" not in resp:
+            raise TestFailure("RefundDirectTest - FAIL: Bob failed to record refund payment")
 
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"

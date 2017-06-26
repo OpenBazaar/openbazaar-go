@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			refundRecord.Timestamp = contract.Refund.Timestamp
 			refundRecord.Confirmations = confirmations
 			refundRecord.Height = height
-
+			log.Notice("here", refundRecord)
 		}
 	}
 	return paymentRecords, refundRecord, nil
