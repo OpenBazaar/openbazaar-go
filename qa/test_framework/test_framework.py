@@ -155,7 +155,7 @@ class OpenBazaarTestFramework(object):
         print()
         f.close()
 
-    def teardown(self, delete_data):
+    def teardown(self):
         for n in self.nodes:
             requests.post(n["gateway_url"] + "ob/shutdown")
         time.sleep(2)
@@ -165,8 +165,6 @@ class OpenBazaarTestFramework(object):
             except BrokenPipeError:
                 pass
         time.sleep(10)
-        if delete_data:
-            shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
 
     def main(self, options=["--disablewallet", "--testnet", "--disableexchangerates"]):
         parser = argparse.ArgumentParser(
@@ -182,6 +180,11 @@ class OpenBazaarTestFramework(object):
         self.bitcoind = args.bitcoind
         self.options = options
 
+        try:
+            shutil.rmtree(os.path.join(self.temp_dir, "openbazaar-go"))
+        except:
+            pass
+
         failure = False
         try:
             self.setup_network()
@@ -194,10 +197,7 @@ class OpenBazaarTestFramework(object):
             traceback.print_tb(sys.exc_info()[2])
             failure = True
 
-        if not failure:
-            self.teardown(True)
-        else:
-            self.teardown(True)
+        self.teardown()
 
         if failure:
             sys.exit(1)
