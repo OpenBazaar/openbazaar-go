@@ -882,7 +882,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
-	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
+	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || strings.ToLower(currencyCode) == "t"+strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
