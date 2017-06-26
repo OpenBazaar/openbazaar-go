@@ -850,13 +850,18 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	// Load the order
 	isPurchase := false
 	var contract *pb.RicardianContract
-	contract, _, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
+	var state pb.OrderState
+	contract, state, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
 	if err != nil {
-		contract, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
+		contract, state, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
 			return nil, err
 		}
 		isPurchase = true
+	}
+
+	if state != pb.OrderState_DISPUTED {
+		return nil, fmt.Errorf("Order is in %s state. Must be DISPUTED", state.String())
 	}
 
 	// Validate
