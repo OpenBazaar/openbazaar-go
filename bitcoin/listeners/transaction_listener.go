@@ -79,11 +79,13 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 
-		var fundsReleased bool
-		for _, r := range records {
+		fundsReleased := true
+		for i, r := range records {
 			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
-				r.Spent = true
-				fundsReleased = true
+				records[i].Spent = true
+			}
+			if records[i].Value > 0 && !records[i].Spent {
+				fundsReleased = false
 			}
 		}
 
