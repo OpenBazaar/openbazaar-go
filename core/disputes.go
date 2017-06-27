@@ -1047,6 +1047,28 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		moderatorSigs = append(moderatorSigs, s)
 	}
 
+	accept := new(pb.DisputeAcceptance)
+	// Create timestamp
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	accept.Timestamp = ts
+	accept.ClosedBy = n.IpfsNode.Identity.Pretty()
+	contract.DisputeAcceptance = accept
+
+	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+
+	// Update database
+	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
+		n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_DISPUTED, true)
+	} else {
+		n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DISPUTED, true)
+	}
+
 	_, err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
 	if err != nil {
 		return err

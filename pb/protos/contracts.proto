@@ -13,8 +13,9 @@ message RicardianContract {
     OrderCompletion buyerOrderCompletion               = 5;
     Dispute dispute                                    = 6;
     DisputeResolution disputeResolution                = 7;
-    Refund refund                                      = 8;
-    repeated Signature signatures                      = 9;
+    DisputeAcceptance disputeAcceptance                = 8;
+    Refund refund                                      = 9;
+    repeated Signature signatures                      = 10;
 }
 
 message Listing {
@@ -337,6 +338,11 @@ message DisputeResolution {
                 uint64 amount  = 2;
             }
     }
+}
+
+message DisputeAcceptance {
+    google.protobuf.Timestamp timestamp = 1;
+    string closedBy                     = 2;
 }
 
 message Outpoint {

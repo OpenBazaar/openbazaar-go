@@ -11,6 +11,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	"sync"
@@ -101,11 +102,25 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			l.db.Sales().UpdateFunding(orderId, funded, records)
 			// This is a dispute payout. We should set the order state.
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+					accept := new(pb.DisputeAcceptance)
+					ts, _ := ptypes.TimestampProto(time.Now())
+					accept.Timestamp = ts
+					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
+					contract.DisputeAcceptance = accept
+				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
+					accept := new(pb.DisputeAcceptance)
+					ts, _ := ptypes.TimestampProto(time.Now())
+					accept.Timestamp = ts
+					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
+					contract.DisputeAcceptance = accept
+				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		}
