@@ -675,16 +675,14 @@ func (n *OpenBazaarNode) SignDisputeResolution(contract *pb.RicardianContract) (
 func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []string {
 	var validationErrors []string
 
-	// Contract should have a listing, order, and order confirmation to make it to this point
+	// Contract should have a listing and order to make it to this point
 	if len(contract.VendorListings) == 0 {
 		validationErrors = append(validationErrors, "Contract contains no listings")
 	}
 	if contract.BuyerOrder == nil {
 		validationErrors = append(validationErrors, "Contract is missing the buyer's order")
 	}
-	if contract.VendorOrderConfirmation == nil {
-		validationErrors = append(validationErrors, "Contract is missing the order confirmation")
-	}
+
 	if contract.VendorListings[0].VendorID == nil || contract.VendorListings[0].VendorID.Pubkeys == nil {
 		validationErrors = append(validationErrors, "The listing is missing the vendor ID information. Unable to validate any signatures.")
 		return validationErrors
@@ -764,8 +762,10 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 	}
 
 	// Verify the order confirmation signature
-	if err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGuid); err != nil {
-		validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
+	if contract.VendorOrderConfirmation != nil {
+		if err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGuid); err != nil {
+			validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
+		}
 	}
 
 	// There should be one fulfilment signature for each vendorOrderFulfilment object
@@ -1064,9 +1064,9 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 
 	// Update database
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
-		n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_DISPUTED, true)
+		n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_DECIDED, true)
 	} else {
-		n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DISPUTED, true)
+		n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DECIDED, true)
 	}
 
 	_, err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
