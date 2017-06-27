@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"os"
@@ -164,6 +165,10 @@ func (w *SPVWallet) CurrencyCode() string {
 	} else {
 		return "tbtc"
 	}
+}
+
+func (w *SPVWallet) IsDust(amount int64) bool {
+	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {

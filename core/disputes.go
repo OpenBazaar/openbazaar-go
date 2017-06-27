@@ -375,7 +375,6 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	// Decide whose contract to use
 	var buyerPayout bool
 	var vendorPayout bool
-	var moderatorPayout bool
 	var outpoints []*pb.Outpoint
 	var redeemScript string
 	var chaincode string
@@ -467,15 +466,16 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
+	outMap := make(map[string]spvwallet.TransactionOutput)
 	var outputs []spvwallet.TransactionOutput
 	var modAddr btcutil.Address
 	var modValue uint64
 	modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	modValue, err = n.GetModeratorFee(totalOut)
-	var modOutputScript []byte
 	if err != nil {
 		return err
 	}
+	var modOutputScript []byte
 	if modValue > 0 {
 		modOutputScript, err = n.Wallet.AddressToScript(modAddr)
 		if err != nil {
@@ -486,7 +486,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(modValue),
 		}
 		outputs = append(outputs, out)
-		moderatorPayout = true
+		outMap["moderator"] = out
 	}
 
 	var buyerAddr btcutil.Address
@@ -507,6 +507,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(buyerValue),
 		}
 		outputs = append(outputs, out)
+		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
@@ -526,6 +527,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(vendorValue),
 		}
 		outputs = append(outputs, out)
+		outMap["vendor"] = out
 	}
 
 	if len(outputs) == 0 {
@@ -555,15 +557,20 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	// Subtract fee from each output in proportion to output value
 	var outs []spvwallet.TransactionOutput
-	for _, output := range outputs {
+	for role, output := range outMap {
 		outPercentage := float64(output.Value) / float64(totalOut)
 		outputShareOfFee := outPercentage * float64(txFee)
-		o := spvwallet.TransactionOutput{
-			Value:        output.Value - int64(outputShareOfFee),
-			ScriptPubKey: output.ScriptPubKey,
-			Index:        output.Index,
+		val := output.Value - int64(outputShareOfFee)
+		if !n.Wallet.IsDust(val) {
+			o := spvwallet.TransactionOutput{
+				Value:        val,
+				ScriptPubKey: output.ScriptPubKey,
+				Index:        output.Index,
+			}
+			outs = append(outs, o)
+		} else {
+			delete(outMap, role)
 		}
-		outs = append(outs, o)
 	}
 
 	// Create moderator key
@@ -615,17 +622,29 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	payout := new(pb.DisputeResolution_Payout)
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
-	if buyerPayout {
+	if _, ok := outMap["buyer"]; ok {
 		outputShareOfFee := (float64(buyerValue) / float64(totalOut)) * float64(txFee)
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: buyerValue - uint64(outputShareOfFee)}
+		amt := int64(buyerValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: uint64(amt)}
 	}
-	if vendorPayout {
+	if _, ok := outMap["vendor"]; ok {
 		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: vendorValue - uint64(outputShareOfFee)}
+		amt := int64(vendorValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: uint64(amt)}
 	}
-	if moderatorPayout {
+	if _, ok := outMap["moderator"]; ok {
 		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: modValue - uint64(outputShareOfFee)}
+		amt := int64(modValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: uint64(amt)}
 	}
 
 	d.Payout = payout

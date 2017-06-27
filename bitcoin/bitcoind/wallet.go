@@ -15,6 +15,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil/txsort"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"os/exec"
@@ -145,6 +146,10 @@ func (w *BitcoindWallet) CurrencyCode() string {
 	} else {
 		return "tbtc"
 	}
+}
+
+func (w *BitcoindWallet) IsDust(amount int64) bool {
+	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *BitcoindWallet) MasterPrivateKey() *hd.ExtendedKey {
