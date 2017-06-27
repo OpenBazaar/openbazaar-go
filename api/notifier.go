@@ -85,6 +85,9 @@ func (notifier *smtpNotifier) notify(n interface{}) error {
 		"%s\r\n",
 	}, "\r\n")
 	head, body := notifications.Describe(n)
+	if head == "" || body == "" {
+		return nil
+	}
 	conf := notifier.settings
 	data := fmt.Sprintf(template, conf.SenderEmail, conf.RecipientEmail, head, body)
 	return sendEmail(notifier.settings, []byte(data))
