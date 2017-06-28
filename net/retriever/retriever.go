@@ -33,7 +33,7 @@ type MessageRetriever struct {
 	service      net.NetworkService
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue []pb.Envelope
+	messageQueue map[pb.Message_MessageType][]pb.Envelope
 	httpClient   *http.Client
 	queueLock    *sync.Mutex
 	*sync.WaitGroup
@@ -46,7 +46,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, nil, client, new(sync.Mutex), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]pb.Envelope), client, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
@@ -108,10 +108,54 @@ func (m *MessageRetriever) fetchPointers() {
 
 	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
-	for _, env := range m.messageQueue {
-		m.handleMessage(env, nil)
+
+	processQueue := func(queue []pb.Envelope) {
+		for _, env := range queue {
+			m.handleMessage(env, nil)
+		}
 	}
-	m.messageQueue = []pb.Envelope{}
+
+	queue, ok := m.messageQueue[pb.Message_ORDER]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_CANCEL]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_REJECT]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_CONFIRMATION]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_FULFILLMENT]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_REFUND]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_OPEN]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_UPDATE]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_CLOSE]
+	if ok {
+		processQueue(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_COMPLETION]
+	if ok {
+		processQueue(queue)
+	}
+	m.messageQueue = make(map[pb.Message_MessageType][]pb.Envelope)
 
 	// For initial start up only
 	if m.WaitGroup != nil {
@@ -192,16 +236,33 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		m.sendAck(id.Pretty(), pid)
 	}
 
-	/* Order messages need to be processed in the correct order, so cancel
-	and dispute close messages need to be processed last. */
-	if env.Message.MessageType == pb.Message_ORDER_CANCEL || env.Message.MessageType == pb.Message_DISPUTE_CLOSE {
-		m.queueLock.Lock()
-		m.messageQueue = append(m.messageQueue, env)
-		m.queueLock.Unlock()
-		return
+	// Order messages need to be processed in the correct order so let's cue them up
+	m.queueLock.Lock()
+	defer m.queueLock.Unlock()
+	switch env.Message.MessageType {
+	case pb.Message_ORDER:
+		m.messageQueue[pb.Message_ORDER] = append(m.messageQueue[pb.Message_ORDER], env)
+	case pb.Message_ORDER_CANCEL:
+		m.messageQueue[pb.Message_ORDER_CANCEL] = append(m.messageQueue[pb.Message_ORDER_CANCEL], env)
+	case pb.Message_ORDER_REJECT:
+		m.messageQueue[pb.Message_ORDER_REJECT] = append(m.messageQueue[pb.Message_ORDER_REJECT], env)
+	case pb.Message_ORDER_CONFIRMATION:
+		m.messageQueue[pb.Message_ORDER_CONFIRMATION] = append(m.messageQueue[pb.Message_ORDER_CONFIRMATION], env)
+	case pb.Message_ORDER_FULFILLMENT:
+		m.messageQueue[pb.Message_ORDER_FULFILLMENT] = append(m.messageQueue[pb.Message_ORDER_FULFILLMENT], env)
+	case pb.Message_ORDER_COMPLETION:
+		m.messageQueue[pb.Message_ORDER_COMPLETION] = append(m.messageQueue[pb.Message_ORDER_COMPLETION], env)
+	case pb.Message_DISPUTE_OPEN:
+		m.messageQueue[pb.Message_DISPUTE_OPEN] = append(m.messageQueue[pb.Message_DISPUTE_OPEN], env)
+	case pb.Message_DISPUTE_UPDATE:
+		m.messageQueue[pb.Message_DISPUTE_UPDATE] = append(m.messageQueue[pb.Message_DISPUTE_UPDATE], env)
+	case pb.Message_DISPUTE_CLOSE:
+		m.messageQueue[pb.Message_DISPUTE_CLOSE] = append(m.messageQueue[pb.Message_DISPUTE_CLOSE], env)
+	case pb.Message_REFUND:
+		m.messageQueue[pb.Message_REFUND] = append(m.messageQueue[pb.Message_REFUND], env)
+	default:
+		m.handleMessage(env, &id)
 	}
-
-	m.handleMessage(env, &id)
 }
 
 func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
