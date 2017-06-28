@@ -633,23 +633,14 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
-	type deleteReq struct {
-		Slug string `json:"slug"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var req deleteReq
-	err := decoder.Decode(&req)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
+	_, slug := path.Split(r.URL.Path)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
-	err = i.node.DeleteListing(req.Slug)
+	err := i.node.DeleteListing(slug)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
