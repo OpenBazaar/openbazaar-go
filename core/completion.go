@@ -395,6 +395,10 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		if err := n.updateRatingInListingIndex(rating); err != nil {
 			return err
 		}
+
+		if err := n.updateProfileRatings(rating); err != nil {
+			return err
+		}
 	}
 	return nil
 }
