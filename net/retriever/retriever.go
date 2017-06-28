@@ -192,9 +192,9 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		m.sendAck(id.Pretty(), pid)
 	}
 
-	/* Order messages need to be processed in the correct order, so cancel messages
-	   need to be processed last. */
-	if env.Message.MessageType == pb.Message_ORDER_CANCEL {
+	/* Order messages need to be processed in the correct order, so cancel
+	and dispute close messages need to be processed last. */
+	if env.Message.MessageType == pb.Message_ORDER_CANCEL || env.Message.MessageType == pb.Message_DISPUTE_CLOSE {
 		m.queueLock.Lock()
 		m.messageQueue = append(m.messageQueue, env)
 		m.queueLock.Unlock()

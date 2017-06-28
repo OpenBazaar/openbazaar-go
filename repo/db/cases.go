@@ -331,14 +331,18 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 	}
 
 	var berr []string
-	err = json.Unmarshal(buyerErrors, &berr)
-	if err != nil {
-		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
+	if string(buyerErrors) != "" {
+		err = json.Unmarshal(buyerErrors, &berr)
+		if err != nil {
+			return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
+		}
 	}
 	var verr []string
-	err = json.Unmarshal(vendorErrors, &verr)
-	if err != nil {
-		return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
+	if string(vendorErrors) != "" {
+		err = json.Unmarshal(vendorErrors, &verr)
+		if err != nil {
+			return nil, nil, []string{}, []string{}, pb.OrderState(0), false, time.Time{}, false, "", nil, err
+		}
 	}
 	resolution = new(pb.DisputeResolution)
 	if string(disputResolution) != "" {
