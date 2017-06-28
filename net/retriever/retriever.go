@@ -33,10 +33,15 @@ type MessageRetriever struct {
 	service      net.NetworkService
 	prefixLen    int
 	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue map[pb.Message_MessageType][]pb.Envelope
+	messageQueue map[pb.Message_MessageType][]offlineMessage
 	httpClient   *http.Client
 	queueLock    *sync.Mutex
 	*sync.WaitGroup
+}
+
+type offlineMessage struct {
+	addr string
+	env  pb.Envelope
 }
 
 func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
@@ -46,7 +51,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]pb.Envelope), client, new(sync.Mutex), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
@@ -109,53 +114,8 @@ func (m *MessageRetriever) fetchPointers() {
 	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
 
-	processQueue := func(queue []pb.Envelope) {
-		for _, env := range queue {
-			m.handleMessage(env, nil)
-		}
-	}
-
-	queue, ok := m.messageQueue[pb.Message_ORDER]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_CANCEL]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_REJECT]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_CONFIRMATION]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_FULFILLMENT]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_REFUND]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_OPEN]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_UPDATE]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_CLOSE]
-	if ok {
-		processQueue(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_COMPLETION]
-	if ok {
-		processQueue(queue)
-	}
-	m.messageQueue = make(map[pb.Message_MessageType][]pb.Envelope)
+	m.processQueue()
+	m.processOldMessages()
 
 	// For initial start up only
 	if m.WaitGroup != nil {
@@ -171,8 +131,8 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
 	}
-	m.attemptDecrypt(ciphertext, pid)
 	m.db.OfflineMessages().Put(addr.String())
+	m.attemptDecrypt(ciphertext, pid, addr)
 }
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
@@ -187,11 +147,12 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 		log.Errorf("Error retrieving offline message: %s", err.Error())
 		return
 	}
-	m.attemptDecrypt(ciphertext, pid)
 	m.db.OfflineMessages().Put(addr.String())
+	m.attemptDecrypt(ciphertext, pid, addr)
+
 }
 
-func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
+func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr ma.Multiaddr) {
 	// Decrypt and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 	if err != nil {
@@ -236,45 +197,122 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID) {
 		m.sendAck(id.Pretty(), pid)
 	}
 
+	// Queue
+	m.queueMessage(env, addr.String())
+}
+
+func (m *MessageRetriever) queueMessage(env pb.Envelope, addr string) {
 	// Order messages need to be processed in the correct order so let's cue them up
 	m.queueLock.Lock()
 	defer m.queueLock.Unlock()
 	switch env.Message.MessageType {
 	case pb.Message_ORDER:
-		m.messageQueue[pb.Message_ORDER] = append(m.messageQueue[pb.Message_ORDER], env)
+		m.messageQueue[pb.Message_ORDER] = append(m.messageQueue[pb.Message_ORDER], offlineMessage{addr, env})
 	case pb.Message_ORDER_CANCEL:
-		m.messageQueue[pb.Message_ORDER_CANCEL] = append(m.messageQueue[pb.Message_ORDER_CANCEL], env)
+		m.messageQueue[pb.Message_ORDER_CANCEL] = append(m.messageQueue[pb.Message_ORDER_CANCEL], offlineMessage{addr, env})
 	case pb.Message_ORDER_REJECT:
-		m.messageQueue[pb.Message_ORDER_REJECT] = append(m.messageQueue[pb.Message_ORDER_REJECT], env)
+		m.messageQueue[pb.Message_ORDER_REJECT] = append(m.messageQueue[pb.Message_ORDER_REJECT], offlineMessage{addr, env})
 	case pb.Message_ORDER_CONFIRMATION:
-		m.messageQueue[pb.Message_ORDER_CONFIRMATION] = append(m.messageQueue[pb.Message_ORDER_CONFIRMATION], env)
+		m.messageQueue[pb.Message_ORDER_CONFIRMATION] = append(m.messageQueue[pb.Message_ORDER_CONFIRMATION], offlineMessage{addr, env})
 	case pb.Message_ORDER_FULFILLMENT:
-		m.messageQueue[pb.Message_ORDER_FULFILLMENT] = append(m.messageQueue[pb.Message_ORDER_FULFILLMENT], env)
+		m.messageQueue[pb.Message_ORDER_FULFILLMENT] = append(m.messageQueue[pb.Message_ORDER_FULFILLMENT], offlineMessage{addr, env})
 	case pb.Message_ORDER_COMPLETION:
-		m.messageQueue[pb.Message_ORDER_COMPLETION] = append(m.messageQueue[pb.Message_ORDER_COMPLETION], env)
+		m.messageQueue[pb.Message_ORDER_COMPLETION] = append(m.messageQueue[pb.Message_ORDER_COMPLETION], offlineMessage{addr, env})
 	case pb.Message_DISPUTE_OPEN:
-		m.messageQueue[pb.Message_DISPUTE_OPEN] = append(m.messageQueue[pb.Message_DISPUTE_OPEN], env)
+		m.messageQueue[pb.Message_DISPUTE_OPEN] = append(m.messageQueue[pb.Message_DISPUTE_OPEN], offlineMessage{addr, env})
 	case pb.Message_DISPUTE_UPDATE:
-		m.messageQueue[pb.Message_DISPUTE_UPDATE] = append(m.messageQueue[pb.Message_DISPUTE_UPDATE], env)
+		m.messageQueue[pb.Message_DISPUTE_UPDATE] = append(m.messageQueue[pb.Message_DISPUTE_UPDATE], offlineMessage{addr, env})
 	case pb.Message_DISPUTE_CLOSE:
-		m.messageQueue[pb.Message_DISPUTE_CLOSE] = append(m.messageQueue[pb.Message_DISPUTE_CLOSE], env)
+		m.messageQueue[pb.Message_DISPUTE_CLOSE] = append(m.messageQueue[pb.Message_DISPUTE_CLOSE], offlineMessage{addr, env})
 	case pb.Message_REFUND:
-		m.messageQueue[pb.Message_REFUND] = append(m.messageQueue[pb.Message_REFUND], env)
+		m.messageQueue[pb.Message_REFUND] = append(m.messageQueue[pb.Message_REFUND], offlineMessage{addr, env})
 	default:
-		m.handleMessage(env, &id)
+		m.handleMessage(env, nil)
 	}
 }
 
-func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
+func (m *MessageRetriever) processQueue() {
+	processMessages := func(queue []offlineMessage) {
+		for _, om := range queue {
+			err := m.handleMessage(om.env, nil)
+			if err != nil {
+				ser, err := proto.Marshal(&om.env)
+				if err == nil {
+					m.db.OfflineMessages().SetMessage(om.addr, ser)
+				}
+			}
+		}
+	}
+
+	queue, ok := m.messageQueue[pb.Message_ORDER]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_CANCEL]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_REJECT]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_CONFIRMATION]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_FULFILLMENT]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_REFUND]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_OPEN]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_UPDATE]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_DISPUTE_CLOSE]
+	if ok {
+		processMessages(queue)
+	}
+	queue, ok = m.messageQueue[pb.Message_ORDER_COMPLETION]
+	if ok {
+		processMessages(queue)
+	}
+	m.messageQueue = make(map[pb.Message_MessageType][]offlineMessage)
+}
+
+func (m *MessageRetriever) processOldMessages() {
+	messages, err := m.db.OfflineMessages().GetMessages()
+	if err != nil {
+		return
+	}
+	for url, ser := range messages {
+		env := new(pb.Envelope)
+		err := proto.Unmarshal(ser, env)
+		if err == nil {
+			m.queueMessage(*env, url)
+		}
+		m.db.OfflineMessages().DeleteMessage(url)
+	}
+	m.processQueue()
+}
+
+func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) error {
 	if id == nil {
 		// Get the peer ID from the public key
 		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 		if err != nil {
-			return
+			return nil
 		}
 		i, err := peer.IDFromPublicKey(pubkey)
 		if err != nil {
-			return
+			return nil
 		}
 		id = &i
 	}
@@ -283,13 +321,13 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) {
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
 		log.Debug("Got back nil handler from HandlerForMsgType")
-		return
+		return nil
 	}
 
 	// Dispatch handler
 	_, err := handler(*id, env.Message, true)
 	if err != nil {
 		log.Errorf("Handle message error: %s", err)
-		return
 	}
+	return err
 }

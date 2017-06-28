@@ -220,9 +220,11 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 	// Subtract fee
 	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false)
 	fee := estimatedSize * int(feePerByte)
-	feePerOutput := fee / len(tx.TxOut)
-	for _, output := range tx.TxOut {
-		output.Value -= int64(feePerOutput)
+	if len(tx.TxOut) > 0 {
+		feePerOutput := fee / len(tx.TxOut)
+		for _, output := range tx.TxOut {
+			output.Value -= int64(feePerOutput)
+		}
 	}
 
 	// BIP 69 sorting

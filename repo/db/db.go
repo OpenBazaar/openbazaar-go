@@ -275,7 +275,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table config (key text primary key not null, value blob);
 	create table followers (peerID text primary key not null);
 	create table following (peerID text primary key not null);
-	create table offlinemessages (url text primary key not null, timestamp integer);
+	create table offlinemessages (url text primary key not null, timestamp integer, message blob);
 	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer, key text);
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);
