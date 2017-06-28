@@ -98,6 +98,9 @@ func (ts *TxStore) CheckDoubleSpends(argTx *wire.MsgTx) ([]*chainhash.Hash, erro
 		return dubs, err
 	}
 	for _, compTx := range txs {
+		if compTx.Height < 0 {
+			continue
+		}
 		r := bytes.NewReader(compTx.Bytes)
 		msgTx := wire.NewMsgTx(1)
 		msgTx.BtcDecode(r, 1)
