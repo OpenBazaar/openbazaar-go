@@ -289,7 +289,7 @@ func (m *MessageRetriever) processQueue() {
 	processMessages := func(queue []offlineMessage) {
 		for _, om := range queue {
 			err := m.handleMessage(om.env, nil)
-			if err != nil {
+			if err != nil && err == net.OutOfOrderMessage {
 				ser, err := proto.Marshal(&om.env)
 				if err == nil {
 					m.db.OfflineMessages().SetMessage(om.addr, ser)
@@ -380,7 +380,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) error {
 
 	// Dispatch handler
 	_, err := handler(*id, env.Message, true)
-	if err != nil {
+	if err != nil && err != net.OutOfOrderMessage {
 		log.Errorf("Handle message error: %s", err)
 	}
 	return err
