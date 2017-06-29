@@ -211,6 +211,15 @@ func (dht *IpfsDHT) handleFindPeer(ctx context.Context, p peer.ID, pmes *pb.Mess
 	return resp, nil
 }
 
+func (dht *IpfsDHT) GetProviders(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
+	// Dummy ID. Only used for logging.
+	id, err := peer.IDB58Decode("QmT5NvUtoM5nWFfrQdVrFtvGfKFmG7AHE8P34isapyhCxX")
+	if err != nil {
+		return nil, err
+	}
+	return dht.handleGetProviders(ctx, id, pmes)
+}
+
 func (dht *IpfsDHT) handleGetProviders(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	lm := make(lgbl.DeferredMap)
 	lm["peer"] = func() interface{} { return p.Pretty() }
@@ -258,6 +267,16 @@ func (dht *IpfsDHT) handleGetProviders(ctx context.Context, p peer.ID, pmes *pb.
 	}
 
 	return resp, nil
+}
+
+func (dht *IpfsDHT) AddProvider(ctx context.Context, pmes *pb.Message) error {
+	// Dummy ID. Only used for logging.
+	id, err := peer.IDB58Decode("QmT5NvUtoM5nWFfrQdVrFtvGfKFmG7AHE8P34isapyhCxX")
+	if err != nil {
+		return err
+	}
+	_, err = dht.handleAddProvider(ctx, id, pmes)
+	return err
 }
 
 func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {

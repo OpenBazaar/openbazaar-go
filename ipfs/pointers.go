@@ -112,6 +112,7 @@ func addPointer(node *core.IpfsNode, ctx context.Context, k *cid.Cid, pi ps.Peer
 func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, pi ps.PeerInfo, skey string) error {
 	pmes := pb.NewMessage(pb.Message_ADD_PROVIDER, skey, 0)
 	pmes.ProviderPeers = pb.RawPeerInfosToPBPeers([]ps.PeerInfo{pi})
+
 	err := sendMessage(ctx, peerHosts, p, pmes)
 	if err != nil {
 		return err
