@@ -389,9 +389,11 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 	// Subtract fee
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
 	fee := estimatedSize * int(feePerByte)
-	feePerOutput := fee / len(tx.TxOut)
-	for _, output := range tx.TxOut {
-		output.Value -= int64(feePerOutput)
+	if len(tx.TxOut) > 0 {
+		feePerOutput := fee / len(tx.TxOut)
+		for _, output := range tx.TxOut {
+			output.Value -= int64(feePerOutput)
+		}
 	}
 
 	// BIP 69 sorting
@@ -432,9 +434,11 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	// Subtract fee
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
 	fee := estimatedSize * int(feePerByte)
-	feePerOutput := fee / len(tx.TxOut)
-	for _, output := range tx.TxOut {
-		output.Value -= int64(feePerOutput)
+	if len(tx.TxOut) > 0 {
+		feePerOutput := fee / len(tx.TxOut)
+		for _, output := range tx.TxOut {
+			output.Value -= int64(feePerOutput)
+		}
 	}
 
 	// BIP 69 sorting
