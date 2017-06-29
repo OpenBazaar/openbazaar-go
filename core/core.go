@@ -102,8 +102,8 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	for _, g := range n.CrosspostGateways {
-		go func() {
-			req, err := http.NewRequest("PUT", g.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
+		go func(u *url.URL) {
+			req, err := http.NewRequest("PUT", u.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
 			if err != nil {
 				return
 			}
@@ -114,7 +114,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 			tbTransport := &http.Transport{Dial: dial}
 			client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 			client.Do(req)
-		}()
+		}(g)
 	}
 	go n.publish(rootHash)
 	return nil

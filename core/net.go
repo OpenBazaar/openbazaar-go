@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/context"
 	gonet "net"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -89,15 +90,15 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		ser, err := proto.Marshal(pmes)
 		if err != nil {
 			for _, g := range n.CrosspostGateways {
-				go func() {
+				go func(u *url.URL) {
 					dial := gonet.Dial
 					if n.TorDialer != nil {
 						dial = n.TorDialer.Dial
 					}
 					tbTransport := &http.Transport{Dial: dial}
 					client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
-					client.Post(g.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
-				}()
+					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
+				}(g)
 			}
 		}
 	}
