@@ -168,13 +168,13 @@ func TestListings(t *testing.T) {
 		{"GET", "/ob/listing/ron-swanson-tshirt", "", 200, anyResponseJSON},
 
 		// Delete/Get
-		{"DELETE", "/ob/listing", listingJSONResponse, 200, `{}`},
-		{"DELETE", "/ob/listing", listingJSONResponse, 404, NotFoundJSON("Listing")},
+		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 200, `{}`},
+		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
 		{"GET", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
 
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", listingUpdateJSON, 404, NotFoundJSON("Listing")},
-		{"DELETE", "/ob/listing", listingJSONResponse, 404, NotFoundJSON("Listing")},
+		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
 	})
 }
 
