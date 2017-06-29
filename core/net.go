@@ -85,18 +85,18 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 
 	// Post provider to gateway if we have one set in the config
 	if len(n.CrosspostGateways) > 0 {
+		dial := gonet.Dial
+		if n.TorDialer != nil {
+			dial = n.TorDialer.Dial
+		}
+		tbTransport := &http.Transport{Dial: dial}
+		client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 		pmes := dhtpb.NewMessage(dhtpb.Message_ADD_PROVIDER, pointer.Cid.KeyString(), 0)
 		pmes.ProviderPeers = dhtpb.RawPeerInfosToPBPeers([]ps.PeerInfo{pointer.Value})
 		ser, err := proto.Marshal(pmes)
-		if err != nil {
+		if err == nil {
 			for _, g := range n.CrosspostGateways {
 				go func(u *url.URL) {
-					dial := gonet.Dial
-					if n.TorDialer != nil {
-						dial = n.TorDialer.Dial
-					}
-					tbTransport := &http.Transport{Dial: dial}
-					client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
 				}(g)
 			}
