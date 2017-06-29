@@ -258,17 +258,23 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			continue
 		}
 		q := int(item.Quantity)
-		if c-q < 0 {
-			q = 0
+		newCount := c - q
+		if c < 0 {
+			newCount = -1
+		}
+		if c >= 0 && c-q <= 0 {
+			newCount = c
 			orderId, err := calcOrderId(contract.BuyerOrder)
 			if err != nil {
 				continue
 			}
-			log.Warning("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
+			log.Warningf("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
 			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
 		}
-		l.db.Inventory().Put(listing.Slug, variant, c-q)
-		log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, c-q)
+		l.db.Inventory().Put(listing.Slug, variant, newCount)
+		if newCount >= 0 {
+			log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, newCount)
+		}
 	}
 }
 

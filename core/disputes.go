@@ -358,17 +358,6 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	// Set self (moderator) as the party that made the resolution proposal
 	d.ProposedBy = n.IpfsNode.Identity.Pretty()
 
-	// Sign buyer rating key
-	if buyerContract != nil {
-		for _, key := range buyerContract.BuyerOrder.RatingKeys {
-			sig, err := n.IpfsNode.PrivateKey.Sign(key)
-			if err != nil {
-				return err
-			}
-			d.ModeratorRatingSigs = append(d.ModeratorRatingSigs, sig)
-		}
-	}
-
 	// Set resolution
 	d.Resolution = resolution
 
@@ -599,6 +588,22 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	moderatorKey, err := hdKey.Child(0)
 	if err != nil {
 		return err
+	}
+
+	// Sign buyer rating key
+	if buyerContract != nil {
+		ecPriv, err := moderatorKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		for _, key := range buyerContract.BuyerOrder.RatingKeys {
+			hashed := sha256.Sum256(key)
+			sig, err := ecPriv.Sign(hashed[:])
+			if err != nil {
+				return err
+			}
+			d.ModeratorRatingSigs = append(d.ModeratorRatingSigs, sig.Serialize())
+		}
 	}
 
 	// Create signatures

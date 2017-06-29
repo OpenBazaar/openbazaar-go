@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -701,7 +702,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_RESOLVED {
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -714,11 +715,16 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
 				ins = append(ins, in)
 			}
-		}
 
-		payoutAddress, err := service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
-		if err != nil {
-			return nil, err
+		}
+		var payoutAddress btcutil.Address
+		if len(contract.VendorOrderFulfillment) > 0 {
+			payoutAddress, err = service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			payoutAddress = service.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 		}
 		var output spvwallet.TransactionOutput
 		outputScript, err := service.node.Wallet.AddressToScript(payoutAddress)
@@ -752,7 +758,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	err = service.node.ValidateAndSaveRating(contract)
 	if err != nil {
-		log.Error(err)
+		log.Error("Error validating rating:", err)
 	}
 
 	// Set message state to complete
