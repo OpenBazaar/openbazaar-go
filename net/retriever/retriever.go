@@ -10,32 +10,38 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
 	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 	multihash "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 	"io/ioutil"
 	gonet "net"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
 
+const DefaultPointerPrefixLength = 14
+
 var log = logging.MustGetLogger("retriever")
 
 type MessageRetriever struct {
-	db           repo.Datastore
-	node         *core.IpfsNode
-	bm           *net.BanManager
-	ctx          commands.Context
-	service      net.NetworkService
-	prefixLen    int
-	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue map[pb.Message_MessageType][]offlineMessage
-	httpClient   *http.Client
-	queueLock    *sync.Mutex
+	db                repo.Datastore
+	node              *core.IpfsNode
+	bm                *net.BanManager
+	ctx               commands.Context
+	service           net.NetworkService
+	prefixLen         int
+	sendAck           func(peerId string, pointerID peer.ID) error
+	messageQueue      map[pb.Message_MessageType][]offlineMessage
+	httpClient        *http.Client
+	crosspostGateways []*url.URL
+	queueLock         *sync.Mutex
 	*sync.WaitGroup
 }
 
@@ -44,14 +50,14 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, dialer proxy.Dialer, crosspostGateways []*url.URL, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
 	dial := gonet.Dial
 	if dialer != nil {
 		dial = dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, new(sync.Mutex), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, crosspostGateways, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
@@ -76,7 +82,18 @@ func (m *MessageRetriever) fetchPointers() {
 	wg.Add(1)
 	downloaded := 0
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
-	peerOut := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+	peerOut := make(chan ps.PeerInfo)
+	go func(c chan ps.PeerInfo) {
+		out := m.getPointersFromGateway()
+		for p := range out {
+			c <- p
+		}
+		iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+		for p := range iout {
+			c <- p
+		}
+		close(c)
+	}(peerOut)
 
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
@@ -121,6 +138,43 @@ func (m *MessageRetriever) fetchPointers() {
 	if m.WaitGroup != nil {
 		m.Done()
 		m.WaitGroup = nil
+	}
+}
+
+func (m *MessageRetriever) getPointersFromGateway() <-chan ps.PeerInfo {
+	peerOut := make(chan ps.PeerInfo, 100000)
+	go m.getPointersFromGatewayRoutine(peerOut)
+	return peerOut
+}
+
+func (m *MessageRetriever) getPointersFromGatewayRoutine(peerOut chan ps.PeerInfo) {
+	defer close(peerOut)
+	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
+	keyhash := ipfs.CreatePointerKey(mh, DefaultPointerPrefixLength)
+	for _, g := range m.crosspostGateways {
+		resp, err := m.httpClient.Get(g.String() + "ipfs/providers/" + keyhash.B58String())
+		if resp.StatusCode != http.StatusOK {
+			return
+		}
+		if err != nil {
+			log.Errorf("Error retrieving offline message from gateway: %s", err.Error())
+			return
+		}
+		buf, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Errorf("Error reading message from gateway: %s", err.Error())
+			return
+		}
+		pmes := new(dhtpb.Message)
+		err = proto.Unmarshal(buf, pmes)
+		if err != nil {
+			log.Errorf("Error unmarshalling pointer from gateway: %s", err.Error())
+			return
+		}
+		provs := dhtpb.PBPeersToPeerInfos(pmes.GetProviderPeers())
+		for _, pi := range provs {
+			peerOut <- *pi
+		}
 	}
 }
 

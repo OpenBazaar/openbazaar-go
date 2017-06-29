@@ -52,7 +52,7 @@ type Pointer struct {
 // entropy is a sequence of bytes that should be deterministic based on the content of the pointer
 // it is hashed and used to fill the remaining 20 bytes of the magic id
 func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr, entropy []byte) (Pointer, error) {
-	keyhash := createKey(mhKey, prefixLen)
+	keyhash := CreatePointerKey(mhKey, prefixLen)
 	k, err := cid.Decode(keyhash.B58String())
 	if err != nil {
 		return Pointer{}, err
@@ -75,7 +75,7 @@ func RePublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer)
 
 // Fetch pointers from the dht. They will be returned asynchronously.
 func FindPointersAsync(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Multihash, prefixLen int) <-chan ps.PeerInfo {
-	keyhash := createKey(mhKey, prefixLen)
+	keyhash := CreatePointerKey(mhKey, prefixLen)
 	key, _ := cid.Decode(keyhash.B58String())
 	peerout := dht.FindProvidersAsync(ctx, key, 100000)
 	return peerout
@@ -136,7 +136,7 @@ func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Messag
 	return nil
 }
 
-func createKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
+func CreatePointerKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
 	// Grab the first 8 bytes from the multihash digest
 	m, _ := multihash.Decode(mh)
 	prefix64 := binary.BigEndian.Uint64(m.Digest[:8])
