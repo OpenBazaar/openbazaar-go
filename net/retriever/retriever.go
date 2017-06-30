@@ -56,7 +56,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 		dial = dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 10}
+	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, crosspostGateways, new(sync.Mutex), new(sync.WaitGroup)}
 	// Add one for initial wait at start up
 	mr.Add(1)

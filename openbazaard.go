@@ -521,7 +521,11 @@ func (x *Start) Execute(args []string) error {
 	var usingTor, usingClearnet bool
 	var controlPort int
 	for i, addr := range cfg.Addresses.Swarm {
-		m, _ := ma.NewMultiaddr(addr)
+		m, err := ma.NewMultiaddr(addr)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
 		p := m.Protocols()
 		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
 		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
@@ -536,26 +540,6 @@ func (x *Start) Execute(args []string) error {
 			break
 		} else if p[0].Name == "onion" {
 			usingTor = true
-			torConfig, err := repo.GetTorConfig(path.Join(repoPath, "config"))
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			torControl := torConfig.TorControl
-			if torControl == "" {
-				controlPort, err = obnet.GetTorControlPort()
-				if err != nil {
-					log.Error(err)
-					return err
-				}
-				torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
-			}
-			auth := &proxy.Auth{Password: torConfig.Password}
-			onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
 			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
 			t, err := ma.ProtocolsWithString("/onion")
 			if err != nil {
@@ -569,6 +553,29 @@ func (x *Start) Execute(args []string) error {
 			}
 		} else {
 			usingClearnet = true
+		}
+	}
+	// Create Tor transport
+	if usingTor {
+		torConfig, err := repo.GetTorConfig(path.Join(repoPath, "config"))
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		torControl := torConfig.TorControl
+		if torControl == "" {
+			controlPort, err = obnet.GetTorControlPort()
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+		}
+		auth := &proxy.Auth{Password: torConfig.Password}
+		onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
+		if err != nil {
+			log.Error(err)
+			return err
 		}
 	}
 	// If we're only using Tor set the proxy dialer
@@ -598,6 +605,7 @@ func (x *Start) Execute(args []string) error {
 
 		var host *p2pbhost.BasicHost
 		if usingTor && !usingClearnet {
+
 			host = p2pbhost.New(network)
 		} else {
 			hostOpts := []interface{}{bwr}
@@ -606,7 +614,6 @@ func (x *Start) Execute(args []string) error {
 			}
 			host = p2pbhost.New(network, hostOpts...)
 		}
-
 		return host, nil
 	}
 
@@ -627,6 +634,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+
 	ctx := commands.Context{}
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
