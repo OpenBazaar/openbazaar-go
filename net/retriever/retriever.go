@@ -153,11 +153,11 @@ func (m *MessageRetriever) getPointersFromGatewayRoutine(peerOut chan ps.PeerInf
 	keyhash := ipfs.CreatePointerKey(mh, DefaultPointerPrefixLength)
 	for _, g := range m.crosspostGateways {
 		resp, err := m.httpClient.Get(g.String() + "ipfs/providers/" + keyhash.B58String())
-		if resp.StatusCode != http.StatusOK {
-			return
-		}
 		if err != nil {
 			log.Errorf("Error retrieving offline message from gateway: %s", err.Error())
+			return
+		}
+		if resp.StatusCode != http.StatusOK {
 			return
 		}
 		buf, err := ioutil.ReadAll(resp.Body)
