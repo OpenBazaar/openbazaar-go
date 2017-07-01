@@ -1,0 +1,16 @@
+language: go
+go:
+ - 1.7
+sudo: required
+services:
+  - docker
+env:
+  - "PATH=/home/travis/gopath/bin:$PATH"
+before_install:
+  - go get github.com/tcnksm/ghr
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+script:
+  - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./cmd/spvwallet/vendor/*"))
+  - cd $TRAVIS_BUILD_DIR && chmod a+x test_compile.sh && ./test_compile.sh
+  - goveralls -coverprofile=coverage.out -service travis-ci

@@ -1,0 +1,102 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-libp2p-swarm"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-libp2p-swarm"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e",
+      "name": "go-libp2p-net",
+      "version": "1.6.11"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY",
+      "name": "go-libp2p-crypto",
+      "version": "1.4.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX",
+      "name": "go-libp2p-peerstore",
+      "version": "1.4.8"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP",
+      "name": "goprocess",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSKoeo64CA54WNWqzVXHi5aT2LbgzP7B9VzQjW5yh7d4H",
+      "name": "go-libp2p-transport",
+      "version": "2.2.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmWUNsat6Jb19nC5CiJCDXepTkxjdxi3eZqeoB6mrmmaGu",
+      "name": "go-smux-spdystream",
+      "version": "1.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRVYfZ7tWNHPBzWiG6KWGzvT2hcGems8srihsQE29x1U5",
+      "name": "go-smux-multistream",
+      "version": "1.5.5"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmbn7RYyWzBVXiUp9jZ1dA4VADHy9DtS7iZLwfhEUQvm3U",
+      "name": "go-smux-yamux",
+      "version": "1.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmbAnytXbEyaVaiwkA2xPp8PPnkFKnQcfBMdXAcSfnjKtB",
+      "name": "ws-transport",
+      "version": "1.4.5"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv",
+      "name": "multiaddr-filter",
+      "version": "1.0.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmYBtUjY2Q3jY8eYAva99G44zefLZ5Ksgk66VG81ueKQp1",
+      "name": "go-peerstream",
+      "version": "1.6.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc",
+      "name": "go-libp2p-metrics",
+      "version": "1.6.9"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSqJFpQ1VQtuhkntP9tMhTexipzpXAHtgSi4UYWFwjUZx",
+      "name": "go-libp2p-conn",
+      "version": "1.6.2"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVcXKVKR9Xd33tFPv9DPLxG6sbDUh2i3BAdFQc48FLM5c",
+      "name": "go-tcp-transport",
+      "version": "1.2.0"
+    }
+  ],
+  "gxVersion": "0.9.1",
+  "language": "go",
+  "license": "",
+  "name": "go-libp2p-swarm",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.6.15"
+}
+

@@ -27,7 +27,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
-	"github.com/OpenBazaar/go-onion-transport"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
@@ -71,6 +70,7 @@ import (
 	swarm "gx/ipfs/QmVkDnNm71vYyY6s6rXwtmyDYis3WkKyrEhMECwT6R12uJ/go-libp2p-swarm"
 	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
 	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	oniontp "gx/ipfs/QmY8QEk1PqyiNr7b4ZF1o4318cu9wNzTD2bP1qBb2yqkvB/go-onion-transport"
 	addrutil "gx/ipfs/QmbH3urJHTrZSUETgvQRriWM6mMFqyNSwCqnhknxfSGVWv/go-addr-util"
 	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	metrics "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics"
@@ -516,7 +516,7 @@ func (x *Start) Execute(args []string) error {
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
 	}
 	// Iterate over our address and process them as needed
-	var onionTransport *torOnion.OnionTransport
+	var onionTransport *oniontp.OnionTransport
 	var torDialer proxy.Dialer
 	var usingTor, usingClearnet bool
 	var controlPort int
@@ -572,7 +572,7 @@ func (x *Start) Execute(args []string) error {
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
 		}
 		auth := &proxy.Auth{Password: torConfig.Password}
-		onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
+		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
 		if err != nil {
 			log.Error(err)
 			return err

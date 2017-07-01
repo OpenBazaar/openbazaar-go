@@ -1,0 +1,1671 @@
+{
+	"ImportPath": "github.com/OpenBazaar/openbazaar-go",
+	"GoVersion": "go1.8",
+	"GodepVersion": "v79",
+	"Deps": [
+		{
+			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
+			"Rev": "8ab4f574207fb0853dc9fea1ae87a58dab34e7a4"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/jsonpb",
+			"Rev": "67acdf00ba190f42920cf190a863085cbd6f303c"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet",
+			"Rev": "bb0867c91094e9d0ff3c06980c858a440ea5bef3"
+		},
+		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.2.0-21-gd974993",
+			"Rev": "d97499360d1ecebc492ea66c7447ea948f417620"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/addrmgr",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/blockchain",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/btcec",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/btcjson",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/chaincfg",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/chaincfg/chainhash",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/connmgr",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/database",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/peer",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/txscript",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcd/wire",
+			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
+			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btclog",
+			"Comment": "BTCLOG_0_0_3-8-g73889fb",
+			"Rev": "73889fb79bd687870312b6e40effcecffbd57d30"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcrpcclient",
+			"Rev": "62b15b5db2619224d174239e3f71f6f37305346d"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/base58",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/bloom",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/coinset",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/hdkeychain",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/txsort",
+			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
+			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcwallet/internal/helpers",
+			"Comment": "BTCWALLET_0_7_0_ALPHA-81-g5e39e68",
+			"Rev": "5e39e68778629237361c251841af06522bcfc07b"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcwallet/wallet/internal/txsizes",
+			"Comment": "BTCWALLET_0_7_0_ALPHA-81-g5e39e68",
+			"Rev": "5e39e68778629237361c251841af06522bcfc07b"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcwallet/wallet/txauthor",
+			"Comment": "BTCWALLET_0_7_0_ALPHA-81-g5e39e68",
+			"Rev": "5e39e68778629237361c251841af06522bcfc07b"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcwallet/wallet/txrules",
+			"Comment": "BTCWALLET_0_7_0_ALPHA-81-g5e39e68",
+			"Rev": "5e39e68778629237361c251841af06522bcfc07b"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/go-socks/socks",
+			"Rev": "cfe8b59e565c1a5bd4e2005d77cd9aa8b2e14524"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/golangcrypto/ripemd160",
+			"Rev": "53f62d9b43e87a6c56975cf862af7edf33a8d0df"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/errors",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/storage",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/util",
+			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/seelog",
+			"Comment": "v2.1-84-g313961b",
+			"Rev": "313961b101eb55f65ae0f03ddd4e322731763b6c"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/websocket",
+			"Rev": "31079b6807923eb23992c421b114992b95131b55"
+		},
+		{
+			"ImportPath": "github.com/ccding/go-stun/stun",
+			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
+		},
+		{
+			"ImportPath": "github.com/davecgh/go-spew/spew",
+			"Comment": "v1.1.0",
+			"Rev": "346938d642f2ec3594ed81d874461961cd0faa76"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/apierror",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/async",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/files",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/sharing",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/team",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/dropbox/dropbox-sdk-go-unofficial/users",
+			"Rev": "04e7072d0476c888b95bbad87858dad2416ef0d5"
+		},
+		{
+			"ImportPath": "github.com/fatih/color",
+			"Comment": "v0.2.0",
+			"Rev": "87d4004f2ab62d0d255e0a38f1680aa534549fe3"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/any",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/duration",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/ptypes/timestamp",
+			"Rev": "2bba0603135d7d7f5cb73b2125beeda19c09f4ef"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Rev": "e2e3d8414d0fbae04004f151979f4e27c6747fe7"
+		},
+		{
+			"ImportPath": "github.com/imdario/mergo",
+			"Comment": "0.2.2-6-g50d4dbd",
+			"Rev": "50d4dbd4eb0e84778abe37cefef140271d96fade"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/briantigerchow/pubsub",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/texttheater/golang-levenshtein/levenshtein",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/whyrusleeping/chunker",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/assets",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/blocks",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/blocks/blockstore",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/blocks/blockstore/util",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/blockservice",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/commands",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/commands/cli",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/commands/files",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/commands/http",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/commands",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/dag",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/files",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/object",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/unixfs",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/coreapi",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/coreapi/interface",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/corehttp",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/corerepo",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/core/coreunix",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/decision",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/message",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/message/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/network",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/notifications",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/testnet",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/wantlist",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/offline",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/exchange/reprovide",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/filestore",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/filestore/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/flags",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/fuse/ipns",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/fuse/mount",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/fuse/node",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/fuse/readonly",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/importer",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/importer/balanced",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/importer/chunk",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/importer/helpers",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/importer/trickle",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/keystore",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/merkledag",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/test",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/utils",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/mfs",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/namesys",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/namesys/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/namesys/republisher",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/p2p",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/path",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/pin",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/pin/gc",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/pin/internal/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/common",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/config",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/lock",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/migrations",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/serialize",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/dht",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/dht/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/dht/providers",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/dht/util",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/mock",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/none",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/routing/offline",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/tar",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/datastore2",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/delay",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/dir",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/ds-help",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/ipfsaddr",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/math2",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/posinfo",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/pq",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/tar",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/testutil",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/tour",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/archive",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/archive/tar",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/hamt",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/io",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/mod",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/pb",
+			"Comment": "v0.4.10-62-g50b1c22",
+			"Rev": "50b1c2298d1275e728bb7370c5265ead38834e58"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-base58",
+			"Comment": "1.0.0",
+			"Rev": "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-context/io",
+			"Rev": "d14ea06fba99483203c19d92cfcd13ebe73135f4"
+		},
+		{
+			"ImportPath": "github.com/jbenet/go-multihash",
+			"Comment": "0.1.0-43-g5bb8e87",
+			"Rev": "5bb8e87657d874eea0af6366dc6336c4d819e7c1"
+		},
+		{
+			"ImportPath": "github.com/jessevdk/go-flags",
+			"Comment": "v1-334-g6b9493b",
+			"Rev": "6b9493b3cb60367edd942144879646604089e3f7"
+		},
+		{
+			"ImportPath": "github.com/kennygrant/sanitize",
+			"Comment": "v1.1",
+			"Rev": "7fdd72ab580907c39c5f0b8b98b8d89e5476f424"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-colorable",
+			"Comment": "v0.0.5",
+			"Rev": "9056b7a9f2d1f2d96498d6d146acd1f9d5ed3d59"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "56b76bdf51f7708750eac80fa38b952bb9f32639"
+		},
+		{
+			"ImportPath": "github.com/microcosm-cc/bluemonday",
+			"Rev": "e79763773ab6222ca1d5a7cbd9d62d83c1f77081"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "b8bc1bf767474819792c23f32d8286a45736f1c6"
+		},
+		{
+			"ImportPath": "github.com/mutecomm/go-sqlcipher",
+			"Rev": "34287a64fbe7fc03ab5a0e6cbc35618f9453b8d2"
+		},
+		{
+			"ImportPath": "github.com/natefinch/lumberjack",
+			"Comment": "v1.0-21-g514cbda",
+			"Rev": "514cbda263a734ae8caac038dadf05f8f3f9f738"
+		},
+		{
+			"ImportPath": "github.com/nfnt/resize",
+			"Rev": "891127d8d1b52734debe1b3c3d7e747502b6c366"
+		},
+		{
+			"ImportPath": "github.com/op/go-logging",
+			"Comment": "v1-7-g970db52",
+			"Rev": "970db520ece77730c7e4724c61121037378659d9"
+		},
+		{
+			"ImportPath": "github.com/tyler-smith/go-bip39",
+			"Rev": "32e294b638a7246c6f0c85736d627a2562604f80"
+		},
+		{
+			"ImportPath": "github.com/yawning/bulb",
+			"Rev": "2d65b370c8d197791de1288e4d2778a2a3cc5abc"
+		},
+		{
+			"ImportPath": "github.com/yawning/bulb/utils/pkcs1",
+			"Rev": "2d65b370c8d197791de1288e4d2778a2a3cc5abc"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/curve25519",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/hkdf",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/nacl/box",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/nacl/secretbox",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/pbkdf2",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/poly1305",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ripemd160",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/sha3",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/ssh/terminal",
+			"Rev": "5ef0053f77724838734b6945dd364d3847e5de1d"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "5602c733f70afc6dcec6766be0d5034d4c4f14de"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html",
+			"Rev": "5602c733f70afc6dcec6766be0d5034d4c4f14de"
+		},
+		{
+			"ImportPath": "golang.org/x/net/html/atom",
+			"Rev": "5602c733f70afc6dcec6766be0d5034d4c4f14de"
+		},
+		{
+			"ImportPath": "golang.org/x/net/proxy",
+			"Rev": "5602c733f70afc6dcec6766be0d5034d4c4f14de"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "65a8d08c6292395d47053be10b3c5e91960def76"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/internal",
+			"Rev": "65a8d08c6292395d47053be10b3c5e91960def76"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "dbc2be9168a660ef302e04b6ff6406de6f967473"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmNPv1yzXBqxzqjfTzHCeBoicxxZgHzLezdY2hMCZ3r6EU/go-ds-measure",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing/notifications",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmNrbCt8j9DT5W9Pmjy2SdudT9k8GpaDr4sRuFix3BXhgR/go-ipld-cbor",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmNtxDQBrVzy88FEjVikyM5tAbyfnHm5jJbJZcUhVykusq/snappy",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmPG2kW5t27LuHgHnvhUwbHCNHAt2eUcb4gPHqofrESUdB/cors",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmPJUtEJsm5YLUWhF6imvyCH8KZXRJa9Wup7FDMwTy5Ufz/backoff",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmPsBptED6X43GYg3347TAUruN3UfsAhaGTP9xbinYX7uf/go-libp2p-interface-pnet",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ3UABWTgK78utKeiVXaH9BrjC7Ydn1pRuwqnWHT3p4zh/go-smux-multiplex",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/edwards25519",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ51pHe6u7CWodkUGDLqaCEMchkbMt7VEZnECF5mp6tVb/ed25519/extra25519",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQ8t8yZJv6bTgnDcHMPMgpUcSTnpNMGPjFxmGwZ2MWak9/go-nat",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/discovery",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/host/basic",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/host/routed",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/net/mock",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/protocol/identify",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/protocol/identify/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/protocol/ping",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQNQhNmY4STU1MURjH9vYEMpx2ncMS4gbwxXWtrEjzVAq/go-todocounter",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQPWTeQJnJE7MYu6dJTiNTQRNuqBr41dis6UgY6Uekmgd/keccakpg",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQfeKxQtBN721pekQh6Jq24adFUjnU65YdY3GNczfuG2T/dir-index-html",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/dcps/internetgateway1",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/dcps/internetgateway2",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/httpu",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/scpd",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/soap",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQtBcHtRy9BxjawZjWJBn8aSKbqraBnQiVsc3wt9w9TTn/goupnp/ssdp",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQur8VHmc276wJDRdU7KtR3qbA88Dov587DpBnzDbENuo/go-crypto-dav/salsa20",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQvJiADDe7JR4m968MwXobTCCzUqQkP87aRHe29MEBGHV/go-logging",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmQvbWzZPGpoppaAvBtj6QmyBZPw4ivFD7ryyHesxuYYDa/yamux",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRQhVisS8dmPbjBUthVkenn81pBxrx1GxE281csJhm2vL/go-msgio",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRQhVisS8dmPbjBUthVkenn81pBxrx1GxE281csJhm2vL/go-msgio/mpool",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRVYfZ7tWNHPBzWiG6KWGzvT2hcGems8srihsQE29x1U5/go-smux-multistream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/keytransform",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/namespace",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/query",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/sync",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/syncmount",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRWT7HgGeMovh1MUiidWFj9i96DjH5KXPmQWkPQDefxHG/go-multiplex",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRg1gKTHzc3CZXSKzem8aR4E3TubFhbgXwfVuWnSK5CC5/go-metrics-interface",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/providers",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/expfmt",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/internal/bitbucket.org/ww/goautoneg",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSERhEpow33rKAUMJq8yfJVQjLmdABGg899cXg7GcX1Bk/common/model",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/periodic",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSGRM5Udmy1jsFBr1Cawez7Lt7LZ3ZKA23GGVEsiEW6F3/eventfd",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSKoeo64CA54WNWqzVXHi5aT2LbgzP7B9VzQjW5yh7d4H/go-libp2p-transport",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSkUKdsSrEo1v28Y3NJ7vQT7jmbxg87g8ucbhctwHEqb4/mafmt",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmSqJFpQ1VQtuhkntP9tMhTexipzpXAHtgSi4UYWFwjUZx/go-libp2p-conn",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmT8rehPR3F6bmwL6zjUN8XpiDBFFpMP2myPdC6ApsWfJf/go-base58",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTDQRD9abCLfdZCjVxuujSVq1X7pkW8eXhaJtgsjH2fnT/websocket",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/html",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/html/atom",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/html/charset",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/internal/iana",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/ipv4",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTEmsyNnckEq8rEfALfdhLHjrEHGoSGFDrAYReuetn7MC/go-net/ipv6",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTJoXQ24GqDf9MqAUwf3vW38HG6ahE9S7GzZoRMEeE8Kc/go-libp2p-pnet",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTKsRYeY4simJyf37K93juSq75Lo8MVCDJ7owjmf46u8W/go-context/frac",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTKsRYeY4simJyf37K93juSq75Lo8MVCDJ7owjmf46u8W/go-context/io",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmTnsezaB1wWNRHeHnYrm8K4d5i9wtyj3GsqjC3Rt5b5v5/go-multistream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmU1N5xVAUXgo3XRTt6GhJ2SuJEbxj2zRgMS7FpjSR2U83/semver",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUaGhKyLgTuYDdQsbKST1tYr2CVoix59rqaxdxqk2UbfK/retry-datastore",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUpeULWfmtsgCnfuRN3BHsfhHvBxNphoYh4La4CMxGt2Z/floodsub",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUpeULWfmtsgCnfuRN3BHsfhHvBxNphoYh4La4CMxGt2Z/floodsub/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUsh7scAkKe2erRhfGJpvxokArYL46ye2EJvFEp6XSbLr/golang_protobuf_extensions/pbutil",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUusaX99BZoELh7dmPgirqRQ1FAmMnmnBn3oiqDFGBUSc/go-keyspace",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmUywuGNZoUKV8B9iyvup9bPkLiMrhTsyVMkeSXW5VxAfC/go-libp2p-host",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmV2e7FjHs7N27D4gRoe2wqRMhMCtfiMmm2teeKqvk7K4Y/go-libp2p-secio",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmV2e7FjHs7N27D4gRoe2wqRMhMCtfiMmm2teeKqvk7K4Y/go-libp2p-secio/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVQfuckfPnW5LGmgSWsJVJr6Xea1bWXD8sBixe8E9MQD6/cbor/go",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/base",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/base/b64",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/base/bin",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/base/hex",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/base/mux",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/cbor",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/json",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVRuqGJ881CFiNLgwWSfRVjTjqQ6FeCNufkftNC4fpACZ/go-multicodec/mux",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru/simplelru",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVcXKVKR9Xd33tFPv9DPLxG6sbDUh2i3BAdFQc48FLM5c/go-tcp-transport",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVesPmqbPp7xRGyY96tnBwzDtVV1nqv4SCVxo5zCqKyH8/go-libp2p-loggables",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmVkDnNm71vYyY6s6rXwtmyDYis3WkKyrEhMECwT6R12uJ/go-libp2p-swarm",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWHgLqrghM9zw77nF6gdvT9ExQ2RB9pLxkd8sDHZf1rWb/go-temp-err-catcher",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWSvDKkcno2UyDg13rUBwWfhRsdj7uR3daAq57VoG5QeN/mdns",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWUNsat6Jb19nC5CiJCDXepTkxjdxi3eZqeoB6mrmmaGu/go-smux-spdystream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWchsfMt9Re1CQaiHqPQC1DrZ9bkpa6n229dRYkGyLXNh/dns",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWi28zbQG6B1xfaaWx5cYoLn3kBFU6pQ6GWQNRV5P6dNe/lock",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWjNfGgm61ABELTxPDwvNDm18j1EmQiPt9zXkCSEYgMDm/spdystream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWjNfGgm61ABELTxPDwvNDm18j1EmQiPt9zXkCSEYgMDm/spdystream/spdy",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmWq5PJgAQKDWQerAijYUVKW8mN5MDatK5j7VMp8rizKQd/btcec",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmX3QZ5jHEPidwUrymXV1iSCSUhdGxj15sm2gP4jKMef7B/client_golang/prometheus",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXMPT8tVwqKHZKWxnrfbYqUEaDJ5SF3Yh3fnFthaSrU37/xhandler",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXPKMT5cT8ajqamSD1YaeEpfeaHvs9AU4MQzte4Bkr6V4/sys/unix",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXZEfbEv9sXG9JnLoMNhREDMDgkq5Jd7uWJ7d77VJ4pxn/go-ds-flatfs",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore/addr",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore/queue",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmXuBJ7DR6k3rmUEKtvVMhwjmXDuJgXXPUt4LQXKBMsU93/go-os-helper",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmY6k4rtt8FZvU87itWvuWTPJoCdkLZF48J55Aa1UxLFeY/autobatch",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmY8QEk1PqyiNr7b4ZF1o4318cu9wNzTD2bP1qBb2yqkvB/go-onion-transport",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYBtUjY2Q3jY8eYAva99G44zefLZ5Ksgk66VG81ueKQp1/go-peerstream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYftoT56eEfUBTD3erR6heXuPSUhGRezSmhSU8LeczP8b/timecache",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYkNhwAviNzN974MB3koxuBRhtbvCotnuQcugrPF96BPp/client_model/go",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYnf27kzqR2cxt6LFZdrAFJuQd6785fTkBvMuEj9EeRxM/proquint",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmYsYNh6saxUYHajdj49uiRzdxQgiFTtymrjf3d1f2Cer4/go-nat-pmp",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZRjKbHa6DenStpQJFiaPcEwkZqrx7TH6xTf342LDU3qM/go-sysinfo",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZmmuAXgX73UQmX1jRKjTGmjzq24Jinqkq8vzkBtno4uX/go-is-domain",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmZvZSVtvxak4dcTkhsQhqd1SQ6rg5UzaSTu62WfWKjj93/base32",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qma2j8dYePrvN5DoNgwh1uAuu3FFtEtrUQFmr737ws8nCp/go-libp2p-netutil",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaFNtBAXX4nVMQWbUqNysXyhevUj1k4B1y5uS45LC7Vw9/fuse",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaFNtBAXX4nVMQWbUqNysXyhevUj1k4B1y5uS45LC7Vw9/fuse/fs",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaFNtBAXX4nVMQWbUqNysXyhevUj1k4B1y5uS45LC7Vw9/fuse/fuseutil",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaHHmfEozrrotyhyN44omJouyuEtx6ahddqV6W5yRaUSQ/go-ds-leveldb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/blake2b",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/blake2s",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/blowfish",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/salsa20",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/salsa20/salsa",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaPHkZLbQQbvcyavn8q1GFHg6o6yeceyHFSJ3Pjf3p3TQ/go-crypto/sha3",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaQG6fJdzn2532WHoPdVwKqftXr6iCSr5NtWyGi1BHytT/go-libp2p-kbucket",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaQG6fJdzn2532WHoPdVwKqftXr6iCSr5NtWyGi1BHytT/go-libp2p-kbucket/keyspace",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/charmap",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/internal",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/internal/identifier",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/japanese",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/korean",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/simplifiedchinese",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/traditionalchinese",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/encoding/unicode",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmaau1d1WjnQdTYfRYfFVsCS97cgD8ATyrKuNoEfexL7JZ/go-text/transform",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmaeRR9SpXumU5tYLRkq6x6pfMe8qKzxn4ujBpsTJ2zQG7/go-os-rename",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbAnytXbEyaVaiwkA2xPp8PPnkFKnQcfBMdXAcSfnjKtB/ws-transport",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/cache",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/comparer",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/errors",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/filter",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/iterator",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/journal",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/memdb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/opt",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/storage",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/table",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbBhyDKsY4mbY6xsKt3qu9Y7FPvMJ6qbD8AMjYYvPRw1g/goleveldb/leveldb/util",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbH3urJHTrZSUETgvQRriWM6mMFqyNSwCqnhknxfSGVWv/go-addr-util",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmbNinL4ErzM73BxQSNf8q2vPmAM4v3MNQM2DmDqDjt47D/perks/quantile",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmbn7RYyWzBVXiUp9jZ1dA4VADHy9DtS7iZLwfhEUQvm3U/go-smux-yamux",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmc5do1bC3JH73MThEgKgKkgNKLmqrvh2uaE6919yDmUaa/procfs",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcLqWSFsaQ8Ujh8Ys8i9JPHVy1CcdPoqV23M9S3ufdVbn/go-sockaddr/net",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcXRdAP5bCCm51X7XfDUrQ8Q9PsrKbU75pyvB18iuKob5/go-libp2p-interface-conn",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcrrEpx3VMUbrbgVroH3YiYyUS5c4YAykzyPJWKspUYLa/go-semver/semver",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcxkxTVuURV2Ptse8TvkqH5BQDwV62X1x19JqqvbBzwUM/go-multibase",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcyaFHbyiZfoX5GTpcqqCPYmbjYNAhRDekXSJPFHdYNSV/go.uuid",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmd3bFpvhYdjX7q11bNKsZnxwtWbwTsgkFhzemqLb5L4Wy/go-maddr-filter",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer/peerset",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer/test",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdVnYKahrvndXhyreWhY8YT3a5chJoWv8b4wVyH9JG2KB/go-testutil",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdYwCmx8pZRkzdcd8MhmLJqYVoVTC1aGsy5Q4reMGLNLg/atomicfile",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics/conn",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics/stream",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeFPvhFJGXGiXAc9zunNxZjCaWgYQpcsdwip2NWLcccyw/GoEndian",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeJcz1smiskcJbPRTWpzqnLpD2vYqkNiGHVrckaaWHCLv/go-reuseport",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeJcz1smiskcJbPRTWpzqnLpD2vYqkNiGHVrckaaWHCLv/go-reuseport/poll",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeJcz1smiskcJbPRTWpzqnLpD2vYqkNiGHVrckaaWHCLv/go-reuseport/singlepoll",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeQW4ayVqi7Jjay1SrP2wYydsH9KwSrzQBnqyC25gPFnG/go-notifier",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeQW4ayVqi7Jjay1SrP2wYydsH9KwSrzQBnqyC25gPFnG/go-notifier/Godeps/_workspace/src/github.com/jbenet/goprocess",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeQW4ayVqi7Jjay1SrP2wYydsH9KwSrzQBnqyC25gPFnG/go-notifier/Godeps/_workspace/src/github.com/jbenet/goprocess/ratelimit",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeWjRodbcZFKe5tMN7poEx3izym6osrLSnTLf9UjJZBbs/pb",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeX6rkyvL4yoW5pyeDPoKjYzMS3hB1dcn9ynyPLwDHn5Y/go-libp2p-nat",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeYJHEk8UjVVZ4XCRTZe6dFQrb8pGWD81LYCgeLp8CvMB/go-metrics",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmeiMCBkYHxkDkDfnDadzz4YxY5ruL5Pj499essE4vRsGM/bbloom",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmf2fBLzCvFxs3vvZaoQyKSTv2rjApek4F1kzRxAfK6P4P/gateway",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "gx/ipfs/QmfJHywXQu98UeZtGJBQrPAR6AtmDjjbe3qjTo9piXHPnx/murmur3",
+			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		}
+	]
+}
