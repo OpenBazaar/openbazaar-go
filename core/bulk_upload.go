@@ -11,13 +11,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net/url"
+	"fmt"
+	"io"
 )
 
-func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
-	records, err := r.ReadAll()
+func (n *OpenBazaarNode) HandleBulkListingUpload(r io.ReadCloser) error {
+	reader := csv.NewReader(r)
+	records, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	log.Notice(records)
 	if len(records) < 2 {
 		return errors.New("Invalid csv file")
 	}
@@ -26,6 +31,8 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 	for i, c := range columns {
 		fields[strings.ToLower(c)] = i
 	}
+
+	var listings []*pb.Listing
 	// For each row in the CSV create a new listing
 	for i := 1; i < len(records); i++ {
 		listing := new(pb.Listing)
@@ -54,27 +61,27 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 		if ok {
 			t, err := time.Parse(time.RFC3339, records[i][pos])
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 			ts, err := ptypes.TimestampProto(t)
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 			listing.Metadata.Expiry = ts
 		} else {
 			t, err := time.Parse(time.RFC3339, "2037-12-31T05:00:00.000Z")
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 			ts, err := ptypes.TimestampProto(t)
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 			listing.Metadata.Expiry = ts
 		}
 		pos, ok = fields["pricing_currency"]
 		if !ok {
-			errors.New("pricing_currency is a mandatory field")
+			return fmt.Errorf("Error in record %d: %s", i, "pricing_currency is a mandatory field")
 		}
 		listing.Metadata.PricingCurrency = strings.ToUpper(records[i][pos])
 		pos, ok = fields["language"]
@@ -83,9 +90,15 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 		}
 		pos, ok = fields["title"]
 		if !ok {
-			errors.New("title is a mandatory field")
+			return fmt.Errorf("Error in record %d: %s", i, "title is a mandatory field")
 		}
 		listing.Item.Title = records[i][pos]
+
+		listing.Slug, err = n.GenerateSlug(listing.Item.Title)
+		if err != nil {
+			return fmt.Errorf("Error in record %d: %s", i, err.Error())
+		}
+
 		pos, ok = fields["description"]
 		if ok {
 			listing.Item.Description = records[i][pos]
@@ -96,25 +109,25 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 		}
 		pos, ok = fields["price"]
 		if !ok {
-			errors.New("price is a mandatory field")
+			return fmt.Errorf("Error in record %d: %s", i, "price is a mandatory field")
 		}
 		if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 			f, err := strconv.ParseFloat(records[i][pos], 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 			listing.Item.Price = uint64(f * 100)
 		} else {
 			listing.Item.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 		}
 		pos, ok = fields["nsfw"]
 		if ok {
 			listing.Item.Nsfw, err = strconv.ParseBool(records[i][pos])
 			if err != nil {
-				return err
+				return fmt.Errorf("Error in record %d: %s", i, err.Error())
 			}
 		}
 		pos, ok = fields["tags"]
@@ -125,16 +138,23 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 		if ok {
 			listing.Item.Images = []*pb.Listing_Item_Image{}
 			image_urls := strings.Split(records[i][pos], ",")
-			for _, i := range image_urls {
-				b64, filename, err := n.GetBase64Image(i)
-				if err != nil {
-					continue
+			for x, img := range image_urls {
+				var b64, filename string
+				testUrl, err := url.Parse(img)
+				if err == nil && (testUrl.Scheme == "http" || testUrl.Scheme == "https") {
+					b64, filename, err = n.GetBase64Image(img)
+					if err != nil {
+						continue
+					}
+				} else {
+					filename = listing.Slug + "_" + strconv.Itoa(x)
+					b64 = img
 				}
 				images, err := n.SetProductImages(b64, filename)
 				if err != nil {
-					continue
+					return fmt.Errorf("Error in record %d: image %d invalid", i, x)
 				}
-				img := &pb.Listing_Item_Image{
+				imgpb := &pb.Listing_Item_Image{
 					Filename: filename,
 					Tiny:     images.Tiny,
 					Small:    images.Small,
@@ -142,7 +162,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 					Large:    images.Large,
 					Original: images.Original,
 				}
-				listing.Item.Images = append(listing.Item.Images, img)
+				listing.Item.Images = append(listing.Item.Images, imgpb)
 			}
 		}
 		pos, ok = fields["categories"]
@@ -162,7 +182,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 			if quantityOK {
 				quantity, err := strconv.ParseInt(records[i][quantityPos], 10, 64)
 				if err != nil {
-					return err
+					return fmt.Errorf("Error in record %d: %s", i, err.Error())
 				}
 				sku.Quantity = quantity
 			}
@@ -197,18 +217,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option1_service1_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option1_service1_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service1_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -228,13 +248,13 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -249,18 +269,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option1_service3_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option1_service3_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service3_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -295,18 +315,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option2_service1_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option2_service1_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service1_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -321,18 +341,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option2_service2_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option2_service2_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service2_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -347,18 +367,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option2_service3_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option2_service3_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service3_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -393,18 +413,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option3_service1_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option3_service1_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service1_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -419,18 +439,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option3_service2_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option1_service2_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service2_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -445,18 +465,18 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				}
 				pos, ok = fields["shipping_option3_service3_estimated_price"]
 				if !ok {
-					return errors.New("shipping_option3_service3_estimated_price is a mandatory field")
+					return fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service3_estimated_price is a mandatory field")
 				}
 				if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
 					f, err := strconv.ParseFloat(records[i][pos], 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 					service.Price = uint64(f * 100)
 				} else {
 					service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
 					if err != nil {
-						return err
+						return fmt.Errorf("Error in record %d: %s", i, err.Error())
 					}
 				}
 				so.Services = append(so.Services, service)
@@ -470,6 +490,9 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 				listing.Moderators = *sd.StoreModerators
 			}
 		}
+		listings = append(listings, listing)
+	}
+	for _, listing := range listings {
 		// Set inventory
 		err = n.SetListingInventory(listing)
 		if err != nil {
@@ -483,7 +506,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 		}
 
 		// Save to disk
-		listingPath := path.Join(n.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
+		listingPath := path.Join(n.RepoPath, "root", "listings", signedListing.Listing.Slug + ".json")
 		f, err := os.Create(listingPath)
 		if err != nil {
 			return err
@@ -509,5 +532,6 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r csv.Reader) error {
 			return err
 		}
 	}
+
 	return nil
 }

@@ -88,6 +88,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTPurchase(w, r)
 	case strings.HasPrefix(path, "/ob/cases"):
 		i.POSTCases(w, r)
+	case strings.HasPrefix(path, "/ob/bulkupload"):
+		i.POSTBulkUpload(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
