@@ -7,6 +7,7 @@ import (
 	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	manet "gx/ipfs/QmVCNGTyD4EkvNYaAp253uMQ9Rjsjy2oGMvcdJJUoVRfja/go-multiaddr-net"
 	tpt "gx/ipfs/QmVpYwkpCJLSLpEY9tUbDQjCVdEVusgibpE9TopF5MPoSS/go-libp2p-transport"
+	mafmt "gx/ipfs/QmYjJnSTfXWhYL2cV1xFphPqjqowJqH7ZKLA1As8QrPHbn/mafmt"
 
 	"context"
 	"crypto/rsa"
@@ -72,6 +73,7 @@ type OnionTransport struct {
 	auth        *proxy.Auth
 	keysDir     string
 	keys        map[string]*rsa.PrivateKey
+	onlyOnion   bool
 }
 
 // NewOnionTransport creates a OnionTransport
@@ -81,7 +83,9 @@ type OnionTransport struct {
 //
 // auth contains the optional tor control password
 // keysDir is the key material for the Tor onion service.
-func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir string) (*OnionTransport, error) {
+//
+// if onlyOnion is true the dialer will only be used to dial out on onion addresses
+func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir string, onlyOnion bool) (*OnionTransport, error) {
 	conn, err := bulb.Dial(controlNet, controlAddr)
 	if err != nil {
 		return nil, err
@@ -97,6 +101,7 @@ func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir
 		controlConn: conn,
 		auth:        auth,
 		keysDir:     keysDir,
+		onlyOnion:   onlyOnion,
 	}
 	keys, err := o.loadKeys()
 	if err != nil {
@@ -205,7 +210,8 @@ func (t *OnionTransport) Listen(laddr ma.Multiaddr) (tpt.Listener, error) {
 	return &listener, nil
 }
 
-// Matches returns true if the given multiaddr represents a Tor onion service
+// Matches returns true if onlyOnion and the given multiaddr represents a Tor onion service otherwise it checks
+// for onion, TCP, and WS.
 func (t *OnionTransport) Matches(a ma.Multiaddr) bool {
 	return IsValidOnionMultiAddr(a)
 }
@@ -254,9 +260,15 @@ func (d *OnionDialer) DialContext(ctx context.Context, raddr ma.Multiaddr) (tpt.
 	return d.Dial(raddr)
 }
 
-// Matches returns true if the given multiaddr represents a Tor onion service
+// If onlyOnion is set, Matches returns true only for onion addrs.
+// Otherwise TCP addrs can use this dialer in addition to onion.
 func (d *OnionDialer) Matches(a ma.Multiaddr) bool {
-	return IsValidOnionMultiAddr(a)
+	if d.transport.onlyOnion {
+		// only dial out on onion addresses
+		return IsValidOnionMultiAddr(a)
+	} else {
+		return IsValidOnionMultiAddr(a) || mafmt.TCP.Matches(a)
+	}
 }
 
 // OnionListener implements go-libp2p-transport's Listener interface

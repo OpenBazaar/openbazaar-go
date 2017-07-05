@@ -275,14 +275,14 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create table config (key text primary key not null, value blob);
 	create table followers (peerID text primary key not null);
 	create table following (peerID text primary key not null);
-	create table offlinemessages (url text primary key not null, timestamp integer);
+	create table offlinemessages (url text primary key not null, timestamp integer, message blob);
 	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
 	create table keys (scriptPubKey text primary key not null, purpose integer, keyIndex integer, used integer, key text);
 	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);
 	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text);
 	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);
 	create table txmetadata (txid text primary key not null, address text, memo text, orderID text, thumbnail text, canBumpFee integer);
-	create table inventory (slug text, variantIndex integer, count integer);
+	create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);
 	create index index_inventory on inventory (slug);
 	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
 	create index index_purchases on purchases (paymentAddr, timestamp);

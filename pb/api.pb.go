@@ -34,6 +34,7 @@ It has these top-level messages:
 	Rating
 	Dispute
 	DisputeResolution
+	DisputeAcceptance
 	Outpoint
 	Refund
 	ID

@@ -25,11 +25,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
+	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	humanize "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
 	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
 	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
 	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
+	dhtpb "gx/ipfs/QmaoxFZcgwGyoB57pCYQobejLoNgqaA6trr3zxxrbm4UXe/go-libp2p-kad-dht/pb"
+	"io/ioutil"
 )
 
 const (
@@ -178,6 +181,39 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 			return
 		}
 		r.URL.Path = strings.Replace(r.URL.Path, paths[2], peerID, 1)
+	}
+
+	if paths[1] == "ipfs" && paths[2] == "providers" {
+		dht, ok := i.node.Routing.(*dht.IpfsDHT)
+		if !ok {
+			webError(w, "Dht routing not available", nil, http.StatusInternalServerError)
+			return
+		}
+		if len(paths) < 3 || paths[3] == "" {
+			webError(w, "Must specify key in path", nil, http.StatusBadRequest)
+			return
+		}
+		key, err := cid.Decode(paths[3])
+		if err != nil {
+			webError(w, "Invalid key", nil, http.StatusBadRequest)
+			return
+		}
+		pmes := dhtpb.NewMessage(dhtpb.Message_GET_PROVIDERS, key.KeyString(), 0)
+		provs, err := dht.GetProviders(ctx, pmes)
+		if err != nil {
+			webError(w, "Error looking up providers", err, http.StatusInternalServerError)
+			return
+		}
+		resp, err := proto.Marshal(provs)
+		if err != nil {
+			webError(w, "Error marshalling response", err, http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Disposition", "attachment; filename=providers.pb")
+		w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+
+		w.Write(resp)
+		return
 	}
 
 	unmodifiedURLPath := r.URL.Path
@@ -381,6 +417,32 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 }
 
 func (i *gatewayHandler) postHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	var paths []string = strings.Split(r.URL.Path, "/")
+	if len(paths) > 1 && paths[1] == "ipfs" && paths[2] == "providers" {
+		// handle provider post
+		dht, ok := i.node.Routing.(*dht.IpfsDHT)
+		if !ok {
+			webError(w, "Dht routing not available", nil, http.StatusInternalServerError)
+			return
+		}
+		buf, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			webError(w, "Invalid provider data", err, http.StatusBadRequest)
+			return
+		}
+		pmes := new(dhtpb.Message)
+		err = proto.Unmarshal(buf, pmes)
+		if err != nil {
+			webError(w, "Error unmarshalling message", err, http.StatusBadRequest)
+			return
+		}
+		err = dht.AddProvider(ctx, pmes)
+		if err != nil {
+			webError(w, "Error adding provier", err, http.StatusInternalServerError)
+		}
+		return
+	}
+
 	p, err := i.api.Unixfs().Add(ctx, r.Body)
 	if err != nil {
 		internalWebError(w, err)

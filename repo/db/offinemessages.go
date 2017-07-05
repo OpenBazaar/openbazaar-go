@@ -47,3 +47,44 @@ func (o *OfflineMessagesDB) Has(url string) bool {
 	}
 	return true
 }
+
+func (o *OfflineMessagesDB) SetMessage(url string, message []byte) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	_, err := o.db.Exec("update offlinemessages set message=? where url=?", message, url)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *OfflineMessagesDB) GetMessages() (map[string][]byte, error) {
+	o.lock.RLock()
+	defer o.lock.RUnlock()
+	stm := "select url, message from offlinemessages where message is not null"
+
+	ret := make(map[string][]byte)
+	rows, err := o.db.Query(stm)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url string
+		var message []byte
+		rows.Scan(&url, &message)
+		ret[url] = message
+	}
+	return ret, nil
+}
+
+func (o *OfflineMessagesDB) DeleteMessage(url string) error {
+	o.lock.Lock()
+	defer o.lock.Unlock()
+	_, err := o.db.Exec("update offlinemessages set message=null where url=?", url)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"database/sql"
 	"testing"
 )
@@ -59,5 +60,36 @@ func TestOfflineMessagesHas(t *testing.T) {
 	if has {
 		t.Error("Offline messages has returned incorrect")
 	}
+}
 
+func TestOfflineMessagesSetMessage(t *testing.T) {
+	err := odb.Put("abcc")
+	if err != nil {
+		t.Error(err)
+	}
+	err = odb.SetMessage("abcc", []byte("helloworld"))
+	if err != nil {
+		t.Error(err)
+	}
+	messages, err := odb.GetMessages()
+	if err != nil {
+		t.Error(err)
+	}
+	m, ok := messages["abcc"]
+	if !ok || !bytes.Equal(m, []byte("helloworld")) {
+		t.Error("Returned incorrect value")
+	}
+
+	err = odb.DeleteMessage("abcc")
+	if err != nil {
+		t.Error(err)
+	}
+	messages, err = odb.GetMessages()
+	if err != nil {
+		t.Error(err)
+	}
+	m, ok = messages["abcc"]
+	if ok {
+		t.Error("Failed to delete")
+	}
 }

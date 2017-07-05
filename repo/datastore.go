@@ -87,6 +87,15 @@ type OfflineMessages interface {
 
 	// Does the given URL exist in the database?
 	Has(url string) bool
+
+	// Save a message with the url
+	SetMessage(url string, message []byte) error
+
+	// Get all entries with a message
+	GetMessages() (map[string][]byte, error)
+
+	// Delete the given message
+	DeleteMessage(url string) error
 }
 
 type Pointers interface {

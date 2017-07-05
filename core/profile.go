@@ -282,6 +282,34 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	return n.UpdateProfile(profile)
 }
 
+func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
+	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profile := new(pb.Profile)
+	_, ferr := os.Stat(profilePath)
+	if !os.IsNotExist(ferr) {
+		// Read existing file
+		file, err := ioutil.ReadFile(profilePath)
+		if err != nil {
+			return err
+		}
+		err = jsonpb.UnmarshalString(string(file), profile)
+		if err != nil {
+			return err
+		}
+	} else {
+		return nil
+	}
+	if profile.Stats != nil && newRating.RatingData != nil {
+
+		total := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
+		total += float32(newRating.RatingData.Overall)
+		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount+1)
+		profile.Stats.RatingCount += 1
+	}
+
+	return n.UpdateProfile(profile)
+}
+
 func ValidateProfile(profile *pb.Profile) error {
 	if strings.Contains(profile.Handle, "@") {
 		return errors.New("Handle should not contain @")

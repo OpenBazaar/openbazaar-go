@@ -4,13 +4,20 @@ import (
 	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
 	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 	multihash "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
 
+	"bytes"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	"golang.org/x/net/context"
+	gonet "net"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 const (
@@ -75,6 +82,27 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	if err != nil {
 		return err
 	}
+
+	// Post provider to gateway if we have one set in the config
+	if len(n.CrosspostGateways) > 0 {
+		dial := gonet.Dial
+		if n.TorDialer != nil {
+			dial = n.TorDialer.Dial
+		}
+		tbTransport := &http.Transport{Dial: dial}
+		client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
+		pmes := dhtpb.NewMessage(dhtpb.Message_ADD_PROVIDER, pointer.Cid.KeyString(), 0)
+		pmes.ProviderPeers = dhtpb.RawPeerInfosToPBPeers([]ps.PeerInfo{pointer.Value})
+		ser, err := proto.Marshal(pmes)
+		if err == nil {
+			for _, g := range n.CrosspostGateways {
+				go func(u *url.URL) {
+					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
+				}(g)
+			}
+		}
+	}
+
 	if m.MessageType != pb.Message_OFFLINE_ACK {
 		pointer.Purpose = ipfs.MESSAGE
 		pointer.CancelID = &p

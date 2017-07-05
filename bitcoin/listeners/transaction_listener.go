@@ -11,6 +11,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
 	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	"sync"
@@ -79,11 +80,13 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			continue
 		}
 
-		var fundsReleased bool
-		for _, r := range records {
+		fundsReleased := true
+		for i, r := range records {
 			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
-				r.Spent = true
-				fundsReleased = true
+				records[i].Spent = true
+			}
+			if records[i].Value > 0 && !records[i].Spent {
+				fundsReleased = false
 			}
 		}
 
@@ -99,11 +102,25 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			l.db.Sales().UpdateFunding(orderId, funded, records)
 			// This is a dispute payout. We should set the order state.
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				if contract.DisputeAcceptance == nil && contract != nil && contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+					accept := new(pb.DisputeAcceptance)
+					ts, _ := ptypes.TimestampProto(time.Now())
+					accept.Timestamp = ts
+					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
+					contract.DisputeAcceptance = accept
+				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		} else {
 			l.db.Purchases().UpdateFunding(orderId, funded, records)
 			if state == pb.OrderState_DECIDED && len(records) > 0 && fundsReleased {
+				if contract.DisputeAcceptance == nil && contract != nil && len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
+					accept := new(pb.DisputeAcceptance)
+					ts, _ := ptypes.TimestampProto(time.Now())
+					accept.Timestamp = ts
+					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
+					contract.DisputeAcceptance = accept
+				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
 		}
@@ -241,17 +258,23 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			continue
 		}
 		q := int(item.Quantity)
-		if c-q < 0 {
-			q = 0
+		newCount := c - q
+		if c < 0 {
+			newCount = -1
+		}
+		if c >= 0 && c-q <= 0 {
+			newCount = c
 			orderId, err := calcOrderId(contract.BuyerOrder)
 			if err != nil {
 				continue
 			}
-			log.Warning("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
+			log.Warningf("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
 			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
 		}
-		l.db.Inventory().Put(listing.Slug, variant, c-q)
-		log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, c-q)
+		l.db.Inventory().Put(listing.Slug, variant, newCount)
+		if newCount >= 0 {
+			log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, newCount)
+		}
 	}
 }
 

@@ -59,7 +59,7 @@ func (c *ChatDB) GetConversations() []repo.ChatConversation {
 	defer c.lock.RUnlock()
 	var ret []repo.ChatConversation
 
-	stm := "select distinct peerID from chat order by timestamp desc;"
+	stm := "select distinct peerID from chat where subject='' order by timestamp desc;"
 	rows, err := c.db.Query(stm)
 	if err != nil {
 		return ret
