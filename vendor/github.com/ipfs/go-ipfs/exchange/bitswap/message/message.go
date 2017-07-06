@@ -8,8 +8,8 @@ import (
 	pb "github.com/ipfs/go-ipfs/exchange/bitswap/message/pb"
 	wantlist "github.com/ipfs/go-ipfs/exchange/bitswap/wantlist"
 
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	inet "gx/ipfs/QmVtMT3fD7DzQNW7hdm6Xe6KPstzcggrhNpeVZ4422UpKK/go-libp2p-net"
+	inet "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 )
@@ -220,19 +220,13 @@ func (m *impl) ToProtoV1() *pb.Message {
 func (m *impl) ToNetV0(w io.Writer) error {
 	pbw := ggio.NewDelimitedWriter(w)
 
-	if err := pbw.WriteMsg(m.ToProtoV0()); err != nil {
-		return err
-	}
-	return nil
+	return pbw.WriteMsg(m.ToProtoV0())
 }
 
 func (m *impl) ToNetV1(w io.Writer) error {
 	pbw := ggio.NewDelimitedWriter(w)
 
-	if err := pbw.WriteMsg(m.ToProtoV1()); err != nil {
-		return err
-	}
-	return nil
+	return pbw.WriteMsg(m.ToProtoV1())
 }
 
 func (m *impl) Loggable() map[string]interface{} {

@@ -63,11 +63,11 @@ func TestOfflineMessagesHas(t *testing.T) {
 }
 
 func TestOfflineMessagesSetMessage(t *testing.T) {
-	err := odb.Put("abcc")
+	err := odb.Put("abccc")
 	if err != nil {
 		t.Error(err)
 	}
-	err = odb.SetMessage("abcc", []byte("helloworld"))
+	err = odb.SetMessage("abccc", []byte("helloworld"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,12 +75,12 @@ func TestOfflineMessagesSetMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	m, ok := messages["abcc"]
+	m, ok := messages["abccc"]
 	if !ok || !bytes.Equal(m, []byte("helloworld")) {
 		t.Error("Returned incorrect value")
 	}
 
-	err = odb.DeleteMessage("abcc")
+	err = odb.DeleteMessage("abccc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +88,7 @@ func TestOfflineMessagesSetMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	m, ok = messages["abcc"]
+	m, ok = messages["abccc"]
 	if ok {
 		t.Error("Failed to delete")
 	}

@@ -11,7 +11,7 @@ import (
 	bsmsg "github.com/ipfs/go-ipfs/exchange/bitswap/message"
 	wl "github.com/ipfs/go-ipfs/exchange/bitswap/wantlist"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 )
 
 // TODO consider taking responsibility for other types of requests. For
@@ -286,6 +286,9 @@ func (e *Engine) AddBlock(block blocks.Block) {
 
 func (e *Engine) MessageSent(p peer.ID, m bsmsg.BitSwapMessage) error {
 	l := e.findOrCreate(p)
+	l.lk.Lock()
+	defer l.lk.Unlock()
+
 	for _, block := range m.Blocks() {
 		l.SentBytes(len(block.RawData()))
 		l.wantList.Remove(block.Cid())
@@ -295,8 +298,32 @@ func (e *Engine) MessageSent(p peer.ID, m bsmsg.BitSwapMessage) error {
 	return nil
 }
 
+func (e *Engine) PeerConnected(p peer.ID) {
+	e.lock.Lock()
+	l, ok := e.ledgerMap[p]
+	if !ok {
+		l = newLedger(p)
+		e.ledgerMap[p] = l
+	}
+	l.lk.Lock()
+	l.ref++
+	l.lk.Unlock()
+	e.lock.Unlock()
+}
+
 func (e *Engine) PeerDisconnected(p peer.ID) {
-	// TODO: release ledger
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	l, ok := e.ledgerMap[p]
+	if !ok {
+		return
+	}
+	l.lk.Lock()
+	l.ref--
+	if l.ref <= 0 {
+		delete(e.ledgerMap, p)
+	}
+	l.lk.Unlock()
 }
 
 func (e *Engine) numBytesSentTo(p peer.ID) uint64 {

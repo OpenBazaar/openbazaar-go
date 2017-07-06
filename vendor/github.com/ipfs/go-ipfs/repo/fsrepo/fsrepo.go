@@ -24,9 +24,9 @@ import (
 	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
 
 	measure "gx/ipfs/QmNPv1yzXBqxzqjfTzHCeBoicxxZgHzLezdY2hMCZ3r6EU/go-ds-measure"
-	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	util "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
+	util "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
+	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 )
 
 var log = logging.Logger("fsrepo")
@@ -36,11 +36,6 @@ var RepoVersion = 5
 
 var migrationInstructions = `See https://github.com/ipfs/fs-repo-migrations/blob/master/run.md
 Sorry for the inconvenience. In the future, these will run automatically.`
-
-var errIncorrectRepoFmt = `Repo has incorrect version: %s
-Program version is: %s
-Please run the ipfs migration tool before continuing.
-` + migrationInstructions
 
 var programTooLowMessage = `Your programs version (%d) is lower than your repos (%d).
 Please update ipfs to a version that supports the existing repo, or run
@@ -411,10 +406,7 @@ func (r *FSRepo) Close() error {
 	// logging.Configure(logging.Output(os.Stderr))
 
 	r.closed = true
-	if err := r.lockfile.Close(); err != nil {
-		return err
-	}
-	return nil
+	return r.lockfile.Close()
 }
 
 // Result when not Open is undefined. The method may panic if it pleases.

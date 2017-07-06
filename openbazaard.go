@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
 	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	manet "gx/ipfs/QmVCNGTyD4EkvNYaAp253uMQ9Rjsjy2oGMvcdJJUoVRfja/go-multiaddr-net"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
+	manet "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net"
 	"net"
 	"os"
 	"os/signal"
@@ -27,7 +27,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
-	"github.com/OpenBazaar/go-onion-transport"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
@@ -57,7 +56,7 @@ import (
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dht "github.com/ipfs/go-ipfs/routing/dht"
+	dht "github.com/ipfs/go-ipfs/routing/dht/util"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
@@ -65,15 +64,16 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	addrutil "gx/ipfs/QmPB5aAzt2wo5Xk8SoZi6y2oFN7shQMvYWgduMATojkdpj/go-addr-util"
-	"gx/ipfs/QmRSTPtUUt4fHYqJ3gwyeRGvqSwR9quD9zDC148oYYycKV/go-libp2p-interface-pnet"
-	swarm "gx/ipfs/QmTU8NWsDYNShMA3hjPfEZTg3pD7YgX62sFmZdEgbjtWq2/go-libp2p-swarm"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	p2phost "gx/ipfs/QmXzeAcmKDTfNZQBiyF22hQKuTK7P5z6MBBQLTk9bbiSUc/go-libp2p-host"
-	metrics "gx/ipfs/QmaMSrAXMpMhsrbGZYmGXE4X1ttkFv7KZSpGa5AKYTUpPD/go-libp2p-metrics"
-	recpb "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record/pb"
-	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
-	p2pbhost "gx/ipfs/QmeWJwi61vii5g8zQUB9UGegfUbmhTKHgeDFP9XuSp5jZ4/go-libp2p/p2p/host/basic"
+	"gx/ipfs/QmPsBptED6X43GYg3347TAUruN3UfsAhaGTP9xbinYX7uf/go-libp2p-interface-pnet"
+	p2pbhost "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/host/basic"
+	p2phost "gx/ipfs/QmUywuGNZoUKV8B9iyvup9bPkLiMrhTsyVMkeSXW5VxAfC/go-libp2p-host"
+	swarm "gx/ipfs/QmVkDnNm71vYyY6s6rXwtmyDYis3WkKyrEhMECwT6R12uJ/go-libp2p-swarm"
+	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
+	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	oniontp "gx/ipfs/QmY8QEk1PqyiNr7b4ZF1o4318cu9wNzTD2bP1qBb2yqkvB/go-onion-transport"
+	addrutil "gx/ipfs/QmbH3urJHTrZSUETgvQRriWM6mMFqyNSwCqnhknxfSGVWv/go-addr-util"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	metrics "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics"
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
 	"syscall"
 )
@@ -516,7 +516,7 @@ func (x *Start) Execute(args []string) error {
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
 	}
 	// Iterate over our address and process them as needed
-	var onionTransport *torOnion.OnionTransport
+	var onionTransport *oniontp.OnionTransport
 	var torDialer proxy.Dialer
 	var usingTor, usingClearnet bool
 	var controlPort int
@@ -572,7 +572,7 @@ func (x *Start) Execute(args []string) error {
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
 		}
 		auth := &proxy.Auth{Password: torConfig.Password}
-		onionTransport, err = torOnion.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
+		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
 		if err != nil {
 			log.Error(err)
 			return err

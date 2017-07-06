@@ -13,7 +13,7 @@ import (
 	exchange "github.com/ipfs/go-ipfs/exchange"
 
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 var log = logging.Logger("blockservice")
@@ -172,7 +172,7 @@ func (s *blockService) GetBlock(ctx context.Context, c *cid.Cid) (blocks.Block, 
 // the returned channel.
 // NB: No guarantees are made about order.
 func (s *blockService) GetBlocks(ctx context.Context, ks []*cid.Cid) <-chan blocks.Block {
-	out := make(chan blocks.Block, 0)
+	out := make(chan blocks.Block)
 	go func() {
 		defer close(out)
 		var misses []*cid.Cid

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	gopath "path"
 	"runtime/debug"
 	"strings"
@@ -19,19 +20,22 @@ import (
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	"github.com/ipfs/go-ipfs/namesys"
 	path "github.com/ipfs/go-ipfs/path"
+	"github.com/ipfs/go-ipfs/routing/dht"
+	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	recpb "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record/pb"
 
 	"crypto/sha256"
 	"encoding/hex"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
-	"github.com/ipfs/go-ipfs/routing/dht"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
+	uio "github.com/ipfs/go-ipfs/unixfs/io"
+	dhtpb "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb"
+
+	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
 	humanize "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
-	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
-	dhtpb "gx/ipfs/QmaoxFZcgwGyoB57pCYQobejLoNgqaA6trr3zxxrbm4UXe/go-libp2p-kad-dht/pb"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
+	multibase "gx/ipfs/QmcxkxTVuURV2Ptse8TvkqH5BQDwV62X1x19JqqvbBzwUM/go-multibase"
 	"io/ioutil"
 )
 
@@ -275,7 +279,22 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		return
 	}
 
-	dr, err := i.api.Unixfs().Cat(ctx, parsedPath)
+	// Resolve path to the final DAG node for the ETag
+	resolvedPath, err := i.api.ResolvePath(ctx, parsedPath)
+	switch err {
+	case nil:
+	case coreiface.ErrOffline:
+		if !i.node.OnlineMode() {
+			webError(w, "ipfs resolve -r "+urlPath, err, http.StatusServiceUnavailable)
+			return
+		}
+		fallthrough
+	default:
+		webError(w, "ipfs resolve -r "+urlPath, err, http.StatusNotFound)
+		return
+	}
+
+	dr, err := i.api.Unixfs().Cat(ctx, resolvedPath)
 	dir := false
 	switch err {
 	case nil:
@@ -283,18 +302,13 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		defer dr.Close()
 	case coreiface.ErrIsDir:
 		dir = true
-	case coreiface.ErrOffline:
-		if !i.node.OnlineMode() {
-			webError(w, "ipfs cat "+urlPath, err, http.StatusServiceUnavailable)
-			return
-		}
-		fallthrough
 	default:
 		webError(w, "ipfs cat "+urlPath, err, http.StatusNotFound)
 		return
 	}
 
-	etag := gopath.Base(urlPath)
+	// Check etag send back to us
+	etag := "\"" + resolvedPath.Cid().String() + "\""
 	if r.Header.Get("If-None-Match") == etag {
 		w.WriteHeader(http.StatusNotModified)
 		return
@@ -302,19 +316,52 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 
 	i.addUserHeaders(w) // ok, _now_ write user's headers.
 	w.Header().Set("X-IPFS-Path", urlPath)
+	w.Header().Set("Etag", etag)
 
 	// set 'allowed' headers
 	w.Header().Set("Access-Control-Allow-Headers", "X-Stream-Output, X-Chunked-Output")
 	// expose those headers
 	w.Header().Set("Access-Control-Expose-Headers", "X-Stream-Output, X-Chunked-Output")
 
+	// Suborigin header, sandboxes apps from each other in the browser (even
+	// though they are served from the same gateway domain).
+	//
+	// Omitted if the path was treated by IPNSHostnameOption(), for example
+	// a request for http://example.net/ would be changed to /ipns/example.net/,
+	// which would turn into an incorrect Suborigin header.
+	// In this case the correct thing to do is omit the header because it is already
+	// handled correctly without a Suborigin.
+	//
+	// NOTE: This is not yet widely supported by browsers.
+	if !ipnsHostname {
+		// e.g.: 1="ipfs", 2="QmYuNaKwY...", ...
+		pathComponents := strings.SplitN(urlPath, "/", 4)
+
+		var suboriginRaw []byte
+		cidDecoded, err := cid.Decode(pathComponents[2])
+		if err != nil {
+			// component 2 doesn't decode with cid, so it must be a hostname
+			suboriginRaw = []byte(strings.ToLower(pathComponents[2]))
+		} else {
+			suboriginRaw = cidDecoded.Bytes()
+		}
+
+		base32Encoded, err := multibase.Encode(multibase.Base32, suboriginRaw)
+		if err != nil {
+			internalWebError(w, err)
+			return
+		}
+
+		suborigin := pathComponents[1] + "000" + strings.ToLower(base32Encoded)
+		w.Header().Set("Suborigin", suborigin)
+	}
+
 	// set these headers _after_ the error, for we may just not have it
 	// and dont want the client to cache a 500 response...
 	// and only if it's /ipfs!
 	// TODO: break this out when we split /ipfs /ipns routes.
 	modtime := time.Now()
-	if strings.HasPrefix(unmodifiedURLPath, ipfsPathPrefix) {
-		w.Header().Set("Etag", etag)
+	if strings.HasPrefix(urlPath, ipfsPathPrefix) && !dir {
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 		// set modtime to a really long time ago, since files are immutable and should stay cached
 		modtime = time.Unix(1, 0)
@@ -328,91 +375,103 @@ func (i *gatewayHandler) getOrHeadHandler(ctx context.Context, w http.ResponseWr
 		return
 	}
 
-	links, err := i.api.Unixfs().Ls(ctx, parsedPath)
+	nd, err := i.api.ResolveNode(ctx, resolvedPath)
 	if err != nil {
 		internalWebError(w, err)
 		return
 	}
 
-	// storage for directory listing
-	var dirListing []directoryItem
-	// loop through files
-	foundIndex := false
-	for _, link := range links {
-		if link.Name == "index.html" {
-			log.Debugf("found index.html link for %s", urlPath)
-			foundIndex = true
+	dirr, err := uio.NewDirectoryFromNode(i.node.DAG, nd)
+	if err != nil {
+		internalWebError(w, err)
+		return
+	}
 
-			if urlPath[len(urlPath)-1] != '/' {
-				// See comment above where originalUrlPath is declared.
-				http.Redirect(w, r, originalUrlPath+"/", 302)
-				log.Debugf("redirect to %s", originalUrlPath+"/")
-				return
-			}
+	ixnd, err := dirr.Find(ctx, "index.html")
+	switch {
+	case err == nil:
+		log.Debugf("found index.html link for %s", urlPath)
 
-			dr, err := i.api.Unixfs().Cat(ctx, coreapi.ParseCid(link.Cid))
-			if err != nil {
-				internalWebError(w, err)
-				return
-			}
-			defer dr.Close()
-
-			// write to request
-			http.ServeContent(w, r, "index.html", modtime, dr)
-			break
+		dirwithoutslash := urlPath[len(urlPath)-1] != '/'
+		goget := r.URL.Query().Get("go-get") == "1"
+		if dirwithoutslash && !goget {
+			// See comment above where originalUrlPath is declared.
+			http.Redirect(w, r, originalUrlPath+"/", 302)
+			log.Debugf("redirect to %s", originalUrlPath+"/")
+			return
 		}
 
+		dr, err := i.api.Unixfs().Cat(ctx, coreapi.ParseCid(ixnd.Cid()))
+		if err != nil {
+			internalWebError(w, err)
+			return
+		}
+		defer dr.Close()
+
+		// write to request
+		http.ServeContent(w, r, "index.html", modtime, dr)
+		return
+	default:
+		internalWebError(w, err)
+		return
+	case os.IsNotExist(err):
+	}
+
+	if r.Method == "HEAD" {
+		return
+	}
+
+	// storage for directory listing
+	var dirListing []directoryItem
+	dirr.ForEachLink(ctx, func(link *node.Link) error {
 		// See comment above where originalUrlPath is declared.
 		di := directoryItem{humanize.Bytes(link.Size), link.Name, gopath.Join(originalUrlPath, link.Name)}
 		dirListing = append(dirListing, di)
+		return nil
+	})
+
+	// construct the correct back link
+	// https://github.com/ipfs/go-ipfs/issues/1365
+	var backLink string = prefix + urlPath
+
+	// don't go further up than /ipfs/$hash/
+	pathSplit := path.SplitList(backLink)
+	switch {
+	// keep backlink
+	case len(pathSplit) == 3: // url: /ipfs/$hash
+
+	// keep backlink
+	case len(pathSplit) == 4 && pathSplit[3] == "": // url: /ipfs/$hash/
+
+	// add the correct link depending on wether the path ends with a slash
+	default:
+		if strings.HasSuffix(backLink, "/") {
+			backLink += "./.."
+		} else {
+			backLink += "/.."
+		}
 	}
 
-	if !foundIndex {
-		if r.Method != "HEAD" {
-			// construct the correct back link
-			// https://github.com/ipfs/go-ipfs/issues/1365
-			var backLink string = prefix + urlPath
-
-			// don't go further up than /ipfs/$hash/
-			pathSplit := path.SplitList(backLink)
-			switch {
-			// keep backlink
-			case len(pathSplit) == 3: // url: /ipfs/$hash
-
-			// keep backlink
-			case len(pathSplit) == 4 && pathSplit[3] == "": // url: /ipfs/$hash/
-
-			// add the correct link depending on wether the path ends with a slash
-			default:
-				if strings.HasSuffix(backLink, "/") {
-					backLink += "./.."
-				} else {
-					backLink += "/.."
-				}
-			}
-
-			// strip /ipfs/$hash from backlink if IPNSHostnameOption touched the path.
-			if ipnsHostname {
-				backLink = prefix + "/"
-				if len(pathSplit) > 5 {
-					// also strip the trailing segment, because it's a backlink
-					backLinkParts := pathSplit[3 : len(pathSplit)-2]
-					backLink += path.Join(backLinkParts) + "/"
-				}
-			}
-
-			// See comment above where originalUrlPath is declared.
-			tplData := listingTemplateData{
-				Listing:  dirListing,
-				Path:     originalUrlPath,
-				BackLink: backLink,
-			}
-			err := listingTemplate.Execute(w, tplData)
-			if err != nil {
-				internalWebError(w, err)
-				return
-			}
+	// strip /ipfs/$hash from backlink if IPNSHostnameOption touched the path.
+	if ipnsHostname {
+		backLink = prefix + "/"
+		if len(pathSplit) > 5 {
+			// also strip the trailing segment, because it's a backlink
+			backLinkParts := pathSplit[3 : len(pathSplit)-2]
+			backLink += path.Join(backLinkParts) + "/"
 		}
+	}
+
+	// See comment above where originalUrlPath is declared.
+	tplData := listingTemplateData{
+		Listing:  dirListing,
+		Path:     originalUrlPath,
+		BackLink: backLink,
+	}
+	err = listingTemplate.Execute(w, tplData)
+	if err != nil {
+		internalWebError(w, err)
+		return
 	}
 }
 

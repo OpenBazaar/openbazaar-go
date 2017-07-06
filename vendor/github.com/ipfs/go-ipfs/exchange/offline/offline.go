@@ -9,7 +9,7 @@ import (
 	"github.com/ipfs/go-ipfs/blocks/blockstore"
 	exchange "github.com/ipfs/go-ipfs/exchange"
 
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 func Exchange(bs blockstore.Blockstore) exchange.Interface {
@@ -42,7 +42,7 @@ func (_ *offlineExchange) Close() error {
 }
 
 func (e *offlineExchange) GetBlocks(ctx context.Context, ks []*cid.Cid) (<-chan blocks.Block, error) {
-	out := make(chan blocks.Block, 0)
+	out := make(chan blocks.Block)
 	go func() {
 		defer close(out)
 		var misses []*cid.Cid

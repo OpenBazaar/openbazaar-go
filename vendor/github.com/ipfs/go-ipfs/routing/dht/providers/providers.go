@@ -7,16 +7,17 @@ import (
 	"strings"
 	"time"
 
+	util "github.com/ipfs/go-ipfs/routing/dht/util"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	dsq "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/query"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	goprocessctx "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
 	lru "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
 	autobatch "gx/ipfs/QmY6k4rtt8FZvU87itWvuWTPJoCdkLZF48J55Aa1UxLFeY/autobatch"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	base32 "gx/ipfs/QmZvZSVtvxak4dcTkhsQhqd1SQ6rg5UzaSTu62WfWKjj93/base32"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 )
 
 var batchBufferSize = 256
@@ -283,7 +284,7 @@ func (pm *ProviderManager) run() {
 				}
 				var filtered []peer.ID
 				for p, t := range provs.set {
-					if time.Now().Sub(t) > ProvideValidity {
+					if (time.Now().Sub(t) > ProvideValidity && !util.IsPointer(p)) || (time.Now().Sub(t) > util.PointerValidity && util.IsPointer(p)) {
 						delete(provs.set, p)
 					} else {
 						filtered = append(filtered, p)

@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"os"
 
-	chunk "github.com/ipfs/go-ipfs/importer/chunk"
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	pi "github.com/ipfs/go-ipfs/thirdparty/posinfo"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
-	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
 )
 
 // BlockSizeLimit specifies the maximum size an imported block can have.
 var BlockSizeLimit = 1048576 // 1 MB
 
 // rough estimates on expected sizes
-var roughDataBlockSize = chunk.DefaultBlockSize
 var roughLinkBlockSize = 1 << 13 // 8KB
 var roughLinkSize = 34 + 8 + 5   // sha256 multihash + size + no name + protobuf framing
 
@@ -48,22 +47,6 @@ type UnixfsNode struct {
 	posInfo *pi.PosInfo
 }
 
-// NewUnixfsNode creates a new Unixfs node to represent a file
-func NewUnixfsNode() *UnixfsNode {
-	return &UnixfsNode{
-		node: new(dag.ProtoNode),
-		ufmt: &ft.FSNode{Type: ft.TFile},
-	}
-}
-
-// NewUnixfsBlock creates a new Unixfs node to represent a raw data block
-func NewUnixfsBlock() *UnixfsNode {
-	return &UnixfsNode{
-		node: new(dag.ProtoNode),
-		ufmt: &ft.FSNode{Type: ft.TRaw},
-	}
-}
-
 // NewUnixfsNodeFromDag reconstructs a Unixfs node from a given dag node
 func NewUnixfsNodeFromDag(nd *dag.ProtoNode) (*UnixfsNode, error) {
 	mb, err := ft.FSNodeFromBytes(nd.Data())
@@ -75,6 +58,11 @@ func NewUnixfsNodeFromDag(nd *dag.ProtoNode) (*UnixfsNode, error) {
 		node: nd,
 		ufmt: mb,
 	}, nil
+}
+
+// SetPrefix sets the CID Prefix
+func (n *UnixfsNode) SetPrefix(prefix *cid.Prefix) {
+	n.node.SetPrefix(prefix)
 }
 
 func (n *UnixfsNode) NumChildren() int {
@@ -123,11 +111,8 @@ func (n *UnixfsNode) AddChild(child *UnixfsNode, db *DagBuilderHelper) error {
 	}
 
 	_, err = db.batch.Add(childnode)
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 // Removes the child node at the given index
