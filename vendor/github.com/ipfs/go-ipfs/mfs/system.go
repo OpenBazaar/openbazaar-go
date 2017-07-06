@@ -20,8 +20,8 @@ import (
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
 )
 
 var ErrNotExist = errors.New("no such rootfs")
@@ -61,6 +61,9 @@ type Root struct {
 	dserv dag.DAGService
 
 	Type string
+
+	// Prefix to use for any children created
+	Prefix *cid.Prefix
 }
 
 type PubFunc func(context.Context, *cid.Cid) error
@@ -167,12 +170,6 @@ type Republisher struct {
 	lastpub *cid.Cid
 }
 
-func (rp *Republisher) getVal() *cid.Cid {
-	rp.lk.Lock()
-	defer rp.lk.Unlock()
-	return rp.val
-}
-
 // NewRepublisher creates a new Republisher object to republish the given root
 // using the given short and long time intervals
 func NewRepublisher(ctx context.Context, pf PubFunc, tshort, tlong time.Duration) *Republisher {
@@ -192,13 +189,6 @@ func (p *Republisher) setVal(c *cid.Cid) {
 	p.lk.Lock()
 	defer p.lk.Unlock()
 	p.val = c
-}
-
-func (p *Republisher) pubNow() {
-	select {
-	case p.pubnowch <- nil:
-	default:
-	}
 }
 
 func (p *Republisher) WaitPub() {

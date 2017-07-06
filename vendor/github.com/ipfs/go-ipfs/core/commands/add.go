@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	bstore "github.com/ipfs/go-ipfs/blocks/blockstore"
 	blockservice "github.com/ipfs/go-ipfs/blockservice"
@@ -17,7 +18,8 @@ import (
 	mfs "github.com/ipfs/go-ipfs/mfs"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
 	"gx/ipfs/QmeWjRodbcZFKe5tMN7poEx3izym6osrLSnTLf9UjJZBbs/pb"
 )
 
@@ -38,7 +40,11 @@ const (
 	rawLeavesOptionName   = "raw-leaves"
 	noCopyOptionName      = "nocopy"
 	fstoreCacheOptionName = "fscache"
+	cidVersionOptionName  = "cid-version"
+	hashOptionName        = "hash"
 )
+
+const adderOutChanSize = 8
 
 var AddCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
@@ -86,6 +92,8 @@ You can now refer to the added file in a gateway, like so:
 		cmds.BoolOption(rawLeavesOptionName, "Use raw blocks for leaf nodes. (experimental)"),
 		cmds.BoolOption(noCopyOptionName, "Add the file using filestore. (experimental)"),
 		cmds.BoolOption(fstoreCacheOptionName, "Check the filestore for pre-existing blocks. (experimental)"),
+		cmds.IntOption(cidVersionOptionName, "Cid version. Non-zero value will change default of 'raw-leaves' to true. (experimental)").Default(0),
+		cmds.StringOption(hashOptionName, "Hash function to use. Will set Cid version to 1 if used. (experimental)").Default("sha2-256"),
 	},
 	PreRun: func(req cmds.Request) error {
 		quiet, _, _ := req.Option(quietOptionName).Bool()
@@ -107,7 +115,7 @@ You can now refer to the added file in a gateway, like so:
 		sizeFile, ok := req.Files().(files.SizeFile)
 		if !ok {
 			// we don't need to error, the progress bar just won't know how big the files are
-			log.Warning("cannnot determine size of input file")
+			log.Warning("cannot determine size of input file")
 			return nil
 		}
 
@@ -159,6 +167,8 @@ You can now refer to the added file in a gateway, like so:
 		rawblks, rbset, _ := req.Option(rawLeavesOptionName).Bool()
 		nocopy, _, _ := req.Option(noCopyOptionName).Bool()
 		fscache, _, _ := req.Option(fstoreCacheOptionName).Bool()
+		cidVer, _, _ := req.Option(cidVersionOptionName).Int()
+		hashFunStr, hfset, _ := req.Option(hashOptionName).String()
 
 		if nocopy && !cfg.Experimental.FilestoreEnabled {
 			res.SetError(errors.New("filestore is not enabled, see https://git.io/vy4XN"),
@@ -174,6 +184,29 @@ You can now refer to the added file in a gateway, like so:
 			res.SetError(fmt.Errorf("nocopy option requires '--raw-leaves' to be enabled as well"), cmds.ErrNormal)
 			return
 		}
+
+		if hfset && cidVer == 0 {
+			cidVer = 1
+		}
+
+		if cidVer >= 1 && !rbset {
+			rawblks = true
+		}
+
+		prefix, err := dag.PrefixForCidVersion(cidVer)
+		if err != nil {
+			res.SetError(err, cmds.ErrNormal)
+			return
+		}
+
+		hashFunCode, ok := mh.Names[strings.ToLower(hashFunStr)]
+		if !ok {
+			res.SetError(fmt.Errorf("unrecognized hash function: %s", strings.ToLower(hashFunStr)), cmds.ErrNormal)
+			return
+		}
+
+		prefix.MhType = hashFunCode
+		prefix.MhLength = -1
 
 		if hash {
 			nilnode, err := core.NewNode(n.Context(), &core.BuildCfg{
@@ -202,14 +235,14 @@ You can now refer to the added file in a gateway, like so:
 		bserv := blockservice.New(addblockstore, exch)
 		dserv := dag.NewDAGService(bserv)
 
-		outChan := make(chan interface{}, 8)
-		res.SetOutput((<-chan interface{})(outChan))
-
 		fileAdder, err := coreunix.NewAdder(req.Context(), n.Pinning, n.Blockstore, dserv)
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
 		}
+
+		outChan := make(chan interface{}, adderOutChanSize)
+		res.SetOutput((<-chan interface{})(outChan))
 
 		fileAdder.Out = outChan
 		fileAdder.Chunker = chunker
@@ -221,6 +254,7 @@ You can now refer to the added file in a gateway, like so:
 		fileAdder.Silent = silent
 		fileAdder.RawLeaves = rawblks
 		fileAdder.NoCopy = nocopy
+		fileAdder.Prefix = &prefix
 
 		if hash {
 			md := dagtest.Mock()

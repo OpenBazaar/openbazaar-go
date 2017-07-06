@@ -16,7 +16,7 @@ import (
 	config "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
 )
 
 type ConfigField struct {
@@ -247,7 +247,7 @@ var configReplaceCmd = &cmds.Command{
 	Helptext: cmds.HelpText{
 		Tagline: "Replace the config with <file>.",
 		ShortDescription: `
-Make sure to back up the config file first if neccessary, as this operation
+Make sure to back up the config file first if necessary, as this operation
 can't be undone.
 `,
 	},
