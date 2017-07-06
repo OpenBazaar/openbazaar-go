@@ -225,6 +225,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r io.ReadCloser) error {
 			if ok && records[i][pos] != "" {
 				so := new(pb.Listing_ShippingOption)
 				so.Name = records[i][pos]
+				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option1_countries"]
@@ -332,6 +333,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r io.ReadCloser) error {
 			if ok && records[i][pos] != "" {
 				so := new(pb.Listing_ShippingOption)
 				so.Name = records[i][pos]
+				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option2_countries"]
@@ -439,6 +441,7 @@ func (n *OpenBazaarNode) HandleBulkListingUpload(r io.ReadCloser) error {
 			if ok && records[i][pos] != "" {
 				so := new(pb.Listing_ShippingOption)
 				so.Name = records[i][pos]
+				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option3_countries"]
