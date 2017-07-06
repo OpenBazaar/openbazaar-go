@@ -104,7 +104,7 @@ func GetHash(ctx commands.Context, reader io.Reader) (string, error) {
 	var root *h.UnixfsNode
 	for level := 0; !db.Done(); level++ {
 
-		nroot := h.NewUnixfsNode()
+		nroot := db.NewUnixfsNode()
 		db.SetPosInfo(nroot, 0)
 
 		// add our old root as a child of the new root.
@@ -124,7 +124,7 @@ func GetHash(ctx commands.Context, reader io.Reader) (string, error) {
 
 	}
 	if root == nil {
-		root = h.NewUnixfsNode()
+		root = db.NewUnixfsNode()
 	}
 	n, err := root.GetDagNode()
 	if err != nil {
@@ -133,6 +133,11 @@ func GetHash(ctx commands.Context, reader io.Reader) (string, error) {
 	return n.String(), nil
 }
 
+// fillNodeRec will fill the given node with data from the dagBuilders input
+// source down to an indirection depth as specified by 'depth'
+// it returns the total dataSize of the node, and a potential error
+//
+// warning: **children** pinned indirectly, but input node IS NOT pinned.
 func fillNodeRec(db *h.DagBuilderHelper, node *h.UnixfsNode, depth int, offset uint64) error {
 	if depth < 0 {
 		return errors.New("attempt to fillNode at depth < 0")
@@ -151,7 +156,7 @@ func fillNodeRec(db *h.DagBuilderHelper, node *h.UnixfsNode, depth int, offset u
 
 	// while we have room AND we're not done
 	for node.NumChildren() < db.Maxlinks() && !db.Done() {
-		child := h.NewUnixfsNode()
+		child := db.NewUnixfsNode()
 		db.SetPosInfo(child, offset)
 
 		err := fillNodeRec(db, child, depth-1, offset)

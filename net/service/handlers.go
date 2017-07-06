@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -70,7 +71,6 @@ func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received FOLLOW message from %s", peer.Pretty())
 	err := service.datastore.Followers().Put(peer.Pretty())
 	if err != nil {
 		return nil, err
@@ -78,11 +78,11 @@ func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message, o
 	n := notifications.FollowNotification{"follow", peer.Pretty()}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received FOLLOW message from %s", peer.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received UNFOLLOW message from %s", peer.Pretty())
 	err := service.datastore.Followers().Delete(peer.Pretty())
 	if err != nil {
 		return nil, err
@@ -90,11 +90,11 @@ func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message,
 	n := notifications.UnfollowNotification{"unfollow", peer.Pretty()}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received UNFOLLOW message from %s", peer.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
 	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
 	if err != nil {
 		return nil, err
@@ -110,11 +110,11 @@ func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, 
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received OFFLINE_RELAY message from %s", p.Pretty())
 	// This acts very similarly to attemptDecrypt&handleMessage in the Offline Message Retreiver
 	// However it does not send an ACK, or worry about message ordering
 
@@ -163,12 +163,11 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 		log.Errorf("Handle message error: %s", err)
 		return nil, err
 	}
-
+	log.Debugf("Received OFFLINE_RELAY message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received ORDER message from %s", peer.Pretty())
 	offline, _ := options.(bool)
 	errorResponse := func(error string) *pb.Message {
 		a := &any.Any{Value: []byte(error)}
@@ -215,6 +214,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
 		}
+		log.Debugf("Received addr-req ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
 		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
@@ -239,6 +239,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		total, err := service.node.CalculateOrderTotal(contract)
@@ -281,6 +282,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
 		}
+		log.Debugf("Received moderated ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
 		err := service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
@@ -304,6 +306,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
+		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		return nil, nil
 	}
@@ -312,7 +315,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 }
 
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
 
 	// Unmarshal payload
 	vendorContract := new(pb.RicardianContract)
@@ -327,7 +329,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	// Load the order
 	contract, _, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	// Validate the order confirmation
@@ -363,19 +365,18 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	n := notifications.OrderConfirmationNotification{"orderConfirmation", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-
+	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
 
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
 	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	// Set message state to canceled
@@ -392,12 +393,12 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	n := notifications.OrderCancelNotification{"canceled", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
 
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received REJECT message from %s", p.Pretty())
 	rejectMsg := new(pb.OrderReject)
 	err := ptypes.UnmarshalAny(pmes.Payload, rejectMsg)
 	if err != nil {
@@ -407,7 +408,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -550,13 +551,14 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	// Send notification to websocket
 	n := notifications.OrderDeclinedNotification{"declined", rejectMsg.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
+
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received REJECT message from %s", p.Pretty())
 
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received REFUND message from %s", p.Pretty())
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -570,7 +572,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	// Load the order
 	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -666,12 +668,11 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	n := notifications.RefundNotification{"refund", contract.Refund.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-
+	log.Debugf("Received REFUND message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -682,7 +683,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	// Load the order
 	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
@@ -714,12 +715,12 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	n := notifications.FulfillmentNotification{"fulfillment", rc.VendorOrderFulfillment[0].OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
 
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
 
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
@@ -730,7 +731,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	// Load the order
 	contract, state, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
@@ -743,7 +744,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_RESOLVED {
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -756,11 +757,16 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
 				ins = append(ins, in)
 			}
-		}
 
-		payoutAddress, err := service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
-		if err != nil {
-			return nil, err
+		}
+		var payoutAddress btcutil.Address
+		if len(contract.VendorOrderFulfillment) > 0 {
+			payoutAddress, err = service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			payoutAddress = service.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 		}
 		var output spvwallet.TransactionOutput
 		outputScript, err := service.node.Wallet.AddressToScript(payoutAddress)
@@ -794,7 +800,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 
 	err = service.node.ValidateAndSaveRating(contract)
 	if err != nil {
-		log.Error(err)
+		log.Error("Error validating rating:", err)
 	}
 
 	// Set message state to complete
@@ -811,12 +817,11 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	n := notifications.CompletionNotification{"orderComplete", rc.BuyerOrderCompletion.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-
+	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received DISPUTE_OPEN message from %s", p.Pretty())
 
 	// Unmarshall
 	rc := new(pb.RicardianContract)
@@ -836,12 +841,11 @@ func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message,
 	if err != nil {
 		return nil, err
 	}
-
+	log.Debugf("Received DISPUTE_OPEN message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
 
 	// Make sure we aren't currently processing any disputes before proceeding
 	core.DisputeWg.Wait()
@@ -854,7 +858,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 	buyerContract, vendorContract, _, _, _, _, _, err := service.node.Datastore.Cases().GetPayoutDetails(update.OrderId)
 	if err != nil {
-		return nil, err
+		return nil, net.OutOfOrderMessage
 	}
 	rc := new(pb.RicardianContract)
 	err = proto.Unmarshal(update.SerializedContract, rc)
@@ -890,13 +894,13 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	// Send notification to websocket
 	n := notifications.DisputeUpdateNotification{"disputeUpdate", update.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, n.Type, time.Now())
 
+	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received DISPUTE_UPDATE message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received DISPUTE_CLOSE message from %s", p.Pretty())
 
 	// Unmarshall
 	rc := new(pb.RicardianContract)
@@ -908,13 +912,18 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	// Load the order
 	isPurchase := false
 	var contract *pb.RicardianContract
-	contract, _, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
+	var state pb.OrderState
+	contract, state, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
 	if err != nil {
-		contract, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
+		contract, state, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
-			return nil, err
+			return nil, net.OutOfOrderMessage
 		}
 		isPurchase = true
+	}
+
+	if state != pb.OrderState_DISPUTED {
+		return nil, fmt.Errorf("Order is in %s state. Must be DISPUTED", state.String())
 	}
 
 	// Validate
@@ -956,12 +965,13 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	// Send notification to websocket
 	n := notifications.DisputeCloseNotification{"disputeClose", rc.DisputeResolution.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
 	service.broadcast <- n
+
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received DISPUTE_CLOSE message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received CHAT message from %s", p.Pretty())
 
 	// Unmarshall
 	chat := new(pb.Chat)
@@ -1038,29 +1048,34 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 		Timestamp: t,
 	}
 	service.broadcast <- n
+	log.Debugf("Received CHAT message from %s", p.Pretty())
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleModeratorAdd(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received MODERATOR_ADD message from %s", peer.Pretty())
 	err := service.datastore.ModeratedStores().Put(peer.Pretty())
 	if err != nil {
 		return nil, err
 	}
 	n := notifications.ModeratorAddNotification{"moderatorAdd", peer.Pretty()}
 	service.broadcast <- n
+
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received MODERATOR_ADD message from %s", peer.Pretty())
+
 	return nil, nil
 }
 
 func (service *OpenBazaarService) handleModeratorRemove(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	log.Debugf("Received MODERATOR_REMOVE message from %s", peer.Pretty())
 	err := service.datastore.ModeratedStores().Delete(peer.Pretty())
 	if err != nil {
 		return nil, err
 	}
 	n := notifications.ModeratorRemoveNotification{"moderatorRemove", peer.Pretty()}
 	service.broadcast <- n
+
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
+	log.Debugf("Received MODERATOR_REMOVE message from %s", peer.Pretty())
+
 	return nil, nil
 }

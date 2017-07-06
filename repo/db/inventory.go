@@ -1,7 +1,10 @@
 package db
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"strconv"
 	"sync"
 )
 
@@ -13,13 +16,16 @@ type InventoryDB struct {
 func (i *InventoryDB) Put(slug string, variantIndex int, count int) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
+
+	id := sha256.Sum256([]byte(slug + strconv.Itoa(variantIndex)))
+
 	tx, _ := i.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into inventory(slug, variantIndex, count) values(?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into inventory(invID, slug, variantIndex, count) values(?,?,?,?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(slug, variantIndex, count)
+	_, err = stmt.Exec(hex.EncodeToString(id[:]), slug, variantIndex, count)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -48,7 +54,7 @@ func (i *InventoryDB) Get(slug string) (map[int]int, error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	ret := make(map[int]int)
-	stmt, err := i.db.Prepare("select * from inventory where slug=?")
+	stmt, err := i.db.Prepare("select slug, variantIndex, count from inventory where slug=?")
 	if err != nil {
 		return ret, err
 	}

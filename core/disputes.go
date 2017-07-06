@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -365,24 +365,12 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	// Set self (moderator) as the party that made the resolution proposal
 	d.ProposedBy = n.IpfsNode.Identity.Pretty()
 
-	// Sign buyer rating key
-	if buyerContract != nil {
-		for _, key := range buyerContract.BuyerOrder.RatingKeys {
-			sig, err := n.IpfsNode.PrivateKey.Sign(key)
-			if err != nil {
-				return err
-			}
-			d.ModeratorRatingSigs = append(d.ModeratorRatingSigs, sig)
-		}
-	}
-
 	// Set resolution
 	d.Resolution = resolution
 
 	// Decide whose contract to use
 	var buyerPayout bool
 	var vendorPayout bool
-	var moderatorPayout bool
 	var outpoints []*pb.Outpoint
 	var redeemScript string
 	var chaincode string
@@ -474,15 +462,16 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
+	outMap := make(map[string]spvwallet.TransactionOutput)
 	var outputs []spvwallet.TransactionOutput
 	var modAddr btcutil.Address
 	var modValue uint64
 	modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
 	modValue, err = n.GetModeratorFee(totalOut)
-	var modOutputScript []byte
 	if err != nil {
 		return err
 	}
+	var modOutputScript []byte
 	if modValue > 0 {
 		modOutputScript, err = n.Wallet.AddressToScript(modAddr)
 		if err != nil {
@@ -493,7 +482,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(modValue),
 		}
 		outputs = append(outputs, out)
-		moderatorPayout = true
+		outMap["moderator"] = out
 	}
 
 	var buyerAddr btcutil.Address
@@ -514,6 +503,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(buyerValue),
 		}
 		outputs = append(outputs, out)
+		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
@@ -533,6 +523,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 			Value:        int64(vendorValue),
 		}
 		outputs = append(outputs, out)
+		outMap["vendor"] = out
 	}
 
 	if len(outputs) == 0 {
@@ -562,15 +553,20 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 
 	// Subtract fee from each output in proportion to output value
 	var outs []spvwallet.TransactionOutput
-	for _, output := range outputs {
+	for role, output := range outMap {
 		outPercentage := float64(output.Value) / float64(totalOut)
 		outputShareOfFee := outPercentage * float64(txFee)
-		o := spvwallet.TransactionOutput{
-			Value:        output.Value - int64(outputShareOfFee),
-			ScriptPubKey: output.ScriptPubKey,
-			Index:        output.Index,
+		val := output.Value - int64(outputShareOfFee)
+		if !n.Wallet.IsDust(val) {
+			o := spvwallet.TransactionOutput{
+				Value:        val,
+				ScriptPubKey: output.ScriptPubKey,
+				Index:        output.Index,
+			}
+			outs = append(outs, o)
+		} else {
+			delete(outMap, role)
 		}
-		outs = append(outs, o)
 	}
 
 	// Create moderator key
@@ -601,6 +597,22 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return err
 	}
 
+	// Sign buyer rating key
+	if buyerContract != nil {
+		ecPriv, err := moderatorKey.ECPrivKey()
+		if err != nil {
+			return err
+		}
+		for _, key := range buyerContract.BuyerOrder.RatingKeys {
+			hashed := sha256.Sum256(key)
+			sig, err := ecPriv.Sign(hashed[:])
+			if err != nil {
+				return err
+			}
+			d.ModeratorRatingSigs = append(d.ModeratorRatingSigs, sig.Serialize())
+		}
+	}
+
 	// Create signatures
 	redeemScriptBytes, err := hex.DecodeString(redeemScript)
 	if err != nil {
@@ -622,17 +634,29 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	payout := new(pb.DisputeResolution_Payout)
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
-	if buyerPayout {
+	if _, ok := outMap["buyer"]; ok {
 		outputShareOfFee := (float64(buyerValue) / float64(totalOut)) * float64(txFee)
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: buyerValue - uint64(outputShareOfFee)}
+		amt := int64(buyerValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(buyerOutputScript), Amount: uint64(amt)}
 	}
-	if vendorPayout {
+	if _, ok := outMap["vendor"]; ok {
 		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: vendorValue - uint64(outputShareOfFee)}
+		amt := int64(vendorValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(vendorOutputScript), Amount: uint64(amt)}
 	}
-	if moderatorPayout {
+	if _, ok := outMap["moderator"]; ok {
 		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: modValue - uint64(outputShareOfFee)}
+		amt := int64(modValue) - int64(outputShareOfFee)
+		if amt < 0 {
+			amt = 0
+		}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{Script: hex.EncodeToString(modOutputScript), Amount: uint64(amt)}
 	}
 
 	d.Payout = payout
@@ -682,16 +706,14 @@ func (n *OpenBazaarNode) SignDisputeResolution(contract *pb.RicardianContract) (
 func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []string {
 	var validationErrors []string
 
-	// Contract should have a listing, order, and order confirmation to make it to this point
+	// Contract should have a listing and order to make it to this point
 	if len(contract.VendorListings) == 0 {
 		validationErrors = append(validationErrors, "Contract contains no listings")
 	}
 	if contract.BuyerOrder == nil {
 		validationErrors = append(validationErrors, "Contract is missing the buyer's order")
 	}
-	if contract.VendorOrderConfirmation == nil {
-		validationErrors = append(validationErrors, "Contract is missing the order confirmation")
-	}
+
 	if contract.VendorListings[0].VendorID == nil || contract.VendorListings[0].VendorID.Pubkeys == nil {
 		validationErrors = append(validationErrors, "The listing is missing the vendor ID information. Unable to validate any signatures.")
 		return validationErrors
@@ -771,8 +793,10 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 	}
 
 	// Verify the order confirmation signature
-	if err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGuid); err != nil {
-		validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
+	if contract.VendorOrderConfirmation != nil {
+		if err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGuid); err != nil {
+			validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
+		}
 	}
 
 	// There should be one fulfilment signature for each vendorOrderFulfilment object
@@ -1054,9 +1078,32 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		moderatorSigs = append(moderatorSigs, s)
 	}
 
+	accept := new(pb.DisputeAcceptance)
+	// Create timestamp
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	accept.Timestamp = ts
+	accept.ClosedBy = n.IpfsNode.Identity.Pretty()
+	contract.DisputeAcceptance = accept
+
+	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+
+	// Update database
+	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
+		n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_DECIDED, true)
+	} else {
+		n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DECIDED, true)
+	}
+
 	_, err = n.Wallet.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

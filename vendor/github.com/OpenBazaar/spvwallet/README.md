@@ -54,6 +54,15 @@ type BitcoinWallet interface {
 	// Returns a fresh address that has never been returned by this function
 	NewAddress(purpose spvwallet.KeyPurpose) btc.Address
 
+	// Parse the address string and return an address interface
+	DecodeAddress(addr string) (btc.Address, error)
+
+	// Turn the given output script into an address
+	ScriptToAddress(script []byte) (btc.Address, error)
+
+	// Turn the given address into an output script
+	AddressToScript(addr btc.Address) ([]byte, error)
+
 	// Returns if the wallet has the key for the given address
 	HasKey(addr btc.Address) bool
 
@@ -102,8 +111,8 @@ type BitcoinWallet interface {
 	// Use this to re-download merkle blocks in case of missed transactions
 	ReSyncBlockchain(fromHeight int32)
 
-	// Return the number of confirmations for a transaction
-	GetConfirmations(txid chainhash.Hash) (uint32, error)
+	// Return the number of confirmations and the height for a transaction
+	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
 
 	// Cleanly disconnect from the wallet
 	Close()

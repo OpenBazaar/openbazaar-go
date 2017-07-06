@@ -94,7 +94,6 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 	} else {
 		var outValue int64
 		for _, r := range records {
-			log.Notice(r.Value)
 			if r.Value > 0 {
 				outValue += r.Value
 			}
@@ -110,6 +109,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		txinfo := new(pb.Refund_TransactionInfo)
 		txinfo.Txid = txid.String()
 		txinfo.Value = uint64(outValue)
+		refundMsg.RefundTransaction = txinfo
 	}
 	contract.Refund = refundMsg
 	contract, err = n.SignRefund(contract)

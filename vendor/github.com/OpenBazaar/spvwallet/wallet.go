@@ -8,6 +8,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"os"
@@ -166,6 +167,10 @@ func (w *SPVWallet) CurrencyCode() string {
 	}
 }
 
+func (w *SPVWallet) IsDust(amount int64) bool {
+	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+}
+
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
 	return w.masterPrivateKey
 }
@@ -262,7 +267,7 @@ func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error
 		return 0, 0, nil
 	}
 	chainTip := w.ChainTip()
-	return chainTip - uint32(txn.Height), uint32(txn.Height), nil
+	return chainTip - uint32(txn.Height) + 1, uint32(txn.Height), nil
 }
 
 func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {

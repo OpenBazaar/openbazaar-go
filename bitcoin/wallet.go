@@ -19,6 +19,9 @@ type BitcoinWallet interface {
 	// Returns the type of crytocurrency this wallet implements
 	CurrencyCode() string
 
+	// Check if this amount is considered dust
+	IsDust(amount int64) bool
+
 	// Get the master private key
 	MasterPrivateKey() *hd.ExtendedKey
 

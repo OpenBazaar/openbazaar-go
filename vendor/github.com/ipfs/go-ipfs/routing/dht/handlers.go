@@ -6,17 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ipfs/go-ipfs/routing/dht/util"
+	util "github.com/ipfs/go-ipfs/routing/dht/util"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	lgbl "gx/ipfs/QmXs1igHHEaUmMxKtbP8Z9wTjitQ75sqxaKQP4QgnLN4nn/go-libp2p-loggables"
+	pb "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb"
+	lgbl "gx/ipfs/QmVesPmqbPp7xRGyY96tnBwzDtVV1nqv4SCVxo5zCqKyH8/go-libp2p-loggables"
+	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
+	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
 	base32 "gx/ipfs/QmZvZSVtvxak4dcTkhsQhqd1SQ6rg5UzaSTu62WfWKjj93/base32"
-	pb "gx/ipfs/QmaoxFZcgwGyoB57pCYQobejLoNgqaA6trr3zxxrbm4UXe/go-libp2p-kad-dht/pb"
-	recpb "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record/pb"
-	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 )
 
 // The number of closer peers to send on requests.
@@ -211,6 +211,15 @@ func (dht *IpfsDHT) handleFindPeer(ctx context.Context, p peer.ID, pmes *pb.Mess
 	return resp, nil
 }
 
+func (dht *IpfsDHT) GetProviders(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
+	// Dummy ID. Only used for logging.
+	id, err := peer.IDB58Decode("QmT5NvUtoM5nWFfrQdVrFtvGfKFmG7AHE8P34isapyhCxX")
+	if err != nil {
+		return nil, err
+	}
+	return dht.handleGetProviders(ctx, id, pmes)
+}
+
 func (dht *IpfsDHT) handleGetProviders(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	lm := make(lgbl.DeferredMap)
 	lm["peer"] = func() interface{} { return p.Pretty() }
@@ -260,6 +269,16 @@ func (dht *IpfsDHT) handleGetProviders(ctx context.Context, p peer.ID, pmes *pb.
 	return resp, nil
 }
 
+func (dht *IpfsDHT) AddProvider(ctx context.Context, pmes *pb.Message) error {
+	// Dummy ID. Only used for logging.
+	id, err := peer.IDB58Decode("QmT5NvUtoM5nWFfrQdVrFtvGfKFmG7AHE8P34isapyhCxX")
+	if err != nil {
+		return err
+	}
+	_, err = dht.handleAddProvider(ctx, id, pmes)
+	return err
+}
+
 func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	lm := make(lgbl.DeferredMap)
 	lm["peer"] = func() interface{} { return p.Pretty() }
@@ -277,6 +296,13 @@ func (dht *IpfsDHT) handleAddProvider(ctx context.Context, p peer.ID, pmes *pb.M
 	// add provider should use the address given in the message
 	pinfos := pb.PBPeersToPeerInfos(pmes.GetProviderPeers())
 	for _, pi := range pinfos {
+		if pi.ID != p {
+			// we should ignore this provider reccord! not from originator.
+			// (we chould sign them and check signature later...)
+			log.Debugf("handleAddProvider received provider %s from %s. Ignore.", pi.ID, p)
+			continue
+		}
+
 		if len(pi.Addrs) < 1 {
 			log.Debugf("%s got no valid addresses for provider %s. Ignore.", dht.self, p)
 			continue

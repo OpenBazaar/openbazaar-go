@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	"gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
+	"gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -16,7 +16,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/btcsuite/btcd/btcec"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -68,11 +67,12 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	}
 	oc.Timestamp = ts
 
-	for _, r := range orderRatings.Ratings {
+	for z, r := range orderRatings.Ratings {
 		rating := new(pb.Rating)
 		rd := new(pb.Rating_RatingData)
 
 		var rs *pb.RatingSignature
+		var rk []byte
 		if contract.DisputeResolution != nil {
 			for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 				if sig.Metadata.ListingSlug == r.Slug {
@@ -80,19 +80,17 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 					break
 				}
 			}
+			if len(contract.BuyerOrder.RatingKeys) < len(orderRatings.Ratings) {
+				return errors.New("Invalid number of rating keys in buyer order")
+			}
+			rk = contract.BuyerOrder.RatingKeys[z]
+
 			for i, l := range contract.VendorListings {
 				if l.Slug == r.Slug && i <= len(contract.DisputeResolution.ModeratorRatingSigs)-1 {
 					rd.ModeratorSig = contract.DisputeResolution.ModeratorRatingSigs[i]
 					break
 				}
 			}
-			moderatorID := &pb.ID{
-				PeerID: contract.BuyerOrder.Payment.Moderator,
-				Pubkeys: &pb.ID_Pubkeys{
-					Identity: rs.Metadata.ModeratorKey,
-				},
-			}
-			rd.ModeratorID = moderatorID
 		} else {
 			for _, fulfillment := range contract.VendorOrderFulfillment {
 				if fulfillment.RatingSignature.Metadata.ListingSlug == r.Slug {
@@ -100,9 +98,10 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 					break
 				}
 			}
+			rk = rs.Metadata.RatingKey
 		}
 
-		rd.RatingKey = rs.Metadata.RatingKey
+		rd.RatingKey = rk
 		if !r.Anonymous {
 			profile, _ := n.GetProfile()
 			rd.BuyerID = contract.BuyerOrder.BuyerID
@@ -292,52 +291,33 @@ func (n *OpenBazaarNode) ValidateOrderCompletion(contract *pb.RicardianContract)
 	return nil
 }
 
-func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) error {
+func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (retErr error) {
 	for _, rating := range contract.BuyerOrderCompletion.Ratings {
-		pubkey, err := btcec.ParsePubKey(rating.RatingData.RatingKey, btcec.S256())
-		if err != nil {
-			return err
-		}
-
-		signature, err := btcec.ParseSignature(rating.Signature, btcec.S256())
-		if err != nil {
-			return err
-		}
-
-		ser, err := proto.Marshal(rating.RatingData)
-		if err != nil {
-			return err
-		}
-		hashed := sha256.Sum256(ser)
-		verified := signature.Verify(hashed[:], pubkey)
-
-		if !verified {
-			return errors.New("Invalid rating signature on rating")
-		}
-
-		ratingSigData, err := proto.Marshal(rating.RatingData.VendorSig.Metadata)
-		if err != nil {
-			return err
-		}
-		valid, err := n.IpfsNode.PrivateKey.GetPublic().Verify(ratingSigData, rating.RatingData.VendorSig.Signature)
-		if !valid {
-			return errors.New("Invalid vendor signature on rating")
+		valid, err := ValidateRating(rating)
+		if !valid || err != nil {
+			retErr = err
+			continue
 		}
 
 		if rating.RatingData.Overall < RatingMin || rating.RatingData.Overall > RatingMax {
-			return errors.New("Rating not within valid range")
+			retErr = err
+			continue
 		}
 		if rating.RatingData.Quality < RatingMin || rating.RatingData.Quality > RatingMax {
-			return errors.New("Rating not within valid range")
+			retErr = err
+			continue
 		}
 		if rating.RatingData.Description < RatingMin || rating.RatingData.Description > RatingMax {
-			return errors.New("Rating not within valid range")
+			retErr = err
+			continue
 		}
 		if rating.RatingData.DeliverySpeed < RatingMin || rating.RatingData.DeliverySpeed > RatingMax {
-			return errors.New("Rating not within valid range")
+			retErr = err
+			continue
 		}
 		if rating.RatingData.CustomerService < RatingMin || rating.RatingData.CustomerService > RatingMax {
-			return errors.New("Rating not within valid range")
+			retErr = err
+			continue
 		}
 
 		m := jsonpb.Marshaler{
@@ -348,24 +328,28 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 		}
 		ratingJson, err := m.MarshalToString(rating)
 		if err != nil {
-			return err
+			retErr = err
+			continue
 		}
 
 		sha := sha256.Sum256([]byte(ratingJson))
 		h, err := multihash.Encode(sha[:], multihash.SHA2_256)
 		if err != nil {
-			return err
+			retErr = err
+			continue
 		}
 
 		mh, err := multihash.Cast(h)
 		if err != nil {
-			return err
+			retErr = err
+			continue
 		}
 
 		ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
 		f, err := os.Create(ratingPath)
 		if err != nil {
-			return err
+			retErr = err
+			continue
 		}
 		defer f.Close()
 
@@ -373,7 +357,8 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 
 		_, werr := f.Write([]byte(ratingJson))
 		if werr != nil {
-			return werr
+			retErr = err
+			continue
 		}
 
 		profile, err := n.GetProfile()
@@ -385,18 +370,26 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) e
 			profile.Stats.RatingCount = profile.Stats.RatingCount + 1
 			err = n.UpdateProfile(&profile)
 			if err != nil {
-				return err
+				retErr = err
+				continue
 			}
 		}
 		if err := n.updateRatingIndex(rating, ratingPath); err != nil {
-			return err
+			retErr = err
+			continue
 		}
 
 		if err := n.updateRatingInListingIndex(rating); err != nil {
-			return err
+			retErr = err
+			continue
+		}
+
+		if err := n.updateProfileRatings(rating); err != nil {
+			retErr = err
+			continue
 		}
 	}
-	return nil
+	return
 }
 
 func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string) error {

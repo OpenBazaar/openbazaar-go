@@ -8,7 +8,7 @@ import (
 	"github.com/ipfs/go-ipfs/blocks"
 
 	"gx/ipfs/QmRg1gKTHzc3CZXSKzem8aR4E3TubFhbgXwfVuWnSK5CC5/go-metrics-interface"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	bloom "gx/ipfs/QmeiMCBkYHxkDkDfnDadzz4YxY5ruL5Pj499essE4vRsGM/bbloom"
 )
 
@@ -118,7 +118,7 @@ func (b *bloomcache) hasCached(k *cid.Cid) (has bool, ok bool) {
 	}
 	if b.BloomActive() {
 		blr := b.bloom.HasTS(k.Bytes())
-		if blr == false { // not contained in bloom is only conclusive answer bloom gives
+		if !blr { // not contained in bloom is only conclusive answer bloom gives
 			b.hits.Inc()
 			return false, true
 		}

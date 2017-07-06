@@ -13,8 +13,9 @@ message RicardianContract {
     OrderCompletion buyerOrderCompletion               = 5;
     Dispute dispute                                    = 6;
     DisputeResolution disputeResolution                = 7;
-    Refund refund                                      = 8;
-    repeated Signature signatures                      = 9;
+    DisputeAcceptance disputeAcceptance                = 8;
+    Refund refund                                      = 9;
+    repeated Signature signatures                      = 10;
 }
 
 message Listing {
@@ -294,18 +295,17 @@ message Rating {
         ID buyerID                          = 4; // optional
         string buyerName                    = 5; // optional
         bytes buyerSig                      = 6; // optional
-        ID moderatorID                      = 7; // only if a dispute was won
-        bytes moderatorSig                  = 8; // only if a dispute was won
+        bytes moderatorSig                  = 7; // only if a dispute was won
 
 
-        google.protobuf.Timestamp timestamp = 9;
+        google.protobuf.Timestamp timestamp = 8;
 
-        uint32 overall                      = 10;
-        uint32 quality                      = 11;
-        uint32 description                  = 12;
-        uint32 deliverySpeed                = 13;
-        uint32 customerService              = 14;
-        string review                       = 15;
+        uint32 overall                      = 9;
+        uint32 quality                      = 10;
+        uint32 description                  = 11;
+        uint32 deliverySpeed                = 12;
+        uint32 customerService              = 13;
+        string review                       = 14;
     }
 }
 
@@ -337,6 +337,11 @@ message DisputeResolution {
                 uint64 amount  = 2;
             }
     }
+}
+
+message DisputeAcceptance {
+    google.protobuf.Timestamp timestamp = 1;
+    string closedBy                     = 2;
 }
 
 message Outpoint {

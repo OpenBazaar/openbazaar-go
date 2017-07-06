@@ -7,9 +7,9 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/ptypes"
-	ma "gx/ipfs/QmSWLfmj5frN9xVLMMN846dMDriy5wN5jeghUm7aTW3DAG/go-multiaddr"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
-	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 )
 
 // Hash with SHA-256 and encode as a multihash
@@ -118,7 +118,6 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			refundRecord.Timestamp = contract.Refund.Timestamp
 			refundRecord.Confirmations = confirmations
 			refundRecord.Height = height
-
 		}
 	}
 	return paymentRecords, refundRecord, nil

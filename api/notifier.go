@@ -31,7 +31,7 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 			manager.sendNotification(n)
 			sanitized, err := SanitizeJSON(notifications.Serialize(n))
 			if err != nil {
-				log.Notice(err)
+				log.Error(err)
 				continue
 			}
 			out <- sanitized
@@ -64,7 +64,7 @@ func (m *notificationManager) getNotifiers() []notifier {
 
 	// SMTP notifier
 	conf := settings.SMTPSettings
-	if conf.Notifications {
+	if conf != nil && conf.Notifications {
 		notifiers = append(notifiers, &smtpNotifier{settings: conf})
 	}
 	return notifiers
@@ -85,6 +85,9 @@ func (notifier *smtpNotifier) notify(n interface{}) error {
 		"%s\r\n",
 	}, "\r\n")
 	head, body := notifications.Describe(n)
+	if head == "" || body == "" {
+		return nil
+	}
 	conf := notifier.settings
 	data := fmt.Sprintf(template, conf.SenderEmail, conf.RecipientEmail, head, body)
 	return sendEmail(notifier.settings, []byte(data))

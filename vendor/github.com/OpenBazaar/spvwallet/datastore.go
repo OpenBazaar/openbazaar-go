@@ -62,7 +62,7 @@ type Txns interface {
 // used keys, and manage the look ahead window.
 type Keys interface {
 	// Put a bip32 key to the database
-	Put(scriptPubKey []byte, keyPath KeyPath) error
+	Put(hash160 []byte, keyPath KeyPath) error
 
 	// Import a loose private key not part of the keychain
 	ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error

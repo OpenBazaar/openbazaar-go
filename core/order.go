@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	crypto "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	crypto "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	"strings"
 	"time"
 
@@ -882,7 +882,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
-	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
+	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || strings.ToLower(currencyCode) == "t"+strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)

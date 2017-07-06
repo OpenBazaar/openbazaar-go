@@ -13,13 +13,13 @@ import (
 	path "github.com/ipfs/go-ipfs/path"
 
 	ipdht "github.com/ipfs/go-ipfs/routing/dht"
+	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
+	notif "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing/notifications"
 	b58 "gx/ipfs/QmT8rehPR3F6bmwL6zjUN8XpiDBFFpMP2myPdC6ApsWfJf/go-base58"
-	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
-	notif "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing/notifications"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
-	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
+	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 )
 
 var ErrNotDHT = errors.New("routing service is not a DHT")
@@ -145,6 +145,7 @@ var findProvidersDhtCmd = &cmds.Command{
 	},
 	Options: []cmds.Option{
 		cmds.BoolOption("verbose", "v", "Print extra information.").Default(false),
+		cmds.IntOption("num-providers", "n", "The number of providers to find.").Default(20),
 	},
 	Run: func(req cmds.Request, res cmds.Response) {
 		n, err := req.InvocContext().GetNode()
@@ -159,7 +160,15 @@ var findProvidersDhtCmd = &cmds.Command{
 			return
 		}
 
-		numProviders := 20
+		numProviders, _, err := res.Request().Option("num-providers").Int()
+		if err != nil {
+			res.SetError(err, cmds.ErrNormal)
+			return
+		}
+		if numProviders < 1 {
+			res.SetError(fmt.Errorf("Number of providers must be greater than 0"), cmds.ErrNormal)
+			return
+		}
 
 		outChan := make(chan interface{})
 		res.SetOutput((<-chan interface{})(outChan))
@@ -357,7 +366,7 @@ var provideRefDhtCmd = &cmds.Command{
 
 func provideKeys(ctx context.Context, r routing.IpfsRouting, cids []*cid.Cid) error {
 	for _, c := range cids {
-		err := r.Provide(ctx, c)
+		err := r.Provide(ctx, c, true)
 		if err != nil {
 			return err
 		}
@@ -380,7 +389,7 @@ func provideKeysRec(ctx context.Context, r routing.IpfsRouting, dserv dag.DAGSer
 				continue
 			}
 
-			err = r.Provide(ctx, k)
+			err = r.Provide(ctx, k, true)
 			if err != nil {
 				return err
 			}

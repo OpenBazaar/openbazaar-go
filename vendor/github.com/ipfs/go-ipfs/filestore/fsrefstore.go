@@ -17,7 +17,7 @@ import (
 	dsns "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/namespace"
 	dsq "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/query"
 	proto "gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 // FilestorePrefix identifies the key prefix for FileManager blocks.
@@ -162,7 +162,7 @@ func (f *FileManager) readDataObj(c *cid.Cid, d *pb.DataObj) ([]byte, error) {
 	}
 	defer fi.Close()
 
-	_, err = fi.Seek(int64(d.GetOffset()), os.SEEK_SET)
+	_, err = fi.Seek(int64(d.GetOffset()), io.SeekStart)
 	if err != nil {
 		return nil, &CorruptReferenceError{StatusFileError, err}
 	}
@@ -211,7 +211,7 @@ func (f *FileManager) putTo(b *posinfo.FilestoreNode, to putter) error {
 	var dobj pb.DataObj
 
 	if !filepath.HasPrefix(b.PosInfo.FullPath, f.root) {
-		return fmt.Errorf("cannot add filestore references outside ipfs root")
+		return fmt.Errorf("cannot add filestore references outside ipfs root (%s)", f.root)
 	}
 
 	p, err := filepath.Rel(f.root, b.PosInfo.FullPath)

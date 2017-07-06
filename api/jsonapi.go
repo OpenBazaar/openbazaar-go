@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -19,8 +19,8 @@ import (
 	"encoding/hex"
 
 	"crypto/sha256"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	ps "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	"sync"
 
 	"bytes"
@@ -633,23 +633,14 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
-	type deleteReq struct {
-		Slug string `json:"slug"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	var req deleteReq
-	err := decoder.Decode(&req)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", req.Slug+".json")
+	_, slug := path.Split(r.URL.Path)
+	listingPath := path.Join(i.node.RepoPath, "root", "listings", slug+".json")
 	_, ferr := os.Stat(listingPath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 		return
 	}
-	err = i.node.DeleteListing(req.Slug)
+	err := i.node.DeleteListing(slug)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1887,7 +1878,6 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, "order must be either fulfilled or in closed dispute state to leave the rating")
 		return
 	}
-
 	err = i.node.CompleteOrder(&or, contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3031,36 +3021,30 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 
 	var indexBytes []byte
-	var err error
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
+		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
+
 	} else {
-		indexBytes, err = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-	}
-	var ratingList []core.SavedRating
-	err = json.Unmarshal(indexBytes, &ratingList)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
 	}
 	var rating *core.SavedRating
-	for _, r := range ratingList {
-		if r.Slug == slug {
-			rating = &r
-			break
+	if indexBytes == nil {
+		rating = new(core.SavedRating)
+		rating.Slug = slug
+		rating.Ratings = []string{}
+	} else {
+		var ratingList []core.SavedRating
+		err := json.Unmarshal(indexBytes, &ratingList)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
 		}
-	}
-	if rating == nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
+		for _, r := range ratingList {
+			if r.Slug == slug {
+				rating = &r
+				break
+			}
+		}
 	}
 	ret, err := json.MarshalIndent(rating, "", "    ")
 	if err != nil {

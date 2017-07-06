@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -694,6 +694,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	// Item
 	if listing.Item.Title == "" {
 		return errors.New("Listing must have a title")
+	}
+	if listing.Item.Price == 0 {
+		return errors.New("Zero price listings are not allowed")
 	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
 		return fmt.Errorf("Title is longer than the max of %d characters", TitleMaxCharacters)

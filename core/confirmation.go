@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	crypto "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
+	crypto "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
 
 	"time"
 
@@ -39,7 +39,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	oc.RatingSignatures = []*pb.RatingSignature{}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		for _, listing := range contract.VendorListings {
-			moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
+			moderatorKey, err := hex.DecodeString(ExtractModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
 			if err != nil {
 				return nil, err
 			}
@@ -263,7 +263,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			if err != nil {
 				return err
 			}
-			moderatorKey, err := hex.DecodeString(ExtraModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
+			moderatorKey, err := hex.DecodeString(ExtractModeratorKeyFromReddemScript(contract.BuyerOrder.Payment.RedeemScript))
 			if err != nil {
 				return err
 			}
@@ -335,6 +335,6 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	return nil
 }
 
-func ExtraModeratorKeyFromReddemScript(redeemScript string) string {
-	return redeemScript[134:200]
+func ExtractModeratorKeyFromReddemScript(redeemScript string) string {
+	return redeemScript[140:206]
 }

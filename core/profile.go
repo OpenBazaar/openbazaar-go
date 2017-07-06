@@ -14,9 +14,9 @@ import (
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
-	mh "gx/ipfs/QmbZ6Cee2uHjG7hf19qLHppgKDRtaG4CVtMzdmK9VCVqLu/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -279,6 +279,34 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	if err != nil {
 		return err
 	}
+	return n.UpdateProfile(profile)
+}
+
+func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
+	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profile := new(pb.Profile)
+	_, ferr := os.Stat(profilePath)
+	if !os.IsNotExist(ferr) {
+		// Read existing file
+		file, err := ioutil.ReadFile(profilePath)
+		if err != nil {
+			return err
+		}
+		err = jsonpb.UnmarshalString(string(file), profile)
+		if err != nil {
+			return err
+		}
+	} else {
+		return nil
+	}
+	if profile.Stats != nil && newRating.RatingData != nil {
+
+		total := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
+		total += float32(newRating.RatingData.Overall)
+		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount+1)
+		profile.Stats.RatingCount += 1
+	}
+
 	return n.UpdateProfile(profile)
 }
 

@@ -15,6 +15,7 @@ import (
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil/txsort"
+	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"os/exec"
@@ -145,6 +146,10 @@ func (w *BitcoindWallet) CurrencyCode() string {
 	} else {
 		return "tbtc"
 	}
+}
+
+func (w *BitcoindWallet) IsDust(amount int64) bool {
+	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *BitcoindWallet) MasterPrivateKey() *hd.ExtendedKey {
@@ -384,9 +389,11 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 	// Subtract fee
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
 	fee := estimatedSize * int(feePerByte)
-	feePerOutput := fee / len(tx.TxOut)
-	for _, output := range tx.TxOut {
-		output.Value -= int64(feePerOutput)
+	if len(tx.TxOut) > 0 {
+		feePerOutput := fee / len(tx.TxOut)
+		for _, output := range tx.TxOut {
+			output.Value -= int64(feePerOutput)
+		}
 	}
 
 	// BIP 69 sorting
@@ -427,9 +434,11 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	// Subtract fee
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
 	fee := estimatedSize * int(feePerByte)
-	feePerOutput := fee / len(tx.TxOut)
-	for _, output := range tx.TxOut {
-		output.Value -= int64(feePerOutput)
+	if len(tx.TxOut) > 0 {
+		feePerOutput := fee / len(tx.TxOut)
+		for _, output := range tx.TxOut {
+			output.Value -= int64(feePerOutput)
+		}
 	}
 
 	// BIP 69 sorting

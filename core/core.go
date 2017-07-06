@@ -3,9 +3,9 @@ package core
 import (
 	"bytes"
 	"errors"
-	libp2p "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
-	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
+	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
+	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	gonet "net"
 	"net/http"
 	"net/url"
@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	VERSION   = "0.6.2"
+	VERSION   = "0.6.3"
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
 
@@ -102,8 +102,8 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	for _, g := range n.CrosspostGateways {
-		go func() {
-			req, err := http.NewRequest("PUT", g.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
+		go func(u *url.URL) {
+			req, err := http.NewRequest("PUT", u.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
 			if err != nil {
 				return
 			}
@@ -114,7 +114,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 			tbTransport := &http.Transport{Dial: dial}
 			client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 			client.Do(req)
-		}()
+		}(g)
 	}
 	go n.publish(rootHash)
 	return nil
