@@ -3220,5 +3220,10 @@ func (i *jsonAPIHandler) POSTBulkUpload(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	return
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, "{}")
 }
