@@ -19,7 +19,7 @@ import (
 	uio "github.com/ipfs/go-ipfs/unixfs/io"
 
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
+	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
 )
 
 var log = logging.Logger("cmds/files")
@@ -472,7 +472,7 @@ Examples:
 			return
 		}
 
-		_, err = rfd.Seek(int64(offset), os.SEEK_SET)
+		_, err = rfd.Seek(int64(offset), io.SeekStart)
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return
@@ -651,7 +651,7 @@ stat' on the file or any of its ancestors.
 			return
 		}
 
-		_, err = wfd.Seek(int64(offset), os.SEEK_SET)
+		_, err = wfd.Seek(int64(offset), io.SeekStart)
 		if err != nil {
 			log.Error("seekfail: ", err)
 			res.SetError(err, cmds.ErrNormal)
@@ -669,7 +669,7 @@ stat' on the file or any of its ancestors.
 			r = io.LimitReader(r, int64(count))
 		}
 
-		n, err := io.Copy(wfd, input)
+		n, err := io.Copy(wfd, r)
 		if err != nil {
 			res.SetError(err, cmds.ErrNormal)
 			return

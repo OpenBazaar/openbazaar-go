@@ -7,7 +7,7 @@ import (
 	nsys "github.com/ipfs/go-ipfs/namesys"
 	path "github.com/ipfs/go-ipfs/path"
 	ft "github.com/ipfs/go-ipfs/unixfs"
-	ci "gx/ipfs/QmPGxZ1DP2w45WcogpW1h43BvseXbfke9N91qotpoQcUeS/go-libp2p-crypto"
+	ci "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
 )
 
 // InitializeKeyspace sets the ipns record for the given key to
@@ -33,9 +33,6 @@ func InitializeKeyspace(n *core.IpfsNode, key ci.PrivKey) error {
 	}
 
 	pub := nsys.NewRoutingPublisher(n.Routing, n.Repo.Datastore())
-	if err := pub.Publish(ctx, key, path.FromCid(nodek)); err != nil {
-		return err
-	}
 
-	return nil
+	return pub.Publish(ctx, key, path.FromCid(nodek))
 }

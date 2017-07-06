@@ -1,14 +1,13 @@
 {
-  "author": "OpenBazaar Developers",
-  "bugs": {
-    "url": "https://github.com/OpenBazaar/openbazaar-go/issues"
-  },
-  "gx": {
-    "dvcsimport": "github.com/OpenBazaar/openbazaar-go"
-  },
-  "gxVersion": "0.7.0",
-  "language": "go",
-  "license": "MIT",
   "name": "openbazaar-go",
-  "version": "0.6.3"
+  "author": "chris",
+  "version": "0.6.3",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "language": "english",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/OpenBazaar/openbazaar-go"
+  },
+  "gxVersion": "0.11.0"
 }
+

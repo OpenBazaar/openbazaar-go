@@ -8,16 +8,18 @@ import (
 	"sync"
 	"time"
 
-	kb "gx/ipfs/QmTxn7JEA8DiBvd9vVzErAzadHn6TwjCKTjjUfPyRH9wjZ/go-libp2p-kbucket"
-	routing "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing"
-	notif "gx/ipfs/QmUc6twRJRE9MNrUGd8eo9WjHHxebGppdZfptGCASkR7fF/go-libp2p-routing/notifications"
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	inet "gx/ipfs/QmVtMT3fD7DzQNW7hdm6Xe6KPstzcggrhNpeVZ4422UpKK/go-libp2p-net"
-	peer "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer"
-	pset "gx/ipfs/QmWUswjn261LSyVxWAEpMVtPdy8zmKBJJfBpG3Qdpa8ZsE/go-libp2p-peer/peerset"
-	pb "gx/ipfs/QmaoxFZcgwGyoB57pCYQobejLoNgqaA6trr3zxxrbm4UXe/go-libp2p-kad-dht/pb"
-	record "gx/ipfs/QmcTnycWsBgvNYFYgWdWi8SRDCeevG8HBUQHkvg4KLXUsW/go-libp2p-record"
-	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	"github.com/ipfs/go-ipfs/routing/dht/util"
+	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
+	notif "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing/notifications"
+	pb "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb"
+	inet "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net"
+	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
+	record "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record"
+	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	kb "gx/ipfs/QmaQG6fJdzn2532WHoPdVwKqftXr6iCSr5NtWyGi1BHytT/go-libp2p-kbucket"
+	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	pset "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer/peerset"
 )
 
 // asyncQueryBuffer is the size of buffered channels in async queries. This
@@ -25,7 +27,6 @@ import (
 // results and continue querying closer peers. Note that different query
 // results will wait for the channel to drain.
 var asyncQueryBuffer = 10
-var QuerySize = 16
 
 // This file implements the Routing interface for the IpfsDHT struct.
 
@@ -88,7 +89,7 @@ func (dht *IpfsDHT) GetValue(ctx context.Context, key string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 
-	vals, err := dht.GetValues(ctx, key, QuerySize)
+	vals, err := dht.GetValues(ctx, key, util.QuerySize)
 	if err != nil {
 		return nil, err
 	}
@@ -241,11 +242,14 @@ func (dht *IpfsDHT) GetValues(ctx context.Context, key string, nvals int) ([]rou
 // This is what DSHTs (Coral and MainlineDHT) do to store large values in a DHT.
 
 // Provide makes this node announce that it can provide a value for the given key
-func (dht *IpfsDHT) Provide(ctx context.Context, key *cid.Cid) error {
-	defer log.EventBegin(ctx, "provide", key).Done()
+func (dht *IpfsDHT) Provide(ctx context.Context, key *cid.Cid, brdcst bool) error {
+	defer log.EventBegin(ctx, "provide", key, logging.LoggableMap{"broadcast": brdcst}).Done()
 
 	// add self locally
 	dht.providers.AddProvider(ctx, key, dht.self)
+	if !brdcst {
+		return nil
+	}
 
 	peers, err := dht.GetClosestPeers(ctx, key.KeyString())
 	if err != nil {
@@ -350,6 +354,9 @@ func (dht *IpfsDHT) findProvidersAsyncRoutine(ctx context.Context, key *cid.Cid,
 
 		// Add unique providers from request, up to 'count'
 		for _, prov := range provs {
+			if prov.ID != dht.self {
+				dht.peerstore.AddAddrs(prov.ID, prov.Addrs, pstore.TempAddrTTL)
+			}
 			log.Debugf("got provider: %s", prov)
 			if ps.TryAdd(prov.ID) {
 				log.Debugf("using provider: %s", prov)

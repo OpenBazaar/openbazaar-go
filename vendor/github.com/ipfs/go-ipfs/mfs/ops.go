@@ -9,7 +9,7 @@ import (
 
 	path "github.com/ipfs/go-ipfs/path"
 
-	node "gx/ipfs/QmYDscK7dmdo2GZ9aumS8s5auUUAH5mR1jvj5pYhWusfK7/go-ipld-node"
+	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
 )
 
 // Mv moves the file or directory at 'src' to 'dst'
@@ -65,12 +65,7 @@ func Mv(r *Root, src, dst string) error {
 		return err
 	}
 
-	err = srcDirObj.Unlink(srcFname)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return srcDirObj.Unlink(srcFname)
 }
 
 func lookupDir(r *Root, path string) (*Directory, error) {
@@ -134,6 +129,7 @@ func Mkdir(r *Root, pth string, mkparents bool, flush bool) error {
 			if err != nil {
 				return err
 			}
+			mkd.SetPrefix(r.Prefix)
 			fsn = mkd
 		} else if err != nil {
 			return err
@@ -152,6 +148,7 @@ func Mkdir(r *Root, pth string, mkparents bool, flush bool) error {
 			return err
 		}
 	}
+	final.SetPrefix(r.Prefix)
 
 	if flush {
 		err := final.Flush()

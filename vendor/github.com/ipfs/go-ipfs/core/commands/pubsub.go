@@ -14,10 +14,10 @@ import (
 	cmds "github.com/ipfs/go-ipfs/commands"
 	core "github.com/ipfs/go-ipfs/core"
 
-	cid "gx/ipfs/QmV5gPoRsjN1Gid3LMdNZTyfCtP2DsvqEbMAmz82RmmiGk/go-cid"
-	floodsub "gx/ipfs/QmZMqv6hzUGd6uA2E7SarfkhA6SLfJAoNaHmjz6VdK9qHV/floodsub"
-	u "gx/ipfs/QmZuY8aV7zbNXVy6DyN9SmnuH3o9nG852F4aTiSBpts8d1/go-ipfs-util"
-	pstore "gx/ipfs/Qme1g4e3m2SmdiSGGU3vSWmUStwUjc5oECnEriaK9Xa1HU/go-libp2p-peerstore"
+	floodsub "gx/ipfs/QmUpeULWfmtsgCnfuRN3BHsfhHvBxNphoYh4La4CMxGt2Z/floodsub"
+	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
+	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 var PubsubCmd = &cmds.Command{
@@ -51,6 +51,18 @@ This is an experimental feature. It is not intended in its current state
 to be used in a production environment.
 
 To use, the daemon must be run with '--enable-pubsub-experiment'.
+`,
+		LongDescription: `
+ipfs pubsub sub subscribes to messages on a given topic.
+
+This is an experimental feature. It is not intended in its current state
+to be used in a production environment.
+
+To use, the daemon must be run with '--enable-pubsub-experiment'.
+
+This command outputs data in the following encodings:
+  * "json"
+(Specified by the "--encoding" or "--enc" flag)
 `,
 	},
 	Arguments: []cmds.Argument{
