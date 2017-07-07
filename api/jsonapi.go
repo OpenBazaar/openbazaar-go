@@ -3207,7 +3207,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (i *jsonAPIHandler) POSTBulkUpload(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -3215,7 +3215,7 @@ func (i *jsonAPIHandler) POSTBulkUpload(w http.ResponseWriter, r *http.Request) 
 	}
 	defer file.Close()
 
-	err = i.node.HandleBulkListingUpload(file)
+	err = i.node.ImportListings(file)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
