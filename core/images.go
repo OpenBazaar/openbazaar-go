@@ -6,6 +6,7 @@ import (
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -21,6 +22,9 @@ import (
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"io/ioutil"
+	"net/http"
+	netUrl "net/url"
 	"time"
 )
 
@@ -236,4 +240,28 @@ func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string
 		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix+peerId), v)
 	}()
 	return dr, nil
+}
+
+func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename string, err error) {
+	dial := net.Dial
+	if n.TorDialer != nil {
+		dial = n.TorDialer.Dial
+	}
+	tbTransport := &http.Transport{Dial: dial}
+	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", "", err
+	}
+	imgBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	img := base64.StdEncoding.EncodeToString(imgBytes)
+	u, err := netUrl.Parse(url)
+	if err != nil {
+		return "", "", err
+	}
+	_, filename = path.Split(u.Path)
+	return img, filename, nil
 }
