@@ -867,11 +867,28 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 }
 
 func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
+	type cfg struct {
+		PeerId         string `json:"peerID"`
+		CryptoCurrency string `json:"cryptoCurrency"`
+		Testnet        bool   `json:"testnet"`
+		Tor            bool   `json:"tor"`
+	}
+
 	testnet := false
 	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
 		testnet = true
 	}
-	SanitizedResponse(w, fmt.Sprintf(`{"peerID": "%s", "cryptoCurrency": "%s", "testnet": %t}`, i.node.IpfsNode.Identity.Pretty(), strings.ToUpper(i.node.Wallet.CurrencyCode()), testnet))
+	var usingTor bool
+	if i.node.TorDialer != nil {
+		usingTor = true
+	}
+	c := cfg{i.node.IpfsNode.Identity.Pretty(), strings.ToUpper(i.node.Wallet.CurrencyCode()), testnet, usingTor}
+	ser, err := json.MarshalIndent(c, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ser))
 }
 
 func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
