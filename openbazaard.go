@@ -113,6 +113,7 @@ type Start struct {
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	AuthCookie           string   `short:"c" long:"authcookie" description:"turn on API authentication and use this specific cookie"`
 	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
 	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
 	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
@@ -436,36 +437,6 @@ func (x *Start) Execute(args []string) error {
 			log.Error("Invalid password")
 			os.Exit(3)
 		}
-	}
-
-	// Create authentication cookie
-	var authCookie http.Cookie
-	authCookie.Name = "OpenBazaar_Auth_Cookie"
-	cookiePrefix := authCookie.Name + "="
-	cookiePath := path.Join(repoPath, ".cookie")
-	cookie, err := ioutil.ReadFile(cookiePath)
-	if err != nil {
-		authBytes := make([]byte, 32)
-		rand.Read(authBytes)
-		authCookie.Value = base58.Encode(authBytes)
-		f, err := os.Create(cookiePath)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		defer f.Close()
-		cookie := cookiePrefix + authCookie.Value
-		_, werr := f.Write([]byte(cookie))
-		if werr != nil {
-			log.Error(werr)
-			return werr
-		}
-	} else {
-		if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-			return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
-		}
-		split := strings.SplitAfter(string(cookie), cookiePrefix)
-		authCookie.Value = split[1]
 	}
 
 	// Create user-agent file
@@ -795,6 +766,42 @@ func (x *Start) Execute(args []string) error {
 	}
 	for _, ip := range x.AllowIP {
 		apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, ip)
+	}
+
+	// Create authentication cookie
+	var authCookie http.Cookie
+	authCookie.Name = "OpenBazaar_Auth_Cookie"
+
+	if x.AuthCookie != "" {
+		authCookie.Value = x.AuthCookie
+		apiConfig.Authenticated = true
+	} else {
+		cookiePrefix := authCookie.Name + "="
+		cookiePath := path.Join(repoPath, ".cookie")
+		cookie, err := ioutil.ReadFile(cookiePath)
+		if err != nil {
+			authBytes := make([]byte, 32)
+			rand.Read(authBytes)
+			authCookie.Value = base58.Encode(authBytes)
+			f, err := os.Create(cookiePath)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+			cookie := cookiePrefix + authCookie.Value
+			_, werr := f.Write([]byte(cookie))
+			if werr != nil {
+				log.Error(werr)
+				return werr
+			}
+			f.Close()
+		} else {
+			if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
+				return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
+			}
+			split := strings.SplitAfter(string(cookie), cookiePrefix)
+			authCookie.Value = split[1]
+		}
 	}
 
 	// Offline messaging storage
