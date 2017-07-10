@@ -300,11 +300,10 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 		return nil
 	}
 	if profile.Stats != nil && newRating.RatingData != nil {
-
 		total := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
 		total += float32(newRating.RatingData.Overall)
-		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount+1)
 		profile.Stats.RatingCount += 1
+		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount)
 	}
 
 	return n.UpdateProfile(profile)

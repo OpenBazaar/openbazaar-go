@@ -599,7 +599,6 @@ func (x *Start) Execute(args []string) error {
 	if onionTransport != nil {
 		ncfg.Host = defaultHostOption
 	}
-
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error(err)
