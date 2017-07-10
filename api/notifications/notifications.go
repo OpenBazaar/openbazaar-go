@@ -13,6 +13,11 @@ type Notification struct {
 	Read      bool      `json:"read"`
 }
 
+type Thumbnail struct {
+	Tiny  string `json:"tiny"`
+	Small string `json:"small"`
+}
+
 type Data interface {
 	// TODO maybe should be made 'real interface', which will allow
 	// to use typed channels, type checking and semantic dispatching
@@ -35,113 +40,101 @@ type walletWrapper struct {
 }
 
 type messageReadWrapper struct {
-	MessageRead interface{} `json:"messageRead"`
+	MessageRead Data `json:"messageRead"`
 }
 
 type messageTypingWrapper struct {
-	MessageRead interface{} `json:"messageTyping"`
-}
-
-type orderWrapper struct {
-	OrderNotification `json:"order"`
-}
-
-type paymentWrapper struct {
-	PaymentNotification `json:"payment"`
-}
-
-type orderConfirmationWrapper struct {
-	OrderConfirmationNotification `json:"orderConfirmation"`
-}
-
-type orderCancelWrapper struct {
-	OrderCancelNotification `json:"orderCancel"`
-}
-
-type refundWrapper struct {
-	RefundNotification `json:"refund"`
-}
-
-type fulfillmentWrapper struct {
-	FulfillmentNotification `json:"orderFulfillment"`
-}
-
-type completionWrapper struct {
-	CompletionNotification `json:"orderCompletion"`
-}
-
-type disputeOpenWrapper struct {
-	DisputeOpenNotification `json:"disputeOpen"`
-}
-
-type disputeUpdateWrapper struct {
-	DisputeUpdateNotification `json:"disputeUpdate"`
-}
-
-type disputeCloseWrapper struct {
-	DisputeCloseNotification `json:"disputeClose"`
+	MessageRead Data `json:"messageTyping"`
 }
 
 type OrderNotification struct {
-	Title             string `json:"title"`
-	BuyerId           string `json:"buyerId"`
-	BuyerBlockchainId string `json:"buyerBlockchainId"`
-	Thumbnail         string `json:"thumbnail"`
-	Timestamp         int    `json:"timestamp"`
-	OrderId           string `json:"orderId"`
+	Type              string    `json:"type"`
+	Title             string    `json:"title"`
+	BuyerId           string    `json:"buyerId"`
+	BuyerBlockchainId string    `json:"buyerBlockchainId"`
+	Thumbnail         Thumbnail `json:"thumbnail"`
+	Timestamp         int       `json:"timestamp"`
+	OrderId           string    `json:"orderId"`
 }
 
 type PaymentNotification struct {
+	Type         string `json:"type"`
 	OrderId      string `json:"orderId"`
 	FundingTotal uint64 `json:"fundingTotal"`
 }
 
 type OrderConfirmationNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
+}
+
+type OrderDeclinedNotification struct {
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type OrderCancelNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type RefundNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type FulfillmentNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type CompletionNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type DisputeOpenNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type DisputeUpdateNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type DisputeCloseNotification struct {
-	OrderId string `json:"orderId"`
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
 type FollowNotification struct {
-	Follow string `json:"follow"`
+	Type   string `json:"type"`
+	PeerId string `json:"peerId"`
 }
 
 type UnfollowNotification struct {
-	Unfollow string `json:"unfollow"`
+	Type   string `json:"type"`
+	PeerId string `json:"peerId"`
 }
 
 type ModeratorAddNotification struct {
-	ModeratorAdd string `json:"moderatorAdd"`
+	Type   string `json:"type"`
+	PeerId string `json:"peerId"`
 }
 
 type ModeratorRemoveNotification struct {
-	ModeratorRemove string `json:"moderatorRemove"`
+	Type   string `json:"type"`
+	PeerId string `json:"peerId"`
 }
 
 type StatusNotification struct {
@@ -181,63 +174,64 @@ type IncomingTransaction struct {
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 
-func Wrap(i interface{}) interface{} {
+func wrap(i interface{}) interface{} {
 	switch i.(type) {
 	case OrderNotification:
-		return orderWrapper{OrderNotification: i.(OrderNotification)}
+		n := i.(OrderNotification)
+		n.Type = "order"
+		return notificationWrapper{n}
 	case PaymentNotification:
-		return paymentWrapper{PaymentNotification: i.(PaymentNotification)}
+		n := i.(PaymentNotification)
+		n.Type = "payment"
+		return notificationWrapper{n}
 	case OrderConfirmationNotification:
-		return orderConfirmationWrapper{OrderConfirmationNotification: i.(OrderConfirmationNotification)}
+		n := i.(OrderConfirmationNotification)
+		n.Type = "orderConfirmation"
+		return notificationWrapper{n}
 	case OrderCancelNotification:
-		return orderCancelWrapper{OrderCancelNotification: i.(OrderCancelNotification)}
+		n := i.(OrderCancelNotification)
+		n.Type = "cancel"
+		return notificationWrapper{n}
 	case RefundNotification:
-		return refundWrapper{RefundNotification: i.(RefundNotification)}
+		n := i.(RefundNotification)
+		n.Type = "refund"
+		return notificationWrapper{n}
 	case FulfillmentNotification:
-		return fulfillmentWrapper{FulfillmentNotification: i.(FulfillmentNotification)}
+		n := i.(FulfillmentNotification)
+		n.Type = "fulfillment"
+		return notificationWrapper{n}
 	case CompletionNotification:
-		return completionWrapper{CompletionNotification: i.(CompletionNotification)}
+		n := i.(CompletionNotification)
+		n.Type = "orderComplete"
+		return notificationWrapper{n}
 	case DisputeOpenNotification:
-		return disputeOpenWrapper{DisputeOpenNotification: i.(DisputeOpenNotification)}
+		n := i.(DisputeOpenNotification)
+		n.Type = "disputeOpen"
+		return notificationWrapper{n}
 	case DisputeUpdateNotification:
-		return disputeUpdateWrapper{DisputeUpdateNotification: i.(DisputeUpdateNotification)}
+		n := i.(DisputeUpdateNotification)
+		n.Type = "disputeUpdate"
+		return notificationWrapper{n}
 	case DisputeCloseNotification:
-		return disputeCloseWrapper{DisputeCloseNotification: i.(DisputeCloseNotification)}
-	default:
-		return i
-	}
-}
-
-func wrapType(i interface{}) interface{} {
-	switch i.(type) {
-	case orderWrapper:
-		return notificationWrapper{i}
-	case paymentWrapper:
-		return notificationWrapper{i}
-	case orderConfirmationWrapper:
-		return notificationWrapper{i}
-	case orderCancelWrapper:
-		return notificationWrapper{i}
-	case refundWrapper:
-		return notificationWrapper{i}
-	case fulfillmentWrapper:
-		return notificationWrapper{i}
-	case completionWrapper:
-		return notificationWrapper{i}
-	case disputeOpenWrapper:
-		return notificationWrapper{i}
-	case disputeUpdateWrapper:
-		return notificationWrapper{i}
-	case disputeCloseWrapper:
-		return notificationWrapper{i}
+		n := i.(DisputeCloseNotification)
+		n.Type = "disputeClose"
+		return notificationWrapper{n}
 	case FollowNotification:
-		return notificationWrapper{i}
+		n := i.(FollowNotification)
+		n.Type = "follow"
+		return notificationWrapper{n}
 	case UnfollowNotification:
-		return notificationWrapper{i}
+		n := i.(UnfollowNotification)
+		n.Type = "unfollow"
+		return notificationWrapper{n}
 	case ModeratorAddNotification:
-		return notificationWrapper{i}
+		n := i.(ModeratorAddNotification)
+		n.Type = "moderatorAdd"
+		return notificationWrapper{n}
 	case ModeratorRemoveNotification:
-		return notificationWrapper{i}
+		n := i.(ModeratorRemoveNotification)
+		n.Type = "moderatorRemove"
+		return notificationWrapper{n}
 	case ChatMessage:
 		return messageWrapper{i.(ChatMessage)}
 	case ChatRead:
@@ -252,7 +246,7 @@ func wrapType(i interface{}) interface{} {
 }
 
 func Serialize(i interface{}) []byte {
-	w := wrapType(Wrap(i))
+	w := wrap(i)
 	if _, ok := w.([]byte); ok {
 		return w.([]byte)
 	}

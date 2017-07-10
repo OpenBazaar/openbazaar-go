@@ -6,6 +6,7 @@ import (
 	"fmt"
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -15,7 +16,7 @@ type NotficationsDB struct {
 	lock sync.RWMutex
 }
 
-func (n *NotficationsDB) Put(notification notif.Data, timestamp time.Time) error {
+func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestamp time.Time) error {
 	ser, err := json.Marshal(notification)
 	if err != nil {
 		return err
@@ -23,10 +24,10 @@ func (n *NotficationsDB) Put(notification notif.Data, timestamp time.Time) error
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	tx, _ := n.db.Begin()
-	stmt, _ := tx.Prepare("insert into notifications(serializedNotification, timestamp, read) values(?,?,?)")
+	stmt, _ := tx.Prepare("insert into notifications(serializedNotification, type, timestamp, read) values(?,?,?,?)")
 
 	defer stmt.Close()
-	_, err = stmt.Exec(string(ser), int(timestamp.Unix()), 0)
+	_, err = stmt.Exec(string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -35,20 +36,30 @@ func (n *NotficationsDB) Put(notification notif.Data, timestamp time.Time) error
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId int, limit int) []notif.Notification {
+func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter string) []notif.Notification {
 	var ret []notif.Notification
 
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
 	var stm string
+	var filter string
+	var args []interface{}
 	if offsetId > 0 {
-		stm = "select rowid, serializedNotification, timestamp, read from notifications where rowid<" + strconv.Itoa(offsetId) + " order by rowid desc limit " + strconv.Itoa(limit) + " ;"
+		args = append(args, offsetId)
+		if typeFilter != "" {
+			filter = " and type=?"
+			args = append(args, strings.ToLower(typeFilter))
+		}
+		stm = "select rowid, serializedNotification, timestamp, read from notifications where rowid<?" + filter + " order by rowid desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		stm = "select rowid, serializedNotification, timestamp, read from notifications order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		if typeFilter != "" {
+			filter = " where type=?"
+			args = append(args, strings.ToLower(typeFilter))
+		}
+		stm = "select rowid, serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
-
-	rows, err := n.db.Query(stm)
+	rows, err := n.db.Query(stm, args...)
 	if err != nil {
 		return ret
 	}
@@ -100,6 +111,13 @@ func (n *NotficationsDB) MarkAsRead(notifID int) error {
 	}
 	tx.Commit()
 	return nil
+}
+
+func (n *NotficationsDB) MarkAllAsRead() error {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	_, err := n.db.Exec("update notifications set read=1")
+	return err
 }
 
 func (n *NotficationsDB) Delete(notifID int) error {

@@ -2315,11 +2315,12 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
+	filter := r.URL.Query().Get("filter")
 	type notifData struct {
 		Unread        int                          `json:"unread"`
 		Notifications []notifications.Notification `json:"notifications"`
 	}
-	notifs := i.node.Datastore.Notifications().GetAll(offsetId, int(l))
+	notifs := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filter)
 	unread, err := i.node.Datastore.Notifications().GetUnreadCount()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -2340,13 +2341,22 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 }
 
 func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
-	_, noftifId := path.Split(r.URL.Path)
-	id, err := strconv.Atoi(noftifId)
+	_, notifId := path.Split(r.URL.Path)
+	id, err := strconv.Atoi(notifId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	err = i.node.Datastore.Notifications().MarkAsRead(id)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, `{}`)
+}
+
+func (i *jsonAPIHandler) POSTMarkNotificationsAsRead(w http.ResponseWriter, r *http.Request) {
+	err := i.node.Datastore.Notifications().MarkAllAsRead()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

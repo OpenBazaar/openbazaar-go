@@ -159,16 +159,17 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.adjustInventory(contract)
 
 			n := notifications.OrderNotification{
+				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
 				contract.BuyerOrder.BuyerID.BlockchainID,
-				contract.VendorListings[0].Item.Images[0].Tiny,
+				notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 				int(contract.BuyerOrder.Timestamp.Seconds),
 				orderId,
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().Put(notifications.Wrap(n), time.Now())
+			l.db.Notifications().Put(n, n.Type, time.Now())
 		}
 	}
 
@@ -225,11 +226,12 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			}
 		}
 		n := notifications.PaymentNotification{
+			"payment",
 			orderId,
 			uint64(funding),
 		}
 		l.broadcast <- n
-		l.db.Notifications().Put(notifications.Wrap(n), time.Now())
+		l.db.Notifications().Put(n, n.Type, time.Now())
 	}
 
 	record := &spvwallet.TransactionRecord{
