@@ -33,13 +33,16 @@ type Datastore interface {
 type Config interface {
 	/* Initialize the database with the node's mnemonic seed and
 	   identity key. This will be called during repo init. */
-	Init(mnemonic string, identityKey []byte, password string) error
+	Init(mnemonic string, identityKey []byte, password string, creationDate time.Time) error
 
 	// Return the mnemonic string
 	GetMnemonic() (string, error)
 
 	// Return the identity key
 	GetIdentityKey() ([]byte, error)
+
+	// Returns the date the seed was created
+	GetCreationDate() (time.Time, error)
 
 	// Returns true if the database has failed to decrypt properly ex) wrong pw
 	IsEncrypted() bool

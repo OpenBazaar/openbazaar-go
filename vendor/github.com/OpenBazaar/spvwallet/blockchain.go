@@ -39,7 +39,7 @@ type Blockchain struct {
 	state  ChainState
 }
 
-func NewBlockchain(filePath string, params *chaincfg.Params) (*Blockchain, error) {
+func NewBlockchain(filePath string, walletCreationDate time.Time, params *chaincfg.Params) (*Blockchain, error) {
 	b := &Blockchain{
 		lock:   new(sync.Mutex),
 		params: params,
@@ -49,41 +49,16 @@ func NewBlockchain(filePath string, params *chaincfg.Params) (*Blockchain, error
 	h, err := b.db.Height()
 	if h == 0 || err != nil {
 		log.Info("Initializing headers db with checkpoints")
-		if b.params.Name == chaincfg.MainNetParams.Name {
-			// Put the checkpoint to the db
-			sh := StoredHeader{
-				header:    mainnetCheckpoint,
-				height:    MAINNET_CHECKPOINT_HEIGHT,
-				totalWork: big.NewInt(0),
-			}
-			err := b.db.Put(sh, true)
-			if err != nil {
-				return nil, err
-			}
-		} else if b.params.Name == chaincfg.TestNet3Params.Name {
-			// Put the checkpoint to the db
-			sh := StoredHeader{
-				header:    testnet3Checkpoint,
-				height:    TESTNET3_CHECKPOINT_HEIGHT,
-				totalWork: big.NewInt(0),
-			}
-			// Put to db
-			err := b.db.Put(sh, true)
-			if err != nil {
-				return nil, err
-			}
-		} else if b.params.Name == chaincfg.RegressionNetParams.Name {
-			// Put the checkpoint to the db
-			sh := StoredHeader{
-				header:    regtestCheckpoint,
-				height:    REGTEST_CHECKPOINT_HEIGHT,
-				totalWork: big.NewInt(0),
-			}
-			// Put to db
-			err := b.db.Put(sh, true)
-			if err != nil {
-				return nil, err
-			}
+		checkpoint := GetCheckpoint(walletCreationDate, params)
+		// Put the checkpoint to the db
+		sh := StoredHeader{
+			header:    checkpoint.Header,
+			height:    checkpoint.Height,
+			totalWork: big.NewInt(0),
+		}
+		err := b.db.Put(sh, true)
+		if err != nil {
+			return nil, err
 		}
 	}
 	return b, nil

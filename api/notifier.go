@@ -57,7 +57,7 @@ func (m *notificationManager) sendNotification(n interface{}) {
 // TODO: should be extended to include new notifiers in the list
 func (m *notificationManager) getNotifiers() []notifier {
 	settings, err := m.node.Datastore.Settings().Get()
-	notifiers := make([]notifier, 0)
+	notifiers := []notifier{}
 	if err != nil {
 		return notifiers
 	}
@@ -102,6 +102,7 @@ func sendEmail(conf *repo.SMTPSettings, body []byte) error {
 	}
 	auth := smtp.PlainAuth("", conf.SenderEmail, conf.Password, host)
 	recipients := []string{conf.RecipientEmail}
+	log.Notice(auth)
 	return smtp.SendMail(conf.ServerAddress, auth, conf.SenderEmail, recipients, body)
 }
 

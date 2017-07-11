@@ -9,6 +9,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
+	"time"
 )
 
 var log = logging.MustGetLogger("db")
@@ -312,7 +313,7 @@ type ConfigDB struct {
 	path string
 }
 
-func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) error {
+func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, creationDate time.Time) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	if err := initDatabaseTables(c.db, password); err != nil {
@@ -333,6 +334,11 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string) er
 		return err
 	}
 	_, err = stmt.Exec("identityKey", identityKey)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	_, err = stmt.Exec("creationDate", creationDate.Format(time.RFC3339))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -368,6 +374,23 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 		return nil, err
 	}
 	return identityKey, nil
+}
+
+func (c *ConfigDB) GetCreationDate() (time.Time, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	var t time.Time
+	stmt, err := c.db.Prepare("select value from config where key=?")
+	if err != nil {
+		return t, err
+	}
+	defer stmt.Close()
+	var creationDate []byte
+	err = stmt.QueryRow("creationDate").Scan(&creationDate)
+	if err != nil {
+		return t, err
+	}
+	return time.Parse(time.RFC3339, string(creationDate))
 }
 
 func (c *ConfigDB) IsEncrypted() bool {

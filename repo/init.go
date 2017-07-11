@@ -13,12 +13,13 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	"time"
 )
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
-func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, dbInit func(string, []byte, string) error) error {
+func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
 	if err := maybeCreateOBDirectories(repoRoot); err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		return err
 	}
 
-	if err := dbInit(mnemonic, identityKey, password); err != nil {
+	if err := dbInit(mnemonic, identityKey, password, creationDate); err != nil {
 		return err
 	}
 

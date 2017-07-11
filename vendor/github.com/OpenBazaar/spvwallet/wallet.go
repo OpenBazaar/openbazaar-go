@@ -14,6 +14,7 @@ import (
 	"os"
 	"path"
 	"sync"
+	"time"
 )
 
 type SPVWallet struct {
@@ -36,6 +37,8 @@ type SPVWallet struct {
 	fpAccumulator map[int32]int32
 	blockQueue    chan chainhash.Hash
 	mutex         *sync.RWMutex
+
+	creationDate time.Time
 
 	running bool
 
@@ -76,6 +79,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
 		params:           config.Params,
+		creationDate:     config.CreationDate,
 		feeProvider: NewFeeProvider(
 			config.MaxFee,
 			config.HighFee,
@@ -98,7 +102,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		return nil, err
 	}
 
-	w.blockchain, err = NewBlockchain(w.repoPath, w.params)
+	w.blockchain, err = NewBlockchain(w.repoPath, w.creationDate, w.params)
 	if err != nil {
 		return nil, err
 	}
@@ -249,25 +253,6 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 	return confirmed, unconfirmed
 }
 
-func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
-	for _, stxo := range stxos {
-		if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
-			if stxo.SpendHeight > 0 {
-				return true
-			} else {
-				return w.checkIfStxoIsConfirmed(stxo.Utxo, stxos)
-			}
-		} else if stxo.Utxo.IsEqual(&utxo) {
-			if stxo.Utxo.AtHeight > 0 {
-				return true
-			} else {
-				return false
-			}
-		}
-	}
-	return false
-}
-
 func (w *SPVWallet) Transactions() ([]Txn, error) {
 	return w.txstore.Txns().GetAll(false)
 }
@@ -287,6 +272,25 @@ func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error
 	}
 	chainTip := w.ChainTip()
 	return chainTip - uint32(txn.Height) + 1, uint32(txn.Height), nil
+}
+
+func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
+	for _, stxo := range stxos {
+		if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
+			if stxo.SpendHeight > 0 {
+				return true
+			} else {
+				return w.checkIfStxoIsConfirmed(stxo.Utxo, stxos)
+			}
+		} else if stxo.Utxo.IsEqual(&utxo) {
+			if stxo.Utxo.AtHeight > 0 {
+				return true
+			} else {
+				return false
+			}
+		}
+	}
+	return false
 }
 
 func (w *SPVWallet) Params() *chaincfg.Params {
@@ -349,7 +353,7 @@ func (w *SPVWallet) Close() {
 func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 	w.Close()
 	os.Remove(path.Join(w.repoPath, "headers.bin"))
-	blockchain, err := NewBlockchain(w.repoPath, w.params)
+	blockchain, err := NewBlockchain(w.repoPath, w.creationDate, w.params)
 	if err != nil {
 		return
 	}

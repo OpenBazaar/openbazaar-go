@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Config struct {
@@ -17,6 +18,10 @@ type Config struct {
 
 	// Bip39 mnemonic string. If empty a new mnemonic will be created.
 	Mnemonic string
+
+	// The date the wallet was created.
+	// If before the earliest checkpoint the chain will be synced using the earliest checkpoint.
+	CreationDate time.Time
 
 	// The user-agent that shall be visible to peers
 	UserAgent string

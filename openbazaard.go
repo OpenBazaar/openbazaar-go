@@ -76,6 +76,7 @@ import (
 	metrics "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics"
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
 	"syscall"
+	"time"
 )
 
 var log = logging.MustGetLogger("main")
@@ -91,11 +92,12 @@ var fileLogFormat = logging.MustStringFormatter(
 var encryptedDatabaseError = errors.New("could not decrypt the database")
 
 type Init struct {
-	Password string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
-	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	Mnemonic string `short:"m" long:"mnemonic" description:"specify a mnemonic seed to use to derive the keychain"`
-	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
-	Force    bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
+	Password           string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
+	DataDir            string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Mnemonic           string `short:"m" long:"mnemonic" description:"specify a mnemonic seed to use to derive the keychain"`
+	Testnet            bool   `short:"t" long:"testnet" description:"use the test network"`
+	Force              bool   `short:"f" long:"force" description:"force overwrite existing repo (dangerous!)"`
+	WalletCreationDate string `short:"w" long:"walletcreationdate" description:"specify the date the seed was created. if omitted the wallet will sync from the oldest checkpoint."`
 }
 type Status struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
@@ -342,15 +344,22 @@ func (x *Init) Execute(args []string) error {
 	if x.Password != "" {
 		x.Password = strings.Replace(x.Password, "'", "''", -1)
 	}
+	creationDate := time.Now()
+	if x.WalletCreationDate != "" {
+		creationDate, err = time.Parse(time.RFC3339, x.WalletCreationDate)
+		if err != nil {
+			return errors.New("Wallet creation date timestamp must be in RFC3339 format")
+		}
+	}
 
-	_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet)
+	_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet, creationDate)
 	if err == repo.ErrRepoExists && x.Force {
 		reader := bufio.NewReader(os.Stdin)
 		fmt.Print("Force overwriting the db will destroy your existing keys and history. Are you really, really sure you want to continue? (y/n): ")
 		resp, _ := reader.ReadString('\n')
 		if strings.ToLower(resp) == "y\n" || strings.ToLower(resp) == "yes\n" {
 			os.RemoveAll(repoPath)
-			_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet)
+			_, err = initializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet, creationDate)
 			if err != nil {
 				return err
 			}
@@ -395,7 +404,7 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
 
-	sqliteDB, err := initializeRepo(repoPath, x.Password, "", isTestnet)
+	sqliteDB, err := initializeRepo(repoPath, x.Password, "", isTestnet, time.Now())
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
@@ -429,7 +438,7 @@ func (x *Start) Execute(args []string) error {
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
-		sqliteDB, err = initializeRepo(repoPath, pw, "", isTestnet)
+		sqliteDB, err = initializeRepo(repoPath, pw, "", isTestnet, time.Now())
 		if err != nil && err != repo.ErrRepoExists {
 			return err
 		}
@@ -438,6 +447,9 @@ func (x *Start) Execute(args []string) error {
 			os.Exit(3)
 		}
 	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
@@ -693,19 +705,20 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:    mn,
-			Params:      &params,
-			MaxFee:      uint64(walletCfg.MaxFee),
-			LowFee:      uint64(walletCfg.LowFeeDefault),
-			MediumFee:   uint64(walletCfg.MediumFeeDefault),
-			HighFee:     uint64(walletCfg.HighFeeDefault),
-			FeeAPI:      *feeApi,
-			RepoPath:    repoPath,
-			DB:          sqliteDB,
-			UserAgent:   "OpenBazaar",
-			TrustedPeer: tp,
-			Proxy:       torDialer,
-			Logger:      ml,
+			Mnemonic:     mn,
+			Params:       &params,
+			MaxFee:       uint64(walletCfg.MaxFee),
+			LowFee:       uint64(walletCfg.LowFeeDefault),
+			MediumFee:    uint64(walletCfg.MediumFeeDefault),
+			HighFee:      uint64(walletCfg.HighFeeDefault),
+			FeeAPI:       *feeApi,
+			RepoPath:     repoPath,
+			CreationDate: creationDate,
+			DB:           sqliteDB,
+			UserAgent:    "OpenBazaar",
+			TrustedPeer:  tp,
+			Proxy:        torDialer,
+			Logger:       ml,
 		}
 		wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
@@ -924,7 +937,7 @@ func (x *Start) Execute(args []string) error {
 	return nil
 }
 
-func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLiteDatastore, error) {
+func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet)
 	if err != nil {
@@ -932,7 +945,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLit
 	}
 
 	// Initialize the IPFS repo if it does not already exist
-	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, sqliteDB.Config().Init)
+	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, creationDate, sqliteDB.Config().Init)
 	if err != nil {
 		return sqliteDB, err
 	}
