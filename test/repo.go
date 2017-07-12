@@ -6,6 +6,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"time"
 )
 
 // Repository represents a test (temporary/volitile) repository
@@ -63,7 +64,7 @@ func (r *Repository) Reset() error {
 	}
 
 	// Rebuild any neccessary structure
-	err = repo.DoInit(r.Path, 4096, true, "", r.Password, r.DB.Config().Init)
+	err = repo.DoInit(r.Path, 4096, true, "", r.Password, time.Now(), r.DB.Config().Init)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
