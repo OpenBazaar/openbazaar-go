@@ -6,13 +6,14 @@ import (
 	"path"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 const repoRootFolder = "testdata/repo-root"
 const mnemonicFixture = "fiscal first first inside toe wedding away element response dry attend oxygen"
 
 // We have to use this and cannot pass the real db.Init because it would create a circular import error
-func MockDbInit(mnemonic string, identityKey []byte, password string) error {
+func MockDbInit(mnemonic string, identityKey []byte, password string, creationDate time.Time) error {
 	return nil
 }
 func MockNewEntropy(int) ([]byte, error) {
@@ -38,19 +39,19 @@ func TestDoInit(t *testing.T) {
 	mnemonic := ""
 	testnet := true
 	// Running DoInit on a folder that already contains a config file
-	err := DoInit(testConfigFolder, 4096, testnet, password, mnemonic, MockDbInit)
+	err := DoInit(testConfigFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
 	if err != ErrRepoExists {
 		t.Error("DoInit didn't throw expected error")
 	}
 	// Running DoInit on an empty, not-writable folder
 	os.Chmod(repoRootFolder, 0444)
-	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
+	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
 	if err == nil {
 		t.Error("DoInit didn't throw an error")
 	}
 	// Running DoInit on an empty, writable folder
 	os.Chmod(repoRootFolder, 0755)
-	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, MockDbInit)
+	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
 	if err != nil {
 		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
 	}
