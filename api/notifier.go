@@ -102,7 +102,6 @@ func sendEmail(conf *repo.SMTPSettings, body []byte) error {
 	}
 	auth := smtp.PlainAuth("", conf.SenderEmail, conf.Password, host)
 	recipients := []string{conf.RecipientEmail}
-	log.Notice(auth)
 	return smtp.SendMail(conf.ServerAddress, auth, conf.SenderEmail, recipients, body)
 }
 
