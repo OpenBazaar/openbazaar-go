@@ -23,11 +23,11 @@ func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int, timestamp time.Time, wa
 		return err
 	}
 	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?)")
-	defer stmt.Close()
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+	defer stmt.Close()
 	watchOnlyInt := 0
 	if watchOnly {
 		watchOnlyInt = 1
@@ -84,10 +84,10 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]spvwallet.Txn, error) {
 	var ret []spvwallet.Txn
 	stm := "select tx, value, height, timestamp, watchOnly from txns"
 	rows, err := t.db.Query(stm)
-	defer rows.Close()
 	if err != nil {
 		return ret, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var tx []byte
 		var value int
