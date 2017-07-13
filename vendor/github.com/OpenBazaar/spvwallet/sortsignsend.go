@@ -81,7 +81,11 @@ func (w *SPVWallet) gatherCoins() map[coinset.Coin]*hd.ExtendedKey {
 			confirmations = int32(height) - u.AtHeight
 		}
 		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
-		key, err := w.keyManager.GetKeyForScript(u.ScriptPubkey)
+		addr, err := w.ScriptToAddress(u.ScriptPubkey)
+		if err != nil {
+			continue
+		}
+		key, err := w.keyManager.GetKeyForScript(addr.ScriptAddress())
 		if err != nil {
 			continue
 		}
@@ -175,7 +179,11 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	for _, u := range utxos {
 		if u.Op.Hash.IsEqual(&txid) && u.AtHeight == 0 {
-			key, err := w.keyManager.GetKeyForScript(u.ScriptPubkey)
+			addr, err := w.ScriptToAddress(u.ScriptPubkey)
+			if err != nil {
+				return nil, err
+			}
+			key, err := w.keyManager.GetKeyForScript(addr.ScriptAddress())
 			if err != nil {
 				return nil, err
 			}
@@ -308,6 +316,7 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 	return buf.Bytes(), nil
 }
 
+// TODO: once segwit activates this will need to build segwit transactions if the utxo script is a witness program
 func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
@@ -395,6 +404,7 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 	return &txid, nil
 }
 
+// TODO: once segwit activates this will need to build segwit transactions if the utxo script is a witness program
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)

@@ -41,19 +41,19 @@ func TestPutKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptPubKey, purpose, keyIndex, used from keys where scriptPubKey=?")
+	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
 	defer stmt.Close()
 
-	var scriptPubKey string
+	var scriptAddress string
 	var purpose int
 	var index int
 	var used int
-	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptPubKey, &purpose, &index, &used)
+	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptAddress, &purpose, &index, &used)
 	if err != nil {
 		t.Error(err)
 	}
-	if scriptPubKey != hex.EncodeToString(b) {
-		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), scriptPubKey)
+	if scriptAddress != hex.EncodeToString(b) {
+		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), scriptAddress)
 	}
 	if purpose != 0 {
 		t.Errorf(`Expected 0 got %d`, purpose)
@@ -79,19 +79,19 @@ func TestImportKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptPubKey, purpose, used, key from keys where scriptPubKey=?")
+	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, used, key from keys where scriptAddress=?")
 	defer stmt.Close()
 
-	var scriptPubKey string
+	var scriptAddress string
 	var purpose int
 	var used int
 	var keyHex string
-	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptPubKey, &purpose, &used, &keyHex)
+	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptAddress, &purpose, &used, &keyHex)
 	if err != nil {
 		t.Error(err)
 	}
-	if scriptPubKey != hex.EncodeToString(b) {
-		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), scriptPubKey)
+	if scriptAddress != hex.EncodeToString(b) {
+		t.Errorf(`Expected %s got %s`, hex.EncodeToString(b), scriptAddress)
 	}
 	if purpose != -1 {
 		t.Errorf(`Expected -1 got %d`, purpose)
@@ -127,14 +127,14 @@ func TestMarkKeyAsUsed(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptPubKey, purpose, keyIndex, used from keys where scriptPubKey=?")
+	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
 	defer stmt.Close()
 
-	var scriptPubKey string
+	var scriptAddress string
 	var purpose int
 	var index int
 	var used int
-	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptPubKey, &purpose, &index, &used)
+	err = stmt.QueryRow(hex.EncodeToString(b)).Scan(&scriptAddress, &purpose, &index, &used)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,14 +165,14 @@ func TestGetLastKeyIndex(t *testing.T) {
 	}
 }
 
-func TestGetPathForScript(t *testing.T) {
+func TestGetPathForKey(t *testing.T) {
 	b := make([]byte, 32)
 	rand.Read(b)
 	err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 15})
 	if err != nil {
 		t.Error(err)
 	}
-	path, err := kdb.GetPathForScript(b)
+	path, err := kdb.GetPathForKey(b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -181,7 +181,7 @@ func TestGetPathForScript(t *testing.T) {
 	}
 }
 
-func TestKeyForScript(t *testing.T) {
+func TestGetKey(t *testing.T) {
 	key, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
 		t.Error(err)
@@ -194,7 +194,7 @@ func TestKeyForScript(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	k, err := kdb.GetKeyForScript(b)
+	k, err := kdb.GetKey(b)
 	if err != nil {
 		t.Error(err)
 	}
@@ -206,7 +206,7 @@ func TestKeyForScript(t *testing.T) {
 func TestKeyNotFound(t *testing.T) {
 	b := make([]byte, 32)
 	rand.Read(b)
-	_, err := kdb.GetPathForScript(b)
+	_, err := kdb.GetPathForKey(b)
 	if err == nil {
 		t.Error("Return key when it shouldn't have")
 	}
