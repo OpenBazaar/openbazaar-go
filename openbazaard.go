@@ -669,11 +669,22 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	qs := ipnsConfig.(map[string]interface{})["QuerySize"].(float64)
-	if qs <= 20 {
-		dht.QuerySize = int(qs)
+	ipnsMap, ok := ipnsConfig.(map[string]interface{})
+	if !ok {
+		return errors.New("Config is malformatted")
+	}
+	var querySize float64
+	qss, ok := ipnsMap["QuerySize"]
+	if ok {
+		qs, ok := qss.(float64)
+		if ok {
+			querySize = qs
+		}
+	}
+	if querySize <= 20 && querySize > 0 {
+		dht.QuerySize = int(querySize)
 	} else {
-		dht.QuerySize = 20
+		dht.QuerySize = 16
 	}
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
