@@ -40,6 +40,7 @@
   "Dropbox-api-token": "dropbox123",
   "Experimental": {
     "FilestoreEnabled": false,
+    "Libp2pStreamMounting": false,
     "ShardingEnabled": false
   },
   "Gateway": {

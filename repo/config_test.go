@@ -5,16 +5,21 @@ import (
 	"testing"
 
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
 const testConfigFolder = "testdata"
 const testConfigPath = "testdata/config"
-const nonexistentTestConfigPath = "testdata/nonexistent"
 
 func TestGetApiConfig(t *testing.T) {
-	config, err := GetAPIConfig(testConfigPath)
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	config, err := GetAPIConfig(configFile)
 	if config.Username != "TestUsername" {
 		t.Error("Expected TestUsername, got ", config.Username)
 	}
@@ -49,14 +54,18 @@ func TestGetApiConfig(t *testing.T) {
 		t.Error("GetAPIAuthentication threw an unexpected error")
 	}
 
-	_, err = GetAPIConfig(nonexistentTestConfigPath)
+	_, err = GetAPIConfig([]byte{})
 	if err == nil {
 		t.Error("GetAPIAuthentication didn`t throw an error")
 	}
 }
 
 func TestGetWalletConfig(t *testing.T) {
-	config, err := GetWalletConfig(testConfigPath)
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	config, err := GetWalletConfig(configFile)
 	if config.FeeAPI != "https://bitcoinfees.21.co/api/v1/fees/recommended" {
 		t.Error("FeeApi does not equal expected value")
 	}
@@ -91,14 +100,18 @@ func TestGetWalletConfig(t *testing.T) {
 		t.Error("GetFeeAPI threw an unexpected error")
 	}
 
-	_, err = GetWalletConfig(nonexistentTestConfigPath)
+	_, err = GetWalletConfig([]byte{})
 	if err == nil {
 		t.Error("GetFeeAPI didn't throw an error")
 	}
 }
 
 func TestGetDropboxApiToken(t *testing.T) {
-	dropboxApiToken, err := GetDropboxApiToken(testConfigPath)
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	dropboxApiToken, err := GetDropboxApiToken(configFile)
 	if dropboxApiToken != "dropbox123" {
 		t.Error("dropboxApiToken does not equal expected value")
 	}
@@ -106,7 +119,7 @@ func TestGetDropboxApiToken(t *testing.T) {
 		t.Error("GetDropboxApiToken threw an unexpected error")
 	}
 
-	dropboxApiToken, err = GetDropboxApiToken(nonexistentTestConfigPath)
+	dropboxApiToken, err = GetDropboxApiToken([]byte{})
 	if dropboxApiToken != "" {
 		t.Error("Expected empty string, got ", dropboxApiToken)
 	}
@@ -116,7 +129,11 @@ func TestGetDropboxApiToken(t *testing.T) {
 }
 
 func TestGetResolverUrl(t *testing.T) {
-	resolverUrl, err := GetResolverUrl(testConfigPath)
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	resolverUrl, err := GetResolverUrl(configFile)
 	if resolverUrl != "https://resolver.onename.com/" {
 		t.Error("resolverUrl does not equal expected value")
 	}
@@ -124,7 +141,7 @@ func TestGetResolverUrl(t *testing.T) {
 		t.Error("GetResolverUrl threw an unexpected error")
 	}
 
-	resolverUrl, err = GetResolverUrl(nonexistentTestConfigPath)
+	resolverUrl, err = GetResolverUrl([]byte{})
 	if resolverUrl != "" {
 		t.Error("Expected empty string, got ", resolverUrl)
 	}
@@ -139,14 +156,22 @@ func TestExtendConfigFile(t *testing.T) {
 		t.Error("fsrepo.Open threw an unexpected error", err)
 		return
 	}
-	config, _ := GetWalletConfig(testConfigPath)
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	config, _ := GetWalletConfig(configFile)
 	originalMaxFee := config.MaxFee
 	newMaxFee := config.MaxFee + 1
 	if err := extendConfigFile(r, "Wallet.MaxFee", newMaxFee); err != nil {
 		t.Error("extendConfigFile threw an unexpected error ", err)
 		return
 	}
-	config, _ = GetWalletConfig(testConfigPath)
+	configFile, err = ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	config, _ = GetWalletConfig(configFile)
 	if config.MaxFee != newMaxFee {
 		t.Errorf("Expected maxFee to be %v, got %v", newMaxFee, config.MaxFee)
 		return

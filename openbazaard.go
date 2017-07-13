@@ -225,7 +225,11 @@ func (x *SetAPICreds) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	apiCfg, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
+	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	if err != nil {
+		return err
+	}
+	apiCfg, err := repo.GetAPIConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -455,6 +459,43 @@ func (x *Start) Execute(args []string) error {
 	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
+	// Load config
+	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	if err != nil {
+		return err
+	}
+
+	apiConfig, err := repo.GetAPIConfig(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	torConfig, err := repo.GetTorConfig(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	walletCfg, err := repo.GetWalletConfig(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	gatewayUrlStrings, err := repo.GetCrosspostGateway(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	dropboxToken, err := repo.GetDropboxApiToken(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	resolverUrl, err := repo.GetResolverUrl(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
@@ -540,11 +581,6 @@ func (x *Start) Execute(args []string) error {
 	}
 	// Create Tor transport
 	if usingTor {
-		torConfig, err := repo.GetTorConfig(path.Join(repoPath, "config"))
-		if err != nil {
-			log.Error(err)
-			return err
-		}
 		torControl := torConfig.TorControl
 		if torControl == "" {
 			controlPort, err = obnet.GetTorControlPort()
@@ -670,11 +706,6 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		params = chaincfg.MainNetParams
 	}
-	walletCfg, err := repo.GetWalletConfig(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 	if x.Regtest && strings.ToLower(walletCfg.Type) == "spvwallet" && walletCfg.TrustedPeer == "" {
 		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
@@ -739,11 +770,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Crosspost gateway
-	gatewayUrlStrings, err := repo.GetCrosspostGateway(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 	var gatewayUrls []*url.URL
 	for _, gw := range gatewayUrlStrings {
 		if gw != "" {
@@ -757,11 +783,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated gateway
-	apiConfig, err := repo.GetAPIConfig(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
 	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
 	if err != nil {
 		log.Error(err)
@@ -825,29 +846,19 @@ func (x *Start) Execute(args []string) error {
 			log.Error("Dropbox can not be used with Tor")
 			return errors.New("Dropbox can not be used with Tor")
 		}
-		token, err := repo.GetDropboxApiToken(path.Join(repoPath, "config"))
-		if err != nil {
-			log.Error(err)
-			return err
-		} else if token == "" {
+
+		if dropboxToken == "" {
 			err = errors.New("Dropbox token not set in config file")
 			log.Error(err)
 			return err
 		}
-		storage, err = dropbox.NewDropBoxStorage(token)
+		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
 		if err != nil {
 			log.Error(err)
 			return err
 		}
 	} else {
 		err = errors.New("Invalid storage option")
-		log.Error(err)
-		return err
-	}
-
-	// Resolver
-	resolverUrl, err := repo.GetResolverUrl(path.Join(repoPath, "config"))
-	if err != nil {
 		log.Error(err)
 		return err
 	}
