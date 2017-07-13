@@ -6,11 +6,16 @@ import (
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"io/ioutil"
 )
 
 // NewAPIConfig returns a new config object for the API tests
 func NewAPIConfig() (*repo.APIConfig, error) {
-	apiConfig, err := repo.GetAPIConfig(path.Join(GetRepoPath(), "config"))
+	configFile, err := ioutil.ReadFile(path.Join(GetRepoPath(), "config"))
+	if err != nil {
+		return nil, err
+	}
+	apiConfig, err := repo.GetAPIConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
