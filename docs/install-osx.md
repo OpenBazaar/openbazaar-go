@@ -45,3 +45,8 @@ To compile and run the source:
 cd $GOPATH/src/github.com/OpenBazaar/openbazaar-go
 go run openbazaard.go start
 ```
+NOTE: If you have Xcode installed you may get the response `signal: killed`. If you do try running the following instead.
+
+```
+go run --ldflags -s openbazaard.go start -t
+```
