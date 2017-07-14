@@ -59,21 +59,25 @@ Example:
 The runtime option will override the swarm address configuration in the config file and use default ports.
 
 ## Advanced Tor configuration
-If you have manually edited your `torrc` file to change the control port or set password authentication on the Tor daemon, you can set both in the openbazaar-go config file:
+If you changed the tor control port in your `torrc` file or you require authentication you can set both the control port and your tor control password in the openbazaar-go config file:
 ```
 "Tor-config": {
-    "Password": "16:A90FDB3A36749874609416DA8FE1896C39081BDD69D53B55F0AEEDEAFC", 
+    "Password": "yourpassword", 
     "TorControl": "127.0.0.1:9000"
 },
+```
+
+Aternatively you can pass the tor control password in as a start up option:
+```
+./openbazaar-go start --torpassword yourpassword
 ```
 
 ## Configuring the client
 The openbazaar-desktop client **must** also be configured to run over Tor as some html tags, such as `IMG`, are allowed in the profile and store data and will trigger the client to make outgoing network calls.
 
-If using the OpenBazaar bundle it will automatically ask you if you want to use Tor if it detects that Tor is running. But when running separate client and server instances
-both **must** be configured to use Tor else your IP will be leaked.
+To set tor in the reference client select `Manage Servers` from the menu then check `Use Tor` and make sure the socks5 proxy url is correct. 
 
-TODO: once the client has Tor support, add a tutorial about how to configure it.
+<img src="https://i.imgur.com/Ht2ZRMd.png">
 
 ### Important Privacy Considerations
 
