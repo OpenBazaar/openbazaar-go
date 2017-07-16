@@ -312,30 +312,6 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 	return err
 }
 
-func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error) {
-	var addrPubKeys []*btc.AddressPubKey
-	for _, key := range keys {
-		ecKey, err := key.ECPubKey()
-		if err != nil {
-			return nil, nil, err
-		}
-		k, err := btc.NewAddressPubKey(ecKey.SerializeCompressed(), w.params)
-		if err != nil {
-			return nil, nil, err
-		}
-		addrPubKeys = append(addrPubKeys, k)
-	}
-	redeemScript, err = txscript.MultiSigScript(addrPubKeys, threshold)
-	if err != nil {
-		return nil, nil, err
-	}
-	addr, err = btc.NewAddressScriptHash(redeemScript, w.params)
-	if err != nil {
-		return nil, nil, err
-	}
-	return addr, redeemScript, nil
-}
-
 func (w *SPVWallet) Close() {
 	if w.running {
 		log.Info("Disconnecting from peers and shutting down")

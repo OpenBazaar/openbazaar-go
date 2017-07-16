@@ -21,6 +21,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	ipfspath "github.com/ipfs/go-ipfs/path"
+	"strconv"
 )
 
 type option struct {
@@ -144,7 +145,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 
-		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2)
+		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -282,7 +284,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1)
+			addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -1204,7 +1206,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1)
+	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 	if order.Payment.Address != addr.EncodeAddress() {
 		return errors.New("Invalid payment address")
 	}
@@ -1214,7 +1216,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error {
+func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile")
 	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 	if err != nil {
@@ -1278,7 +1280,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error 
 	if err != nil {
 		return err
 	}
-	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *ModeratorKey}, 2)
+	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *ModeratorKey}, 2, timeout, vendorKey)
 	if order.Payment.Address != addr.EncodeAddress() {
 		return errors.New("Invalid payment address")
 	}

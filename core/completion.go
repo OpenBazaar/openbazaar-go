@@ -12,10 +12,13 @@ import (
 	"path"
 	"time"
 
+	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -259,6 +262,72 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		return err
 	}
 
+	return nil
+}
+
+var EscrowTimeLockedError error
+
+func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
+	var utxos []spvwallet.Utxo
+	for _, r := range records {
+		if !r.Spent && r.Value > 0 {
+			var utxo spvwallet.Utxo
+			utxo.Value = r.Value
+
+			hash, err := chainhash.NewHashFromStr(r.Txid)
+			if err != nil {
+				return err
+			}
+
+			confirms, _, err := n.Wallet.GetConfirmations(*hash)
+			if err != nil {
+				return err
+			}
+			if confirms < minConfirms {
+				EscrowTimeLockedError = fmt.Errorf("Tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
+				return EscrowTimeLockedError
+			}
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			utxo.Op = *outpoint
+			utxos = append(utxos, utxo)
+		}
+	}
+
+	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+	if err != nil {
+		return err
+	}
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	mPrivKey := n.Wallet.MasterPrivateKey()
+	if err != nil {
+		return err
+	}
+	mECKey, err := mPrivKey.ECPrivKey()
+	if err != nil {
+		return err
+	}
+	hdKey := hd.NewExtendedKey(
+		n.Wallet.Params().HDPrivateKeyID[:],
+		mECKey.Serialize(),
+		chaincode,
+		parentFP,
+		0,
+		0,
+		true)
+
+	vendorKey, err := hdKey.Child(0)
+	if err != nil {
+		return err
+	}
+	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		return err
+	}
+	_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, spvwallet.NORMAL)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

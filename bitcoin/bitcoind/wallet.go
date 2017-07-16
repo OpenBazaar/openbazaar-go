@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -444,6 +446,12 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	// BIP 69 sorting
 	txsort.InPlaceSort(tx)
 
+	// Check if time locked
+	var timeLocked bool
+	if redeemScript[0] == txscript.OP_IF {
+		timeLocked = true
+	}
+
 	for i, input := range tx.TxIn {
 		var sig1 []byte
 		var sig2 []byte
@@ -461,6 +469,17 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		builder.AddOp(txscript.OP_0)
 		builder.AddData(sig1)
 		builder.AddData(sig2)
+
+		if timeLocked {
+			builder.AddOp(txscript.OP_1)
+			tx.Version = 2
+			locktime, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
+			if err != nil {
+				return nil, err
+			}
+			input.Sequence = locktime
+		}
+
 		builder.AddData(redeemScript)
 		scriptSig, err := builder.Script()
 		if err != nil {
@@ -468,6 +487,7 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		}
 		input.SignatureScript = scriptSig
 	}
+
 	// Broadcast
 	if broadcast {
 		_, err := w.rpcClient.SendRawTransaction(tx, false)
@@ -555,15 +575,45 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 		return *redeemScript, nil
 	})
 
+	// Check if time locked
+	var timeLocked bool
+	rs := *redeemScript
+	if redeemScript != nil && rs[0] == txscript.OP_IF {
+		timeLocked = true
+	}
+
 	for i, txIn := range tx.TxIn {
-		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
-		script, err := txscript.SignTxOutput(w.params,
-			tx, i, prevOutScript, txscript.SigHashAll, getKey,
-			getScript, txIn.SignatureScript)
-		if err != nil {
-			return nil, errors.New("Failed to sign transaction")
+		if !timeLocked {
+			prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
+			script, err := txscript.SignTxOutput(w.params,
+				tx, i, prevOutScript, txscript.SigHashAll, getKey,
+				getScript, txIn.SignatureScript)
+			if err != nil {
+				return nil, errors.New("Failed to sign transaction")
+			}
+			txIn.SignatureScript = script
+		} else {
+			priv, err := key.ECPrivKey()
+			if err != nil {
+				return nil, err
+			}
+			script, err := txscript.RawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, priv)
+			if err != nil {
+				return nil, err
+			}
+			builder := txscript.NewScriptBuilder().
+				AddData(script).
+				AddOp(txscript.OP_0).
+				AddData(*redeemScript)
+			scriptSig, _ := builder.Script()
+			txIn.SignatureScript = scriptSig
+			tx.Version = 2
+			locktime, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+			if err != nil {
+				return nil, err
+			}
+			txIn.Sequence = locktime
 		}
-		txIn.SignatureScript = script
 	}
 
 	// Broadcast
@@ -583,20 +633,58 @@ func (w *BitcoindWallet) AddTransactionListener(callback func(spvwallet.Transact
 	w.listeners = append(w.listeners, callback)
 }
 
-func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error) {
-	var addrPubKeys []*btc.AddressPubKey
+func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
+	if uint32(timeout.Hours()) > 0 && timeoutKey == nil {
+		return nil, nil, errors.New("Timeout key must be non nil when using an escrow timeout")
+	}
+
+	if len(keys) < threshold {
+		return nil, nil, fmt.Errorf("unable to generate multisig script with "+
+			"%d required signatures when there are only %d public "+
+			"keys available", threshold, len(keys))
+	}
+
+	var ecKeys []*btcec.PublicKey
 	for _, key := range keys {
 		ecKey, err := key.ECPubKey()
 		if err != nil {
 			return nil, nil, err
 		}
-		k, err := btc.NewAddressPubKey(ecKey.SerializeCompressed(), w.params)
+		ecKeys = append(ecKeys, ecKey)
+	}
+
+	builder := txscript.NewScriptBuilder()
+	if uint32(timeout.Hours()) == 0 {
+
+		builder.AddInt64(int64(threshold))
+		for _, key := range ecKeys {
+			builder.AddData(key.SerializeCompressed())
+		}
+		builder.AddInt64(int64(len(ecKeys)))
+		builder.AddOp(txscript.OP_CHECKMULTISIG)
+
+	} else {
+		ecKey, err := timeoutKey.ECPubKey()
 		if err != nil {
 			return nil, nil, err
 		}
-		addrPubKeys = append(addrPubKeys, k)
+		sequenceLock := blockchain.LockTimeToSequence(false, uint32(timeout.Hours()*6))
+		builder.AddOp(txscript.OP_IF)
+		builder.AddInt64(int64(threshold))
+		for _, key := range ecKeys {
+			builder.AddData(key.SerializeCompressed())
+		}
+		builder.AddInt64(int64(len(ecKeys)))
+		builder.AddOp(txscript.OP_CHECKMULTISIG)
+		builder.AddOp(txscript.OP_ELSE).
+			AddInt64(int64(sequenceLock)).
+			AddOp(txscript.OP_CHECKSEQUENCEVERIFY).
+			AddOp(txscript.OP_DROP).
+			AddData(ecKey.SerializeCompressed()).
+			AddOp(txscript.OP_CHECKSIG).
+			AddOp(txscript.OP_ENDIF)
 	}
-	redeemScript, err = txscript.MultiSigScript(addrPubKeys, threshold)
+	redeemScript, err = builder.Script()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -41,6 +41,7 @@ const (
 	AboutMaxCharacters       = 10000
 	URLMaxCharacters         = 2000
 	MaxCountryCodes          = 255
+	EscrowMaxTimeout         = 8760
 )
 
 type price struct {
@@ -689,6 +690,9 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
+	}
+	if listing.Metadata.EscrowTimeoutHours > EscrowMaxTimeout {
+		return fmt.Errorf("Escrow timeout cannot be greater than one year. Use zero if you want infinite.")
 	}
 
 	// Item
