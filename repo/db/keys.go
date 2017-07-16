@@ -22,7 +22,10 @@ func (k *KeysDB) Put(scriptAddress []byte, keyPath spvwallet.KeyPath) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("insert into keys(scriptAddress, purpose, keyIndex, used) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert into keys(scriptAddress, purpose, keyIndex, used) values(?,?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), int(keyPath.Purpose), keyPath.Index, 0)
 	if err != nil {
@@ -40,7 +43,10 @@ func (k *KeysDB) ImportKey(scriptAddress []byte, key *btcec.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("insert into keys(scriptAddress, purpose, used, key) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert into keys(scriptAddress, purpose, used, key) values(?,?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), -1, 0, hex.EncodeToString(key.Serialize()))
 	if err != nil {
@@ -58,7 +64,10 @@ func (k *KeysDB) MarkKeyAsUsed(scriptAddress []byte) error {
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("update keys set used=1 where scriptAddress=?")
+	stmt, err := tx.Prepare("update keys set used=1 where scriptAddress=?")
+	if err != nil {
+		return err
+	}
 
 	defer stmt.Close()
 	_, err = stmt.Exec(hex.EncodeToString(scriptAddress))
