@@ -48,7 +48,7 @@ type notifier interface {
 func (m *notificationManager) sendNotification(n interface{}) {
 	for _, notifier := range m.getNotifiers() {
 		if err := notifier.notify(n); err != nil {
-			log.Errorf("Notification failed")
+			log.Errorf("Notification failed: %s", err.Error())
 		}
 	}
 }

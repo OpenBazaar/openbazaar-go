@@ -61,7 +61,7 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 	}
 	ts.addrMutex.Lock()
 	elem := uint32(len(ts.adrs)+len(allUtxos)+len(allStxos)) + uint32(len(ts.watchedScripts))
-	f := bloom.NewFilter(elem, 0, 0.0001, wire.BloomUpdateAll)
+	f := bloom.NewFilter(elem, 0, 0.00003, wire.BloomUpdateAll)
 
 	// note there could be false positives since we're just looking
 	// for the 20 byte PKH without the opcodes.
@@ -223,6 +223,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	PKscripts := make([][]byte, len(ts.adrs))
 	for i := range ts.adrs {
 		// Iterate through all our addresses
+		// TODO: This will need to test both segwit and legacy once segwit activates
 		PKscripts[i], err = txscript.PayToAddrScript(ts.adrs[i])
 		if err != nil {
 			return hits, err

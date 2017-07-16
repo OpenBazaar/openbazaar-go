@@ -173,20 +173,16 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 			} else { // Otherwise return the difficulty of the last block not using special difficulty rules
 				for {
 					var err error = nil
-					fmt.Println(err, prevHeader.height, prevHeader.header.Bits)
 					for err == nil && int32(prevHeader.height)%epochLength != 0 && prevHeader.header.Bits == b.params.PowLimitBits {
 						var sh StoredHeader
 						sh, err = b.db.GetPreviousHeader(prevHeader.header)
 						// Error should only be non-nil if prevHeader is the checkpoint.
 						// In that case we should just return checkpoint bits
-						fmt.Println("**", sh.height, err)
 						if err == nil {
 							prevHeader = sh
-							fmt.Println("here")
 						}
 
 					}
-					fmt.Println(prevHeader.height)
 					return prevHeader.header.Bits, nil
 				}
 			}

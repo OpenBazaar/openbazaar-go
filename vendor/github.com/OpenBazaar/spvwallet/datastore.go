@@ -65,20 +65,20 @@ type Keys interface {
 	Put(hash160 []byte, keyPath KeyPath) error
 
 	// Import a loose private key not part of the keychain
-	ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error
+	ImportKey(scriptAddress []byte, key *btcec.PrivateKey) error
 
 	// Mark the script as used
-	MarkKeyAsUsed(scriptPubKey []byte) error
+	MarkKeyAsUsed(scriptAddress []byte) error
 
 	// Fetch the last index for the given key purpose
 	// The bool should state whether the key has been used or not
 	GetLastKeyIndex(purpose KeyPurpose) (int, bool, error)
 
 	// Returns the first unused path for the given purpose
-	GetPathForScript(scriptPubKey []byte) (KeyPath, error)
+	GetPathForKey(scriptAddress []byte) (KeyPath, error)
 
-	// Returns an imported private key given a script
-	GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error)
+	// Returns an imported private key given a script address
+	GetKey(scriptAddress []byte) (*btcec.PrivateKey, error)
 
 	// Get a list of unused key indexes for the given purpose
 	GetUnused(purpose KeyPurpose) ([]int, error)

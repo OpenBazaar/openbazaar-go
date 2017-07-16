@@ -17,33 +17,43 @@ var testnet3Checkpoints []Checkpoint
 var regtestCheckpoint Checkpoint
 
 func init() {
-	mainnetPrev, _ := chainhash.NewHashFromStr("000000000000000000b3ff31d54e9e83515ee18360c7dc59e30697d083c745ff")
-	mainnetMerk, _ := chainhash.NewHashFromStr("33d4a902daa28d09f9f6a319f538153e4b747938e20e113a2935c8dc0b971584")
+	// Mainnet
+	mainnetPrev, _ := chainhash.NewHashFromStr("000000000000000001389446206ebcd378c32cd00b4920a8a1ba7b540ca7d699")
+	mainnetMerk, _ := chainhash.NewHashFromStr("ddc4fede55aeebe6e3bfd3292145b011a4f16ead187ed90d7df0fd4c020b6ab6")
 	mainnetCheckpoints = append(mainnetCheckpoints, Checkpoint{
-		Height: 443520,
+		Height: 473760,
 		Header: wire.BlockHeader{
-			Version:    536870912,
+			Version:    536870914,
 			PrevBlock:  *mainnetPrev,
 			MerkleRoot: *mainnetMerk,
-			Timestamp:  time.Unix(1481765313, 0),
-			Bits:       402885509,
-			Nonce:      251583942,
+			Timestamp:  time.Unix(1498956437, 0),
+			Bits:       402754864,
+			Nonce:      134883004,
 		},
 	})
+	if mainnetCheckpoints[0].Header.BlockHash().String() != "000000000000000000802ba879f1b7a638dcea6ff0ceb614d91afc8683ac0502" {
+		panic("Invalid checkpoint")
+	}
 
-	testnet3Prev, _ := chainhash.NewHashFromStr("00000000000016abe4e7c10ddb658bb089b2ef3b1de3f3329097cf679eedf2b5")
-	testnet3Merk, _ := chainhash.NewHashFromStr("ba732d7a0e4b0b46351b1b476e1628ff03f399ce07f888a257982240b36e2ed2")
+	// Testnet3
+	testnet3Prev, _ := chainhash.NewHashFromStr("0000000000001e8cdb2d98471a5c60bdbddbe644b9ad08e17a97b3a7dce1e332")
+	testnet3Merk, _ := chainhash.NewHashFromStr("f675c565b293be2ad808b01b0a763557c8874e4aefe7f2eea0dab91b1f60ec45")
 	testnet3Checkpoints = append(testnet3Checkpoints, Checkpoint{
-		Height: 1114848,
+		Height: 1151136,
 		Header: wire.BlockHeader{
 			Version:    536870912,
 			PrevBlock:  *testnet3Prev,
 			MerkleRoot: *testnet3Merk,
-			Timestamp:  time.Unix(1491041521, 0),
-			Bits:       438809536,
-			Nonce:      2732625067,
+			Timestamp:  time.Unix(1498950206, 0),
+			Bits:       436724869,
+			Nonce:      2247874206,
 		},
 	})
+	if testnet3Checkpoints[0].Header.BlockHash().String() != "00000000000002c04de174cf25c993b4dd221eb087c0601a599ff1977e230c99" {
+		panic("Invalid checkpoint")
+	}
+
+	// Regtest
 	regtestCheckpoint = Checkpoint{0, chaincfg.RegressionNetParams.GenesisBlock.Header}
 }
 

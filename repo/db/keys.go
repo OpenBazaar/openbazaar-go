@@ -15,16 +15,19 @@ type KeysDB struct {
 	lock sync.RWMutex
 }
 
-func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
+func (k *KeysDB) Put(scriptAddress []byte, keyPath spvwallet.KeyPath) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	tx, err := k.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("insert into keys(scriptPubKey, purpose, keyIndex, used) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert into keys(scriptAddress, purpose, keyIndex, used) values(?,?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
-	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey), int(keyPath.Purpose), keyPath.Index, 0)
+	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), int(keyPath.Purpose), keyPath.Index, 0)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -33,16 +36,19 @@ func (k *KeysDB) Put(scriptPubKey []byte, keyPath spvwallet.KeyPath) error {
 	return nil
 }
 
-func (k *KeysDB) ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error {
+func (k *KeysDB) ImportKey(scriptAddress []byte, key *btcec.PrivateKey) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	tx, err := k.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("insert into keys(scriptPubKey, purpose, used, key) values(?,?,?,?)")
+	stmt, err := tx.Prepare("insert into keys(scriptAddress, purpose, used, key) values(?,?,?,?)")
+	if err != nil {
+		return err
+	}
 	defer stmt.Close()
-	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey), -1, 0, hex.EncodeToString(key.Serialize()))
+	_, err = stmt.Exec(hex.EncodeToString(scriptAddress), -1, 0, hex.EncodeToString(key.Serialize()))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -51,17 +57,20 @@ func (k *KeysDB) ImportKey(scriptPubKey []byte, key *btcec.PrivateKey) error {
 	return nil
 }
 
-func (k *KeysDB) MarkKeyAsUsed(scriptPubKey []byte) error {
+func (k *KeysDB) MarkKeyAsUsed(scriptAddress []byte) error {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	tx, err := k.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("update keys set used=1 where scriptPubKey=?")
+	stmt, err := tx.Prepare("update keys set used=1 where scriptAddress=?")
+	if err != nil {
+		return err
+	}
 
 	defer stmt.Close()
-	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey))
+	_, err = stmt.Exec(hex.EncodeToString(scriptAddress))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -92,18 +101,18 @@ func (k *KeysDB) GetLastKeyIndex(purpose spvwallet.KeyPurpose) (int, bool, error
 	return index, used, nil
 }
 
-func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error) {
+func (k *KeysDB) GetPathForKey(scriptAddress []byte) (spvwallet.KeyPath, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()
 
-	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptPubKey=?")
+	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptAddress=?")
 	if err != nil {
 		return spvwallet.KeyPath{}, err
 	}
 	defer stmt.Close()
 	var purpose int
 	var index int
-	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&purpose, &index)
+	err = stmt.QueryRow(hex.EncodeToString(scriptAddress)).Scan(&purpose, &index)
 	if err != nil {
 		return spvwallet.KeyPath{}, errors.New("Key not found")
 	}
@@ -114,17 +123,17 @@ func (k *KeysDB) GetPathForScript(scriptPubKey []byte) (spvwallet.KeyPath, error
 	return p, nil
 }
 
-func (k *KeysDB) GetKeyForScript(scriptPubKey []byte) (*btcec.PrivateKey, error) {
+func (k *KeysDB) GetKey(scriptAddress []byte) (*btcec.PrivateKey, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stmt, err := k.db.Prepare("select key from keys where scriptPubKey=? and purpose=-1")
+	stmt, err := k.db.Prepare("select key from keys where scriptAddress=? and purpose=-1")
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	var keyHex string
-	err = stmt.QueryRow(hex.EncodeToString(scriptPubKey)).Scan(&keyHex)
+	err = stmt.QueryRow(hex.EncodeToString(scriptAddress)).Scan(&keyHex)
 	if err != nil {
 		return nil, errors.New("Key not found")
 	}

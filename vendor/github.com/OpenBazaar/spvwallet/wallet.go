@@ -223,11 +223,7 @@ func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
 }
 
 func (w *SPVWallet) HasKey(addr btc.Address) bool {
-	script, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		return false
-	}
-	_, err = w.keyManager.GetKeyForScript(script)
+	_, err := w.keyManager.GetKeyForScript(addr.ScriptAddress())
 	if err != nil {
 		return false
 	}

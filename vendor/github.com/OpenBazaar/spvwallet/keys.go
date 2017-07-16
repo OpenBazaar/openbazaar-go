@@ -2,7 +2,6 @@ package spvwallet
 
 import (
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/txscript"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/goleveldb/leveldb/errors"
 )
@@ -102,12 +101,8 @@ func (km *KeyManager) GetFreshKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	script, err := txscript.PayToAddrScript(addr)
-	if err != nil {
-		return nil, err
-	}
 	p := KeyPath{KeyPurpose(purpose), index}
-	err = km.datastore.Put(script, p)
+	err = km.datastore.Put(addr.ScriptAddress(), p)
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +125,10 @@ func (km *KeyManager) GetKeys() []*hd.ExtendedKey {
 	return keys
 }
 
-func (km *KeyManager) GetKeyForScript(scriptPubKey []byte) (*hd.ExtendedKey, error) {
-	keyPath, err := km.datastore.GetPathForScript(scriptPubKey)
+func (km *KeyManager) GetKeyForScript(scriptAddress []byte) (*hd.ExtendedKey, error) {
+	keyPath, err := km.datastore.GetPathForKey(scriptAddress)
 	if err != nil {
-		key, err := km.datastore.GetKeyForScript(scriptPubKey)
+		key, err := km.datastore.GetKey(scriptAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -151,8 +146,8 @@ func (km *KeyManager) GetKeyForScript(scriptPubKey []byte) (*hd.ExtendedKey, err
 }
 
 // Mark the given key as used and extend the lookahead window
-func (km *KeyManager) MarkKeyAsUsed(scriptPubKey []byte) error {
-	if err := km.datastore.MarkKeyAsUsed(scriptPubKey); err != nil {
+func (km *KeyManager) MarkKeyAsUsed(scriptAddress []byte) error {
+	if err := km.datastore.MarkKeyAsUsed(scriptAddress); err != nil {
 		return err
 	}
 	return km.lookahead()
