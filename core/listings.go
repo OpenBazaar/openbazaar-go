@@ -41,7 +41,7 @@ const (
 	AboutMaxCharacters       = 10000
 	URLMaxCharacters         = 2000
 	MaxCountryCodes          = 255
-	EscrowMaxTimeout         = 8760
+	EscrowTimeout            = 1080
 )
 
 type price struct {
@@ -102,6 +102,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	sl := new(pb.SignedListing)
+
+	// Set hardcode escrow timeout. This may change in the future
+	listing.Metadata.EscrowTimeoutHours = EscrowTimeout
 
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
@@ -691,8 +694,8 @@ func validateListing(listing *pb.Listing) (err error) {
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
 	}
-	if listing.Metadata.EscrowTimeoutHours > EscrowMaxTimeout {
-		return fmt.Errorf("Escrow timeout cannot be greater than one year. Use zero if you want infinite.")
+	if listing.Metadata.EscrowTimeoutHours !=  EscrowTimeout {
+		return fmt.Errorf("Escrow timeout must be %d hours", EscrowTimeout)
 	}
 
 	// Item
