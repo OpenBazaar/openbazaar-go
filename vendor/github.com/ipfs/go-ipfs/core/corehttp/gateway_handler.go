@@ -27,9 +27,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
+	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	uio "github.com/ipfs/go-ipfs/unixfs/io"
-	dhtpb "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb"
 
 	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
 	humanize "gx/ipfs/QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K/go-humanize"
