@@ -206,7 +206,7 @@ func (w *SPVWallet) EstimateFee(ins []TransactionInput, outs []TransactionOutput
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
-	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false)
+	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, P2PKH)
 	fee := estimatedSize * int(feePerByte)
 	return uint64(fee)
 }
@@ -291,7 +291,12 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 	}
 
 	// Subtract fee
-	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false)
+	txType := P2SH_2of3_Multisig
+	_, err := LockTimeFromRedeemScript(redeemScript)
+	if err == nil {
+		txType = P2SH_Multisig_Timelock_2Sigs
+	}
+	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
 	fee := estimatedSize * int(feePerByte)
 	if len(tx.TxOut) > 0 {
 		feePerOutput := fee / len(tx.TxOut)
@@ -336,7 +341,12 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 	}
 
 	// Subtract fee
-	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false)
+	txType := P2SH_2of3_Multisig
+	_, err := LockTimeFromRedeemScript(redeemScript)
+	if err == nil {
+		txType = P2SH_Multisig_Timelock_2Sigs
+	}
+	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
 	fee := estimatedSize * int(feePerByte)
 	if len(tx.TxOut) > 0 {
 		feePerOutput := fee / len(tx.TxOut)
@@ -422,7 +432,15 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 	}
 	out := wire.NewTxOut(val, script)
 
-	estimatedSize := EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false)
+	txType := P2PKH
+	if redeemScript != nil {
+		txType = P2SH_1of2_Multisig
+		_, err := LockTimeFromRedeemScript(*redeemScript)
+		if err == nil {
+			txType = P2SH_Multisig_Timelock_1Sig
+		}
+	}
+	estimatedSize := EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
 	feePerByte := int(w.GetFeePerByte(feeLevel))
@@ -635,7 +653,7 @@ func LockTimeFromRedeemScript(redeemScript []byte) (uint32, error) {
 	op := redeemScript[107]
 	if 1 <= op && op <= 75 {
 		for i := 0; i < int(op); i++ {
-			v = append(v, []byte{redeemScript[108 + i]}...)
+			v = append(v, []byte{redeemScript[108+i]}...)
 		}
 	} else {
 		return 0, errors.New("Too many bytes pushed for sequence")

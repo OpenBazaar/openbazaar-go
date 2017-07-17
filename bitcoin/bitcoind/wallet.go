@@ -366,7 +366,7 @@ func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []sp
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
 	fee := estimatedSize * int(feePerByte)
 	return uint64(fee)
 }
@@ -389,7 +389,12 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 	}
 
 	// Subtract fee
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	txType := spvwallet.P2SH_2of3_Multisig
+	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
+	if err == nil {
+		txType = spvwallet.P2SH_Multisig_Timelock_2Sigs
+	}
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
 	fee := estimatedSize * int(feePerByte)
 	if len(tx.TxOut) > 0 {
 		feePerOutput := fee / len(tx.TxOut)
@@ -434,7 +439,12 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	}
 
 	// Subtract fee
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false)
+	txType := spvwallet.P2SH_2of3_Multisig
+	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
+	if err == nil {
+		txType = spvwallet.P2SH_Multisig_Timelock_2Sigs
+	}
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
 	fee := estimatedSize * int(feePerByte)
 	if len(tx.TxOut) > 0 {
 		feePerOutput := fee / len(tx.TxOut)
@@ -523,7 +533,15 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 	}
 	out := wire.NewTxOut(val, script)
 
-	estimatedSize := spvwallet.EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false)
+	txType := spvwallet.P2PKH
+	if redeemScript != nil {
+		txType = spvwallet.P2SH_1of2_Multisig
+		_, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+		if err == nil {
+			txType = spvwallet.P2SH_Multisig_Timelock_1Sig
+		}
+	}
+	estimatedSize := spvwallet.EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
 	b := json.RawMessage([]byte(`1`))
