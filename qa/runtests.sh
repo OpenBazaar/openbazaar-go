@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 for SCRIPT in *
 do
    b=$(basename $SCRIPT)

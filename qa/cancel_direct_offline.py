@@ -145,7 +145,6 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            self.print_logs(alice, "ob.log")
             raise TestFailure("CancelDirectOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
         if resp["state"] != "CANCELED":

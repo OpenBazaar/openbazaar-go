@@ -73,10 +73,16 @@ class OpenBazaarTestFramework(object):
             config = json.load(cfg)
         config["Addresses"]["Gateway"] = "/ip4/127.0.0.1/tcp/" + str(TEST_GATEWAY_PORT + n)
         config["Addresses"]["Swarm"] = ["/ip4/127.0.0.1/tcp/" + str(TEST_SWARM_PORT + n)]
-        config["Bootstrap"] = BOOTSTRAP_NODES
+        to_boostrap = []
+        for node in BOOTSTRAP_NODES:
+            if config["Addresses"]["Swarm"][0] not in node:
+                to_boostrap.append(node)
+        config["Bootstrap"] = to_boostrap
         config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
         config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
+        config["Swarm"]["DisableNatPortMap"] = True
+
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
         node = {
