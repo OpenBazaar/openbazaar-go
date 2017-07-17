@@ -12,8 +12,8 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         self.num_nodes = 3
 
     def run_test(self):
-        alice = self.nodes[1]
-        bob = self.nodes[2]
+        alice = self.nodes[0]
+        bob = self.nodes[1]
 
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
