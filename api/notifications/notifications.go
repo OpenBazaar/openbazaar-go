@@ -268,7 +268,7 @@ func Describe(i interface{}) (string, string) {
 			buyer = n.BuyerId
 		}
 		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail: %s\nTimestamp: %d"
-		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail, n.Timestamp)
+		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail.Small, n.Timestamp)
 
 	case PaymentNotification:
 		head = "Payment received"
