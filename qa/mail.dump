@@ -1,0 +1,12 @@
+From: openbazaar@test.org
+To: user.openbazaar@test.org
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Subject: [OpenBazaar] Order received
+
+You received an order "Ron Swanson Tshirt".
+
+Order ID: QmWRwEk1pe7sfUh46Vxj1iBP4C89shDZjM4JZpcMikbhjA
+Buyer: QmVQzkdi3Fq6LRFG9UNqDZfSry67weCZV6ZL26QVx64UFy
+Thumbnail: {QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr}
+Timestamp: 1500332128

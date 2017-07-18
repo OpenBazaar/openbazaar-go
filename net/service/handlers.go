@@ -768,7 +768,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
 				ins = append(ins, in)
 			}
-
 		}
 		var payoutAddress btcutil.Address
 		if len(contract.VendorOrderFulfillment) > 0 {
