@@ -20,9 +20,9 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
-	"github.com/btcsuite/btcd/chaincfg"
 )
 
 const (
@@ -703,7 +703,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
 	}
-	if !testnet && listing.Metadata.EscrowTimeoutHours !=  EscrowTimeout {
+	if !testnet && listing.Metadata.EscrowTimeoutHours != EscrowTimeout {
 		return fmt.Errorf("Escrow timeout must be %d hours", EscrowTimeout)
 	}
 

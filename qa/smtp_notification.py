@@ -133,15 +133,13 @@ Subject: [OpenBazaar] Order received
 You received an order "Ron Swanson Tshirt".
 
 Order ID: QmNiPgKNq27qQE8fRxMbtDfRcFDEYMH5wDRgdqtqoWBpGg
-Buyer: QmS5svqgGwFxwY9W5nXBUh1GJ7x8tqpkYfD4kB3MG7mPRv
-Thumbnail: QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e
+Buyer: QmVQzkdi3Fq6LRFG9UNqDZfSry67weCZV6ZL26QVx64UFy
+Thumbnail: {QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr}
 Timestamp: 1487699826
 '''
         expected_lines = [e for e in expected.splitlines() if not e.startswith('Timestamp:') and not e.startswith('Order ID:')]
         with open(SMTP_DUMPFILE, 'r') as f:
             res_lines = [l.strip() for l in f.readlines() if not l.startswith('Timestamp') and not l.startswith('Order ID:')]
-            print(res_lines)
-            print(expected_lines)
             if res_lines != expected_lines:
                 #os.remove(SMTP_DUMPFILE)
                 raise TestFailure("SMTPTest - FAIL: Incorrect mail data received")
