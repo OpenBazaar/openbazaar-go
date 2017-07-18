@@ -328,6 +328,16 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
+
+	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+
+	err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PAYMENT_FINALIZED, true)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

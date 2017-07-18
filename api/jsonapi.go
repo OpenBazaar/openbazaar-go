@@ -2077,6 +2077,50 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	return
 }
 
+func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Request) {
+	type release struct {
+		OrderID string `json:"orderId"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	var rel release
+	err := decoder.Decode(&rel)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var records []*spvwallet.TransactionRecord
+	var isSale bool
+	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	if err != nil {
+		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		isSale = true
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Order not found")
+			return
+		}
+	}
+
+	if isSale && state == pb.OrderState_FULFILLED {
+		err = i.node.ReleaseFundsAfterTimeout(contract, records)
+		if err != nil {
+			if err == core.EscrowTimeLockedError {
+				ErrorResponse(w, http.StatusUnauthorized, err.Error())
+				return
+			} else {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+	} else {
+		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called after fulfillment and timeout")
+		return
+	}
+	SanitizedResponse(w, `{}`)
+	return
+}
+
 func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var chat repo.ChatMessage

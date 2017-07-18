@@ -43,4 +43,8 @@ enum OrderState {
     // The winning party has accepted the dispute and it is now complete. After the buyer
     // leaves a review the state should be set to COMPLETE.
     RESOLVED             = 12;
+
+    // Escrow has been released after waiting the timeout period. After the buyer
+    // leaves a review the state should be set to COMPLETE.
+    PAYMENT_FINALIZED            = 13;
 }

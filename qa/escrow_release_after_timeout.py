@@ -192,14 +192,14 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         release = {
             "OrderID": orderId,
         }
-        api_url = alice["gateway_url"] + "ob/releasefunds/"
+        api_url = alice["gateway_url"] + "ob/releaseescrow/"
         r = requests.post(api_url, data=json.dumps(release, indent=4))
         if r.status_code == 500:
             resp = json.loads(r.text)
-            raise TestFailure("EscrowTimeoutRelease - FAIL: Release funds internal server error %s", resp["reason"])
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
         elif r.status_code != 401:
             resp = json.loads(r.text)
-            raise TestFailure("EscrowTimeoutRelease - FAIL: Failed to raise error when releasing funds before timeout")
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):
             self.send_bitcoin_cmd("generate", 1)
@@ -209,11 +209,11 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         release = {
             "OrderID": orderId,
         }
-        api_url = alice["gateway_url"] + "ob/releasefunds/"
+        api_url = alice["gateway_url"] + "ob/releaseescrow/"
         r = requests.post(api_url, data=json.dumps(release, indent=4))
         if r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("EscrowTimeoutRelease - FAIL: Release funds error %s", resp["reason"])
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Release escrow error %s", resp["reason"])
 
         time.sleep(20)
 
