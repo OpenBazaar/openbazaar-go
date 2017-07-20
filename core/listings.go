@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -725,25 +726,25 @@ func validateListing(listing *pb.Listing) (err error) {
 		return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
 	}
 	for _, img := range listing.Item.Images {
-		_, err := mh.FromB58String(img.Tiny)
+		_, err := cid.Parse(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be multihashes")
+			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Small)
+		_, err = cid.Parse(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be multihashes")
+			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Medium)
+		_, err = cid.Parse(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be multihashes")
+			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Large)
+		_, err = cid.Parse(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be multihashes")
+			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Original)
+		_, err = cid.Parse(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be multihashes")
+			return errors.New("Original image hashes must be properly formatted CID")
 		}
 		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
@@ -794,25 +795,25 @@ func validateListing(listing *pb.Listing) (err error) {
 			if variant.Image != nil && (variant.Image.Filename != "" ||
 				variant.Image.Large != "" || variant.Image.Medium != "" || variant.Image.Small != "" ||
 				variant.Image.Tiny != "" || variant.Image.Original != "") {
-				_, err := mh.FromB58String(variant.Image.Tiny)
+				_, err := cid.Parse(variant.Image.Tiny)
 				if err != nil {
-					return errors.New("Tiny image hashes must be multihashes")
+					return errors.New("Tiny image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Small)
+				_, err = cid.Parse(variant.Image.Small)
 				if err != nil {
-					return errors.New("Small image hashes must be multihashes")
+					return errors.New("Small image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Medium)
+				_, err = cid.Parse(variant.Image.Medium)
 				if err != nil {
-					return errors.New("Medium image hashes must be multihashes")
+					return errors.New("Medium image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Large)
+				_, err = cid.Parse(variant.Image.Large)
 				if err != nil {
-					return errors.New("Large image hashes must be multihashes")
+					return errors.New("Large image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Original)
+				_, err = cid.Parse(variant.Image.Original)
 				if err != nil {
-					return errors.New("Original image hashes must be multihashes")
+					return errors.New("Original image hashes must be properly formatted CID")
 				}
 				if variant.Image.Filename == "" {
 					return errors.New("Image file names must not be nil")

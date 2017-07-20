@@ -14,8 +14,8 @@ import (
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
-	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	u "gx/ipfs/QmWbjfz3u6HkAdPh34dgPchGbQjob6LXLhAeCGii2TX69n/go-ipfs-util"
+	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"io/ioutil"
 	"os"
@@ -381,46 +381,46 @@ func ValidateProfile(profile *pb.Profile) error {
 	}
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
-		_, err := mh.FromB58String(profile.AvatarHashes.Tiny)
+		_, err := cid.Parse(profile.AvatarHashes.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be multihashes")
+			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.AvatarHashes.Small)
+		_, err = cid.Parse(profile.AvatarHashes.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be multihashes")
+			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.AvatarHashes.Medium)
+		_, err = cid.Parse(profile.AvatarHashes.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be multihashes")
+			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.AvatarHashes.Large)
+		_, err = cid.Parse(profile.AvatarHashes.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be multihashes")
+			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.AvatarHashes.Original)
+		_, err = cid.Parse(profile.AvatarHashes.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be multihashes")
+			return errors.New("Original image hashes must be properly formatted CID")
 		}
 	}
 	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
 		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
-		_, err := mh.FromB58String(profile.HeaderHashes.Tiny)
+		_, err := cid.Parse(profile.HeaderHashes.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be multihashes")
+			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.HeaderHashes.Small)
+		_, err = cid.Parse(profile.HeaderHashes.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be multihashes")
+			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.HeaderHashes.Medium)
+		_, err = cid.Parse(profile.HeaderHashes.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be multihashes")
+			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.HeaderHashes.Large)
+		_, err = cid.Parse(profile.HeaderHashes.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be multihashes")
+			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(profile.HeaderHashes.Original)
+		_, err = cid.Parse(profile.HeaderHashes.Original)
 		if err != nil {
 			return errors.New("Original image hashes must be multihashes")
 		}

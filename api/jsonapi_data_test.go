@@ -216,11 +216,11 @@ const avatarValidJSON = `{
 }`
 
 const avatarValidJSONResponse = `{
-    "large": "QmaPwqUMAdWoGBQo8G6DNM2qa15BqDd5hLP7heLPk5gAkx",
-    "medium": "QmZcPEpeS5rWZCVHhjX1xdo7AEuEcTQHW2BqizGXhnzZjq",
-    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8",
-    "small": "QmT6ihQa2EY1ByiNmtuu1AWMSm7PdFoK77KN8N7Hy6EqUj",
-    "tiny": "QmQRjmW6EAXeXjDtvLWKLvbBoageEycVN6bXUwwkBeLU4s"
+    "large": "zb2rhcGSp5aytRMabdQPLCNwtbQBGj9CtMPvgxtCG88Ynv2GR",
+    "medium": "zb2rhehj452AhU2aB97Zjn3MQcgBfWM2VXAGuPiPTFwQ5xPtS",
+    "original": "zb2rhhRiyDk1VtoeKrM5iYEJHMAkAqXBSYrt5KVNJbtwXDYcz",
+    "small": "zb2rhYuY8rMeDVv54yq7C1Ma1Aa9FGTb7wCzKdKkw76PqUUY1",
+    "tiny": "zb2rhhyKWGWBDKvznMvPeFURFbbUrvYMKaTurBcH4Kc3zjWFQ"
 }`
 
 const avatarUnexpectedEOFJSON = `{
@@ -247,11 +247,11 @@ const imageValidJSON = `[{
 const imageValidJSONResponse = `[{
         "filename": "blue_tshirt.jpg",
         "hashes": {
-            "large": "QmPwg3VK1xdMpPxQ9omSAAdd4GuRPpucaWcUsZZK2j1EJZ",
-            "medium": "QmQZKAS1rHrawNSB63WfgEaHeabuNz5h3hTQEAcn4AC9oC",
-            "original": "Qme5EXQZ5P87YjJApgSAedBpUhRwLX2sTQFgynoj77zTEd",
-            "small": "QmYetHRdJRdEDt8ZNTHKdq5gUXDPB4u8R6FFyU1Jk8jC67",
-            "tiny": "QmeW3HU2zGDRLynbkhcB3KVkTRoKUifW48rjgkktGwUbY9"
+            "large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+            "medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+            "original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
+            "small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+            "tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2"
         }
 }]`
 
@@ -260,11 +260,11 @@ const headerValidJSON = `{
 }`
 
 const headerValidJSONResponse = `{
-    "large": "QmSMNeymDVp1w6r9KomxCSHUfwt4pNDKRfkddmFdcDybis",
-    "medium": "QmWxunFtgUjAeYDYuuuzDGHbdu7odEQzRNWL2QLpMiB5f5",
-    "original": "QmdfiTnhj1oqiCDmhxu1gdgW6ZqtR7D6ZE7j7CqWUHgKJ8",
-    "small": "QmXgkkdnxVdKCoqxexFKwT9hGSZdZTU9xGy8Fcwgfij5dV",
-    "tiny": "QmWm6Qkry7ekJiBsR77jWk7yRMhsSQDRCXxauHVN1PpcD2"
+    "large": "zb2rhZtBYss96ZztvD7LDb48bNdfiUAzq3qPYDtgx6spZBJGG",
+    "medium": "zb2rhf3ejQ2Tp2bi8mvs3VWannYMrX9RfZiXRjqtQb2mzv2ng",
+    "original": "zb2rhhRiyDk1VtoeKrM5iYEJHMAkAqXBSYrt5KVNJbtwXDYcz",
+    "small": "zb2rhfuwHxf5Bw8CE3PtzQpPVhiomMjd7URS9m64D7zPbwWxh",
+    "tiny": "zb2rhbzfPS9QKfa2yeKQF57NARSrMGoHF7Go7nZQg87SDbgNy"
 }`
 
 //
@@ -292,11 +292,11 @@ const listingJSON = `{
 		],
 		"images": [
 			{
-				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+				"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+				"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+				"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+				"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 				"filename": "swanson.jpg"
 			}
 		],
@@ -313,11 +313,11 @@ const listingJSON = `{
 					{
 						"name": "Small",
 						"image": {
-							"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-							"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-							"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-							"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-							"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+							"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+							"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+							"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+							"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+							"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 							"filename": "swanson.jpg"
 						}
 					},
@@ -493,11 +493,11 @@ const listingUpdateJSON = `{
 		],
 		"images": [
 			{
-				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+				"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+				"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+				"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+				"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 				"filename": "swanson.jpg"
 			}
 		],
@@ -514,11 +514,11 @@ const listingUpdateJSON = `{
 					{
 						"name": "Small",
 						"image": {
-							"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-							"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-							"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-							"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-							"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+							"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+							"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+							"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+							"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+							"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 							"filename": "swanson.jpg"
 						}
 					},

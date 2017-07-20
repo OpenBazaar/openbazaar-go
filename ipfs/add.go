@@ -17,7 +17,7 @@ var addErr = errors.New(`Add directory failed`)
 // Resursively add a directory to IPFS and return the root hash
 func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err error) {
 	_, root := path.Split(fpath)
-	args := []string{"add", "-r", fpath, "--cid-version", strconv.Itoa(1)}
+	args := []string{"add", "-r", "--cid-version", strconv.Itoa(1), fpath}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
@@ -41,7 +41,7 @@ func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err erro
 }
 
 func AddFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", fpath}
+	args := []string{"add", "--cid-version", strconv.Itoa(1), fpath}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
@@ -64,7 +64,7 @@ func AddFile(ctx commands.Context, fpath string) (string, error) {
 }
 
 func GetHashOfFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", "-n", fpath}
+	args := []string{"add", "-n", "--cid-version", strconv.Itoa(1), fpath}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
