@@ -84,14 +84,23 @@ func (m *MessageRetriever) fetchPointers() {
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := make(chan ps.PeerInfo)
 	go func(c chan ps.PeerInfo) {
-		out := m.getPointersFromGateway()
-		for p := range out {
-			c <- p
-		}
-		iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
-		for p := range iout {
-			c <- p
-		}
+		pwg := new(sync.WaitGroup)
+		pwg.Add(2)
+		go func(c chan ps.PeerInfo) {
+			out := m.getPointersFromGateway()
+			for p := range out {
+				c <- p
+			}
+			pwg.Done()
+		}(c)
+		go func(c chan ps.PeerInfo) {
+			iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+			for p := range iout {
+				c <- p
+			}
+			pwg.Done()
+		}(c)
+		pwg.Wait()
 		close(c)
 	}(peerOut)
 
