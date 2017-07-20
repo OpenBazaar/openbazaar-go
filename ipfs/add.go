@@ -9,6 +9,7 @@ import (
 	ihelper "github.com/ipfs/go-ipfs/importer/helpers"
 	"io"
 	"path"
+	"strconv"
 )
 
 var addErr = errors.New(`Add directory failed`)
@@ -16,7 +17,7 @@ var addErr = errors.New(`Add directory failed`)
 // Resursively add a directory to IPFS and return the root hash
 func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err error) {
 	_, root := path.Split(fpath)
-	args := []string{"add", "-r", fpath}
+	args := []string{"add", "-r", fpath, "--cid-version", strconv.Itoa(1)}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
