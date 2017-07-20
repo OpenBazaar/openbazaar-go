@@ -41,7 +41,7 @@ func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err erro
 }
 
 func AddFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", fpath}
+	args := []string{"add", fpath, "--cid-version", strconv.Itoa(1)}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
@@ -64,7 +64,7 @@ func AddFile(ctx commands.Context, fpath string) (string, error) {
 }
 
 func GetHashOfFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", "-n", fpath}
+	args := []string{"add", "-n", fpath, "--cid-version", strconv.Itoa(1)}
 	req, cmd, err := NewRequest(ctx, args)
 	if err != nil {
 		return "", err
