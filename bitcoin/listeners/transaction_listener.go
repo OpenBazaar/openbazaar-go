@@ -108,6 +108,15 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
 					contract.DisputeAcceptance = accept
+
+					n := notifications.DisputeAcceptedNotification{
+						"disputeAccepted",
+						orderId,
+						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+					}
+
+					l.broadcast <- n
+					l.db.Notifications().Put(n, n.Type, time.Now())
 				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -120,6 +129,15 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
 					contract.DisputeAcceptance = accept
+
+					n := notifications.DisputeAcceptedNotification{
+						"disputeAccepted",
+						orderId,
+						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+					}
+
+					l.broadcast <- n
+					l.db.Notifications().Put(n, n.Type, time.Now())
 				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}

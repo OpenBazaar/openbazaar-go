@@ -117,6 +117,12 @@ type DisputeCloseNotification struct {
 	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
+type DisputeAcceptedNotification struct {
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
+}
+
 type FollowNotification struct {
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
@@ -215,6 +221,10 @@ func wrap(i interface{}) interface{} {
 	case DisputeCloseNotification:
 		n := i.(DisputeCloseNotification)
 		n.Type = "disputeClose"
+		return notificationWrapper{n}
+	case DisputeAcceptedNotification:
+		n := i.(DisputeAcceptedNotification)
+		n.Type = "disputeAccepted"
 		return notificationWrapper{n}
 	case FollowNotification:
 		n := i.(FollowNotification)
