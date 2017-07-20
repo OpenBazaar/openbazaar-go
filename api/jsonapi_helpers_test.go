@@ -126,8 +126,8 @@ func runAPITest(t *testing.T, test apiTest) {
 	// Ensure correct status code
 	if resp.StatusCode != test.expectedResponseCode {
 		b, _ := ioutil.ReadAll(resp.Body)
-		t.Error(string(b))
-		t.Fatalf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)
+		t.Error(test.method, test.path, string(b))
+		t.Errorf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)
 		return
 	}
 
