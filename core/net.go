@@ -96,7 +96,6 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		ser, err := proto.Marshal(pmes)
 		if err == nil {
 			for _, g := range n.CrosspostGateways {
-				log.Notice("Pointing pointer to crosspost gateway")
 				go func(u *url.URL) {
 					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
 				}(g)

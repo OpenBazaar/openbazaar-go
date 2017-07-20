@@ -144,6 +144,10 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	return sqliteDB, nil
 }
 
+func (d *SQLiteDatastore) Ping() error {
+	return d.db.Ping()
+}
+
 func (d *SQLiteDatastore) Close() {
 	d.db.Close()
 }

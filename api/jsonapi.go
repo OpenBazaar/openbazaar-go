@@ -3254,3 +3254,31 @@ func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Reque
 	}
 	SanitizedResponse(w, "{}")
 }
+
+func (i *jsonAPIHandler) GETHealthCheck(w http.ResponseWriter, r *http.Request) {
+	type resp struct {
+		Database bool `json:"database"`
+		IPFSRoot bool `json:"ipfsRoot"`
+		Peers    bool `json:"peers"`
+	}
+
+	re := resp{true, true, true}
+	pingErr := i.node.Datastore.Ping()
+	if pingErr != nil {
+		re.Database = false
+	}
+	_, ferr := os.Stat(i.node.RepoPath)
+	if ferr != nil {
+		re.IPFSRoot = false
+	}
+	peers, perr := ipfs.ConnectedPeers(i.node.Context)
+	if perr != nil || len(peers) == 0 {
+		re.Peers = false
+	}
+	if pingErr != nil || ferr != nil || perr != nil {
+		ret, _ := json.MarshalIndent(re, "", "    ")
+		ErrorResponse(w, http.StatusNotFound, string(ret))
+		return
+	}
+	SanitizedResponse(w, "{}")
+}
