@@ -166,7 +166,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		OrigName:     false,
 	}
 	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
+		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 	}
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	out, err := m.MarshalToString(profile)

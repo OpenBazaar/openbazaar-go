@@ -103,6 +103,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	sl := new(pb.SignedListing)
 
+	// Set crypto currency
+	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing); err != nil {
 		return sl, err
@@ -139,9 +142,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
-
-	// Set crypto currency
-	listing.Metadata.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
 
 	// Update coupon db
 	n.Datastore.Coupons().Delete(listing.Slug)
@@ -690,6 +690,17 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
+	}
+	if len(listing.Metadata.AcceptedCurrencies) == 0 {
+		return errors.New("At least one accepted currency must be provided")
+	}
+	if len(listing.Metadata.AcceptedCurrencies) > MaxListItems {
+		return fmt.Errorf("AcceptedCurrencies is longer than the max of %d currencies", MaxListItems)
+	}
+	for _, c := range listing.Metadata.AcceptedCurrencies {
+		if len(c) > WordMaxCharacters {
+			return fmt.Errorf("Accepted currency is longer than the max of %d characters", WordMaxCharacters)
+		}
 	}
 
 	// Item
