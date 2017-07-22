@@ -87,8 +87,17 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		if !profile.Moderator || profile.ModeratorInfo == nil || strings.ToLower(profile.ModeratorInfo.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
+		if !profile.Moderator || profile.ModeratorInfo == nil || len(profile.ModeratorInfo.AcceptedCurrencies) == 0 {
 			return "", "", 0, false, errors.New("Moderator is not capable of moderating this transaction")
+		}
+		currencyAccepted := false
+		for _, currency := range profile.ModeratorInfo.AcceptedCurrencies {
+			if strings.ToLower(currency) == strings.ToLower(n.Wallet.CurrencyCode()) {
+				currencyAccepted = true
+			}
+		}
+		if !currencyAccepted {
+			return "", "", 0, false, errors.New("Moderator does not accept our currency")
 		}
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
@@ -487,8 +496,8 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			listing = addedListings[item.ListingHash]
 		}
 
-		if strings.ToLower(listing.Metadata.AcceptedCurrency) != strings.ToLower(n.Wallet.CurrencyCode()) {
-			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrency, n.Wallet.CurrencyCode())
+		if strings.ToLower(listing.Metadata.AcceptedCurrencies[0]) != strings.ToLower(n.Wallet.CurrencyCode()) {
+			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrencies[0], n.Wallet.CurrencyCode())
 		}
 
 		// Remove any duplicate coupons
@@ -521,11 +530,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		if err != nil {
 			return nil, err
 		}
-		listingMH, err := EncodeMultihash(ser)
+		listingId, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		i.ListingHash = listingMH.B58String()
+		i.ListingHash = listingId.String()
 		i.Quantity = uint32(item.Quantity)
 
 		for _, option := range item.Options {
@@ -631,11 +640,11 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	multihash, err := EncodeMultihash(ser)
+	id, err := EncodeMultihashCID(ser)
 	if err != nil {
 		return "", err
 	}
-	return multihash.B58String(), nil
+	return id.String(), nil
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
@@ -687,11 +696,11 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		// Subtract any coupons
 		for _, couponCode := range item.CouponCodes {
 			for _, vendorCoupon := range l.Coupons {
-				multihash, err := EncodeMultihash([]byte(couponCode))
+				id, err := EncodeMultihashCID([]byte(couponCode))
 				if err != nil {
 					return 0, err
 				}
-				if multihash.B58String() == vendorCoupon.GetHash() {
+				if id.String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
 						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
 						if err != nil {
@@ -996,12 +1005,12 @@ collectListings:
 		if err != nil {
 			return err
 		}
-		multihash, err := EncodeMultihash(ser)
+		listingID, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return err
 		}
 		for i, hash := range itemHashes {
-			if hash == multihash.B58String() {
+			if hash == listingID.String() {
 				itemHashes = append(itemHashes[:i], itemHashes[i+1:]...)
 				listingMap[hash] = listing
 			}
@@ -1364,11 +1373,11 @@ func ParseContractForListing(hash string, contract *pb.RicardianContract) (*pb.L
 		if err != nil {
 			return nil, err
 		}
-		listingMH, err := EncodeMultihash(ser)
+		listingID, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		if hash == listingMH.B58String() {
+		if hash == listingID.String() {
 			return listing, nil
 		}
 	}

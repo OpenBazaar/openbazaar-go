@@ -43,7 +43,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
+        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings.json"
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't get listing index")

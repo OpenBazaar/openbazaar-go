@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		moderator.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
+		moderator.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 		profile.Moderator = true
 		profile.ModeratorInfo = moderator
 		err = n.UpdateProfile(&profile)
@@ -69,15 +69,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	pointers, err := n.Datastore.Pointers().GetByPurpose(ipfs.MODERATOR)
 	ctx := context.Background()
 	if err != nil || len(pointers) == 0 {
-		b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)
-		if err != nil {
-			return err
-		}
-		mhc, err := multihash.Cast(b)
-		if err != nil {
-			return err
-		}
-		addr, err := ma.NewMultiaddr("/ipfs/" + mhc.B58String())
+		addr, err := ma.NewMultiaddr("/ipfs/" + n.IpfsNode.Identity.Pretty())
 		if err != nil {
 			return err
 		}
@@ -120,7 +112,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 }
 
 func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error) {
-	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile"))
+	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return 0, err
 	}
@@ -175,7 +167,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	}
 	hashes := make(map[string]string)
 	walkpath := func(p string, f os.FileInfo, err error) error {
-		if !strings.HasSuffix(f.Name(), "index.json") && !f.IsDir() {
+		if !f.IsDir() {
 			file, err := ioutil.ReadFile(p)
 			if err != nil {
 				return err

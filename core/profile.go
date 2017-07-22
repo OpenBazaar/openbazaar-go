@@ -33,7 +33,7 @@ var ErrorProfileNotFound error = errors.New("Profile not found")
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
-	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
+	f, err := os.Open(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return profile, ErrorProfileNotFound
 	}
@@ -51,12 +51,12 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		var profile []byte
 		var err error
 		if rootHash == "" {
-			profile, err = ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile")))
+			profile, err = ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile.json")))
 			if err != nil || len(profile) == 0 {
 				return pro, err
 			}
 		} else {
-			profile, err = ipfs.Cat(n.Context, path.Join(rootHash, "profile"))
+			profile, err = ipfs.Cat(n.Context, path.Join(rootHash, "profile.json"))
 			if err != nil || len(profile) == 0 {
 				return pro, err
 			}
@@ -166,14 +166,20 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		OrigName:     false,
 	}
 	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
+		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 	}
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	out, err := m.MarshalToString(profile)
 	if err != nil {
 		return err
 	}
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	profile.LastModified = ts
+
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	f, err := os.Create(profilePath)
 	defer f.Close()
 	if err != nil {
@@ -186,7 +192,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 }
 
 func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 
 	// Read stored profile data
 	file, err := os.Open(profilePath)
@@ -242,24 +248,31 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	return n.UpdateProfile(p)
 }
 
-func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
+func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool, error) {
 	if profile.Stats == nil {
 		profile.Stats = new(pb.Profile_Stats)
 	}
-	profile.Stats.ListingCount = uint32(n.GetListingCount())
-	profile.Stats.FollowerCount = uint32(n.Datastore.Followers().Count())
-	profile.Stats.FollowingCount = uint32(n.Datastore.Following().Count())
-
-	ts, err := ptypes.TimestampProto(time.Now())
-	if err != nil {
-		return nil, err
+	var changed bool
+	listingCount := uint32(n.GetListingCount())
+	if listingCount != profile.Stats.ListingCount {
+		profile.Stats.ListingCount = listingCount
+		changed = true
 	}
-	profile.LastModified = ts
-	return profile, nil
+	followerCount := uint32(n.Datastore.Followers().Count())
+	if followerCount != profile.Stats.FollowerCount {
+		profile.Stats.FollowerCount = followerCount
+		changed = true
+	}
+	followingCount := uint32(n.Datastore.Following().Count())
+	if followingCount != profile.Stats.FollowingCount {
+		profile.Stats.FollowingCount = followingCount
+		changed = true
+	}
+	return profile, changed, nil
 }
 
 func (n *OpenBazaarNode) updateProfileCounts() error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	profile := new(pb.Profile)
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
@@ -275,15 +288,18 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	} else {
 		return nil
 	}
-	profile, err := n.appendCountsToProfile(profile)
+	profile, changed, err := n.appendCountsToProfile(profile)
 	if err != nil {
 		return err
 	}
-	return n.UpdateProfile(profile)
+	if changed {
+		return n.UpdateProfile(profile)
+	}
+	return nil
 }
 
 func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	profile := new(pb.Profile)
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
@@ -381,48 +397,48 @@ func ValidateProfile(profile *pb.Profile) error {
 	}
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
-		_, err := cid.Parse(profile.AvatarHashes.Tiny)
+		_, err := cid.Decode(profile.AvatarHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Small)
+		_, err = cid.Decode(profile.AvatarHashes.Small)
 		if err != nil {
 			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Medium)
+		_, err = cid.Decode(profile.AvatarHashes.Medium)
 		if err != nil {
 			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Large)
+		_, err = cid.Decode(profile.AvatarHashes.Large)
 		if err != nil {
 			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Original)
+		_, err = cid.Decode(profile.AvatarHashes.Original)
 		if err != nil {
 			return errors.New("Original image hashes must be properly formatted CID")
 		}
 	}
 	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
 		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
-		_, err := cid.Parse(profile.HeaderHashes.Tiny)
+		_, err := cid.Decode(profile.HeaderHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Small)
+		_, err = cid.Decode(profile.HeaderHashes.Small)
 		if err != nil {
 			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Medium)
+		_, err = cid.Decode(profile.HeaderHashes.Medium)
 		if err != nil {
 			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Large)
+		_, err = cid.Decode(profile.HeaderHashes.Large)
 		if err != nil {
 			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Original)
+		_, err = cid.Decode(profile.HeaderHashes.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be multihashes")
+			return errors.New("Original image hashes must be properly formatted CID")
 		}
 	}
 	if len(profile.BitcoinPubkey) > 66 {

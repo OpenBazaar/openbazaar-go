@@ -1,7 +1,6 @@
 package bitcoin
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
@@ -13,7 +12,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
-	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"sync"
 	"time"
 )
@@ -303,14 +301,9 @@ func calcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	orderBytes := sha256.Sum256(ser)
-	encoded, err := mh.Encode(orderBytes[:], mh.SHA2_256)
+	id, err := core.EncodeMultihashCID(ser)
 	if err != nil {
 		return "", err
 	}
-	multihash, err := mh.Cast(encoded)
-	if err != nil {
-		return "", err
-	}
-	return multihash.B58String(), nil
+	return id.String(), nil
 }
