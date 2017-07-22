@@ -1127,8 +1127,23 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
+		var followers []repo.Follower
+		err = json.Unmarshal(followBytes, &followers)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		var followList []string
+		for _, f := range followers {
+			followList = append(followList, f.PeerId)
+		}
+		ret, err := json.MarshalIndent(followList, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
-		SanitizedResponse(w, string(followBytes))
+		SanitizedResponse(w, string(ret))
 	}
 }
 
