@@ -9,11 +9,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 )
 
 // Hash with SHA-256 and encode as a multihash
-func EncodeMultihash(b []byte) (*mh.Multihash, error) {
+func EncodeMultihashCID(b []byte) (*cid.Cid, error) {
 	h := sha256.Sum256(b)
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
@@ -23,7 +24,8 @@ func EncodeMultihash(b []byte) (*mh.Multihash, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &multihash, err
+	id := cid.NewCidV1(cid.DagCBOR, multihash)
+	return id, err
 }
 
 // Certain pointers, such as moderators, contain a peerID. This function
@@ -40,15 +42,11 @@ func ExtractIDFromPointer(pi ps.PeerInfo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	h, err := mh.FromB58String(val)
+	id, err := cid.Decode(val)
 	if err != nil {
 		return "", err
 	}
-	d, err := mh.Decode(h)
-	if err != nil {
-		return "", err
-	}
-	return string(d.Digest), nil
+	return string(id.String()), nil
 }
 
 // Used by the GET order API to build transaction records suitable to be included in the order response

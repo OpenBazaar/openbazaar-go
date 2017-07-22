@@ -84,7 +84,7 @@ class SMTPTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings/index.json"
+        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings.json"
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("SMTPTest - FAIL: Couldn't get listing index")
@@ -133,17 +133,17 @@ Subject: [OpenBazaar] Order received
 You received an order "Ron Swanson Tshirt".
 
 Order ID: QmNiPgKNq27qQE8fRxMbtDfRcFDEYMH5wDRgdqtqoWBpGg
-Buyer: QmS5svqgGwFxwY9W5nXBUh1GJ7x8tqpkYfD4kB3MG7mPRv
-Thumbnail: QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e
+Buyer: QmVQzkdi3Fq6LRFG9UNqDZfSry67weCZV6ZL26QVx64UFy
+Thumbnail: zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15
 Timestamp: 1487699826
 '''
         expected_lines = [e for e in expected.splitlines() if not e.startswith('Timestamp:') and not e.startswith('Order ID:')]
         with open(SMTP_DUMPFILE, 'r') as f:
             res_lines = [l.strip() for l in f.readlines() if not l.startswith('Timestamp') and not l.startswith('Order ID:')]
-            print(res_lines)
-            print(expected_lines)
+            #print(res_lines)
+            #print(expected_lines)
             if res_lines != expected_lines:
-                #os.remove(SMTP_DUMPFILE)
+                os.remove(SMTP_DUMPFILE)
                 raise TestFailure("SMTPTest - FAIL: Incorrect mail data received")
         os.remove(SMTP_DUMPFILE)
         print("SMTPTest - PASS")

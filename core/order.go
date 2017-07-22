@@ -530,11 +530,11 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		if err != nil {
 			return nil, err
 		}
-		listingMH, err := EncodeMultihash(ser)
+		listingId, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		i.ListingHash = listingMH.B58String()
+		i.ListingHash = listingId.String()
 		i.Quantity = uint32(item.Quantity)
 
 		for _, option := range item.Options {
@@ -640,11 +640,11 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	multihash, err := EncodeMultihash(ser)
+	id, err := EncodeMultihashCID(ser)
 	if err != nil {
 		return "", err
 	}
-	return multihash.B58String(), nil
+	return id.String(), nil
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
@@ -696,11 +696,11 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		// Subtract any coupons
 		for _, couponCode := range item.CouponCodes {
 			for _, vendorCoupon := range l.Coupons {
-				multihash, err := EncodeMultihash([]byte(couponCode))
+				id, err := EncodeMultihashCID([]byte(couponCode))
 				if err != nil {
 					return 0, err
 				}
-				if multihash.B58String() == vendorCoupon.GetHash() {
+				if id.String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
 						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
 						if err != nil {
@@ -1005,12 +1005,12 @@ collectListings:
 		if err != nil {
 			return err
 		}
-		multihash, err := EncodeMultihash(ser)
+		listingID, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return err
 		}
 		for i, hash := range itemHashes {
-			if hash == multihash.B58String() {
+			if hash == listingID.String() {
 				itemHashes = append(itemHashes[:i], itemHashes[i+1:]...)
 				listingMap[hash] = listing
 			}
@@ -1373,11 +1373,11 @@ func ParseContractForListing(hash string, contract *pb.RicardianContract) (*pb.L
 		if err != nil {
 			return nil, err
 		}
-		listingMH, err := EncodeMultihash(ser)
+		listingID, err := EncodeMultihashCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		if hash == listingMH.B58String() {
+		if hash == listingID.String() {
 			return listing, nil
 		}
 	}

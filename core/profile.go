@@ -381,48 +381,48 @@ func ValidateProfile(profile *pb.Profile) error {
 	}
 	if profile.AvatarHashes != nil && (profile.AvatarHashes.Large != "" || profile.AvatarHashes.Medium != "" ||
 		profile.AvatarHashes.Small != "" || profile.AvatarHashes.Tiny != "" || profile.AvatarHashes.Original != "") {
-		_, err := cid.Parse(profile.AvatarHashes.Tiny)
+		_, err := cid.Decode(profile.AvatarHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Small)
+		_, err = cid.Decode(profile.AvatarHashes.Small)
 		if err != nil {
 			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Medium)
+		_, err = cid.Decode(profile.AvatarHashes.Medium)
 		if err != nil {
 			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Large)
+		_, err = cid.Decode(profile.AvatarHashes.Large)
 		if err != nil {
 			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.AvatarHashes.Original)
+		_, err = cid.Decode(profile.AvatarHashes.Original)
 		if err != nil {
 			return errors.New("Original image hashes must be properly formatted CID")
 		}
 	}
 	if profile.HeaderHashes != nil && (profile.HeaderHashes.Large != "" || profile.HeaderHashes.Medium != "" ||
 		profile.HeaderHashes.Small != "" || profile.HeaderHashes.Tiny != "" || profile.HeaderHashes.Original != "") {
-		_, err := cid.Parse(profile.HeaderHashes.Tiny)
+		_, err := cid.Decode(profile.HeaderHashes.Tiny)
 		if err != nil {
 			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Small)
+		_, err = cid.Decode(profile.HeaderHashes.Small)
 		if err != nil {
 			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Medium)
+		_, err = cid.Decode(profile.HeaderHashes.Medium)
 		if err != nil {
 			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Large)
+		_, err = cid.Decode(profile.HeaderHashes.Large)
 		if err != nil {
 			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = cid.Parse(profile.HeaderHashes.Original)
+		_, err = cid.Decode(profile.HeaderHashes.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be multihashes")
+			return errors.New("Original image hashes must be properly formatted CID")
 		}
 	}
 	if len(profile.BitcoinPubkey) > 66 {

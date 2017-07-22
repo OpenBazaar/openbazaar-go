@@ -19,11 +19,11 @@
 		],
 		"images": [
 			{
-				"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-				"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-				"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-				"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-				"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+				"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+				"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+				"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+				"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+				"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 				"filename": "swanson.jpg"
 			}
 		],
@@ -40,11 +40,11 @@
 					{
 						"name": "Small",
 						"image": {
-							"tiny": "QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
-							"small": "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
-							"medium": "QmbyUYWZEBRFw9uxVThS4FYMwkdhWfGAsYwppBKTF6L968",
-							"large": "QmanB2z2s6jig7SXxDtSTdZpnu9fZN9eNVQtqDeUroE5w4",
-							"original": "QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+							"tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2",
+							"small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
+							"medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
+							"large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
+							"original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
 							"filename": "swanson.jpg"
 						}
 					},

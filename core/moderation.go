@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"golang.org/x/net/context"
+	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 var ModeratorPointerID multihash.Multihash
@@ -77,7 +78,8 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		addr, err := ma.NewMultiaddr("/ipfs/" + mhc.B58String())
+		id := cid.NewCidV1(cid.DagCBOR, mhc)
+		addr, err := ma.NewMultiaddr("/ipfs/" + id.String())
 		if err != nil {
 			return err
 		}
@@ -175,7 +177,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	}
 	hashes := make(map[string]string)
 	walkpath := func(p string, f os.FileInfo, err error) error {
-		if !strings.HasSuffix(f.Name(), "index.json") && !f.IsDir() {
+		if !f.IsDir() {
 			file, err := ioutil.ReadFile(p)
 			if err != nil {
 				return err
