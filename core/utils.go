@@ -42,11 +42,11 @@ func ExtractIDFromPointer(pi ps.PeerInfo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id, err := cid.Decode(val)
+	_, err = mh.FromB58String(val)
 	if err != nil {
 		return "", err
 	}
-	return string(id.String()), nil
+	return string(val), nil
 }
 
 // Used by the GET order API to build transaction records suitable to be included in the order response
