@@ -1122,7 +1122,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1164,7 +1164,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return

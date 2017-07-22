@@ -11,8 +11,8 @@ import (
    We only do this when a user updates his node to avoid needing to make network calls
    each time a new follower or unfollow request comes in. */
 func (n *OpenBazaarNode) UpdateFollow() error {
-	followPath := path.Join(n.RepoPath, "root", "followers")
-	followingPath := path.Join(n.RepoPath, "root", "following")
+	followPath := path.Join(n.RepoPath, "root", "followers.json")
+	followingPath := path.Join(n.RepoPath, "root", "following.json")
 
 	// Update followers file
 	followers, err := n.Datastore.Followers().Get("", -1)
