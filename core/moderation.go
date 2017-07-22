@@ -122,7 +122,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 }
 
 func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error) {
-	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile"))
+	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return 0, err
 	}

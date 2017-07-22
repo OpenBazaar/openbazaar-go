@@ -33,7 +33,7 @@ var ErrorProfileNotFound error = errors.New("Profile not found")
 
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
-	f, err := os.Open(path.Join(n.RepoPath, "root", "profile"))
+	f, err := os.Open(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return profile, ErrorProfileNotFound
 	}
@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 				return pro, err
 			}
 		} else {
-			profile, err = ipfs.Cat(n.Context, path.Join(rootHash, "profile"))
+			profile, err = ipfs.Cat(n.Context, path.Join(rootHash, "profile.json"))
 			if err != nil || len(profile) == 0 {
 				return pro, err
 			}
@@ -173,7 +173,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if err != nil {
 		return err
 	}
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	f, err := os.Create(profilePath)
 	defer f.Close()
 	if err != nil {
@@ -186,7 +186,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 }
 
 func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 
 	// Read stored profile data
 	file, err := os.Open(profilePath)
@@ -259,7 +259,7 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 }
 
 func (n *OpenBazaarNode) updateProfileCounts() error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	profile := new(pb.Profile)
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
@@ -283,7 +283,7 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 }
 
 func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
-	profilePath := path.Join(n.RepoPath, "root", "profile")
+	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	profile := new(pb.Profile)
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {

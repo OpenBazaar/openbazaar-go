@@ -201,7 +201,7 @@ func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message)
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// If the profile is already set tell them to use PUT
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusConflict, "Profile already exists. Use PUT.")
@@ -328,7 +328,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	// If profile is not set tell them to use POST
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
@@ -1226,7 +1226,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTModerator(w http.ResponseWriter, r *http.Request) {
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusConflict, "Profile does not exist. Create one first.")
