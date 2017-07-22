@@ -15,7 +15,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 var ModeratorPointerID multihash.Multihash
@@ -70,16 +69,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	pointers, err := n.Datastore.Pointers().GetByPurpose(ipfs.MODERATOR)
 	ctx := context.Background()
 	if err != nil || len(pointers) == 0 {
-		b, err := multihash.Encode([]byte(n.IpfsNode.Identity.Pretty()), multihash.SHA1)
-		if err != nil {
-			return err
-		}
-		mhc, err := multihash.Cast(b)
-		if err != nil {
-			return err
-		}
-		id := cid.NewCidV1(cid.DagCBOR, mhc)
-		addr, err := ma.NewMultiaddr("/ipfs/" + id.String())
+		addr, err := ma.NewMultiaddr("/ipfs/" + n.IpfsNode.Identity.Pretty())
 		if err != nil {
 			return err
 		}

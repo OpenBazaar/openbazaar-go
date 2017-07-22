@@ -143,7 +143,8 @@ func ipfsStB(s string) ([]byte, error) {
 }
 
 func ipfsBtS(b []byte) (string, error) {
-	if len(b) == 35 {
+	id, err := cid.Parse(b)
+	if err != nil {
 		size, n, err := ReadVarintCode(b)
 		if err != nil {
 			return "", err
@@ -158,13 +159,8 @@ func ipfsBtS(b []byte) (string, error) {
 			return "", err
 		}
 		return m.B58String(), nil
-	} else {
-		id, err := cid.Parse(b)
-		if err != nil {
-			return "", err
-		}
-		return id.String(), nil
 	}
+	return id.String(), nil
 }
 
 var TranscoderUnix = NewTranscoderFromFunctions(unixStB, unixBtS)
