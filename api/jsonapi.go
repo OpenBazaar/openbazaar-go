@@ -3039,10 +3039,10 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 
 	var indexBytes []byte
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
+		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")))
 
 	} else {
-		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
+		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
 	}
 	var rating *core.SavedRating
 	if indexBytes == nil {

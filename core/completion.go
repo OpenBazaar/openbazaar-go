@@ -380,7 +380,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 }
 
 func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string) error {
-	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "ratings.json")
 
 	var index []SavedRating
 
