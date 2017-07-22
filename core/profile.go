@@ -173,6 +173,12 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	if err != nil {
 		return err
 	}
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	profile.LastModified = ts
+
 	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	f, err := os.Create(profilePath)
 	defer f.Close()
@@ -242,20 +248,27 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	return n.UpdateProfile(p)
 }
 
-func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, error) {
+func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool, error) {
 	if profile.Stats == nil {
 		profile.Stats = new(pb.Profile_Stats)
 	}
-	profile.Stats.ListingCount = uint32(n.GetListingCount())
-	profile.Stats.FollowerCount = uint32(n.Datastore.Followers().Count())
-	profile.Stats.FollowingCount = uint32(n.Datastore.Following().Count())
-
-	ts, err := ptypes.TimestampProto(time.Now())
-	if err != nil {
-		return nil, err
+	var changed bool
+	listingCount := uint32(n.GetListingCount())
+	if listingCount != profile.Stats.ListingCount {
+		profile.Stats.ListingCount = listingCount
+		changed = true
 	}
-	profile.LastModified = ts
-	return profile, nil
+	followerCount := uint32(n.Datastore.Followers().Count())
+	if followerCount != profile.Stats.FollowerCount {
+		profile.Stats.FollowerCount = followerCount
+		changed = true
+	}
+	followingCount := uint32(n.Datastore.Following().Count())
+	if followingCount != profile.Stats.FollowingCount {
+		profile.Stats.FollowingCount = followingCount
+		changed = true
+	}
+	return profile, changed, nil
 }
 
 func (n *OpenBazaarNode) updateProfileCounts() error {
@@ -275,11 +288,14 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	} else {
 		return nil
 	}
-	profile, err := n.appendCountsToProfile(profile)
+	profile, changed, err := n.appendCountsToProfile(profile)
 	if err != nil {
 		return err
 	}
-	return n.UpdateProfile(profile)
+	if changed {
+		return n.UpdateProfile(profile)
+	}
+	return nil
 }
 
 func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
