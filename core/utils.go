@@ -14,7 +14,16 @@ import (
 )
 
 // Hash with SHA-256 and encode as a multihash
-func EncodeMultihashCID(b []byte) (*cid.Cid, error) {
+func EncodeCID(b []byte) (*cid.Cid, error) {
+	multihash, err := EncodeMultihash(b)
+	if err != nil {
+		return nil, err
+	}
+	id := cid.NewCidV1(cid.Raw, *multihash)
+	return id, err
+}
+
+func EncodeMultihash(b []byte) (*mh.Multihash, error) {
 	h := sha256.Sum256(b)
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
 	if err != nil {
@@ -24,8 +33,7 @@ func EncodeMultihashCID(b []byte) (*cid.Cid, error) {
 	if err != nil {
 		return nil, err
 	}
-	id := cid.NewCidV1(cid.DagCBOR, multihash)
-	return id, err
+	return &multihash, err
 }
 
 // Certain pointers, such as moderators, contain a peerID. This function
