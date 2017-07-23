@@ -140,6 +140,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		return
 	}
+	r.Header.Del("Cookie")
+	r.Header.Del("Authorization")
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		log.Error("Error reading http request:", err)
