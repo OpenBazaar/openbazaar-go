@@ -22,7 +22,9 @@ type Gateway struct {
 }
 
 // NewGateway instantiates a new `Gateway`
-func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config repo.APIConfig, options ...corehttp.ServeOption) (*Gateway, error) {
+func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config repo.APIConfig, logger logging.Backend, options ...corehttp.ServeOption) (*Gateway, error) {
+
+	log.SetBackend(logging.AddModuleLevel(logger))
 	topMux := http.NewServeMux()
 
 	jsonAPI, err := newJsonAPIHandler(n, authCookie, config)
