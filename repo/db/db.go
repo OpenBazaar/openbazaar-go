@@ -278,7 +278,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	sqlStmt += `
 	PRAGMA user_version = 0;
 	create table config (key text primary key not null, value blob);
-	create table followers (peerID text primary key not null);
+	create table followers (peerID text primary key not null, proof blob);
 	create table following (peerID text primary key not null);
 	create table offlinemessages (url text primary key not null, timestamp integer, message blob);
 	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
