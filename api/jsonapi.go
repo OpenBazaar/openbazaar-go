@@ -140,6 +140,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
 		return
 	}
+	r.Header.Del("Cookie")
+	r.Header.Del("Authorization")
 	dump, err := httputil.DumpRequest(r, false)
 	if err != nil {
 		log.Error("Error reading http request:", err)
@@ -201,7 +203,7 @@ func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message)
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 
 	// If the profile is already set tell them to use PUT
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusConflict, "Profile already exists. Use PUT.")
@@ -328,7 +330,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	// If profile is not set tell them to use POST
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Profile doesn't exist yet. Use POST.")
@@ -1122,7 +1124,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1164,7 +1166,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1226,7 +1228,7 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTModerator(w http.ResponseWriter, r *http.Request) {
-	profilePath := path.Join(i.node.RepoPath, "root", "profile")
+	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusConflict, "Profile does not exist. Create one first.")
@@ -1312,7 +1314,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", "index.json")))
+		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3096,10 +3098,10 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 
 	var indexBytes []byte
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings", "index.json")))
+		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")))
 
 	} else {
-		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings", "index.json"))
+		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
 	}
 	var rating *core.SavedRating
 	if indexBytes == nil {
@@ -3304,6 +3306,43 @@ func (i *jsonAPIHandler) POSTImportListings(w http.ResponseWriter, r *http.Reque
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, "{}")
+}
+
+func (i *jsonAPIHandler) GETHealthCheck(w http.ResponseWriter, r *http.Request) {
+	type resp struct {
+		Database bool `json:"database"`
+		IPFSRoot bool `json:"ipfsRoot"`
+		Peers    bool `json:"peers"`
+	}
+
+	re := resp{true, true, true}
+	pingErr := i.node.Datastore.Ping()
+	if pingErr != nil {
+		re.Database = false
+	}
+	_, ferr := os.Stat(i.node.RepoPath)
+	if ferr != nil {
+		re.IPFSRoot = false
+	}
+	peers, perr := ipfs.ConnectedPeers(i.node.Context)
+	if perr != nil || len(peers) == 0 {
+		re.Peers = false
+	}
+	if pingErr != nil || ferr != nil || perr != nil {
+		ret, _ := json.MarshalIndent(re, "", "    ")
+		ErrorResponse(w, http.StatusNotFound, string(ret))
+		return
+	}
+	SanitizedResponse(w, "{}")
+}
+
+func (i *jsonAPIHandler) POSTPublish(w http.ResponseWriter, r *http.Request) {
 	// Republish to IPNS
 	if err := i.node.SeedNode(); err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

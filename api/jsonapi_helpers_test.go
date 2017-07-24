@@ -12,8 +12,10 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/test"
 
+	"github.com/op/go-logging"
 	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 	manet "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net"
+	"os"
 )
 
 // testURIRoot is the root http URI to hit for testing
@@ -51,7 +53,7 @@ func newTestGateway() (*Gateway, error) {
 		return nil, err
 	}
 
-	return NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig)
+	return NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig, logging.NewLogBackend(os.Stdout, "", 0))
 }
 
 // apiTest is a test case to be run against the api blackbox
@@ -126,8 +128,8 @@ func runAPITest(t *testing.T, test apiTest) {
 	// Ensure correct status code
 	if resp.StatusCode != test.expectedResponseCode {
 		b, _ := ioutil.ReadAll(resp.Body)
-		t.Error(string(b))
-		t.Fatalf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)
+		t.Error(test.method, test.path, string(b))
+		t.Errorf("Wanted status %d, got %d", test.expectedResponseCode, resp.StatusCode)
 		return
 	}
 

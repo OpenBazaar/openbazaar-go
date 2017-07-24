@@ -43,6 +43,7 @@ It has these top-level messages:
 	Message
 	Envelope
 	Chat
+	SignedData
 	Moderator
 	DisputeUpdate
 	Profile

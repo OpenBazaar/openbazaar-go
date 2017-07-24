@@ -71,27 +71,83 @@ func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, opt
 	return pmes, nil
 }
 
-func (service *OpenBazaarService) handleFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	err := service.datastore.Followers().Put(peer.Pretty())
+func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	sd := new(pb.SignedData)
+	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
 		return nil, err
 	}
-	n := notifications.FollowNotification{"follow", peer.Pretty()}
+	pubkey, err := libp2p.UnmarshalPublicKey(sd.SenderPubkey)
+	if err != nil {
+		return nil, err
+	}
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	data := new(pb.SignedData_Command)
+	err = proto.Unmarshal(sd.SerializedData, data)
+	if err != nil {
+		return nil, err
+	}
+	if data.PeerID != service.node.IpfsNode.Identity.Pretty() {
+		return nil, errors.New("Follow message doesn't include correct peer ID")
+	}
+	if data.Type != pb.Message_FOLLOW {
+		return nil, errors.New("Data type is not follow")
+	}
+	good, err := pubkey.Verify(sd.SerializedData, sd.Signature)
+	if err != nil || !good {
+		return nil, errors.New("Bad signature")
+	}
+	err = service.datastore.Followers().Put(id.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.FollowNotification{"follow", id.Pretty()}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-	log.Debugf("Received FOLLOW message from %s", peer.Pretty())
+	log.Debugf("Received FOLLOW message from %s", id.Pretty())
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleUnFollow(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	err := service.datastore.Followers().Delete(peer.Pretty())
+func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	sd := new(pb.SignedData)
+	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
 		return nil, err
 	}
-	n := notifications.UnfollowNotification{"unfollow", peer.Pretty()}
+	pubkey, err := libp2p.UnmarshalPublicKey(sd.SenderPubkey)
+	if err != nil {
+		return nil, err
+	}
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	data := new(pb.SignedData_Command)
+	err = proto.Unmarshal(sd.SerializedData, data)
+	if err != nil {
+		return nil, err
+	}
+	if data.PeerID != service.node.IpfsNode.Identity.Pretty() {
+		return nil, errors.New("Unfollow message doesn't include correct peer ID")
+	}
+	if data.Type != pb.Message_UNFOLLOW {
+		return nil, errors.New("Data type is not unfollow")
+	}
+	good, err := pubkey.Verify(sd.SerializedData, sd.Signature)
+	if err != nil || !good {
+		return nil, errors.New("Bad signature")
+	}
+	err = service.datastore.Followers().Delete(id.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.UnfollowNotification{"unfollow", id.Pretty()}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-	log.Debugf("Received UNFOLLOW message from %s", peer.Pretty())
+	log.Debugf("Received UNFOLLOW message from %s", id.Pretty())
 	return nil, nil
 }
 
@@ -1062,30 +1118,86 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleModeratorAdd(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	err := service.datastore.ModeratedStores().Put(peer.Pretty())
+func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	sd := new(pb.SignedData)
+	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
 		return nil, err
 	}
-	n := notifications.ModeratorAddNotification{"moderatorAdd", peer.Pretty()}
+	pubkey, err := libp2p.UnmarshalPublicKey(sd.SenderPubkey)
+	if err != nil {
+		return nil, err
+	}
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	data := new(pb.SignedData_Command)
+	err = proto.Unmarshal(sd.SerializedData, data)
+	if err != nil {
+		return nil, err
+	}
+	if data.PeerID != service.node.IpfsNode.Identity.Pretty() {
+		return nil, errors.New("Moderator add message doesn't include correct peer ID")
+	}
+	if data.Type != pb.Message_MODERATOR_ADD {
+		return nil, errors.New("Data type is not moderator_add")
+	}
+	good, err := pubkey.Verify(sd.SerializedData, sd.Signature)
+	if err != nil || !good {
+		return nil, errors.New("Bad signature")
+	}
+	err = service.datastore.ModeratedStores().Put(id.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.ModeratorAddNotification{"moderatorAdd", id.Pretty()}
 	service.broadcast <- n
 
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-	log.Debugf("Received MODERATOR_ADD message from %s", peer.Pretty())
+	log.Debugf("Received MODERATOR_ADD message from %s", id.Pretty())
 
 	return nil, nil
 }
 
-func (service *OpenBazaarService) handleModeratorRemove(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	err := service.datastore.ModeratedStores().Delete(peer.Pretty())
+func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	sd := new(pb.SignedData)
+	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
 		return nil, err
 	}
-	n := notifications.ModeratorRemoveNotification{"moderatorRemove", peer.Pretty()}
+	pubkey, err := libp2p.UnmarshalPublicKey(sd.SenderPubkey)
+	if err != nil {
+		return nil, err
+	}
+	id, err := peer.IDFromPublicKey(pubkey)
+	if err != nil {
+		return nil, err
+	}
+	data := new(pb.SignedData_Command)
+	err = proto.Unmarshal(sd.SerializedData, data)
+	if err != nil {
+		return nil, err
+	}
+	if data.PeerID != service.node.IpfsNode.Identity.Pretty() {
+		return nil, errors.New("Moderator remove message doesn't include correct peer ID")
+	}
+	if data.Type != pb.Message_MODERATOR_REMOVE {
+		return nil, errors.New("Data type is not moderator_remove")
+	}
+	good, err := pubkey.Verify(sd.SerializedData, sd.Signature)
+	if err != nil || !good {
+		return nil, errors.New("Bad signature")
+	}
+	err = service.datastore.ModeratedStores().Delete(id.Pretty())
+	if err != nil {
+		return nil, err
+	}
+	n := notifications.ModeratorRemoveNotification{"moderatorRemove", id.Pretty()}
 	service.broadcast <- n
 
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
-	log.Debugf("Received MODERATOR_REMOVE message from %s", peer.Pretty())
+	log.Debugf("Received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
 }

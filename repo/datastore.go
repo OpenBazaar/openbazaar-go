@@ -27,6 +27,7 @@ type Datastore interface {
 	Coupons() Coupons
 	TxMetadata() TxMetadata
 	ModeratedStores() ModeratedStores
+	Ping() error
 	Close()
 }
 

@@ -117,6 +117,12 @@ type DisputeCloseNotification struct {
 	Thumbnail Thumbnail `json:"thumbnail"`
 }
 
+type DisputeAcceptedNotification struct {
+	Type      string    `json:"type"`
+	OrderId   string    `json:"orderId"`
+	Thumbnail Thumbnail `json:"thumbnail"`
+}
+
 type FollowNotification struct {
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
@@ -216,6 +222,10 @@ func wrap(i interface{}) interface{} {
 		n := i.(DisputeCloseNotification)
 		n.Type = "disputeClose"
 		return notificationWrapper{n}
+	case DisputeAcceptedNotification:
+		n := i.(DisputeAcceptedNotification)
+		n.Type = "disputeAccepted"
+		return notificationWrapper{n}
 	case FollowNotification:
 		n := i.(FollowNotification)
 		n.Type = "follow"
@@ -268,7 +278,7 @@ func Describe(i interface{}) (string, string) {
 			buyer = n.BuyerId
 		}
 		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail: %s\nTimestamp: %d"
-		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail, n.Timestamp)
+		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail.Small, n.Timestamp)
 
 	case PaymentNotification:
 		head = "Payment received"

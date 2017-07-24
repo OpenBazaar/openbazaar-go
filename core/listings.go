@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -115,6 +116,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		}
 	}
 
+	// Set crypto currency
+	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing, testnet); err != nil {
 		return sl, err
@@ -151,9 +155,6 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
-
-	// Set crypto currency
-	listing.Metadata.AcceptedCurrency = strings.ToUpper(n.Wallet.CurrencyCode())
 
 	// Update coupon db
 	n.Datastore.Coupons().Delete(listing.Slug)
@@ -305,7 +306,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (listingD
 }
 
 func (n *OpenBazaarNode) getListingIndex() ([]listingData, error) {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	var index []listingData
 
@@ -324,9 +325,9 @@ func (n *OpenBazaarNode) getListingIndex() ([]listingData, error) {
 	return index, nil
 }
 
-// Update the index.json file in the listings directory
+// Update the listings.json file in the listings directory
 func (n *OpenBazaarNode) updateListingOnDisk(index []listingData, ld listingData, updateRatings bool) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	// Check to see if the listing we are adding already exists in the list. If so delete it.
 	var avgRating float32
 	var ratingCount uint32
@@ -393,9 +394,9 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	return n.updateListingOnDisk(index, ld, true)
 }
 
-// Update the hashes in the index.json file
+// Update the hashes in the listings.json file
 func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	var index []listingData
 
@@ -441,7 +442,7 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 
 // Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
@@ -465,7 +466,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 		log.Error(err)
 		return false
 	}
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
@@ -512,7 +513,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 		return err
 	}
 	var index []listingData
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	_, ferr := os.Stat(indexPath)
 	if !os.IsNotExist(ferr) {
 		// Read existing file
@@ -565,7 +566,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 }
 
 func (n *OpenBazaarNode) GetListings() ([]byte, error) {
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if os.IsNotExist(err) {
 		return []byte("[]"), nil
@@ -585,8 +586,8 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 }
 
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, error) {
-	// Read index.json
-	indexPath := path.Join(n.RepoPath, "root", "listings", "index.json")
+	// Read listings.json
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return nil, err
@@ -703,8 +704,20 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
 	}
+
 	if !testnet && listing.Metadata.EscrowTimeoutHours != EscrowTimeout {
 		return fmt.Errorf("Escrow timeout must be %d hours", EscrowTimeout)
+	}
+	if len(listing.Metadata.AcceptedCurrencies) == 0 {
+		return errors.New("At least one accepted currency must be provided")
+	}
+	if len(listing.Metadata.AcceptedCurrencies) > MaxListItems {
+		return fmt.Errorf("AcceptedCurrencies is longer than the max of %d currencies", MaxListItems)
+	}
+	for _, c := range listing.Metadata.AcceptedCurrencies {
+		if len(c) > WordMaxCharacters {
+			return fmt.Errorf("Accepted currency is longer than the max of %d characters", WordMaxCharacters)
+		}
 	}
 
 	// Item
@@ -741,25 +754,25 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		return fmt.Errorf("Number of listing images is greater than the max of %d", MaxListItems)
 	}
 	for _, img := range listing.Item.Images {
-		_, err := mh.FromB58String(img.Tiny)
+		_, err := cid.Decode(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be multihashes")
+			return errors.New("Tiny image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Small)
+		_, err = cid.Decode(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be multihashes")
+			return errors.New("Small image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Medium)
+		_, err = cid.Decode(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be multihashes")
+			return errors.New("Medium image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Large)
+		_, err = cid.Decode(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be multihashes")
+			return errors.New("Large image hashes must be properly formatted CID")
 		}
-		_, err = mh.FromB58String(img.Original)
+		_, err = cid.Decode(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be multihashes")
+			return errors.New("Original image hashes must be properly formatted CID")
 		}
 		if img.Filename == "" {
 			return errors.New("Image file names must not be nil")
@@ -810,25 +823,25 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			if variant.Image != nil && (variant.Image.Filename != "" ||
 				variant.Image.Large != "" || variant.Image.Medium != "" || variant.Image.Small != "" ||
 				variant.Image.Tiny != "" || variant.Image.Original != "") {
-				_, err := mh.FromB58String(variant.Image.Tiny)
+				_, err := cid.Decode(variant.Image.Tiny)
 				if err != nil {
-					return errors.New("Tiny image hashes must be multihashes")
+					return errors.New("Tiny image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Small)
+				_, err = cid.Decode(variant.Image.Small)
 				if err != nil {
-					return errors.New("Small image hashes must be multihashes")
+					return errors.New("Small image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Medium)
+				_, err = cid.Decode(variant.Image.Medium)
 				if err != nil {
-					return errors.New("Medium image hashes must be multihashes")
+					return errors.New("Medium image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Large)
+				_, err = cid.Decode(variant.Image.Large)
 				if err != nil {
-					return errors.New("Large image hashes must be multihashes")
+					return errors.New("Large image hashes must be properly formatted CID")
 				}
-				_, err = mh.FromB58String(variant.Image.Original)
+				_, err = cid.Decode(variant.Image.Original)
 				if err != nil {
-					return errors.New("Original image hashes must be multihashes")
+					return errors.New("Original image hashes must be properly formatted CID")
 				}
 				if variant.Image.Filename == "" {
 					return errors.New("Image file names must not be nil")

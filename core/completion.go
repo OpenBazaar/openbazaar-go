@@ -424,7 +424,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 			continue
 		}
 
-		ratingPath := path.Join(n.RepoPath, "root", "ratings", "rating_"+mh.B58String()[:12])
+		ratingPath := path.Join(n.RepoPath, "root", "ratings", mh.B58String()[:12]+".json")
 		f, err := os.Create(ratingPath)
 		if err != nil {
 			retErr = err
@@ -459,7 +459,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 }
 
 func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string) error {
-	indexPath := path.Join(n.RepoPath, "root", "ratings", "index.json")
+	indexPath := path.Join(n.RepoPath, "root", "ratings.json")
 
 	var index []SavedRating
 

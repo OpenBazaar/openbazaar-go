@@ -9,10 +9,20 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 )
 
 // Hash with SHA-256 and encode as a multihash
+func EncodeCID(b []byte) (*cid.Cid, error) {
+	multihash, err := EncodeMultihash(b)
+	if err != nil {
+		return nil, err
+	}
+	id := cid.NewCidV1(cid.Raw, *multihash)
+	return id, err
+}
+
 func EncodeMultihash(b []byte) (*mh.Multihash, error) {
 	h := sha256.Sum256(b)
 	encoded, err := mh.Encode(h[:], mh.SHA2_256)
@@ -40,15 +50,7 @@ func ExtractIDFromPointer(pi ps.PeerInfo) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	h, err := mh.FromB58String(val)
-	if err != nil {
-		return "", err
-	}
-	d, err := mh.Decode(h)
-	if err != nil {
-		return "", err
-	}
-	return string(d.Digest), nil
+	return val, nil
 }
 
 // Used by the GET order API to build transaction records suitable to be included in the order response
