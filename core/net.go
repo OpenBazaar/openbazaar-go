@@ -139,7 +139,41 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) (string, error) {
 
 func (n *OpenBazaarNode) Follow(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_FOLLOW}
-	err := n.sendMessage(peerId, nil, m)
+
+	pubkey := n.IpfsNode.PrivateKey.GetPublic()
+	pubkeyBytes, err := pubkey.Bytes()
+	if err != nil {
+		return err
+	}
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	data := &pb.SignedData_Command{
+		PeerID:    peerId,
+		Type:      pb.Message_FOLLOW,
+		Timestamp: ts,
+	}
+	ser, err := proto.Marshal(data)
+	if err != nil {
+		return err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	sd := &pb.SignedData{
+		SerializedData: ser,
+		SenderPubkey:   pubkeyBytes,
+		Signature:      sig,
+	}
+	any, err := ptypes.MarshalAny(sd)
+	if err != nil {
+		return err
+	}
+	m.Payload = any
+
+	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
 	}
@@ -156,7 +190,41 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 
 func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_UNFOLLOW}
-	err := n.sendMessage(peerId, nil, m)
+
+	pubkey := n.IpfsNode.PrivateKey.GetPublic()
+	pubkeyBytes, err := pubkey.Bytes()
+	if err != nil {
+		return err
+	}
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	data := &pb.SignedData_Command{
+		PeerID:    peerId,
+		Type:      pb.Message_UNFOLLOW,
+		Timestamp: ts,
+	}
+	ser, err := proto.Marshal(data)
+	if err != nil {
+		return err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	sd := &pb.SignedData{
+		SerializedData: ser,
+		SenderPubkey:   pubkeyBytes,
+		Signature:      sig,
+	}
+	any, err := ptypes.MarshalAny(sd)
+	if err != nil {
+		return err
+	}
+	m.Payload = any
+
+	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
 	}
@@ -363,7 +431,41 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 
 func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_MODERATOR_ADD}
-	err := n.sendMessage(peerId, nil, m)
+
+	pubkey := n.IpfsNode.PrivateKey.GetPublic()
+	pubkeyBytes, err := pubkey.Bytes()
+	if err != nil {
+		return err
+	}
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	data := &pb.SignedData_Command{
+		PeerID:    peerId,
+		Type:      pb.Message_MODERATOR_ADD,
+		Timestamp: ts,
+	}
+	ser, err := proto.Marshal(data)
+	if err != nil {
+		return err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	sd := &pb.SignedData{
+		SerializedData: ser,
+		SenderPubkey:   pubkeyBytes,
+		Signature:      sig,
+	}
+	any, err := ptypes.MarshalAny(sd)
+	if err != nil {
+		return err
+	}
+	m.Payload = any
+
+	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
 	}
@@ -372,7 +474,41 @@ func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
 
 func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
 	m := pb.Message{MessageType: pb.Message_MODERATOR_REMOVE}
-	err := n.sendMessage(peerId, nil, m)
+
+	pubkey := n.IpfsNode.PrivateKey.GetPublic()
+	pubkeyBytes, err := pubkey.Bytes()
+	if err != nil {
+		return err
+	}
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return err
+	}
+	data := &pb.SignedData_Command{
+		PeerID:    peerId,
+		Type:      pb.Message_MODERATOR_REMOVE,
+		Timestamp: ts,
+	}
+	ser, err := proto.Marshal(data)
+	if err != nil {
+		return err
+	}
+	sig, err := n.IpfsNode.PrivateKey.Sign(ser)
+	if err != nil {
+		return err
+	}
+	sd := &pb.SignedData{
+		SerializedData: ser,
+		SenderPubkey:   pubkeyBytes,
+		Signature:      sig,
+	}
+	any, err := ptypes.MarshalAny(sd)
+	if err != nil {
+		return err
+	}
+	m.Payload = any
+
+	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
 	}
