@@ -530,7 +530,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		if err != nil {
 			return nil, err
 		}
-		listingId, err := EncodeMultihashCID(ser)
+		listingId, err := EncodeCID(ser)
 		if err != nil {
 			return nil, err
 		}
@@ -640,7 +640,7 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id, err := EncodeMultihashCID(ser)
+	id, err := EncodeMultihash(ser)
 	if err != nil {
 		return "", err
 	}
@@ -696,7 +696,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		// Subtract any coupons
 		for _, couponCode := range item.CouponCodes {
 			for _, vendorCoupon := range l.Coupons {
-				id, err := EncodeMultihashCID([]byte(couponCode))
+				id, err := EncodeMultihash([]byte(couponCode))
 				if err != nil {
 					return 0, err
 				}
@@ -1005,7 +1005,7 @@ collectListings:
 		if err != nil {
 			return err
 		}
-		listingID, err := EncodeMultihashCID(ser)
+		listingID, err := EncodeCID(ser)
 		if err != nil {
 			return err
 		}
@@ -1373,7 +1373,7 @@ func ParseContractForListing(hash string, contract *pb.RicardianContract) (*pb.L
 		if err != nil {
 			return nil, err
 		}
-		listingID, err := EncodeMultihashCID(ser)
+		listingID, err := EncodeCID(ser)
 		if err != nil {
 			return nil, err
 		}

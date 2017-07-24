@@ -169,15 +169,15 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 	}
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		return err
-	}
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
 		return err
 	}
 	profile.LastModified = ts
+	out, err := m.MarshalToString(profile)
+	if err != nil {
+		return err
+	}
 
 	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	f, err := os.Create(profilePath)
@@ -277,23 +277,24 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	_, ferr := os.Stat(profilePath)
 	if !os.IsNotExist(ferr) {
 		// Read existing file
-		file, err := ioutil.ReadFile(profilePath)
+		file, err := os.Open(profilePath)
+		defer file.Close()
 		if err != nil {
 			return err
 		}
-		err = jsonpb.UnmarshalString(string(file), profile)
+		err = jsonpb.Unmarshal(file, profile)
 		if err != nil {
 			return err
 		}
 	} else {
 		return nil
 	}
-	profile, changed, err := n.appendCountsToProfile(profile)
+	newPro, changed, err := n.appendCountsToProfile(profile)
 	if err != nil {
 		return err
 	}
 	if changed {
-		return n.UpdateProfile(profile)
+		return n.UpdateProfile(newPro)
 	}
 	return nil
 }
@@ -321,8 +322,12 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 		profile.Stats.RatingCount += 1
 		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount)
 	}
+	newPro, _, err := n.appendCountsToProfile(profile)
+	if err != nil {
+		return err
+	}
 
-	return n.UpdateProfile(profile)
+	return n.UpdateProfile(newPro)
 }
 
 func ValidateProfile(profile *pb.Profile) error {

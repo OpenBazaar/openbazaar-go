@@ -1061,7 +1061,17 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 	}
 
 	// Create and return an API gateway
-	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, opts...)
+	w4 := &lumberjack.Logger{
+		Filename:   path.Join(node.RepoPath, "logs", "api.log"),
+		MaxSize:    10, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	apiFile := logging.NewLogBackend(w4, "", 0)
+	apiFileFormatter := logging.NewBackendFormatter(apiFile, fileLogFormat)
+	ml := logging.MultiLogger(apiFileFormatter)
+
+	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, ml, opts...)
 }
 
 /* Returns the directory to store repo data in.

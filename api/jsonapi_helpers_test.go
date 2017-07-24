@@ -12,8 +12,10 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/test"
 
+	"github.com/op/go-logging"
 	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
 	manet "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net"
+	"os"
 )
 
 // testURIRoot is the root http URI to hit for testing
@@ -51,7 +53,7 @@ func newTestGateway() (*Gateway, error) {
 		return nil, err
 	}
 
-	return NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig)
+	return NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig, logging.NewLogBackend(os.Stdout, "", 0))
 }
 
 // apiTest is a test case to be run against the api blackbox

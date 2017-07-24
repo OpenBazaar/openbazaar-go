@@ -301,7 +301,7 @@ func calcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	id, err := core.EncodeMultihashCID(ser)
+	id, err := core.EncodeMultihash(ser)
 	if err != nil {
 		return "", err
 	}
