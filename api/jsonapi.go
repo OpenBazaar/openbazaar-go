@@ -3284,3 +3284,12 @@ func (i *jsonAPIHandler) GETHealthCheck(w http.ResponseWriter, r *http.Request) 
 	}
 	SanitizedResponse(w, "{}")
 }
+
+func (i *jsonAPIHandler) POSTPublish(w http.ResponseWriter, r *http.Request) {
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, "{}")
+}
