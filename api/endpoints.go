@@ -62,6 +62,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTCloseDispute(w, r)
 	case strings.HasPrefix(path, "/ob/releasefunds"):
 		i.POSTReleaseFunds(w, r)
+	case strings.HasPrefix(path, "/ob/releaseescrow"):
+		i.POSTReleaseEscrow(w, r)
 	case strings.HasPrefix(path, "/ob/chat"):
 		i.POSTChat(w, r)
 	case strings.HasPrefix(path, "/ob/groupchat"):

@@ -140,8 +140,6 @@ Timestamp: 1487699826
         expected_lines = [e for e in expected.splitlines() if not e.startswith('Timestamp:') and not e.startswith('Order ID:')]
         with open(SMTP_DUMPFILE, 'r') as f:
             res_lines = [l.strip() for l in f.readlines() if not l.startswith('Timestamp') and not l.startswith('Order ID:')]
-            #print(res_lines)
-            #print(expected_lines)
             if res_lines != expected_lines:
                 os.remove(SMTP_DUMPFILE)
                 raise TestFailure("SMTPTest - FAIL: Incorrect mail data received")

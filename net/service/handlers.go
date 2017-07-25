@@ -20,6 +20,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"strconv"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -309,7 +310,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error("Calculated a different payment amount")
 			return errorResponse("Calculated a different payment amount"), nil
 		}
-		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
+		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+		if err != nil {
+			log.Error(err)
+			return errorResponse(err.Error()), err
+		}
+		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder, timeout)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -343,7 +349,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		log.Debugf("Received moderated ORDER message from %s", peer.Pretty())
 		return &m, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && offline {
-		err := service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder)
+		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+		if err != nil {
+			log.Error(err)
+			return errorResponse(err.Error()), err
+		}
+		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder, timeout)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
@@ -802,7 +813,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	if err := service.node.ValidateOrderCompletion(contract); err != nil {
 		return nil, err
 	}
-	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED {
+	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
 		var ins []spvwallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -815,7 +826,6 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
 				ins = append(ins, in)
 			}
-
 		}
 		var payoutAddress btcutil.Address
 		if len(contract.VendorOrderFulfillment) > 0 {

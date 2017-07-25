@@ -19,6 +19,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
 )
@@ -40,6 +41,7 @@ const (
 	AboutMaxCharacters       = 10000
 	URLMaxCharacters         = 2000
 	MaxCountryCodes          = 255
+	EscrowTimeout            = 1080
 )
 
 type price struct {
@@ -101,11 +103,22 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	sl := new(pb.SignedListing)
 
+	// Set hardcode escrow timeout. This may change in the future
+	var testnet bool
+	if n.Wallet.Params().Name == chaincfg.MainNetParams.Name {
+		listing.Metadata.EscrowTimeoutHours = EscrowTimeout
+	} else {
+		testnet = true
+		if listing.Metadata.EscrowTimeoutHours == 0 {
+			listing.Metadata.EscrowTimeoutHours = 1
+		}
+	}
+
 	// Set crypto currency
 	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 
 	// Check the listing data is correct for continuing
-	if err := validateListing(listing); err != nil {
+	if err := validateListing(listing, testnet); err != nil {
 		return sl, err
 	}
 
@@ -631,7 +644,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func validateListing(listing *pb.Listing) (err error) {
+func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -683,6 +696,10 @@ func validateListing(listing *pb.Listing) (err error) {
 	}
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
+	}
+
+	if !testnet && listing.Metadata.EscrowTimeoutHours != EscrowTimeout {
+		return fmt.Errorf("Escrow timeout must be %d hours", EscrowTimeout)
 	}
 	if len(listing.Metadata.AcceptedCurrencies) == 0 {
 		return errors.New("At least one accepted currency must be provided")

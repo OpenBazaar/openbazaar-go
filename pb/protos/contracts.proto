@@ -38,6 +38,7 @@ message Listing {
         repeated string acceptedCurrencies = 5;
         string pricingCurrency             = 6;
         string language                    = 7;
+        uint32 escrowTimeoutHours          = 8;
 
         enum ContractType {
             PHYSICAL_GOOD = 0;
