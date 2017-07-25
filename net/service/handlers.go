@@ -72,6 +72,9 @@ func (service *OpenBazaarService) handlePing(peer peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
@@ -114,6 +117,9 @@ func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, op
 }
 
 func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
@@ -154,6 +160,9 @@ func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, 
 }
 
 func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
 	if err != nil {
 		return nil, err
@@ -178,6 +187,9 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	// However it does not send an ACK, or worry about message ordering
 
 	// Decrypt and unmarshal plaintext
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
 	if err != nil {
 		return nil, err
@@ -235,6 +247,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			Payload:     a,
 		}
 		return m
+	}
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
 	}
 	contract := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, contract)
@@ -386,6 +401,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshal payload
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	vendorContract := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, vendorContract)
 	if err != nil {
@@ -440,6 +458,9 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
@@ -468,6 +489,9 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 }
 
 func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rejectMsg := new(pb.OrderReject)
 	err := ptypes.UnmarshalAny(pmes.Payload, rejectMsg)
 	if err != nil {
@@ -628,6 +652,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 }
 
 func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -742,7 +769,9 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 }
 
 func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -791,6 +820,9 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 
 func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -892,6 +924,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 func (service *OpenBazaarService) handleDisputeOpen(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -919,6 +954,9 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	core.DisputeWg.Wait()
 
 	// Unmarshall
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	update := new(pb.DisputeUpdate)
 	err := ptypes.UnmarshalAny(pmes.Payload, update)
 	if err != nil {
@@ -971,6 +1009,9 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	rc := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, rc)
 	if err != nil {
@@ -1042,6 +1083,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 
 	// Unmarshall
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	chat := new(pb.Chat)
 	err := ptypes.UnmarshalAny(pmes.Payload, chat)
 	if err != nil {
@@ -1121,6 +1165,9 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 }
 
 func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
@@ -1163,6 +1210,9 @@ func (service *OpenBazaarService) handleModeratorAdd(pid peer.ID, pmes *pb.Messa
 }
 
 func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
 	sd := new(pb.SignedData)
 	err := ptypes.UnmarshalAny(pmes.Payload, sd)
 	if err != nil {
