@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
-	"gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
