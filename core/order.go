@@ -644,7 +644,7 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return id.String(), nil
+	return id.B58String(), nil
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
@@ -700,7 +700,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				if err != nil {
 					return 0, err
 				}
-				if id.String() == vendorCoupon.GetHash() {
+				if id.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
 						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
 						if err != nil {

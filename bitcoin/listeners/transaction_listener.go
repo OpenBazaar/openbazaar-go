@@ -305,5 +305,5 @@ func calcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return id.String(), nil
+	return id.B58String(), nil
 }
