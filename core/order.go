@@ -1230,7 +1230,6 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	return nil
 }
 
-
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error {
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
 	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
