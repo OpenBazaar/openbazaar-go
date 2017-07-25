@@ -411,14 +411,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 			continue
 		}
 
-		sha := sha256.Sum256([]byte(ratingJson))
-		h, err := multihash.Encode(sha[:], multihash.SHA2_256)
-		if err != nil {
-			retErr = err
-			continue
-		}
-
-		mh, err := multihash.Cast(h)
+		mh, err := EncodeMultihash([]byte(ratingJson))
 		if err != nil {
 			retErr = err
 			continue
