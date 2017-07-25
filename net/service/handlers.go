@@ -1047,13 +1047,6 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 		return nil, err
 	}
 
-	// Save to database
-	contract.DisputeResolution = rc.DisputeResolution
-	for _, sig := range rc.Signatures {
-		if sig.Section == pb.Signature_DISPUTE_RESOLUTION {
-			contract.Signatures = append(contract.Signatures, sig)
-		}
-	}
 	if isPurchase {
 		// Set message state to complete
 		err = service.datastore.Purchases().Put(rc.DisputeResolution.OrderId, *contract, pb.OrderState_DECIDED, false)
