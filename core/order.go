@@ -170,7 +170,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedScript(script)
+		if err != nil {
+			return "", "", 0, false, err
+		}
 
 		contract, err = n.SignOrder(contract)
 		if err != nil {
@@ -237,7 +240,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	} else { // Direct payment
@@ -306,7 +312,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Wallet.AddWatchedScript(script)
+			err = n.Wallet.AddWatchedScript(script)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 
 			// Remove signature and resign
 			contract.Signatures = []*pb.Signature{contract.Signatures[0]}
@@ -341,7 +350,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
@@ -349,6 +361,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
+			}
+			if resp.Payload == nil {
+				return "", "", 0, false, errors.New("Vendor responded with nil payload")
 			}
 			rc := new(pb.RicardianContract)
 			err := proto.Unmarshal(resp.Payload.Value, rc)
@@ -373,12 +388,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Wallet.AddWatchedScript(script)
+			err = n.Wallet.AddWatchedScript(script)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 			orderId, err := n.CalcOrderId(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 	}
