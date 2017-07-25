@@ -96,6 +96,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTPublish(w, r)
 	case strings.HasPrefix(path, "/ob/importlistings"):
 		i.POSTImportListings(w, r)
+	case strings.HasPrefix(path, "/ob/purgecache"):
+		i.POSTPurgeCache(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
