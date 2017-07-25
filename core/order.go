@@ -75,7 +75,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
-		ipnsPath := ipfspath.FromString(data.Moderator + "/profile")
+		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
 		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 		if err != nil {
 			return "", "", 0, false, errors.New("Moderator could not be found")
@@ -651,7 +651,7 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return id.String(), nil
+	return id.B58String(), nil
 }
 
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
@@ -707,7 +707,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				if err != nil {
 					return 0, err
 				}
-				if id.String() == vendorCoupon.GetHash() {
+				if id.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
 						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
 						if err != nil {
@@ -1230,8 +1230,9 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
-	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile")
+
+func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order) error {
+	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
 	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 	if err != nil {
 		return err

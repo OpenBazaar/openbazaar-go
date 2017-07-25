@@ -50,12 +50,12 @@ type Config interface {
 }
 
 type Followers interface {
-	// Put a B58 encoded follower ID to the database
-	Put(follower string) error
+	// Put a B58 encoded follower ID and proof to the database
+	Put(follower string, proof []byte) error
 
 	/* Get followers from the database.
 	   The offset and limit arguments can be used to for lazy loading. */
-	Get(offsetId string, limit int) ([]string, error)
+	Get(offsetId string, limit int) ([]Follower, error)
 
 	// Delete a follower from the database
 	Delete(follower string) error

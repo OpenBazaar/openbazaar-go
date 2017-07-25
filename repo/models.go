@@ -42,6 +42,11 @@ type SMTPSettings struct {
 	RecipientEmail string `json:"recipientEmail"`
 }
 
+type Follower struct {
+	PeerId string `json:"peerId"`
+	Proof  []byte `json:"proof"`
+}
+
 type Coupon struct {
 	Slug string
 	Code string

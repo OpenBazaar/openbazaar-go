@@ -100,7 +100,9 @@ func (service *OpenBazaarService) handleFollow(pid peer.ID, pmes *pb.Message, op
 	if err != nil || !good {
 		return nil, errors.New("Bad signature")
 	}
-	err = service.datastore.Followers().Put(id.Pretty())
+
+	proof := append(sd.SerializedData, sd.Signature...)
+	err = service.datastore.Followers().Put(id.Pretty(), proof)
 	if err != nil {
 		return nil, err
 	}

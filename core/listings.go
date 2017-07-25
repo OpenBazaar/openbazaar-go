@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"crypto/sha256"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -164,12 +162,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		code := coupon.GetDiscountCode()
 		_, err := mh.FromB58String(hash)
 		if err != nil {
-			h := sha256.Sum256([]byte(code))
-			encoded, err := mh.Encode(h[:], mh.SHA2_256)
-			if err != nil {
-				return sl, err
-			}
-			couponMH, err := mh.Cast(encoded)
+			couponMH, err := EncodeMultihash([]byte(code))
 			if err != nil {
 				return sl, err
 			}
