@@ -3376,3 +3376,22 @@ func (i *jsonAPIHandler) POSTPublish(w http.ResponseWriter, r *http.Request) {
 	}
 	SanitizedResponse(w, "{}")
 }
+
+func (i *jsonAPIHandler) POSTPurgeCache(w http.ResponseWriter, r *http.Request) {
+
+	ch, err := i.node.IpfsNode.Blockstore.AllKeysChan(context.Background())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for id := range ch {
+		i.node.IpfsNode.Blockstore.DeleteBlock(id)
+	}
+
+	// Republish to IPNS
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, "{}")
+}
