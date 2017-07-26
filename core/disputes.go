@@ -9,7 +9,6 @@ import (
 	"time"
 
 	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
-	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
@@ -348,6 +347,12 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 	if state != pb.OrderState_DISPUTED {
 		return errors.New("A dispute for this order is not open")
+	}
+
+	if buyerContract == nil {
+		buyerContract = vendorContract
+	} else if vendorContract == nil {
+		vendorContract = buyerContract
 	}
 
 	d := new(pb.DisputeResolution)
@@ -744,12 +749,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		if err != nil {
 			continue
 		}
-		h := sha256.Sum256(ser)
-		encoded, err := mh.Encode(h[:], mh.SHA2_256)
-		if err != nil {
-			continue
-		}
-		listingMH, err := mh.Cast(encoded)
+		listingMH, err := EncodeMultihash(ser)
 		if err != nil {
 			continue
 		}
