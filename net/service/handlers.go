@@ -154,7 +154,6 @@ func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, 
 	}
 	n := notifications.UnfollowNotification{"unfollow", id.Pretty()}
 	service.broadcast <- n
-	service.datastore.Notifications().Put(n, n.Type, time.Now())
 	log.Debugf("Received UNFOLLOW message from %s", id.Pretty())
 	return nil, nil
 }
