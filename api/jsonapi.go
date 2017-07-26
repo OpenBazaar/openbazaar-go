@@ -2069,36 +2069,22 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var records []*spvwallet.TransactionRecord
-	var isSale bool
 	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
 		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
-		isSale = true
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
 	}
-
 	if state == pb.OrderState_DECIDED {
 		err = i.node.ReleaseFunds(contract, records)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-	} else if isSale && state == pb.OrderState_FULFILLED {
-		err = i.node.ReleaseFundsAfterTimeout(contract, records)
-		if err != nil {
-			if err == core.EscrowTimeLockedError {
-				ErrorResponse(w, http.StatusUnauthorized, err.Error())
-				return
-			} else {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
 	} else {
-		ErrorResponse(w, http.StatusBadRequest, "releasefunds can only be called for decided disputes or for vendor escrow release after fulfillment and timeout")
+		ErrorResponse(w, http.StatusBadRequest, "releasefunds can only be called for decided disputes")
 		return
 	}
 	SanitizedResponse(w, `{}`)
