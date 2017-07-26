@@ -483,9 +483,11 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 
 	// Check if time locked
 	var timeLocked bool
-	rs := *redeemScript
-	if redeemScript != nil && rs[0] == txscript.OP_IF {
-		timeLocked = true
+	if redeemScript != nil {
+		rs := *redeemScript
+		if rs[0] == txscript.OP_IF {
+			timeLocked = true
+		}
 	}
 
 	for i, txIn := range tx.TxIn {
