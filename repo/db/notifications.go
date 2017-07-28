@@ -36,7 +36,7 @@ func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestam
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter string) []notif.Notification {
+func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) []notif.Notification {
 	var ret []notif.Notification
 
 	n.lock.RLock()
@@ -44,18 +44,36 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter string) []no
 
 	var stm string
 	var filter string
+
+	typeFilterClause := ""
+	var types []string
+	if len(typeFilter) > 0 {
+		typeFilterClauseParts := make([]string, 0, len(typeFilter))
+
+		for i := 0; i < len(typeFilter); i++ {
+			types = append(types, strings.ToLower(typeFilter[i]))
+			typeFilterClauseParts = append(typeFilterClauseParts, "?")
+		}
+
+		typeFilterClause = "type in (" + strings.Join(typeFilterClauseParts, ",") + ")"
+	}
+
 	var args []interface{}
 	if offsetId > 0 {
 		args = append(args, offsetId)
-		if typeFilter != "" {
-			filter = " and type=?"
-			args = append(args, strings.ToLower(typeFilter))
+		if len(types) > 0 {
+			filter = " and " + typeFilterClause
+			for _, a := range types {
+				args = append(args, a)
+			}
 		}
 		stm = "select rowid, serializedNotification, timestamp, read from notifications where rowid<?" + filter + " order by rowid desc limit " + strconv.Itoa(limit) + " ;"
 	} else {
-		if typeFilter != "" {
-			filter = " where type=?"
-			args = append(args, strings.ToLower(typeFilter))
+		if len(types) > 0 {
+			filter = " where " + typeFilterClause
+			for _, a := range types {
+				args = append(args, a)
+			}
 		}
 		stm = "select rowid, serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 	}
