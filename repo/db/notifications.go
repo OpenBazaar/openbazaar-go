@@ -36,13 +36,14 @@ func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestam
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) []notif.Notification {
+func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([]notif.Notification, int, error) {
 	var ret []notif.Notification
 
 	n.lock.RLock()
 	defer n.lock.RUnlock()
 
 	var stm string
+	var cstm string
 	var filter string
 
 	typeFilterClause := ""
@@ -68,6 +69,7 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) []
 			}
 		}
 		stm = "select rowid, serializedNotification, timestamp, read from notifications where rowid<?" + filter + " order by rowid desc limit " + strconv.Itoa(limit) + " ;"
+		cstm = "select Count(*) from notifications where rowid<?" + filter + " order by rowid desc;"
 	} else {
 		if len(types) > 0 {
 			filter = " where " + typeFilterClause
@@ -76,10 +78,11 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) []
 			}
 		}
 		stm = "select rowid, serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		cstm = "select Count(*) from notifications" + filter + " order by timestamp desc;"
 	}
 	rows, err := n.db.Query(stm, args...)
 	if err != nil {
-		return ret
+		return ret, 0, err
 	}
 	for rows.Next() {
 		var notifId int
@@ -109,7 +112,13 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) []
 		}
 		ret = append(ret, n)
 	}
-	return ret
+	row := n.db.QueryRow(cstm, args...)
+	var count int
+	err = row.Scan(&count)
+	if err != nil {
+		return ret, 0, err
+	}
+	return ret, count, nil
 }
 
 func (n *NotficationsDB) MarkAsRead(notifID int) error {

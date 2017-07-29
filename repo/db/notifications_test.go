@@ -83,25 +83,37 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	notifs := notifDB.GetAll(0, -1, []string{})
+	notifs, _, err := notifDB.GetAll(0, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
 	if len(notifs) != 3 {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
 
-	limtedMessages := notifDB.GetAll(0, 2, []string{})
+	limtedMessages, _, err := notifDB.GetAll(0, 2, []string{})
+	if err != nil {
+		t.Error(err)
+	}
 	if len(limtedMessages) != 2 {
 		t.Error("Returned incorrect number of messages")
 		return
 	}
 
-	offsetMessages := notifDB.GetAll(2, -1, []string{})
+	offsetMessages, _, err := notifDB.GetAll(2, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
 	if len(offsetMessages) != 1 {
 		t.Errorf("Returned incorrect number of messages %d", len(offsetMessages))
 		return
 	}
 
-	filteredMessages := notifDB.GetAll(0, -1, []string{"order"})
+	filteredMessages, _, err := notifDB.GetAll(0, -1, []string{"order"})
+	if err != nil {
+		t.Error(err)
+	}
 	if len(filteredMessages) != 2 {
 		t.Errorf("Returned incorrect number of messages %d", len(filteredMessages))
 		return
@@ -169,7 +181,10 @@ func TestNotificationDB_GetUnreadCount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	all := notifDB.GetAll(0, -1, []string{})
+	all, _, err := notifDB.GetAll(0, -1, []string{})
+	if err != nil {
+		t.Error(err)
+	}
 	var c int
 	for _, a := range all {
 		if !a.Read {
