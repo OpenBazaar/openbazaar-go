@@ -288,7 +288,7 @@ type Notifications interface {
 	MarkAllAsRead() error
 
 	// Fetch notifications from database
-	GetAll(offsetID int, limit int, typeFilter string) []notif.Notification
+	GetAll(offsetID int, limit int, typeFilter []string) ([]notif.Notification, int, error)
 
 	// Returns the unread count for all notifications
 	GetUnreadCount() (int, error)
