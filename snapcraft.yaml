@@ -1,5 +1,5 @@
 name: openbazaar-server
-version: master
+version: git
 summary: OpenBazaar Server Daemon in Go
 description: |
   OpenBazaar server daemon handles the heavy lifting for the OpenBazaar desktop
