@@ -106,11 +106,14 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
 					contract.DisputeAcceptance = accept
+					buyerHandle := contract.BuyerOrder.BuyerID.BlockchainID
 
 					n := notifications.DisputeAcceptedNotification{
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						accept.ClosedBy,
+						buyerHandle,
 					}
 
 					l.broadcast <- n
@@ -127,11 +130,14 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
 					contract.DisputeAcceptance = accept
+					vendorHandle := contract.VendorListings[0].VendorID.BlockchainID
 
 					n := notifications.DisputeAcceptedNotification{
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						accept.ClosedBy,
+						vendorHandle,
 					}
 
 					l.broadcast <- n
