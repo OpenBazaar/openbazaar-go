@@ -119,6 +119,7 @@ type DisputeOpenNotification struct {
 	DisputerHandle string    `json:"disputerHandle"`
 	DisputeeID     string    `json:"disputeeId"`
 	DisputeeHandle string    `json:"disputeeHandle"`
+	Buyer          string    `json:"buyer"`
 }
 
 type DisputeUpdateNotification struct {
@@ -129,6 +130,7 @@ type DisputeUpdateNotification struct {
 	DisputerHandle string    `json:"disputerHandle"`
 	DisputeeID     string    `json:"disputeeId"`
 	DisputeeHandle string    `json:"disputeeHandle"`
+	Buyer          string    `json:"buyer"`
 }
 
 type DisputeCloseNotification struct {
@@ -137,6 +139,7 @@ type DisputeCloseNotification struct {
 	Thumbnail        Thumbnail `json:"thumbnail"`
 	OtherPartyID     string    `json:"otherPartyId"`
 	OtherPartyHandle string    `json:"otherPartyHandle"`
+	Buyer          string       `json:"buyer"`
 }
 
 type DisputeAcceptedNotification struct {
@@ -145,6 +148,7 @@ type DisputeAcceptedNotification struct {
 	Thumbnail        Thumbnail `json:"thumbnail"`
 	OherPartyID      string    `json:"otherPartyId"`
 	OtherPartyHandle string    `json:"otherPartyHandle"`
+	Buyer          string    `json:"buyer"`
 }
 
 type FollowNotification struct {

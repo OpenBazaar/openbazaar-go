@@ -194,9 +194,13 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 	var thumbnailTiny string
 	var thumbnailSmall string
+	var buyer string
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
+		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+			buyer = contract.BuyerOrder.BuyerID.PeerID
+		}
 	}
 
 	// Figure out what role we have in this dispute and process it
@@ -221,7 +225,6 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 				return err
 			}
 		} else if contract.BuyerOrder.BuyerID.PeerID == peerID {
-
 			DisputerID = contract.BuyerOrder.BuyerID.PeerID
 			DisputerHandle = contract.BuyerOrder.BuyerID.BlockchainID
 			DisputeeID = contract.VendorListings[0].VendorID.PeerID
@@ -298,6 +301,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		DisputerHandle = contract.VendorListings[0].VendorID.BlockchainID
 		DisputeeID = contract.BuyerOrder.BuyerID.PeerID
 		DisputeeHandle = contract.BuyerOrder.BuyerID.BlockchainID
+
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
 		if err != nil {
@@ -350,7 +354,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("We are not involved in this dispute")
 	}
 
-	notif := notifications.DisputeOpenNotification{"disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle}
+	notif := notifications.DisputeOpenNotification{"disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle, buyer}
 	n.Broadcast <- notif
 	n.Datastore.Notifications().Put(notif, notif.Type, time.Now())
 

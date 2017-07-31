@@ -1012,6 +1012,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	var disputerHandle string
 	var disputeeID string
 	var disputeeHandle string
+	var buyer string
 	if buyerContract == nil {
 		buyerValidationErrors := service.node.ValidateCaseContract(rc)
 		err = service.node.Datastore.Cases().UpdateBuyerInfo(update.OrderId, rc, buyerValidationErrors, update.PayoutAddress, update.Outpoints)
@@ -1026,6 +1027,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 				disputerHandle = vendorContract.VendorListings[0].VendorID.BlockchainID
 			}
 			if vendorContract.BuyerOrder.BuyerID != nil {
+				buyer = vendorContract.BuyerOrder.BuyerID.PeerID
 				disputeeID = vendorContract.BuyerOrder.BuyerID.PeerID
 				disputeeHandle = vendorContract.BuyerOrder.BuyerID.BlockchainID
 			}
@@ -1040,12 +1042,13 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 			thumbnailTiny = buyerContract.VendorListings[0].Item.Images[0].Tiny
 			thumbnailSmall = buyerContract.VendorListings[0].Item.Images[0].Small
 			if buyerContract.VendorListings[0].VendorID != nil {
-				disputeeID = vendorContract.VendorListings[0].VendorID.PeerID
-				disputeeHandle = vendorContract.VendorListings[0].VendorID.BlockchainID
+				disputeeID = buyerContract.VendorListings[0].VendorID.PeerID
+				disputeeHandle = buyerContract.VendorListings[0].VendorID.BlockchainID
 			}
 			if buyerContract.BuyerOrder.BuyerID != nil {
-				disputerID = vendorContract.BuyerOrder.BuyerID.PeerID
-				disputerHandle = vendorContract.BuyerOrder.BuyerID.BlockchainID
+				buyer = buyerContract.BuyerOrder.BuyerID.PeerID
+				disputerID = buyerContract.BuyerOrder.BuyerID.PeerID
+				disputerHandle = buyerContract.BuyerOrder.BuyerID.BlockchainID
 			}
 		}
 	} else {
@@ -1053,7 +1056,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	}
 
 	// Send notification to websocket
-	n := notifications.DisputeUpdateNotification{"disputeUpdate", update.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, disputerID, disputerHandle, disputeeID, disputeeHandle}
+	n := notifications.DisputeUpdateNotification{"disputeUpdate", update.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, disputerID, disputerHandle, disputeeID, disputeeHandle, buyer}
 	service.broadcast <- n
 
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
@@ -1079,6 +1082,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	var state pb.OrderState
 	var otherPartyID string
 	var otherPartyHandle string
+	var buyer string
 	contract, state, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
 	if err != nil {
 		contract, state, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
@@ -1089,11 +1093,15 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 		if len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 			otherPartyID = contract.VendorListings[0].VendorID.PeerID
 			otherPartyHandle = contract.VendorListings[0].VendorID.BlockchainID
+			if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+				buyer = contract.BuyerOrder.BuyerID.PeerID
+			}
 		}
 	} else {
 		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 			otherPartyID = contract.BuyerOrder.BuyerID.PeerID
 			otherPartyHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			buyer = contract.BuyerOrder.BuyerID.PeerID
 		}
 	}
 
@@ -1131,7 +1139,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	// Send notification to websocket
-	n := notifications.DisputeCloseNotification{"disputeClose", rc.DisputeResolution.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, otherPartyID, otherPartyHandle}
+	n := notifications.DisputeCloseNotification{"disputeClose", rc.DisputeResolution.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, otherPartyID, otherPartyHandle, buyer}
 	service.broadcast <- n
 
 	service.datastore.Notifications().Put(n, n.Type, time.Now())
