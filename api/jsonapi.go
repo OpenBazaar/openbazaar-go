@@ -3385,7 +3385,10 @@ func (i *jsonAPIHandler) POSTPurgeCache(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	for id := range ch {
-		i.node.IpfsNode.Blockstore.DeleteBlock(id)
+		if err := i.node.IpfsNode.Blockstore.DeleteBlock(id); err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	// Republish to IPNS
