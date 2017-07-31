@@ -51,11 +51,11 @@ import (
 )
 
 type Node struct {
-	node    *core.OpenBazaarNode
-	config  NodeConfig
-	cancel   context.CancelFunc
+	node       *core.OpenBazaarNode
+	config     NodeConfig
+	cancel     context.CancelFunc
 	ipfsConfig *ipfscore.BuildCfg
-	apiConfig *repo.APIConfig
+	apiConfig  *repo.APIConfig
 }
 
 func NewNode(config NodeConfig) (*Node, error) {

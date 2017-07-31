@@ -27,6 +27,3 @@ type NodeConfig struct {
 	// Add a trusted peer for the wallet
 	WalletTrustedPeer string
 }
-
-
-
