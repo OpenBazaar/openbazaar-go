@@ -31,6 +31,7 @@ Easy peasy
 
 The wallet implements the following interface:
 ```go
+
 type BitcoinWallet interface {
 
 	// Start the wallet
@@ -41,6 +42,9 @@ type BitcoinWallet interface {
 
 	// Returns the type of crytocurrency this wallet implements
 	CurrencyCode() string
+
+	// Check if this amount is considered dust
+	IsDust(amount int64) bool
 
 	// Get the master private key
 	MasterPrivateKey() *hd.ExtendedKey
@@ -99,8 +103,8 @@ type BitcoinWallet interface {
 	// Combine signatures and optionally broadcast
 	Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error)
 
-	// Generate a multisig script from public keys
-	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int) (addr btc.Address, redeemScript []byte, err error)
+	// Generate a multisig script from public keys. If a timeout is included the returned script should be a timelocked escrow which releases using the timeoutKey.
+	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error)
 
 	// Add a script to the wallet and get notifications back when coins are received or spent from it
 	AddWatchedScript(script []byte) error
@@ -139,6 +143,7 @@ Available commands:
   chaintip                 return the height of the chain
   createmultisigsignature  create a p2sh multisig signature
   currentaddress           get the current bitcoin address
+  dumpheaders              print the header database
   estimatefee              estimate the fee for a tx
   getconfirmations         get the number of confirmations for a tx
   getfeeperbyte            get the current bitcoin fee
@@ -156,6 +161,7 @@ Available commands:
   sweepaddress             sweep all coins from an address
   transactions             get a list of transactions
   version                  print the version number
+
 ```
 
 Finally a gRPC API is available on port 8234. The same interface is exposed via the API plus a streaming wallet notifier which fires when a new transaction (either incoming or outgoing) is recorded then again when it gains its first confirmation.

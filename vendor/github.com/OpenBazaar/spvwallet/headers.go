@@ -12,10 +12,16 @@ import (
 	"sync"
 
 	"github.com/boltdb/bolt"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/cevaris/ordered_map"
+	"strings"
 )
 
-const MAX_HEADERS = 2000
+const (
+	MAX_HEADERS = 2000
+	CACHE_SIZE  = 100
+)
 
 // Database interface for storing block headers
 type Headers interface {
@@ -29,6 +35,9 @@ type Headers interface {
 
 	// Returns all information about the previous header
 	GetPreviousHeader(header wire.BlockHeader) (StoredHeader, error)
+
+	// Grab a header given hash
+	GetHeader(hash chainhash.Hash) (StoredHeader, error)
 
 	// Retrieve the best header from the database
 	GetBestHeader() (StoredHeader, error)
@@ -51,9 +60,11 @@ type StoredHeader struct {
 
 // HeaderDB implements Headers using bolt DB
 type HeaderDB struct {
-	lock     *sync.Mutex
-	db       *bolt.DB
-	filePath string
+	lock      *sync.Mutex
+	db        *bolt.DB
+	filePath  string
+	bestCache *StoredHeader
+	cache     *HeaderCache
 }
 
 var (
@@ -63,11 +74,15 @@ var (
 )
 
 func NewHeaderDB(filePath string) *HeaderDB {
+	if !strings.Contains(filePath, ".bin") {
+		filePath = path.Join(filePath, "headers.bin")
+	}
 	h := new(HeaderDB)
-	db, _ := bolt.Open(path.Join(filePath, "headers.bin"), 0644, &bolt.Options{InitialMmapSize: 5000000})
+	db, _ := bolt.Open(filePath, 0644, &bolt.Options{InitialMmapSize: 5000000})
 	h.db = db
 	h.lock = new(sync.Mutex)
 	h.filePath = filePath
+	h.cache = &HeaderCache{ordered_map.NewOrderedMap(), sync.Mutex{}, CACHE_SIZE}
 
 	db.Update(func(btx *bolt.Tx) error {
 		_, err := btx.CreateBucketIfNotExists(BKTHeaders)
@@ -80,12 +95,18 @@ func NewHeaderDB(filePath string) *HeaderDB {
 		}
 		return nil
 	})
+
+	h.initializeCache()
 	return h
 }
 
 func (h *HeaderDB) Put(sh StoredHeader, newBestHeader bool) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+	h.cache.Set(sh)
+	if newBestHeader {
+		h.bestCache = &sh
+	}
 	return h.db.Update(func(btx *bolt.Tx) error {
 		hdrs := btx.Bucket(BKTHeaders)
 		ser, err := serializeHeader(sh)
@@ -153,11 +174,19 @@ func (h *HeaderDB) Prune() error {
 }
 
 func (h *HeaderDB) GetPreviousHeader(header wire.BlockHeader) (sh StoredHeader, err error) {
+	hash := header.PrevBlock
+	return h.GetHeader(hash)
+}
+
+func (h *HeaderDB) GetHeader(hash chainhash.Hash) (sh StoredHeader, err error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+	cachedHeader, cerr := h.cache.Get(hash)
+	if cerr == nil {
+		return cachedHeader, nil
+	}
 	err = h.db.View(func(btx *bolt.Tx) error {
 		hdrs := btx.Bucket(BKTHeaders)
-		hash := header.PrevBlock
 		b := hdrs.Get(hash.CloneBytes())
 		if b == nil {
 			return errors.New("Header does not exist in database")
@@ -177,6 +206,10 @@ func (h *HeaderDB) GetPreviousHeader(header wire.BlockHeader) (sh StoredHeader, 
 func (h *HeaderDB) GetBestHeader() (sh StoredHeader, err error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+	if h.bestCache != nil {
+		best := h.bestCache
+		return *best, nil
+	}
 	err = h.db.View(func(btx *bolt.Tx) error {
 		tip := btx.Bucket(BKTChainTip)
 		b := tip.Get(KEYChainTip)
@@ -198,6 +231,9 @@ func (h *HeaderDB) GetBestHeader() (sh StoredHeader, err error) {
 func (h *HeaderDB) Height() (uint32, error) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
+	if h.bestCache != nil {
+		return h.bestCache.height, nil
+	}
 	var height uint32
 	err := h.db.View(func(btx *bolt.Tx) error {
 		tip := btx.Bucket(BKTChainTip)
@@ -247,6 +283,25 @@ func (h *HeaderDB) Print(w io.Writer) {
 	sort.Float64s(keys)
 	for _, k := range keys {
 		fmt.Fprintf(w, "Height: %.1f, Hash: %s, Parent: %s\n", k, m[k][0], m[k][1])
+	}
+}
+
+func (h *HeaderDB) initializeCache() {
+	best, err := h.GetBestHeader()
+	if err != nil {
+		return
+	}
+	h.bestCache = &best
+	headers := []StoredHeader{best}
+	for i := 0; i < 99; i++ {
+		sh, err := h.GetPreviousHeader(best.header)
+		if err != nil {
+			break
+		}
+		headers = append(headers, sh)
+	}
+	for i := len(headers) - 1; i >= 0; i-- {
+		h.cache.Set(headers[i])
 	}
 }
 
@@ -302,4 +357,36 @@ func deserializeHeader(b []byte) (sh StoredHeader, err error) {
 		totalWork: bi,
 	}
 	return sh, nil
+}
+
+type HeaderCache struct {
+	headers *ordered_map.OrderedMap
+	sync.Mutex
+	cacheSize int
+}
+
+func (h *HeaderCache) pop() {
+	iter := h.headers.IterFunc()
+	k, ok := iter()
+	if ok {
+		h.headers.Delete(k.Key)
+	}
+}
+
+func (h *HeaderCache) Set(sh StoredHeader) {
+	h.Lock()
+	defer h.Unlock()
+	if h.headers.Len() > h.cacheSize {
+		h.pop()
+	}
+	hash := sh.header.BlockHash()
+	h.headers.Set(hash.String(), sh)
+}
+
+func (h *HeaderCache) Get(hash chainhash.Hash) (StoredHeader, error) {
+	sh, ok := h.headers.Get(hash.String())
+	if !ok {
+		return StoredHeader{}, errors.New("Not found")
+	}
+	return sh.(StoredHeader), nil
 }

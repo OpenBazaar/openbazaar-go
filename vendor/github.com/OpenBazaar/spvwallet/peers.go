@@ -86,6 +86,8 @@ type PeerManager struct {
 	getFilter          func() (*bloom.Filter, error)
 	startChainDownload func(*peer.Peer)
 
+	targetOutbound uint32
+
 	proxy proxy.Dialer
 }
 
@@ -116,6 +118,7 @@ func NewPeerManager(config *PeerManagerConfig) (*PeerManager, error) {
 	if config.TrustedPeer != nil {
 		targetOutbound = 1
 	}
+	pm.targetOutbound = targetOutbound
 
 	retryDuration := config.RetryDuration
 	if config.RetryDuration <= 0 {
@@ -267,11 +270,15 @@ func (pm *PeerManager) onDisconnection(req *connmgr.ConnReq) {
 	// If this was our download peer we lost, replace him
 	if pm.downloadPeer != nil && peer != nil {
 		if pm.downloadPeer.ID() == peer.ID() {
-			for id := range pm.connectedPeers {
-				pm.setDownloadPeer(pm.connectedPeers[id])
-				break
-			}
+			go pm.selectNewDownlaodPeer()
 		}
+	}
+}
+
+func (pm *PeerManager) selectNewDownlaodPeer() {
+	for _, peer := range pm.connectedPeers {
+		pm.setDownloadPeer(peer)
+		break
 	}
 }
 
@@ -312,18 +319,19 @@ func (pm *PeerManager) DequeueTx(peer *peer.Peer, txid chainhash.Hash) (int32, e
 // Iterates over our peers and sees if any are reporting a height
 // greater than our height. If so switch them to the download peer
 // and start the chain download again.
-func (pm *PeerManager) CheckForMoreBlocks(height uint32) (moar bool) {
+func (pm *PeerManager) CheckForMoreBlocks(height uint32) bool {
 	pm.peerMutex.RLock()
 	defer pm.peerMutex.RUnlock()
 
+	moar := false
 	for _, peer := range pm.connectedPeers {
 		if uint32(peer.LastBlock()) > height {
 			pm.downloadPeer = peer
 			go pm.startChainDownload(peer)
-			return true
+			moar = true
 		}
 	}
-	return false
+	return moar
 }
 
 // Called by connManager when it adds a new connection

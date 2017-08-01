@@ -11,6 +11,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -310,6 +311,10 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 		w.updateFilterAndSend(peer)
 	}
 	return err
+}
+
+func (w *SPVWallet) DumpHeaders(writer io.Writer) {
+	w.blockchain.db.Print(writer)
 }
 
 func (w *SPVWallet) Close() {

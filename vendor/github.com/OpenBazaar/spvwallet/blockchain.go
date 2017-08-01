@@ -7,6 +7,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"math/big"
+	"sort"
 	"sync"
 	"time"
 )
@@ -21,6 +22,7 @@ const (
 	maxDiffAdjust       = 4
 	minRetargetTimespan = int64(targetTimespan / maxDiffAdjust)
 	maxRetargetTimespan = int64(targetTimespan * maxDiffAdjust)
+	medianTimeBlocks    = 11
 )
 
 type ChainState int
@@ -28,7 +30,6 @@ type ChainState int
 const (
 	SYNCING = 0
 	WAITING = 1
-	REORG   = 2
 )
 
 // Wrapper around Headers implementation that handles all blockchain operations
@@ -68,7 +69,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, *StoredHeader,
 	b.lock.Lock()
 	defer b.lock.Unlock()
 	newTip := false
-	var lastGoodHeader *StoredHeader
+	var commonAncestor *StoredHeader
 	// Fetch our current best header from the db
 	bestHeader, err := b.db.GetBestHeader()
 	if err != nil {
@@ -106,11 +107,12 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, *StoredHeader,
 		prevHash := parentHeader.header.BlockHash()
 		// If this header is not extending the previous best header then we have a reorg.
 		if !tipHash.IsEqual(&prevHash) {
-			log.Warning("REORG!!! REORG!!! REORG!!!")
-			lastGoodHeader, err = b.GetLastGoodHeader(StoredHeader{header: header}, bestHeader)
+			commonAncestor, err = b.GetCommonAncestor(StoredHeader{header: header, height: parentHeader.height + 1}, bestHeader)
 			if err != nil {
-				return newTip, lastGoodHeader, 0, err
+				log.Errorf("Error calculating common ancestor: %s", err.Error())
+				return newTip, commonAncestor, 0, err
 			}
+			log.Warningf("REORG!!! REORG!!! REORG!!! At block %d, Wiped out %d blocks", int(bestHeader.height), int(bestHeader.height-commonAncestor.height))
 		}
 	}
 	newHeight := parentHeader.height + 1
@@ -121,9 +123,9 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, *StoredHeader,
 		totalWork: cumulativeWork,
 	}, newTip)
 	if err != nil {
-		return newTip, lastGoodHeader, 0, err
+		return newTip, commonAncestor, 0, err
 	}
-	return newTip, lastGoodHeader, newHeight, nil
+	return newTip, commonAncestor, newHeight, nil
 }
 
 func (b *Blockchain) CheckHeader(header wire.BlockHeader, prevHeader StoredHeader) bool {
@@ -199,6 +201,28 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 	return calcDiffAdjust(*epoch, prevHeader.header, b.params), nil
 }
 
+func (b *Blockchain) CalcMedianTimePast(header *wire.BlockHeader) (time.Time, error) {
+	iterNode := StoredHeader{header: *header}
+	var err error
+
+	timestamps := make([]int64, medianTimeBlocks)
+	numNodes := 0
+
+	for i := 0; i < medianTimeBlocks; i++ {
+		numNodes++
+		timestamps[i] = iterNode.header.Timestamp.Unix()
+		iterNode, err = b.db.GetHeader(header.BlockHash())
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	timestamps = timestamps[:numNodes]
+	sort.Sort(timeSorter(timestamps))
+	medianTimestamp := timestamps[numNodes/2]
+	return time.Unix(medianTimestamp, 0), nil
+	return time.Now(), nil
+}
+
 func (b *Blockchain) GetEpoch() (*wire.BlockHeader, error) {
 	sh, err := b.db.GetBestHeader()
 	if err != nil {
@@ -272,12 +296,32 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 }
 
 // Returns last header before reorg point
-func (b *Blockchain) GetLastGoodHeader(bestHeader, prevBestHeader StoredHeader) (*StoredHeader, error) {
-	majority, err := b.db.GetPreviousHeader(bestHeader.header)
-	if err != nil {
-		return nil, err
+func (b *Blockchain) GetCommonAncestor(bestHeader, prevBestHeader StoredHeader) (*StoredHeader, error) {
+	var err error
+	rollback := func(parent StoredHeader, n int) (StoredHeader, error) {
+		for i := 0; i < n; i++ {
+			parent, err = b.db.GetPreviousHeader(parent.header)
+			if err != nil {
+				return parent, err
+			}
+		}
+		return parent, nil
 	}
+
+	majority := bestHeader
 	minority := prevBestHeader
+	if bestHeader.height > prevBestHeader.height {
+		majority, err = rollback(majority, int(bestHeader.height-prevBestHeader.height))
+		if err != nil {
+			return nil, err
+		}
+	} else if prevBestHeader.height > bestHeader.height {
+		minority, err = rollback(minority, int(prevBestHeader.height-bestHeader.height))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for {
 		majorityHash := majority.header.BlockHash()
 		minorityHash := minority.header.BlockHash()
