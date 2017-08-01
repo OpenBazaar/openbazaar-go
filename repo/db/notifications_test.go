@@ -18,25 +18,29 @@ func init() {
 }
 
 func TestNotficationsDB_Put(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"1", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
 	stmt, err := notifDB.db.Prepare("select * from notifications")
 	defer stmt.Close()
+	var notifID string
 	var data []byte
 	var timestamp int
 	var notifType string
 	var read int
-	err = stmt.QueryRow().Scan(&data, &notifType, &timestamp, &read)
+	err = stmt.QueryRow().Scan(&notifID, &data, &notifType, &timestamp, &read)
 	if err != nil {
 		t.Error(err)
+	}
+	if notifID != "1" {
+		t.Error("Returned incorrect ID")
 	}
 	if notifType != "follow" {
 		t.Error("Returned incorrect type")
 	}
-	if string(data) != `{"type":"follow","peerId":"abc"}` {
+	if string(data) != `{"notificationId":"1","type":"follow","peerId":"abc"}` {
 		t.Error("Returned incorrect notification")
 	}
 	if read != 0 {
@@ -45,20 +49,20 @@ func TestNotficationsDB_Put(t *testing.T) {
 	if timestamp <= 0 {
 		t.Error("Returned incorrect timestamp")
 	}
-	notifDB.Delete(1)
+	notifDB.Delete("1")
 }
 
 func TestNotficationsDB_Delete(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"1", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	err = notifDB.Delete(1)
+	err = notifDB.Delete("1")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select rowid from notifications where rowid=1")
+	stmt, err := chdb.db.Prepare("select notifID from notifications where notifID='1'")
 	defer stmt.Close()
 	var notifId int
 	err = stmt.QueryRow().Scan(&notifId)
@@ -68,22 +72,22 @@ func TestNotficationsDB_Delete(t *testing.T) {
 }
 
 func TestNotficationsDB_GetAll(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"1", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"order", "123"}
-	err = notifDB.Put(n, n.Type, time.Now())
+	n = notif.FollowNotification{"2", "order", "123"}
+	err = notifDB.Put(n.ID, n, n.Type, time.Now().Add(time.Second))
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"order", "56778"}
-	err = notifDB.Put(n, n.Type, time.Now())
+	n = notif.FollowNotification{"3", "order", "56778"}
+	err = notifDB.Put(n.ID, n, n.Type, time.Now().Add(time.Second*2))
 	if err != nil {
 		t.Error(err)
 	}
-	notifs, _, err := notifDB.GetAll(0, -1, []string{})
+	notifs, _, err := notifDB.GetAll("", -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -92,7 +96,7 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 		return
 	}
 
-	limtedMessages, _, err := notifDB.GetAll(0, 2, []string{})
+	limtedMessages, _, err := notifDB.GetAll("", 2, []string{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -101,16 +105,16 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 		return
 	}
 
-	offsetMessages, _, err := notifDB.GetAll(2, -1, []string{})
+	offsetMessages, _, err := notifDB.GetAll("3", -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}
-	if len(offsetMessages) != 1 {
+	if len(offsetMessages) != 2 {
 		t.Errorf("Returned incorrect number of messages %d", len(offsetMessages))
 		return
 	}
 
-	filteredMessages, _, err := notifDB.GetAll(0, -1, []string{"order"})
+	filteredMessages, _, err := notifDB.GetAll("", -1, []string{"order"})
 	if err != nil {
 		t.Error(err)
 	}
@@ -121,16 +125,16 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAsRead(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"5", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	err = notifDB.MarkAsRead(1)
+	err = notifDB.MarkAsRead("5")
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := notifDB.db.Prepare("select read from notifications where rowid=1")
+	stmt, err := notifDB.db.Prepare("select read from notifications where notifID='5'")
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow().Scan(&read)
@@ -143,13 +147,13 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"6", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"follow", "123"}
-	err = notifDB.Put(n, n.Type, time.Now())
+	n = notif.FollowNotification{"7", "follow", "123"}
+	err = notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
@@ -167,21 +171,21 @@ func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
 }
 
 func TestNotificationDB_GetUnreadCount(t *testing.T) {
-	n := notif.FollowNotification{"follow", "abc"}
-	err := notifDB.Put(n, n.Type, time.Now())
+	n := notif.FollowNotification{"8", "follow", "abc"}
+	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	err = notifDB.MarkAsRead(1)
+	err = notifDB.MarkAsRead("8")
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"follow", "xyz"}
-	err = notifDB.Put(n, n.Type, time.Now())
+	n = notif.FollowNotification{"9", "follow", "xyz"}
+	err = notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	all, _, err := notifDB.GetAll(0, -1, []string{})
+	all, _, err := notifDB.GetAll("", -1, []string{})
 	if err != nil {
 		t.Error(err)
 	}

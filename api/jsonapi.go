@@ -2377,15 +2377,7 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	offset := r.URL.Query().Get("offsetId")
-	offsetId := 0
-	if offset != "" {
-		offsetId, err = strconv.Atoi(offset)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
+	offsetId := r.URL.Query().Get("offsetId")
 	filter := r.URL.Query().Get("filter")
 
 	types := strings.Split(filter, ",")
@@ -2427,12 +2419,7 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 
 func (i *jsonAPIHandler) POSTMarkNotificationAsRead(w http.ResponseWriter, r *http.Request) {
 	_, notifId := path.Split(r.URL.Path)
-	id, err := strconv.Atoi(notifId)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.Datastore.Notifications().MarkAsRead(id)
+	err := i.node.Datastore.Notifications().MarkAsRead(notifId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2450,13 +2437,8 @@ func (i *jsonAPIHandler) POSTMarkNotificationsAsRead(w http.ResponseWriter, r *h
 }
 
 func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Request) {
-	_, noftifId := path.Split(r.URL.Path)
-	id, err := strconv.Atoi(noftifId)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.Datastore.Notifications().Delete(id)
+	_, notifId := path.Split(r.URL.Path)
+	err := i.node.Datastore.Notifications().Delete(notifId)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

@@ -279,22 +279,22 @@ type Chat interface {
 type Notifications interface {
 
 	// Put a new notification to the database
-	Put(notification notif.Data, notifType string, timestamp time.Time) error
+	Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error
 
 	// Mark notification as read
-	MarkAsRead(notifID int) error
+	MarkAsRead(notifID string) error
 
 	// Mark all notifications as read
 	MarkAllAsRead() error
 
 	// Fetch notifications from database
-	GetAll(offsetID int, limit int, typeFilter []string) ([]notif.Notification, int, error)
+	GetAll(offsetID string, limit int, typeFilter []string) ([]notif.Notification, int, error)
 
 	// Returns the unread count for all notifications
 	GetUnreadCount() (int, error)
 
 	// Delete a notification
-	Delete(notifID int) error
+	Delete(notifID string) error
 }
 
 type Coupons interface {

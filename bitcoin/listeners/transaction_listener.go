@@ -109,6 +109,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					buyerHandle := contract.BuyerOrder.BuyerID.BlockchainID
 
 					n := notifications.DisputeAcceptedNotification{
+						notifications.NewID(),
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
@@ -118,7 +119,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n, n.Type, time.Now())
+					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -138,6 +139,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					}
 
 					n := notifications.DisputeAcceptedNotification{
+						notifications.NewID(),
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
@@ -147,7 +149,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n, n.Type, time.Now())
+					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -187,6 +189,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.adjustInventory(contract)
 
 			n := notifications.OrderNotification{
+				notifications.NewID(),
 				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
@@ -198,7 +201,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().Put(n, n.Type, time.Now())
+			l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 		}
 	}
 
@@ -255,12 +258,13 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			}
 		}
 		n := notifications.PaymentNotification{
+			notifications.NewID(),
 			"payment",
 			orderId,
 			uint64(funding),
 		}
 		l.broadcast <- n
-		l.db.Notifications().Put(n, n.Type, time.Now())
+		l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 	}
 
 	record := &spvwallet.TransactionRecord{

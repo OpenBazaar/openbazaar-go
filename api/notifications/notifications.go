@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+	"crypto/rand"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 )
 
 type Notification struct {
-	ID        int       `json:"id"`
 	Data      Data      `json:"notification"`
 	Timestamp time.Time `json:"timestamp"`
 	Read      bool      `json:"read"`
@@ -48,6 +49,7 @@ type messageTypingWrapper struct {
 }
 
 type OrderNotification struct {
+	ID          string    `json:"notificationId"`
 	Type        string    `json:"type"`
 	Title       string    `json:"title"`
 	BuyerID     string    `json:"buyerId"`
@@ -59,12 +61,14 @@ type OrderNotification struct {
 }
 
 type PaymentNotification struct {
+	ID           string `json:"notificationId"`
 	Type         string `json:"type"`
 	OrderId      string `json:"orderId"`
 	FundingTotal uint64 `json:"fundingTotal"`
 }
 
 type OrderConfirmationNotification struct {
+	ID           string    `json:"notificationId"`
 	Type         string    `json:"type"`
 	OrderId      string    `json:"orderId"`
 	Thumbnail    Thumbnail `json:"thumbnail"`
@@ -73,6 +77,7 @@ type OrderConfirmationNotification struct {
 }
 
 type OrderDeclinedNotification struct {
+	ID           string    `json:"notificationId"`
 	Type         string    `json:"type"`
 	OrderId      string    `json:"orderId"`
 	Thumbnail    Thumbnail `json:"thumbnail"`
@@ -81,6 +86,7 @@ type OrderDeclinedNotification struct {
 }
 
 type OrderCancelNotification struct {
+	ID          string    `json:"notificationId"`
 	Type        string    `json:"type"`
 	OrderId     string    `json:"orderId"`
 	Thumbnail   Thumbnail `json:"thumbnail"`
@@ -89,6 +95,7 @@ type OrderCancelNotification struct {
 }
 
 type RefundNotification struct {
+	ID           string    `json:"notificationId"`
 	Type         string    `json:"type"`
 	OrderId      string    `json:"orderId"`
 	Thumbnail    Thumbnail `json:"thumbnail"`
@@ -97,6 +104,7 @@ type RefundNotification struct {
 }
 
 type FulfillmentNotification struct {
+	ID           string    `json:"notificationId"`
 	Type         string    `json:"type"`
 	OrderId      string    `json:"orderId"`
 	Thumbnail    Thumbnail `json:"thumbnail"`
@@ -105,6 +113,7 @@ type FulfillmentNotification struct {
 }
 
 type CompletionNotification struct {
+	ID          string    `json:"notificationId"`
 	Type        string    `json:"type"`
 	OrderId     string    `json:"orderId"`
 	Thumbnail   Thumbnail `json:"thumbnail"`
@@ -113,6 +122,7 @@ type CompletionNotification struct {
 }
 
 type DisputeOpenNotification struct {
+	ID             string    `json:"notificationId"`
 	Type           string    `json:"type"`
 	OrderId        string    `json:"orderId"`
 	Thumbnail      Thumbnail `json:"thumbnail"`
@@ -124,6 +134,7 @@ type DisputeOpenNotification struct {
 }
 
 type DisputeUpdateNotification struct {
+	ID             string    `json:"notificationId"`
 	Type           string    `json:"type"`
 	OrderId        string    `json:"orderId"`
 	Thumbnail      Thumbnail `json:"thumbnail"`
@@ -135,6 +146,7 @@ type DisputeUpdateNotification struct {
 }
 
 type DisputeCloseNotification struct {
+	ID               string    `json:"notificationId"`
 	Type             string    `json:"type"`
 	OrderId          string    `json:"orderId"`
 	Thumbnail        Thumbnail `json:"thumbnail"`
@@ -144,6 +156,7 @@ type DisputeCloseNotification struct {
 }
 
 type DisputeAcceptedNotification struct {
+	ID               string    `json:"notificationId"`
 	Type             string    `json:"type"`
 	OrderId          string    `json:"orderId"`
 	Thumbnail        Thumbnail `json:"thumbnail"`
@@ -153,21 +166,25 @@ type DisputeAcceptedNotification struct {
 }
 
 type FollowNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type UnfollowNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type ModeratorAddNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type ModeratorRemoveNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
@@ -207,6 +224,14 @@ type IncomingTransaction struct {
 	Thumbnail     string    `json:"thumbnail"`
 	Height        int32     `json:"height"`
 	CanBumpFee    bool      `json:"canBumpFee"`
+}
+
+func NewID() string {
+	b:= make([]byte, 32)
+	rand.Read(b)
+	encoded, _ := mh.Encode(b, mh.SHA2_256)
+	nId, _ := mh.Cast(encoded)
+	return nId.B58String()
 }
 
 func wrap(i interface{}) interface{} {
