@@ -194,6 +194,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 				notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 				int(contract.BuyerOrder.Timestamp.Seconds),
 				orderId,
+				contract.VendorListings[0].Slug,
 			}
 
 			l.broadcast <- n

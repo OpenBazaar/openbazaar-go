@@ -55,6 +55,7 @@ type OrderNotification struct {
 	Thumbnail   Thumbnail `json:"thumbnail"`
 	Timestamp   int       `json:"timestamp"`
 	OrderId     string    `json:"orderId"`
+	Slug        string    `json:"slug"`
 }
 
 type PaymentNotification struct {
@@ -139,7 +140,7 @@ type DisputeCloseNotification struct {
 	Thumbnail        Thumbnail `json:"thumbnail"`
 	OtherPartyID     string    `json:"otherPartyId"`
 	OtherPartyHandle string    `json:"otherPartyHandle"`
-	Buyer          string       `json:"buyer"`
+	Buyer            string    `json:"buyer"`
 }
 
 type DisputeAcceptedNotification struct {
@@ -148,7 +149,7 @@ type DisputeAcceptedNotification struct {
 	Thumbnail        Thumbnail `json:"thumbnail"`
 	OherPartyID      string    `json:"otherPartyId"`
 	OtherPartyHandle string    `json:"otherPartyHandle"`
-	Buyer          string    `json:"buyer"`
+	Buyer            string    `json:"buyer"`
 }
 
 type FollowNotification struct {
