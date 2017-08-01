@@ -669,23 +669,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set IPNS query size
-	ipnsConfig, err := nd.Repo.GetConfigKey("Ipns")
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	ipnsMap, ok := ipnsConfig.(map[string]interface{})
-	if !ok {
-		return errors.New("Config is malformatted")
-	}
-	var querySize float64
-	qss, ok := ipnsMap["QuerySize"]
-	if ok {
-		qs, ok := qss.(float64)
-		if ok {
-			querySize = qs
-		}
-	}
+	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
 		dht.QuerySize = int(querySize)
 	} else {
