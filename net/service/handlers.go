@@ -454,7 +454,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	}
 
 	// Send notification to websocket
-	n := notifications.OrderConfirmationNotification{notifications.NewID(), "orderConfirmation", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorID, vendorHandle}
+	n := notifications.OrderConfirmationNotification{notifications.NewID(), "orderConfirmation", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
 	log.Debugf("Received ORDER_CONFIRMATION message from %s", p.Pretty())
@@ -491,7 +491,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	}
 
 	// Send notification to websocket
-	n := notifications.OrderCancelNotification{notifications.NewID(), "canceled", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerID, buyerHandle}
+	n := notifications.OrderCancelNotification{notifications.NewID(), "canceled", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerHandle, buyerID}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
 	log.Debugf("Received ORDER_CANCEL message from %s", p.Pretty())
@@ -659,7 +659,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Send notification to websocket
-	n := notifications.OrderDeclinedNotification{notifications.NewID(), "declined", rejectMsg.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorID, vendorHandle}
+	n := notifications.OrderDeclinedNotification{notifications.NewID(), "declined", rejectMsg.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
 	service.broadcast <- n
 
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
@@ -784,7 +784,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Send notification to websocket
-	n := notifications.RefundNotification{notifications.NewID(), "refund", contract.Refund.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorID, vendorHandle}
+	n := notifications.RefundNotification{notifications.NewID(), "refund", contract.Refund.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
 	log.Debugf("Received REFUND message from %s", p.Pretty())
@@ -839,7 +839,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Send notification to websocket
-	n := notifications.FulfillmentNotification{notifications.NewID(), "fulfillment", rc.VendorOrderFulfillment[0].OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorID, vendorHandle}
+	n := notifications.FulfillmentNotification{notifications.NewID(), "fulfillment", rc.VendorOrderFulfillment[0].OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
 	log.Debugf("Received ORDER_FULFILLMENT message from %s", p.Pretty())
