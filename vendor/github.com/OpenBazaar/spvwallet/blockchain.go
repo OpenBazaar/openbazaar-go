@@ -41,10 +41,14 @@ type Blockchain struct {
 }
 
 func NewBlockchain(filePath string, walletCreationDate time.Time, params *chaincfg.Params) (*Blockchain, error) {
+	hdb, err := NewHeaderDB(filePath)
+	if err != nil {
+		return nil, err
+	}
 	b := &Blockchain{
 		lock:   new(sync.Mutex),
 		params: params,
-		db:     NewHeaderDB(filePath),
+		db:     hdb,
 	}
 
 	h, err := b.db.Height()
@@ -220,7 +224,6 @@ func (b *Blockchain) CalcMedianTimePast(header *wire.BlockHeader) (time.Time, er
 	sort.Sort(timeSorter(timestamps))
 	medianTimestamp := timestamps[numNodes/2]
 	return time.Unix(medianTimestamp, 0), nil
-	return time.Now(), nil
 }
 
 func (b *Blockchain) GetEpoch() (*wire.BlockHeader, error) {
