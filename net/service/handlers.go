@@ -949,7 +949,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Send notification to websocket
-	n := notifications.CompletionNotification{notifications.NewID(), "orderComplete", rc.BuyerOrderCompletion.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerID, buyerHandle}
+	n := notifications.CompletionNotification{notifications.NewID(), "orderComplete", rc.BuyerOrderCompletion.OrderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, buyerHandle, buyerID}
 	service.broadcast <- n
 	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
 	log.Debugf("Received ORDER_COMPLETION message from %s", p.Pretty())

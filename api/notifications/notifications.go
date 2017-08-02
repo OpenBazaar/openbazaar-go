@@ -1,11 +1,11 @@
 package notifications
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"time"
-	"crypto/rand"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	"time"
 )
 
 type Notification struct {
@@ -55,7 +55,6 @@ type OrderNotification struct {
 	BuyerID     string    `json:"buyerId"`
 	BuyerHandle string    `json:"buyerHandle"`
 	Thumbnail   Thumbnail `json:"thumbnail"`
-	Timestamp   int       `json:"timestamp"`
 	OrderId     string    `json:"orderId"`
 	Slug        string    `json:"slug"`
 }
@@ -227,7 +226,7 @@ type IncomingTransaction struct {
 }
 
 func NewID() string {
-	b:= make([]byte, 32)
+	b := make([]byte, 32)
 	rand.Read(b)
 	encoded, _ := mh.Encode(b, mh.SHA2_256)
 	nId, _ := mh.Cast(encoded)
