@@ -73,16 +73,19 @@ var (
 	KEYChainTip = []byte("ChainTip")
 )
 
-func NewHeaderDB(filePath string) *HeaderDB {
+func NewHeaderDB(filePath string) (*HeaderDB, error) {
 	if !strings.Contains(filePath, ".bin") {
 		filePath = path.Join(filePath, "headers.bin")
 	}
 	h := new(HeaderDB)
-	db, _ := bolt.Open(filePath, 0644, &bolt.Options{InitialMmapSize: 5000000})
+	db, err := bolt.Open(filePath, 0644, &bolt.Options{InitialMmapSize: 5000000})
+	if err != nil {
+		return nil, err
+	}
 	h.db = db
 	h.lock = new(sync.Mutex)
 	h.filePath = filePath
-	h.cache = &HeaderCache{ordered_map.NewOrderedMap(), sync.Mutex{}, CACHE_SIZE}
+	h.cache = &HeaderCache{ordered_map.NewOrderedMap(), sync.RWMutex{}, CACHE_SIZE}
 
 	db.Update(func(btx *bolt.Tx) error {
 		_, err := btx.CreateBucketIfNotExists(BKTHeaders)
@@ -361,7 +364,7 @@ func deserializeHeader(b []byte) (sh StoredHeader, err error) {
 
 type HeaderCache struct {
 	headers *ordered_map.OrderedMap
-	sync.Mutex
+	sync.RWMutex
 	cacheSize int
 }
 
@@ -384,6 +387,8 @@ func (h *HeaderCache) Set(sh StoredHeader) {
 }
 
 func (h *HeaderCache) Get(hash chainhash.Hash) (StoredHeader, error) {
+	h.RLock()
+	defer h.RUnlock()
 	sh, ok := h.headers.Get(hash.String())
 	if !ok {
 		return StoredHeader{}, errors.New("Not found")

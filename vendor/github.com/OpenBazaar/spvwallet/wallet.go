@@ -24,6 +24,8 @@ type SPVWallet struct {
 	masterPrivateKey *hd.ExtendedKey
 	masterPublicKey  *hd.ExtendedKey
 
+	mnemonic string
+
 	feeProvider *FeeProvider
 
 	repoPath string
@@ -64,6 +66,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 			return nil, err
 		}
 		config.Mnemonic = mnemonic
+		config.CreationDate = time.Now()
 	}
 	seed := b39.NewSeed(config.Mnemonic, "")
 
@@ -79,6 +82,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
+		mnemonic:         config.Mnemonic,
 		params:           config.Params,
 		creationDate:     config.CreationDate,
 		feeProvider: NewFeeProvider(
@@ -182,6 +186,10 @@ func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
 
 func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
+}
+
+func (w *SPVWallet) Mnemonic() string {
+	return w.mnemonic
 }
 
 func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
@@ -335,6 +343,7 @@ func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 		return
 	}
 	w.blockchain = blockchain
+	w.txstore.PopulateAdrs()
 	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return
