@@ -100,7 +100,7 @@ func NewHeaderDB(filePath string) (*HeaderDB, error) {
 	})
 
 	h.initializeCache()
-	return h
+	return h, nil
 }
 
 func (h *HeaderDB) Put(sh StoredHeader, newBestHeader bool) error {
