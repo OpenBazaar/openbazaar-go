@@ -11,6 +11,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -22,6 +23,8 @@ type SPVWallet struct {
 
 	masterPrivateKey *hd.ExtendedKey
 	masterPublicKey  *hd.ExtendedKey
+
+	mnemonic string
 
 	feeProvider *FeeProvider
 
@@ -63,6 +66,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 			return nil, err
 		}
 		config.Mnemonic = mnemonic
+		config.CreationDate = time.Now()
 	}
 	seed := b39.NewSeed(config.Mnemonic, "")
 
@@ -78,6 +82,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
+		mnemonic:         config.Mnemonic,
 		params:           config.Params,
 		creationDate:     config.CreationDate,
 		feeProvider: NewFeeProvider(
@@ -181,6 +186,10 @@ func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {
 
 func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
+}
+
+func (w *SPVWallet) Mnemonic() string {
+	return w.mnemonic
 }
 
 func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
@@ -312,6 +321,10 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 	return err
 }
 
+func (w *SPVWallet) DumpHeaders(writer io.Writer) {
+	w.blockchain.db.Print(writer)
+}
+
 func (w *SPVWallet) Close() {
 	if w.running {
 		log.Info("Disconnecting from peers and shutting down")
@@ -330,6 +343,7 @@ func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 		return
 	}
 	w.blockchain = blockchain
+	w.txstore.PopulateAdrs()
 	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return

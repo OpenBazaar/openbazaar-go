@@ -13,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "d4fb2fbddd3b88f295b0b2c3acdc001b11b87c09"
+			"Rev": "4a16c7942b76a49911d58e65ea37020dbd0d2fa2"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -1666,6 +1666,10 @@
 		{
 			"ImportPath": "gx/ipfs/QmfJHywXQu98UeZtGJBQrPAR6AtmDjjbe3qjTo9piXHPnx/murmur3",
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "github.com/cevaris/ordered_map",
+			"Rev": "531fd444821a2eda0e8d1ed033ae207641e03b54"
 		}
 	]
 }
