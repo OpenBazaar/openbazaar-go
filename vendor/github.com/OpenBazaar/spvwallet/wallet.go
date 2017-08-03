@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"errors"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
@@ -206,8 +207,7 @@ func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
 	i, _ := w.txstore.Keys().GetUnused(purpose)
 	key, _ := w.keyManager.generateChildKey(purpose, uint32(i[1]))
 	addr, _ := key.Address(w.params)
-	script, _ := txscript.PayToAddrScript(btc.Address(addr))
-	w.txstore.Keys().MarkKeyAsUsed(script)
+	w.txstore.Keys().MarkKeyAsUsed(addr.ScriptAddress())
 	w.txstore.PopulateAdrs()
 	return btc.Address(addr)
 }
@@ -237,6 +237,40 @@ func (w *SPVWallet) HasKey(addr btc.Address) bool {
 		return false
 	}
 	return true
+}
+
+func (w *SPVWallet) GetKey(addr btc.Address) (*btcec.PrivateKey, error) {
+	key, err := w.keyManager.GetKeyForScript(addr.ScriptAddress())
+	if err != nil {
+		return nil, err
+	}
+	return key.ECPrivKey()
+}
+
+func (w *SPVWallet) ListAddresses() []btc.Address {
+	keys := w.keyManager.GetKeys()
+	addrs := []btc.Address{}
+	for _, k := range keys {
+		addr, err := k.Address(w.params)
+		if err != nil {
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+	return addrs
+}
+
+func (w *SPVWallet) ListKeys() []btcec.PrivateKey {
+	keys := w.keyManager.GetKeys()
+	list := []btcec.PrivateKey{}
+	for _, k := range keys {
+		priv, err := k.ECPrivKey()
+		if err != nil {
+			continue
+		}
+		list = append(list, *priv)
+	}
+	return list
 }
 
 func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {

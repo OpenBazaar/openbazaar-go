@@ -205,17 +205,16 @@ func (b *Blockchain) calcRequiredWork(header wire.BlockHeader, height int32, pre
 	return calcDiffAdjust(*epoch, prevHeader.header, b.params), nil
 }
 
-func (b *Blockchain) CalcMedianTimePast(header *wire.BlockHeader) (time.Time, error) {
-	iterNode := StoredHeader{header: *header}
-	var err error
-
+func (b *Blockchain) CalcMedianTimePast(header wire.BlockHeader) (time.Time, error) {
 	timestamps := make([]int64, medianTimeBlocks)
 	numNodes := 0
+	iterNode := StoredHeader{header: header}
+	var err error
 
 	for i := 0; i < medianTimeBlocks; i++ {
 		numNodes++
 		timestamps[i] = iterNode.header.Timestamp.Unix()
-		iterNode, err = b.db.GetHeader(header.BlockHash())
+		iterNode, err = b.db.GetPreviousHeader(iterNode.header)
 		if err != nil {
 			return time.Time{}, err
 		}
