@@ -310,6 +310,7 @@ func (h *HeaderDB) initializeCache() {
 
 func (h *HeaderDB) Close() {
 	h.lock.Lock()
+	h.db.Close()
 }
 
 /*----- header serialization ------- */
