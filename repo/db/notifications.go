@@ -68,8 +68,8 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 				args = append(args, a)
 			}
 		}
-		stm = "select serializedNotification, timestamp, read from notifications where timestamp<(select timestamp from notifications where notifID='" + offsetId + "')" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + " ;"
-		cstm = "select Count(*) from notifications where timestamp<(select timestamp from notifications where notifID='" + offsetId + "')" + filter + " order by timestamp desc;"
+		stm = "select serializedNotification, timestamp, read from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		cstm = "select Count(*) from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc;"
 	} else {
 		if len(types) > 0 {
 			filter = " where " + typeFilterClause
