@@ -2666,7 +2666,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	height := i.node.Wallet.ChainTip()
+	height, _ := i.node.Wallet.ChainTip()
 	var txs []Tx
 	passedOffset := false
 	for i := len(transactions) - 1; i >= 0; i-- {
@@ -3397,4 +3397,19 @@ func (i *jsonAPIHandler) POSTPurgeCache(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	SanitizedResponse(w, "{}")
+}
+
+func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request) {
+	height, hash := i.node.Wallet.ChainTip()
+	type status struct {
+		Height   uint32 `json:"height"`
+		BestHash string `json:"bestHash"`
+	}
+	hh := status{height, hash.String()}
+	ret, err := json.MarshalIndent(&hh, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(ret))
 }
