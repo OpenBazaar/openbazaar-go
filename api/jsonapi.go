@@ -3402,7 +3402,7 @@ func (i *jsonAPIHandler) POSTPurgeCache(w http.ResponseWriter, r *http.Request) 
 func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request) {
 	height, hash := i.node.Wallet.ChainTip()
 	type status struct {
-		Height uint32 `json:"height"`
+		Height   uint32 `json:"height"`
 		BestHash string `json:"bestHash"`
 	}
 	hh := status{height, hash.String()}
