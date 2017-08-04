@@ -21,18 +21,13 @@ func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType 
 	if err != nil {
 		return err
 	}
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	tx, _ := n.db.Begin()
-	stmt, _ := tx.Prepare("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)")
-
-	defer stmt.Close()
-	_, err = stmt.Exec(notifID, string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
+	_, err = n.db.Exec("insert into notifications(serializedNotification, type, timestamp, read) values(?,?,?,?)", string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
-	tx.Commit()
 	return nil
 }
 
