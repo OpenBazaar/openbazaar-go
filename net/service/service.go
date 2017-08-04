@@ -125,7 +125,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		// Dispatch handler
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
-			log.Debugf("handle message error: %s", err)
+			log.Debugf("%s handle message error: %s", pmes.MessageType.String(), err)
 			continue
 		}
 
