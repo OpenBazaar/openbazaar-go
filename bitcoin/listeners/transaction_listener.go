@@ -106,15 +106,20 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
 					contract.DisputeAcceptance = accept
+					buyerHandle := contract.BuyerOrder.BuyerID.BlockchainID
 
 					n := notifications.DisputeAcceptedNotification{
+						notifications.NewID(),
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						accept.ClosedBy,
+						buyerHandle,
+						accept.ClosedBy,
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n, n.Type, time.Now())
+					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -127,15 +132,24 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
 					contract.DisputeAcceptance = accept
+					vendorHandle := contract.VendorListings[0].VendorID.BlockchainID
+					var buyer string
+					if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+						buyer = contract.BuyerOrder.BuyerID.PeerID
+					}
 
 					n := notifications.DisputeAcceptedNotification{
+						notifications.NewID(),
 						"disputeAccepted",
 						orderId,
 						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						accept.ClosedBy,
+						vendorHandle,
+						buyer,
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n, n.Type, time.Now())
+					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -175,17 +189,18 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 			l.adjustInventory(contract)
 
 			n := notifications.OrderNotification{
+				notifications.NewID(),
 				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
 				contract.BuyerOrder.BuyerID.BlockchainID,
 				notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-				int(contract.BuyerOrder.Timestamp.Seconds),
 				orderId,
+				contract.VendorListings[0].Slug,
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().Put(n, n.Type, time.Now())
+			l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 		}
 	}
 
@@ -242,12 +257,13 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 			}
 		}
 		n := notifications.PaymentNotification{
+			notifications.NewID(),
 			"payment",
 			orderId,
 			uint64(funding),
 		}
 		l.broadcast <- n
-		l.db.Notifications().Put(n, n.Type, time.Now())
+		l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 	}
 
 	record := &spvwallet.TransactionRecord{

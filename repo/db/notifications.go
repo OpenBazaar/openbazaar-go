@@ -16,7 +16,7 @@ type NotficationsDB struct {
 	lock sync.RWMutex
 }
 
-func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestamp time.Time) error {
+func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error {
 	ser, err := json.Marshal(notification)
 	if err != nil {
 		return err
@@ -24,10 +24,10 @@ func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestam
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	tx, _ := n.db.Begin()
-	stmt, _ := tx.Prepare("insert into notifications(serializedNotification, type, timestamp, read) values(?,?,?,?)")
+	stmt, _ := tx.Prepare("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)")
 
 	defer stmt.Close()
-	_, err = stmt.Exec(string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
+	_, err = stmt.Exec(notifID, string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -36,7 +36,7 @@ func (n *NotficationsDB) Put(notification notif.Data, notifType string, timestam
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([]notif.Notification, int, error) {
+func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]notif.Notification, int, error) {
 	var ret []notif.Notification
 
 	n.lock.RLock()
@@ -60,7 +60,7 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 	}
 
 	var args []interface{}
-	if offsetId > 0 {
+	if offsetId != "" {
 		args = append(args, offsetId)
 		if len(types) > 0 {
 			filter = " and " + typeFilterClause
@@ -68,8 +68,8 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 				args = append(args, a)
 			}
 		}
-		stm = "select rowid, serializedNotification, timestamp, read from notifications where rowid<?" + filter + " order by rowid desc limit " + strconv.Itoa(limit) + " ;"
-		cstm = "select Count(*) from notifications where rowid<?" + filter + " order by rowid desc;"
+		stm = "select serializedNotification, timestamp, read from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		cstm = "select Count(*) from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc;"
 	} else {
 		if len(types) > 0 {
 			filter = " where " + typeFilterClause
@@ -77,7 +77,7 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 				args = append(args, a)
 			}
 		}
-		stm = "select rowid, serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
+		stm = "select serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 		cstm = "select Count(*) from notifications" + filter + " order by timestamp desc;"
 	}
 	rows, err := n.db.Query(stm, args...)
@@ -85,11 +85,10 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 		return ret, 0, err
 	}
 	for rows.Next() {
-		var notifId int
 		var data []byte
 		var timestampInt int
 		var readInt int
-		if err := rows.Scan(&notifId, &data, &timestampInt, &readInt); err != nil {
+		if err := rows.Scan(&data, &timestampInt, &readInt); err != nil {
 			fmt.Println(err)
 			continue
 		}
@@ -105,7 +104,6 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 			continue
 		}
 		n := notif.Notification{
-			ID:        notifId,
 			Data:      ni,
 			Timestamp: timestamp,
 			Read:      read,
@@ -121,14 +119,14 @@ func (n *NotficationsDB) GetAll(offsetId int, limit int, typeFilter []string) ([
 	return ret, count, nil
 }
 
-func (n *NotficationsDB) MarkAsRead(notifID int) error {
+func (n *NotficationsDB) MarkAsRead(notifID string) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	tx, err := n.db.Begin()
 	if err != nil {
 		return err
 	}
-	stmt, _ := tx.Prepare("update notifications set read=1 where rowid=?")
+	stmt, _ := tx.Prepare("update notifications set read=1 where notifID=?")
 
 	defer stmt.Close()
 	_, err = stmt.Exec(notifID)
@@ -147,10 +145,10 @@ func (n *NotficationsDB) MarkAllAsRead() error {
 	return err
 }
 
-func (n *NotficationsDB) Delete(notifID int) error {
+func (n *NotficationsDB) Delete(notifID string) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	n.db.Exec("delete from notifications where rowid=?", notifID)
+	n.db.Exec("delete from notifications where notifID=?", notifID)
 	return nil
 }
 
