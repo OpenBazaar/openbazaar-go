@@ -80,10 +80,12 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 		if err != nil {
 			log.Error(err)
 		}
-		w.blockchain.SetChainState(SYNCING)
-		w.blockchain.db.Put(*reorg, true)
-		go w.startChainDownload(p)
-		return
+		if w.blockchain.state != SYNCING {
+			w.blockchain.SetChainState(SYNCING)
+			w.blockchain.db.Put(*reorg, true)
+			go w.startChainDownload(p)
+			return
+		}
 	}
 
 	for _, txid := range txids {

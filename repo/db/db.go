@@ -298,8 +298,8 @@ func initDatabaseTables(db *sql.DB, password string) error {
 	create index index_cases on cases (timestamp);
 	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
 	create index index_chat on chat (peerID, subject, read, timestamp);
-	create table notifications (serializedNotification blob, type text, timestamp integer, read integer);
-	create index index_notifications on notifications (read, type);
+	create table notifications (notifID text primary key not null, serializedNotification blob, type text, timestamp integer, read integer);
+	create index index_notifications on notifications (read, type, timestamp);
 	create table coupons (slug text, code text, hash text);
 	create index index_coupons on coupons (slug);
 	create table moderatedstores (peerID text primary key not null);

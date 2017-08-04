@@ -194,16 +194,28 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 	var thumbnailTiny string
 	var thumbnailSmall string
+	var buyer string
 	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
+		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
+			buyer = contract.BuyerOrder.BuyerID.PeerID
+		}
 	}
 
 	// Figure out what role we have in this dispute and process it
+	var DisputerID string
+	var DisputerHandle string
+	var DisputeeID string
+	var DisputeeHandle string
 	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
 		if contract.VendorListings[0].VendorID.PeerID == peerID {
+			DisputerID = contract.VendorListings[0].VendorID.PeerID
+			DisputerHandle = contract.VendorListings[0].VendorID.BlockchainID
+			DisputeeID = contract.BuyerOrder.BuyerID.PeerID
+			DisputeeHandle = contract.BuyerOrder.BuyerID.BlockchainID
 			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, false, rc.Dispute.Claim)
 			if err != nil {
 				return err
@@ -213,6 +225,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 				return err
 			}
 		} else if contract.BuyerOrder.BuyerID.PeerID == peerID {
+			DisputerID = contract.BuyerOrder.BuyerID.PeerID
+			DisputerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			DisputeeID = contract.VendorListings[0].VendorID.PeerID
+			DisputeeHandle = contract.VendorListings[0].VendorID.BlockchainID
 			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, true, rc.Dispute.Claim)
 			if err != nil {
 				return err
@@ -228,6 +244,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			return err
 		}
 	} else if contract.VendorListings[0].VendorID.PeerID == n.IpfsNode.Identity.Pretty() { // Vendor
+		DisputerID = contract.BuyerOrder.BuyerID.PeerID
+		DisputerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+		DisputeeID = contract.VendorListings[0].VendorID.PeerID
+		DisputeeHandle = contract.VendorListings[0].VendorID.BlockchainID
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, err := n.Datastore.Sales().GetByOrderId(orderId)
 		if err != nil {
@@ -277,6 +297,11 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			return err
 		}
 	} else if contract.BuyerOrder.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() { // Buyer
+		DisputerID = contract.VendorListings[0].VendorID.PeerID
+		DisputerHandle = contract.VendorListings[0].VendorID.BlockchainID
+		DisputeeID = contract.BuyerOrder.BuyerID.PeerID
+		DisputeeHandle = contract.BuyerOrder.BuyerID.BlockchainID
+
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
 		if err != nil {
@@ -329,10 +354,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("We are not involved in this dispute")
 	}
 
-	notif := notifications.DisputeOpenNotification{"disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}}
+	notif := notifications.DisputeOpenNotification{notifications.NewID(), "disputeOpen", orderId, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle, buyer}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().Put(notif, notif.Type, time.Now())
-
+	n.Datastore.Notifications().Put(notif.ID, notif, notif.Type, time.Now())
 	return nil
 }
 

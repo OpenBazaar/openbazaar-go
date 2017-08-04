@@ -384,6 +384,12 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 
 		if timeLocked {
 			builder.AddOp(txscript.OP_1)
+			tx.Version = 2
+			locktime, err := LockTimeFromRedeemScript(redeemScript)
+			if err != nil {
+				return nil, err
+			}
+			input.Sequence = locktime
 		}
 
 		builder.AddData(redeemScript)

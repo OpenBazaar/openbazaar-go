@@ -1,13 +1,14 @@
 package notifications
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	"time"
 )
 
 type Notification struct {
-	ID        int       `json:"id"`
 	Data      Data      `json:"notification"`
 	Timestamp time.Time `json:"timestamp"`
 	Read      bool      `json:"read"`
@@ -48,97 +49,141 @@ type messageTypingWrapper struct {
 }
 
 type OrderNotification struct {
-	Type              string    `json:"type"`
-	Title             string    `json:"title"`
-	BuyerId           string    `json:"buyerId"`
-	BuyerBlockchainId string    `json:"buyerBlockchainId"`
-	Thumbnail         Thumbnail `json:"thumbnail"`
-	Timestamp         int       `json:"timestamp"`
-	OrderId           string    `json:"orderId"`
+	ID          string    `json:"notificationId"`
+	Type        string    `json:"type"`
+	Title       string    `json:"title"`
+	BuyerID     string    `json:"buyerId"`
+	BuyerHandle string    `json:"buyerHandle"`
+	Thumbnail   Thumbnail `json:"thumbnail"`
+	OrderId     string    `json:"orderId"`
+	Slug        string    `json:"slug"`
 }
 
 type PaymentNotification struct {
+	ID           string `json:"notificationId"`
 	Type         string `json:"type"`
 	OrderId      string `json:"orderId"`
 	FundingTotal uint64 `json:"fundingTotal"`
 }
 
 type OrderConfirmationNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
 }
 
 type OrderDeclinedNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
 }
 
 type OrderCancelNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID          string    `json:"notificationId"`
+	Type        string    `json:"type"`
+	OrderId     string    `json:"orderId"`
+	Thumbnail   Thumbnail `json:"thumbnail"`
+	BuyerHandle string    `json:"buyerHandle"`
+	BuyerID     string    `json:"buyerId"`
 }
 
 type RefundNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
 }
 
 type FulfillmentNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
 }
 
 type CompletionNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID          string    `json:"notificationId"`
+	Type        string    `json:"type"`
+	OrderId     string    `json:"orderId"`
+	Thumbnail   Thumbnail `json:"thumbnail"`
+	BuyerHandle string    `json:"buyerHandle"`
+	BuyerID     string    `json:"buyerId"`
 }
 
 type DisputeOpenNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID             string    `json:"notificationId"`
+	Type           string    `json:"type"`
+	OrderId        string    `json:"orderId"`
+	Thumbnail      Thumbnail `json:"thumbnail"`
+	DisputerID     string    `json:"disputerId"`
+	DisputerHandle string    `json:"disputerHandle"`
+	DisputeeID     string    `json:"disputeeId"`
+	DisputeeHandle string    `json:"disputeeHandle"`
+	Buyer          string    `json:"buyer"`
 }
 
 type DisputeUpdateNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID             string    `json:"notificationId"`
+	Type           string    `json:"type"`
+	OrderId        string    `json:"orderId"`
+	Thumbnail      Thumbnail `json:"thumbnail"`
+	DisputerID     string    `json:"disputerId"`
+	DisputerHandle string    `json:"disputerHandle"`
+	DisputeeID     string    `json:"disputeeId"`
+	DisputeeHandle string    `json:"disputeeHandle"`
+	Buyer          string    `json:"buyer"`
 }
 
 type DisputeCloseNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID               string    `json:"notificationId"`
+	Type             string    `json:"type"`
+	OrderId          string    `json:"orderId"`
+	Thumbnail        Thumbnail `json:"thumbnail"`
+	OtherPartyID     string    `json:"otherPartyId"`
+	OtherPartyHandle string    `json:"otherPartyHandle"`
+	Buyer            string    `json:"buyer"`
 }
 
 type DisputeAcceptedNotification struct {
-	Type      string    `json:"type"`
-	OrderId   string    `json:"orderId"`
-	Thumbnail Thumbnail `json:"thumbnail"`
+	ID               string    `json:"notificationId"`
+	Type             string    `json:"type"`
+	OrderId          string    `json:"orderId"`
+	Thumbnail        Thumbnail `json:"thumbnail"`
+	OherPartyID      string    `json:"otherPartyId"`
+	OtherPartyHandle string    `json:"otherPartyHandle"`
+	Buyer            string    `json:"buyer"`
 }
 
 type FollowNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type UnfollowNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type ModeratorAddNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
 
 type ModeratorRemoveNotification struct {
+	ID     string `json:"notificationId"`
 	Type   string `json:"type"`
 	PeerId string `json:"peerId"`
 }
@@ -178,6 +223,14 @@ type IncomingTransaction struct {
 	Thumbnail     string    `json:"thumbnail"`
 	Height        int32     `json:"height"`
 	CanBumpFee    bool      `json:"canBumpFee"`
+}
+
+func NewID() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	encoded, _ := mh.Encode(b, mh.SHA2_256)
+	nId, _ := mh.Cast(encoded)
+	return nId.B58String()
 }
 
 func wrap(i interface{}) interface{} {
@@ -272,13 +325,13 @@ func Describe(i interface{}) (string, string) {
 
 		n := i.(OrderNotification)
 		var buyer string
-		if n.BuyerBlockchainId != "" {
-			buyer = n.BuyerBlockchainId
+		if n.BuyerHandle != "" {
+			buyer = n.BuyerHandle
 		} else {
-			buyer = n.BuyerId
+			buyer = n.BuyerID
 		}
-		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail: %s\nTimestamp: %d"
-		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail.Small, n.Timestamp)
+		form := "You received an order \"%s\".\n\nOrder ID: %s\nBuyer: %s\nThumbnail"
+		body = fmt.Sprintf(form, n.Title, n.OrderId, buyer, n.Thumbnail.Small)
 
 	case PaymentNotification:
 		head = "Payment received"

@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"errors"
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
@@ -11,6 +12,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"io"
 	"os"
 	"path"
 	"sync"
@@ -22,6 +24,8 @@ type SPVWallet struct {
 
 	masterPrivateKey *hd.ExtendedKey
 	masterPublicKey  *hd.ExtendedKey
+
+	mnemonic string
 
 	feeProvider *FeeProvider
 
@@ -63,6 +67,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 			return nil, err
 		}
 		config.Mnemonic = mnemonic
+		config.CreationDate = time.Now()
 	}
 	seed := b39.NewSeed(config.Mnemonic, "")
 
@@ -78,6 +83,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
+		mnemonic:         config.Mnemonic,
 		params:           config.Params,
 		creationDate:     config.CreationDate,
 		feeProvider: NewFeeProvider(
@@ -183,6 +189,10 @@ func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
+func (w *SPVWallet) Mnemonic() string {
+	return w.mnemonic
+}
+
 func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
 	return w.peerManager.ConnectedPeers()
 }
@@ -197,8 +207,7 @@ func (w *SPVWallet) NewAddress(purpose KeyPurpose) btc.Address {
 	i, _ := w.txstore.Keys().GetUnused(purpose)
 	key, _ := w.keyManager.generateChildKey(purpose, uint32(i[1]))
 	addr, _ := key.Address(w.params)
-	script, _ := txscript.PayToAddrScript(btc.Address(addr))
-	w.txstore.Keys().MarkKeyAsUsed(script)
+	w.txstore.Keys().MarkKeyAsUsed(addr.ScriptAddress())
 	w.txstore.PopulateAdrs()
 	return btc.Address(addr)
 }
@@ -228,6 +237,40 @@ func (w *SPVWallet) HasKey(addr btc.Address) bool {
 		return false
 	}
 	return true
+}
+
+func (w *SPVWallet) GetKey(addr btc.Address) (*btcec.PrivateKey, error) {
+	key, err := w.keyManager.GetKeyForScript(addr.ScriptAddress())
+	if err != nil {
+		return nil, err
+	}
+	return key.ECPrivKey()
+}
+
+func (w *SPVWallet) ListAddresses() []btc.Address {
+	keys := w.keyManager.GetKeys()
+	addrs := []btc.Address{}
+	for _, k := range keys {
+		addr, err := k.Address(w.params)
+		if err != nil {
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+	return addrs
+}
+
+func (w *SPVWallet) ListKeys() []btcec.PrivateKey {
+	keys := w.keyManager.GetKeys()
+	list := []btcec.PrivateKey{}
+	for _, k := range keys {
+		priv, err := k.ECPrivKey()
+		if err != nil {
+			continue
+		}
+		list = append(list, *priv)
+	}
+	return list
 }
 
 func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
@@ -266,7 +309,7 @@ func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error
 	if txn.Height == 0 {
 		return 0, 0, nil
 	}
-	chainTip := w.ChainTip()
+	chainTip, _ := w.ChainTip()
 	return chainTip - uint32(txn.Height) + 1, uint32(txn.Height), nil
 }
 
@@ -297,9 +340,13 @@ func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
 	w.txstore.listeners = append(w.txstore.listeners, callback)
 }
 
-func (w *SPVWallet) ChainTip() uint32 {
-	height, _ := w.blockchain.db.Height()
-	return uint32(height)
+func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
+	var ch chainhash.Hash
+	sh, err := w.blockchain.db.GetBestHeader()
+	if err != nil {
+		return 0, ch
+	}
+	return sh.height, sh.header.BlockHash()
 }
 
 func (w *SPVWallet) AddWatchedScript(script []byte) error {
@@ -310,6 +357,10 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 		w.updateFilterAndSend(peer)
 	}
 	return err
+}
+
+func (w *SPVWallet) DumpHeaders(writer io.Writer) {
+	w.blockchain.db.Print(writer)
 }
 
 func (w *SPVWallet) Close() {
@@ -330,6 +381,7 @@ func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
 		return
 	}
 	w.blockchain = blockchain
+	w.txstore.PopulateAdrs()
 	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return
