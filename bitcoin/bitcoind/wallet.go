@@ -264,12 +264,17 @@ func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, 
 	return uint32(resp.Confirmations), uint32(resp.BlockIndex), nil
 }
 
-func (w *BitcoindWallet) ChainTip() uint32 {
+func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
+	var ch chainhash.Hash
 	info, err := w.rpcClient.GetInfo()
 	if err != nil {
-		return uint32(0)
+		return uint32(0), ch
 	}
-	return uint32(info.Blocks)
+	h, err := w.rpcClient.GetBestBlockHash()
+	if err != nil {
+		return uint32(0), ch
+	}
+	return uint32(info.Blocks), *h
 }
 
 func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {

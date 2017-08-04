@@ -56,8 +56,8 @@ type BitcoinWallet interface {
 	// Get info on a specific transaction
 	GetTransaction(txid chainhash.Hash) (spvwallet.Txn, error)
 
-	// Get the height of the blockchain
-	ChainTip() uint32
+	// Get the height and best hash of the blockchain
+	ChainTip() (uint32, chainhash.Hash)
 
 	// Get the current fee per byte
 	GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64

@@ -32,8 +32,9 @@ func (s *StatusUpdater) Start() {
 		select {
 		case <-t.C:
 			confirmed, unconfirmed := s.w.Balance()
+			height, _ := s.w.ChainTip()
 			u := walletUpdate{
-				Height:      s.w.ChainTip(),
+				Height:      height,
 				Unconfirmed: unconfirmed,
 				Confirmed:   confirmed,
 			}
