@@ -337,7 +337,11 @@ func (pm *PeerManager) CheckForMoreBlocks(height uint32) bool {
 // Called by connManager when it adds a new connection
 func (pm *PeerManager) getNewAddress() (net.Addr, error) {
 	if pm.trustedPeer == nil {
-		knownAddress := pm.addrManager.GetAddress().NetAddress()
+		ka := pm.addrManager.GetAddress()
+		if ka == nil {
+			return &net.TCPAddr{}, errors.New("Adder manager returned nil address")
+		}
+		knownAddress := ka.NetAddress()
 		addr := &net.TCPAddr{
 			Port: int(knownAddress.Port),
 			IP:   knownAddress.IP,
