@@ -173,6 +173,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETRating(w, r)
 	case strings.HasPrefix(path, "/ob/healthcheck"):
 		i.GETHealthCheck(w, r)
+	case strings.HasPrefix(path, "/wallet/status"):
+		i.GETWalletStatus(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}

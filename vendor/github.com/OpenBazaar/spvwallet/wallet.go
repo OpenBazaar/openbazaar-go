@@ -309,7 +309,7 @@ func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error
 	if txn.Height == 0 {
 		return 0, 0, nil
 	}
-	chainTip := w.ChainTip()
+	chainTip, _ := w.ChainTip()
 	return chainTip - uint32(txn.Height) + 1, uint32(txn.Height), nil
 }
 
@@ -340,9 +340,13 @@ func (w *SPVWallet) AddTransactionListener(callback func(TransactionCallback)) {
 	w.txstore.listeners = append(w.txstore.listeners, callback)
 }
 
-func (w *SPVWallet) ChainTip() uint32 {
-	height, _ := w.blockchain.db.Height()
-	return uint32(height)
+func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
+	var ch chainhash.Hash
+	sh, err := w.blockchain.db.GetBestHeader()
+	if err != nil {
+		return 0, ch
+	}
+	return sh.height, sh.header.BlockHash()
 }
 
 func (w *SPVWallet) AddWatchedScript(script []byte) error {
