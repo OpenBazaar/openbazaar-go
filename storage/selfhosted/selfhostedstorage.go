@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 
+	"bytes"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/commands"
 	"golang.org/x/net/proxy"
@@ -15,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"bytes"
 )
 
 type SelfHostedStorage struct {
