@@ -22,58 +22,58 @@
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/addrmgr",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/blockchain",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcec",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcjson",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/chaincfg",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/chaincfg/chainhash",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/connmgr",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/database",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/peer",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/txscript",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/wire",
-			"Comment": "BTCD_0_12_0_BETA-320-g292dbeb",
-			"Rev": "292dbebb4d830dbff4d55a8ff0c2975a74ffebcf"
+			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
+			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btclog",

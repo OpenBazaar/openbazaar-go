@@ -31,6 +31,7 @@ func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, walle
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
+	log.Notice("Received tx")
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {

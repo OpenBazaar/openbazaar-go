@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -84,6 +85,11 @@ const (
 	// DeploymentTestDummy defines the rule change deployment ID for testing
 	// purposes.
 	DeploymentTestDummy = iota
+
+	// DeploymentCSV defines the rule change deployment ID for the CSV
+	// soft-fork package. The CSV package includes the depolyment of BIPS
+	// 68, 112, and 113.
+	DeploymentCSV
 
 	// NOTE: DefinedDeployments must always come last since it is used to
 	// determine how many defined deployments there currently are.
@@ -190,6 +196,10 @@ type Params struct {
 	// Mempool parameters
 	RelayNonStdTxs bool
 
+	// Human-readable part for Bech32 encoded segwit addresses, as defined
+	// in BIP 173.
+	Bech32HRPSegwit string
+
 	// Address encoding magics
 	PubKeyHashAddrID byte // First byte of a P2PKH address
 	ScriptHashAddrID byte // First byte of a P2SH address
@@ -215,7 +225,6 @@ var MainNetParams = Params{
 		{"dnsseed.bitcoin.dashjr.org", false},
 		{"seed.bitcoinstats.com", true},
 		{"seed.bitnodes.io", false},
-		{"bitseed.xf2.org", false},
 		{"seed.bitcoin.jonasschnelli.ch", true},
 	},
 
@@ -270,10 +279,19 @@ var MainNetParams = Params{
 			StartTime:  1199145601, // January 1, 2008 UTC
 			ExpireTime: 1230767999, // December 31, 2008 UTC
 		},
+		DeploymentCSV: {
+			BitNumber:  0,
+			StartTime:  1462060800, // May 1st, 2016
+			ExpireTime: 1493596800, // May 1st, 2017
+		},
 	},
 
 	// Mempool parameters
 	RelayNonStdTxs: false,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "bc", // always bc for main net
 
 	// Address encoding magics
 	PubKeyHashAddrID: 0x00, // starts with 1
@@ -330,10 +348,19 @@ var RegressionNetParams = Params{
 			StartTime:  0,             // Always available for vote
 			ExpireTime: math.MaxInt64, // Never expires
 		},
+		DeploymentCSV: {
+			BitNumber:  0,
+			StartTime:  0,             // Always available for vote
+			ExpireTime: math.MaxInt64, // Never expires
+		},
 	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "tb", // always tb for test net
 
 	// Address encoding magics
 	PubKeyHashAddrID: 0x6f, // starts with m or n
@@ -407,10 +434,19 @@ var TestNet3Params = Params{
 			StartTime:  1199145601, // January 1, 2008 UTC
 			ExpireTime: 1230767999, // December 31, 2008 UTC
 		},
+		DeploymentCSV: {
+			BitNumber:  0,
+			StartTime:  1456790400, // March 1st, 2016
+			ExpireTime: 1493596800, // May 1st, 2017
+		},
 	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "tb", // always tb for test net
 
 	// Address encoding magics
 	PubKeyHashAddrID: 0x6f, // starts with m or n
@@ -471,10 +507,19 @@ var SimNetParams = Params{
 			StartTime:  0,             // Always available for vote
 			ExpireTime: math.MaxInt64, // Never expires
 		},
+		DeploymentCSV: {
+			BitNumber:  0,
+			StartTime:  0,             // Always available for vote
+			ExpireTime: math.MaxInt64, // Never expires
+		},
 	},
 
 	// Mempool parameters
 	RelayNonStdTxs: true,
+
+	// Human-readable part for Bech32 encoded segwit addresses, as defined in
+	// BIP 173.
+	Bech32HRPSegwit: "sb", // always sb for sim net
 
 	// Address encoding magics
 	PubKeyHashAddrID: 0x3f, // starts with S
@@ -503,10 +548,11 @@ var (
 )
 
 var (
-	registeredNets    = make(map[wire.BitcoinNet]struct{})
-	pubKeyHashAddrIDs = make(map[byte]struct{})
-	scriptHashAddrIDs = make(map[byte]struct{})
-	hdPrivToPubKeyIDs = make(map[[4]byte][]byte)
+	registeredNets       = make(map[wire.BitcoinNet]struct{})
+	pubKeyHashAddrIDs    = make(map[byte]struct{})
+	scriptHashAddrIDs    = make(map[byte]struct{})
+	bech32SegwitPrefixes = make(map[string]struct{})
+	hdPrivToPubKeyIDs    = make(map[[4]byte][]byte)
 )
 
 // String returns the hostname of the DNS seed in human-readable form.
@@ -531,6 +577,10 @@ func Register(params *Params) error {
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
 	hdPrivToPubKeyIDs[params.HDPrivateKeyID] = params.HDPublicKeyID[:]
+
+	// A valid Bech32 encoded segwit address always has as prefix the
+	// human-readable part for the given net followed by '1'.
+	bech32SegwitPrefixes[params.Bech32HRPSegwit+"1"] = struct{}{}
 	return nil
 }
 
@@ -561,6 +611,15 @@ func IsPubKeyHashAddrID(id byte) bool {
 // undeterminable (if both return true).
 func IsScriptHashAddrID(id byte) bool {
 	_, ok := scriptHashAddrIDs[id]
+	return ok
+}
+
+// IsBech32SegwitPrefix returns whether the prefix is a known prefix for segwit
+// addresses on any default or registered network.  This is used when decoding
+// an address string into a specific address type.
+func IsBech32SegwitPrefix(prefix string) bool {
+	prefix = strings.ToLower(prefix)
+	_, ok := bech32SegwitPrefixes[prefix]
 	return ok
 }
 

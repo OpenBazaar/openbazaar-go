@@ -167,23 +167,23 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "DECLINED":
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to save as declined")
+            raise TestFailure("RejectModeratedOffline - FAIL: Alice failed to save as declined")
         if len(resp["paymentAddressTransactions"]) != 2:
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Alice failed to detect outgoing payment")
+            raise TestFailure("RejectModeratedOffline - FAIL: Alice failed to detect outgoing payment")
 
         # bob check order rejected correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("RejectModeratedOffline - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "DECLINED":
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to save as declined")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to save as declined")
         if len(resp["paymentAddressTransactions"]) != 2:
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to detect outgoing payment")
+            raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to detect outgoing payment")
 
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"
@@ -193,9 +193,9 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed <= 50 - payment_amount:
-                raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Bob failed to receive the multisig payout")
+                raise TestFailure("RejectModeratedOffline - FAIL: Bob failed to receive the multisig payout")
         else:
-            raise TestFailure("PurchaseDirectOfflineRejectTest - FAIL: Failed to query Bob's balance")
+            raise TestFailure("RejectModeratedOffline - FAIL: Failed to query Bob's balance")
 
         print("RejectModeratedOffline - PASS")
 
