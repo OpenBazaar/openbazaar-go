@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"bytes"
+	"errors"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -240,7 +241,8 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
 			if bytes.Equal(txout.PkScript, script) { // new utxo found
-				ts.keyManager.MarkKeyAsUsed(txout.PkScript)
+				scriptAddress, _ := ts.extractScriptAddress(txout.PkScript)
+				ts.keyManager.MarkKeyAsUsed(scriptAddress)
 				newop := wire.OutPoint{
 					Hash:  cachedSha,
 					Index: uint32(i),
@@ -434,6 +436,17 @@ func (ts *TxStore) processReorg(lastGoodHeight uint32) error {
 		}
 	}
 	return nil
+}
+
+func (ts *TxStore) extractScriptAddress(script []byte) ([]byte, error) {
+	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, ts.params)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("unknown script")
+	}
+	return addrs[0].ScriptAddress(), nil
 }
 
 func outPointsEqual(a, b wire.OutPoint) bool {
