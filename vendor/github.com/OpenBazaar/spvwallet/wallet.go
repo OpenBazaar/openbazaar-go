@@ -118,6 +118,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		OnInv:         w.onInv,
 		OnTx:          w.onTx,
 		OnGetData:     w.onGetData,
+		OnReject:      w.onReject,
 	}
 
 	getNewestBlock := func() (*chainhash.Hash, int32, error) {

@@ -139,10 +139,6 @@
 			"Rev": "cfe8b59e565c1a5bd4e2005d77cd9aa8b2e14524"
 		},
 		{
-			"ImportPath": "github.com/btcsuite/golangcrypto/ripemd160",
-			"Rev": "53f62d9b43e87a6c56975cf862af7edf33a8d0df"
-		},
-		{
 			"ImportPath": "github.com/btcsuite/goleveldb/leveldb/errors",
 			"Rev": "7834afc9e8cd15233b6c3d97e12674a31ca24602"
 		},
@@ -166,6 +162,10 @@
 		{
 			"ImportPath": "github.com/ccding/go-stun/stun",
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
+		},
+		{
+			"ImportPath": "github.com/cevaris/ordered_map",
+			"Rev": "531fd444821a2eda0e8d1ed033ae207641e03b54"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
@@ -1032,18 +1032,6 @@
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
 		},
 		{
-			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht",
-			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
-		},
-		{
-			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb",
-			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
-		},
-		{
-			"ImportPath": "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/providers",
-			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
-		},
-		{
 			"ImportPath": "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net",
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
 		},
@@ -1666,10 +1654,6 @@
 		{
 			"ImportPath": "gx/ipfs/QmfJHywXQu98UeZtGJBQrPAR6AtmDjjbe3qjTo9piXHPnx/murmur3",
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
-		},
-		{
-			"ImportPath": "github.com/cevaris/ordered_map",
-			"Rev": "531fd444821a2eda0e8d1ed033ae207641e03b54"
 		}
 	]
 }

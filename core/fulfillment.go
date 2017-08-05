@@ -24,7 +24,8 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		payout.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+		currentAddress := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+		payout.PayoutAddress = currentAddress.EncodeAddress()
 		payout.PayoutFeePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
 		var ins []spvwallet.TransactionInput
 		var outValue int64
@@ -40,13 +41,9 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			}
 		}
 
-		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
-		if err != nil {
-			return err
-		}
 		var output spvwallet.TransactionOutput
 
-		outputScript, err := n.Wallet.AddressToScript(refundAddress)
+		outputScript, err := n.Wallet.AddressToScript(currentAddress)
 		if err != nil {
 			return err
 		}

@@ -370,11 +370,13 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 		for _, sig := range sigs1 {
 			if int(sig.InputIndex) == i {
 				sig1 = sig.Signature
+				break
 			}
 		}
 		for _, sig := range sigs2 {
 			if int(sig.InputIndex) == i {
 				sig2 = sig.Signature
+				break
 			}
 		}
 		builder := txscript.NewScriptBuilder()
@@ -393,6 +395,7 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 		}
 		input.SignatureScript = scriptSig
 	}
+
 	// broadcast
 	if broadcast {
 		w.Broadcast(tx)
