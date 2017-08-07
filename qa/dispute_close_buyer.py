@@ -252,14 +252,17 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
             raise TestFailure("DisputeCloseBuyerTest - FAIL: ReleaseFunds POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= (generated_coins*100000000) - payment_amount:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= (generated_coins*100000000) - payment_amount:
                 raise TestFailure("DisputeCloseBuyerTest - FAIL: Bob failed to detect dispute payout")
         elif r.status_code == 404:
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Receive coins endpoint not found")

@@ -172,14 +172,17 @@ class RefundDirectTest(OpenBazaarTestFramework):
         if "refundAddressTransaction" not in resp:
             raise TestFailure("RefundDirectTest - FAIL: Bob failed to record refund payment")
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 50 - payment_amount:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 50 - payment_amount:
                 raise TestFailure("RefundDirectTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Bob's balance")

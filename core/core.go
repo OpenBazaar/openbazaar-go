@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	VERSION   = "0.7.2"
+	VERSION   = "0.7.3"
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
 
