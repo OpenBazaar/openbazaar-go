@@ -266,14 +266,17 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         else:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Unknown response")
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check alice received payout
         api_url = alice["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 0:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 0:
                 raise TestFailure("DisputeCloseSplitTest - FAIL: Alice failed to detect dispute payout")
         elif r.status_code == 404:
             raise TestFailure("DisputeCloseSplitTest - FAIL: Receive coins endpoint not found")

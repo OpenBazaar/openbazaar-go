@@ -191,14 +191,17 @@ class RefundModeratedTest(OpenBazaarTestFramework):
         if "refundAddressTransaction" not in resp or resp["refundAddressTransaction"] == {}:
             raise TestFailure("RefundModeratedTest - FAIL: Alice failed to detect refund payment")
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 50 - payment_amount:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 50 - payment_amount:
                 raise TestFailure("RefundModeratedTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RefundModeratedTest - FAIL: Failed to query Bob's balance")

@@ -139,6 +139,7 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
+        self.send_bitcoin_cmd("generate", 1)
         time.sleep(45)
 
         # check alice detected order
@@ -156,8 +157,8 @@ class CancelDirectOfflineTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 50 - payment_amount:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 50 - payment_amount:
                 raise TestFailure("CancelDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("CancelDirectOfflineTest - FAIL: Failed to query Bob's balance")

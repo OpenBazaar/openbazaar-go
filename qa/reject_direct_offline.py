@@ -158,14 +158,17 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
         if len(resp["paymentAddressTransactions"]) != 2:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to detect outgoing payment")
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check the funds moved into bob's wallet
         api_url = bob["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 50 - payment_amount:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 50 - payment_amount:
                 raise TestFailure("RejectDirectOfflineTest - FAIL: Bob failed to receive the multisig payout")
         else:
             raise TestFailure("RejectDirectOfflineTest - FAIL: Failed to query Bob's balance")

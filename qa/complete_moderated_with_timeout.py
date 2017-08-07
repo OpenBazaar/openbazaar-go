@@ -220,14 +220,17 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
         if resp["state"] != "COMPLETED":
             raise TestFailure("CompleteModeratedWithTimeout - FAIL: Bob failed to order completion")
 
+        self.send_bitcoin_cmd("generate", 1)
+        time.sleep(2)
+
         # Check the funds moved into alice's wallet
         api_url = alice["gateway_url"] + "wallet/balance"
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            unconfirmed = int(resp["unconfirmed"])
-            if confirmed + unconfirmed <= 0:
+            #unconfirmed = int(resp["unconfirmed"])
+            if confirmed <= 0:
                 raise TestFailure("RefundDirectTest - FAIL: Alice failed to receive the multisig payout")
         else:
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
