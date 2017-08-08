@@ -706,14 +706,19 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			if selectedSku == i {
 				skuExists = true
 				if sku.Surcharge != 0 {
-					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, uint64(sku.Surcharge))
+					surcharge := uint64(sku.Surcharge)
+					if sku.Surcharge < 0 {
+						surcharge = uint64(-sku.Surcharge)
+					}
+					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, surcharge)
 					if err != nil {
 						return 0, err
 					}
 					if sku.Surcharge < 0 {
-						satoshis = -satoshis
+						itemTotal -= satoshis
+					} else {
+						itemTotal += satoshis
 					}
-					itemTotal += satoshis
 				}
 				if !skuExists {
 					return 0, errors.New("Selected variant not found in listing")
