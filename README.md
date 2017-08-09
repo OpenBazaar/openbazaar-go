@@ -1,5 +1,5 @@
 # openbazaar-go
-![banner](https://i.imgur.com/RDGxXSi.png)
+![banner](https://i.imgur.com/iOnXDXK.png)
 OpenBazaar Server Daemon in Go
 
 [![Build Status](https://travis-ci.org/OpenBazaar/openbazaar-go.svg?branch=master)](https://travis-ci.org/OpenBazaar/openbazaar-go)
@@ -58,6 +58,9 @@ Usage:
 
 The start command starts the OpenBazaar-Server
 
+Application Options:
+  -v, --version                   Print the version number and exit
+
 Help Options:
   -h, --help                      Show this help message
 
@@ -69,8 +72,13 @@ Help Options:
       -l, --loglevel=             set the logging level [debug, info, notice,
                                   warning, error, critical]
       -a, --allowip=              only allow API connections from these IPs
-      -s, --stun                  use stun on µTP IPv4 [deprecated for now]
+      -s, --stun                  use stun on µTP IPv4
       -d, --datadir=              specify the data directory to be used
+      -c, --authcookie=           turn on API authentication and use this
+                                  specific cookie
+      -u, --useragent=            add a custom user-agent field
+          --torpassword=          Set the tor control password. This will
+                                  override the tor password in the config.
           --tor                   Automatically configure the daemon to run as
                                   a Tor hidden service and use Tor exclusively.
                                   Requires Tor to be running.
@@ -83,16 +91,11 @@ Help Options:
                                   api queries
           --storage=              set the outgoing message storage option
                                   [self-hosted, dropbox] default=self-hosted
-
 ```
 
 ## Documentation
 
 When ready we will put up a full documentation of the OpenBazaar protocol and the JSON API at https://docs.openbazaar.org
-
-## TODO
-
-The server is currently under heavy development. Most of the underlying networking is complete and what remains is to build out the order/purchase flow. We expect to have a development release which will be capable of browsing the network in a few weeks.
 
 ## Contributing
 
