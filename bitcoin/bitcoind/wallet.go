@@ -43,6 +43,8 @@ type BitcoindWallet struct {
 	binary           string
 	controlPort      int
 	useTor           bool
+	started          bool
+	scriptsToAdd     [][]byte
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -113,7 +115,7 @@ func (w *BitcoindWallet) Start() {
 	go startNotificationListener(client, w.listeners)
 
 	cmd := exec.Command(w.binary, args...)
-	cmd.Start()
+	go cmd.Start()
 	ticker := time.NewTicker(time.Second * 30)
 	go func() {
 		for range ticker.C {
@@ -129,6 +131,14 @@ func (w *BitcoindWallet) Start() {
 	}
 	ticker.Stop()
 	log.Info("Connected to bitcoind")
+	w.started = true
+	go w.addScripts()
+}
+
+func (w *BitcoindWallet) addScripts() {
+	for _, script := range w.scriptsToAdd {
+		w.AddWatchedScript(script)
+	}
 }
 
 // If bitcoind is already running let's shut it down so we restart it with our options
@@ -213,6 +223,14 @@ func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
+func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
+	blockinfo, err := w.rpcClient.GetBlockHeaderVerbose(hash)
+	if err != nil {
+		return 0, err
+	}
+	return blockinfo.Height, nil
+}
+
 func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 	var ret []spvwallet.Txn
 	resp, err := w.rpcClient.ListTransactions(Account)
@@ -226,8 +244,15 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 		}
 		ts := time.Unix(r.TimeReceived, 0)
 		height := int32(0)
-		if r.BlockIndex != nil {
-			height = int32(*r.BlockIndex)
+		if r.Confirmations > 0 {
+			h, err := chainhash.NewHashFromStr(r.BlockHash)
+			if err != nil {
+				return ret, err
+			}
+			height, err = w.GetBlockHeight(h)
+			if err != nil {
+				return ret, err
+			}
 		}
 		t := spvwallet.Txn{
 			Txid:      r.TxID,
@@ -378,7 +403,7 @@ func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []sp
 
 func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error) {
 	var sigs []spvwallet.Signature
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := new(wire.MsgTx)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -428,7 +453,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 }
 
 func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	tx := wire.NewMsgTx(wire.TxVersion)
+	tx := new(wire.MsgTx)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -473,11 +498,13 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		for _, sig := range sigs1 {
 			if int(sig.InputIndex) == i {
 				sig1 = sig.Signature
+				break
 			}
 		}
 		for _, sig := range sigs2 {
 			if int(sig.InputIndex) == i {
 				sig2 = sig.Signature
+				break
 			}
 		}
 		builder := txscript.NewScriptBuilder()
@@ -487,12 +514,6 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 
 		if timeLocked {
 			builder.AddOp(txscript.OP_1)
-			tx.Version = 2
-			locktime, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
-			if err != nil {
-				return nil, err
-			}
-			input.Sequence = locktime
 		}
 
 		builder.AddData(redeemScript)
@@ -503,7 +524,7 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		input.SignatureScript = scriptSig
 	}
 
-	// Broadcast
+	// broadcast
 	if broadcast {
 		_, err := w.rpcClient.SendRawTransaction(tx, false)
 		if err != nil {
@@ -549,19 +570,8 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 	estimatedSize := spvwallet.EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
-	b := json.RawMessage([]byte(`1`))
-	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{b})
-	if err != nil {
-		return nil, err
-	}
-	feePerKb, err := strconv.Atoi(string(resp))
-	if err != nil {
-		return nil, err
-	}
-	if feePerKb <= 0 {
-		feePerKb = 50000
-	}
-	fee := estimatedSize * (feePerKb / 1000)
+	feePerByte := int(w.GetFeePerByte(feeLevel))
+	fee := estimatedSize * feePerByte
 
 	outVal := val - int64(fee)
 	if outVal < 0 {
@@ -580,16 +590,22 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 	txsort.InPlaceSort(tx)
 
 	// Sign tx
+	privKey, err := key.ECPrivKey()
+	if err != nil {
+		return nil, err
+	}
+	pk := privKey.PubKey().SerializeCompressed()
+	addressPub, err := btc.NewAddressPubKey(pk, w.params)
+
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
-		privKey, err := key.ECPrivKey()
-		if err != nil {
-			return nil, false, err
+		if addressPub.EncodeAddress() == addr.EncodeAddress() {
+			wif, err := btc.NewWIF(privKey, w.params, true)
+			if err != nil {
+				return nil, false, err
+			}
+			return wif.PrivKey, wif.CompressPubKey, nil
 		}
-		wif, err := btc.NewWIF(privKey, w.params, true)
-		if err != nil {
-			return nil, false, err
-		}
-		return wif.PrivKey, wif.CompressPubKey, nil
+		return nil, false, errors.New("Not found")
 	})
 	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
 		if redeemScript == nil {
@@ -600,9 +616,11 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 
 	// Check if time locked
 	var timeLocked bool
-	rs := *redeemScript
-	if redeemScript != nil && rs[0] == txscript.OP_IF {
-		timeLocked = true
+	if redeemScript != nil {
+		rs := *redeemScript
+		if rs[0] == txscript.OP_IF {
+			timeLocked = true
+		}
 	}
 
 	for i, txIn := range tx.TxIn {
@@ -639,7 +657,7 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 		}
 	}
 
-	// Broadcast
+	// broadcast
 	_, err = w.rpcClient.SendRawTransaction(tx, false)
 	if err != nil {
 		return nil, err
@@ -719,6 +737,10 @@ func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 }
 
 func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
+	if !w.started {
+		w.scriptsToAdd = append(w.scriptsToAdd, script)
+		return nil
+	}
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err

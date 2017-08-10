@@ -52,6 +52,21 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		in.Value = prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].Value
 		inputs = append(inputs, in)
 	}
+
+	height := int32(0)
+	if txInfo.Confirmations > 0 {
+		h, err := chainhash.NewHashFromStr(txInfo.BlockHash)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		blockinfo, err := l.client.GetBlockHeaderVerbose(h)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		height = blockinfo.Height
+	}
 	cb := spvwallet.TransactionCallback{
 		Txid:      tx.Hash().CloneBytes(),
 		Inputs:    inputs,
@@ -59,7 +74,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		WatchOnly: watchOnly,
 		Value:     int64(txInfo.Amount * 100000000),
 		Timestamp: time.Unix(txInfo.TimeReceived, 0),
-		Height:    int32(txInfo.BlockIndex),
+		Height:    height,
 	}
 	for _, lis := range l.listeners {
 		lis(cb)
