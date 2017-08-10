@@ -29,7 +29,7 @@ func init() {
 	listing.Item = item
 	vendorID := new(pb.ID)
 	vendorID.PeerID = "vendor id"
-	vendorID.BlockchainID = "@testvendor"
+	vendorID.Handle = "@testvendor"
 	listing.VendorID = vendorID
 	image := new(pb.Listing_Item_Image)
 	image.Tiny = "test image hash"
@@ -38,7 +38,7 @@ func init() {
 	order := new(pb.Order)
 	buyerID := new(pb.ID)
 	buyerID.PeerID = "buyer id"
-	buyerID.BlockchainID = "@testbuyer"
+	buyerID.Handle = "@testbuyer"
 	order.BuyerID = buyerID
 	shipping := new(pb.Order_Shipping)
 	shipping.Address = "1234 test ave."
@@ -73,7 +73,7 @@ func TestPutPurchase(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := purdb.db.Prepare("select orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress from purchases where orderID=?")
+	stmt, _ := purdb.db.Prepare("select orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress from purchases where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -84,11 +84,11 @@ func TestPutPurchase(t *testing.T) {
 	var total int
 	var thumbnail string
 	var vendorID string
-	var vendorBlockchainID string
+	var vendorHandle string
 	var title string
 	var shippingName string
 	var shippingAddress string
-	err = stmt.QueryRow("orderID").Scan(&orderID, &c, &state, &read, &date, &total, &thumbnail, &vendorID, &vendorBlockchainID, &title, &shippingName, &shippingAddress)
+	err = stmt.QueryRow("orderID").Scan(&orderID, &c, &state, &read, &date, &total, &thumbnail, &vendorID, &vendorHandle, &title, &shippingName, &shippingAddress)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,8 +113,8 @@ func TestPutPurchase(t *testing.T) {
 	if vendorID != contract.VendorListings[0].VendorID.PeerID {
 		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.PeerID, vendorID)
 	}
-	if vendorBlockchainID != contract.VendorListings[0].VendorID.BlockchainID {
-		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.BlockchainID, vendorBlockchainID)
+	if vendorHandle != contract.VendorListings[0].VendorID.Handle {
+		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].VendorID.Handle, vendorHandle)
 	}
 	if title != contract.VendorListings[0].Item.Title {
 		t.Errorf(`Expected %s got %s`, contract.VendorListings[0].Item.Title, title)

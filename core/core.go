@@ -75,7 +75,7 @@ type OpenBazaarNode struct {
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher
 
-	// Used to resolve blockchainIDs to OpenBazaar IDs
+	// Used to resolve handles to OpenBazaar IDs
 	Resolver *bstk.BlockstackClient
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
