@@ -745,7 +745,7 @@ func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
 	if err != nil {
 		return err
 	}
-	return w.rpcClient.ImportAddress(addrs[0].EncodeAddress())
+	return w.rpcClient.ImportAddressRescan(addrs[0].EncodeAddress(), false)
 }
 
 func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
