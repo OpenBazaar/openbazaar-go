@@ -294,6 +294,8 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 		q := int(item.Quantity)
 		newCount := c - q
 		if c < 0 {
+			newCount = -1
+		} else if newCount < 0 {
 			newCount = 0
 		}
 		if (c == 0) || (c > 0 && c-q < 0) {
