@@ -73,8 +73,8 @@ type listingData struct {
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
-		l := TitleMaxCharacters
-		if len(title) < TitleMaxCharacters {
+		l := TitleMaxCharacters - 5
+		if len(title) < TitleMaxCharacters - 5{
 			l = len(title)
 		}
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
