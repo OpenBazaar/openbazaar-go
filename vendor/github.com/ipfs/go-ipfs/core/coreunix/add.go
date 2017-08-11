@@ -27,7 +27,6 @@ import (
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	syncds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/sync"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
 	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	node "gx/ipfs/Qmb3Hm9QDFmfYuET4pu7Kyg8JV78jFa1nvZx5vnCZsK4ck/go-ipld-format"
 )
@@ -301,27 +300,10 @@ func Add(n *core.IpfsNode, r io.Reader) (string, error) {
 func AddWithContext(ctx context.Context, n *core.IpfsNode, r io.Reader) (string, error) {
 	defer n.Blockstore.PinLock().Unlock()
 
-	prefix, err := dag.PrefixForCidVersion(1)
-	if err != nil {
-		return "", err
-	}
-	prefix.MhType = mh.SHA2_256
-	prefix.MhLength = -1
-
 	fileAdder, err := NewAdder(n.Context(), n.Pinning, n.Blockstore, n.DAG)
 	if err != nil {
 		return "", err
 	}
-	fileAdder.Chunker = ""
-	fileAdder.Progress = true
-	fileAdder.Pin = true
-	fileAdder.Silent = false
-	fileAdder.Hidden = false
-	fileAdder.Prefix = &prefix
-	fileAdder.RawLeaves = true
-	fileAdder.Trickle = false
-	fileAdder.Wrap = false
-	fileAdder.NoCopy = false
 
 	node, err := fileAdder.add(r)
 	if err != nil {
@@ -489,6 +471,7 @@ func (adder *Adder) addFile(file files.File) error {
 			reader = rdr
 		}
 	}
+
 	dagnode, err := adder.add(reader)
 	if err != nil {
 		return err

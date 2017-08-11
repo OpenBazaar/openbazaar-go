@@ -7,10 +7,13 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
+	_ "github.com/mattes/migrate/source/file"
 	"time"
+	"github.com/mattes/migrate"
 )
+
+const DefaultDatabaseVersion = 1
 
 var log = logging.MustGetLogger("db")
 
@@ -50,6 +53,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if password != "" {
 		p := "pragma key='" + password + "';"
 		conn.Exec(p)
@@ -141,6 +145,26 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		lock: l,
 	}
 
+	// Migrations
+	driver, err := WithInstance(conn, &Config{
+		MigrationsTable: DefaultMigrationsTable,
+		DatabaseName: "sqlite3",
+	})
+	if err != nil {
+		return nil, err
+	}
+	version, _, err := driver.Version()
+	if version < 0 || err != nil {
+		driver.SetVersion(DefaultDatabaseVersion, false)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://repo/db/migrations",
+		"sqlite3", driver)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	m.Up()
 	return sqliteDB, nil
 }
 

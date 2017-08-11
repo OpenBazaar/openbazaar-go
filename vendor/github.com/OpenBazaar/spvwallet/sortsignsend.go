@@ -395,7 +395,6 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 		}
 		input.SignatureScript = scriptSig
 	}
-
 	// broadcast
 	if broadcast {
 		w.Broadcast(tx)
