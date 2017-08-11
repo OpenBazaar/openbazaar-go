@@ -197,7 +197,7 @@ func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, string(out))
+	fmt.Fprint(w, string(out))
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
