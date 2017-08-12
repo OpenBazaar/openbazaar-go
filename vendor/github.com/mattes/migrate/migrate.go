@@ -739,7 +739,6 @@ func (m *Migrate) versionExists(version uint) error {
 	if os.IsExist(err) {
 		return nil
 	} else if !os.IsNotExist(err) {
-		fmt.Println("here")
 		return err
 	}
 
@@ -751,10 +750,9 @@ func (m *Migrate) versionExists(version uint) error {
 	if os.IsExist(err) {
 		return nil
 	} else if !os.IsNotExist(err) {
-		fmt.Println("here2")
 		return err
 	}
-	fmt.Println("here3")
+
 	return os.ErrNotExist
 }
 

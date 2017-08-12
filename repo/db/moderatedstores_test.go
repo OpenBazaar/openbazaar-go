@@ -10,7 +10,7 @@ var modDB ModeratedDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	modDB = ModeratedDB{
 		db: conn,
 	}

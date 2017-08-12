@@ -17,7 +17,7 @@ var saldb SalesDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	saldb = SalesDB{
 		db: conn,
 	}

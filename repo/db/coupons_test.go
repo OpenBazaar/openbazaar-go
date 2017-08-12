@@ -10,7 +10,7 @@ var coup CouponDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	coup = CouponDB{
 		db: conn,
 	}

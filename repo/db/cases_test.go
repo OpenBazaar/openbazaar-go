@@ -19,7 +19,7 @@ var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	casesdb = CasesDB{
 		db: conn,
 	}

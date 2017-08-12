@@ -11,7 +11,7 @@ var wsdb WatchedScriptsDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	wsdb = WatchedScriptsDB{
 		db: conn,
 	}

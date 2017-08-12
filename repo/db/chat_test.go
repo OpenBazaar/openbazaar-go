@@ -14,7 +14,7 @@ func init() {
 
 func setupDB() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	chdb = ChatDB{
 		db: conn,
 	}

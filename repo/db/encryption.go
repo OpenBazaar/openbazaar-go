@@ -100,7 +100,6 @@ func Encrypt() error {
 	tmpPath := path.Join(repoPath, "tmp")
 	sqlliteDB, err := Create(repoPath, "", testnet)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	if sqlliteDB.Config().IsEncrypted() {
@@ -112,13 +111,11 @@ func Encrypt() error {
 	}
 	tmpDB, err := Create(tmpPath, pw, testnet)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
-	initDatabaseTables(tmpDB.db, pw)
+	decryptDatabase(tmpDB.db, pw)
 	if err := sqlliteDB.Copy(path.Join(tmpPath, "datastore", filename), pw); err != nil {
-		fmt.Println(err)
 		return err
 	}
 	err = os.Rename(path.Join(tmpPath, "datastore", filename), path.Join(repoPath, "datastore", filename))
@@ -202,7 +199,7 @@ func Decrypt() error {
 		fmt.Println(err)
 		return err
 	}
-	initDatabaseTables(tmpDB.db, "")
+	decryptDatabase(tmpDB.db, "")
 	if err := sqlliteDB.Copy(path.Join(repoPath, "tmp", "datastore", filename), ""); err != nil {
 		fmt.Println(err)
 		return err

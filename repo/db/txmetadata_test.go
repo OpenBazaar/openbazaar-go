@@ -11,7 +11,7 @@ var m repo.Metadata
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	metDB = TxMetadataDB{
 		db: conn,
 	}
