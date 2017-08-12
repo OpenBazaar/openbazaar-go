@@ -1,8 +1,8 @@
 package flatfs
 
 import (
-	"os"
 	"io"
+	"os"
 )
 
 // From: http://stackoverflow.com/questions/30697324/how-to-check-if-directory-on-path-is-empty

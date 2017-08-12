@@ -1,11 +1,11 @@
 package db
 
 import (
+	"database/sql"
 	"os"
 	"path"
 	"testing"
 	"time"
-	"database/sql"
 )
 
 var testDB *SQLiteDatastore
@@ -22,8 +22,8 @@ func setup() {
 	conn, _ := sql.Open("sqlite3", path.Join("./", "datastore", "mainnet.db"))
 	initDatabase(conn, "file://migrations")
 	testDB = &SQLiteDatastore{
-		db: conn,
-		config: &ConfigDB{db:conn},
+		db:     conn,
+		config: &ConfigDB{db: conn},
 	}
 	testDB.config.Init("Mnemonic Passphrase", []byte("Private Key"), "LetMeIn", time.Now())
 }

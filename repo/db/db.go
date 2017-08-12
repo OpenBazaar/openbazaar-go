@@ -7,10 +7,10 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	"github.com/op/go-logging"
-	_ "github.com/mattes/migrate/source/file"
-	"time"
 	"github.com/mattes/migrate"
+	_ "github.com/mattes/migrate/source/file"
+	"github.com/op/go-logging"
+	"time"
 )
 
 var log = logging.MustGetLogger("db")
@@ -153,7 +153,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 func initDatabase(db *sql.DB, migrationsPath string) error {
 	driver, err := WithInstance(db, &Config{
 		MigrationsTable: DefaultMigrationsTable,
-		DatabaseName: "sqlite3",
+		DatabaseName:    "sqlite3",
 	})
 	if err != nil {
 		return err
