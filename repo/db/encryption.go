@@ -98,7 +98,7 @@ func Encrypt() error {
 	}
 	pw = strings.Replace(pw, "'", "''", -1)
 	tmpPath := path.Join(repoPath, "tmp")
-	sqlliteDB, err := Create(repoPath, "", testnet)
+	sqlliteDB, err := Create(repoPath, "", testnet, "file://repo/db/migrations")
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func Encrypt() error {
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {
 		return err
 	}
-	tmpDB, err := Create(tmpPath, pw, testnet)
+	tmpDB, err := Create(tmpPath, pw, testnet, "file://repo/db/migrations")
 	if err != nil {
 		return err
 	}
@@ -186,7 +186,7 @@ func Decrypt() error {
 	fmt.Println("")
 	pw := string(bytePassword)
 	pw = strings.Replace(pw, "'", "''", -1)
-	sqlliteDB, err := Create(repoPath, pw, testnet)
+	sqlliteDB, err := Create(repoPath, pw, testnet, "file://repo/db/migrations")
 	if err != nil || sqlliteDB.Config().IsEncrypted() {
 		fmt.Println("Invalid password")
 		return err
@@ -194,7 +194,7 @@ func Decrypt() error {
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {
 		return err
 	}
-	tmpDB, err := Create(path.Join(repoPath, "tmp"), "", testnet)
+	tmpDB, err := Create(path.Join(repoPath, "tmp"), "", testnet, "file://repo/db/migrations")
 	if err != nil {
 		fmt.Println(err)
 		return err

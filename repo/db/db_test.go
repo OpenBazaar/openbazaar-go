@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"os"
 	"path"
 	"testing"
@@ -19,12 +18,7 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	os.MkdirAll(path.Join("./", "datastore"), os.ModePerm)
-	conn, _ := sql.Open("sqlite3", path.Join("./", "datastore", "mainnet.db"))
-	initDatabase(conn, "file://migrations")
-	testDB = &SQLiteDatastore{
-		db:     conn,
-		config: &ConfigDB{db: conn},
-	}
+	testDB, _ = Create("./", "", true, "file://migrations")
 	testDB.config.Init("Mnemonic Passphrase", []byte("Private Key"), "LetMeIn", time.Now())
 }
 
@@ -33,7 +27,7 @@ func teardown() {
 }
 
 func TestCreate(t *testing.T) {
-	if _, err := os.Stat(path.Join("./", "datastore", "mainnet.db")); os.IsNotExist(err) {
+	if _, err := os.Stat(path.Join("./", "datastore", "testnet.db")); os.IsNotExist(err) {
 		t.Error("Failed to create database file")
 	}
 }

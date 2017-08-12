@@ -40,7 +40,7 @@ type SQLiteDatastore struct {
 	lock            sync.RWMutex
 }
 
-func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
+func Create(repoPath, password string, testnet bool, migrationsPath string) (*SQLiteDatastore, error) {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -144,7 +144,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	}
 
 	// Migrations
-	if err = initDatabase(conn, "file://repo/db/migrations"); err != nil {
+	if err = initDatabase(conn, migrationsPath); err != nil {
 		return nil, err
 	}
 	return sqliteDB, nil
@@ -165,7 +165,11 @@ func initDatabase(db *sql.DB, migrationsPath string) error {
 		log.Error(err)
 		return err
 	}
-	return m.Up()
+	err = m.Up()
+	if err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
 func (d *SQLiteDatastore) Ping() error {

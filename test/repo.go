@@ -4,6 +4,7 @@ import (
 	"os"
 	"path"
 
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"time"
@@ -25,9 +26,11 @@ func NewRepository() (*Repository, error) {
 	}
 
 	// Create database
+	os.MkdirAll(path.Join(r.Path, "datastore"), os.ModePerm)
 	var err error
-	r.DB, err = db.Create(r.Path, "", true)
+	r.DB, err = db.Create(r.Path, "", true, "file://../repo/db/migrations")
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 
