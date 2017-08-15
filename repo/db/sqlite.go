@@ -22,6 +22,7 @@ var (
 	ErrDatabaseDirty  = fmt.Errorf("database is dirty")
 	ErrNilConfig      = fmt.Errorf("no config")
 	ErrNoDatabaseName = fmt.Errorf("no database name")
+	ErrNotInitialized = fmt.Errorf("database not initialized")
 )
 
 type Config struct {
@@ -42,7 +43,7 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 	}
 
 	if err := instance.Ping(); err != nil {
-		return nil, err
+		return nil, ErrNotInitialized
 	}
 	if len(config.MigrationsTable) == 0 {
 		config.MigrationsTable = DefaultMigrationsTable

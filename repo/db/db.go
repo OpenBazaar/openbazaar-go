@@ -37,8 +37,11 @@ type SQLiteDatastore struct {
 	txMetadata      repo.TxMetadata
 	moderatedStores repo.ModeratedStores
 	db              *sql.DB
+	migrationsPath  string
 	lock            sync.RWMutex
 }
+
+var MigrationsPath string
 
 func Create(repoPath, password string, testnet bool, migrationsPath string) (*SQLiteDatastore, error) {
 	var dbPath string
@@ -56,6 +59,7 @@ func Create(repoPath, password string, testnet bool, migrationsPath string) (*SQ
 		p := "pragma key='" + password + "';"
 		conn.Exec(p)
 	}
+	MigrationsPath = migrationsPath
 	var l sync.RWMutex
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
@@ -144,7 +148,7 @@ func Create(repoPath, password string, testnet bool, migrationsPath string) (*SQ
 	}
 
 	// Migrations
-	if err = initDatabase(conn, migrationsPath); err != nil {
+	if err = initDatabase(conn, migrationsPath); err != nil && err != ErrNotInitialized {
 		return nil, err
 	}
 	return sqliteDB, nil
@@ -325,6 +329,12 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, cr
 	if err := decryptDatabase(c.db, password); err != nil {
 		return err
 	}
+
+	// Migrations
+	if err := initDatabase(c.db, MigrationsPath); err != nil {
+		return err
+	}
+
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err
