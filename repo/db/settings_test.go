@@ -12,7 +12,7 @@ var settings repo.SettingsData
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	sdb = SettingsDB{
 		db: conn,
 	}

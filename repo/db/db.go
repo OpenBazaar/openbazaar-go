@@ -7,7 +7,8 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
-	_ "github.com/mutecomm/go-sqlcipher"
+	"github.com/mattes/migrate"
+	_ "github.com/mattes/migrate/source/file"
 	"github.com/op/go-logging"
 	"time"
 )
@@ -36,10 +37,13 @@ type SQLiteDatastore struct {
 	txMetadata      repo.TxMetadata
 	moderatedStores repo.ModeratedStores
 	db              *sql.DB
+	migrationsPath  string
 	lock            sync.RWMutex
 }
 
-func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
+var MigrationsPath string
+
+func Create(repoPath, password string, testnet bool, migrationsPath string) (*SQLiteDatastore, error) {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -50,10 +54,12 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if password != "" {
 		p := "pragma key='" + password + "';"
 		conn.Exec(p)
 	}
+	MigrationsPath = migrationsPath
 	var l sync.RWMutex
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
@@ -141,7 +147,33 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		lock: l,
 	}
 
+	// Migrations
+	if err = initDatabase(conn, migrationsPath); err != nil && err != ErrNotInitialized {
+		return nil, err
+	}
 	return sqliteDB, nil
+}
+
+func initDatabase(db *sql.DB, migrationsPath string) error {
+	driver, err := WithInstance(db, &Config{
+		MigrationsTable: DefaultMigrationsTable,
+		DatabaseName:    "sqlite3",
+	})
+	if err != nil {
+		return err
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		migrationsPath,
+		"sqlite3", driver)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	err = m.Up()
+	if err != migrate.ErrNoChange {
+		return err
+	}
+	return nil
 }
 
 func (d *SQLiteDatastore) Ping() error {
@@ -253,12 +285,16 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	if password == "" {
 		cp = `attach database '` + dbPath + `' as plaintext key '';`
 		for _, name := range tables {
-			cp = cp + "insert into plaintext." + name + " select * from main." + name + ";"
+			if name != "schema_migrations" {
+				cp = cp + "insert into plaintext." + name + " select * from main." + name + ";"
+			}
 		}
 	} else {
 		cp = `attach database '` + dbPath + `' as encrypted key '` + password + `';`
 		for _, name := range tables {
-			cp = cp + "insert into encrypted." + name + " select * from main." + name + ";"
+			if name != "schema_migrations" {
+				cp = cp + "insert into encrypted." + name + " select * from main." + name + ";"
+			}
 		}
 	}
 
@@ -270,43 +306,13 @@ func (d *SQLiteDatastore) Copy(dbPath string, password string) error {
 	return nil
 }
 
-func initDatabaseTables(db *sql.DB, password string) error {
-	var sqlStmt string
+func decryptDatabase(db *sql.DB, password string) error {
 	if password != "" {
-		sqlStmt = "PRAGMA key = '" + password + "';"
-	}
-	sqlStmt += `
-	PRAGMA user_version = 0;
-	create table config (key text primary key not null, value blob);
-	create table followers (peerID text primary key not null, proof blob);
-	create table following (peerID text primary key not null);
-	create table offlinemessages (url text primary key not null, timestamp integer, message blob);
-	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
-	create table keys (scriptAddress text primary key not null, purpose integer, keyIndex integer, used integer, key text);
-	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);
-	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text);
-	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);
-	create table txmetadata (txid text primary key not null, address text, memo text, orderID text, thumbnail text, canBumpFee integer);
-	create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);
-	create index index_inventory on inventory (slug);
-	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create index index_purchases on purchases (paymentAddr, timestamp);
-	create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerBlockchainID text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create index index_sales on sales (paymentAddr, timestamp);
-	create table watchedscripts (scriptPubKey text primary key not null);
-	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);
-	create index index_cases on cases (timestamp);
-	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
-	create index index_chat on chat (peerID, subject, read, timestamp);
-	create table notifications (notifID text primary key not null, serializedNotification blob, type text, timestamp integer, read integer);
-	create index index_notifications on notifications (read, type, timestamp);
-	create table coupons (slug text, code text, hash text);
-	create index index_coupons on coupons (slug);
-	create table moderatedstores (peerID text primary key not null);
-	`
-	_, err := db.Exec(sqlStmt)
-	if err != nil {
-		return err
+		sqlStmt := "PRAGMA key = '" + password + "';"
+		_, err := db.Exec(sqlStmt)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -320,9 +326,15 @@ type ConfigDB struct {
 func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, creationDate time.Time) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if err := initDatabaseTables(c.db, password); err != nil {
+	if err := decryptDatabase(c.db, password); err != nil {
 		return err
 	}
+
+	// Migrations
+	if err := initDatabase(c.db, MigrationsPath); err != nil {
+		return err
+	}
+
 	tx, err := c.db.Begin()
 	if err != nil {
 		return err

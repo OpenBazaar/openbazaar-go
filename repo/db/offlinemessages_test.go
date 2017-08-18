@@ -10,7 +10,7 @@ var odb OfflineMessagesDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	odb = OfflineMessagesDB{
 		db: conn,
 	}

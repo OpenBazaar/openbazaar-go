@@ -16,7 +16,7 @@ var stxo spvwallet.Stxo
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	sxdb = StxoDB{
 		db: conn,
 	}

@@ -299,7 +299,7 @@ func (x *Status) Execute(args []string) error {
 		torAvailable = true
 	}
 	if fsrepo.IsInitialized(repoPath) {
-		sqliteDB, err := db.Create(repoPath, "", x.Testnet)
+		sqliteDB, err := db.Create(repoPath, "", x.Testnet, "file://repo/db/migrations")
 		if err != nil {
 			return err
 			os.Exit(1)
@@ -950,7 +950,7 @@ func (x *Start) Execute(args []string) error {
 
 func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
 	// Database
-	sqliteDB, err := db.Create(dataDir, password, testnet)
+	sqliteDB, err := db.Create(dataDir, password, testnet, "file://repo/db/migrations")
 	if err != nil {
 		return sqliteDB, err
 	}

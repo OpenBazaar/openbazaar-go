@@ -11,7 +11,7 @@ var fdb FollowerDB
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
+	initDatabase(conn, "file://migrations")
 	fdb = FollowerDB{
 		db: conn,
 	}
