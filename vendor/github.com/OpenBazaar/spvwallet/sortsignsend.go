@@ -402,7 +402,6 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 	return buf.Bytes(), nil
 }
 
-// TODO: once segwit activates this will need to build segwit transactions if the utxo script is a witness program
 func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
@@ -526,9 +525,6 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 	}
 
 	// broadcast
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-	log.Notice("***", hex.EncodeToString(buf.Bytes()))
 	w.Broadcast(tx)
 	txid := tx.TxHash()
 	return &txid, nil
