@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -27,7 +28,7 @@ func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
 		return err
 	}
 
-	// Make an inv message instead of a tx message to be polite
+	// make an inv message instead of a tx message to be polite
 	txid := tx.TxHash()
 	iv1 := wire.NewInvVect(wire.InvTypeTx, &txid)
 	invMsg := wire.NewMsgInv()
@@ -266,7 +267,10 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int,
 	if err != nil {
 		return nil, nil, err
 	}
-	addr, err = btc.NewAddressScriptHash(redeemScript, w.params)
+
+	witnessProgram := sha256.Sum256(redeemScript)
+
+	addr, err = btc.NewAddressWitnessScriptHash(witnessProgram[:], w.params)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -275,14 +279,14 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int,
 
 func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]Signature, error) {
 	var sigs []Signature
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return sigs, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
-		input := wire.NewTxIn(outpoint, []byte{})
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
@@ -313,8 +317,9 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 		return sigs, err
 	}
 
+	hashes := txscript.NewTxSigHashes(tx)
 	for i := range tx.TxIn {
-		sig, err := txscript.RawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey)
+		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, redeemScript, txscript.SigHashAll, signingKey)
 		if err != nil {
 			continue
 		}
@@ -325,14 +330,14 @@ func (w *SPVWallet) CreateMultisigSignature(ins []TransactionInput, outs []Trans
 }
 
 func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, sigs1 []Signature, sigs2 []Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return nil, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
-		input := wire.NewTxIn(outpoint, []byte{})
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
@@ -379,29 +384,21 @@ func (w *SPVWallet) Multisign(ins []TransactionInput, outs []TransactionOutput, 
 				break
 			}
 		}
-		builder := txscript.NewScriptBuilder()
-		builder.AddOp(txscript.OP_0)
-		builder.AddData(sig1)
-		builder.AddData(sig2)
+
+		witness := wire.TxWitness{[]byte{}, sig1, sig2}
 
 		if timeLocked {
-			builder.AddOp(txscript.OP_1)
+			witness = append(witness, []byte{0x01})
 		}
-
-		builder.AddData(redeemScript)
-		scriptSig, err := builder.Script()
-		if err != nil {
-			return nil, err
-		}
-		input.SignatureScript = scriptSig
+		witness = append(witness, redeemScript)
+		input.Witness = witness
 	}
-
 	// broadcast
 	if broadcast {
 		w.Broadcast(tx)
 	}
 	var buf bytes.Buffer
-	tx.BtcEncode(&buf, 1)
+	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
 	return buf.Bytes(), nil
 }
 
@@ -423,7 +420,7 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
 	for _, u := range utxos {
 		val += u.Value
-		in := wire.NewTxIn(&u.Op, []byte{})
+		in := wire.NewTxIn(&u.Op, []byte{}, [][]byte{})
 		inputs = append(inputs, in)
 		additionalPrevScripts[u.Op] = u.ScriptPubkey
 	}
@@ -493,8 +490,9 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 		}
 	}
 
+	hashes := txscript.NewTxSigHashes(tx)
 	for i, txIn := range tx.TxIn {
-		if !timeLocked {
+		if redeemScript == nil {
 			prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
 			script, err := txscript.SignTxOutput(w.params,
 				tx, i, prevOutScript, txscript.SigHashAll, getKey,
@@ -508,26 +506,29 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 			if err != nil {
 				return nil, err
 			}
-			script, err := txscript.RawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, priv)
+			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, utxos[i].Value, *redeemScript, txscript.SigHashAll, priv)
 			if err != nil {
 				return nil, err
 			}
-			builder := txscript.NewScriptBuilder().
-				AddData(script).
-				AddOp(txscript.OP_0).
-				AddData(*redeemScript)
-			scriptSig, _ := builder.Script()
-			txIn.SignatureScript = scriptSig
-			tx.Version = 2
-			locktime, err := LockTimeFromRedeemScript(*redeemScript)
-			if err != nil {
-				return nil, err
+			witness := wire.TxWitness{[]byte{}, sig}
+			if timeLocked {
+				tx.Version = 2
+				locktime, err := LockTimeFromRedeemScript(*redeemScript)
+				if err != nil {
+					return nil, err
+				}
+				txIn.Sequence = locktime
+				witness = append(txIn.Witness, []byte{})
 			}
-			txIn.Sequence = locktime
+			witness = append(witness, *redeemScript)
+			txIn.Witness = witness
 		}
 	}
 
 	// broadcast
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
+	log.Notice("***", hex.EncodeToString(buf.Bytes()))
 	w.Broadcast(tx)
 	txid := tx.TxHash()
 	return &txid, nil
@@ -561,7 +562,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel FeeLevel, o
 		for _, c := range coins.Coins() {
 			total += c.Value()
 			outpoint := wire.NewOutPoint(c.Hash(), c.Index())
-			in := wire.NewTxIn(outpoint, []byte{})
+			in := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 			in.Sequence = 0 // Opt-in RBF so we can bump fees
 			inputs = append(inputs, in)
 			additionalPrevScripts[*outpoint] = c.PkScript()

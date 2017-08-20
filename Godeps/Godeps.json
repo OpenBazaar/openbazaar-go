@@ -13,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "829571036cdbef56f48fad36a43ce659f9fdc11d"
+			"Rev": "abf82b88149f3852a0701b84e649fcd05c8d9f98"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -22,58 +22,58 @@
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/addrmgr",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/blockchain",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcec",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/btcjson",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/chaincfg",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/chaincfg/chainhash",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/connmgr",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/database",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/peer",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/txscript",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcd/wire",
-			"Comment": "BTCD_0_12_0_BETA-353-g47885ab",
-			"Rev": "47885ab8702485be6b6f87a03d4f3be0bc5c982c"
+			"Comment": "BTCD_0_12_0_BETA-563-g7e5e6b4",
+			"Rev": "7e5e6b46106fc23c49c6f51609e6975d7decc966"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btclog",
@@ -86,33 +86,33 @@
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/base58",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/bloom",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/coinset",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/hdkeychain",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcutil/txsort",
-			"Comment": "BTCUTIL_0_5_0-26-g61ec18f",
-			"Rev": "61ec18f9c8a4552c209416ce363592e35e416997"
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		},
 		{
 			"ImportPath": "github.com/btcsuite/btcwallet/internal/helpers",
@@ -1654,6 +1654,11 @@
 		{
 			"ImportPath": "gx/ipfs/QmfJHywXQu98UeZtGJBQrPAR6AtmDjjbe3qjTo9piXHPnx/murmur3",
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
+		},
+		{
+			"ImportPath": "github.com/btcsuite/btcutil/bech32",
+			"Comment": "BTCUTIL_0_5_0-32-g501929d",
+			"Rev": "501929d3d046174c3d39f0ea54ece471aa17238c"
 		}
 	]
 }

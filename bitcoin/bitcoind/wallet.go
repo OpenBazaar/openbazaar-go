@@ -410,7 +410,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 			return sigs, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
-		input := wire.NewTxIn(outpoint, []byte{})
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
@@ -460,7 +460,7 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 			return nil, err
 		}
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
-		input := wire.NewTxIn(outpoint, []byte{})
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
@@ -532,7 +532,7 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 		}
 	}
 	var buf bytes.Buffer
-	tx.BtcEncode(&buf, 1)
+	tx.BtcEncode(&buf, 1, wire.WitnessEncoding)
 	return buf.Bytes(), nil
 }
 
@@ -553,7 +553,7 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
 	for _, u := range utxos {
 		val += u.Value
-		in := wire.NewTxIn(&u.Op, []byte{})
+		in := wire.NewTxIn(&u.Op, []byte{}, [][]byte{})
 		inputs = append(inputs, in)
 		additionalPrevScripts[u.Op] = u.ScriptPubkey
 	}

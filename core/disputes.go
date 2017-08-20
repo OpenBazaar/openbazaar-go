@@ -569,6 +569,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		input := spvwallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
+			Value:         int64(o.Value),
 		}
 		inputs = append(inputs, input)
 	}
@@ -1012,6 +1013,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		input := spvwallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
+			Value:         int64(o.Value),
 		}
 		inputs = append(inputs, input)
 	}

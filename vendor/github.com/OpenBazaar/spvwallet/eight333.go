@@ -143,10 +143,6 @@ func (w *SPVWallet) onTx(p *peer.Peer, m *wire.MsgTx) {
 	log.Infof("Tx %s from Peer%d ingested at height %d", m.TxHash().String(), p.ID(), height)
 }
 
-func (w *SPVWallet) onReject(p *peer.Peer, m *wire.MsgReject) {
-	log.Warningf("Received reject message from peer %d: Code: %s, Hash %s, Reason: %s", int(p.ID()), m.Code.String(), m.Hash.String(), m.Reason)
-}
-
 func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 	go func() {
 		defer func() {
@@ -180,6 +176,10 @@ func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 	}()
 }
 
+func (w *SPVWallet) onReject(p *peer.Peer, m *wire.MsgReject) {
+	log.Warningf("Received reject message from peer %d: Code: %s, Hash %s, Reason: %s", int(p.ID()), m.Code.String(), m.Hash.String(), m.Reason)
+}
+
 func (w *SPVWallet) onGetData(p *peer.Peer, m *wire.MsgGetData) {
 	log.Debugf("Received getdata request from Peer%d\n", p.ID())
 	var sent int32
@@ -190,7 +190,7 @@ func (w *SPVWallet) onGetData(p *peer.Peer, m *wire.MsgGetData) {
 				log.Errorf("Error getting tx %s: %s", thing.Hash.String(), err.Error())
 				continue
 			}
-			p.QueueMessage(tx, nil)
+			p.QueueMessageWithEncoding(tx, nil, wire.WitnessEncoding)
 			sent++
 			continue
 		}
