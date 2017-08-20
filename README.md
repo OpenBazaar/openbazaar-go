@@ -49,7 +49,7 @@ You can either pull in remote changes as normal or run `go get -u github.com/Ope
 
 ## Usage
 
-You can run the server with `go run openbazaard.go start`
+You can run the server with `go run cli/openbazaard.go start`
 
 ### Options
 ```

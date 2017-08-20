@@ -1,0 +1,8 @@
+framework module "Openbazaar" {
+	header "ref.h"
+    header "Openbazaar.objc.h"
+    header "Universe.objc.h"
+    header "Openbazaar.h"
+
+    export *
+}

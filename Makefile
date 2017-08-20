@@ -10,6 +10,11 @@ build:
 linux_binary:
 	./build.sh linux/amd64
 
+ios_framework:
+	gomobile bind -target=ios github.com/OpenBazaar/openbazaar-go
+	rm -rf ./examples/ios-example/frameworks/Openbazaar.framework
+	mv -f Openbazaar.framework ./examples/ios-example/frameworks/
+
 ##
 ## Protobuf compilation
 ##

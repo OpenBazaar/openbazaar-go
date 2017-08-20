@@ -31,3 +31,6 @@ dist
 # Development environment files
 .ackrc
 .tags*
+
+.DS_Store
+*/xcuserdata/
