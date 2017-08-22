@@ -453,6 +453,17 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
+	// Check system file limits
+	var rLimit syscall.Rlimit
+	err = syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		return err
+	}
+	if rLimit.Max < 10000 {
+		log.Warningf(`File descriptor limit %d is too low for production servers. At least 10000 is recommended. Fix with "ulimit -n 10000"`, int(rLimit.Max))
+
+	}
+
 	// Get creation date. Ignore the error and use a default timestamp.
 	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
