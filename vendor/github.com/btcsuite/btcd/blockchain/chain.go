@@ -42,25 +42,29 @@ type orphanBlock struct {
 // However, the returned snapshot must be treated as immutable since it is
 // shared by all callers.
 type BestState struct {
-	Hash       chainhash.Hash // The hash of the block.
-	Height     int32          // The height of the block.
-	Bits       uint32         // The difficulty bits of the block.
-	BlockSize  uint64         // The size of the block.
-	NumTxns    uint64         // The number of txns in the block.
-	TotalTxns  uint64         // The total number of txns in the chain.
-	MedianTime time.Time      // Median time as per CalcPastMedianTime.
+	Hash        chainhash.Hash // The hash of the block.
+	Height      int32          // The height of the block.
+	Bits        uint32         // The difficulty bits of the block.
+	BlockSize   uint64         // The size of the block.
+	BlockWeight uint64         // The weight of the block.
+	NumTxns     uint64         // The number of txns in the block.
+	TotalTxns   uint64         // The total number of txns in the chain.
+	MedianTime  time.Time      // Median time as per CalcPastMedianTime.
 }
 
 // newBestState returns a new best stats instance for the given parameters.
-func newBestState(node *blockNode, blockSize, numTxns, totalTxns uint64, medianTime time.Time) *BestState {
+func newBestState(node *blockNode, blockSize, blockWeight, numTxns,
+	totalTxns uint64, medianTime time.Time) *BestState {
+
 	return &BestState{
-		Hash:       node.hash,
-		Height:     node.height,
-		Bits:       node.bits,
-		BlockSize:  blockSize,
-		NumTxns:    numTxns,
-		TotalTxns:  totalTxns,
-		MedianTime: medianTime,
+		Hash:        node.hash,
+		Height:      node.height,
+		Bits:        node.bits,
+		BlockSize:   blockSize,
+		BlockWeight: blockWeight,
+		NumTxns:     numTxns,
+		TotalTxns:   totalTxns,
+		MedianTime:  medianTime,
 	}
 }
 
@@ -77,9 +81,9 @@ type BlockChain struct {
 	db                  database.DB
 	chainParams         *chaincfg.Params
 	timeSource          MedianTimeSource
-	notifications       NotificationCallback
 	sigCache            *txscript.SigCache
 	indexManager        IndexManager
+	hashCache           *txscript.HashCache
 
 	// The following fields are calculated based upon the provided chain
 	// parameters.  They are also set when the instance is created and
@@ -119,8 +123,8 @@ type BlockChain struct {
 
 	// These fields are related to checkpoint handling.  They are protected
 	// by the chain lock.
-	nextCheckpoint  *chaincfg.Checkpoint
-	checkpointBlock *btcutil.Block
+	nextCheckpoint *chaincfg.Checkpoint
+	checkpointNode *blockNode
 
 	// The state is used as a fairly efficient way to cache information
 	// about the current best chain state that is returned to callers when
@@ -163,6 +167,11 @@ type BlockChain struct {
 	// being mined.
 	unknownRulesWarned    bool
 	unknownVersionsWarned bool
+
+	// The notifications field stores a slice of callbacks to be executed on
+	// certain blockchain events.
+	notificationsLock sync.RWMutex
+	notifications     []NotificationCallback
 }
 
 // DisableVerify provides a mechanism to disable transaction script validation
@@ -184,10 +193,7 @@ func (b *BlockChain) DisableVerify(disable bool) {
 //
 // This function is safe for concurrent access.
 func (b *BlockChain) HaveBlock(hash *chainhash.Hash) (bool, error) {
-	b.chainLock.RLock()
 	exists, err := b.blockExists(hash)
-	b.chainLock.RUnlock()
-
 	if err != nil {
 		return false, err
 	}
@@ -343,9 +349,7 @@ type SequenceLock struct {
 // the candidate transaction to be included in a block.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint,
-	mempool bool) (*SequenceLock, error) {
-
+func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, error) {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
@@ -356,9 +360,7 @@ func (b *BlockChain) CalcSequenceLock(tx *btcutil.Tx, utxoView *UtxoViewpoint,
 // transaction. See the exported version, CalcSequenceLock for further details.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx,
-	utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, error) {
-
+func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx, utxoView *UtxoViewpoint, mempool bool) (*SequenceLock, error) {
 	// A value of -1 for each relative lock type represents a relative time
 	// lock value that will allow a transaction to be included in a block
 	// at any given height or time. This value is returned as the relative
@@ -373,15 +375,10 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx,
 	// If we're performing block validation, then we need to query the BIP9
 	// state.
 	if !csvSoftforkActive {
-		prevNode, err := b.index.PrevNodeFromNode(node)
-		if err != nil {
-			return nil, err
-		}
-
 		// Obtain the latest BIP9 version bits state for the
 		// CSV-package soft-fork deployment. The adherence of sequence
 		// locks depends on the current soft-fork state.
-		csvState, err := b.deploymentState(prevNode, chaincfg.DeploymentCSV)
+		csvState, err := b.deploymentState(node.parent, chaincfg.DeploymentCSV)
 		if err != nil {
 			return nil, err
 		}
@@ -406,10 +403,11 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx,
 	for txInIndex, txIn := range mTx.TxIn {
 		utxo := utxoView.LookupEntry(&txIn.PreviousOutPoint.Hash)
 		if utxo == nil {
-			str := fmt.Sprintf("unable to find unspent output "+
-				"%v referenced from transaction %s:%d",
-				txIn.PreviousOutPoint, tx.Hash(), txInIndex)
-			return sequenceLock, ruleError(ErrMissingTx, str)
+			str := fmt.Sprintf("output %v referenced from "+
+				"transaction %s:%d either does not exist or "+
+				"has already been spent", txIn.PreviousOutPoint,
+				tx.Hash(), txInIndex)
+			return sequenceLock, ruleError(ErrMissingTxOut, str)
 		}
 
 		// If the input height is set to the mempool height, then we
@@ -433,26 +431,17 @@ func (b *BlockChain) calcSequenceLock(node *blockNode, tx *btcutil.Tx,
 			continue
 		case sequenceNum&wire.SequenceLockTimeIsSeconds == wire.SequenceLockTimeIsSeconds:
 			// This input requires a relative time lock expressed
-			// in seconds before it can be spent. Therefore, we
+			// in seconds before it can be spent.  Therefore, we
 			// need to query for the block prior to the one in
 			// which this input was included within so we can
 			// compute the past median time for the block prior to
 			// the one which included this referenced output.
-			// TODO: caching should be added to keep this speedy
-			inputDepth := uint32(node.height-inputHeight) + 1
-			blockNode, err := b.index.RelativeNode(node, inputDepth)
-			if err != nil {
-				return sequenceLock, err
+			prevInputHeight := inputHeight - 1
+			if prevInputHeight < 0 {
+				prevInputHeight = 0
 			}
-
-			// With all the necessary block headers loaded into
-			// memory, we can now finally calculate the MTP of the
-			// block prior to the one which included the output
-			// being spent.
-			medianTime, err := b.index.CalcPastMedianTime(blockNode)
-			if err != nil {
-				return sequenceLock, err
-			}
+			blockNode := node.Ancestor(prevInputHeight)
+			medianTime := blockNode.CalcPastMedianTime()
 
 			// Time based relative time-locks as defined by BIP 68
 			// have a time granularity of RelativeLockSeconds, so
@@ -529,12 +518,6 @@ func (b *BlockChain) getReorganizeNodes(node *blockNode) (*list.List, *list.List
 		attachNodes.PushFront(ancestor)
 	}
 
-	// TODO(davec): Use prevNodeFromNode function in case the requested
-	// node is further back than the what is in memory.  This shouldn't
-	// happen in the normal course of operation, but the ability to fetch
-	// input transactions of arbitrary blocks will likely to be exposed at
-	// some point and that could lead to an issue here.
-
 	// Start from the end of the main chain and work backwards until the
 	// common ancestor adding each block to the list of nodes to detach from
 	// the main chain.
@@ -603,12 +586,6 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block, view *U
 		}
 	}
 
-	// Calculate the median time for the block.
-	medianTime, err := b.index.CalcPastMedianTime(node)
-	if err != nil {
-		return err
-	}
-
 	// Generate a new best state snapshot that will be used to update the
 	// database and later memory if all database updates are successful.
 	b.stateLock.RLock()
@@ -616,11 +593,12 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block, view *U
 	b.stateLock.RUnlock()
 	numTxns := uint64(len(block.MsgBlock().Transactions))
 	blockSize := uint64(block.MsgBlock().SerializeSize())
-	state := newBestState(node, blockSize, numTxns, curTotalTxns+numTxns,
-		medianTime)
+	blockWeight := uint64(GetBlockWeight(block))
+	state := newBestState(node, blockSize, blockWeight, numTxns,
+		curTotalTxns+numTxns, node.CalcPastMedianTime())
 
 	// Atomically insert info into the database.
-	err = b.db.Update(func(dbTx database.Tx) error {
+	err := b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
 		err := dbPutBestState(dbTx, state, node.workSum)
 		if err != nil {
@@ -659,16 +637,11 @@ func (b *BlockChain) connectBlock(node *blockNode, block *btcutil.Block, view *U
 			}
 		}
 
-		// Update the cached threshold states in the database as needed.
-		return b.putThresholdCaches(dbTx)
+		return nil
 	})
 	if err != nil {
 		return err
 	}
-
-	// Mark all modified entries in the threshold caches as flushed now that
-	// they have been committed to the database.
-	b.markThresholdCachesFlushed()
 
 	// Prune fully spent entries and mark all entries in the view unmodified
 	// now that the modifications have been committed to the database.
@@ -711,24 +684,10 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 			"block at the end of the main chain")
 	}
 
-	// Get the previous block node.  This function is used over simply
-	// accessing node.parent directly as it will dynamically create previous
-	// block nodes as needed.  This helps allow only the pieces of the chain
-	// that are needed to remain in memory.
-	prevNode, err := b.index.PrevNodeFromNode(node)
-	if err != nil {
-		return err
-	}
-
-	// Calculate the median time for the previous block.
-	medianTime, err := b.index.CalcPastMedianTime(prevNode)
-	if err != nil {
-		return err
-	}
-
 	// Load the previous block since some details for it are needed below.
+	prevNode := node.parent
 	var prevBlock *btcutil.Block
-	err = b.db.View(func(dbTx database.Tx) error {
+	err := b.db.View(func(dbTx database.Tx) error {
 		var err error
 		prevBlock, err = dbFetchBlockByHash(dbTx, &prevNode.hash)
 		return err
@@ -744,9 +703,10 @@ func (b *BlockChain) disconnectBlock(node *blockNode, block *btcutil.Block, view
 	b.stateLock.RUnlock()
 	numTxns := uint64(len(prevBlock.MsgBlock().Transactions))
 	blockSize := uint64(prevBlock.MsgBlock().SerializeSize())
+	blockWeight := uint64(GetBlockWeight(prevBlock))
 	newTotalTxns := curTotalTxns - uint64(len(block.MsgBlock().Transactions))
-	state := newBestState(prevNode, blockSize, numTxns, newTotalTxns,
-		medianTime)
+	state := newBestState(prevNode, blockSize, blockWeight, numTxns,
+		newTotalTxns, prevNode.CalcPastMedianTime())
 
 	err = b.db.Update(func(dbTx database.Tx) error {
 		// Update best block state.
@@ -1018,16 +978,12 @@ func (b *BlockChain) reorganizeChain(detachNodes, attachNodes *list.List, flags 
 		}
 	}
 
-	// Log the point where the chain forked.
+	// Log the point where the chain forked and old and new best chain
+	// heads.
 	firstAttachNode := attachNodes.Front().Value.(*blockNode)
-	forkNode, err := b.index.PrevNodeFromNode(firstAttachNode)
-	if err == nil {
-		log.Infof("REORGANIZE: Chain forks at %v", forkNode.hash)
-	}
-
-	// Log the old and new best chain heads.
 	firstDetachNode := detachNodes.Front().Value.(*blockNode)
 	lastAttachNode := attachNodes.Back().Value.(*blockNode)
+	log.Infof("REORGANIZE: Chain forks at %v", firstAttachNode.parent.hash)
 	log.Infof("REORGANIZE: Old best chain head was %v", firstDetachNode.hash)
 	log.Infof("REORGANIZE: New best chain head is %v", lastAttachNode.hash)
 
@@ -1057,12 +1013,13 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 
 	// We are extending the main (best) chain with a new block.  This is the
 	// most common case.
-	if node.parentHash.IsEqual(&b.bestNode.hash) {
+	parentHash := &block.MsgBlock().Header.PrevBlock
+	if parentHash.IsEqual(&b.bestNode.hash) {
 		// Perform several checks to verify the block can be connected
 		// to the main chain without violating any rules and without
 		// actually connecting the block.
 		view := NewUtxoViewpoint()
-		view.SetBestHash(&node.parentHash)
+		view.SetBestHash(parentHash)
 		stxos := make([]spentTxOut, 0, countSpentOutputs(block))
 		if !fastAdd {
 			err := b.checkConnectBlock(node, block, view, &stxos)
@@ -1097,11 +1054,6 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 			return false, err
 		}
 
-		// Connect the parent node to this node.
-		if node.parent != nil {
-			node.parent.children = append(node.parent.children, node)
-		}
-
 		return true, nil
 	}
 	if fastAdd {
@@ -1116,18 +1068,13 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 	b.index.index[node.hash] = node
 	b.index.Unlock()
 
-	// Connect the parent node to this node.
+	// Mark node as in a side chain.
 	node.inMainChain = false
-	node.parent.children = append(node.parent.children, node)
 
 	// Disconnect it from the parent node when the function returns when
 	// running in dry run mode.
 	if dryRun {
 		defer func() {
-			children := node.parent.children
-			children = removeChildNode(children, node)
-			node.parent.children = children
-
 			b.index.Lock()
 			delete(b.index.index, node.hash)
 			b.index.Unlock()
@@ -1151,7 +1098,7 @@ func (b *BlockChain) connectBestChain(node *blockNode, block *btcutil.Block, fla
 		}
 
 		// Log information about how the block is forking the chain.
-		if fork.hash.IsEqual(&node.parent.hash) {
+		if fork.hash.IsEqual(parentHash) {
 			log.Infof("FORK: Block %v forks the chain at height %d"+
 				"/block %v, but does not cause a reorganize",
 				node.hash, fork.height, fork.hash)
@@ -1304,15 +1251,6 @@ type Config struct {
 	// time is adjusted to be in agreement with other peers.
 	TimeSource MedianTimeSource
 
-	// Notifications defines a callback to which notifications will be sent
-	// when various events take place.  See the documentation for
-	// Notification and NotificationType for details on the types and
-	// contents of notifications.
-	//
-	// This field can be nil if the caller is not interested in receiving
-	// notifications.
-	Notifications NotificationCallback
-
 	// SigCache defines a signature cache to use when when validating
 	// signatures.  This is typically most useful when individual
 	// transactions are already being validated prior to their inclusion in
@@ -1328,6 +1266,16 @@ type Config struct {
 	// This field can be nil if the caller does not wish to make use of an
 	// index manager.
 	IndexManager IndexManager
+
+	// HashCache defines a transaction hash mid-state cache to use when
+	// validating transactions. This cache has the potential to greatly
+	// speed up transaction validation as re-using the pre-calculated
+	// mid-state eliminates the O(N^2) validation complexity due to the
+	// SigHashAll flag.
+	//
+	// This field can be nil if the caller is not interested in using a
+	// signature cache.
+	HashCache *txscript.HashCache
 }
 
 // New returns a BlockChain instance using the provided configuration details.
@@ -1371,13 +1319,13 @@ func New(config *Config) (*BlockChain, error) {
 		db:                  config.DB,
 		chainParams:         params,
 		timeSource:          config.TimeSource,
-		notifications:       config.Notifications,
 		sigCache:            config.SigCache,
 		indexManager:        config.IndexManager,
 		minRetargetTimespan: targetTimespan / adjustmentFactor,
 		maxRetargetTimespan: targetTimespan * adjustmentFactor,
 		blocksPerRetarget:   int32(targetTimespan / targetTimePerBlock),
 		index:               newBlockIndex(config.DB, params),
+		hashCache:           config.HashCache,
 		orphans:             make(map[chainhash.Hash]*orphanBlock),
 		prevOrphans:         make(map[chainhash.Hash][]*orphanBlock),
 		warningCaches:       newThresholdCaches(vbNumBits),
@@ -1399,10 +1347,7 @@ func New(config *Config) (*BlockChain, error) {
 		}
 	}
 
-	// Initialize rule change threshold state caches from the passed
-	// database.  When the db does not yet contains any cached information
-	// for a given threshold cache, the threshold states will be calculated
-	// using the chain state.
+	// Initialize rule change threshold state caches.
 	if err := b.initThresholdCaches(); err != nil {
 		return nil, err
 	}

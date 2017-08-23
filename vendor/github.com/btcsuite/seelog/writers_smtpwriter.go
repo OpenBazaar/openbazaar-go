@@ -74,7 +74,7 @@ func newSMTPWriter(sa, sn string, ras []string, hn, hp, un, pwd string, cacdps [
 }
 
 func prepareMessage(senderAddr, senderName, subject string, body []byte, headers []string) []byte {
-	headerLines := fmt.Sprintf(rfc5321SubjectPattern, senderName, senderAddr, subject);
+	headerLines := fmt.Sprintf(rfc5321SubjectPattern, senderName, senderAddr, subject)
 
 	// Build header lines if configured.
 	if headers != nil && len(headers) > 0 {
