@@ -171,6 +171,14 @@ func (k *ExtendedKey) IsPrivate() bool {
 	return k.isPrivate
 }
 
+// Depth returns the current derivation level with respect to the root.
+//
+// The root key has depth zero, and the field has a maximum of 255 due to
+// how depth is serialized.
+func (k *ExtendedKey) Depth() uint8 {
+	return k.depth
+}
+
 // ParentFingerprint returns a fingerprint of the parent extended key from which
 // this one was derived.
 func (k *ExtendedKey) ParentFingerprint() uint32 {

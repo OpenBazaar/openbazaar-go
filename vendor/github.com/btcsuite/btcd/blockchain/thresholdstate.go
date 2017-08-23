@@ -15,37 +15,34 @@ import (
 type ThresholdState byte
 
 // These constants are used to identify specific threshold states.
-//
-// NOTE: This section specifically does not use iota for the individual states
-// since these values are serialized and must be stable for long-term storage.
 const (
 	// ThresholdDefined is the first state for each deployment and is the
 	// state for the genesis block has by definition for all deployments.
-	ThresholdDefined ThresholdState = 0
+	ThresholdDefined ThresholdState = iota
 
 	// ThresholdStarted is the state for a deployment once its start time
 	// has been reached.
-	ThresholdStarted ThresholdState = 1
+	ThresholdStarted
 
 	// ThresholdLockedIn is the state for a deployment during the retarget
 	// period which is after the ThresholdStarted state period and the
 	// number of blocks that have voted for the deployment equal or exceed
 	// the required number of votes for the deployment.
-	ThresholdLockedIn ThresholdState = 2
+	ThresholdLockedIn
 
 	// ThresholdActive is the state for a deployment for all blocks after a
 	// retarget period in which the deployment was in the ThresholdLockedIn
 	// state.
-	ThresholdActive ThresholdState = 3
+	ThresholdActive
 
 	// ThresholdFailed is the state for a deployment once its expiration
 	// time has been reached and it did not reach the ThresholdLockedIn
 	// state.
-	ThresholdFailed ThresholdState = 4
+	ThresholdFailed
 
 	// numThresholdsStates is the maximum number of threshold states used in
 	// tests.
-	numThresholdsStates = iota
+	numThresholdsStates
 )
 
 // thresholdStateStrings is a map of ThresholdState values back to their
@@ -94,11 +91,9 @@ type thresholdConditionChecker interface {
 }
 
 // thresholdStateCache provides a type to cache the threshold states of each
-// threshold window for a set of IDs.  It also keeps track of which entries have
-// been modified and therefore need to be written to the database.
+// threshold window for a set of IDs.
 type thresholdStateCache struct {
-	dbUpdates map[chainhash.Hash]ThresholdState
-	entries   map[chainhash.Hash]ThresholdState
+	entries map[chainhash.Hash]ThresholdState
 }
 
 // Lookup returns the threshold state associated with the given hash along with
@@ -109,23 +104,9 @@ func (c *thresholdStateCache) Lookup(hash *chainhash.Hash) (ThresholdState, bool
 }
 
 // Update updates the cache to contain the provided hash to threshold state
-// mapping while properly tracking needed updates flush changes to the database.
+// mapping.
 func (c *thresholdStateCache) Update(hash *chainhash.Hash, state ThresholdState) {
-	if existing, ok := c.entries[*hash]; ok && existing == state {
-		return
-	}
-
-	c.dbUpdates[*hash] = state
 	c.entries[*hash] = state
-}
-
-// MarkFlushed marks all of the current udpates as flushed to the database.
-// This is useful so the caller can ensure the needed database updates are not
-// lost until they have successfully been written to the database.
-func (c *thresholdStateCache) MarkFlushed() {
-	for hash := range c.dbUpdates {
-		delete(c.dbUpdates, hash)
-	}
 }
 
 // newThresholdCaches returns a new array of caches to be used when calculating
@@ -134,8 +115,7 @@ func newThresholdCaches(numCaches uint32) []thresholdStateCache {
 	caches := make([]thresholdStateCache, numCaches)
 	for i := 0; i < len(caches); i++ {
 		caches[i] = thresholdStateCache{
-			entries:   make(map[chainhash.Hash]ThresholdState),
-			dbUpdates: make(map[chainhash.Hash]ThresholdState),
+			entries: make(map[chainhash.Hash]ThresholdState),
 		}
 	}
 	return caches
@@ -157,12 +137,8 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 	// Get the ancestor that is the last block of the previous confirmation
 	// window in order to get its threshold state.  This can be done because
 	// the state is the same for all blocks within a given window.
-	var err error
-	prevNode, err = b.index.AncestorNode(prevNode, prevNode.height-
+	prevNode = prevNode.Ancestor(prevNode.height -
 		(prevNode.height+1)%confirmationWindow)
-	if err != nil {
-		return ThresholdFailed, err
-	}
 
 	// Iterate backwards through each of the previous confirmation windows
 	// to find the most recently cached threshold state.
@@ -176,10 +152,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 
 		// The start and expiration times are based on the median block
 		// time, so calculate it now.
-		medianTime, err := b.index.CalcPastMedianTime(prevNode)
-		if err != nil {
-			return ThresholdFailed, err
-		}
+		medianTime := prevNode.CalcPastMedianTime()
 
 		// The state is simply defined if the start time hasn't been
 		// been reached yet.
@@ -194,11 +167,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 
 		// Get the ancestor that is the last block of the previous
 		// confirmation window.
-		prevNode, err = b.index.AncestorNode(prevNode, prevNode.height-
-			confirmationWindow)
-		if err != nil {
-			return ThresholdFailed, err
-		}
+		prevNode = prevNode.RelativeAncestor(confirmationWindow)
 	}
 
 	// Start with the threshold state for the most recent confirmation
@@ -223,10 +192,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		case ThresholdDefined:
 			// The deployment of the rule change fails if it expires
 			// before it is accepted and locked in.
-			medianTime, err := b.index.CalcPastMedianTime(prevNode)
-			if err != nil {
-				return ThresholdFailed, err
-			}
+			medianTime := prevNode.CalcPastMedianTime()
 			medianTimeUnix := uint64(medianTime.Unix())
 			if medianTimeUnix >= checker.EndTime() {
 				state = ThresholdFailed
@@ -243,10 +209,7 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 		case ThresholdStarted:
 			// The deployment of the rule change fails if it expires
 			// before it is accepted and locked in.
-			medianTime, err := b.index.CalcPastMedianTime(prevNode)
-			if err != nil {
-				return ThresholdFailed, err
-			}
+			medianTime := prevNode.CalcPastMedianTime()
 			if uint64(medianTime.Unix()) >= checker.EndTime() {
 				state = ThresholdFailed
 				break
@@ -266,16 +229,8 @@ func (b *BlockChain) thresholdState(prevNode *blockNode, checker thresholdCondit
 					count++
 				}
 
-				// Get the previous block node.  This function
-				// is used over simply accessing countNode.parent
-				// directly as it will dynamically create
-				// previous block nodes as needed.  This helps
-				// allow only the pieces of the chain that are
-				// needed to remain in memory.
-				countNode, err = b.index.PrevNodeFromNode(countNode)
-				if err != nil {
-					return ThresholdFailed, err
-				}
+				// Get the previous block node.
+				countNode = countNode.parent
 			}
 
 			// The state is locked in if the number of blocks in the
@@ -316,6 +271,21 @@ func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error)
 	return state, err
 }
 
+// IsDeploymentActive returns true if the target deploymentID is active, and
+// false otherwise.
+//
+// This function is safe for concurrent access.
+func (b *BlockChain) IsDeploymentActive(deploymentID uint32) (bool, error) {
+	b.chainLock.Lock()
+	state, err := b.deploymentState(b.bestNode, deploymentID)
+	b.chainLock.Unlock()
+	if err != nil {
+		return false, err
+	}
+
+	return state == ThresholdActive, nil
+}
+
 // deploymentState returns the current rule change threshold for a given
 // deploymentID. The threshold is evaluated from the point of view of the block
 // node passed in as the first argument to this method.
@@ -326,9 +296,7 @@ func (b *BlockChain) ThresholdState(deploymentID uint32) (ThresholdState, error)
 // AFTER the passed node.
 //
 // This function MUST be called with the chain state lock held (for writes).
-func (b *BlockChain) deploymentState(prevNode *blockNode,
-	deploymentID uint32) (ThresholdState, error) {
-
+func (b *BlockChain) deploymentState(prevNode *blockNode, deploymentID uint32) (ThresholdState, error) {
 	if deploymentID > uint32(len(b.chainParams.Deployments)) {
 		return ThresholdFailed, DeploymentError(deploymentID)
 	}
@@ -338,4 +306,50 @@ func (b *BlockChain) deploymentState(prevNode *blockNode,
 	cache := &b.deploymentCaches[deploymentID]
 
 	return b.thresholdState(prevNode, checker, cache)
+}
+
+// initThresholdCaches initializes the threshold state caches for each warning
+// bit and defined deployment and provides warnings if the chain is current per
+// the warnUnknownVersions and warnUnknownRuleActivations functions.
+func (b *BlockChain) initThresholdCaches() error {
+	// Initialize the warning and deployment caches by calculating the
+	// threshold state for each of them.  This will ensure the caches are
+	// populated and any states that needed to be recalculated due to
+	// definition changes is done now.
+	prevNode := b.bestNode.parent
+	for bit := uint32(0); bit < vbNumBits; bit++ {
+		checker := bitConditionChecker{bit: bit, chain: b}
+		cache := &b.warningCaches[bit]
+		_, err := b.thresholdState(prevNode, checker, cache)
+		if err != nil {
+			return err
+		}
+	}
+	for id := 0; id < len(b.chainParams.Deployments); id++ {
+		deployment := &b.chainParams.Deployments[id]
+		cache := &b.deploymentCaches[id]
+		checker := deploymentChecker{deployment: deployment, chain: b}
+		_, err := b.thresholdState(prevNode, checker, cache)
+		if err != nil {
+			return err
+		}
+	}
+
+	// No warnings about unknown rules or versions until the chain is
+	// current.
+	if b.isCurrent() {
+		// Warn if a high enough percentage of the last blocks have
+		// unexpected versions.
+		if err := b.warnUnknownVersions(b.bestNode); err != nil {
+			return err
+		}
+
+		// Warn if any unknown new rules are either about to activate or
+		// have already been activated.
+		if err := b.warnUnknownRuleActivations(b.bestNode); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
