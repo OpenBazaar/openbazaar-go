@@ -525,9 +525,6 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 	}
 
 	// broadcast
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-	log.Notice(hex.EncodeToString(buf.Bytes()))
 	w.Broadcast(tx)
 	txid := tx.TxHash()
 	return &txid, nil

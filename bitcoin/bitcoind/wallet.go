@@ -614,6 +614,14 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 		rs := *redeemScript
 		if rs[0] == txscript.OP_IF {
 			timeLocked = true
+			tx.Version = 2
+		}
+		for _, txIn := range tx.TxIn {
+			locktime, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
+			if err != nil {
+				return nil, err
+			}
+			txIn.Sequence = locktime
 		}
 	}
 
@@ -629,23 +637,15 @@ func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Addre
 			}
 			txIn.SignatureScript = script
 		} else {
-			priv, err := key.ECPrivKey()
+			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, utxos[i].Value, *redeemScript, txscript.SigHashAll, privKey)
 			if err != nil {
 				return nil, err
 			}
-			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, utxos[i].Value, *redeemScript, txscript.SigHashAll, priv)
-			if err != nil {
-				return nil, err
-			}
-			witness := wire.TxWitness{[]byte{}, sig}
+			var witness wire.TxWitness
 			if timeLocked {
-				tx.Version = 2
-				locktime, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
-				if err != nil {
-					return nil, err
-				}
-				txIn.Sequence = locktime
-				witness = append(txIn.Witness, []byte{})
+				witness = wire.TxWitness{sig, []byte{}}
+			} else {
+				witness = wire.TxWitness{[]byte{}, sig}
 			}
 			witness = append(witness, *redeemScript)
 			txIn.Witness = witness
