@@ -582,7 +582,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 					return nil, err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
@@ -698,7 +698,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 					return nil, err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}

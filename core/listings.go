@@ -73,8 +73,8 @@ type listingData struct {
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
-		l := TitleMaxCharacters
-		if len(title) < TitleMaxCharacters {
+		l := TitleMaxCharacters - 5
+		if len(title) < TitleMaxCharacters-5 {
 			l = len(title)
 		}
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
@@ -793,7 +793,11 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	}
 	maxCombos := 1
 	variantSizeMap := make(map[int]int)
+	optionMap := make(map[string]struct{})
 	for i, option := range listing.Item.Options {
+		if _, ok := optionMap[option.Name]; ok {
+			return errors.New("Option names must be unique")
+		}
 		if option.Name == "" {
 			return errors.New("Options titles must not be empty")
 		}
@@ -809,7 +813,11 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		if len(option.Variants) > MaxListItems {
 			return fmt.Errorf("Number of variants is greater than the max of %d", MaxListItems)
 		}
+		varMap := make(map[string]struct{})
 		for _, variant := range option.Variants {
+			if _, ok := varMap[variant.Name]; ok {
+				return errors.New("Variant names must be unique")
+			}
 			if len(variant.Name) > WordMaxCharacters {
 				return fmt.Errorf("Variant name length must be less than the max of %d", WordMaxCharacters)
 			}
@@ -843,9 +851,11 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 					return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
 				}
 			}
+			varMap[variant.Name] = struct{}{}
 		}
 		variantSizeMap[i] = len(option.Variants)
 		maxCombos *= len(option.Variants)
+		optionMap[option.Name] = struct{}{}
 	}
 
 	if len(listing.Item.Skus) > maxCombos {

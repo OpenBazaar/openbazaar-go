@@ -316,17 +316,19 @@ func (w *SPVWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error
 
 func (w *SPVWallet) checkIfStxoIsConfirmed(utxo Utxo, stxos []Stxo) bool {
 	for _, stxo := range stxos {
-		if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
-			if stxo.SpendHeight > 0 {
-				return true
-			} else {
-				return w.checkIfStxoIsConfirmed(stxo.Utxo, stxos)
-			}
-		} else if stxo.Utxo.IsEqual(&utxo) {
-			if stxo.Utxo.AtHeight > 0 {
-				return true
-			} else {
-				return false
+		if !stxo.Utxo.WatchOnly {
+			if stxo.SpendTxid.IsEqual(&utxo.Op.Hash) {
+				if stxo.SpendHeight > 0 {
+					return true
+				} else {
+					return w.checkIfStxoIsConfirmed(stxo.Utxo, stxos)
+				}
+			} else if stxo.Utxo.IsEqual(&utxo) {
+				if stxo.Utxo.AtHeight > 0 {
+					return true
+				} else {
+					return false
+				}
 			}
 		}
 	}

@@ -277,7 +277,7 @@ const listingJSON = `{
 		"version": 1,
 		"contractType": "PHYSICAL_GOOD",
 		"format": "FIXED_PRICE",
-		"expiry": "2017-08-17T04:52:19.000Z",
+		"expiry": "2030-08-17T04:52:19.000Z",
 		"pricingCurrency": "tbtc"
 	},
 	"item": {
@@ -478,7 +478,7 @@ const listingUpdateJSON = `{
 		"version": 1,
 		"contractType": "PHYSICAL_GOOD",
 		"format": "FIXED_PRICE",
-		"expiry": "2017-08-17T04:52:19.000Z",
+		"expiry": "2030-08-17T04:52:19.000Z",
 		"pricingCurrency": "tbtc"
 	},
 	"item": {
