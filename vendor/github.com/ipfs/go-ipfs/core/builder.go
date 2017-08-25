@@ -20,6 +20,7 @@ import (
 	cfg "github.com/ipfs/go-ipfs/repo/config"
 	uio "github.com/ipfs/go-ipfs/unixfs/io"
 
+	"github.com/ipfs/go-ipfs/namesys"
 	ci "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
 	dsync "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore/sync"
@@ -44,9 +45,10 @@ type BuildCfg struct {
 	// If NilRepo is set, a repo backed by a nil datastore will be constructed
 	NilRepo bool
 
-	Routing RoutingOption
-	Host    HostOption
-	Repo    repo.Repo
+	Routing     RoutingOption
+	Host        HostOption
+	Repo        repo.Repo
+	DNSResolver namesys.Resolver
 }
 
 func (cfg *BuildCfg) getOpt(key string) bool {
@@ -210,7 +212,7 @@ func setupNode(ctx context.Context, n *IpfsNode, cfg *BuildCfg) error {
 
 	if cfg.Online {
 		do := setupDiscoveryOption(rcfg.Discovery)
-		if err := n.startOnlineServices(ctx, cfg.Routing, cfg.Host, do, cfg.getOpt("pubsub"), cfg.getOpt("mplex")); err != nil {
+		if err := n.startOnlineServices(ctx, cfg.Routing, cfg.Host, do, cfg.getOpt("pubsub"), cfg.getOpt("mplex"), cfg.DNSResolver); err != nil {
 			return err
 		}
 	} else {

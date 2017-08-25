@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/ipfs/go-ipfs/routing/dht/pb"
-	providers "github.com/ipfs/go-ipfs/routing/dht/providers"
 	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
+	pb "gx/ipfs/QmRmroYSdievxnjiuy99C8BzShNstdEWcEF3LQHF7fUbez/go-libp2p-kad-dht/pb"
+	providers "github.com/ipfs/go-ipfs/routing/dht/providers"
 
 	ci "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"

@@ -37,6 +37,7 @@ func GatewayOption(resolver *bc.BlockstackClient, authenticated bool, allowedIPs
 			ipMap[ip] = true
 		}
 
+
 		gateway := newGatewayHandler(n, GatewayConfig{
 			Headers:       cfg.Gateway.HTTPHeaders,
 			Writable:      writable,

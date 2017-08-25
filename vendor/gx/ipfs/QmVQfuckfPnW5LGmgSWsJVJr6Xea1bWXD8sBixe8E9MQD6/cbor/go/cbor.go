@@ -1272,8 +1272,8 @@ func (enc *Encoder) writeReflection(rv reflect.Value) error {
 		rv = reflect.ValueOf(enc.filter(rv.Interface()))
 	}
 
-	if !rv.IsValid() {
-		return enc.tagAuxOut(cbor7, uint64(cborNull))
+	if ! rv.IsValid() {
+	   return enc.tagAuxOut(cbor7, uint64(cborNull))
 	}
 
 	if v, ok := rv.Interface().(MarshallValue); ok {

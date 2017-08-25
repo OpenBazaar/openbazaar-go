@@ -42,7 +42,6 @@ import (
 	offroute "github.com/ipfs/go-ipfs/routing/offline"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
-	dht "github.com/ipfs/go-ipfs/routing/dht"
 	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
 	ic "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
 	ipnet "gx/ipfs/QmPsBptED6X43GYg3347TAUruN3UfsAhaGTP9xbinYX7uf/go-libp2p-interface-pnet"
@@ -54,6 +53,7 @@ import (
 	ping "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/protocol/ping"
 	mssmux "gx/ipfs/QmRVYfZ7tWNHPBzWiG6KWGzvT2hcGems8srihsQE29x1U5/go-smux-multistream"
 	ds "gx/ipfs/QmRWDav6mzWseLWeYfVd5fvUKiVe9xNH29YfMF438fG364/go-datastore"
+	dht "github.com/ipfs/go-ipfs/routing/dht"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	mamask "gx/ipfs/QmSMZwvs3n4GBikZ7hKzT17c3bk65FmyZo2JqtJ16swqCv/multiaddr-filter"
 	logging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
@@ -149,7 +149,7 @@ type Mounts struct {
 	Ipns mount.Mount
 }
 
-func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption RoutingOption, hostOption HostOption, do DiscoveryOption, pubsub, mplex bool) error {
+func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption RoutingOption, hostOption HostOption, do DiscoveryOption, pubsub, mplex bool, dnsResolver namesys.Resolver) error {
 
 	if n.PeerHost != nil { // already online.
 		return errors.New("node already online")
@@ -219,7 +219,7 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 		return err
 	}
 
-	if err := n.startOnlineServicesWithHost(ctx, peerhost, routingOption); err != nil {
+	if err := n.startOnlineServicesWithHost(ctx, peerhost, routingOption, dnsResolver); err != nil {
 		return err
 	}
 
@@ -317,7 +317,7 @@ func (n *IpfsNode) HandlePeerFound(p pstore.PeerInfo) {
 
 // startOnlineServicesWithHost  is the set of services which need to be
 // initialized with the host and _before_ we start listening.
-func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost.Host, routingOption RoutingOption) error {
+func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost.Host, routingOption RoutingOption, dnsResolver namesys.Resolver) error {
 	// setup diagnostics service
 	n.Ping = ping.NewPingService(host)
 
@@ -342,7 +342,7 @@ func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost
 	}
 
 	// setup name system
-	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
+	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size, dnsResolver)
 
 	// setup ipns republishing
 	return n.setupIpnsRepublisher()
@@ -668,7 +668,7 @@ func (n *IpfsNode) SetupOfflineRouting() error {
 		return err
 	}
 
-	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
+	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size, namesys.NewDNSResolver())
 
 	return nil
 }

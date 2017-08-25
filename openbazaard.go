@@ -602,7 +602,8 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	}
-	// If we're only using Tor set the proxy dialer
+	// If we're only using Tor set the proxy dialer and dns resolver
+	dnsResolver := namesys.NewDNSResolver()
 	if usingTor && !usingClearnet {
 		log.Notice("Using Tor exclusively")
 		torDialer, err = onionTransport.TorDialer()
@@ -610,6 +611,8 @@ func (x *Start) Execute(args []string) error {
 			log.Error(err)
 			return err
 		}
+		// TODO: maybe create a tor resolver impl later
+		dnsResolver = nil
 	}
 
 	// Custom host option used if Tor is enabled
@@ -647,6 +650,7 @@ func (x *Start) Execute(args []string) error {
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
+		DNSResolver: dnsResolver,
 	}
 
 	if onionTransport != nil {

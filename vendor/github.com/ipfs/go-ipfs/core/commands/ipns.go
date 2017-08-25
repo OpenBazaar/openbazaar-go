@@ -88,7 +88,7 @@ Resolve the value of a dnslink:
 		}
 
 		if nocache {
-			resolver = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), 0)
+			resolver = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), 0, namesys.NewDNSResolver())
 		}
 
 		var name string
