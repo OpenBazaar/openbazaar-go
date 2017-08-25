@@ -39,13 +39,9 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	oc.RatingSignatures = []*pb.RatingSignature{}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		for _, listing := range contract.VendorListings {
-			moderatorKey, err := hex.DecodeString(ExtractModeratorKeyFromRedeemScript(contract.BuyerOrder.Payment.RedeemScript))
-			if err != nil {
-				return nil, err
-			}
 			metadata := new(pb.RatingSignature_TransactionMetadata)
 			metadata.ListingSlug = listing.Slug
-			metadata.ModeratorKey = moderatorKey
+			metadata.ModeratorKey = contract.BuyerOrder.Payment.ModeratorKey
 
 			ser, err := proto.Marshal(metadata)
 			if err != nil {
@@ -263,12 +259,8 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			if err != nil {
 				return err
 			}
-			moderatorKey, err := hex.DecodeString(ExtractModeratorKeyFromRedeemScript(contract.BuyerOrder.Payment.RedeemScript))
-			if err != nil {
-				return err
-			}
 
-			if !bytes.Equal(sig.Metadata.ModeratorKey, moderatorKey) {
+			if !bytes.Equal(sig.Metadata.ModeratorKey, contract.BuyerOrder.Payment.ModeratorKey) {
 				return errors.New("Rating signature does not contain moderatory key")
 			}
 			ser, err := proto.Marshal(sig.Metadata)
@@ -333,12 +325,4 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 		}
 	}
 	return nil
-}
-
-func ExtractModeratorKeyFromRedeemScript(redeemScript string) string {
-	if redeemScript[:2] == "63" {
-		return redeemScript[142:208]
-	} else {
-		return redeemScript[140:206]
-	}
 }
