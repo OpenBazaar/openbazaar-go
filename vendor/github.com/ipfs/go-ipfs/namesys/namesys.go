@@ -28,10 +28,9 @@ type mpns struct {
 }
 
 // NewNameSystem will construct the IPFS naming system based on Routing
-func NewNameSystem(r routing.ValueStore, ds ds.Datastore, cachesize int) NameSystem {
-	return &mpns{
+func NewNameSystem(r routing.ValueStore, ds ds.Datastore, cachesize int, dnsResolver Resolver) NameSystem {
+	m := &mpns{
 		resolvers: map[string]resolver{
-			"dns":      newDNSResolver(),
 			"proquint": new(ProquintResolver),
 			"dht":      NewRoutingResolver(r, cachesize, ds),
 		},
@@ -39,6 +38,10 @@ func NewNameSystem(r routing.ValueStore, ds ds.Datastore, cachesize int) NameSys
 			"/ipns/": NewRoutingPublisher(r, ds),
 		},
 	}
+	if dnsResolver != nil {
+		m.resolvers["dns"] = dnsResolver.(*DNSResolver)
+	}
+	return m
 }
 
 const DefaultResolverCacheTTL = time.Minute
