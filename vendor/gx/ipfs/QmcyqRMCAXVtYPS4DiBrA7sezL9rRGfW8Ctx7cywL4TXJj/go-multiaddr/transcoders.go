@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 )
 
 type Transcoder interface {
@@ -18,7 +19,7 @@ type Transcoder interface {
 }
 
 func NewTranscoderFromFunctions(s2b func(string) ([]byte, error),
-	b2s func([]byte) (string, error)) Transcoder {
+b2s func([]byte) (string, error)) Transcoder {
 
 	return twrp{s2b, b2s}
 }
@@ -124,32 +125,42 @@ func onionBtS(b []byte) (string, error) {
 var TranscoderIPFS = NewTranscoderFromFunctions(ipfsStB, ipfsBtS)
 
 func ipfsStB(s string) ([]byte, error) {
-	// the address is a varint prefixed multihash string representation
-	m, err := mh.FromB58String(s)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
+	if len(s) == 46 && s[:2] == "Qm" {
+		m, err := mh.FromB58String(s)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
+		}
+		size := CodeToVarint(len(m))
+		b := append(size, m...)
+		return b, nil
+	} else {
+		id, err := cid.Decode(s)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
+		}
+		return id.Bytes(), nil
 	}
-	size := CodeToVarint(len(m))
-	b := append(size, m...)
-	return b, nil
 }
 
 func ipfsBtS(b []byte) (string, error) {
-	// the address is a varint-prefixed multihash string representation
-	size, n, err := ReadVarintCode(b)
+	id, err := cid.Parse(b)
 	if err != nil {
-		return "", err
-	}
+		size, n, err := ReadVarintCode(b)
+		if err != nil {
+			return "", err
+		}
 
-	b = b[n:]
-	if len(b) != size {
-		return "", errors.New("inconsistent lengths")
+		b = b[n:]
+		if len(b) != size {
+			return "", errors.New("inconsistent lengths")
+		}
+		m, err := mh.Cast(b)
+		if err != nil {
+			return "", err
+		}
+		return m.B58String(), nil
 	}
-	m, err := mh.Cast(b)
-	if err != nil {
-		return "", err
-	}
-	return m.B58String(), nil
+	return id.String(), nil
 }
 
 var TranscoderUnix = NewTranscoderFromFunctions(unixStB, unixBtS)
