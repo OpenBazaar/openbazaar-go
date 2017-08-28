@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"bytes"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -154,6 +155,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+		modPub, err := moderatorKey.ECPubKey()
+		if err != nil {
+			return "", "", 0, false, err
+		}
+		payment.ModeratorKey = modPub.SerializeCompressed()
 
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
@@ -1319,6 +1325,13 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	ModeratorKey, err := hdKey.Child(0)
 	if err != nil {
 		return err
+	}
+	ModPub, err := ModeratorKey.ECPubKey()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(order.Payment.ModeratorKey, ModPub.SerializeCompressed()) {
+		return errors.New("Invalid moderator key")
 	}
 	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *ModeratorKey}, 2, timeout, vendorKey)
 	if order.Payment.Address != addr.EncodeAddress() {

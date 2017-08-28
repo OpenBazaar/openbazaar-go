@@ -487,13 +487,13 @@ func (w *SPVWallet) SweepAddress(utxos []Utxo, address *btc.Address, key *hd.Ext
 		if rs[0] == txscript.OP_IF {
 			timeLocked = true
 			tx.Version = 2
-		}
-		for _, txIn := range tx.TxIn {
-			locktime, err := LockTimeFromRedeemScript(*redeemScript)
-			if err != nil {
-				return nil, err
+			for _, txIn := range tx.TxIn {
+				locktime, err := LockTimeFromRedeemScript(*redeemScript)
+				if err != nil {
+					return nil, err
+				}
+				txIn.Sequence = locktime
 			}
-			txIn.Sequence = locktime
 		}
 	}
 

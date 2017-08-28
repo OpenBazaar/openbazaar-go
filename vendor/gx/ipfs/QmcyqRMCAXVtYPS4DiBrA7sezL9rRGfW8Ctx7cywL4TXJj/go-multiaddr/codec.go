@@ -38,7 +38,7 @@ func stringToBytes(s string) ([]byte, error) {
 		}
 
 		if p.Path {
-			// it's a path protocol (terminal).
+			// it's a path protocol (terminal).
 			// consume the rest of the address as the next component.
 			sp = []string{"/" + strings.Join(sp, "/")}
 		}

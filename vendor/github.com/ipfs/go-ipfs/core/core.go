@@ -149,7 +149,7 @@ type Mounts struct {
 	Ipns mount.Mount
 }
 
-func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption RoutingOption, hostOption HostOption, do DiscoveryOption, pubsub, mplex bool) error {
+func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption RoutingOption, hostOption HostOption, do DiscoveryOption, pubsub, mplex bool, dnsResolver namesys.Resolver) error {
 
 	if n.PeerHost != nil { // already online.
 		return errors.New("node already online")
@@ -219,7 +219,7 @@ func (n *IpfsNode) startOnlineServices(ctx context.Context, routingOption Routin
 		return err
 	}
 
-	if err := n.startOnlineServicesWithHost(ctx, peerhost, routingOption); err != nil {
+	if err := n.startOnlineServicesWithHost(ctx, peerhost, routingOption, dnsResolver); err != nil {
 		return err
 	}
 
@@ -317,7 +317,7 @@ func (n *IpfsNode) HandlePeerFound(p pstore.PeerInfo) {
 
 // startOnlineServicesWithHost  is the set of services which need to be
 // initialized with the host and _before_ we start listening.
-func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost.Host, routingOption RoutingOption) error {
+func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost.Host, routingOption RoutingOption, dnsResolver namesys.Resolver) error {
 	// setup diagnostics service
 	n.Ping = ping.NewPingService(host)
 
@@ -342,7 +342,7 @@ func (n *IpfsNode) startOnlineServicesWithHost(ctx context.Context, host p2phost
 	}
 
 	// setup name system
-	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
+	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size, dnsResolver)
 
 	// setup ipns republishing
 	return n.setupIpnsRepublisher()
@@ -668,7 +668,7 @@ func (n *IpfsNode) SetupOfflineRouting() error {
 		return err
 	}
 
-	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size)
+	n.Namesys = namesys.NewNameSystem(n.Routing, n.Repo.Datastore(), size, namesys.NewDNSResolver())
 
 	return nil
 }

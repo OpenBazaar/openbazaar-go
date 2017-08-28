@@ -489,6 +489,7 @@ func (adder *Adder) addFile(file files.File) error {
 			reader = rdr
 		}
 	}
+
 	dagnode, err := adder.add(reader)
 	if err != nil {
 		return err

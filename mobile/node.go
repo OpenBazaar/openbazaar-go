@@ -127,8 +127,9 @@ func NewNode(config NodeConfig) (*Node, error) {
 	cfg.Swarm.DisableNatPortMap = true
 
 	ncfg := &ipfscore.BuildCfg{
-		Repo:   r,
-		Online: true,
+		Repo:    r,
+		Online:  true,
+		Routing: ipfscore.DHTClientOption,
 	}
 
 	// Set IPNS query size
