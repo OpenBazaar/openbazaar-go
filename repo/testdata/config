@@ -81,7 +81,9 @@
   "Reprovider": {
     "Interval": ""
   },
-  "Resolver": "https://resolver.onename.com/",
+  "Resolvers": {
+    ".id": "https://resolver.onename.com/"
+  },
   "SupernodeRouting": {
     "Servers": null
   },

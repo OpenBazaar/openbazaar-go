@@ -33,6 +33,11 @@ type TorConfig struct {
 	TorControl string
 }
 
+type ResolverConfig struct {
+	Id  string `json:".id"`
+	Eth string `json:".eth"`
+}
+
 type WalletConfig struct {
 	Type             string
 	Binary           string
@@ -379,25 +384,38 @@ func GetCrosspostGateway(cfgBytes []byte) ([]string, error) {
 	return urls, nil
 }
 
-func GetResolverUrl(cfgBytes []byte) (string, error) {
+func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
 	var cfgIface interface{}
 	json.Unmarshal(cfgBytes, &cfgIface)
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return "", MalformedConfigError
+		return nil, MalformedConfigError
 	}
 
-	r, ok := cfg["Resolver"]
+	r, ok := cfg["Resolvers"]
 	if !ok {
-		return "", MalformedConfigError
+		return nil, MalformedConfigError
 	}
-	resolverStr, ok := r.(string)
+	resolverMap, ok := r.(map[string]interface{})
 	if !ok {
-		return "", MalformedConfigError
+		return nil, MalformedConfigError
+	}
+	blockstack, ok := resolverMap[".id"]
+	if !ok {
+		return nil, MalformedConfigError
 	}
 
-	return resolverStr, nil
+	idStr, ok := blockstack.(string)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	resolvers := &ResolverConfig{
+		Id:  idStr,
+	}
+
+	return resolvers, nil
 }
 
 func extendConfigFile(r repo.Repo, key string, value interface{}) error {

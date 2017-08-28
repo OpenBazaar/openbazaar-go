@@ -43,6 +43,7 @@ import (
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
@@ -491,7 +492,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	resolverUrl, err := repo.GetResolverUrl(configFile)
+	resolverConfig, err := repo.GetResolverConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -890,6 +891,19 @@ func (x *Start) Execute(args []string) error {
 	}
 	bm := obnet.NewBanManager(blockedNodes)
 
+	// Create namesys resolvers
+	resolvers := []obns.Resolver{
+		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
+	}
+	if !(usingTor && !usingClearnet) {
+		resolvers = append(resolvers, obns.NewDNSResolver())
+	}
+	ns, err := obns.NewNameSystem(resolvers)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:           ctx,
@@ -899,7 +913,7 @@ func (x *Start) Execute(args []string) error {
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
 		MessageStorage:    storage,
-		Resolver:          bstk.NewBlockStackClient(resolverUrl, torDialer),
+		NameSystem:        ns,
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 		TorDialer:         torDialer,
@@ -1037,7 +1051,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

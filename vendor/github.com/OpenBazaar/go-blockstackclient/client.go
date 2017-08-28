@@ -3,7 +3,6 @@ package blockstackclient
 import (
 	"encoding/json"
 	"errors"
-	"github.com/jbenet/go-multihash"
 	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"context"
+	"gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 )
 
 type httpClient interface {
@@ -21,14 +22,7 @@ type httpClient interface {
 type BlockstackClient struct {
 	resolverURL string
 	httpClient  httpClient
-	cache       map[string]CachedGuid
-	cacheLife   time.Duration
 	sync.Mutex
-}
-
-type CachedGuid struct {
-	guid   string
-	exipry time.Time
 }
 
 func NewBlockStackClient(resolverURL string, dialer proxy.Dialer) *BlockstackClient {
@@ -41,42 +35,43 @@ func NewBlockStackClient(resolverURL string, dialer proxy.Dialer) *BlockstackCli
 	b := &BlockstackClient{
 		resolverURL: resolverURL,
 		httpClient:  client,
-		cache:       make(map[string]CachedGuid),
-		cacheLife:   time.Minute,
 	}
-	go b.gc()
 	return b
 }
 
-func (b *BlockstackClient) Resolve(handle string) (guid string, err error) {
+func (b *BlockstackClient) Resolve(ctx context.Context, name string) (pid peer.ID, err error) {
 	defer func() {
 		if rerr := recover(); rerr != nil {
 			err = errors.New("Couldn't parse blockchainID json")
 		}
 	}()
-	formatted := formatHandle(handle)
-	if cached, ok := b.cache[formatted]; ok {
-		return cached.guid, nil
+
+	if !strings.HasSuffix(name, ".id") {
+		return pid, errors.New("Domain is not a blockstack domain")
 	}
+
+	split := strings.Split(name, ".")
+	name = split[0]
+
 	resolver, err := url.Parse(b.resolverURL)
 	if err != nil {
-		return "", err
+		return pid, err
 	}
-	resolver.Path = path.Join(resolver.Path, "v2", "users", formatted)
+	resolver.Path = path.Join(resolver.Path, "v2", "users", name)
 	resp, err := b.httpClient.Get(resolver.String())
 	if err != nil {
-		return "", errors.New("Error querying resolver")
+		return pid, errors.New("Error querying resolver")
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		return "", errors.New("Handle not found")
+		return pid, errors.New("Handle not found")
 	}
 	decoder := json.NewDecoder(resp.Body)
 	var data map[string]interface{}
 	err = decoder.Decode(&data)
 	if err != nil {
-		return "", err
+		return pid, err
 	}
-	obj := data[formatted].(map[string]interface{})
+	obj := data[name].(map[string]interface{})
 	profile := obj["profile"].(map[string]interface{})
 	account := profile["account"].([]interface{})
 	for _, a := range account {
@@ -84,50 +79,16 @@ func (b *BlockstackClient) Resolve(handle string) (guid string, err error) {
 		service := strings.ToLower(acc["service"].(string))
 		identifier := acc["identifier"].(string)
 		if service == "openbazaar" {
-			mh, err := multihash.FromB58String(identifier)
+			pid, err := peer.IDB58Decode(identifier)
 			if err != nil {
-				return "", err
+				return pid, err
 			}
-			_, err = multihash.Decode(mh)
-			if err != nil {
-				return "", err
-			}
-			b.Lock()
-			b.cache[formatted] = CachedGuid{identifier, time.Now().Add(b.cacheLife)}
-			b.Unlock()
-			return identifier, nil
+			return pid, nil
 		}
 	}
-	return "", errors.New("Handle does not exist")
+	return pid, errors.New("Handle does not exist")
 }
 
-func (b *BlockstackClient) SetCacheLifetime(duration time.Duration) {
-	b.cacheLife = duration
-}
-
-func (b *BlockstackClient) gc() {
-	ticker := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-ticker.C:
-			b.deleteExpiredCache()
-		}
-	}
-}
-
-func (b *BlockstackClient) deleteExpiredCache() {
-	b.Lock()
-	defer b.Unlock()
-	for k, v := range b.cache {
-		if v.exipry.Before(time.Now()) {
-			delete(b.cache, k)
-		}
-	}
-}
-
-func formatHandle(handle string) string {
-	if handle[0:1] == "@" {
-		return strings.ToLower(handle[1:])
-	}
-	return strings.ToLower(handle)
+func (b *BlockstackClient) Domains() []string {
+	return []string{"id"}
 }
