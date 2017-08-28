@@ -1,8 +1,8 @@
 package namesys
 
 import (
-	"errors"
 	"context"
+	"errors"
 	"gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
 	"strings"
 )
@@ -17,7 +17,7 @@ type NameSystem struct {
 	resolvers map[string]Resolver
 }
 
-func NewNameSystem(resolvers []Resolver) (*NameSystem, error){
+func NewNameSystem(resolvers []Resolver) (*NameSystem, error) {
 	n := &NameSystem{
 		resolvers: make(map[string]Resolver),
 	}

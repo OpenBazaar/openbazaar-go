@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	isd "gx/ipfs/QmZmmuAXgX73UQmX1jRKjTGmjzq24Jinqkq8vzkBtno4uX/go-is-domain"
-	"net"
 	"gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	"net"
 )
 
 type LookupTXTFunc func(name string) (txt []string, err error)
@@ -31,7 +31,7 @@ func (r *DNSResolver) Domains() []string {
 }
 
 type lookupRes struct {
-	pid  peer.ID
+	pid   peer.ID
 	error error
 }
 

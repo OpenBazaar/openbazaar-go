@@ -412,7 +412,7 @@ func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
 	}
 
 	resolvers := &ResolverConfig{
-		Id:  idStr,
+		Id: idStr,
 	}
 
 	return resolvers, nil
