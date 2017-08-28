@@ -129,6 +129,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
+		Routing: ipfscore.DHTClientOption,
 	}
 
 	// Set IPNS query size
