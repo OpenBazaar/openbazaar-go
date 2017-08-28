@@ -134,7 +134,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 	profile, err := n.GetProfile()
 	if err == nil {
-		id.BlockchainID = profile.Handle
+		id.Handle = profile.Handle
 	}
 	p := new(pb.ID_Pubkeys)
 	p.Identity = pubkey

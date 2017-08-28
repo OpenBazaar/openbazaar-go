@@ -106,7 +106,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.BuyerOrder.BuyerID.PeerID
 					contract.DisputeAcceptance = accept
-					buyerHandle := contract.BuyerOrder.BuyerID.BlockchainID
+					buyerHandle := contract.BuyerOrder.BuyerID.Handle
 
 					n := notifications.DisputeAcceptedNotification{
 						notifications.NewID(),
@@ -132,7 +132,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 					accept.Timestamp = ts
 					accept.ClosedBy = contract.VendorListings[0].VendorID.PeerID
 					contract.DisputeAcceptance = accept
-					vendorHandle := contract.VendorListings[0].VendorID.BlockchainID
+					vendorHandle := contract.VendorListings[0].VendorID.Handle
 					var buyer string
 					if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 						buyer = contract.BuyerOrder.BuyerID.PeerID
@@ -193,7 +193,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
-				contract.BuyerOrder.BuyerID.BlockchainID,
+				contract.BuyerOrder.BuyerID.Handle,
 				notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 				orderId,
 				contract.VendorListings[0].Slug,

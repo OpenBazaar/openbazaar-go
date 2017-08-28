@@ -213,9 +213,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var err error
 		if contract.VendorListings[0].VendorID.PeerID == peerID {
 			DisputerID = contract.VendorListings[0].VendorID.PeerID
-			DisputerHandle = contract.VendorListings[0].VendorID.BlockchainID
+			DisputerHandle = contract.VendorListings[0].VendorID.Handle
 			DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-			DisputeeHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
 			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, false, rc.Dispute.Claim)
 			if err != nil {
 				return err
@@ -226,9 +226,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			}
 		} else if contract.BuyerOrder.BuyerID.PeerID == peerID {
 			DisputerID = contract.BuyerOrder.BuyerID.PeerID
-			DisputerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			DisputerHandle = contract.BuyerOrder.BuyerID.Handle
 			DisputeeID = contract.VendorListings[0].VendorID.PeerID
-			DisputeeHandle = contract.VendorListings[0].VendorID.BlockchainID
+			DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, true, rc.Dispute.Claim)
 			if err != nil {
 				return err
@@ -245,9 +245,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 	} else if contract.VendorListings[0].VendorID.PeerID == n.IpfsNode.Identity.Pretty() { // Vendor
 		DisputerID = contract.BuyerOrder.BuyerID.PeerID
-		DisputerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+		DisputerHandle = contract.BuyerOrder.BuyerID.Handle
 		DisputeeID = contract.VendorListings[0].VendorID.PeerID
-		DisputeeHandle = contract.VendorListings[0].VendorID.BlockchainID
+		DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, err := n.Datastore.Sales().GetByOrderId(orderId)
 		if err != nil {
@@ -298,9 +298,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 	} else if contract.BuyerOrder.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() { // Buyer
 		DisputerID = contract.VendorListings[0].VendorID.PeerID
-		DisputerHandle = contract.VendorListings[0].VendorID.BlockchainID
+		DisputerHandle = contract.VendorListings[0].VendorID.Handle
 		DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-		DisputeeHandle = contract.BuyerOrder.BuyerID.BlockchainID
+		DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
 
 		// Load out version of the contract from the db
 		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderId)

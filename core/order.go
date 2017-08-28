@@ -432,7 +432,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	id := new(pb.ID)
 	profile, err := n.GetProfile()
 	if err == nil {
-		id.BlockchainID = profile.Handle
+		id.Handle = profile.Handle
 	}
 
 	id.PeerID = n.IpfsNode.Identity.Pretty()

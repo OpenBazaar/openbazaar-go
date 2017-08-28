@@ -234,7 +234,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 				slug = contract.VendorListings[0].Slug
 				if contract.VendorListings[0].VendorID != nil {
 					vendorId = contract.VendorListings[0].VendorID.PeerID
-					vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+					vendorHandle = contract.VendorListings[0].VendorID.Handle
 				}
 				if contract.VendorListings[0].Item != nil {
 					title = contract.VendorListings[0].Item.Title
@@ -247,7 +247,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 				slug = contract.VendorListings[0].Slug
 				if contract.BuyerOrder.BuyerID != nil {
 					buyerId = contract.BuyerOrder.BuyerID.PeerID
-					buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+					buyerHandle = contract.BuyerOrder.BuyerID.Handle
 				}
 				if contract.BuyerOrder.Payment != nil {
 					total = contract.BuyerOrder.Payment.Amount

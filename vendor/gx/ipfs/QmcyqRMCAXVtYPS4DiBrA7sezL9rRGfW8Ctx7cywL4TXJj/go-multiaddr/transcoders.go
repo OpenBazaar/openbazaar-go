@@ -19,7 +19,7 @@ type Transcoder interface {
 }
 
 func NewTranscoderFromFunctions(s2b func(string) ([]byte, error),
-b2s func([]byte) (string, error)) Transcoder {
+	b2s func([]byte) (string, error)) Transcoder {
 
 	return twrp{s2b, b2s}
 }

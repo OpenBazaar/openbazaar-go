@@ -37,12 +37,12 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorBlockchainID, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"))`
+	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"))`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
-	blockchainID := contract.VendorListings[0].VendorID.BlockchainID
+	handle := contract.VendorListings[0].VendorID.Handle
 	shippingName := ""
 	shippingAddress := ""
 	if contract.BuyerOrder.Shipping != nil {
@@ -65,7 +65,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		int(contract.BuyerOrder.Payment.Amount),
 		contract.VendorListings[0].Item.Images[0].Tiny,
 		contract.VendorListings[0].VendorID.PeerID,
-		blockchainID,
+		handle,
 		contract.VendorListings[0].Item.Title,
 		shippingName,
 		shippingAddress,
@@ -134,10 +134,10 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 
 	q := query{
 		table:           "purchases",
-		columns:         []string{"orderID", "contract", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "state", "read"},
+		columns:         []string{"orderID", "contract", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorHandle", "shippingName", "shippingAddress", "state", "read"},
 		stateFilter:     stateFilter,
 		searchTerm:      searchTerm,
-		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorBlockchainID", "shippingName", "shippingAddress", "paymentAddr"},
+		searchColumns:   []string{"orderID", "timestamp", "total", "title", "thumbnail", "vendorID", "vendorHandle", "shippingName", "shippingAddress", "paymentAddr"},
 		sortByAscending: sortByAscending,
 		sortByRead:      sortByRead,
 		id:              "orderID",

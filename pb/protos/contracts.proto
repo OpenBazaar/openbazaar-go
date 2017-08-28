@@ -367,7 +367,7 @@ message Refund {
 
 message ID {
     string peerID       = 1;
-    string blockchainID = 2;
+    string handle       = 2;
     Pubkeys pubkeys     = 3;
     bytes bitcoinSig    = 4; // Bitcoin signature covering peerID
 

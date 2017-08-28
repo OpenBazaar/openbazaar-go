@@ -449,7 +449,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.VendorListings[0].VendorID != nil {
 			vendorID = contract.VendorListings[0].VendorID.PeerID
-			vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+			vendorHandle = contract.VendorListings[0].VendorID.Handle
 		}
 	}
 
@@ -486,7 +486,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 			buyerID = contract.BuyerOrder.BuyerID.PeerID
-			buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			buyerHandle = contract.BuyerOrder.BuyerID.Handle
 		}
 	}
 
@@ -654,7 +654,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.VendorListings[0].VendorID != nil {
 			vendorID = contract.VendorListings[0].VendorID.PeerID
-			vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+			vendorHandle = contract.VendorListings[0].VendorID.Handle
 		}
 	}
 
@@ -779,7 +779,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.VendorListings[0].VendorID != nil {
 			vendorID = contract.VendorListings[0].VendorID.PeerID
-			vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+			vendorHandle = contract.VendorListings[0].VendorID.Handle
 		}
 	}
 
@@ -834,7 +834,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.VendorListings[0].VendorID != nil {
 			vendorID = contract.VendorListings[0].VendorID.PeerID
-			vendorHandle = contract.VendorListings[0].VendorID.BlockchainID
+			vendorHandle = contract.VendorListings[0].VendorID.Handle
 		}
 	}
 
@@ -944,7 +944,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
 		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 			buyerID = contract.BuyerOrder.BuyerID.PeerID
-			buyerHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			buyerHandle = contract.BuyerOrder.BuyerID.Handle
 		}
 	}
 
@@ -1024,12 +1024,12 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 			thumbnailSmall = vendorContract.VendorListings[0].Item.Images[0].Small
 			if vendorContract.VendorListings[0].VendorID != nil {
 				disputerID = vendorContract.VendorListings[0].VendorID.PeerID
-				disputerHandle = vendorContract.VendorListings[0].VendorID.BlockchainID
+				disputerHandle = vendorContract.VendorListings[0].VendorID.Handle
 			}
 			if vendorContract.BuyerOrder.BuyerID != nil {
 				buyer = vendorContract.BuyerOrder.BuyerID.PeerID
 				disputeeID = vendorContract.BuyerOrder.BuyerID.PeerID
-				disputeeHandle = vendorContract.BuyerOrder.BuyerID.BlockchainID
+				disputeeHandle = vendorContract.BuyerOrder.BuyerID.Handle
 			}
 		}
 	} else if vendorContract == nil {
@@ -1043,12 +1043,12 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 			thumbnailSmall = buyerContract.VendorListings[0].Item.Images[0].Small
 			if buyerContract.VendorListings[0].VendorID != nil {
 				disputeeID = buyerContract.VendorListings[0].VendorID.PeerID
-				disputeeHandle = buyerContract.VendorListings[0].VendorID.BlockchainID
+				disputeeHandle = buyerContract.VendorListings[0].VendorID.Handle
 			}
 			if buyerContract.BuyerOrder.BuyerID != nil {
 				buyer = buyerContract.BuyerOrder.BuyerID.PeerID
 				disputerID = buyerContract.BuyerOrder.BuyerID.PeerID
-				disputerHandle = buyerContract.BuyerOrder.BuyerID.BlockchainID
+				disputerHandle = buyerContract.BuyerOrder.BuyerID.Handle
 			}
 		}
 	} else {
@@ -1092,7 +1092,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 		isPurchase = true
 		if len(contract.VendorListings) > 0 && contract.VendorListings[0].VendorID != nil {
 			otherPartyID = contract.VendorListings[0].VendorID.PeerID
-			otherPartyHandle = contract.VendorListings[0].VendorID.BlockchainID
+			otherPartyHandle = contract.VendorListings[0].VendorID.Handle
 			if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 				buyer = contract.BuyerOrder.BuyerID.PeerID
 			}
@@ -1100,7 +1100,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	} else {
 		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
 			otherPartyID = contract.BuyerOrder.BuyerID.PeerID
-			otherPartyHandle = contract.BuyerOrder.BuyerID.BlockchainID
+			otherPartyHandle = contract.BuyerOrder.BuyerID.Handle
 			buyer = contract.BuyerOrder.BuyerID.PeerID
 		}
 	}
