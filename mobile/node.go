@@ -307,6 +307,7 @@ func (n *Node) Start() error {
 	go gateway.Serve()
 
 	go func() {
+		<-ipfscore.DefaultBootstrapConfig.DoneChan
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
 		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, nil, n.node.CrosspostGateways, n.node.SendOfflineAck)
 		go MR.Run()
