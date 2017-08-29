@@ -921,6 +921,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
+		<-ipfscore.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, torDialer, core.Node.CrosspostGateways, core.Node.SendOfflineAck)
 		go MR.Run()
