@@ -205,7 +205,10 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Resolver", "https://resolver.onename.com/"); err != nil {
+	var resolvers ResolverConfig = ResolverConfig{
+		Id: "https://resolver.onename.com/",
+	}
+	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Crosspost-gateways", []string{"https://gateway.ob1.io/", "https://gateway.duosear.ch/"}); err != nil {

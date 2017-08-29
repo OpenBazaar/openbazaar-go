@@ -12,10 +12,10 @@ import (
 	"path"
 	"time"
 
-	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
@@ -75,8 +75,8 @@ type OpenBazaarNode struct {
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher
 
-	// Used to resolve handles to OpenBazaar IDs
-	Resolver *bstk.BlockstackClient
+	// Used to resolve domains to OpenBazaar IDs
+	NameSystem *namesys.NameSystem
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates

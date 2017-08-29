@@ -1094,7 +1094,6 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	var err error
 	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
@@ -1125,13 +1124,12 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		if strings.HasPrefix(peerId, "@") {
-			peerId, err = i.node.Resolver.Resolve(peerId)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, err.Error())
-				return
-			}
+		pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
 		}
+		peerId = pid.Pretty()
 		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1162,7 +1160,6 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	var err error
 	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
@@ -1185,13 +1182,12 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		if strings.HasPrefix(peerId, "@") {
-			peerId, err = i.node.Resolver.Resolve(peerId)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, err.Error())
-				return
-			}
+		pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
 		}
+		peerId = pid.Pretty()
 		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1324,7 +1320,6 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	var err error
 	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		listingsBytes, err := i.node.GetListings()
 		if err != nil {
@@ -1333,13 +1328,12 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(listingsBytes))
 	} else {
-		if strings.HasPrefix(peerId, "@") {
-			peerId, err = i.node.Resolver.Resolve(peerId)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, err.Error())
-				return
-			}
+		pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
 		}
+		peerId = pid.Pretty()
 		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1416,13 +1410,12 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			hash = listingId
 			w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 		} else {
-			if strings.HasPrefix(peerId, "@") {
-				peerId, err = i.node.Resolver.Resolve(peerId)
-				if err != nil {
-					ErrorResponse(w, http.StatusNotFound, err.Error())
-					return
-				}
+			pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
 			}
+			peerId = pid.Pretty()
 			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1468,13 +1461,12 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		if strings.HasPrefix(peerId, "@") {
-			peerId, err = i.node.Resolver.Resolve(peerId)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, err.Error())
-				return
-			}
+		pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
 		}
+		peerId = pid.Pretty()
 		profile, err = i.node.FetchProfile(peerId, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -3394,4 +3386,14 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	SanitizedResponse(w, string(ret))
+}
+
+func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
+	_, name := path.Split(r.URL.Path)
+	pid, err := i.node.NameSystem.Resolve(context.Background(), name)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	fmt.Fprint(w, pid.Pretty())
 }

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/OpenBazaar/openbazaar-go/api"
+	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
@@ -95,7 +96,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	resolverUrl, err := repo.GetResolverUrl(configFile)
+	resolverConfig, err := repo.GetResolverConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +216,22 @@ func NewNode(config NodeConfig) (*Node, error) {
 	}
 	bm := obnet.NewBanManager(blockedNodes)
 
+	// Create namesys resolvers
+	resolvers := []obns.Resolver{
+		bstk.NewBlockStackClient(resolverConfig.Id, nil),
+		obns.NewDNSResolver(),
+	}
+	ns, err := obns.NewNameSystem(resolvers)
+	if err != nil {
+		return nil, err
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		RepoPath:          config.RepoPath,
 		Datastore:         sqliteDB,
 		Wallet:            wallet,
-		Resolver:          bstk.NewBlockStackClient(resolverUrl, nil),
+		NameSystem:        ns,
 		ExchangeRates:     exchangeRates,
 		CrosspostGateways: gatewayUrls,
 		UserAgent:         core.USERAGENT,
@@ -371,7 +382,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(node.Resolver, config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

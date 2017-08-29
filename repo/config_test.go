@@ -128,25 +128,17 @@ func TestGetDropboxApiToken(t *testing.T) {
 	}
 }
 
-func TestGetResolverUrl(t *testing.T) {
+func TestGetResolverConfig(t *testing.T) {
 	configFile, err := ioutil.ReadFile(testConfigPath)
 	if err != nil {
 		t.Error(err)
 	}
-	resolverUrl, err := GetResolverUrl(configFile)
-	if resolverUrl != "https://resolver.onename.com/" {
-		t.Error("resolverUrl does not equal expected value")
-	}
+	resolvers, err := GetResolverConfig(configFile)
 	if err != nil {
 		t.Error("GetResolverUrl threw an unexpected error")
 	}
-
-	resolverUrl, err = GetResolverUrl([]byte{})
-	if resolverUrl != "" {
-		t.Error("Expected empty string, got ", resolverUrl)
-	}
-	if err == nil {
-		t.Error("GetResolverUrl didn't throw an error")
+	if resolvers.Id != "https://resolver.onename.com/" {
+		t.Error("resolverUrl does not equal expected value")
 	}
 }
 
