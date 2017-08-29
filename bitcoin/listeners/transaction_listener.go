@@ -67,6 +67,9 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			}
 			isForSale = false
 		}
+		if isForSale && contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
+			continue
+		}
 
 		orderId, err := calcOrderId(contract.BuyerOrder)
 		if err != nil {
