@@ -225,6 +225,8 @@ type IncomingTransaction struct {
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 
+type TestNotification struct {}
+
 func NewID() string {
 	b := make([]byte, 32)
 	rand.Read(b)
@@ -395,6 +397,11 @@ func Describe(i interface{}) (string, string) {
 		n := i.(DisputeCloseNotification)
 		form := "Dispute around order \"%s\" was closed."
 		body = fmt.Sprintf(form, n.OrderId)
+
+	case TestNotification:
+		head = "SMTP Notification Test"
+		body = "Hello World"
 	}
+
 	return head, body
 }
