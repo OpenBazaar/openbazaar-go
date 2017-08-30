@@ -3397,3 +3397,21 @@ func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprint(w, pid.Pretty())
 }
+
+func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	var settings repo.SMTPSettings
+	err := decoder.Decode(&settings)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	notifier := smtpNotifier{&settings}
+	err = notifier.notify(notifications.TestNotification{})
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, "{}")
+}

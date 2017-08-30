@@ -98,6 +98,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTImportListings(w, r)
 	case strings.HasPrefix(path, "/ob/purgecache"):
 		i.POSTPurgeCache(w, r)
+	case strings.HasPrefix(path, "/ob/testemailnotifications"):
+		i.POSTTestEmailNotifications(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
