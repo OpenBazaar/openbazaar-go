@@ -225,7 +225,7 @@ type IncomingTransaction struct {
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 
-type TestNotification struct {}
+type TestNotification struct{}
 
 func NewID() string {
 	b := make([]byte, 32)

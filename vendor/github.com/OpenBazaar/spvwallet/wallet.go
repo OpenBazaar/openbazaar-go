@@ -195,7 +195,7 @@ func (w *SPVWallet) Mnemonic() string {
 }
 
 func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
-	return w.peerManager.ConnectedPeers()
+	return w.peerManager.ReadyPeers()
 }
 
 func (w *SPVWallet) CurrentAddress(purpose KeyPurpose) btc.Address {
@@ -356,7 +356,7 @@ func (w *SPVWallet) AddWatchedScript(script []byte) error {
 	err := w.txstore.WatchedScripts().Put(script)
 	w.txstore.PopulateAdrs()
 
-	for _, peer := range w.peerManager.ConnectedPeers() {
+	for _, peer := range w.peerManager.ReadyPeers() {
 		w.updateFilterAndSend(peer)
 	}
 	return err
