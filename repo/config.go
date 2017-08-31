@@ -15,6 +15,10 @@ var DefaultBootstrapAddresses = []string{
 	"/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX", // Duo Search
 }
 
+var TestnetBootstrapAddresses = []string{
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K", // Le Marché Serpette
+}
+
 type APIConfig struct {
 	Authenticated bool
 	AllowedIPs    []string
@@ -382,6 +386,36 @@ func GetCrosspostGateway(cfgBytes []byte) ([]string, error) {
 	}
 
 	return urls, nil
+}
+
+func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
+	var cfgIface interface{}
+	json.Unmarshal(cfgBytes, &cfgIface)
+	var addrs []string
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+
+	bootstrap, ok := cfg["Bootstrap-testnet"]
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+	addrList, ok := bootstrap.([]interface{})
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+
+	for _, addr := range addrList {
+		addrStr, ok := addr.(string)
+		if !ok {
+			return addrs, MalformedConfigError
+		}
+		addrs = append(addrs, addrStr)
+	}
+
+	return addrs, nil
 }
 
 func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {

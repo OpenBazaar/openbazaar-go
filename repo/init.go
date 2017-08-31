@@ -211,6 +211,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
 		return err
 	}
+	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
+		return err
+	}
 	if err := extendConfigFile(r, "Crosspost-gateways", []string{"https://gateway.ob1.io/", "https://gateway.duosear.ch/"}); err != nil {
 		return err
 	}
