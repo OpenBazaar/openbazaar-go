@@ -139,6 +139,8 @@ func NewNode(config NodeConfig) (*Node, error) {
 		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
+
+		gatewayUrlStrings = []string{}
 	}
 
 	ncfg := &ipfscore.BuildCfg{
