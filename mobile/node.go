@@ -37,7 +37,9 @@ import (
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dht "github.com/ipfs/go-ipfs/routing/dht/util"
+	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
+	dht "github.com/ipfs/go-ipfs/routing/dht"
+	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/op/go-logging"
 	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
@@ -127,6 +129,18 @@ func NewNode(config NodeConfig) (*Node, error) {
 	cfg.Identity = identity
 	cfg.Swarm.DisableNatPortMap = true
 
+	// Setup testnet
+	if config.Testnet {
+		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Bootstrap = testnetBootstrapAddrs
+		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
+		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
+	}
+
 	ncfg := &ipfscore.BuildCfg{
 		Repo:    r,
 		Online:  true,
@@ -136,9 +150,9 @@ func NewNode(config NodeConfig) (*Node, error) {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dht.QuerySize = int(querySize)
+		dhtutil.QuerySize = int(querySize)
 	} else {
-		dht.QuerySize = 16
+		dhtutil.QuerySize = 16
 	}
 
 	// Wallet
