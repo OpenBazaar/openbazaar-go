@@ -10,9 +10,13 @@ import (
 
 var DefaultBootstrapAddresses = []string{
 	"/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K", // Le Marché Serpette
-	"/ip4/139.59.174.197/tcp/4001/ipfs/QmcCoBtYyduyurcLHRF14QhhA88YojJJpGFuMHoMZuU8sc", // Brixton-Village
+	"/ip4/139.59.174.197/tcp/4001/ipfs/QmcCoBtYyduyurcLHRF14QhhA88YojJJpGFuMHoMZuU8sc", // Brixton Village
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg",   // Johari
 	"/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX", // Duo Search
+}
+
+var TestnetBootstrapAddresses = []string{
+	"/ip4/165.227.117.91/tcp/4001/ipfs/Qmaa6De5QYNqShzPb9SGSo8vLmoUte8mnWgzn4GYwzuUYA", // Brooklyn Flea
 }
 
 type APIConfig struct {
@@ -382,6 +386,36 @@ func GetCrosspostGateway(cfgBytes []byte) ([]string, error) {
 	}
 
 	return urls, nil
+}
+
+func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
+	var cfgIface interface{}
+	json.Unmarshal(cfgBytes, &cfgIface)
+	var addrs []string
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+
+	bootstrap, ok := cfg["Bootstrap-testnet"]
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+	addrList, ok := bootstrap.([]interface{})
+	if !ok {
+		return addrs, MalformedConfigError
+	}
+
+	for _, addr := range addrList {
+		addrStr, ok := addr.(string)
+		if !ok {
+			return addrs, MalformedConfigError
+		}
+		addrs = append(addrs, addrStr)
+	}
+
+	return addrs, nil
 }
 
 func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {

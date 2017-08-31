@@ -51,13 +51,15 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dht "github.com/ipfs/go-ipfs/routing/dht/util"
+	dht "github.com/ipfs/go-ipfs/routing/dht"
+	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
@@ -524,6 +526,21 @@ func (x *Start) Execute(args []string) error {
 	}
 	cfg.Identity = identity
 
+	// Setup testnet
+	if x.Testnet {
+		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		cfg.Bootstrap = testnetBootstrapAddrs
+		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
+		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
+
+		gatewayUrlStrings = []string{}
+	}
+
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
 	if err != nil {
 		log.Error(err)
@@ -676,9 +693,9 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dht.QuerySize = int(querySize)
+		dhtutil.QuerySize = int(querySize)
 	} else {
-		dht.QuerySize = 16
+		dhtutil.QuerySize = 16
 	}
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
