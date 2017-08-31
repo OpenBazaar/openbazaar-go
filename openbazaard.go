@@ -51,15 +51,15 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
+	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
 	dht "github.com/ipfs/go-ipfs/routing/dht"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
+	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
@@ -525,7 +525,6 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	cfg.Identity = identity
-
 
 	// Setup testnet
 	if x.Testnet {
