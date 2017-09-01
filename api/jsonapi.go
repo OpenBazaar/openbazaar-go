@@ -30,6 +30,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
@@ -41,8 +43,6 @@ import (
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
 	"io/ioutil"
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/OpenBazaar/spvwallet"
 )
 
 type JsonAPIConfig struct {

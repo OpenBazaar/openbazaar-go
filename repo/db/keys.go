@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"strconv"
 	"sync"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type KeysDB struct {

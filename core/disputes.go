@@ -13,13 +13,13 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 var DisputeWg = new(sync.WaitGroup)

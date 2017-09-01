@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 var saldb SalesDB

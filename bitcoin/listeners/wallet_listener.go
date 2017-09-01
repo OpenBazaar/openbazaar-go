@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type WalletListener struct {

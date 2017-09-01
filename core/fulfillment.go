@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/wallet-interface"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {

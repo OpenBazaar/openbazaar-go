@@ -1,12 +1,12 @@
 package bitcoind
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcrpcclient"
 	"io/ioutil"
 	"net/http"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type NotificationListener struct {

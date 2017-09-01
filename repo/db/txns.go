@@ -3,11 +3,11 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type TxnsDB struct {

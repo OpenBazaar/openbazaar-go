@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -25,7 +26,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("bitcoind")

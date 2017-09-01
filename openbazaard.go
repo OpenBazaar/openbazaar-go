@@ -45,6 +45,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/fatih/color"
@@ -80,7 +81,6 @@ import (
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
 	"syscall"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("main")

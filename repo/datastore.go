@@ -6,9 +6,9 @@ import (
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Datastore interface {

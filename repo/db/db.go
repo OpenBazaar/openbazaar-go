@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/wallet-interface"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("db")

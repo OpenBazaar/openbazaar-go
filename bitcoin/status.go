@@ -3,8 +3,8 @@ package bitcoin
 import (
 	"context"
 	"encoding/json"
-	"time"
 	"github.com/OpenBazaar/wallet-interface"
+	"time"
 )
 
 type StatusUpdater struct {

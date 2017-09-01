@@ -3,12 +3,12 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"strconv"
 	"strings"
 	"sync"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type UtxoDB struct {

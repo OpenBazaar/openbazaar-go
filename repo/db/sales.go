@@ -6,10 +6,10 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
 	"sync"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type SalesDB struct {
