@@ -114,4 +114,4 @@ class ChatTest(OpenBazaarTestFramework):
 
 if __name__ == '__main__':
     print("Running ChatTest")
-    ChatTest().main()
+    ChatTest().main(["--regtest", "--disableexchangerates"])
