@@ -1,17 +1,17 @@
 package bitcoind
 
 import (
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcrpcclient"
 	"io/ioutil"
 	"net/http"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type NotificationListener struct {
 	client    *btcrpcclient.Client
-	listeners []func(spvwallet.TransactionCallback)
+	listeners []func(wallet.TransactionCallback)
 }
 
 func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
@@ -35,14 +35,14 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		watchOnly = true
 	}
-	var outputs []spvwallet.TransactionOutput
+	var outputs []wallet.TransactionOutput
 	for i, txout := range tx.MsgTx().TxOut {
-		out := spvwallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
+		out := wallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		outputs = append(outputs, out)
 	}
-	var inputs []spvwallet.TransactionInput
+	var inputs []wallet.TransactionInput
 	for _, txin := range tx.MsgTx().TxIn {
-		in := spvwallet.TransactionInput{OutpointHash: txin.PreviousOutPoint.Hash.CloneBytes(), OutpointIndex: txin.PreviousOutPoint.Index}
+		in := wallet.TransactionInput{OutpointHash: txin.PreviousOutPoint.Hash.CloneBytes(), OutpointIndex: txin.PreviousOutPoint.Index}
 		prev, err := l.client.GetRawTransaction(&txin.PreviousOutPoint.Hash)
 		if err != nil {
 			inputs = append(inputs, in)
@@ -67,7 +67,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		}
 		height = blockinfo.Height
 	}
-	cb := spvwallet.TransactionCallback{
+	cb := wallet.TransactionCallback{
 		Txid:      tx.Hash().CloneBytes(),
 		Inputs:    inputs,
 		Outputs:   outputs,
@@ -81,7 +81,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startNotificationListener(client *btcrpcclient.Client, listeners []func(spvwallet.TransactionCallback)) {
+func startNotificationListener(client *btcrpcclient.Client, listeners []func(wallet.TransactionCallback)) {
 	l := NotificationListener{
 		client:    client,
 		listeners: listeners,

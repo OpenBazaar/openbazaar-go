@@ -30,7 +30,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
@@ -42,6 +41,8 @@ import (
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
 	"io/ioutil"
+	"github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/spvwallet"
 )
 
 type JsonAPIConfig struct {
@@ -754,7 +755,7 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
-	addr := i.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+	addr := i.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
 }
 
@@ -786,16 +787,16 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var feeLevel spvwallet.FeeLevel
+	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(snd.FeeLevel) {
 	case "PRIORITY":
-		feeLevel = spvwallet.PRIOIRTY
+		feeLevel = wallet.PRIOIRTY
 	case "NORMAL":
-		feeLevel = spvwallet.NORMAL
+		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
-		feeLevel = spvwallet.ECONOMIC
+		feeLevel = wallet.ECONOMIC
 	default:
-		feeLevel = spvwallet.NORMAL
+		feeLevel = wallet.NORMAL
 	}
 	addr, err := i.node.Wallet.DecodeAddress(snd.Address)
 	if err != nil {
@@ -1587,7 +1588,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var funded bool
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	var read bool
 	contract, state, funded, records, read, err = i.node.Datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
@@ -1939,7 +1940,7 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	var isSale bool
 	var contract *pb.RicardianContract
 	var state pb.OrderState
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
 	if err != nil {
 		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
@@ -2060,7 +2061,7 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 	var contract *pb.RicardianContract
 	var state pb.OrderState
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
 		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
@@ -2096,7 +2097,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 	var contract *pb.RicardianContract
 	var state pb.OrderState
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	var isSale bool
 	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
@@ -3060,16 +3061,16 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	fl := r.URL.Query().Get("feeLevel")
-	var feeLevel spvwallet.FeeLevel
+	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(fl) {
 	case "PRIORITY":
-		feeLevel = spvwallet.PRIOIRTY
+		feeLevel = wallet.PRIOIRTY
 	case "NORMAL":
-		feeLevel = spvwallet.NORMAL
+		feeLevel = wallet.NORMAL
 	case "ECONOMIC":
-		feeLevel = spvwallet.ECONOMIC
+		feeLevel = wallet.ECONOMIC
 	default:
-		feeLevel = spvwallet.NORMAL
+		feeLevel = wallet.NORMAL
 	}
 	fmt.Fprintf(w, "%d", int(i.node.Wallet.GetFeePerByte(feeLevel)))
 	return

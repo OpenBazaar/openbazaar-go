@@ -80,6 +80,7 @@ import (
 	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
 	"syscall"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("main")
@@ -741,7 +742,7 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
-	var wallet bitcoin.BitcoinWallet
+	var crytoWallet wallet.Wallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
 		var tp net.Addr
@@ -773,7 +774,7 @@ func (x *Start) Execute(args []string) error {
 			Proxy:        torDialer,
 			Logger:       ml,
 		}
-		wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
+		crytoWallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -786,7 +787,7 @@ func (x *Start) Execute(args []string) error {
 		if usingTor && !usingClearnet {
 			usetor = true
 		}
-		wallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
+		crytoWallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
 	default:
 		log.Fatal("Unknown wallet type")
 	}
@@ -816,7 +817,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	// Override config file preference if this is Mainnet, open internet and API enabled
-	if addr != "127.0.0.1" && wallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
+	if addr != "127.0.0.1" && crytoWallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
 	for _, ip := range x.AllowIP {
@@ -928,7 +929,7 @@ func (x *Start) Execute(args []string) error {
 		RootHash:          ipath.Path(e.Value).String(),
 		RepoPath:          repoPath,
 		Datastore:         sqliteDB,
-		Wallet:            wallet,
+		Wallet:            crytoWallet,
 		MessageStorage:    storage,
 		NameSystem:        ns,
 		ExchangeRates:     exchangeRates,
@@ -964,12 +965,12 @@ func (x *Start) Execute(args []string) error {
 			MR.Wait()
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
-			wallet.AddTransactionListener(TL.OnTransactionReceived)
-			wallet.AddTransactionListener(WL.OnTransactionReceived)
+			crytoWallet.AddTransactionListener(TL.OnTransactionReceived)
+			crytoWallet.AddTransactionListener(WL.OnTransactionReceived)
 			log.Info("Starting bitcoin wallet")
-			su := bitcoin.NewStatusUpdater(wallet, core.Node.Broadcast, nd.Context())
+			su := bitcoin.NewStatusUpdater(crytoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
-			go wallet.Start()
+			go crytoWallet.Start()
 		}
 		core.Node.UpdateFollow()
 		core.Node.SeedNode()

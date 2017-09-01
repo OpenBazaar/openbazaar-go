@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
-func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	if fulfillment.Slug == "" && len(contract.VendorListings) == 1 {
 		fulfillment.Slug = contract.VendorListings[0].Slug
 	} else if fulfillment.Slug == "" && len(contract.VendorListings) > 1 {
@@ -24,10 +24,10 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		currentAddress := n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+		currentAddress := n.Wallet.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.EncodeAddress()
-		payout.PayoutFeePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
-		var ins []spvwallet.TransactionInput
+		payout.PayoutFeePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -36,12 +36,12 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 					return err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
 
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 
 		outputScript, err := n.Wallet.AddressToScript(currentAddress)
 		if err != nil {
@@ -78,7 +78,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
 
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
+		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
 		if err != nil {
 			return err
 		}

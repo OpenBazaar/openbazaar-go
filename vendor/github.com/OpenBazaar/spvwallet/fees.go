@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"encoding/json"
+	"github.com/OpenBazaar/wallet-interface"
 	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
@@ -54,16 +55,16 @@ func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, feeAPI s
 	return &fp
 }
 
-func (fp *FeeProvider) GetFeePerByte(feeLevel FeeLevel) uint64 {
+func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	defaultFee := func() uint64 {
 		switch feeLevel {
-		case PRIOIRTY:
+		case wallet.PRIOIRTY:
 			return fp.priorityFee
-		case NORMAL:
+		case wallet.NORMAL:
 			return fp.normalFee
-		case ECONOMIC:
+		case wallet.ECONOMIC:
 			return fp.economicFee
-		case FEE_BUMP:
+		case wallet.FEE_BUMP:
 			return fp.priorityFee * 2
 		default:
 			return fp.normalFee
@@ -91,25 +92,25 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel FeeLevel) uint64 {
 		fees = fp.cache.fees
 	}
 	switch feeLevel {
-	case PRIOIRTY:
+	case wallet.PRIOIRTY:
 		if fees.FastestFee > fp.maxFee || fees.FastestFee == 0 {
 			return fp.maxFee
 		} else {
 			return fees.FastestFee
 		}
-	case NORMAL:
+	case wallet.NORMAL:
 		if fees.HalfHourFee > fp.maxFee || fees.HalfHourFee == 0 {
 			return fp.maxFee
 		} else {
 			return fees.HalfHourFee
 		}
-	case ECONOMIC:
+	case wallet.ECONOMIC:
 		if fees.HourFee > fp.maxFee || fees.HourFee == 0 {
 			return fp.maxFee
 		} else {
 			return fees.HourFee
 		}
-	case FEE_BUMP:
+	case wallet.FEE_BUMP:
 		if (fees.FastestFee*2) > fp.maxFee || fees.FastestFee == 0 {
 			return fp.maxFee
 		} else {

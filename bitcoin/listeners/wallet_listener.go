@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type WalletListener struct {
@@ -18,7 +18,7 @@ func NewWalletListener(db repo.Datastore, broadcast chan interface{}) *WalletLis
 	return l
 }
 
-func (l *WalletListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
+func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	if !cb.WatchOnly {
 		txid := hex.EncodeToString(cb.Txid)
 		metadata, _ := l.db.TxMetadata().Get(txid)

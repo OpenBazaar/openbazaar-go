@@ -15,12 +15,12 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 const (
@@ -52,7 +52,7 @@ type SavedRating struct {
 	Ratings []string `json:"ratings"`
 }
 
-func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
@@ -155,7 +155,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 	// Payout order if moderated and not disputed
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && contract.DisputeResolution == nil {
-		var ins []spvwallet.TransactionInput
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -164,7 +164,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 					return err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
@@ -173,7 +173,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 		outputScript, err := n.Wallet.AddressToScript(payoutAddress)
 		if err != nil {
 			return err
@@ -212,7 +212,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 
-		buyerSignatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
+		buyerSignatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte)
 		if err != nil {
 			return err
 		}
@@ -224,12 +224,12 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			pbSigs = append(pbSigs, sig)
 		}
 		oc.PayoutSigs = pbSigs
-		var vendorSignatures []spvwallet.Signature
+		var vendorSignatures []wallet.Signature
 		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
-			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = n.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
+		_, err = n.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
 		if err != nil {
 			return err
 		}
@@ -266,12 +266,12 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 
 var EscrowTimeLockedError error
 
-func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
-	var utxos []spvwallet.Utxo
+	var utxos []wallet.Utxo
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			var utxo spvwallet.Utxo
+			var utxo wallet.Utxo
 			utxo.Value = r.Value
 
 			hash, err := chainhash.NewHashFromStr(r.Txid)
@@ -323,7 +323,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, spvwallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}

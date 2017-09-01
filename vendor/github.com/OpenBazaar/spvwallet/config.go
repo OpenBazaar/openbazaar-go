@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/mitchellh/go-homedir"
 	"github.com/op/go-logging"
@@ -31,7 +32,7 @@ type Config struct {
 	RepoPath string
 
 	// An implementation of the Datastore interface
-	DB Datastore
+	DB wallet.Datastore
 
 	// If you wish to connect to a single trusted peer set this. Otherwise leave nil.
 	TrustedPeer net.Addr

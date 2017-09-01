@@ -26,6 +26,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var (
@@ -64,7 +65,7 @@ type OpenBazaarNode struct {
 	Broadcast chan interface{}
 
 	// Bitcoin wallet implementation
-	Wallet bitcoin.BitcoinWallet
+	Wallet wallet.Wallet
 
 	// Storage for our outgoing messages
 	MessageStorage sto.OfflineMessagingStorage

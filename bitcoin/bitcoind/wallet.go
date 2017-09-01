@@ -25,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -39,7 +40,7 @@ type BitcoindWallet struct {
 	trustedPeer      string
 	masterPrivateKey *hd.ExtendedKey
 	masterPublicKey  *hd.ExtendedKey
-	listeners        []func(spvwallet.TransactionCallback)
+	listeners        []func(wallet.TransactionCallback)
 	rpcClient        *btcrpcclient.Client
 	binary           string
 	controlPort      int
@@ -173,12 +174,12 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
-func (w *BitcoindWallet) CurrentAddress(purpose spvwallet.KeyPurpose) btc.Address {
+func (w *BitcoindWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 	addr, _ := w.rpcClient.GetAccountAddress(Account)
 	return addr
 }
 
-func (w *BitcoindWallet) NewAddress(purpose spvwallet.KeyPurpose) btc.Address {
+func (w *BitcoindWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
 	addr, _ := w.rpcClient.GetNewAddress(Account)
 	return addr
 }
@@ -232,8 +233,8 @@ func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	return blockinfo.Height, nil
 }
 
-func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
-	var ret []spvwallet.Txn
+func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
+	var ret []wallet.Txn
 	resp, err := w.rpcClient.ListTransactions(Account)
 	if err != nil {
 		return ret, err
@@ -255,7 +256,7 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 				return ret, err
 			}
 		}
-		t := spvwallet.Txn{
+		t := wallet.Txn{
 			Txid:      r.TxID,
 			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
 			Height:    height,
@@ -266,9 +267,9 @@ func (w *BitcoindWallet) Transactions() ([]spvwallet.Txn, error) {
 	return ret, nil
 }
 
-func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (spvwallet.Txn, error) {
+func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	includeWatchOnly := false
-	t := spvwallet.Txn{}
+	t := wallet.Txn{}
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
 		return t, err
@@ -303,7 +304,7 @@ func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
 	return uint32(info.Blocks), *h
 }
 
-func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	amt, err := btc.NewAmount(float64(amount) / 100000000)
 	if err != nil {
 		return nil, err
@@ -338,7 +339,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				continue
 			}
-			utxo := spvwallet.Utxo{
+			utxo := wallet.Utxo{
 				Op:           *op,
 				Value:        int64(u.Amount / 100000000),
 				ScriptPubkey: script,
@@ -352,7 +353,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 				continue
 			}
 			hdKey := hd.NewExtendedKey(w.Params().HDPrivateKeyID[:], key.PrivKey.Serialize(), make([]byte, 32), make([]byte, 4), 0, 0, true)
-			transactionID, err := w.SweepAddress([]spvwallet.Utxo{utxo}, nil, hdKey, nil, spvwallet.FEE_BUMP)
+			transactionID, err := w.SweepAddress([]wallet.Utxo{utxo}, nil, hdKey, nil, wallet.FEE_BUMP)
 			if err != nil {
 				return nil, err
 			}
@@ -363,15 +364,15 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	return nil, spvwallet.BumpFeeNotFoundError
 }
 
-func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
+func (w *BitcoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	defautlFee := uint64(50)
 	var nBlocks json.RawMessage
 	switch feeLevel {
-	case spvwallet.PRIOIRTY:
+	case wallet.PRIOIRTY:
 		nBlocks = json.RawMessage([]byte(`1`))
-	case spvwallet.NORMAL:
+	case wallet.NORMAL:
 		nBlocks = json.RawMessage([]byte(`3`))
-	case spvwallet.ECONOMIC:
+	case wallet.ECONOMIC:
 		nBlocks = json.RawMessage([]byte(`6`))
 	default:
 		return defautlFee
@@ -391,7 +392,7 @@ func (w *BitcoindWallet) GetFeePerByte(feeLevel spvwallet.FeeLevel) uint64 {
 	return uint64(fee)
 }
 
-func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, feePerByte uint64) uint64 {
+func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
@@ -402,8 +403,8 @@ func (w *BitcoindWallet) EstimateFee(ins []spvwallet.TransactionInput, outs []sp
 	return uint64(fee)
 }
 
-func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]spvwallet.Signature, error) {
-	var sigs []spvwallet.Signature
+func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {
+	var sigs []wallet.Signature
 	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
@@ -448,13 +449,13 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []spvwallet.TransactionInpu
 		if err != nil {
 			continue
 		}
-		bs := spvwallet.Signature{InputIndex: uint32(i), Signature: sig}
+		bs := wallet.Signature{InputIndex: uint32(i), Signature: sig}
 		sigs = append(sigs, bs)
 	}
 	return sigs, nil
 }
 
-func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvwallet.TransactionOutput, sigs1 []spvwallet.Signature, sigs2 []spvwallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
+func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, sigs1 []wallet.Signature, sigs2 []wallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
@@ -530,12 +531,12 @@ func (w *BitcoindWallet) Multisign(ins []spvwallet.TransactionInput, outs []spvw
 	return buf.Bytes(), nil
 }
 
-func (w *BitcoindWallet) SweepAddress(utxos []spvwallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel spvwallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
 	} else {
-		internalAddr = w.CurrentAddress(spvwallet.INTERNAL)
+		internalAddr = w.CurrentAddress(wallet.INTERNAL)
 	}
 	script, err := txscript.PayToAddrScript(internalAddr)
 	if err != nil {
@@ -665,7 +666,7 @@ func (w *BitcoindWallet) Params() *chaincfg.Params {
 	return w.params
 }
 
-func (w *BitcoindWallet) AddTransactionListener(callback func(spvwallet.TransactionCallback)) {
+func (w *BitcoindWallet) AddTransactionListener(callback func(wallet.TransactionCallback)) {
 	w.listeners = append(w.listeners, callback)
 }
 

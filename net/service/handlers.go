@@ -12,7 +12,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
@@ -21,6 +20,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"strconv"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -517,10 +517,10 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the address into our wallet
-		var utxos []spvwallet.Utxo
+		var utxos []wallet.Utxo
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := spvwallet.Utxo{}
+				u := wallet.Utxo{}
 				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
 				if err != nil {
 					return nil, err
@@ -568,12 +568,12 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		_, err = service.node.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, spvwallet.NORMAL)
+		_, err = service.node.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		var ins []spvwallet.TransactionInput
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -582,7 +582,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 					return nil, err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
@@ -591,7 +591,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return nil, err
@@ -627,16 +627,16 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
 
-		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return nil, err
 		}
-		var vendorSignatures []spvwallet.Signature
+		var vendorSignatures []wallet.Signature
 		for _, s := range rejectMsg.Sigs {
-			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
+		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -689,7 +689,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		var ins []spvwallet.TransactionInput
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -698,7 +698,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 					return nil, err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
@@ -707,7 +707,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
 		if err != nil {
 			return nil, err
@@ -746,16 +746,16 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 
-		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return nil, err
 		}
-		var vendorSignatures []spvwallet.Signature
+		var vendorSignatures []wallet.Signature
 		for _, s := range rc.Refund.Sigs {
-			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
+		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -875,7 +875,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && state != pb.OrderState_DISPUTED && state != pb.OrderState_DECIDED && state != pb.OrderState_RESOLVED && state != pb.OrderState_PAYMENT_FINALIZED {
-		var ins []spvwallet.TransactionInput
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -884,7 +884,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 					return nil, err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash}
 				ins = append(ins, in)
 			}
 		}
@@ -895,9 +895,9 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 				return nil, err
 			}
 		} else {
-			payoutAddress = service.node.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+			payoutAddress = service.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 		}
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 		outputScript, err := service.node.Wallet.AddressToScript(payoutAddress)
 		if err != nil {
 			return nil, err
@@ -910,18 +910,18 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			return nil, err
 		}
 
-		var vendorSignatures []spvwallet.Signature
+		var vendorSignatures []wallet.Signature
 		for _, s := range contract.VendorOrderFulfillment[0].Payout.Sigs {
-			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		var buyerSignatures []spvwallet.Signature
+		var buyerSignatures []wallet.Signature
 		for _, s := range contract.BuyerOrderCompletion.PayoutSigs {
-			sig := spvwallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
+			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			buyerSignatures = append(buyerSignatures, sig)
 		}
 
-		_, err = service.node.Wallet.Multisign(ins, []spvwallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
+		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
 		if err != nil {
 			return nil, err
 		}

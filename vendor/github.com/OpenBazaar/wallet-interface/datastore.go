@@ -1,4 +1,4 @@
-package spvwallet
+package wallet
 
 import (
 	"bytes"
@@ -198,4 +198,9 @@ type Txn struct {
 
 	// Raw transaction bytes
 	Bytes []byte
+}
+
+type KeyPath struct {
+	Purpose KeyPurpose
+	Index   int
 }

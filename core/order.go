@@ -15,7 +15,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -24,6 +23,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	"strconv"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type option struct {
@@ -170,7 +170,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 		contract.BuyerOrder.Payment = payment
-		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
+		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(wallet.NORMAL)
 
 		script, err := n.Wallet.AddressToScript(addr)
 		if err != nil {
@@ -417,7 +417,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
-		order.RefundAddress = n.Wallet.CurrentAddress(spvwallet.INTERNAL).EncodeAddress()
+		order.RefundAddress = n.Wallet.CurrentAddress(wallet.INTERNAL).EncodeAddress()
 	}
 	shipping := &pb.Order_Shipping{
 		ShipTo:     data.ShipTo,
@@ -600,16 +600,16 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) 
 	return n.CalculateOrderTotal(contract)
 }
 
-func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
 	// Sweep the temp address into our wallet
-	var utxos []spvwallet.Utxo
+	var utxos []wallet.Utxo
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			u := spvwallet.Utxo{}
+			u := wallet.Utxo{}
 			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
 			if err != nil {
 				return err
@@ -657,7 +657,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, spvwallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}

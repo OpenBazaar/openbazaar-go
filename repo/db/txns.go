@@ -3,11 +3,11 @@ package db
 import (
 	"bytes"
 	"database/sql"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type TxnsDB struct {
@@ -43,10 +43,10 @@ func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int, timestamp time.Time, wa
 	return nil
 }
 
-func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, spvwallet.Txn, error) {
+func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	var txn spvwallet.Txn
+	var txn wallet.Txn
 	stmt, err := t.db.Prepare("select tx, value, height, timestamp, watchOnly from txns where txid=?")
 	if err != nil {
 		return nil, txn, err
@@ -68,7 +68,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, spvwallet.Txn, error) {
 	r := bytes.NewReader(ret)
 	msgTx := wire.NewMsgTx(1)
 	msgTx.BtcDecode(r, wire.ProtocolVersion, wire.WitnessEncoding)
-	txn = spvwallet.Txn{
+	txn = wallet.Txn{
 		Txid:      msgTx.TxHash().String(),
 		Value:     int64(value),
 		Height:    int32(height),
@@ -78,10 +78,10 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (*wire.MsgTx, spvwallet.Txn, error) {
 	return msgTx, txn, nil
 }
 
-func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]spvwallet.Txn, error) {
+func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	var ret []spvwallet.Txn
+	var ret []wallet.Txn
 	stm := "select tx, value, height, timestamp, watchOnly from txns"
 	rows, err := t.db.Query(stm)
 	if err != nil {
@@ -109,7 +109,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]spvwallet.Txn, error) {
 			watchOnly = true
 		}
 
-		txn := spvwallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly, tx}
+		txn := wallet.Txn{msgTx.TxHash().String(), int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly, tx}
 		ret = append(ret, txn)
 	}
 	return ret, nil

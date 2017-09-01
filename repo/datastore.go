@@ -6,9 +6,9 @@ import (
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	btc "github.com/btcsuite/btcutil"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Datastore interface {
@@ -168,16 +168,16 @@ type Purchases interface {
 	MarkAsUnread(orderID string) error
 
 	// Update the funding level for the contract
-	UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error
+	UpdateFunding(orderId string, funded bool, records []*wallet.TransactionRecord) error
 
 	// Delete an order
 	Delete(orderID string) error
 
 	// Return a purchase given the payment address
-	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, err error)
 
 	// Return a purchase given the order ID
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, err error)
 
 	// Return the metadata for all purchases. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Purchase, int, error)
@@ -197,16 +197,16 @@ type Sales interface {
 	MarkAsUnread(orderID string) error
 
 	// Update the funding level for the contract
-	UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error
+	UpdateFunding(orderId string, funded bool, records []*wallet.TransactionRecord) error
 
 	// Delete an order
 	Delete(orderID string) error
 
 	// Return a sale given the payment address
-	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, err error)
+	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, err error)
 
 	// Return a sale given the order ID
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord, read bool, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, err error)
 
 	// Return the metadata for all sales. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Sale, int, error)

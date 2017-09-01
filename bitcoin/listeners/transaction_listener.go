@@ -3,17 +3,16 @@ package bitcoin
 import (
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
 	"sync"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -21,16 +20,16 @@ var log = logging.MustGetLogger("transaction-listener")
 type TransactionListener struct {
 	db        repo.Datastore
 	broadcast chan interface{}
-	wallet    bitcoin.BitcoinWallet
+	wallet    wallet.Wallet
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, wallet bitcoin.BitcoinWallet) *TransactionListener {
+func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, wallet wallet.Wallet) *TransactionListener {
 	l := &TransactionListener{db, broadcast, wallet, new(sync.Mutex)}
 	return l
 }
 
-func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCallback) {
+func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
@@ -91,7 +90,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 			}
 		}
 
-		record := &spvwallet.TransactionRecord{
+		record := &wallet.TransactionRecord{
 			Timestamp:    time.Now(),
 			Txid:         chainHash.String(),
 			Index:        input.OutpointIndex,
@@ -161,7 +160,7 @@ func (l *TransactionListener) OnTransactionReceived(cb spvwallet.TransactionCall
 
 }
 
-func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
+func (l *TransactionListener) processSalePayment(txid []byte, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	chainHash, err := chainhash.NewHash(txid)
 	if err != nil {
 		return
@@ -207,7 +206,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 		}
 	}
 
-	record := &spvwallet.TransactionRecord{
+	record := &wallet.TransactionRecord{
 		Timestamp:    time.Now(),
 		Txid:         chainHash.String(),
 		Index:        output.Index,
@@ -231,7 +230,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output spvwallet.T
 	l.db.TxMetadata().Put(repo.Metadata{chainHash.String(), "", title, orderId, thumbnail, bumpable})
 }
 
-func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*spvwallet.TransactionRecord) {
+func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	chainHash, err := chainhash.NewHash(txid)
 	if err != nil {
 		return
@@ -269,7 +268,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output spvwall
 		l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
 	}
 
-	record := &spvwallet.TransactionRecord{
+	record := &wallet.TransactionRecord{
 		Txid:         chainHash.String(),
 		Index:        output.Index,
 		Value:        output.Value,

@@ -13,20 +13,20 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var DisputeWg = new(sync.WaitGroup)
 
 var ErrCaseNotFound = errors.New("Case not found")
 
-func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*spvwallet.TransactionRecord, claim string) error {
+func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
 	var isPurchase bool
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		isPurchase = true
@@ -56,7 +56,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	dispute.Outpoints = outpoints
 
 	// Add payout address
-	dispute.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+	dispute.PayoutAddress = n.Wallet.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
 
 	// Serialize contract
 	ser, err := proto.Marshal(contract)
@@ -266,7 +266,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 		update.SerializedContract = ser
 		update.OrderId = orderId
-		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+		update.PayoutAddress = n.Wallet.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
 
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
@@ -320,7 +320,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		}
 		update.SerializedContract = ser
 		update.OrderId = orderId
-		update.PayoutAddress = n.Wallet.CurrentAddress(spvwallet.EXTERNAL).EncodeAddress()
+		update.PayoutAddress = n.Wallet.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
 
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
@@ -432,7 +432,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		if len(vendorContract.VendorOrderFulfillment) > 0 && vendorContract.VendorOrderFulfillment[0].Payout != nil {
 			feePerByte = vendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
 		} else {
-			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
+			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
 		}
 		buyerId = vendorContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(vendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
@@ -453,7 +453,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		if len(vendorContract.VendorOrderFulfillment) > 0 && vendorContract.VendorOrderFulfillment[0].Payout != nil {
 			feePerByte = vendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
 		} else {
-			feePerByte = n.Wallet.GetFeePerByte(spvwallet.NORMAL)
+			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
 		}
 		buyerId = vendorContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(vendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
@@ -491,11 +491,11 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 
 	// Create outputs using full value. We will subtract the fee off each output later.
-	outMap := make(map[string]spvwallet.TransactionOutput)
-	var outputs []spvwallet.TransactionOutput
+	outMap := make(map[string]wallet.TransactionOutput)
+	var outputs []wallet.TransactionOutput
 	var modAddr btcutil.Address
 	var modValue uint64
-	modAddr = n.Wallet.CurrentAddress(spvwallet.EXTERNAL)
+	modAddr = n.Wallet.CurrentAddress(wallet.EXTERNAL)
 	modValue, err = n.GetModeratorFee(totalOut)
 	if err != nil {
 		return err
@@ -506,7 +506,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		out := spvwallet.TransactionOutput{
+		out := wallet.TransactionOutput{
 			ScriptPubKey: modOutputScript,
 			Value:        int64(modValue),
 		}
@@ -527,7 +527,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		out := spvwallet.TransactionOutput{
+		out := wallet.TransactionOutput{
 			ScriptPubKey: buyerOutputScript,
 			Value:        int64(buyerValue),
 		}
@@ -547,7 +547,7 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
-		out := spvwallet.TransactionOutput{
+		out := wallet.TransactionOutput{
 			ScriptPubKey: vendorOutputScript,
 			Value:        int64(vendorValue),
 		}
@@ -560,13 +560,13 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 
 	// Create inputs
-	var inputs []spvwallet.TransactionInput
+	var inputs []wallet.TransactionInput
 	for _, o := range outpoints {
 		decodedHash, err := hex.DecodeString(o.Hash)
 		if err != nil {
 			return err
 		}
-		input := spvwallet.TransactionInput{
+		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
 			Value:         int64(o.Value),
@@ -582,13 +582,13 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
 
 	// Subtract fee from each output in proportion to output value
-	var outs []spvwallet.TransactionOutput
+	var outs []wallet.TransactionOutput
 	for role, output := range outMap {
 		outPercentage := float64(output.Value) / float64(totalOut)
 		outputShareOfFee := outPercentage * float64(txFee)
 		val := output.Value - int64(outputShareOfFee)
 		if !n.Wallet.IsDust(val) {
-			o := spvwallet.TransactionOutput{
+			o := wallet.TransactionOutput{
 				Value:        val,
 				ScriptPubKey: output.ScriptPubKey,
 				Index:        output.Index,
@@ -1002,15 +1002,15 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 	return nil
 }
 
-func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	// Create inputs
-	var inputs []spvwallet.TransactionInput
+	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
 		decodedHash, err := hex.DecodeString(o.Hash)
 		if err != nil {
 			return err
 		}
-		input := spvwallet.TransactionInput{
+		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
 			Value:         int64(o.Value),
@@ -1023,13 +1023,13 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create outputs
-	var outputs []spvwallet.TransactionOutput
+	var outputs []wallet.TransactionOutput
 	if contract.DisputeResolution.Payout.BuyerOutput != nil {
 		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.BuyerOutput.Script)
 		if err != nil {
 			return err
 		}
-		output := spvwallet.TransactionOutput{
+		output := wallet.TransactionOutput{
 			ScriptPubKey: decodedScript,
 			Value:        int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
 		}
@@ -1040,7 +1040,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		output := spvwallet.TransactionOutput{
+		output := wallet.TransactionOutput{
 			ScriptPubKey: decodedScript,
 			Value:        int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
 		}
@@ -1051,7 +1051,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
-		output := spvwallet.TransactionOutput{
+		output := wallet.TransactionOutput{
 			ScriptPubKey: decodedScript,
 			Value:        int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
 		}
@@ -1096,9 +1096,9 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	var moderatorSigs []spvwallet.Signature
+	var moderatorSigs []wallet.Signature
 	for _, sig := range contract.DisputeResolution.Payout.Sigs {
-		s := spvwallet.Signature{
+		s := wallet.Signature{
 			Signature:  sig.Signature,
 			InputIndex: sig.InputIndex,
 		}

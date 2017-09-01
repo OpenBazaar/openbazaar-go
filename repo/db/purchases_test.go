@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var purdb PurchasesDB
@@ -195,10 +195,10 @@ func TestUpdatePurchaseFunding(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	record := &spvwallet.TransactionRecord{
+	record := &wallet.TransactionRecord{
 		Txid: "abc123",
 	}
-	records := []*spvwallet.TransactionRecord{record}
+	records := []*wallet.TransactionRecord{record}
 	err = purdb.UpdateFunding("orderID", true, records)
 	if err != nil {
 		t.Error(err)
@@ -230,10 +230,10 @@ func TestPurchasePutAfterFundingUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	record := &spvwallet.TransactionRecord{
+	record := &wallet.TransactionRecord{
 		Txid: "abc123",
 	}
-	records := []*spvwallet.TransactionRecord{record}
+	records := []*wallet.TransactionRecord{record}
 	err = purdb.UpdateFunding("orderID", true, records)
 	if err != nil {
 		t.Error(err)
