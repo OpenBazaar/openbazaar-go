@@ -16,6 +16,10 @@
 			"Rev": "d8b7c75b86a33f80946bdba8f24b6fd5014581a1"
 		},
 		{
+			"ImportPath": "github.com/OpenBazaar/wallet-interface",
+			"Rev": "9f19afb35ee4212c5f94e5eac38e538cb7e38d16"
+		},
+		{
 			"ImportPath": "github.com/boltdb/bolt",
 			"Comment": "v1.2.0-21-gd974993",
 			"Rev": "d97499360d1ecebc492ea66c7447ea948f417620"
@@ -710,18 +714,8 @@
 			"Rev": "9991ed99bcf1d768399aea10d225fbd074f03da2"
 		},
 		{
-			"ImportPath": "github.com/jbenet/go-base58",
-			"Comment": "1.0.0",
-			"Rev": "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-		},
-		{
 			"ImportPath": "github.com/jbenet/go-context/io",
 			"Rev": "d14ea06fba99483203c19d92cfcd13ebe73135f4"
-		},
-		{
-			"ImportPath": "github.com/jbenet/go-multihash",
-			"Comment": "0.1.0-43-g5bb8e87",
-			"Rev": "5bb8e87657d874eea0af6366dc6336c4d819e7c1"
 		},
 		{
 			"ImportPath": "github.com/jessevdk/go-flags",
@@ -810,10 +804,6 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
-			"Rev": "558b6879de74bc843225cde5686419267ff707ca"
-		},
-		{
-			"ImportPath": "golang.org/x/crypto/sha3",
 			"Rev": "558b6879de74bc843225cde5686419267ff707ca"
 		},
 		{
@@ -1671,10 +1661,6 @@
 		{
 			"ImportPath": "gx/ipfs/QmfJHywXQu98UeZtGJBQrPAR6AtmDjjbe3qjTo9piXHPnx/murmur3",
 			"Rev": "be2d1a2331f5caa2315e99fc187b77286d6d9a0b"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "9f19afb35ee4212c5f94e5eac38e538cb7e38d16"
 		}
 	]
 }
