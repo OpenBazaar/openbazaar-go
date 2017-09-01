@@ -6,7 +6,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
 	"sync"
 	"time"
@@ -99,7 +99,7 @@ func (p *PurchasesDB) MarkAsUnread(orderID string) error {
 	return nil
 }
 
-func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []*spvwallet.TransactionRecord) error {
+func (p *PurchasesDB) UpdateFunding(orderId string, funded bool, records []*wallet.TransactionRecord) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -205,7 +205,7 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 	return ret, count, nil
 }
 
-func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, error) {
+func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
@@ -227,12 +227,12 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	if fundedInt != nil && *fundedInt == 1 {
 		funded = true
 	}
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
-func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*spvwallet.TransactionRecord, bool, error) {
+func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, bool, error) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions, read from purchases where orderID=?")
@@ -259,7 +259,7 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
-	var records []*spvwallet.TransactionRecord
+	var records []*wallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
 	return rc, pb.OrderState(stateInt), funded, records, read, nil
 }

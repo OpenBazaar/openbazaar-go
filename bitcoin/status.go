@@ -3,11 +3,12 @@ package bitcoin
 import (
 	"context"
 	"encoding/json"
+	"github.com/OpenBazaar/wallet-interface"
 	"time"
 )
 
 type StatusUpdater struct {
-	w   BitcoinWallet
+	w   wallet.Wallet
 	c   chan interface{}
 	ctx context.Context
 }
@@ -22,7 +23,7 @@ type walletUpdate struct {
 	Confirmed   int64  `json:"confirmed"`
 }
 
-func NewStatusUpdater(w BitcoinWallet, c chan interface{}, ctx context.Context) *StatusUpdater {
+func NewStatusUpdater(w wallet.Wallet, c chan interface{}, ctx context.Context) *StatusUpdater {
 	return &StatusUpdater{w, c, ctx}
 }
 

@@ -1,6 +1,7 @@
 package spvwallet
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/goleveldb/leveldb/errors"
@@ -8,20 +9,15 @@ import (
 
 const LOOKAHEADWINDOW = 100
 
-type KeyPath struct {
-	Purpose KeyPurpose
-	Index   int
-}
-
 type KeyManager struct {
-	datastore Keys
+	datastore wallet.Keys
 	params    *chaincfg.Params
 
 	internalKey *hd.ExtendedKey
 	externalKey *hd.ExtendedKey
 }
 
-func NewKeyManager(db Keys, params *chaincfg.Params, masterPrivKey *hd.ExtendedKey) (*KeyManager, error) {
+func NewKeyManager(db wallet.Keys, params *chaincfg.Params, masterPrivKey *hd.ExtendedKey) (*KeyManager, error) {
 	internal, external, err := Bip44Derivation(masterPrivKey)
 	if err != nil {
 		return nil, err
@@ -68,7 +64,7 @@ func Bip44Derivation(masterPrivKey *hd.ExtendedKey) (internal, external *hd.Exte
 	return internal, external, nil
 }
 
-func (km *KeyManager) GetCurrentKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
+func (km *KeyManager) GetCurrentKey(purpose wallet.KeyPurpose) (*hd.ExtendedKey, error) {
 	i, err := km.datastore.GetUnused(purpose)
 	if err != nil {
 		return nil, err
@@ -79,7 +75,7 @@ func (km *KeyManager) GetCurrentKey(purpose KeyPurpose) (*hd.ExtendedKey, error)
 	return km.generateChildKey(purpose, uint32(i[0]))
 }
 
-func (km *KeyManager) GetFreshKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
+func (km *KeyManager) GetFreshKey(purpose wallet.KeyPurpose) (*hd.ExtendedKey, error) {
 	index, _, err := km.datastore.GetLastKeyIndex(purpose)
 	var childKey *hd.ExtendedKey
 	if err != nil {
@@ -101,7 +97,7 @@ func (km *KeyManager) GetFreshKey(purpose KeyPurpose) (*hd.ExtendedKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	p := KeyPath{KeyPurpose(purpose), index}
+	p := wallet.KeyPath{wallet.KeyPurpose(purpose), index}
 	err = km.datastore.Put(addr.ScriptAddress(), p)
 	if err != nil {
 		return nil, err
@@ -153,10 +149,10 @@ func (km *KeyManager) MarkKeyAsUsed(scriptAddress []byte) error {
 	return km.lookahead()
 }
 
-func (km *KeyManager) generateChildKey(purpose KeyPurpose, index uint32) (*hd.ExtendedKey, error) {
-	if purpose == EXTERNAL {
+func (km *KeyManager) generateChildKey(purpose wallet.KeyPurpose, index uint32) (*hd.ExtendedKey, error) {
+	if purpose == wallet.EXTERNAL {
 		return km.externalKey.Child(index)
-	} else if purpose == INTERNAL {
+	} else if purpose == wallet.INTERNAL {
 		return km.internalKey.Child(index)
 	}
 	return nil, errors.New("Unknown key purpose")

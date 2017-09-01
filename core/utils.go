@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/golang/protobuf/ptypes"
 	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
@@ -54,7 +54,7 @@ func ExtractIDFromPointer(pi ps.PeerInfo) (string, error) {
 }
 
 // Used by the GET order API to build transaction records suitable to be included in the order response
-func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
+func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
 

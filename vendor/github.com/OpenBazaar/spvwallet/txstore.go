@@ -3,6 +3,7 @@ package spvwallet
 import (
 	"bytes"
 	"errors"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -25,12 +26,12 @@ type TxStore struct {
 
 	params *chaincfg.Params
 
-	listeners []func(TransactionCallback)
+	listeners []func(wallet.TransactionCallback)
 
-	Datastore
+	wallet.Datastore
 }
 
-func NewTxStore(p *chaincfg.Params, db Datastore, keyManager *KeyManager) (*TxStore, error) {
+func NewTxStore(p *chaincfg.Params, db wallet.Datastore, keyManager *KeyManager) (*TxStore, error) {
 	txs := &TxStore{
 		params:     p,
 		keyManager: keyManager,
@@ -234,11 +235,11 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// Iterate through all outputs of this tx, see if we gain
 	cachedSha := tx.TxHash()
-	cb := TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
+	cb := wallet.TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
 	value := int64(0)
 	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
-		out := TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
+		out := wallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
 			if bytes.Equal(txout.PkScript, script) { // new utxo found
 				scriptAddress, _ := ts.extractScriptAddress(txout.PkScript)
@@ -247,7 +248,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Hash:  cachedSha,
 					Index: uint32(i),
 				}
-				newu := Utxo{
+				newu := wallet.Utxo{
 					AtHeight:     height,
 					Value:        txout.Value,
 					ScriptPubkey: txout.PkScript,
@@ -267,7 +268,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					Hash:  cachedSha,
 					Index: uint32(i),
 				}
-				newu := Utxo{
+				newu := wallet.Utxo{
 					AtHeight:     height,
 					Value:        txout.Value,
 					ScriptPubkey: txout.PkScript,
@@ -287,7 +288,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 	for _, txin := range tx.TxIn {
 		for i, u := range utxos {
 			if outPointsEqual(txin.PreviousOutPoint, u.Op) {
-				st := Stxo{
+				st := wallet.Stxo{
 					Utxo:        u,
 					SpendHeight: height,
 					SpendTxid:   cachedSha,
@@ -302,7 +303,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 					matchesWatchOnly = true
 				}
 
-				in := TransactionInput{
+				in := wallet.TransactionInput{
 					OutpointHash:       u.Op.Hash.CloneBytes(),
 					OutpointIndex:      u.Op.Index,
 					LinkedScriptPubKey: u.ScriptPubkey,
@@ -368,7 +369,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 	if err != nil {
 		return err
 	}
-	markStxoAsDead := func(s Stxo) error {
+	markStxoAsDead := func(s wallet.Stxo) error {
 		err := ts.Stxos().Delete(s)
 		if err != nil {
 			return err

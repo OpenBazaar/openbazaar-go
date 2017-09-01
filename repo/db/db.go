@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
 	"time"
@@ -20,11 +20,11 @@ type SQLiteDatastore struct {
 	following       repo.Following
 	offlineMessages repo.OfflineMessages
 	pointers        repo.Pointers
-	keys            spvwallet.Keys
-	stxos           spvwallet.Stxos
-	txns            spvwallet.Txns
-	utxos           spvwallet.Utxos
-	watchedScripts  spvwallet.WatchedScripts
+	keys            wallet.Keys
+	stxos           wallet.Stxos
+	txns            wallet.Txns
+	utxos           wallet.Utxos
+	watchedScripts  wallet.WatchedScripts
 	settings        repo.Settings
 	inventory       repo.Inventory
 	purchases       repo.Purchases
@@ -172,19 +172,19 @@ func (d *SQLiteDatastore) Pointers() repo.Pointers {
 	return d.pointers
 }
 
-func (d *SQLiteDatastore) Keys() spvwallet.Keys {
+func (d *SQLiteDatastore) Keys() wallet.Keys {
 	return d.keys
 }
 
-func (d *SQLiteDatastore) Stxos() spvwallet.Stxos {
+func (d *SQLiteDatastore) Stxos() wallet.Stxos {
 	return d.stxos
 }
 
-func (d *SQLiteDatastore) Txns() spvwallet.Txns {
+func (d *SQLiteDatastore) Txns() wallet.Txns {
 	return d.txns
 }
 
-func (d *SQLiteDatastore) Utxos() spvwallet.Utxos {
+func (d *SQLiteDatastore) Utxos() wallet.Utxos {
 	return d.utxos
 }
 
@@ -204,7 +204,7 @@ func (d *SQLiteDatastore) Sales() repo.Sales {
 	return d.sales
 }
 
-func (d *SQLiteDatastore) WatchedScripts() spvwallet.WatchedScripts {
+func (d *SQLiteDatastore) WatchedScripts() wallet.WatchedScripts {
 	return d.watchedScripts
 }
 

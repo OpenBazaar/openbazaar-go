@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
@@ -26,7 +26,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 	if addressRequest {
-		addr := n.Wallet.NewAddress(spvwallet.EXTERNAL)
+		addr := n.Wallet.NewAddress(wallet.EXTERNAL)
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
 
@@ -73,17 +73,17 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	return contract, nil
 }
 
-func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	contract, err := n.NewOrderConfirmation(contract, false)
 	if err != nil {
 		return err
 	}
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
-		var utxos []spvwallet.Utxo
+		var utxos []wallet.Utxo
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := spvwallet.Utxo{}
+				u := wallet.Utxo{}
 				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
 				if err != nil {
 					return err
@@ -130,7 +130,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, spvwallet.NORMAL)
+		_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return err
 		}
@@ -143,7 +143,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	return nil
 }
 
-func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, records []*spvwallet.TransactionRecord) error {
+func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	orderId, err := n.CalcOrderId(contract.BuyerOrder)
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	}
 	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		var ins []spvwallet.TransactionInput
+		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
@@ -165,7 +165,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 					return err
 				}
 				outValue += r.Value
-				in := spvwallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
 		}
@@ -174,7 +174,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return err
 		}
-		var output spvwallet.TransactionOutput
+		var output wallet.TransactionOutput
 
 		outputScript, err := n.Wallet.AddressToScript(refundAddress)
 		if err != nil {
@@ -213,7 +213,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return err
 		}
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []spvwallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return err
 		}

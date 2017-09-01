@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"strconv"
@@ -16,7 +16,7 @@ type UtxoDB struct {
 	lock sync.RWMutex
 }
 
-func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
+func (u *UtxoDB) Put(utxo wallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	tx, _ := u.db.Begin()
@@ -40,10 +40,10 @@ func (u *UtxoDB) Put(utxo spvwallet.Utxo) error {
 	return nil
 }
 
-func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
+func (u *UtxoDB) GetAll() ([]wallet.Utxo, error) {
 	u.lock.RLock()
 	defer u.lock.RUnlock()
-	var ret []spvwallet.Utxo
+	var ret []wallet.Utxo
 	stm := "select outpoint, value, height, scriptPubKey, watchOnly from utxos"
 	rows, err := u.db.Query(stm)
 	if err != nil {
@@ -76,7 +76,7 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 		if watchOnlyInt == 1 {
 			watchOnly = true
 		}
-		ret = append(ret, spvwallet.Utxo{
+		ret = append(ret, wallet.Utxo{
 			Op:           *wire.NewOutPoint(shaHash, uint32(index)),
 			AtHeight:     int32(height),
 			Value:        int64(value),
@@ -87,7 +87,7 @@ func (u *UtxoDB) GetAll() ([]spvwallet.Utxo, error) {
 	return ret, nil
 }
 
-func (u *UtxoDB) SetWatchOnly(utxo spvwallet.Utxo) error {
+func (u *UtxoDB) SetWatchOnly(utxo wallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))
@@ -98,7 +98,7 @@ func (u *UtxoDB) SetWatchOnly(utxo spvwallet.Utxo) error {
 	return nil
 }
 
-func (u *UtxoDB) Delete(utxo spvwallet.Utxo) error {
+func (u *UtxoDB) Delete(utxo wallet.Utxo) error {
 	u.lock.Lock()
 	defer u.lock.Unlock()
 	outpoint := utxo.Op.Hash.String() + ":" + strconv.Itoa(int(utxo.Op.Index))

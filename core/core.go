@@ -21,6 +21,7 @@ import (
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
@@ -64,7 +65,7 @@ type OpenBazaarNode struct {
 	Broadcast chan interface{}
 
 	// Bitcoin wallet implementation
-	Wallet bitcoin.BitcoinWallet
+	Wallet wallet.Wallet
 
 	// Storage for our outgoing messages
 	MessageStorage sto.OfflineMessagingStorage

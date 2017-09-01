@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"testing"
 )
@@ -24,7 +24,7 @@ func TestGetAll(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -37,7 +37,7 @@ func TestGetAll(t *testing.T) {
 
 func TestPutKey(t *testing.T) {
 	b := make([]byte, 32)
-	err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 0})
+	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,8 +110,8 @@ func TestImportKey(t *testing.T) {
 
 func TestPutDuplicateKey(t *testing.T) {
 	b := make([]byte, 32)
-	kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 0})
-	err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 0})
+	kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
+	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
 	if err == nil {
 		t.Error("Expected duplicate key error")
 	}
@@ -119,7 +119,7 @@ func TestPutDuplicateKey(t *testing.T) {
 
 func TestMarkKeyAsUsed(t *testing.T) {
 	b := make([]byte, 33)
-	err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 0})
+	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 0})
 	if err != nil {
 		t.Error(err)
 	}
@@ -148,18 +148,18 @@ func TestGetLastKeyIndex(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
 		last = b
 	}
-	idx, used, err := kdb.GetLastKeyIndex(spvwallet.EXTERNAL)
+	idx, used, err := kdb.GetLastKeyIndex(wallet.EXTERNAL)
 	if err != nil || idx != 99 || used != false {
 		t.Error("Failed to fetch correct last index")
 	}
 	kdb.MarkKeyAsUsed(last)
-	_, used, err = kdb.GetLastKeyIndex(spvwallet.EXTERNAL)
+	_, used, err = kdb.GetLastKeyIndex(wallet.EXTERNAL)
 	if err != nil || used != true {
 		t.Error("Failed to fetch correct last index")
 	}
@@ -168,7 +168,7 @@ func TestGetLastKeyIndex(t *testing.T) {
 func TestGetPathForKey(t *testing.T) {
 	b := make([]byte, 32)
 	rand.Read(b)
-	err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, 15})
+	err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, 15})
 	if err != nil {
 		t.Error(err)
 	}
@@ -176,7 +176,7 @@ func TestGetPathForKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if path.Index != 15 || path.Purpose != spvwallet.EXTERNAL {
+	if path.Index != 15 || path.Purpose != wallet.EXTERNAL {
 		t.Error("Returned incorrect key path")
 	}
 }
@@ -216,12 +216,12 @@ func TestGetUnsed(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.INTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{wallet.INTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
 	}
-	idx, err := kdb.GetUnused(spvwallet.INTERNAL)
+	idx, err := kdb.GetUnused(wallet.INTERNAL)
 	if err != nil {
 		t.Error("Failed to fetch correct unused")
 	}
@@ -234,7 +234,7 @@ func TestGetLookaheadWindows(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		b := make([]byte, 32)
 		rand.Read(b)
-		err := kdb.Put(b, spvwallet.KeyPath{spvwallet.EXTERNAL, i})
+		err := kdb.Put(b, wallet.KeyPath{wallet.EXTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -243,7 +243,7 @@ func TestGetLookaheadWindows(t *testing.T) {
 		}
 		b = make([]byte, 32)
 		rand.Read(b)
-		err = kdb.Put(b, spvwallet.KeyPath{spvwallet.INTERNAL, i})
+		err = kdb.Put(b, wallet.KeyPath{wallet.INTERNAL, i})
 		if err != nil {
 			t.Error(err)
 		}
@@ -252,7 +252,7 @@ func TestGetLookaheadWindows(t *testing.T) {
 		}
 	}
 	windows := kdb.GetLookaheadWindows()
-	if windows[spvwallet.EXTERNAL] != 50 || windows[spvwallet.INTERNAL] != 50 {
+	if windows[wallet.EXTERNAL] != 50 || windows[wallet.INTERNAL] != 50 {
 		t.Error("Fetched incorrect lookahead windows")
 	}
 
