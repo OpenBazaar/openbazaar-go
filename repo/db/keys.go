@@ -145,6 +145,32 @@ func (k *KeysDB) GetKey(scriptAddress []byte) (*btcec.PrivateKey, error) {
 	return key, nil
 }
 
+func (k *KeysDB) GetImported() ([]*btcec.PrivateKey, error) {
+	k.lock.RLock()
+	defer k.lock.RUnlock()
+	var ret []*btcec.PrivateKey
+	stm := "select key from keys where purpose=-1"
+	rows, err := k.db.Query(stm)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var keyHex []byte
+		err = rows.Scan(&keyHex)
+		if err != nil {
+			return ret, err
+		}
+		keyBytes, err := hex.DecodeString(string(keyHex))
+		if err != nil {
+			return ret, err
+		}
+		priv, _ := btcec.PrivKeyFromBytes(btcec.S256(), keyBytes)
+		ret = append(ret, priv)
+	}
+	return ret, nil
+}
+
 func (k *KeysDB) GetUnused(purpose wallet.KeyPurpose) ([]int, error) {
 	k.lock.RLock()
 	defer k.lock.RUnlock()

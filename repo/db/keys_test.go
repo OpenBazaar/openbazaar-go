@@ -203,6 +203,28 @@ func TestGetKey(t *testing.T) {
 	}
 }
 
+func TestKeysDB_GetImported(t *testing.T) {
+	key, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		t.Error(err)
+	}
+	err = kdb.ImportKey([]byte("fsdfa"), key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	keys, err := kdb.GetImported()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(keys) != 1 {
+		t.Error("Failed to return imported key")
+	}
+	if !bytes.Equal(key.Serialize(), keys[0].Serialize()) {
+		t.Error("Returned incorrect key")
+	}
+}
+
 func TestKeyNotFound(t *testing.T) {
 	b := make([]byte, 32)
 	rand.Read(b)
