@@ -420,12 +420,13 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		order.RefundAddress = n.Wallet.CurrentAddress(wallet.INTERNAL).EncodeAddress()
 	}
 	shipping := &pb.Order_Shipping{
-		ShipTo:     data.ShipTo,
-		Address:    data.Address,
-		City:       data.City,
-		State:      data.State,
-		PostalCode: data.PostalCode,
-		Country:    pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
+		ShipTo:       data.ShipTo,
+		Address:      data.Address,
+		City:         data.City,
+		State:        data.State,
+		PostalCode:   data.PostalCode,
+		Country:      pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
+		AddressNotes: data.AddressNotes,
 	}
 	order.Shipping = shipping
 
