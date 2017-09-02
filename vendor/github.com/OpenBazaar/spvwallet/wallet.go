@@ -377,10 +377,10 @@ func (w *SPVWallet) Close() {
 	}
 }
 
-func (w *SPVWallet) ReSyncBlockchain(fromHeight int32) {
+func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.Close()
 	os.Remove(path.Join(w.repoPath, "headers.bin"))
-	blockchain, err := NewBlockchain(w.repoPath, w.creationDate, w.params)
+	blockchain, err := NewBlockchain(w.repoPath, fromDate, w.params)
 	if err != nil {
 		return
 	}

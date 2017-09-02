@@ -105,6 +105,16 @@ func (m *mockKeyStore) GetKey(scriptAddress []byte) (*btcec.PrivateKey, error) {
 	return nil, errors.New("Not found")
 }
 
+func (m *mockKeyStore) GetImported() ([]*btcec.PrivateKey, error) {
+	var keys []*btcec.PrivateKey
+	for _, k := range m.keys {
+		if k.path.Index == -1 {
+			keys = append(keys, k.key)
+		}
+	}
+	return keys, nil
+}
+
 func (m *mockKeyStore) GetUnused(purpose wallet.KeyPurpose) ([]int, error) {
 	var i []int
 	for _, key := range m.keys {

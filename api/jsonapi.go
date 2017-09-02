@@ -1576,7 +1576,12 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Request) {
-	i.node.Wallet.ReSyncBlockchain(0)
+	creationDate, err := i.node.Datastore.Config().GetCreationDate()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	i.node.Wallet.ReSyncBlockchain(creationDate)
 	SanitizedResponse(w, `{}`)
 	return
 }

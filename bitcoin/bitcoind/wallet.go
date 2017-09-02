@@ -747,7 +747,7 @@ func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
 	return w.rpcClient.ImportAddressRescan(addrs[0].EncodeAddress(), false)
 }
 
-func (w *BitcoindWallet) ReSyncBlockchain(fromHeight int32) {
+func (w *BitcoindWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)

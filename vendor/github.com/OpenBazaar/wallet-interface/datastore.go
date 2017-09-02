@@ -80,6 +80,9 @@ type Keys interface {
 	// Returns an imported private key given a script address
 	GetKey(scriptAddress []byte) (*btcec.PrivateKey, error)
 
+	// Returns all imported keys
+	GetImported() ([]*btcec.PrivateKey, error)
+
 	// Get a list of unused key indexes for the given purpose
 	GetUnused(purpose KeyPurpose) ([]int, error)
 
