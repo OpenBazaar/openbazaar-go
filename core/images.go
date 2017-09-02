@@ -159,7 +159,7 @@ func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string
 		var dr io.DagReader
 		var err error
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 		defer cancel()
 		if rootHash == "" {
 			query := "/ipns/" + peerId + "/images/" + size + "/" + imageType

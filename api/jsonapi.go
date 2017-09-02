@@ -2441,7 +2441,7 @@ func (i *jsonAPIHandler) DELETENotification(w http.ResponseWriter, r *http.Reque
 
 func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
 	_, imageHash := path.Split(r.URL.Path)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Hour)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 	defer cancel()
 	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, "/ipfs/"+imageHash)
 	if err != nil {
