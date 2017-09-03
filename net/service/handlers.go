@@ -272,7 +272,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error("Calculated a different payment amount")
 			return errorResponse("Calculated a different payment amount"), nil
 		}
-		contract, err = service.node.NewOrderConfirmation(contract, true)
+		contract, err = service.node.NewOrderConfirmation(contract, true, true)
 		if err != nil {
 			log.Error(err)
 			return errorResponse("Error building order confirmation"), nil
@@ -345,7 +345,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		contract, err = service.node.NewOrderConfirmation(contract, false)
+		contract, err = service.node.NewOrderConfirmation(contract, false, true)
 		if err != nil {
 			log.Error(err)
 			return errorResponse("Error building order confirmation"), nil
