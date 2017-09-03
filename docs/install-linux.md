@@ -12,7 +12,7 @@ sudo apt-get install build-essential git -y
 ### Intall Go 1.7 or greater
 ```
 wget https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz
-tar -zxvf  go1.7.1.linux-amd64.tar.gz -C /usr/local/
+sudo tar -zxvf  go1.7.1.linux-amd64.tar.gz -C /usr/local/
 ```
 
 ### Setup Go
