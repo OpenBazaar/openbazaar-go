@@ -17,7 +17,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
-func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest bool) (*pb.RicardianContract, error) {
+func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest, calculateNewTotal bool) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
 	orderID, err := n.CalcOrderId(contract.BuyerOrder)
@@ -61,9 +61,13 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		oc.PaymentAddress = contract.BuyerOrder.Payment.Address
 	}
 
-	oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
-	if err != nil {
-		return nil, err
+	if calculateNewTotal {
+		oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
 	}
 	contract.VendorOrderConfirmation = oc
 	contract, err = n.SignOrderConfirmation(contract)
@@ -74,7 +78,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 }
 
 func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	contract, err := n.NewOrderConfirmation(contract, false)
+	contract, err := n.NewOrderConfirmation(contract, false, false)
 	if err != nil {
 		return err
 	}
