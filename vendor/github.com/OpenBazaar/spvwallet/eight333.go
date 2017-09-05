@@ -36,7 +36,6 @@ func (w *SPVWallet) startChainDownload(p *peer.Peer) {
 				log.Info("Chain download complete")
 				w.blockchain.SetChainState(WAITING)
 				w.Rebroadcast()
-				close(w.blockQueue)
 			}
 			return
 		}
@@ -51,7 +50,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	if w.blockchain.ChainState() == SYNCING && w.peerManager.DownloadPeer() != nil && w.peerManager.DownloadPeer().ID() == p.ID() {
-		queueHash := <-w.blockQueue
+		queueHash := <-w.peerManager.BlockQueue()
 		headerHash := m.Header.BlockHash()
 		if !headerHash.IsEqual(&queueHash) {
 			log.Errorf("Peer%d is sending us blocks out of order", p.ID())
@@ -93,7 +92,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 	}
 
 	log.Debugf("Received Merkle Block %s at height %d\n", m.Header.BlockHash().String(), height)
-	if len(w.blockQueue) == 0 && w.blockchain.ChainState() == SYNCING {
+	if len(w.peerManager.BlockQueue()) == 0 && w.blockchain.ChainState() == SYNCING {
 		go w.startChainDownload(p)
 	}
 	if w.blockchain.ChainState() == WAITING {
@@ -161,7 +160,7 @@ func (w *SPVWallet) onInv(p *peer.Peer, m *wire.MsgInv) {
 				gData.AddInvVect(inv)
 				p.QueueMessage(gData, nil)
 				if w.blockchain.ChainState() == SYNCING && w.peerManager.DownloadPeer() != nil && w.peerManager.DownloadPeer().ID() == p.ID() {
-					w.blockQueue <- inv.Hash
+					w.peerManager.BlockQueue() <- inv.Hash
 				}
 			case wire.InvTypeTx:
 				w.peerManager.QueueTxForDownload(p, inv.Hash, 0)

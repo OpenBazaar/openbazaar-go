@@ -40,7 +40,6 @@ type SPVWallet struct {
 	fPositives    chan *peer.Peer
 	stopChan      chan int
 	fpAccumulator map[int32]int32
-	blockQueue    chan chainhash.Hash
 	mutex         *sync.RWMutex
 
 	creationDate time.Time
@@ -98,7 +97,6 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		fPositives:    make(chan *peer.Peer),
 		stopChan:      make(chan int),
 		fpAccumulator: make(map[int32]int32),
-		blockQueue:    make(chan chainhash.Hash, 32),
 		mutex:         new(sync.RWMutex),
 	}
 
@@ -390,6 +388,5 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	if err != nil {
 		return
 	}
-	w.blockQueue = make(chan chainhash.Hash, 32)
 	go w.Start()
 }

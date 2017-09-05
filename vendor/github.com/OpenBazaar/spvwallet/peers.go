@@ -86,6 +86,7 @@ type PeerManager struct {
 	trustedPeer    net.Addr
 	downloadPeer   *peer.Peer
 	downloadQueues map[int32]map[chainhash.Hash]int32
+	blockQueue     chan chainhash.Hash
 
 	getFilter          func() (*bloom.Filter, error)
 	startChainDownload func(*peer.Peer)
@@ -113,6 +114,7 @@ func NewPeerManager(config *PeerManagerConfig) (*PeerManager, error) {
 		getFilter:          config.GetFilter,
 		startChainDownload: config.StartChainDownload,
 		proxy:              config.Proxy,
+		blockQueue:         make(chan chainhash.Hash, 32),
 	}
 
 	targetOutbound := config.TargetOutbound
@@ -185,6 +187,10 @@ func (pm *PeerManager) ReadyPeers() []*peer.Peer {
 
 func (pm *PeerManager) DownloadPeer() *peer.Peer {
 	return pm.downloadPeer
+}
+
+func (pm *PeerManager) BlockQueue() chan chainhash.Hash {
+	return pm.blockQueue
 }
 
 func (pm *PeerManager) onConnection(req *connmgr.ConnReq, conn net.Conn) {
@@ -269,6 +275,7 @@ func (pm *PeerManager) onDisconnection(req *connmgr.ConnReq) {
 	// If this was our download peer we lost, replace him
 	if pm.downloadPeer != nil && peer != nil {
 		if pm.downloadPeer.ID() == peer.ID() {
+			close(pm.blockQueue)
 			go pm.selectNewDownloadPeer()
 		}
 	}
@@ -285,6 +292,7 @@ func (pm *PeerManager) setDownloadPeer(peer *peer.Peer) {
 	log.Infof("Setting peer%d as download peer\n", peer.ID())
 	pm.downloadPeer = peer
 	if pm.startChainDownload != nil {
+		pm.blockQueue = make(chan chainhash.Hash, 32)
 		go pm.startChainDownload(pm.downloadPeer)
 	}
 }
