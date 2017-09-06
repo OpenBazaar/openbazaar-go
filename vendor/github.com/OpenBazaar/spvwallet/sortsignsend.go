@@ -598,7 +598,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	if optionalOutput != nil {
 		outputs = append(outputs, optionalOutput)
 	}
-	authoredTx, err := txauthor.NewUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
+	authoredTx, err := NewUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
 	if err != nil {
 		return nil, err
 	}
@@ -627,6 +627,66 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 		txIn.SignatureScript = script
 	}
 	return authoredTx.Tx, nil
+}
+
+func NewUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, error) {
+
+	var targetAmount btc.Amount
+	for _, txOut := range outputs {
+		targetAmount += btc.Amount(txOut.Value)
+	}
+
+	estimatedSize := EstimateSerializeSize(1, outputs, true, P2PKH)
+	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
+
+	for {
+		inputAmount, inputs, scripts, err := fetchInputs(targetAmount + targetFee)
+		if err != nil {
+			return nil, err
+		}
+		if inputAmount < targetAmount+targetFee {
+			return nil, errors.New("insufficient funds available to construct transaction")
+		}
+
+		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, P2PKH)
+		maxRequiredFee := txrules.FeeForSerializeSize(feePerKb, maxSignedSize)
+		remainingAmount := inputAmount - targetAmount
+		if remainingAmount < maxRequiredFee {
+			targetFee = maxRequiredFee
+			continue
+		}
+
+		unsignedTransaction := &wire.MsgTx{
+			Version:  wire.TxVersion,
+			TxIn:     inputs,
+			TxOut:    outputs,
+			LockTime: 0,
+		}
+		changeIndex := -1
+		changeAmount := inputAmount - targetAmount - maxRequiredFee
+		if changeAmount != 0 && !txrules.IsDustAmount(changeAmount,
+			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
+			changeScript, err := fetchChange()
+			if err != nil {
+				return nil, err
+			}
+			if len(changeScript) > P2PKHPkScriptSize {
+				return nil, errors.New("fee estimation requires change " +
+					"scripts no larger than P2PKH output scripts")
+			}
+			change := wire.NewTxOut(int64(changeAmount), changeScript)
+			l := len(outputs)
+			unsignedTransaction.TxOut = append(outputs[:l:l], change)
+			changeIndex = l
+		}
+
+		return &txauthor.AuthoredTx{
+			Tx:          unsignedTransaction,
+			PrevScripts: scripts,
+			TotalInput:  inputAmount,
+			ChangeIndex: changeIndex,
+		}, nil
+	}
 }
 
 func (w *SPVWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
