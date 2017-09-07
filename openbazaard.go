@@ -158,6 +158,7 @@ func main() {
 			log.Noticef("Received %s\n", sig)
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
+				core.OfflineMessageWaitGroup.Wait()
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 				os.Remove(repoLockFile)
