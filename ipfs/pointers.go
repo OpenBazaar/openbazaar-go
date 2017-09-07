@@ -51,7 +51,7 @@ type Pointer struct {
 
 // entropy is a sequence of bytes that should be deterministic based on the content of the pointer
 // it is hashed and used to fill the remaining 20 bytes of the magic id
-func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr, entropy []byte) (Pointer, error) {
+func NewPointer(mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr, entropy []byte) (Pointer, error) {
 	keyhash := CreatePointerKey(mhKey, prefixLen)
 	k, err := cid.Decode(keyhash.B58String())
 	if err != nil {
@@ -66,10 +66,10 @@ func PublishPointer(node *core.IpfsNode, ctx context.Context, mhKey multihash.Mu
 		ID:    magicID,
 		Addrs: []ma.Multiaddr{addr},
 	}
-	return Pointer{Cid: k, Value: pi}, addPointer(node, ctx, k, pi)
+	return Pointer{Cid: k, Value: pi}, nil
 }
 
-func RePublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer) error {
+func PublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer) error {
 	return addPointer(node, ctx, pointer.Cid, pointer.Value)
 }
 
