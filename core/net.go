@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"sync"
 )
 
 const (
@@ -25,6 +26,8 @@ const (
 	CHAT_SUBJECT_MAX_CHARACTERS = 500
 	DefaultPointerPrefixLength  = 14
 )
+
+var OfflineMessageWaitGroup sync.WaitGroup
 
 func (n *OpenBazaarNode) sendMessage(peerId string, k *libp2p.PubKey, message pb.Message) error {
 	p, err := peer.IDB58Decode(peerId)
@@ -78,10 +81,18 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	}
 	/* TODO: We are just using a default prefix length for now. Eventually we will want to customize this,
 	   but we will need some way to get the recipient's desired prefix length. Likely will be in profile. */
-	pointer, err := ipfs.PublishPointer(n.IpfsNode, ctx, mh, DefaultPointerPrefixLength, addr, ciphertext)
+	pointer, err := ipfs.NewPointer(mh, DefaultPointerPrefixLength, addr, ciphertext)
 	if err != nil {
 		return err
 	}
+	go func() {
+		OfflineMessageWaitGroup.Add(1)
+		err := ipfs.PublishPointer(n.IpfsNode, ctx, pointer)
+		if err != nil {
+			log.Error(err)
+		}
+		OfflineMessageWaitGroup.Done()
+	}()
 
 	// Post provider to gateway if we have one set in the config
 	if len(n.CrosspostGateways) > 0 {

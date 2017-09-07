@@ -348,6 +348,7 @@ func (n *Node) Start() error {
 }
 
 func (n *Node) Stop() error {
+	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
