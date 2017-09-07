@@ -31,3 +31,4 @@ dist
 # Development environment files
 .ackrc
 .tags*
+*.sw?
