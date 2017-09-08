@@ -35,6 +35,23 @@ func init() {
 		panic("Invalid checkpoint")
 	}
 
+	mainnetPrev1, _ := chainhash.NewHashFromStr("000000000000000000d0ad638ad61e7c4c3113618b8b26b2044347c00c042278")
+	mainnetMerk1, _ := chainhash.NewHashFromStr("87b940030e48d97625b923c3ebc0626c2cb1123b78135380306eb6dcfd50703c")
+	mainnetCheckpoints = append(mainnetCheckpoints, Checkpoint{
+		Height: 483840,
+		Header: wire.BlockHeader{
+			Version:    536870912,
+			PrevBlock:  *mainnetPrev1,
+			MerkleRoot: *mainnetMerk1,
+			Timestamp:  time.Unix(1504704195, 0),
+			Bits:       402731275,
+			Nonce:      1775134070,
+		},
+	})
+	if mainnetCheckpoints[1].Header.BlockHash().String() != "0000000000000000008e5d72027ef42ca050a0776b7184c96d0d4b300fa5da9e" {
+		panic("Invalid checkpoint")
+	}
+
 	// Testnet3
 	testnet3Prev, _ := chainhash.NewHashFromStr("0000000000001e8cdb2d98471a5c60bdbddbe644b9ad08e17a97b3a7dce1e332")
 	testnet3Merk, _ := chainhash.NewHashFromStr("f675c565b293be2ad808b01b0a763557c8874e4aefe7f2eea0dab91b1f60ec45")
