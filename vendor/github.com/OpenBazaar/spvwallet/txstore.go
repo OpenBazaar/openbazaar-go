@@ -325,6 +325,11 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 			if stxo.SpendTxid.IsEqual(&cachedSha) {
 				stxo.SpendHeight = height
 				ts.Stxos().Put(stxo)
+				if !stxo.Utxo.WatchOnly {
+					hits++
+				} else {
+					matchesWatchOnly = true
+				}
 				break
 			}
 		}
