@@ -17,8 +17,8 @@ import (
 	gonet "net"
 	"net/http"
 	"net/url"
-	"time"
 	"sync"
+	"time"
 )
 
 const (
