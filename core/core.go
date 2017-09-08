@@ -98,7 +98,17 @@ type OpenBazaarNode struct {
 // Unpin the current node repo, re-add it, then publish to IPNS
 func (n *OpenBazaarNode) SeedNode() error {
 	ipfs.UnPinDir(n.Context, n.RootHash)
-	rootHash, aerr := ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
+	var aerr error
+	var rootHash string
+	// There's an IPFS bug on Windows that might be related to the Windows indexer that could cause this to fail
+	// If we fail the first time, let's retry a couple times before giving up.
+	for i:=0; i<3; i++ {
+		rootHash, aerr = ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
+		if aerr == nil {
+			break
+		}
+		time.Sleep(time.Millisecond*500)
+	}
 	if aerr != nil {
 		return aerr
 	}
