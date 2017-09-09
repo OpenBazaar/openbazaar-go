@@ -10,13 +10,13 @@ sudo apt-get update
 sudo apt-get install build-essential git -y
 ```
 
-### Install Go 1.9
+### Install [Go](https://golang.org/) 1.9
 ```
 wget https://storage.googleapis.com/golang/go1.9.linux-armv6l.tar.gz
 sudo tar -zxvf go1.9.linux-armv6l.tar.gz -C /usr/local/
 ```
 
-### Setup Go
+### Setup [Go](https://golang.org/) 1.9
 
 Create a directory to store all your Go projects (below we just put the directory in our home directory but you can use any directory you want).
 ```
