@@ -27,7 +27,7 @@ func NotFoundJSON(resource string) string {
 //
 
 const settingsJSON = `{
-	"version": "",
+    "version": "",
     "paymentDataInQR": true,
     "showNotifications": true,
     "showNsfw": true,

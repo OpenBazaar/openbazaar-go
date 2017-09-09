@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 func TestSettings(t *testing.T) {
 	// Create, Read, Update, Patch
 	runAPITests(t, apiTests{
-		{"POST", "/ob/settings", settingsJSON, 200, "{}"},
+		{"POST", "/ob/settings", settingsJSON, 200, settingsJSON},
 		{"GET", "/ob/settings", "", 200, settingsJSON},
 		{"POST", "/ob/settings", settingsJSON, 409, settingsAlreadyExistsJSON},
 		{"PUT", "/ob/settings", settingsUpdateJSON, 200, "{}"},
@@ -53,7 +53,7 @@ func TestSettings(t *testing.T) {
 
 	// Invalid JSON
 	runAPITests(t, apiTests{
-		{"POST", "/ob/settings", settingsJSON, 200, "{}"},
+		{"POST", "/ob/settings", settingsJSON, 200, settingsJSON},
 		{"GET", "/ob/settings", "", 200, settingsJSON},
 		{"PUT", "/ob/settings", settingsMalformedJSON, 400, settingsMalformedJSONResponse},
 	})
