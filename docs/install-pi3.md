@@ -1,6 +1,5 @@
-Pi 3, running [Raspbian Stretch Lite 4.9 kernel](https://www.raspberrypi.org/downloads/raspbian/) 
+Pi 3, running [Raspbian Stretch Lite 4.9 kernel](https://www.raspberrypi.org/downloads/raspbian/) INSTALL NOTES
 
-INSTALL NOTES
 ====================
 
 ### Install dependencies
