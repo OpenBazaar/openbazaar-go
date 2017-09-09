@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const RepoVersion = "1"
+
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
@@ -25,6 +27,10 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	if fsrepo.IsInitialized(repoRoot) {
+		err := MigrateUp(repoRoot)
+		if err != nil {
+			return err
+		}
 		return ErrRepoExists
 	}
 
@@ -69,6 +75,16 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if err := dbInit(mnemonic, identityKey, password, creationDate); err != nil {
 		return err
 	}
+
+	f, err := os.Create(path.Join(repoRoot, "repover"))
+	if err != nil {
+		return err
+	}
+	_, werr := f.Write([]byte(RepoVersion))
+	if werr != nil {
+		return werr
+	}
+	f.Close()
 
 	return initializeIpnsKeyspace(repoRoot, identityKey)
 }
@@ -188,7 +204,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	var w WalletConfig = WalletConfig{
 		Type:             "spvwallet",
 		MaxFee:           2000,
-		FeeAPI:           "https://bitcoinfees.21.co/api/v1/fees/recommended",
+		FeeAPI:           "https://fees.openbazaar.org",
 		HighFeeDefault:   160,
 		MediumFeeDefault: 140,
 		LowFeeDefault:    120,
