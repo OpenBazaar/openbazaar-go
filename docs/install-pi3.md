@@ -19,20 +19,19 @@ sudo tar -zxvf go1.9.linux-armv6l.tar.gz -C /usr/local/
 ### Setup Go
 
 Create a directory to store all your Go projects (below we just put the directory in our home directory but you can use any directory you want).
-
 ```
 mkdir go
 ```
 
 Set that directory as your go path:
 
-Edit `.profile` in your home directory and append the following to the end of the file (if you used a different go directory make sure to change it below):
+Paste these lines at the command line, to append their quoted text to the end of `.profile` in your home directory (if you used a different go directory, make sure to change it below):
 ```
 echo "export GOPATH=$HOME/go" >> .profile
 echo "export PATH=$PATH:/usr/local/go/bin" >> .profile
 ```
 
-Then run:
+Then run the command:
 ```
 source ~/.profile
 ```
@@ -40,12 +39,14 @@ source ~/.profile
 Go should now be installed.
 
 ### Install openbazaar-go
-
 ```
 go get github.com/OpenBazaar/openbazaar-go
 ```
 
-It will put the source code in $GOPATH/src/github.com/OpenBazaar/openbazaar-go
+It will put the source code in 
+```
+$GOPATH/src/github.com/OpenBazaar/openbazaar-go
+```
 
 During the few minutes it takes the process to complete without a progress indicator, then return to blank command line, [read about securing your node](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/security.md)
 
