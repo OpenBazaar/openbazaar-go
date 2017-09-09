@@ -1,4 +1,5 @@
-Pi 3, running [Raspbian Stretch Lite 4.9 kernel](https://www.raspberrypi.org/downloads/raspbian/) INSTALL NOTES
+Pi 3, running [Raspbian Stretch Lite 4.9 kernel](https://www.raspberrypi.org/downloads/raspbian/) 
+INSTALL NOTES
 ====================
 
 ### Install dependencies
@@ -27,8 +28,8 @@ Set that directory as your go path:
 
 Edit `.profile` in your home directory and append the following to the end of the file (if you used a different go directory make sure to change it below):
 ```
-export GOPATH=$HOME/go
-export PATH=$PATH:/usr/local/go/bin
+echo "export GOPATH=$HOME/go" >> .profile
+echo "export PATH=$PATH:/usr/local/go/bin" >> .profile
 ```
 
 Then run:
