@@ -774,12 +774,12 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		if err != nil {
 			continue
 		}
-		listingMH, err := EncodeMultihash(ser)
+		listingMH, err := EncodeCID(ser)
 		if err != nil {
 			continue
 		}
 		for i, l := range listingHashes {
-			if l == listingMH.B58String() {
+			if l == listingMH.String() {
 				// Delete from listingHases
 				listingHashes = append(listingHashes[:i], listingHashes[i+1:]...)
 				break
