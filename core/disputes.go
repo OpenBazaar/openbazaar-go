@@ -373,10 +373,12 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 		return errors.New("A dispute for this order is not open")
 	}
 
+	if vendorContract == nil && vendorPercentage > 0 {
+		return errors.New("Vendor must provide his copy of the contract before you can release funds to the vendor")
+	}
+
 	if buyerContract == nil {
 		buyerContract = vendorContract
-	} else if vendorContract == nil {
-		vendorContract = buyerContract
 	}
 
 	d := new(pb.DisputeResolution)
