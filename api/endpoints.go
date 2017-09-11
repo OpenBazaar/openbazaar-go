@@ -179,6 +179,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETWalletStatus(w, r)
 	case strings.HasPrefix(path, "/ob/resolve"):
 		i.GETResolve(w, r)
+	case strings.HasPrefix(path, "/ob/peerinfo"):
+		i.GETPeerInfo(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}

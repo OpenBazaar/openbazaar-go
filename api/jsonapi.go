@@ -3427,3 +3427,24 @@ func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *ht
 
 	SanitizedResponse(w, "{}")
 }
+
+func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
+	_, idb58 := path.Split(r.URL.Path)
+	pid, err := peer.IDB58Decode(idb58)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*30)
+	pi, err := i.node.IpfsNode.Routing.FindPeer(ctx, pid)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	out, err := pi.MarshalJSON()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(out))
+}
