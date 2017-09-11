@@ -42,6 +42,7 @@ const (
 	URLMaxCharacters         = 2000
 	MaxCountryCodes          = 255
 	EscrowTimeout            = 1080
+	SlugBuffer               = 5
 )
 
 type price struct {
@@ -73,8 +74,8 @@ type listingData struct {
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
-		l := TitleMaxCharacters - 5
-		if len(title) < TitleMaxCharacters-5 {
+		l := SentenceMaxCharacters - SlugBuffer
+		if len(title) < SentenceMaxCharacters-SlugBuffer {
 			l = len(title)
 		}
 		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
