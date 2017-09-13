@@ -23,6 +23,8 @@ func MigrateUp(repoPath string) error {
 	version, err := ioutil.ReadFile(path.Join(repoPath, "repover"))
 	if err != nil && !os.IsNotExist(err) {
 		return err
+	} else if err != nil && os.IsNotExist(err) {
+		version = []byte("0")
 	}
 	v, err := strconv.Atoi(string(version))
 	if err != nil {
