@@ -66,7 +66,7 @@ func TestGetWalletConfig(t *testing.T) {
 		t.Error(err)
 	}
 	config, err := GetWalletConfig(configFile)
-	if config.FeeAPI != "https://bitcoinfees.21.co/api/v1/fees/recommended" {
+	if config.FeeAPI != "https://btc.fees.openbazaar.org" {
 		t.Error("FeeApi does not equal expected value")
 	}
 	if config.TrustedPeer != "127.0.0.1:8333" {

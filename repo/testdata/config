@@ -1,110 +1,110 @@
 {
-   "API": {
-      "HTTPHeaders": null
-   },
-   "Addresses": {
-      "API": "",
-      "Gateway": "/ip4/127.0.0.1/tcp/4002",
-      "Swarm": [
-         "/ip4/0.0.0.0/tcp/4001",
-         "/ip4/0.0.0.0/udp/4001/utp",
-         "/ip6/::/tcp/4001",
-         "/ip6/::/udp/4001/utp"
-      ]
-   },
-   "Bootstrap": [
-      "/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",
-      "/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
-      "/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
-   ],
-   "Crosspost-gateways": [
-      "http://gateway.ob1.io/"
-   ],
-   "Datastore": {
-      "BloomFilterSize": 0,
-      "GCPeriod": "1h",
-      "HashOnRead": false,
-      "NoSync": false,
-      "Params": null,
-      "Path": "/datastore",
-      "StorageGCWatermark": 90,
-      "StorageMax": "10GB",
-      "Type": "leveldb"
-   },
-   "Discovery": {
-      "MDNS": {
-         "Enabled": false,
-         "Interval": 10
-      }
-   },
-   "Dropbox-api-token": "dropbox123",
-   "Experimental": {
-      "FilestoreEnabled": false,
-      "Libp2pStreamMounting": false,
-      "ShardingEnabled": false
-   },
-   "Gateway": {
-      "HTTPHeaders": null,
-      "PathPrefixes": [],
-      "RootRedirect": "",
-      "Writable": false
-   },
-   "Identity": {
-      "PeerID": "testID",
-      "PrivKey": "testKey"
-   },
-   "Ipns": {
-      "QuerySize": 0,
-      "RecordLifetime": "7d",
-      "RepublishPeriod": "24h",
-      "ResolveCacheSize": 128
-   },
-   "JSON-API": {
-      "AllowedIPs": [
-         "127.0.0.1"
-      ],
-      "Authenticated": true,
-      "CORS": "*",
-      "Enabled": true,
-      "HTTPHeaders": null,
-      "Password": "TestPassword",
-      "SSL": true,
-      "SSLCert": "/path/to/ssl.cert",
-      "SSLKey": "/path/to/ssl.key",
-      "Username": "TestUsername"
-   },
-   "Mounts": {
-      "FuseAllowOther": false,
-      "IPFS": "/ipfs",
-      "IPNS": "/ipns"
-   },
-   "Reprovider": {
-      "Interval": ""
-   },
-   "Resolvers": {
-      ".id": "https://resolver.onename.com/"
-   },
-   "SupernodeRouting": {
-      "Servers": null
-   },
-   "Swarm": {
-      "AddrFilters": null,
-      "DisableBandwidthMetrics": false,
-      "DisableNatPortMap": false
-   },
-   "Tour": {
-      "Last": ""
-   },
-   "Wallet": {
-      "Binary": "/path/to/bitcoind",
-      "FeeAPI": "https://fees.openbazaar.org",
-      "HighFeeDefault": 60,
-      "LowFeeDefault": 20,
-      "MaxFee": 2000,
-      "MediumFeeDefault": 40,
-      "RPCPassword": "password",
-      "RPCUser": "username",
-      "TrustedPeer": "127.0.0.1:8333",
-      "Type": "spvwallet"
-   }
+  "API": {
+    "HTTPHeaders": null
+  },
+  "Addresses": {
+    "API": "",
+    "Gateway": "/ip4/127.0.0.1/tcp/4002",
+    "Swarm": [
+      "/ip4/0.0.0.0/tcp/4001",
+      "/ip4/0.0.0.0/udp/4001/utp",
+      "/ip6/::/tcp/4001",
+      "/ip6/::/udp/4001/utp"
+    ]
+  },
+  "Bootstrap": [
+    "/ip4/107.170.133.32/tcp/4001/ipfs/QmboEn7ycZqb8sXH6wJunWE6d3mdT9iVD7XWDmCcKE9jZ5",
+    "/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
+    "/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
+  ],
+  "Crosspost-gateways": [
+    "http://gateway.ob1.io/"
+  ],
+  "Datastore": {
+    "BloomFilterSize": 0,
+    "GCPeriod": "1h",
+    "HashOnRead": false,
+    "NoSync": false,
+    "Params": null,
+    "Path": "/datastore",
+    "StorageGCWatermark": 90,
+    "StorageMax": "10GB",
+    "Type": "leveldb"
+  },
+  "Discovery": {
+    "MDNS": {
+      "Enabled": false,
+      "Interval": 10
+    }
+  },
+  "Dropbox-api-token": "dropbox123",
+  "Experimental": {
+    "FilestoreEnabled": false,
+    "Libp2pStreamMounting": false,
+    "ShardingEnabled": false
+  },
+  "Gateway": {
+    "HTTPHeaders": null,
+    "PathPrefixes": [],
+    "RootRedirect": "",
+    "Writable": false
+  },
+  "Identity": {
+    "PeerID": "testID",
+    "PrivKey": "testKey"
+  },
+  "Ipns": {
+    "QuerySize": 0,
+    "RecordLifetime": "7d",
+    "RepublishPeriod": "24h",
+    "ResolveCacheSize": 128
+  },
+  "JSON-API": {
+    "AllowedIPs": [
+      "127.0.0.1"
+    ],
+    "Authenticated": true,
+    "CORS": "*",
+    "Enabled": true,
+    "HTTPHeaders": null,
+    "Password": "TestPassword",
+    "SSL": true,
+    "SSLCert": "/path/to/ssl.cert",
+    "SSLKey": "/path/to/ssl.key",
+    "Username": "TestUsername"
+  },
+  "Mounts": {
+    "FuseAllowOther": false,
+    "IPFS": "/ipfs",
+    "IPNS": "/ipns"
+  },
+  "Reprovider": {
+    "Interval": ""
+  },
+  "Resolvers": {
+    ".id": "https://resolver.onename.com/"
+  },
+  "SupernodeRouting": {
+    "Servers": null
+  },
+  "Swarm": {
+    "AddrFilters": null,
+    "DisableBandwidthMetrics": false,
+    "DisableNatPortMap": false
+  },
+  "Tour": {
+    "Last": ""
+  },
+  "Wallet": {
+    "Binary": "/path/to/bitcoind",
+    "FeeAPI": "https://btc.fees.openbazaar.org",
+    "HighFeeDefault": 60,
+    "LowFeeDefault": 20,
+    "MaxFee": 2000,
+    "MediumFeeDefault": 40,
+    "RPCPassword": "password",
+    "RPCUser": "username",
+    "TrustedPeer": "127.0.0.1:8333",
+    "Type": "spvwallet"
+  }
 }
