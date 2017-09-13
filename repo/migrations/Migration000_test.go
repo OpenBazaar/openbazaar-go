@@ -1,10 +1,10 @@
 package migrations
 
 import (
-	"testing"
-	"os"
 	"io/ioutil"
+	"os"
 	"strings"
+	"testing"
 )
 
 var testConfig string = `{
