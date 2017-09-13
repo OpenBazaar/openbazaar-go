@@ -41,7 +41,7 @@ func (migration000) Up(repoPath string) error {
 		return errors.New("Error parsing FeeAPI")
 	}
 	if feeAPIstr == "https://bitcoinfees.21.co/api/v1/fees/recommended" {
-		wallet["FeeAPI"] = "https://fees.openbazaar.org"
+		wallet["FeeAPI"] = "https://btc.fees.openbazaar.org"
 		cfg["Wallet"] = wallet
 		out, err := json.MarshalIndent(cfg, "", "   ")
 		if err != nil {
@@ -97,11 +97,11 @@ func (migration000) Down(repoPath string) error {
 	if !ok {
 		return errors.New("Error parsing FeeAPI")
 	}
-	if feeAPIstr == "https://fees.openbazaar.org" {
+	if feeAPIstr == "https://btc.fees.openbazaar.org" {
 		wallet["FeeAPI"] = "https://bitcoinfees.21.co/api/v1/fees/recommended"
 		cfg["Wallet"] = wallet
 		out, _ := json.MarshalIndent(cfg, "", "   ")
-		f, err := os.Open(path.Join(repoPath, "config"))
+		f, err := os.Create(path.Join(repoPath, "config"))
 		if err != nil {
 			return err
 		}
@@ -111,7 +111,7 @@ func (migration000) Down(repoPath string) error {
 		}
 		f.Close()
 	}
-	f, err := os.Open(path.Join(repoPath, "repover"))
+	f, err := os.Create(path.Join(repoPath, "repover"))
 	if err != nil {
 		return err
 	}
