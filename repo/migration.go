@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"path"
 	"strconv"
+	"os"
 )
 
 type Migration interface {
@@ -20,7 +21,7 @@ var Migrations = []Migration{
 // and will migrate all the way up (applying all up migrations).
 func MigrateUp(repoPath string) error {
 	version, err := ioutil.ReadFile(path.Join(repoPath, "repover"))
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	v, err := strconv.Atoi(string(version))

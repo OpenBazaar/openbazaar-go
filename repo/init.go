@@ -206,8 +206,8 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		MaxFee:           2000,
 		FeeAPI:           "https://btc.fees.openbazaar.org",
 		HighFeeDefault:   160,
-		MediumFeeDefault: 140,
-		LowFeeDefault:    120,
+		MediumFeeDefault: 60,
+		LowFeeDefault:    20,
 		TrustedPeer:      "",
 	}
 
