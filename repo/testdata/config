@@ -97,7 +97,7 @@
   },
   "Wallet": {
     "Binary": "/path/to/bitcoind",
-    "FeeAPI": "https://bitcoinfees.21.co/api/v1/fees/recommended",
+    "FeeAPI": "https://btc.fees.openbazaar.org",
     "HighFeeDefault": 60,
     "LowFeeDefault": 20,
     "MaxFee": 2000,

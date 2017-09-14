@@ -19,9 +19,9 @@ type feeCache struct {
 }
 
 type Fees struct {
-	FastestFee  uint64
-	HalfHourFee uint64
-	HourFee     uint64
+	Priority uint64 `json:"priority"`
+	Normal   uint64 `json:"normal"`
+	Economic uint64 `json:"economic"`
 }
 
 type FeeProvider struct {
@@ -93,28 +93,28 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	}
 	switch feeLevel {
 	case wallet.PRIOIRTY:
-		if fees.FastestFee > fp.maxFee || fees.FastestFee == 0 {
+		if fees.Priority > fp.maxFee || fees.Priority == 0 {
 			return fp.maxFee
 		} else {
-			return fees.FastestFee
+			return fees.Priority
 		}
 	case wallet.NORMAL:
-		if fees.HalfHourFee > fp.maxFee || fees.HalfHourFee == 0 {
+		if fees.Normal > fp.maxFee || fees.Normal == 0 {
 			return fp.maxFee
 		} else {
-			return fees.HalfHourFee
+			return fees.Normal
 		}
 	case wallet.ECONOMIC:
-		if fees.HourFee > fp.maxFee || fees.HourFee == 0 {
+		if fees.Economic > fp.maxFee || fees.Economic == 0 {
 			return fp.maxFee
 		} else {
-			return fees.HourFee
+			return fees.Economic
 		}
 	case wallet.FEE_BUMP:
-		if (fees.FastestFee*2) > fp.maxFee || fees.FastestFee == 0 {
+		if (fees.Priority*2) > fp.maxFee || fees.Priority == 0 {
 			return fp.maxFee
 		} else {
-			return fees.FastestFee * 2
+			return fees.Priority * 2
 		}
 	default:
 		return fp.normalFee
