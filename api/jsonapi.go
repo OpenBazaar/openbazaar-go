@@ -807,10 +807,10 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
-			ErrorResponse(w, http.StatusBadRequest, `{"error": "ERROR_INSUFFICIENT_FUNDS"}`)
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
 			return
 		case err == wallet.ErrorDustAmount:
-			ErrorResponse(w, http.StatusBadRequest, `{"error": "ERROR_DUST_AMOUNT"}`)
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_DUST_AMOUNT`)
 			return
 		default:
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())

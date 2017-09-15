@@ -190,7 +190,7 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 500, insuffientFundsJSON},
+		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
 	})
 }
