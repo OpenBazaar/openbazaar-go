@@ -169,6 +169,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETCase(w, r)
 	case strings.HasPrefix(path, "/wallet/estimatefee"):
 		i.GETEstimateFee(w, r)
+	case strings.HasPrefix(path, "/wallet/fees"):
+		i.GETFees(w, r)
 	case strings.HasPrefix(path, "/ob/ratings"):
 		i.GETRatings(w, r)
 	case strings.HasPrefix(path, "/ob/rating"):

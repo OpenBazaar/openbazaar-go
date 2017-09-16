@@ -760,8 +760,8 @@ const spendJSON = `{
 }`
 
 const insuffientFundsJSON = `{
-    "success": false,
-    "reason": "insuffient funds"
+	"success": false,
+	"reason": "ERROR_INSUFFICIENT_FUNDS"
 }`
 
 //

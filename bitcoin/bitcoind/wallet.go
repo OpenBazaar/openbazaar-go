@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcrpcclient"
 	btc "github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/coinset"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -304,12 +305,149 @@ func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
 	return uint32(info.Blocks), *h
 }
 
+func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
+	m := make(map[coinset.Coin]*hd.ExtendedKey)
+	utxos, err := w.rpcClient.ListUnspent()
+	if err != nil {
+		return m, err
+	}
+	for _, u := range utxos {
+		if !u.Spendable {
+			continue
+		}
+		txhash, err := chainhash.NewHashFromStr(u.TxID)
+		if err != nil {
+			return m, err
+		}
+		addr, err := btc.DecodeAddress(u.Address, w.params)
+		if err != nil {
+			return m, err
+		}
+		scriptPubkey, err := w.AddressToScript(addr)
+		if err != nil {
+			return m, err
+		}
+		c := spvwallet.NewCoin(txhash.CloneBytes(), u.Vout, btc.Amount(u.Amount*100000000), u.Confirmations, scriptPubkey)
+
+		wif, err := w.rpcClient.DumpPrivKey(addr)
+		if err != nil {
+			return m, err
+		}
+		key := hd.NewExtendedKey(
+			w.params.HDPrivateKeyID[:],
+			wif.PrivKey.Serialize(),
+			make([]byte, 32),
+			[]byte{0x00, 0x00, 0x00, 0x00},
+			0,
+			0,
+			true)
+		m[c] = key
+	}
+	return m, nil
+}
+
 func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
-	amt, err := btc.NewAmount(float64(amount) / 100000000)
+	tx, err := w.buildTx(amount, addr, feeLevel)
 	if err != nil {
 		return nil, err
 	}
-	return w.rpcClient.SendFrom(Account, addr, amt)
+	return w.rpcClient.SendRawTransaction(tx, false)
+}
+
+func (w *BitcoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
+	script, _ := txscript.PayToAddrScript(addr)
+	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
+		return nil, wallet.ErrorDustAmount
+	}
+
+	var additionalPrevScripts map[wire.OutPoint][]byte
+	var additionalKeysByAddress map[string]*btc.WIF
+
+	// Create input source
+	coinMap, err := w.gatherCoins()
+	if err != nil {
+		return nil, err
+	}
+	coins := make([]coinset.Coin, 0, len(coinMap))
+	for k := range coinMap {
+		coins = append(coins, k)
+	}
+	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
+		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(10000)}
+		coins, err := coinSelector.CoinSelect(target, coins)
+		if err != nil {
+			return total, inputs, scripts, wallet.ErrorInsuffientFunds
+		}
+		additionalPrevScripts = make(map[wire.OutPoint][]byte)
+		additionalKeysByAddress = make(map[string]*btc.WIF)
+		for _, c := range coins.Coins() {
+			total += c.Value()
+			outpoint := wire.NewOutPoint(c.Hash(), c.Index())
+			in := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
+			in.Sequence = 0 // Opt-in RBF so we can bump fees
+			inputs = append(inputs, in)
+			additionalPrevScripts[*outpoint] = c.PkScript()
+			key := coinMap[c]
+			addr, err := key.Address(w.params)
+			if err != nil {
+				continue
+			}
+			privKey, err := key.ECPrivKey()
+			if err != nil {
+				continue
+			}
+			wif, _ := btc.NewWIF(privKey, w.params, true)
+			additionalKeysByAddress[addr.EncodeAddress()] = wif
+		}
+		return total, inputs, scripts, nil
+	}
+
+	// Get the fee per kilobyte
+	feePerKB := int64(w.GetFeePerByte(feeLevel)) * 1000
+
+	// outputs
+	out := wire.NewTxOut(amount, script)
+
+	// Create change source
+	changeSource := func() ([]byte, error) {
+		addr := w.CurrentAddress(wallet.INTERNAL)
+		script, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return []byte{}, err
+		}
+		return script, nil
+	}
+
+	outputs := []*wire.TxOut{out}
+	authoredTx, err := spvwallet.NewUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
+	if err != nil {
+		return nil, err
+	}
+
+	// BIP 69 sorting
+	txsort.InPlaceSort(authoredTx.Tx)
+
+	// Sign tx
+	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
+		addrStr := addr.EncodeAddress()
+		wif := additionalKeysByAddress[addrStr]
+		return wif.PrivKey, wif.CompressPubKey, nil
+	})
+	getScript := txscript.ScriptClosure(func(
+		addr btc.Address) ([]byte, error) {
+		return []byte{}, nil
+	})
+	for i, txIn := range authoredTx.Tx.TxIn {
+		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
+		script, err := txscript.SignTxOutput(w.params,
+			authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, getKey,
+			getScript, txIn.SignatureScript)
+		if err != nil {
+			return nil, errors.New("Failed to sign transaction")
+		}
+		txIn.SignatureScript = script
+	}
+	return authoredTx.Tx, nil
 }
 
 func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
@@ -401,6 +539,39 @@ func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []walle
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
 	fee := estimatedSize * int(feePerByte)
 	return uint64(fee)
+}
+
+func (w *BitcoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
+	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
+	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", w.params)
+	if err != nil {
+		return 0, err
+	}
+	tx, err := w.buildTx(amount, addr, feeLevel)
+	if err != nil {
+		return 0, err
+	}
+	var outval int64
+	for _, output := range tx.TxOut {
+		outval += output.Value
+	}
+	var inval int64
+	utxos, err := w.rpcClient.ListUnspent()
+	if err != nil {
+		return 0, err
+	}
+	for _, input := range tx.TxIn {
+		for _, utxo := range utxos {
+			if utxo.TxID == input.PreviousOutPoint.Hash.String() && utxo.Vout == input.PreviousOutPoint.Index {
+				inval += int64(utxo.Amount * 100000000)
+				break
+			}
+		}
+	}
+	if inval < outval {
+		return 0, errors.New("Error building transaction: inputs less than outputs")
+	}
+	return uint64(inval - outval), err
 }
 
 func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {

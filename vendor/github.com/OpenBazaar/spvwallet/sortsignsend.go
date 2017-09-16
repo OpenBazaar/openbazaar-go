@@ -213,6 +213,40 @@ func (w *SPVWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.Tra
 	return uint64(fee)
 }
 
+// Build a spend transaction for the amount and return the transaction fee
+func (w *SPVWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
+	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
+	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", w.params)
+	if err != nil {
+		return 0, err
+	}
+	tx, err := w.buildTx(amount, addr, feeLevel, nil)
+	if err != nil {
+		return 0, err
+	}
+	var outval int64
+	for _, output := range tx.TxOut {
+		outval += output.Value
+	}
+	var inval int64
+	utxos, err := w.txstore.Utxos().GetAll()
+	if err != nil {
+		return 0, err
+	}
+	for _, input := range tx.TxIn {
+		for _, utxo := range utxos {
+			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index {
+				inval += utxo.Value
+				break
+			}
+		}
+	}
+	if inval < outval {
+		return 0, errors.New("Error building transaction: inputs less than outputs")
+	}
+	return uint64(inval - outval), err
+}
+
 func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
 	if uint32(timeout.Hours()) > 0 && timeoutKey == nil {
 		return nil, nil, errors.New("Timeout key must be non nil when using an escrow timeout")
@@ -531,12 +565,11 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 	return &txid, nil
 }
 
-// TODO: once segwit activates this will need to build segwit transactions if the utxo script is a witness program
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := txscript.PayToAddrScript(addr)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
-		return nil, errors.New("Amount is below dust threshold")
+		return nil, wallet.ErrorDustAmount
 	}
 
 	var additionalPrevScripts map[wire.OutPoint][]byte
@@ -552,7 +585,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(10000)}
 		coins, err := coinSelector.CoinSelect(target, coins)
 		if err != nil {
-			return total, inputs, scripts, errors.New("insuffient funds")
+			return total, inputs, scripts, wallet.ErrorInsuffientFunds
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)

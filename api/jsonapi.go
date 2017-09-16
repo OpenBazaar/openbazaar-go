@@ -805,8 +805,17 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	}
 	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
+		switch {
+		case err == wallet.ErrorInsuffientFunds:
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
+			return
+		case err == wallet.ErrorDustAmount:
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_DUST_AMOUNT`)
+			return
+		default:
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	var orderId string
@@ -3072,6 +3081,13 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
 	fl := r.URL.Query().Get("feeLevel")
+	amt := r.URL.Query().Get("amount")
+	amount, err := strconv.Atoi(amt)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	var feeLevel wallet.FeeLevel
 	switch strings.ToUpper(fl) {
 	case "PRIORITY":
@@ -3081,9 +3097,33 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 	case "ECONOMIC":
 		feeLevel = wallet.ECONOMIC
 	default:
-		feeLevel = wallet.NORMAL
+		ErrorResponse(w, http.StatusBadRequest, "Unknown feeLevel")
+		return
 	}
-	fmt.Fprintf(w, "%d", int(i.node.Wallet.GetFeePerByte(feeLevel)))
+
+	fee, err := i.node.Wallet.EstimateSpendFee(int64(amount), feeLevel)
+	if err != nil {
+		switch {
+		case err == wallet.ErrorInsuffientFunds:
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
+			return
+		case err == wallet.ErrorDustAmount:
+			ErrorResponse(w, http.StatusBadRequest, `ERROR_DUST_AMOUNT`)
+			return
+		default:
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	fmt.Fprintf(w, `{"estimatedFee": "%d"}`, (fee))
+	return
+}
+
+func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
+	priority := i.node.Wallet.GetFeePerByte(wallet.PRIOIRTY)
+	normal := i.node.Wallet.GetFeePerByte(wallet.NORMAL)
+	economic := i.node.Wallet.GetFeePerByte(wallet.ECONOMIC)
+	fmt.Fprintf(w, `{"priority": "%d", "normal": "%d", "economic": "%d"}`, int(priority), int(normal), int(economic))
 	return
 }
 
