@@ -499,6 +499,11 @@ func (m *Marshaler) marshalValue(out *errWriter, prop *proto.Properties, v refle
 	if err != nil {
 		return err
 	}
+
+	b = bytes.Replace(b, []byte("\\u003c"), []byte("<"), -1)
+	b = bytes.Replace(b, []byte("\\u003e"), []byte(">"), -1)
+	b = bytes.Replace(b, []byte("\\u0026"), []byte("&"), -1)
+
 	var bigInt bool
 	if v.Kind() == reflect.Int64 {
 		if v.Int() >= int64(1<<53) {
