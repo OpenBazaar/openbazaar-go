@@ -42,6 +42,7 @@ import (
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	routing "github.com/ipfs/go-ipfs/routing/dht"
 	"golang.org/x/net/context"
+	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
 	"io/ioutil"
 )
 
@@ -1371,7 +1372,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	}
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
 		sl := new(pb.SignedListing)
-		_, err := mh.FromB58String(listingId)
+		_, err := cid.Decode(listingId)
 		if err == nil {
 			sl, err = i.node.GetListingFromHash(listingId)
 			if err != nil {
@@ -1416,7 +1417,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 	} else {
 		var listingBytes []byte
 		var hash string
-		_, err := mh.FromB58String(listingId)
+		_, err := cid.Decode(listingId)
 		if err == nil {
 			listingBytes, err = ipfs.Cat(i.node.Context, listingId)
 			if err != nil {
