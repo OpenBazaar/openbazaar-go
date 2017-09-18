@@ -6,7 +6,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/microcosm-cc/bluemonday"
-	"strings"
 )
 
 var sanitizer *bluemonday.Policy
@@ -25,8 +24,6 @@ func SanitizeJSON(s []byte) ([]byte, error) {
 		return nil, err
 	}
 	sanitize(i)
-
-	i = bytes.Replace(i, []byte("&amp;"), []byte("&"), -1)
 
 	return json.MarshalIndent(i, "", "    ")
 }
@@ -50,7 +47,6 @@ func SanitizeProtobuf(jsonEncodedProtobuf string, m proto.Message) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	out = strings.Replace(out, "&amp;", "&", -1)
 	return []byte(out), nil
 }
 

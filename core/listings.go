@@ -22,6 +22,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -117,6 +118,24 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Set crypto currency
 	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+
+	// Sanitize a few critical fields
+	if listing.Item == nil {
+		return sl, errors.New("No item in listing")
+	}
+	sanitizer := bluemonday.UGCPolicy()
+	for _, opt := range listing.Item.Options {
+		opt.Name = sanitizer.Sanitize(opt.Name)
+		for _, v := range opt.Variants {
+			v.Name = sanitizer.Sanitize(v.Name)
+		}
+	}
+	for _, so := range listing.ShippingOptions {
+		so.Name = sanitizer.Sanitize(so.Name)
+		for _, serv := range so.Services {
+			serv.Name = sanitizer.Sanitize(serv.Name)
+		}
+	}
 
 	// Check the listing data is correct for continuing
 	if err := validateListing(listing, testnet); err != nil {
