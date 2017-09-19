@@ -3116,7 +3116,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": "%d"}`, (fee))
+	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
 	return
 }
 
@@ -3124,7 +3124,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := i.node.Wallet.GetFeePerByte(wallet.PRIOIRTY)
 	normal := i.node.Wallet.GetFeePerByte(wallet.NORMAL)
 	economic := i.node.Wallet.GetFeePerByte(wallet.ECONOMIC)
-	fmt.Fprintf(w, `{"priority": "%d", "normal": "%d", "economic": "%d"}`, int(priority), int(normal), int(economic))
+	fmt.Fprintf(w, `{"priority": %d, "normal": %d, "economic": %d}`, int(priority), int(normal), int(economic))
 	return
 }
 
