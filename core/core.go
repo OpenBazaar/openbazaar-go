@@ -27,6 +27,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
+	"sync"
 )
 
 var (
@@ -96,7 +97,9 @@ type OpenBazaarNode struct {
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
+var seedLock sync.Mutex
 func (n *OpenBazaarNode) SeedNode() error {
+	seedLock.Lock()
 	ipfs.UnPinDir(n.Context, n.RootHash)
 	var aerr error
 	var rootHash string
@@ -112,6 +115,8 @@ func (n *OpenBazaarNode) SeedNode() error {
 	if aerr != nil {
 		return aerr
 	}
+	seedLock.Unlock()
+
 	for _, g := range n.CrosspostGateways {
 		go func(u *url.URL) {
 			req, err := http.NewRequest("PUT", u.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
