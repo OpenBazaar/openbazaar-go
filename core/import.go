@@ -17,32 +17,50 @@ import (
 	"time"
 )
 
+const bufferSize = 5
+
 func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	reader := csv.NewReader(r)
-	records, err := reader.ReadAll()
+	columns, err := reader.Read()
 	if err != nil {
 		return err
 	}
-	if len(records) < 2 {
-		return errors.New("Invalid csv file")
-	}
-	columns := records[0]
 	fields := make(map[string]int)
 	for i, c := range columns {
 		fields[strings.ToLower(c)] = i
 	}
 
-	type Result struct {
-		listing *pb.Listing
-		err     error
-	}
+	done := make(chan struct{})
+	buf := make(chan struct{}, bufferSize)
+	errChan := make(chan error)
 
-	respCh := make(chan Result, len(records)-1)
-	defer close(respCh)
+	countLock := new(sync.Mutex)
+	count := 0
 
-	// For each row in the CSV create a new listing
-	for i := 1; i < len(records); i++ {
-		go func(i int) {
+	indexLock := new(sync.Mutex)
+
+	for {
+		select {
+		case err := <-errChan:
+			return err
+		case <-done:
+			return nil
+		default:
+		}
+		buf <- struct{}{}
+		go func() {
+			defer func() { <-buf }()
+
+			countLock.Lock()
+			i := count
+			record, err := reader.Read()
+			count++
+			countLock.Unlock()
+			if err != nil {
+				done <- struct{}{}
+				return
+			}
+
 			listing := new(pb.Listing)
 			metadata := new(pb.Listing_Metadata)
 			item := new(pb.Listing_Item)
@@ -53,110 +71,110 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 
 			pos, ok := fields["contract_type"]
 			if ok {
-				e, ok := pb.Listing_Metadata_ContractType_value[strings.ToUpper(records[i][pos])]
+				e, ok := pb.Listing_Metadata_ContractType_value[strings.ToUpper(record[pos])]
 				if ok {
 					listing.Metadata.ContractType = pb.Listing_Metadata_ContractType(e)
 				}
 			}
 			pos, ok = fields["format"]
 			if ok {
-				e, ok := pb.Listing_Metadata_Format_value[strings.ToUpper(records[i][pos])]
+				e, ok := pb.Listing_Metadata_Format_value[strings.ToUpper(record[pos])]
 				if ok {
 					listing.Metadata.Format = pb.Listing_Metadata_Format(e)
 				}
 			}
 			pos, ok = fields["expiry"]
 			if ok {
-				t, err := time.Parse(time.RFC3339, records[i][pos])
+				t, err := time.Parse(time.RFC3339, record[pos])
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 				ts, err := ptypes.TimestampProto(t)
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 				listing.Metadata.Expiry = ts
 			} else {
 				t, err := time.Parse(time.RFC3339, "2037-12-31T05:00:00.000Z")
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 				ts, err := ptypes.TimestampProto(t)
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 				listing.Metadata.Expiry = ts
 			}
 			pos, ok = fields["pricing_currency"]
 			if !ok {
-				respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "pricing_currency is a mandatory field")}
+				errChan <- fmt.Errorf("Error in record %d: %s", i, "pricing_currency is a mandatory field")
 				return
 			}
-			listing.Metadata.PricingCurrency = strings.ToUpper(records[i][pos])
+			listing.Metadata.PricingCurrency = strings.ToUpper(record[pos])
 			pos, ok = fields["language"]
 			if ok {
-				listing.Metadata.Language = records[i][pos]
+				listing.Metadata.Language = record[pos]
 			}
 			pos, ok = fields["title"]
 			if !ok {
-				respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "title is a mandatory field")}
+				errChan <- fmt.Errorf("Error in record %d: %s", i, "title is a mandatory field")
 				return
 			}
-			listing.Item.Title = records[i][pos]
+			listing.Item.Title = record[pos]
 
 			listing.Slug, err = n.GenerateSlug(listing.Item.Title)
 			if err != nil {
-				respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 				return
 			}
 
 			pos, ok = fields["description"]
 			if ok {
-				listing.Item.Description = records[i][pos]
+				listing.Item.Description = record[pos]
 			}
 			pos, ok = fields["processing_time"]
 			if ok {
-				listing.Item.ProcessingTime = records[i][pos]
+				listing.Item.ProcessingTime = record[pos]
 			}
 			pos, ok = fields["price"]
 			if !ok {
-				respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "price is a mandatory field")}
+				errChan <- fmt.Errorf("Error in record %d: %s", i, "price is a mandatory field")
 				return
 			}
 			if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-				f, err := strconv.ParseFloat(records[i][pos], 64)
+				f, err := strconv.ParseFloat(record[pos], 64)
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 				listing.Item.Price = uint64(f * 100)
 			} else {
-				listing.Item.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+				listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 			}
 			pos, ok = fields["nsfw"]
 			if ok {
-				listing.Item.Nsfw, err = strconv.ParseBool(records[i][pos])
+				listing.Item.Nsfw, err = strconv.ParseBool(record[pos])
 				if err != nil {
-					respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 					return
 				}
 			}
 			pos, ok = fields["tags"]
 			if ok {
-				listing.Item.Tags = strings.Split(records[i][pos], ",")
+				listing.Item.Tags = strings.Split(record[pos], ",")
 			}
 			pos, ok = fields["image_urls"]
 			if ok {
 				listing.Item.Images = []*pb.Listing_Item_Image{}
-				image_urls := strings.Split(records[i][pos], ",")
+				image_urls := strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
 				for x, img := range image_urls {
@@ -168,7 +186,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 						if err == nil && (testUrl.Scheme == "http" || testUrl.Scheme == "https") {
 							b64, filename, err = n.GetBase64Image(img)
 							if err != nil {
-								respCh <- Result{nil, fmt.Errorf("Error in record %d: image %d failed to download", i, x)}
+								errChan <- fmt.Errorf("Error in record %d: image %d failed to download", i, x)
 								return
 							}
 						} else {
@@ -177,7 +195,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 						}
 						images, err := n.SetProductImages(b64, filename)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: image %d invalid", i, x)}
+							errChan <- fmt.Errorf("Error in record %d: image %d invalid", i, x)
 							return
 						}
 						imgpb := &pb.Listing_Item_Image{
@@ -198,7 +216,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 			pos, ok = fields["categories"]
 			if ok {
 
-				cats := strings.Split(records[i][pos], ",")
+				cats := strings.Split(record[pos], ",")
 				for _, cat := range cats {
 					if cat != "" {
 						listing.Item.Categories = append(listing.Item.Categories, cat)
@@ -207,18 +225,18 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 			}
 			pos, ok = fields["condition"]
 			if ok {
-				listing.Item.Condition = records[i][pos]
+				listing.Item.Condition = record[pos]
 			}
 			quantityPos, quantityOK := fields["quantity"]
 			skuPos, skuOK := fields["sku_number"]
 			listing.Item.Skus = []*pb.Listing_Item_Sku{}
 			if quantityOK || skuOK {
 				sku := new(pb.Listing_Item_Sku)
-				sku.ProductID = records[i][skuPos]
+				sku.ProductID = record[skuPos]
 				if quantityOK {
-					quantity, err := strconv.ParseInt(records[i][quantityPos], 10, 64)
+					quantity, err := strconv.ParseInt(record[quantityPos], 10, 64)
 					if err != nil {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 						return
 					}
 					sku.Quantity = quantity
@@ -227,15 +245,15 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 			}
 			listing.ShippingOptions = []*pb.Listing_ShippingOption{}
 			pos, ok = fields["shipping_option1_name"]
-			if ok && records[i][pos] != "" {
+			if ok && record[pos] != "" {
 				so := new(pb.Listing_ShippingOption)
-				so.Name = records[i][pos]
+				so.Name = record[pos]
 				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option1_countries"]
 				if ok {
-					countries := strings.Split(records[i][pos], ",")
+					countries := strings.Split(record[pos], ",")
 					for _, c := range countries {
 						e, ok := pb.CountryCode_value[strings.ToUpper(c)]
 						if ok {
@@ -246,87 +264,87 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 					so.Regions = append(so.Regions, pb.CountryCode_ALL)
 				}
 				pos, ok = fields["shipping_option1_service1_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option1_service1_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option1_service1_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service1_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service1_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option1_service2_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option1_service2_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option1_service2_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, errors.New("shipping_option1_service2_estimated_price is a mandatory field")}
+						errChan <- errors.New("shipping_option1_service2_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option1_service3_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option1_service3_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option1_service3_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service3_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service3_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
@@ -335,15 +353,15 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 				listing.ShippingOptions = append(listing.ShippingOptions, so)
 			}
 			pos, ok = fields["shipping_option2_name"]
-			if ok && records[i][pos] != "" {
+			if ok && record[pos] != "" {
 				so := new(pb.Listing_ShippingOption)
-				so.Name = records[i][pos]
+				so.Name = record[pos]
 				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option2_countries"]
 				if ok {
-					countries := strings.Split(records[i][pos], ",")
+					countries := strings.Split(record[pos], ",")
 					for _, c := range countries {
 						e, ok := pb.CountryCode_value[strings.ToUpper(c)]
 						if ok {
@@ -354,87 +372,87 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 					so.Regions = append(so.Regions, pb.CountryCode_ALL)
 				}
 				pos, ok = fields["shipping_option2_service1_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option2_service1_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option2_service1_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service1_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service1_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option2_service2_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option2_service2_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option2_service2_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service2_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service2_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option2_service3_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option2_service3_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option2_service3_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service3_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service3_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
@@ -443,15 +461,15 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 				listing.ShippingOptions = append(listing.ShippingOptions, so)
 			}
 			pos, ok = fields["shipping_option3_name"]
-			if ok && records[i][pos] != "" {
+			if ok && record[pos] != "" {
 				so := new(pb.Listing_ShippingOption)
-				so.Name = records[i][pos]
+				so.Name = record[pos]
 				so.Type = pb.Listing_ShippingOption_FIXED_PRICE
 				so.Regions = []pb.CountryCode{}
 				so.Services = []*pb.Listing_ShippingOption_Service{}
 				pos, ok = fields["shipping_option3_countries"]
 				if ok {
-					countries := strings.Split(records[i][pos], ",")
+					countries := strings.Split(record[pos], ",")
 					for _, c := range countries {
 						e, ok := pb.CountryCode_value[strings.ToUpper(c)]
 						if ok {
@@ -462,87 +480,87 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 					so.Regions = append(so.Regions, pb.CountryCode_ALL)
 				}
 				pos, ok = fields["shipping_option3_service1_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option3_service1_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option3_service1_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service1_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service1_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option3_service2_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option3_service2_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option3_service2_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service2_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service2_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
 					so.Services = append(so.Services, service)
 				}
 				pos, ok = fields["shipping_option3_service3_name"]
-				if ok && records[i][pos] != "" {
+				if ok && record[pos] != "" {
 					service := new(pb.Listing_ShippingOption_Service)
-					service.Name = records[i][pos]
+					service.Name = record[pos]
 					pos, ok = fields["shipping_option3_service3_estimated_delivery"]
 					if ok {
-						service.EstimatedDelivery = records[i][pos]
+						service.EstimatedDelivery = record[pos]
 					}
 					pos, ok = fields["shipping_option3_service3_estimated_price"]
 					if !ok {
-						respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service3_estimated_price is a mandatory field")}
+						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service3_estimated_price is a mandatory field")
 						return
 					}
 					if strings.ToUpper(listing.Metadata.PricingCurrency) != "BTC" {
-						f, err := strconv.ParseFloat(records[i][pos], 64)
+						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 						service.Price = uint64(f * 100)
 					} else {
-						service.Price, err = strconv.ParseUint(records[i][pos], 10, 64)
+						service.Price, err = strconv.ParseUint(record[pos], 10, 64)
 						if err != nil {
-							respCh <- Result{nil, fmt.Errorf("Error in record %d: %s", i, err.Error())}
+							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 							return
 						}
 					}
@@ -557,64 +575,54 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 					listing.Moderators = *sd.StoreModerators
 				}
 			}
-			respCh <- Result{listing, nil}
-		}(i)
-	}
-	var rerr error
-	var listings []*pb.Listing
-	for i := 0; i < len(records)-1; i++ {
-		select {
-		case resp := <-respCh:
-			if resp.err != nil {
-				rerr = err
-			} else {
-				listings = append(listings, resp.listing)
+
+			// Set inventory
+			err = n.SetListingInventory(listing)
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
 			}
-		}
+
+			// Sign listing
+			signedListing, err := n.SignListing(listing)
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+
+			// Save to disk
+			listingPath := path.Join(n.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
+			f, err := os.Create(listingPath)
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+			defer f.Close()
+			m := jsonpb.Marshaler{
+				EnumsAsInts:  false,
+				EmitDefaults: false,
+				Indent:       "    ",
+				OrigName:     false,
+			}
+			out, err := m.MarshalToString(signedListing)
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+
+			if _, err := f.WriteString(out); err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+
+			// Update index
+			indexLock.Lock()
+			err = n.UpdateListingIndex(signedListing)
+			indexLock.Unlock()
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+		}()
 	}
-	if rerr != nil {
-		return rerr
-	}
-
-	for _, listing := range listings {
-		// Set inventory
-		err = n.SetListingInventory(listing)
-		if err != nil {
-			return err
-		}
-
-		// Sign listing
-		signedListing, err := n.SignListing(listing)
-		if err != nil {
-			return err
-		}
-
-		// Save to disk
-		listingPath := path.Join(n.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
-		f, err := os.Create(listingPath)
-		if err != nil {
-			return err
-		}
-		m := jsonpb.Marshaler{
-			EnumsAsInts:  false,
-			EmitDefaults: false,
-			Indent:       "    ",
-			OrigName:     false,
-		}
-		out, err := m.MarshalToString(signedListing)
-		if err != nil {
-			return err
-		}
-
-		if _, err := f.WriteString(out); err != nil {
-			return err
-		}
-
-		// Update index
-		err = n.UpdateListingIndex(signedListing)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
