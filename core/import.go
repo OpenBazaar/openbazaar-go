@@ -38,28 +38,38 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	count := 0
 
 	indexLock := new(sync.Mutex)
+	wg := new(sync.WaitGroup)
 
+listingLoop:
 	for {
 		select {
 		case err := <-errChan:
 			return err
 		case <-done:
-			return nil
+			break listingLoop
 		default:
 		}
 		buf <- struct{}{}
 		go func() {
-			defer func() { <-buf }()
+			defer func() {
+				<-buf
+			}()
 
 			countLock.Lock()
 			i := count
 			record, err := reader.Read()
 			count++
 			countLock.Unlock()
-			if err != nil {
+			if err == io.EOF {
 				done <- struct{}{}
 				return
 			}
+			if err != nil {
+				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				return
+			}
+
+			wg.Add(1)
 
 			listing := new(pb.Listing)
 			metadata := new(pb.Listing_Metadata)
@@ -623,6 +633,14 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 				return
 			}
+			wg.Done()
 		}()
+	}
+	wg.Wait()
+	select {
+	case err := <-errChan:
+		return err
+	default:
+		return nil
 	}
 }
