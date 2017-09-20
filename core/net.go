@@ -73,8 +73,6 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	if aerr != nil {
 		return aerr
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	mh, mherr := multihash.FromB58String(p.Pretty())
 	if mherr != nil {
 		return mherr
@@ -85,8 +83,18 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	if err != nil {
 		return err
 	}
+	if m.MessageType != pb.Message_OFFLINE_ACK {
+		pointer.Purpose = ipfs.MESSAGE
+		pointer.CancelID = &p
+		err = n.Datastore.Pointers().Put(pointer)
+		if err != nil {
+			return err
+		}
+	}
+	OfflineMessageWaitGroup.Add(1)
 	go func() {
-		OfflineMessageWaitGroup.Add(1)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 		err := ipfs.PublishPointer(n.IpfsNode, ctx, pointer)
 		if err != nil {
 			log.Error(err)
@@ -111,15 +119,6 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
 				}(g)
 			}
-		}
-	}
-
-	if m.MessageType != pb.Message_OFFLINE_ACK {
-		pointer.Purpose = ipfs.MESSAGE
-		pointer.CancelID = &p
-		err = n.Datastore.Pointers().Put(pointer)
-		if err != nil {
-			return err
 		}
 	}
 	return nil
