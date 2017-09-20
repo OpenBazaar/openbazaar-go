@@ -113,6 +113,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 		time.Sleep(time.Millisecond * 500)
 	}
 	if aerr != nil {
+		seedLock.Unlock()
 		return aerr
 	}
 	seedLock.Unlock()
