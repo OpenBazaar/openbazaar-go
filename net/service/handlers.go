@@ -247,6 +247,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		return m
 	}
+	pro, _ := service.node.GetProfile()
+	if !pro.Vendor {
+		return nil, errors.New("Vendor's store is turned off")
+	}
+
 	if pmes.Payload == nil {
 		return nil, errors.New("Payload is nil")
 	}
