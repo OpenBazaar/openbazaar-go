@@ -12,6 +12,9 @@ import (
 
 var log = logging.MustGetLogger("service")
 
+const kRepointFrequency = time.Hour * 12
+const kPointerExpiration = time.Hour * 24 * 30
+
 type PointerRepublisher struct {
 	ipfsNode    *core.IpfsNode
 	db          repo.Datastore
@@ -27,7 +30,7 @@ func NewPointerRepublisher(node *core.IpfsNode, database repo.Datastore, isModer
 }
 
 func (r *PointerRepublisher) Run() {
-	tick := time.NewTicker(time.Hour * 24)
+	tick := time.NewTicker(kRepointFrequency)
 	defer tick.Stop()
 	go r.Republish()
 	for range tick.C {
@@ -46,7 +49,7 @@ func (r *PointerRepublisher) Republish() {
 	for _, p := range pointers {
 		switch p.Purpose {
 		case ipfs.MESSAGE:
-			if time.Now().Sub(p.Timestamp) > time.Hour*24*30 {
+			if time.Now().Sub(p.Timestamp) > kPointerExpiration {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				go ipfs.PublishPointer(r.ipfsNode, ctx, p)
