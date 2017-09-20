@@ -32,13 +32,15 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 
 	done := make(chan struct{})
 	buf := make(chan struct{}, bufferSize)
-	errChan := make(chan error)
+	errChan := make(chan error, bufferSize)
 
 	countLock := new(sync.Mutex)
 	count := 0
 
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
+
+	imagePool := sync.Pool{New: func() interface{} {var s string; return s},}
 
 listingLoop:
 	for {
@@ -191,7 +193,8 @@ listingLoop:
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
-						var b64, filename string
+						b64 := imagePool.Get().(string)
+						var filename string
 						testUrl, err := url.Parse(img)
 						if err == nil && (testUrl.Scheme == "http" || testUrl.Scheme == "https") {
 							b64, filename, err = n.GetBase64Image(img)
