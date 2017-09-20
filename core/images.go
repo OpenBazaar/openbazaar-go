@@ -107,8 +107,8 @@ func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, erro
 	if err != nil {
 		return "", err
 	}
-	defer out.Close()
 	jpeg.Encode(out, img, nil)
+	out.Close()
 	return ipfs.AddFile(n.Context, imgPath)
 }
 
