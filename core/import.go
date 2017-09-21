@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"encoding/json"
 )
 
 const bufferSize = 5
@@ -37,6 +38,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	countLock := new(sync.Mutex)
 	count := 0
 
+	var ld []listingData
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 
@@ -623,19 +625,15 @@ listingLoop:
 				return
 			}
 
+			// Add listing data
+			data, err := n.extractListingData(signedListing)
 			if _, err := f.WriteString(out); err != nil {
 				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 				return
 			}
-
-			// Update index
 			indexLock.Lock()
-			err = n.UpdateListingIndex(signedListing)
+			ld = append(ld, data)
 			indexLock.Unlock()
-			if err != nil {
-				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
-				return
-			}
 			wg.Done()
 		}()
 	}
@@ -644,6 +642,28 @@ listingLoop:
 	case err := <-errChan:
 		return err
 	default:
-		return nil
 	}
+	index, err := n.getListingIndex()
+	if err != nil {
+		return err
+	}
+	index = append(index, ld...)
+
+	// Write it back to file
+	indexPath := path.Join(n.RepoPath, "root", "listings.json")
+	f, err := os.Create(indexPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	j, jerr := json.MarshalIndent(index, "", "    ")
+	if jerr != nil {
+		return jerr
+	}
+	_, werr := f.Write(j)
+	if werr != nil {
+		return werr
+	}
+	return nil
 }
