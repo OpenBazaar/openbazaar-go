@@ -191,7 +191,9 @@ listingLoop:
 				image_urls := strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
-				for x, img := range image_urls {
+				var x int
+				img := imagePool.Get().(string)
+				for x, img = range image_urls {
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
