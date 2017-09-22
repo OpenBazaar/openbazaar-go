@@ -7,7 +7,7 @@ import (
 	"github.com/icrowley/fake"
 )
 
-func newRandomProfile(randomImages chan (*randomImage)) *pb.Profile {
+func newRandomProfile(randomImages chan (*pb.Profile_Image)) *pb.Profile {
 	name := "🤖" + fake.Company()
 
 	vendor := true

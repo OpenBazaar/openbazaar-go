@@ -43,7 +43,8 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/config"
 
-	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
+	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
+	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -91,7 +92,7 @@ func main() {
 	log.Print("Peer ID: ", node.IpfsNode.Identity.Pretty())
 
 	// Start getting images.
-	randomImages := make(chan *randomImage, imageConcurrency)
+	randomImages := make(chan *pb.Profile_Image, imageConcurrency)
 	stopGettingImages := make(chan struct{})
 	for i := 0; i < imageConcurrency; i++ {
 		go func() {
@@ -185,7 +186,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool) (*db.SQLit
 	}
 
 	// Initialize the IPFS repo if it does not already exist
-	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, sqliteDB.Config().Init)
+	err = repo.DoInit(dataDir, 4096, testnet, password, mnemonic, time.Now(), sqliteDB.Config().Init)
 	if err != nil {
 		return sqliteDB, err
 	}
@@ -277,7 +278,7 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 		gatewayUrls = append(gatewayUrls, u)
 	}
 
-	resolverURL, err := repo.GetResolverUrl(path.Join(repoPath, "config"))
+	resolverConfig, err := repo.ResolverConfig{}(path.Join(repoPath, "config"))
 	if err != nil {
 		return nil, err
 	}
@@ -289,6 +290,10 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 
 	var torDialer proxy.Dialer
 
+	resolvers := []obns.Resolver{
+		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
+	}
+
 	core.Node = &core.OpenBazaarNode{
 		Context:            ctx,
 		IpfsNode:           nd,
@@ -296,7 +301,7 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 		RepoPath:           repoPath,
 		Datastore:          db,
 		Wallet:             wallet,
-		Resolver:           bstk.NewBlockStackClient(resolverURL, torDialer),
+		NameSystem:         obns.NewNameSystem(resolvers),
 		ExchangeRates:      exchange.NewBitcoinPriceFetcher(torDialer),
 		MessageStorage:     selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer),
 		CrosspostGateways:  gatewayUrls,
@@ -305,7 +310,7 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 	}
 
 	core.Node.Service = service.New(core.Node, ctx, db)
-	core.Node.MessageRetriever = ret.NewMessageRetriever(db, ctx, nd, nil, core.Node.Service, 16, torDialer, core.Node.SendOfflineAck)
+	core.Node.MessageRetriever = ret.NewMessageRetriever(db, ctx, nd, nil, core.Node.Service, 16, torDialer, []*url.URL{}, core.Node.SendOfflineAck)
 
 	go core.Node.MessageRetriever.Run()
 	go core.Node.PointerRepublisher.Run()
@@ -351,7 +356,7 @@ func newWallet(repoPath string, db *db.SQLiteDatastore) (*spvwallet.SPVWallet, e
 	return wallet, nil
 }
 
-func setFakeProfile(node *core.OpenBazaarNode, randomImages chan (*randomImage)) (*pb.Profile, error) {
+func setFakeProfile(node *core.OpenBazaarNode, randomImages chan (*pb.Profile_Image)) (*pb.Profile, error) {
 	profile := newRandomProfile(randomImages)
 	err := node.UpdateProfile(profile)
 	if err != nil {
@@ -360,7 +365,7 @@ func setFakeProfile(node *core.OpenBazaarNode, randomImages chan (*randomImage))
 	return profile, nil
 }
 
-func addFakeListing(node *core.OpenBazaarNode, randomImages chan (*randomImage)) error {
+func addFakeListing(node *core.OpenBazaarNode, randomImages chan (*pb.Profile_Image)) error {
 	ld := newRandomListing(randomImages)
 
 	// Sign

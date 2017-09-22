@@ -9,8 +9,8 @@ import (
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
-	manet "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net"
+	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
+	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
@@ -28,6 +28,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -37,14 +38,17 @@ import (
 	ipath "github.com/ipfs/go-ipfs/path"
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dht "github.com/ipfs/go-ipfs/routing/dht"
-	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/op/go-logging"
-	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
+	dht "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
+	dhtutil "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/util"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
+	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
+	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -146,7 +150,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	ncfg := &ipfscore.BuildCfg{
 		Repo:    r,
 		Online:  true,
-		Routing: ipfscore.DHTClientOption,
+		Routing: DHTClientOption,
 	}
 
 	// Set IPNS query size
@@ -169,7 +173,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		params = chaincfg.MainNetParams
 	}
 
-	var wallet bitcoin.BitcoinWallet
+	var wallet wallet.Wallet
 	var tp net.Addr
 	if config.WalletTrustedPeer != "" {
 		tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -412,4 +416,12 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 	}
 
 	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, logger, opts...)
+}
+
+var DHTClientOption ipfscore.RoutingOption = constructClientDHTRouting
+func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ipfsrepo.Datastore) (routing.IpfsRouting, error) {
+	dhtRouting := dht.NewDHTClient(ctx, host, dstore)
+	dhtRouting.Validator[ipfscore.IpnsValidatorTag] = namesys.IpnsRecordValidator
+	dhtRouting.Selector[ipfscore.IpnsValidatorTag] = namesys.IpnsSelectorFunc
+	return dhtRouting, nil
 }
