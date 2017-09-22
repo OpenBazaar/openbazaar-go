@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/jsonpb"
@@ -15,7 +16,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"encoding/json"
 )
 
 const bufferSize = 5
@@ -42,7 +42,8 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 
-	imagePool := sync.Pool{New: func() interface{} {var s string; return s},}
+	stringPool := sync.Pool{New: func() interface{} { var s string; return s }}
+	stringSlicePool := sync.Pool{New: func() interface{} { var s []string; return s }}
 
 listingLoop:
 	for {
@@ -61,7 +62,8 @@ listingLoop:
 
 			countLock.Lock()
 			i := count
-			record, err := reader.Read()
+			record := stringSlicePool.Get().([]string)
+			record, err = reader.Read()
 			count++
 			countLock.Unlock()
 			if err == io.EOF {
@@ -188,16 +190,18 @@ listingLoop:
 			pos, ok = fields["image_urls"]
 			if ok {
 				listing.Item.Images = []*pb.Listing_Item_Image{}
-				image_urls := strings.Split(record[pos], ",")
+				image_urls := stringSlicePool.Get().([]string)
+				image_urls = []string{}
+				image_urls = strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
 				var x int
-				img := imagePool.Get().(string)
+				img := stringPool.Get().(string)
 				for x, img = range image_urls {
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
-						b64 := imagePool.Get().(string)
+						b64 := stringPool.Get().(string)
 						var filename string
 						testUrl, err := url.Parse(img)
 						if err == nil && (testUrl.Scheme == "http" || testUrl.Scheme == "https") {
