@@ -98,6 +98,7 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
+
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
 	ipfs.UnPinDir(n.Context, n.RootHash)
