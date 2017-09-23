@@ -4,7 +4,9 @@
   },
   "Addresses": {
     "API": "",
+    "Announce": null,
     "Gateway": "/ip4/127.0.0.1/tcp/4002",
+    "NoAnnounce": null,
     "Swarm": [
       "/ip4/0.0.0.0/tcp/4001",
       "/ip4/0.0.0.0/udp/4001/utp",
@@ -24,12 +26,34 @@
     "BloomFilterSize": 0,
     "GCPeriod": "1h",
     "HashOnRead": false,
-    "NoSync": false,
-    "Params": null,
-    "Path": "/datastore",
+    "Spec": {
+      "mounts": [
+        {
+          "child": {
+            "path": "blocks",
+            "shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
+            "sync": true,
+            "type": "flatfs"
+          },
+          "mountpoint": "/blocks",
+          "prefix": "flatfs.datastore",
+          "type": "measure"
+        },
+        {
+          "child": {
+            "compression": "none",
+            "path": "datastore",
+            "type": "levelds"
+          },
+          "mountpoint": "/",
+          "prefix": "leveldb.datastore",
+          "type": "measure"
+        }
+      ],
+      "type": "mount"
+    },
     "StorageGCWatermark": 90,
-    "StorageMax": "10GB",
-    "Type": "leveldb"
+    "StorageMax": "10GB"
   },
   "Discovery": {
     "MDNS": {
@@ -79,7 +103,8 @@
     "IPNS": "/ipns"
   },
   "Reprovider": {
-    "Interval": ""
+    "Interval": "",
+    "Strategy": ""
   },
   "Resolvers": {
     ".id": "https://resolver.onename.com/"
@@ -90,7 +115,9 @@
   "Swarm": {
     "AddrFilters": null,
     "DisableBandwidthMetrics": false,
-    "DisableNatPortMap": false
+    "DisableNatPortMap": false,
+    "DisableRelay": false,
+    "EnableRelayHop": false
   },
   "Tour": {
     "Last": ""
