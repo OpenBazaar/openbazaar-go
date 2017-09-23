@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
-	"path"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -513,12 +512,37 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 }
 
 func datastoreConfig(repoRoot string) config.Datastore {
-	dspath := path.Join(repoRoot, "datastore")
 	return config.Datastore{
-		Path:               dspath,
-		Type:               "leveldb",
 		StorageMax:         "10GB",
 		StorageGCWatermark: 90, // 90%
 		GCPeriod:           "1h",
+		BloomFilterSize:    0,
+		HashOnRead:         false,
+		Spec: map[string]interface{}{
+			"type": "mount",
+			"mounts": []interface{}{
+				map[string]interface{}{
+					"mountpoint": "/blocks",
+					"type":       "measure",
+					"prefix":     "flatfs.datastore",
+					"child": map[string]interface{}{
+						"type":      "flatfs",
+						"path":      "blocks",
+						"sync":      true,
+						"shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
+					},
+				},
+				map[string]interface{}{
+					"mountpoint": "/",
+					"type":       "measure",
+					"prefix":     "leveldb.datastore",
+					"child": map[string]interface{}{
+						"type":        "levelds",
+						"path":        "datastore",
+						"compression": "none",
+					},
+				},
+			},
+		},
 	}
 }
