@@ -235,7 +235,7 @@ func (w *SPVWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (ui
 	}
 	for _, input := range tx.TxIn {
 		for _, utxo := range utxos {
-			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index{
+			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index {
 				inval += utxo.Value
 				break
 			}
@@ -244,7 +244,7 @@ func (w *SPVWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (ui
 	if inval < outval {
 		return 0, errors.New("Error building transaction: inputs less than outputs")
 	}
-	return uint64(inval-outval), err
+	return uint64(inval - outval), err
 }
 
 func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {

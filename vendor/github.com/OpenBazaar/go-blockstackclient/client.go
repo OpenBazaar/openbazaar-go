@@ -1,9 +1,11 @@
 package blockstackclient
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"golang.org/x/net/proxy"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,8 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"context"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 )
 
 type httpClient interface {
@@ -40,7 +40,7 @@ func NewBlockStackClient(resolverURL string, dialer proxy.Dialer) *BlockstackCli
 }
 
 type lookupRes struct {
-	pid  peer.ID
+	pid   peer.ID
 	error error
 }
 

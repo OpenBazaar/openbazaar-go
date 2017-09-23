@@ -2,9 +2,9 @@ package namesys
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
-	"fmt"
 
 	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
@@ -20,7 +20,6 @@ import (
 	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
 )
 
 var log = logging.Logger("namesys")
@@ -28,9 +27,9 @@ var cachePrefix = "IPNSPERSISENTCACHE_"
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
-	routing routing.ValueStore
+	routing   routing.ValueStore
 	datastore ds.Datastore
-	cache *lru.Cache
+	cache     *lru.Cache
 }
 
 func (r *routingResolver) cacheGet(name string) (path.Path, bool) {
@@ -214,14 +213,14 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		}
 
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix + name), val)
+		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
 		return p, nil
 	} else {
 		// Its an old style multihash record
 		log.Warning("Detected old style multihash record")
 		p := path.FromCid(cid.NewCidV0(valh))
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix + name), val)
+		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
 		return p, nil
 	}
 }

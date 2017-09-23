@@ -1,8 +1,8 @@
 package ordered_map
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
 type node struct {

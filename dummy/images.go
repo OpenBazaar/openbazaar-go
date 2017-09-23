@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/icrowley/fake"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/icrowley/fake"
 )
 
 const randomImageURL = "http://lorempixel.com/600/400/"

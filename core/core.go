@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"errors"
 	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	gonet "net"
 	"net/http"
 	"net/url"
@@ -98,6 +98,7 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
+
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
 	ipfs.UnPinDir(n.Context, n.RootHash)
