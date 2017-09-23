@@ -3,8 +3,8 @@ package migrations
 import (
 	"io/ioutil"
 	"os"
-	"testing"
 	"strings"
+	"testing"
 )
 
 var testConfig1 string = `{
@@ -146,4 +146,3 @@ func TestMigration001(t *testing.T) {
 	os.Remove("./version")
 	os.Remove("./datastore_spec")
 }
-

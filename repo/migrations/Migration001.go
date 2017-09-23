@@ -117,15 +117,15 @@ func (migration001) Down(repoPath string) error {
 	}
 
 	cfg["Datastore"] = map[string]interface{}{
-		"BloomFilterSize": 0,
-		"GCPeriod": "1h",
-		"HashOnRead": false,
-		"NoSync": false,
-		"Params": nil,
-		"Path": path.Join(repoPath, "datastore"),
+		"BloomFilterSize":    0,
+		"GCPeriod":           "1h",
+		"HashOnRead":         false,
+		"NoSync":             false,
+		"Params":             nil,
+		"Path":               path.Join(repoPath, "datastore"),
 		"StorageGCWatermark": 90,
-		"StorageMax": "10GB",
-		"Type": "leveldb",
+		"StorageMax":         "10GB",
+		"Type":               "leveldb",
 	}
 
 	out, err := json.MarshalIndent(cfg, "", "   ")
