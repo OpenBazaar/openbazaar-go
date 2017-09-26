@@ -6,7 +6,6 @@ import (
 	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	"math/rand"
 	"sync"
 	"time"
@@ -17,11 +16,12 @@ import (
 type messageSender struct {
 	s         inet.Stream
 	w         ggio.WriteCloser
+	r         ggio.ReadCloser
 	lk        sync.Mutex
 	p         peer.ID
 	service   *OpenBazaarService
-	protoc    protocol.ID
 	singleMes int
+	invalid   bool
 	requests  map[int32]chan *pb.Message
 	requestlk sync.Mutex
 }
@@ -29,48 +29,81 @@ type messageSender struct {
 var ReadMessageTimeout = time.Minute
 var ErrReadTimeout = fmt.Errorf("timed out reading response")
 
-func (service *OpenBazaarService) messageSenderForPeer(p peer.ID, s *inet.Stream) *messageSender {
+func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSender, error) {
 	service.senderlk.Lock()
-	defer service.senderlk.Unlock()
-
 	ms, ok := service.sender[p]
-	if !ok {
-		ms = service.newMessageSender(p)
-		service.sender[p] = ms
+	if ok {
+		service.senderlk.Unlock()
+		return ms, nil
 	}
-	if s != nil {
-		// replace old stream
-		ms.lk.Lock()
-		if ms.s != nil {
-			ms.s.Close()
+	ms = &messageSender{p: p, service: service, requests: make(map[int32]chan *pb.Message, 2)}
+	service.sender[p] = ms
+	service.senderlk.Unlock()
+
+	if err := ms.prepOrInvalidate(); err != nil {
+		service.senderlk.Lock()
+		defer service.senderlk.Unlock()
+
+		if msCur, ok := service.sender[p]; ok {
+			// Changed. Use the new one, old one is invalid and
+			// not in the map so we can just throw it away.
+			if ms != msCur {
+				return msCur, nil
+			}
+			// Not changed, remove the now invalid stream from the
+			// map.
+			delete(service.sender, p)
 		}
-		ms.s = *s
-		ms.w = ggio.NewDelimitedWriter(ms.s)
-		ms.lk.Unlock()
+		// Invalid but not in map. Must have been removed by a disconnect.
+		return nil, err
 	}
-	return ms
+	// All ready to go.
+	return ms, nil
 }
 
 func (service *OpenBazaarService) newMessageSender(p peer.ID) *messageSender {
 	return &messageSender{
 		p:        p,
 		service:  service,
-		protoc:   ProtocolOpenBazaar,
 		requests: make(map[int32]chan *pb.Message, 2), // low initial capacity
 	}
 }
 
+// invalidate is called before this messageSender is removed from the strmap.
+// It prevents the messageSender from being reused/reinitialized and then
+// forgotten (leaving the stream open).
+func (ms *messageSender) invalidate() {
+	ms.invalid = true
+	if ms.s != nil {
+		ms.s.Reset()
+		ms.s = nil
+	}
+}
+
+func (ms *messageSender) prepOrInvalidate() error {
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
+	if err := ms.prep(); err != nil {
+		ms.invalidate()
+		return err
+	}
+	return nil
+}
+
 func (ms *messageSender) prep() error {
+	if ms.invalid {
+		return fmt.Errorf("message sender has been invalidated")
+	}
 	if ms.s != nil {
 		return nil
 	}
 
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ms.protoc)
+	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
 	if err != nil {
 		return err
 	}
-	go ms.service.handleNewMessage(nstr, false)
 
+	ms.r = ggio.NewDelimitedReader(nstr, inet.MessageSizeMax)
 	ms.w = ggio.NewDelimitedWriter(nstr)
 	ms.s = nstr
 
@@ -85,45 +118,33 @@ const streamReuseTries = 3
 func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
-	if err := ms.prep(); err != nil {
-		return err
-	}
-
-	if err := ms.writeMessage(pmes); err != nil {
-		return err
-	}
-
-	if ms.singleMes > streamReuseTries {
-		ms.s.Close()
-		ms.s = nil
-	}
-
-	return nil
-}
-
-func (ms *messageSender) writeMessage(pmes *pb.Message) error {
-	err := ms.w.WriteMsg(pmes)
-	if err != nil {
-		// If the other side isnt expecting us to be reusing streams, we're gonna
-		// end up erroring here. To make sure things work seamlessly, lets retry once
-		// before continuing
-
-		log.Infof("error writing message: %s", err.Error())
-		ms.s.Close()
-		ms.s = nil
+	retry := false
+	for {
 		if err := ms.prep(); err != nil {
 			return err
 		}
 
 		if err := ms.w.WriteMsg(pmes); err != nil {
-			return err
+			ms.s.Reset()
+			ms.s = nil
+
+			if retry {
+				return err
+			} else {
+				retry = true
+				continue
+			}
 		}
 
-		// keep track of this happening. If it happens a few times, its
-		// likely we can assume the otherside will never support stream reuse
-		ms.singleMes++
+		if ms.singleMes > streamReuseTries {
+			ms.s.Close()
+			ms.s = nil
+		} else if retry {
+			ms.singleMes++
+		}
+
+		return nil
 	}
-	return nil
 }
 
 func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
@@ -133,25 +154,42 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	ms.requests[pmes.RequestId] = returnChan
 	ms.requestlk.Unlock()
 
-	if err := ms.SendMessage(ctx, pmes); err != nil {
-		ms.closeRequest(pmes.RequestId)
-		return nil, err
-	}
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
+	retry := false
+	for {
+		if err := ms.prep(); err != nil {
+			return nil, err
+		}
 
-	mes, err := ms.ctxReadMsg(ctx, returnChan)
-	if err != nil {
-		ms.closeRequest(pmes.RequestId)
-		ms.s.Close()
-		ms.s = nil
-		return nil, err
-	}
-	// no need to close request here, it will have been done in the stream handler
+		if err := ms.w.WriteMsg(pmes); err != nil {
+			ms.s.Reset()
+			ms.s = nil
 
-	if ms.singleMes > streamReuseTries {
-		ms.s.Close()
-		ms.s = nil
+			if retry {
+				return nil, err
+			} else {
+				retry = true
+				continue
+			}
+		}
+
+		mes, err := ms.ctxReadMsg(ctx, returnChan);
+		if err != nil {
+			ms.s.Reset()
+			ms.s = nil
+			return nil, err
+		}
+
+		if ms.singleMes > streamReuseTries {
+			ms.s.Close()
+			ms.s = nil
+		} else if retry {
+			ms.singleMes++
+		}
+
+		return mes, nil
 	}
-	return mes, nil
 }
 
 // stop listening for responses

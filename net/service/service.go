@@ -9,7 +9,6 @@ import (
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
 	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
-	"io"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
+	"io"
 )
 
 var log = logging.MustGetLogger("service")
@@ -60,22 +60,22 @@ func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
 }
 
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
-	cr := ctxio.NewReader(service.ctx, s)
+	defer s.Close()
+
+	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
-	var ms *messageSender
-	if incoming {
-		// if this is an inbound stream
-		// ensure the message sender for this peer is updated with this stream, so we reply over it
-		ms = service.messageSenderForPeer(mPeer, &s)
-	} else {
-		ms = service.messageSenderForPeer(mPeer, nil)
+
+	ms, err := service.messageSenderForPeer(mPeer)
+	if err != nil {
+		log.Error("Error getting message sender")
+		return
 	}
-	defer s.Close()
+
 	for {
 		select {
 		// end loop on context close
@@ -90,8 +90,9 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 				// EOF error means the sender closed the stream
 				return
 			}
-			log.Errorf("Error unmarshaling data: %s", err)
-			continue
+			s.Reset()
+			log.Debugf("Error unmarshaling data: %s", err)
+			return
 		}
 
 		if pmes.IsResponse {
@@ -138,17 +139,20 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		rpmes.RequestId = pmes.RequestId
 		rpmes.IsResponse = true
 
-		// Send out response msg
+		// send out response msg
 		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
 			log.Debugf("send response error: %s", err)
-			continue
+			return
 		}
 	}
 }
 
 func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Sending %s request to %s", pmes.MessageType.String(), p.Pretty())
-	ms := service.messageSenderForPeer(p, nil)
+	ms, err := service.messageSenderForPeer(p)
+	if err != nil {
+		return nil, err
+	}
 
 	rpmes, err := ms.SendRequest(ctx, pmes)
 	if err != nil {
@@ -162,13 +166,16 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 	}
 
 	log.Debugf("Received response from %s", p.Pretty())
-
 	return rpmes, nil
 }
 
 func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
 	log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
-	ms := service.messageSenderForPeer(p, nil)
+	ms, err := service.messageSenderForPeer(p)
+	if err != nil {
+		log.Error("Error creating new message sender")
+		return err
+	}
 
 	if err := ms.SendMessage(ctx, pmes); err != nil {
 		return err
