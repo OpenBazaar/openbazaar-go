@@ -91,7 +91,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 				return
 			}
 			log.Errorf("Error unmarshaling data: %s", err)
-			continue
+			return
 		}
 
 		if pmes.IsResponse {
