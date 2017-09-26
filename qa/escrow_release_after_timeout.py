@@ -209,7 +209,7 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
 
         for i in range(6):
             self.send_bitcoin_cmd("generate", 1)
-            time.sleep(2)
+            time.sleep(3)
 
         # Alice attempt to release funds again
         release = {
