@@ -174,7 +174,7 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 			}
 		}
 
-		mes, err := ms.ctxReadMsg(ctx, returnChan);
+		mes, err := ms.ctxReadMsg(ctx, returnChan)
 		if err != nil {
 			ms.s.Reset()
 			ms.s = nil

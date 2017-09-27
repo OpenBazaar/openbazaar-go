@@ -18,7 +18,6 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
-	"io"
 )
 
 var log = logging.MustGetLogger("service")
@@ -86,10 +85,6 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
-			if err == io.EOF {
-				// EOF error means the sender closed the stream
-				return
-			}
 			s.Reset()
 			log.Debugf("Error unmarshaling data: %s", err)
 			return
@@ -113,21 +108,24 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 				log.Debug("received response message with unknown request id: requesting function may have timed out")
 			}
 			ms.requestlk.Unlock()
-			continue
+			s.Reset()
+			return
 		}
 
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
+			s.Reset()
 			log.Debug("Got back nil handler from handlerForMsgType")
-			continue
+			return
 		}
 
 		// Dispatch handler
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
+			s.Reset()
 			log.Debugf("%s handle message error: %s", pmes.MessageType.String(), err)
-			continue
+			return
 		}
 
 		// If nil response, return it before serializing
@@ -141,6 +139,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 
 		// send out response msg
 		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
+			s.Reset()
 			log.Debugf("send response error: %s", err)
 			return
 		}
