@@ -495,10 +495,11 @@ func InitConfig(repoRoot string) (*config.Config, error) {
 		},
 
 		Ipns: config.Ipns{
-			ResolveCacheSize: 128,
-			RecordLifetime:   "7d",
-			RepublishPeriod:  "24h",
-			QuerySize:        5,
+			ResolveCacheSize:   128,
+			RecordLifetime:     "7d",
+			RepublishPeriod:    "24h",
+			QuerySize:          5,
+			UsePersistentCache: true,
 		},
 
 		Gateway: config.Gateway{
