@@ -258,6 +258,11 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 		profile.Stats.ListingCount = listingCount
 		changed = true
 	}
+	postCount := uint32(n.GetPostCount())
+	if postCount != profile.Stats.PostCount {
+		profile.Stats.PostCount = postCount
+		changed = true
+	}
 	followerCount := uint32(n.Datastore.Followers().Count())
 	if followerCount != profile.Stats.FollowerCount {
 		profile.Stats.FollowerCount = followerCount

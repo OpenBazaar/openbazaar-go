@@ -390,6 +390,7 @@ message Signature {
         DISPUTE            = 5;
         DISPUTE_RESOLUTION = 6;
         REFUND             = 7;
+        POST               = 8;
     }
 }
 
