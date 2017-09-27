@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"fmt"
 )
 
 var testConfig1 string = `{
@@ -18,7 +19,13 @@ var testConfig1 string = `{
 	    "StorageGCWatermark": 90,
 	    "StorageMax": "10GB",
 	    "Type": "leveldb"
-    }
+    },
+    "Ipns": {
+      "QuerySize": 1,
+      "RecordLifetime": "7d",
+      "RepublishPeriod": "24h",
+      "ResolveCacheSize": 128
+   }
 }`
 
 func TestMigration001(t *testing.T) {
@@ -72,7 +79,14 @@ func TestMigration001(t *testing.T) {
 	      },
 	      "StorageGCWatermark": 90,
 	      "StorageMax": "10GB"
-	   }`
+	   },
+	   "Ipns": {
+      "QuerySize": 1,
+      "RecordLifetime": "7d",
+      "RepublishPeriod": "24h",
+      "ResolveCacheSize": 128,
+      "UsePersistentCache": true
+   }`
 	if strings.Contains(string(newConfig), newConfigCheck) {
 		t.Error("Failed to write new Datastore")
 	}
@@ -120,6 +134,12 @@ func TestMigration001(t *testing.T) {
       "StorageGCWatermark": 90,
       "StorageMax": "10GB",
       "Type": "leveldb"
+   },
+   "Ipns": {
+      "QuerySize": 1,
+      "RecordLifetime": "7d",
+      "RepublishPeriod": "24h",
+      "ResolveCacheSize": 128
    }
 }`
 	if !strings.Contains(string(newConfig), newConfigCheck) {

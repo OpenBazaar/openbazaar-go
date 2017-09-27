@@ -702,6 +702,7 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		dhtutil.QuerySize = 16
 	}
+	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)

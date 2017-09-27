@@ -160,6 +160,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	} else {
 		dhtutil.QuerySize = 16
 	}
+	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()

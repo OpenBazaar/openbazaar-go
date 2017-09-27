@@ -81,7 +81,8 @@
     "QuerySize": 0,
     "RecordLifetime": "7d",
     "RepublishPeriod": "24h",
-    "ResolveCacheSize": 128
+    "ResolveCacheSize": 128,
+    "UsePersistentCache": true
   },
   "JSON-API": {
     "AllowedIPs": [

@@ -58,6 +58,17 @@ func (migration001) Up(repoPath string) error {
 		},
 	}
 
+	ipnsIface, ok := cfg["Ipns"]
+	if !ok {
+		return errors.New("Missing ipns config")
+	}
+	ipns, ok := ipnsIface.(map[string]interface{})
+	if !ok {
+		return errors.New("Error parsing ipns config")
+	}
+	ipns["UsePersistentCache"] = true
+	cfg["Ipns"] = ipns
+
 	out, err := json.MarshalIndent(cfg, "", "   ")
 	if err != nil {
 		return err
@@ -127,6 +138,17 @@ func (migration001) Down(repoPath string) error {
 		"StorageMax":         "10GB",
 		"Type":               "leveldb",
 	}
+
+	ipnsIface, ok := cfg["Ipns"]
+	if !ok {
+		return errors.New("Missing ipns config")
+	}
+	ipns, ok := ipnsIface.(map[string]interface{})
+	if !ok {
+		return errors.New("Error parsing ipns config")
+	}
+	delete(ipns, "UsePersistentCache")
+	cfg["Ipns"] = ipns
 
 	out, err := json.MarshalIndent(cfg, "", "   ")
 	if err != nil {
