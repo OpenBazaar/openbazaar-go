@@ -1817,43 +1817,51 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
 			found := make(map[string]bool)
+			foundMu := sync.Mutex{}
 			for p := range peerChan {
 				go func(pi ps.PeerInfo) {
 					pid, err := core.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
-					if !found[pid] {
-						found[pid] = true
-						if strings.ToLower(include) == "profile" {
-							profile, err := i.node.FetchProfile(pid, false)
-							if err != nil {
-								return
-							}
-							resp := pb.PeerAndProfileWithID{id, pid, &profile}
-							m := jsonpb.Marshaler{
-								EnumsAsInts:  false,
-								EmitDefaults: true,
-								Indent:       "    ",
-								OrigName:     false,
-							}
-							respJson, err := m.MarshalToString(&resp)
-							if err != nil {
-								return
-							}
-							b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
-							if err != nil {
-								return
-							}
-							i.node.Broadcast <- b
-						} else {
-							resp := wsResp{id, pid}
-							respJson, err := json.MarshalIndent(resp, "", "    ")
-							if err != nil {
-								return
-							}
-							i.node.Broadcast <- []byte(respJson)
+
+					// Check and set the peer in `found` with locking
+					foundMu.Lock()
+					if found[pid] {
+						foundMu.Unlock()
+						return
+					}
+					found[pid] = true
+					foundMu.Unlock()
+
+					if strings.ToLower(include) == "profile" {
+						profile, err := i.node.FetchProfile(pid, false)
+						if err != nil {
+							return
 						}
+						resp := pb.PeerAndProfileWithID{id, pid, &profile}
+						m := jsonpb.Marshaler{
+							EnumsAsInts:  false,
+							EmitDefaults: true,
+							Indent:       "    ",
+							OrigName:     false,
+						}
+						respJson, err := m.MarshalToString(&resp)
+						if err != nil {
+							return
+						}
+						b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- b
+					} else {
+						resp := wsResp{id, pid}
+						respJson, err := json.MarshalIndent(resp, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- []byte(respJson)
 					}
 				}(p)
 			}
