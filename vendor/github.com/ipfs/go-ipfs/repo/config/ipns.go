@@ -6,4 +6,6 @@ type Ipns struct {
 
 	ResolveCacheSize int
 	QuerySize        int
+
+	UsePersistentCache bool
 }

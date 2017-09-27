@@ -24,6 +24,7 @@ import (
 
 var log = logging.Logger("namesys")
 var cachePrefix = "IPNSPERSISENTCACHE_"
+var UsePersistentCache bool
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
@@ -178,7 +179,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 
 	for i := 0; i < 2; i++ {
 		err = <-resp
-		if err != nil {
+		if err != nil && UsePersistentCache {
 			val, err := r.datastore.Get(ds.NewKey(cachePrefix + name))
 			if err != nil {
 				return "", err
@@ -193,6 +194,8 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 				return "", err
 			}
 			return p, nil
+		} else if err != nil {
+			return "", err
 		}
 	}
 
