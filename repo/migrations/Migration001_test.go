@@ -1,11 +1,11 @@
 package migrations
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
-	"fmt"
 )
 
 var testConfig1 string = `{
