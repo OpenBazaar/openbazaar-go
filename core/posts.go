@@ -107,7 +107,10 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		Slug:      post.Post.Slug,
 		Title:     post.Post.Title,
 		Reference: reference{post.Post.Reference.PeerId},
-		Timestamp: post.Post.Timestamp,
+	}
+
+	if post.Post.Timestamp != nil {
+		ld.Timestamp = FormatRFC3339PB(*post.Post.Timestamp)
 	}
 
 	if len(post.Post.Images) > 0 {
