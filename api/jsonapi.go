@@ -3559,7 +3559,7 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
+func (i *jsonAPIHandler) PUTPost(w http.ResponseWriter, r *http.Request) {
 	ld := new(pb.Post)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
@@ -3588,7 +3588,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(postPath)
+	out, err := m.MarshalToString(signedPost)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

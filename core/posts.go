@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	cid "gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -27,6 +26,12 @@ type postData struct {
 	Slug      string    `json:"slug"`
 	Title     string    `json:"title"`
 	Thumbnail thumbnail `json:"thumbnail"`
+	Reference reference `json:"reference"`
+	Timestamp string		`json:"timestamp"`
+}
+
+type reference struct {
+	PeerId    string		`json:"peerId"`
 }
 
 // Add our identity to the post and sign it
@@ -101,7 +106,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		Hash:      postHash,
 		Slug:      post.Post.Slug,
 		Title:     post.Post.Title,
-		Reference: post.Post.Reference,
+		Reference: reference{post.Post.Reference.PeerId},
 		Timestamp: post.Post.Timestamp,
 	}
 
@@ -136,7 +141,7 @@ func (n *OpenBazaarNode) getPostIndex() ([]postData, error) {
 }
 
 // Update the posts.json file in the posts directory
-func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData) error {
+func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData, updateRatings bool) error {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 	// Check to see if the post we are adding already exists in the list. If so delete it.
 	for i, d := range index {
@@ -397,7 +402,7 @@ func validatePost(post *pb.Post) (err error) {
 	}
 
 	// Long Form
-	if len(post.longForm) > PostLongFormMaxCharacters {
+	if len(post.LongForm) > PostLongFormMaxCharacters {
 		return fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
 	}
 
