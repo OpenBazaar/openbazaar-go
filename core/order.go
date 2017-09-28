@@ -507,7 +507,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			if err := validateVersionNumber(sl.Listing); err != nil {
 				return nil, err
 			}
-			if err := listing.Metadata.ContractType == pb.Listing_Metadata_CLASSIFIED {
+			if listing.Metadata.ContractType == pb.Listing_Metadata_CLASSIFIED {
 				return nil, errors.New("Cannot purchase a classified")
 			}
 			if err := validateVendorID(sl.Listing); err != nil {
@@ -1044,8 +1044,8 @@ collectListings:
 	}
 	// TODO: use function for this
 	for _, listing := range contract.VendorListings {
-		if err := listing.Metadata.ContractType == pb.Listing_Metadata_CLASSIFIED {
-			return nil, errors.New("Cannot purchase a classified")
+		if listing.Metadata.ContractType == pb.Listing_Metadata_CLASSIFIED {
+			return errors.New("Cannot purchase a classified")
 		}
 		ser, err := proto.Marshal(listing)
 		if err != nil {
