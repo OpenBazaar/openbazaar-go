@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	PostTitleMaxCharacters		= 280
-	PostLongFormMaxCharacters	= 50000
+	PostTitleMaxCharacters    = 280
+	PostLongFormMaxCharacters = 50000
 )
 
 type postData struct {
@@ -27,11 +27,11 @@ type postData struct {
 	Title     string    `json:"title"`
 	Thumbnail thumbnail `json:"thumbnail"`
 	Reference reference `json:"reference"`
-	Timestamp string		`json:"timestamp"`
+	Timestamp string    `json:"timestamp"`
 }
 
 type reference struct {
-	PeerId    string		`json:"peerId"`
+	PeerId string `json:"peerId"`
 }
 
 // Add our identity to the post and sign it
@@ -114,11 +114,11 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	}
 
 	if len(post.Post.Images) > 0 {
-			ld.Thumbnail = thumbnail{
-					post.Post.Images[0].Tiny,
-					post.Post.Images[0].Small,
-					post.Post.Images[0].Medium,
-			}
+		ld.Thumbnail = thumbnail{
+			post.Post.Images[0].Tiny,
+			post.Post.Images[0].Small,
+			post.Post.Images[0].Medium,
+		}
 	}
 	return ld, nil
 }
