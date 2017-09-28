@@ -32,3 +32,6 @@ dist
 .ackrc
 .tags*
 *.sw?
+
+# macOS
+.DS_Store

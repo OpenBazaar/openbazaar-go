@@ -45,6 +45,7 @@ message Listing {
             DIGITAL_GOOD  = 1;
             SERVICE       = 2;
             CROWD_FUND    = 3;
+            CLASSIFIED    = 4;
         }
 
         enum Format {
