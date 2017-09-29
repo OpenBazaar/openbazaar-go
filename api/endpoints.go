@@ -15,6 +15,8 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.PUTModerator(w, r)
 	case strings.HasPrefix(path, "/ob/listing"):
 		i.PUTListing(w, r)
+	case strings.HasPrefix(path, "/ob/post"):
+		i.PUTPost(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
