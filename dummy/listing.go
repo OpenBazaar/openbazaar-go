@@ -24,7 +24,7 @@ var categories = []string{
 	"Other",
 }
 
-func newRandomListing(randomImages chan (*randomImage)) *pb.Listing {
+func newRandomListing(randomImages chan (*pb.Profile_Image)) *pb.Listing {
 	title := fake.ProductName()
 	slug := slugify(title)
 	// sku := slug + "-" + fake.Digits()
@@ -69,7 +69,7 @@ func newRandomListing(randomImages chan (*randomImage)) *pb.Listing {
 				break
 			case image := <-randomImages:
 				options[i].Variants[j].Image = &pb.Listing_Item_Image{
-					Filename: image.filename,
+					Filename: fake.Word(),
 					Tiny:     image.Tiny,
 					Small:    image.Small,
 					Medium:   image.Medium,
@@ -99,7 +99,7 @@ IMAGE_LOOP:
 			break IMAGE_LOOP
 		case image := <-randomImages:
 			images = append(images, &pb.Listing_Item_Image{
-				Filename: image.filename,
+				Filename: fake.Word(),
 				Tiny:     image.Tiny,
 				Small:    image.Small,
 				Medium:   image.Medium,
@@ -112,12 +112,12 @@ IMAGE_LOOP:
 	return &pb.Listing{
 		Slug: slug,
 		Metadata: &pb.Listing_Metadata{
-			Version:          1,
-			AcceptedCurrency: "btc",
-			PricingCurrency:  "btc",
-			Expiry:           &timestamp.Timestamp{Seconds: 2147483647},
-			Format:           pb.Listing_Metadata_FIXED_PRICE,
-			ContractType:     pb.Listing_Metadata_ContractType(uint32(rand.Intn(3))),
+			Version:            1,
+			AcceptedCurrencies: []string{"btc"},
+			PricingCurrency:    "btc",
+			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
+			Format:             pb.Listing_Metadata_FIXED_PRICE,
+			ContractType:       pb.Listing_Metadata_ContractType(uint32(rand.Intn(3))),
 		},
 		Item: &pb.Listing_Item{
 			// Skus:           sku,

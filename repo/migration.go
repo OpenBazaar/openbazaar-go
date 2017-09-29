@@ -15,6 +15,7 @@ type Migration interface {
 
 var Migrations = []Migration{
 	migrations.Migration000,
+	migrations.Migration001,
 }
 
 // MigrateUp looks at the currently active migration version
@@ -26,12 +27,12 @@ func MigrateUp(repoPath string) error {
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
 	}
-	v, err := strconv.Atoi(string(version))
+	v, err := strconv.Atoi(string(version[0]))
 	if err != nil {
 		return err
 	}
 	for _, m := range Migrations[v:] {
-		log.Notice("Migrationg repo to version %d", v+1)
+		log.Noticef("Migrationg repo to version %d\n", v+1)
 		err := m.Up(repoPath)
 		if err != nil {
 			return err

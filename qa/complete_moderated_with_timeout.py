@@ -237,9 +237,9 @@ class CompleteModeratedWithTimeout(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
-                raise TestFailure("RefundDirectTest - FAIL: Alice failed to receive the multisig payout")
+                raise TestFailure("CompleteModeratedWithTimeout - FAIL: Alice failed to receive the multisig payout")
         else:
-            raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
+            raise TestFailure("CompleteModeratedWithTimeout - FAIL: Failed to query Alice's balance")
 
         print("CompleteModeratedWithTimeout - PASS")
 
