@@ -9,11 +9,14 @@ import (
 	"os"
 	"path"
 	"strings"
+	"strconv"
+	"net/url"	
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
 )
 
 const (
@@ -31,7 +34,32 @@ type postData struct {
 }
 
 type reference struct {
-	PeerId string `json:"peerId"`
+	PeerId		string		`json:"peerId"`
+	Listings	[]string	`json:"listings"`
+}
+
+func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
+	title = strings.Replace(title, "/", "", -1)
+	slugFromTitle := func(title string) string {
+		l := SentenceMaxCharacters - SlugBuffer
+		if len(title) < SentenceMaxCharacters-SlugBuffer {
+			l = len(title)
+		}
+		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
+	}
+	counter := 1
+	slugBase := slugFromTitle(title)
+	slugToTry := slugBase
+	for {
+		_, err := n.GetPostFromSlug(slugToTry)
+		if os.IsNotExist(err) {
+			return slugToTry, nil
+		} else if err != nil {
+			return "", err
+		}
+		slugToTry = slugBase + strconv.Itoa(counter)
+		counter++
+	}
 }
 
 // Add our identity to the post and sign it
@@ -102,11 +130,27 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		return postData{}, err
 	}
 
+	contains := func(s []string, e string) bool {
+		for _, a := range s {
+			if a == e {
+				return true
+			}
+		}
+		return false
+	}
+
+	referenceListings := []string{}
+	for _, listing := range post.Post.Reference.Listings {
+		if !contains(referenceListings, listing) {
+			referenceListings = append(referenceListings, listing)
+		}
+	}
+
 	ld := postData{
 		Hash:      postHash,
 		Slug:      post.Post.Slug,
 		Title:     post.Post.Title,
-		Reference: reference{post.Post.Reference.PeerId},
+		Reference: reference{post.Post.Reference.PeerId, referenceListings},
 	}
 
 	if post.Post.Timestamp != nil {
