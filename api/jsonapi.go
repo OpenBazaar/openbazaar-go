@@ -3498,7 +3498,7 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If the post already exists tell them to use PUT
+	// If the post already exists in path, tell them to use PUT
 	postPath := path.Join(i.node.RepoPath, "root", "posts", ld.Slug+".json")
 	if ld.Slug != "" {
 		_, ferr := os.Stat(postPath)
@@ -3507,17 +3507,27 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		ld.Slug, err = i.node.GenerateSlug(ld.Title)
+		// The post isn't in the path and is new, therefore add required data (slug, timestamp)
+		// Generate a slug from the title
+		ld.Slug, err = i.node.GeneratePostSlug(ld.Title)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 	}
+	// Add the timestamp
+	ld.Timestamp, err = ptypes.TimestampProto(time.Now())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Sign the post
 	signedPost, err := i.node.SignPost(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Add to path
 	postPath = path.Join(i.node.RepoPath, "root", "posts", signedPost.Post.Slug+".json")
 	f, err := os.Create(postPath)
 	if err != nil {
@@ -3566,12 +3576,20 @@ func (i *jsonAPIHandler) PUTPost(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	// Check if the post exists
 	postPath := path.Join(i.node.RepoPath, "root", "posts", ld.Slug+".json")
 	_, ferr := os.Stat(postPath)
 	if os.IsNotExist(ferr) {
 		ErrorResponse(w, http.StatusNotFound, "Post not found.")
 		return
 	}
+	// Add the timestamp
+	ld.Timestamp, err = ptypes.TimestampProto(time.Now())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Sign the post
 	signedPost, err := i.node.SignPost(ld)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
