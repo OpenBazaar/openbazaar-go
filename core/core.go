@@ -118,7 +118,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	seedLock.Unlock()
-	id, err := cid.Decode(rootHash[6:])
+	id, err := cid.Decode(rootHash)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -129,8 +129,14 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return err
 	}
 	for _, p := range n.PushNodes {
-		go n.SendStore(p.Pretty(), graph)
+		go func() {
+			err := n.SendStore(p.Pretty(), graph)
+			if err != nil {
+				log.Errorf("Error pushing data to peer %s: %s", p.Pretty(), err.Error())
+			}
+		}()
 	}
+
 	go n.publish(rootHash)
 	return nil
 }
@@ -142,6 +148,7 @@ func (n *OpenBazaarNode) publish(hash string) {
 	var err error
 	inflightPublishRequests++
 	_, err = ipfs.Publish(n.Context, hash)
+
 	inflightPublishRequests--
 	if inflightPublishRequests == 0 {
 		if err != nil {

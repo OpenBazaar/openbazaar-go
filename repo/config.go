@@ -409,7 +409,6 @@ func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 		}
 		dataSharing.PushTo = append(dataSharing.PushTo, ndStr)
 	}
-
 	return dataSharing, nil
 }
 

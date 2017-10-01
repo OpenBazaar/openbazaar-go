@@ -18,6 +18,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
+	"io"
 )
 
 var log = logging.MustGetLogger("service")
@@ -54,13 +55,25 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 	return service
 }
 
+func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
+	log.Debugf("Disconnecting from %s", p.Pretty())
+	service.senderlk.Lock()
+	defer service.senderlk.Unlock()
+	ms, ok := service.sender[p]
+	if !ok {
+		return nil
+	}
+	ms.s.Close()
+	delete(service.sender, p)
+	return nil
+}
+
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
 	go service.handleNewMessage(s, true)
 }
 
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
 	defer s.Close()
-
 	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
@@ -86,7 +99,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
 			s.Reset()
-			log.Debugf("Error unmarshaling data: %s", err)
+			if err == io.EOF {
+				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
+			} else {
+				log.Debugf("Error unmarshaling data: %s", err)
+			}
 			return
 		}
 

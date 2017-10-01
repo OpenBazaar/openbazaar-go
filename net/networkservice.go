@@ -23,4 +23,7 @@ type NetworkService interface {
 
 	// Send a message to a peer without requiring a response
 	SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error
+
+	// Disconnect from the given peer
+	DisconnectFromPeer(p peer.ID) error
 }

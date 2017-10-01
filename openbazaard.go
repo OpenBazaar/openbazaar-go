@@ -542,7 +542,7 @@ func (x *Start) Execute(args []string) error {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		dataSharing.PushTo = []string{}
+		//dataSharing.PushTo = []string{}
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -800,14 +800,12 @@ func (x *Start) Execute(args []string) error {
 	// Push nodes
 	var pushNodes []peer.ID
 	for _, pnd := range dataSharing.PushTo {
-		if pnd != "" {
-			p, err := peer.IDB58Decode(pnd)
-			if err != nil {
-				log.Error("Invalid peerID in DataSharing config")
-				return err
-			}
-			pushNodes = append(pushNodes, p)
+		p, err := peer.IDB58Decode(pnd)
+		if err != nil {
+			log.Error("Invalid peerID in DataSharing config")
+			return err
 		}
+		pushNodes = append(pushNodes, p)
 	}
 
 	// Authenticated gateway
@@ -959,7 +957,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
-		<-ipfscore.DefaultBootstrapConfig.DoneChan
+		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
