@@ -232,7 +232,7 @@ func (pm *PeerManager) onConnection(req *connmgr.ConnReq, conn net.Conn) {
 func (pm *PeerManager) onVerack(p *peer.Peer, msg *wire.MsgVerAck) {
 	// Check this peer offers bloom filtering services. If not dump them.
 	p.NA().Services = p.Services()
-	if !(p.NA().HasService(wire.SFNodeBloom) && p.NA().HasService(wire.SFNodeNetwork)) ||
+	if !(p.NA().HasService(wire.SFNodeBloom) && p.NA().HasService(wire.SFNodeNetwork) && p.NA().HasService(wire.SFNodeWitness)) ||
 		p.NA().HasService(SFNodeBitcoinCash) { // Don't connect to bitcoin cash nodes
 		// onDisconnection will be called
 		// which will remove the peer from openPeers
@@ -289,7 +289,7 @@ func (pm *PeerManager) selectNewDownloadPeer() {
 }
 
 func (pm *PeerManager) setDownloadPeer(peer *peer.Peer) {
-	log.Infof("Setting peer%d as download peer\n", peer.ID())
+	log.Infof("Setting peer%d (%s) as download peer\n", peer.ID(), peer.UserAgent())
 	pm.downloadPeer = peer
 	if pm.startChainDownload != nil {
 		pm.blockQueue = make(chan chainhash.Hash, 32)
