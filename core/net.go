@@ -581,10 +581,11 @@ func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
 	if err != nil {
 		return err
 	}
+	if pmes.Payload == nil {
+		return errors.New("Peer responded with nil payload")
+	}
 	if pmes.MessageType == pb.Message_ERROR {
-		if pmes.Payload != nil {
-			log.Errorf("Error response from %s: %s", peerId, string(pmes.Payload.Value))
-		}
+		log.Errorf("Error response from %s: %s", peerId, string(pmes.Payload.Value))
 		return errors.New("Peer responded with error message")
 	}
 
