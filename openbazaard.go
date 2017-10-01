@@ -863,32 +863,7 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	// Offline messaging storage
-	var storage sto.OfflineMessagingStorage
-	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, pushNodes, core.Node.SendStore)
-	} else if x.Storage == "dropbox" {
-		if usingTor && !usingClearnet {
-			log.Error("Dropbox can not be used with Tor")
-			return errors.New("Dropbox can not be used with Tor")
-		}
-
-		if dropboxToken == "" {
-			err = errors.New("Dropbox token not set in config file")
-			log.Error(err)
-			return err
-		}
-		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-	} else {
-		err = errors.New("Invalid storage option")
-		log.Error(err)
-		return err
-	}
-
+	// Exchange rates
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
@@ -933,7 +908,6 @@ func (x *Start) Execute(args []string) error {
 		RepoPath:            repoPath,
 		Datastore:           sqliteDB,
 		Wallet:              cryptoWallet,
-		MessageStorage:      storage,
 		NameSystem:          ns,
 		ExchangeRates:       exchangeRates,
 		PushNodes:           pushNodes,
@@ -942,6 +916,33 @@ func (x *Start) Execute(args []string) error {
 		UserAgent:           core.USERAGENT,
 		BanManager:          bm,
 	}
+
+	// Offline messaging storage
+	var storage sto.OfflineMessagingStorage
+	if x.Storage == "self-hosted" || x.Storage == "" {
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, pushNodes, core.Node.SendStore)
+	} else if x.Storage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
+		}
+
+		if dropboxToken == "" {
+			err = errors.New("Dropbox token not set in config file")
+			log.Error(err)
+			return err
+		}
+		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		err = errors.New("Invalid storage option")
+		log.Error(err)
+		return err
+	}
+	core.Node.MessageStorage = storage
 
 	if len(cfg.Addresses.Gateway) <= 0 {
 		return ErrNoGateways

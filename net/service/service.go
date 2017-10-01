@@ -191,7 +191,6 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	}
 	ms, err := service.messageSenderForPeer(p)
 	if err != nil {
-		log.Error("Error creating new message sender")
 		return err
 	}
 

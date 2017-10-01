@@ -21,7 +21,6 @@ type SelfHostedStorage struct {
 }
 
 func NewSelfHostedStorage(repoPath string, context commands.Context, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
-
 	return &SelfHostedStorage{
 		repoPath:  repoPath,
 		context:   context,
