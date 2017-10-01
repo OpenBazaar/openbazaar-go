@@ -1333,6 +1333,12 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 }
 
 func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	// If we aren't accepting store requests then ban this peer
+	if !service.node.AcceptStoreRequests {
+		service.node.BanManager.AddBlockedId(pid)
+		return nil, nil
+	}
+
 	if pmes.Payload == nil {
 		return nil, errors.New("Payload is nil")
 	}
@@ -1358,6 +1364,12 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 }
 
 func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	// If we aren't accepting store requests then ban this peer
+	if !service.node.AcceptStoreRequests {
+		service.node.BanManager.AddBlockedId(pid)
+		return nil, nil
+	}
+
 	errorResponse := func(error string) *pb.Message {
 		a := &any.Any{Value: []byte(error)}
 		m := &pb.Message{

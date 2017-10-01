@@ -94,6 +94,9 @@ type OpenBazaarNode struct {
 
 	// Manage blocked peers
 	BanManager *net.BanManager
+
+	// Allow other nodes to push data to this node for storage
+	AcceptStoreRequests bool
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
