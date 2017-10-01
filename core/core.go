@@ -129,12 +129,12 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return err
 	}
 	for _, p := range n.PushNodes {
-		go func() {
-			err := n.SendStore(p.Pretty(), graph)
+		go func(pid peer.ID) {
+			err := n.SendStore(pid.Pretty(), graph)
 			if err != nil {
-				log.Errorf("Error pushing data to peer %s: %s", p.Pretty(), err.Error())
+				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
 			}
-		}()
+		}(p)
 	}
 
 	go n.publish(rootHash)

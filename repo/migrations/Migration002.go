@@ -24,10 +24,9 @@ func (migration002) Up(repoPath string) error {
 		return errors.New("Invalid config file")
 	}
 
-	// TODO: Replace with actual nodes
 	pushNodes := []string{
-		"abc",
-		"def",
+		"QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ",
+		"QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o",
 	}
 	cfg["DataSharing"] = map[string]interface{}{
 		"AcceptStoreRequests": false,

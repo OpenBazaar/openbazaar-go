@@ -16,9 +16,13 @@ var DefaultBootstrapAddresses = []string{
 
 var TestnetBootstrapAddresses = []string{
 	"/ip4/165.227.117.91/tcp/4001/ipfs/Qmaa6De5QYNqShzPb9SGSo8vLmoUte8mnWgzn4GYwzuUYA", // Brooklyn Flea
+	"/ip4/46.101.221.165/tcp/4001/ipfs/QmVAQYg7ygAWTWegs8HSV2kdW1MqW8WMrmpqKG1PQtkgTC", // Shipshewana
 }
 
-var DataPushNodes = []string{}
+var DataPushNodes = []string{
+	"QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ",
+	"QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o",
+}
 
 type APIConfig struct {
 	Authenticated bool

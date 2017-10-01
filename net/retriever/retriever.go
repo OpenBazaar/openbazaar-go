@@ -165,17 +165,25 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	keyhash := ipfs.CreatePointerKey(mh, DefaultPointerPrefixLength)
 	k, _ := cid.Decode(keyhash.B58String())
+	var wg sync.WaitGroup
 	for _, p := range m.dataPeers {
-		pmes, err := m.node.Routing.(*dht.IpfsDHT).FindProvidersSingle(context.Background(), p, k)
-		if err != nil {
-			log.Errorf("Error fetching pointer from data peer: %s", err.Error())
-			return
-		}
-		provs := dhtpb.PBPeersToPeerInfos(pmes.GetProviderPeers())
-		for _, pi := range provs {
-			peerOut <- *pi
-		}
+		wg.Add(1)
+		go func(pid peer.ID) {
+			defer wg.Done()
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*7)
+			defer cancel()
+			pmes, err := m.node.Routing.(*dht.IpfsDHT).FindProvidersSingle(ctx, pid, k)
+			if err != nil {
+				log.Errorf("Error fetching pointer from data peer: %s", err.Error())
+				return
+			}
+			provs := dhtpb.PBPeersToPeerInfos(pmes.GetProviderPeers())
+			for _, pi := range provs {
+				peerOut <- *pi
+			}
+		}(p)
 	}
+	wg.Wait()
 }
 
 func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {

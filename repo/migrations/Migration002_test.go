@@ -1,7 +1,6 @@
 package migrations
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
