@@ -101,8 +101,6 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 			s.Reset()
 			if err == io.EOF {
 				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
-			} else {
-				log.Debugf("Error unmarshaling data: %s", err)
 			}
 			return
 		}

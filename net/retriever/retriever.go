@@ -170,11 +170,10 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 		wg.Add(1)
 		go func(pid peer.ID) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*7)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
 			defer cancel()
 			pmes, err := m.node.Routing.(*dht.IpfsDHT).FindProvidersSingle(ctx, pid, k)
 			if err != nil {
-				log.Errorf("Error fetching pointer from data peer: %s", err.Error())
 				return
 			}
 			provs := dhtpb.PBPeersToPeerInfos(pmes.GetProviderPeers())
