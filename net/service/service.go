@@ -169,7 +169,9 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 }
 
 func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
-	log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
+	if pmes.MessageType != pb.Message_BLOCK {
+		log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
+	}
 	ms, err := service.messageSenderForPeer(p)
 	if err != nil {
 		log.Error("Error creating new message sender")

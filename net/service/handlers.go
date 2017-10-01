@@ -20,6 +20,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	blocks "gx/ipfs/QmSn9Td7xgxm9EV7iEjTckpUWmWApggzPxu7eFGWkkpwin/go-block-format"
 	"strconv"
 )
 
@@ -61,6 +63,10 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleModeratorAdd
 	case pb.Message_MODERATOR_REMOVE:
 		return service.handleModeratorRemove
+	case pb.Message_BLOCK:
+		return service.handleBlock
+	case pb.Message_STORE:
+		return service.handleStore
 	default:
 		return nil
 	}
@@ -1324,4 +1330,74 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 	log.Debugf("Received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
+}
+
+func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
+	b := new(pb.Block)
+	err := ptypes.UnmarshalAny(pmes.Payload, b)
+	if err != nil {
+		return nil, err
+	}
+	id, err := cid.Decode(b.Cid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := blocks.NewBlockWithCid(b.RawData, id)
+	if err != nil {
+		return nil, err
+	}
+	_, err = service.node.IpfsNode.Blocks.AddBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Received BLOCK message from %s", pid.Pretty())
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	errorResponse := func(error string) *pb.Message {
+		a := &any.Any{Value: []byte(error)}
+		m := &pb.Message{
+			MessageType: pb.Message_ERROR,
+			Payload:     a,
+		}
+		return m
+	}
+
+	if pmes.Payload == nil {
+		return errorResponse("Payload is nil"), errors.New("Payload is nil")
+	}
+	cList := new(pb.CidList)
+	err := ptypes.UnmarshalAny(pmes.Payload, cList)
+	if err != nil {
+		return errorResponse("Could not unmarshall message"), err
+	}
+	var need []string
+	for _, id := range cList.Cids {
+		decoded, err := cid.Decode(id)
+		if err != nil {
+			continue
+		}
+		has, err := service.node.IpfsNode.Blockstore.Has(decoded)
+		if err != nil || !has {
+			need = append(need, decoded.String())
+		}
+	}
+	log.Debugf("Received STORE message from %s", pid.Pretty())
+	log.Debugf("Requesting %d blocks from %s", len(need), pid.Pretty())
+
+	resp := new(pb.CidList)
+	resp.Cids = need
+	a, err := ptypes.MarshalAny(resp)
+	if err != nil {
+		return errorResponse("Error marshalling response"), err
+	}
+	m := &pb.Message{
+		MessageType: pb.Message_STORE,
+		Payload:     a,
+	}
+	return m, nil
 }

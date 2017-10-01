@@ -7,12 +7,14 @@ import (
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 
 	"bytes"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"golang.org/x/net/context"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	dhtpb "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/pb"
 	gonet "net"
 	"net/http"
@@ -521,6 +523,87 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
 	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendBlock(peerId string, id cid.Cid) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	block, err := n.IpfsNode.Blocks.GetBlock(ctx, &id)
+	if err != nil {
+		return err
+	}
+
+	b := &pb.Block{
+		Cid:     block.Cid().String(),
+		RawData: block.RawData(),
+	}
+	a, err := ptypes.MarshalAny(b)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_BLOCK,
+		Payload:     a,
+	}
+
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	return n.Service.SendMessage(context.Background(), p, &m)
+}
+
+func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
+	var s []string
+	for _, d := range ids {
+		s = append(s, d.String())
+	}
+	cList := new(pb.CidList)
+	cList.Cids = s
+
+	a, err := ptypes.MarshalAny(cList)
+	if err != nil {
+		return err
+	}
+
+	m := pb.Message{
+		MessageType: pb.Message_STORE,
+		Payload:     a,
+	}
+
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	pmes, err := n.Service.SendRequest(context.Background(), p, &m)
+	if err != nil {
+		return err
+	}
+	if pmes.MessageType == pb.Message_ERROR {
+		if pmes.Payload != nil {
+			log.Errorf("Error response from %s: %s", peerId, string(pmes.Payload.Value))
+		}
+		return errors.New("Peer responded with error message")
+	}
+
+	resp := new(pb.CidList)
+	err = ptypes.UnmarshalAny(pmes.Payload, resp)
+	if err != nil {
+		return err
+	}
+	if len(resp.Cids) == 0 {
+		log.Debugf("Peer %s requested no blocks", peerId)
+		return nil
+	}
+	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerId)
+	for _, id := range resp.Cids {
+		decoded, err := cid.Decode(id)
+		if err != nil {
+			continue
+		}
+		go n.SendBlock(peerId, *decoded)
 	}
 	return nil
 }
