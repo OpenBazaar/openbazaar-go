@@ -18,6 +18,8 @@ var TestnetBootstrapAddresses = []string{
 	"/ip4/165.227.117.91/tcp/4001/ipfs/Qmaa6De5QYNqShzPb9SGSo8vLmoUte8mnWgzn4GYwzuUYA", // Brooklyn Flea
 }
 
+var DataPushNodes = []string{}
+
 type APIConfig struct {
 	Authenticated bool
 	AllowedIPs    []string
@@ -52,6 +54,11 @@ type WalletConfig struct {
 	TrustedPeer      string
 	RPCUser          string
 	RPCPassword      string
+}
+
+type DataSharing struct {
+	AcceptStoreRequests bool
+	PushTo              []string
 }
 
 var MalformedConfigError error = errors.New("Config file is malformed")
@@ -357,34 +364,53 @@ func GetDropboxApiToken(cfgBytes []byte) (string, error) {
 	return tokenStr, nil
 }
 
-func GetCrosspostGateway(cfgBytes []byte) ([]string, error) {
+func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 	var cfgIface interface{}
 	json.Unmarshal(cfgBytes, &cfgIface)
-	var urls []string
+	dataSharing := new(DataSharing)
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return urls, MalformedConfigError
+		return dataSharing, MalformedConfigError
 	}
 
-	gwys, ok := cfg["Crosspost-gateways"]
+	dscfg, ok := cfg["DataSharing"]
 	if !ok {
-		return urls, MalformedConfigError
+		return dataSharing, MalformedConfigError
 	}
-	gatewayList, ok := gwys.([]interface{})
+	ds, ok := dscfg.(map[string]interface{})
 	if !ok {
-		return urls, MalformedConfigError
+		return dataSharing, MalformedConfigError
 	}
 
-	for _, gw := range gatewayList {
-		gwStr, ok := gw.(string)
+	acceptcfg, ok := ds["AcceptStoreRequests"]
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	accept, ok := acceptcfg.(bool)
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	dataSharing.AcceptStoreRequests = accept
+
+	pushcfg, ok := ds["PushTo"]
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	pushList, ok := pushcfg.([]interface{})
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+
+	for _, nd := range pushList {
+		ndStr, ok := nd.(string)
 		if !ok {
-			return urls, MalformedConfigError
+			return dataSharing, MalformedConfigError
 		}
-		urls = append(urls, gwStr)
+		dataSharing.PushTo = append(dataSharing.PushTo, ndStr)
 	}
 
-	return urls, nil
+	return dataSharing, nil
 }
 
 func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {

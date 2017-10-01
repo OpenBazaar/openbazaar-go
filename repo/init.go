@@ -217,6 +217,11 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		HTTPHeaders: nil,
 	}
 
+	var ds DataSharing = DataSharing{
+		AcceptStoreRequests: false,
+		PushTo:              DataPushNodes,
+	}
+
 	var t TorConfig = TorConfig{}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
@@ -224,13 +229,13 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	var resolvers ResolverConfig = ResolverConfig{
 		Id: "https://resolver.onename.com/",
 	}
+	if err := extendConfigFile(r, "DataSharing", ds); err != nil {
+		return err
+	}
 	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "Crosspost-gateways", []string{"https://gateway.ob1.io/", "https://gateway.duosear.ch/"}); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {

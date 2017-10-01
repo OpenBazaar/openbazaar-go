@@ -1,14 +1,10 @@
 package core
 
 import (
-	"bytes"
 	"errors"
 	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	gonet "net"
-	"net/http"
-	"net/url"
 	"path"
 	"time"
 
@@ -27,6 +23,7 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"sync"
 )
 
@@ -83,8 +80,8 @@ type OpenBazaarNode struct {
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates
 
-	// An optional gateway URL where we can crosspost data to ensure persistence
-	CrosspostGateways []*url.URL
+	// Optional nodes to push user data to
+	PushNodes []peer.ID
 
 	// The user-agent for this node
 	UserAgent string
@@ -121,21 +118,18 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return aerr
 	}
 	seedLock.Unlock()
+	id, err := cid.Decode(rootHash[6:])
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
-	for _, g := range n.CrosspostGateways {
-		go func(u *url.URL) {
-			req, err := http.NewRequest("PUT", u.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
-			if err != nil {
-				return
-			}
-			dial := gonet.Dial
-			if n.TorDialer != nil {
-				dial = n.TorDialer.Dial
-			}
-			tbTransport := &http.Transport{Dial: dial}
-			client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
-			client.Do(req)
-		}(g)
+	graph, err := ipfs.FetchGraph(n.IpfsNode.DAG, id)
+	if err != nil {
+		return err
+	}
+	for _, p := range n.PushNodes {
+		go n.SendStore(p.Pretty(), graph)
 	}
 	go n.publish(rootHash)
 	return nil

@@ -67,7 +67,6 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
 	pstore "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	metrics "gx/ipfs/QmQbh3Rb7KM37As3vkHYnEFnzkVXNCP8EYGtHz6g2fXk14/go-libp2p-metrics"
@@ -489,7 +488,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	gatewayUrlStrings, err := repo.GetCrosspostGateway(configFile)
+	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -543,7 +542,7 @@ func (x *Start) Execute(args []string) error {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		gatewayUrlStrings = []string{}
+		dataSharing.PushTo = []string{}
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -798,16 +797,16 @@ func (x *Start) Execute(args []string) error {
 		log.Fatal("Unknown wallet type")
 	}
 
-	// Crosspost gateway
-	var gatewayUrls []*url.URL
-	for _, gw := range gatewayUrlStrings {
-		if gw != "" {
-			u, err := url.Parse(gw)
+	// Push nodes
+	var pushNodes []peer.ID
+	for _, pnd := range dataSharing.PushTo {
+		if pnd != "" {
+			p, err := peer.IDB58Decode(pnd)
 			if err != nil {
-				log.Error(err)
+				log.Error("Invalid peerID in DataSharing config")
 				return err
 			}
-			gatewayUrls = append(gatewayUrls, u)
+			pushNodes = append(pushNodes, p)
 		}
 	}
 
@@ -869,7 +868,7 @@ func (x *Start) Execute(args []string) error {
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
 	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer)
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, pushNodes, core.Node.SendStore)
 	} else if x.Storage == "dropbox" {
 		if usingTor && !usingClearnet {
 			log.Error("Dropbox can not be used with Tor")
@@ -930,19 +929,20 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:           ctx,
-		IpfsNode:          nd,
-		RootHash:          ipath.Path(e.Value).String(),
-		RepoPath:          repoPath,
-		Datastore:         sqliteDB,
-		Wallet:            cryptoWallet,
-		MessageStorage:    storage,
-		NameSystem:        ns,
-		ExchangeRates:     exchangeRates,
-		CrosspostGateways: gatewayUrls,
-		TorDialer:         torDialer,
-		UserAgent:         core.USERAGENT,
-		BanManager:        bm,
+		Context:             ctx,
+		IpfsNode:            nd,
+		RootHash:            ipath.Path(e.Value).String(),
+		RepoPath:            repoPath,
+		Datastore:           sqliteDB,
+		Wallet:              cryptoWallet,
+		MessageStorage:      storage,
+		NameSystem:          ns,
+		ExchangeRates:       exchangeRates,
+		PushNodes:           pushNodes,
+		AcceptStoreRequests: dataSharing.AcceptStoreRequests,
+		TorDialer:           torDialer,
+		UserAgent:           core.USERAGENT,
+		BanManager:          bm,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -961,10 +961,10 @@ func (x *Start) Execute(args []string) error {
 	go func() {
 		<-ipfscore.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, torDialer, core.Node.CrosspostGateways, core.Node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.IsModerator)
+		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
 		go PR.Run()
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {
