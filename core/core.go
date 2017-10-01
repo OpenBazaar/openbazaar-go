@@ -124,9 +124,12 @@ func (n *OpenBazaarNode) SeedNode() error {
 		return err
 	}
 
-	graph, err := ipfs.FetchGraph(n.IpfsNode.DAG, id)
-	if err != nil {
-		return err
+	var graph []cid.Cid
+	if len(n.PushNodes) > 0 {
+		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
+		if err != nil {
+			return err
+		}
 	}
 	for _, p := range n.PushNodes {
 		go func(pid peer.ID) {
