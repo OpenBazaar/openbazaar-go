@@ -13,7 +13,6 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 	"golang.org/x/net/context"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	"gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
 	"sync"
 	"time"
 )
@@ -99,7 +98,12 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 
 		// Push provider to our push nodes for redundancy
 		for _, p := range n.PushNodes {
-			n.IpfsNode.Routing.(*dht.IpfsDHT).PutProviderToPeer(context.Background(), p, pointer.Cid)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			err := ipfs.PutPointerToPeer(n.IpfsNode, ctx, p, pointer)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 
 		OfflineMessageWaitGroup.Done()

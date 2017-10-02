@@ -9,7 +9,6 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
-	"gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
 )
 
 var log = logging.MustGetLogger("service")
@@ -59,7 +58,7 @@ func (r *PointerRepublisher) Republish() {
 			} else {
 				go ipfs.PublishPointer(r.ipfsNode, ctx, p)
 				for _, peer := range r.pushNodes {
-					go r.ipfsNode.Routing.(*dht.IpfsDHT).PutProviderToPeer(context.Background(), peer, p.Cid)
+					go ipfs.PutPointerToPeer(r.ipfsNode, context.Background(), peer, p)
 				}
 			}
 		case ipfs.MODERATOR:

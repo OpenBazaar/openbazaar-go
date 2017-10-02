@@ -13,7 +13,6 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 
 	routing "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
-	dhtpb "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/pb"
 
 	"github.com/op/go-logging"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
@@ -22,7 +21,6 @@ import (
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	dht "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
 	"io/ioutil"
 	gonet "net"
 	"net/http"
@@ -170,13 +168,12 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 		wg.Add(1)
 		go func(pid peer.ID) {
 			defer wg.Done()
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*4)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
-			pmes, err := m.node.Routing.(*dht.IpfsDHT).FindProvidersSingle(ctx, pid, k)
+			provs, err := ipfs.GetPointersFromPeer(m.node, ctx, pid, k)
 			if err != nil {
 				return
 			}
-			provs := dhtpb.PBPeersToPeerInfos(pmes.GetProviderPeers())
 			for _, pi := range provs {
 				peerOut <- *pi
 			}

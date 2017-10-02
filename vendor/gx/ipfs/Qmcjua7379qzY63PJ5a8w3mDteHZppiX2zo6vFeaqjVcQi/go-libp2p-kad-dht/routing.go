@@ -277,18 +277,6 @@ func (dht *IpfsDHT) Provide(ctx context.Context, key *cid.Cid, brdcst bool) erro
 	return nil
 }
 
-func (dht *IpfsDHT) PutProviderToPeer(ctx context.Context, p peer.ID, key *cid.Cid) error {
-	mes, err := dht.makeProvRecord(key)
-	if err != nil {
-		return err
-	}
-	err = dht.sendMessage(ctx, p, mes)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (dht *IpfsDHT) makeProvRecord(skey *cid.Cid) (*pb.Message, error) {
 	pi := pstore.PeerInfo{
 		ID:    dht.self,

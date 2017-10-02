@@ -288,10 +288,6 @@ func (dht *IpfsDHT) findPeerSingle(ctx context.Context, p peer.ID, id peer.ID) (
 	}
 }
 
-func (dht *IpfsDHT) FindProvidersSingle(ctx context.Context, p peer.ID, key *cid.Cid) (*pb.Message, error) {
-	return dht.findProvidersSingle(ctx, p, key)
-}
-
 func (dht *IpfsDHT) findProvidersSingle(ctx context.Context, p peer.ID, key *cid.Cid) (*pb.Message, error) {
 	defer log.EventBegin(ctx, "findProvidersSingle", p, key).Done()
 
