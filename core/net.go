@@ -96,13 +96,14 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		if err != nil {
 			log.Error(err)
 		}
+
+		// Push provider to our push nodes for redundancy
+		for _, p := range n.PushNodes {
+			n.IpfsNode.Routing.(*dht.IpfsDHT).PutProviderToPeer(context.Background(), p, pointer.Cid)
+		}
+
 		OfflineMessageWaitGroup.Done()
 	}()
-
-	// Push provider to our push nodes for redundancy
-	for _, p := range n.PushNodes {
-		go n.IpfsNode.Routing.(*dht.IpfsDHT).PutProviderToPeer(context.Background(), p, pointer.Cid)
-	}
 	return nil
 }
 
