@@ -81,6 +81,7 @@ import (
 	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
 	dht "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/util"
+	"io"
 	"syscall"
 	"time"
 )
@@ -117,7 +118,8 @@ type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
 	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" defaut:"debug"`
+	NoLogFiles           bool     `short:"f" long:"nologfiles" description:"save logs on disk"`
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
@@ -429,19 +431,41 @@ func (x *Start) Execute(args []string) error {
 		MaxAge:     30, // Days
 	}
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFile := logging.NewLogBackend(w, "", 0)
 	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+	logging.SetBackend(backendStdoutFormatter)
 
-	ipfslogging.LdJSONFormatter()
-	w2 := &lumberjack.Logger{
-		Filename:   path.Join(repoPath, "logs", "ipfs.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	if !x.NoLogFiles {
+		backendFile := logging.NewLogBackend(w, "", 0)
+		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+		logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		ipfslogging.LdJSONFormatter()
+		w2 := &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
+		ipfslogging.Output(w2)()
 	}
-	ipfslogging.Output(w2)()
+
+	var level logging.Level
+	switch strings.ToLower(x.LogLevel) {
+	case "debug":
+		level = logging.DEBUG
+	case "info":
+		level = logging.INFO
+	case "notice":
+		level = logging.NOTICE
+	case "warning":
+		level = logging.WARNING
+	case "error":
+		level = logging.ERROR
+	case "critical":
+		level = logging.CRITICAL
+	default:
+		level = logging.DEBUG
+	}
+	logging.SetLevel(level, "")
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -738,15 +762,21 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
-	w3 := &lumberjack.Logger{
-		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	var w3 io.Writer
+	if x.NoLogFiles {
+		w3 = &DummyWriter{}
+	} else {
+		w3 = &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
 	}
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
+
 	var cryptoWallet wallet.Wallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
@@ -951,7 +981,7 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("SSL cert and key files must be set when SSL is enabled")
 	}
 
-	gateway, err := newHTTPGateway(core.Node, authCookie, *apiConfig)
+	gateway, err := newHTTPGateway(core.Node, authCookie, *apiConfig, x.NoLogFiles)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -1018,6 +1048,12 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	}
 }
 
+type DummyWriter struct{}
+
+func (d *DummyWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
 type DummyListener struct {
 	addr net.Addr
 }
@@ -1036,7 +1072,7 @@ func (d *DummyListener) Close() error {
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig, noLogFiles bool) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -1087,11 +1123,16 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 	}
 
 	// Create and return an API gateway
-	w4 := &lumberjack.Logger{
-		Filename:   path.Join(node.RepoPath, "logs", "api.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	var w4 io.Writer
+	if noLogFiles {
+		w4 = &DummyWriter{}
+	} else {
+		w4 = &lumberjack.Logger{
+			Filename:   path.Join(node.RepoPath, "logs", "api.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
 	}
 	apiFile := logging.NewLogBackend(w4, "", 0)
 	apiFileFormatter := logging.NewBackendFormatter(apiFile, fileLogFormat)
