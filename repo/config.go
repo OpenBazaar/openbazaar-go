@@ -5,6 +5,9 @@ import (
 	"errors"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -546,4 +549,44 @@ func datastoreConfig(repoRoot string) config.Datastore {
 			},
 		},
 	}
+}
+
+func ConfigureSSL(repoPath string) error {
+	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	if err != nil {
+		return err
+	}
+	var cfgIface interface{}
+	json.Unmarshal(configFile, &cfgIface)
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return errors.New("Invalid config file")
+	}
+	apiIface, ok := cfg["JSON-API"]
+	if !ok {
+		return errors.New("Missing json api config")
+	}
+	api, ok := apiIface.(map[string]interface{})
+	if !ok {
+		return errors.New("Error parsing json api config")
+	}
+	api["SSL"] = true
+	api["SSLCert"] = path.Join(repoPath, "ob.cert")
+	api["SSLKey"] = path.Join(repoPath, "ob.key")
+	cfg["JSON-API"] = api
+
+	out, err := json.MarshalIndent(cfg, "", "   ")
+	if err != nil {
+		return err
+	}
+	f, err := os.Create(path.Join(repoPath, "config"))
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(out)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	return nil
 }

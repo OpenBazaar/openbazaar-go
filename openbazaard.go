@@ -114,6 +114,12 @@ type SetAPICreds struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet bool   `short:"t" long:"testnet" description:"config file is for testnet node"`
 }
+type GenCerts struct {
+	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Force   bool   `short:"f" long:"force" description:"force overwrite existing key and cert"`
+	Testnet bool   `short:"t" long:"testnet" description:"data directory is for testnet"`
+	SetSSL  bool   `short:"s" long:"setssl" description:"config the server to use the new ssl certs"`
+}
 type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
@@ -147,6 +153,7 @@ var restartServer Restart
 var encryptDatabase EncryptDatabase
 var decryptDatabase DecryptDatabase
 var setAPICreds SetAPICreds
+var genCerts GenCerts
 var status Status
 var opts Opts
 
@@ -184,6 +191,10 @@ func main() {
 		"set API credentials",
 		"The API password field in the config file takes a SHA256 hash of the password. This command will generate the hash for you and save it to the config file.",
 		&setAPICreds)
+	parser.AddCommand("gencerts",
+		"generate SSL certificates",
+		"Generate an SSL key and certificate for use with a remote server. The files will be save in the data directory.",
+		&genCerts)
 	parser.AddCommand("start",
 		"start the OpenBazaar-Server",
 		"The start command starts the OpenBazaar-Server",
@@ -341,6 +352,27 @@ func (x *Status) Execute(args []string) error {
 			fmt.Println("Not initialized")
 			fmt.Println("Tor Available")
 			os.Exit(11)
+		}
+	}
+	return nil
+}
+
+func (x *GenCerts) Execute(args []string) error {
+	repoPath, err := getRepoPath(x.Testnet)
+	if err != nil {
+		return err
+	}
+	if x.DataDir != "" {
+		repoPath = x.DataDir
+	}
+	err = obnet.GenerateCerts(repoPath, x.Force)
+	if err != nil {
+		return err
+	}
+	if x.SetSSL {
+		err := repo.ConfigureSSL(repoPath)
+		if err != nil {
+			return err
 		}
 	}
 	return nil

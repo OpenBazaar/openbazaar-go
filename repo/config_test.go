@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const testConfigFolder = "testdata"
@@ -187,4 +188,56 @@ func TestInitConfig(t *testing.T) {
 	if config.Addresses.Gateway != "/ip4/127.0.0.1/tcp/4002" {
 		t.Error("config.Addresses.Gateway is not set")
 	}
+}
+
+var testConfig string = `{
+    "JSON-API": {
+      "AllowedIPs": [],
+      "Authenticated": false,
+      "CORS": null,
+      "Enabled": true,
+      "HTTPHeaders": null,
+      "Password": "",
+      "SSL": false,
+      "SSLCert": "",
+      "SSLKey": "",
+      "Username": ""
+   }
+}`
+
+func TestConfigureSSL(t *testing.T) {
+	f, err := os.Create("./config")
+	if err != nil {
+		t.Error(err)
+	}
+	f.Write([]byte(testConfig))
+	f.Close()
+
+	err = ConfigureSSL("./")
+	if err != nil {
+		t.Error(err)
+	}
+	newConfig, err := ioutil.ReadFile("./config")
+	if err != nil {
+		t.Error(err)
+	}
+
+	newConfigCheck := `{
+	   "JSON-API": {
+	      "AllowedIPs": [],
+	      "Authenticated": false,
+	      "CORS": null,
+	      "Enabled": true,
+	      "HTTPHeaders": null,
+	      "Password": "",
+	      "SSL": true,
+	      "SSLCert": "ob.cert",
+	      "SSLKey": "ob.key",
+	      "Username": ""
+	   }
+}`
+	if strings.Contains(string(newConfig), newConfigCheck) {
+		t.Error("Failed to write new config with ssl")
+	}
+	os.Remove("./config")
 }
