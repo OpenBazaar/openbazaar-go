@@ -66,18 +66,22 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 }
 
 func (m *MessageRetriever) Run() {
-	tick := time.NewTicker(time.Hour)
-	defer tick.Stop()
-	go m.fetchPointers()
+	dht := time.NewTicker(time.Hour)
+	peers := time.NewTicker(time.Minute * 10)
+	defer dht.Stop()
+	defer peers.Stop()
+	go m.fetchPointers(true)
 	for {
 		select {
-		case <-tick.C:
-			go m.fetchPointers()
+		case <-dht.C:
+			go m.fetchPointers(true)
+		case <-peers.C:
+			go m.fetchPointers(false)
 		}
 	}
 }
 
-func (m *MessageRetriever) fetchPointers() {
+func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	wg := new(sync.WaitGroup)
@@ -87,7 +91,7 @@ func (m *MessageRetriever) fetchPointers() {
 	peerOut := make(chan ps.PeerInfo)
 	go func(c chan ps.PeerInfo) {
 		pwg := new(sync.WaitGroup)
-		pwg.Add(2)
+		pwg.Add(1)
 		go func(c chan ps.PeerInfo) {
 			out := m.getPointersDataPeers()
 			for p := range out {
@@ -95,13 +99,16 @@ func (m *MessageRetriever) fetchPointers() {
 			}
 			pwg.Done()
 		}(c)
-		go func(c chan ps.PeerInfo) {
-			iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
-			for p := range iout {
-				c <- p
-			}
-			pwg.Done()
-		}(c)
+		if useDHT {
+			pwg.Add(1)
+			go func(c chan ps.PeerInfo) {
+				iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+				for p := range iout {
+					c <- p
+				}
+				pwg.Done()
+			}(c)
+		}
 		pwg.Wait()
 		close(c)
 	}(peerOut)
