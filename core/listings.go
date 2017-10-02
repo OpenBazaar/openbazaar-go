@@ -696,7 +696,8 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
+	_, ok := pb.Listing_Metadata_ContractType_name[int32(listing.Metadata.ContractType)]
+	if !ok {
 		return errors.New("Invalid contract type")
 	}
 	if listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
