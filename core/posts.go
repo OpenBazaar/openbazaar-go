@@ -64,14 +64,19 @@ func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
 // Add the peer's identity to the post and sign it
 func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 
-	sl := new(pb.SignedPost)
+	sp := new(pb.SignedPost)
+
+	// Check the post data is correct for continuing
+	if err := validatePost(post); err != nil {
+		return sp, err
+	}
 
 	// Add the vendor ID to the post
 	id := new(pb.ID)
 	id.PeerID = n.IpfsNode.Identity.Pretty()
 	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
-		return sl, err
+		return sp, err
 	}
 	profile, err := n.GetProfile()
 	if err == nil {
@@ -81,7 +86,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	p.Identity = pubkey
 	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
-		return sl, err
+		return sp, err
 	}
 	p.Bitcoin = ecPubKey.SerializeCompressed()
 	id.Pubkeys = p
@@ -90,7 +95,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	// Sign the GUID with the Bitcoin key
 	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
 	if err != nil {
-		return sl, err
+		return sp, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
 	id.BitcoinSig = sig.Serialize()
@@ -98,15 +103,15 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	// Sign post
 	serializedPost, err := proto.Marshal(post)
 	if err != nil {
-		return sl, err
+		return sp, err
 	}
 	idSig, err := n.IpfsNode.PrivateKey.Sign(serializedPost)
 	if err != nil {
-		return sl, err
+		return sp, err
 	}
-	sl.Post = post
-	sl.Signature = idSig
-	return sl, nil
+	sp.Post = post
+	sp.Signature = idSig
+	return sp, nil
 }
 
 // Update the posts index 
