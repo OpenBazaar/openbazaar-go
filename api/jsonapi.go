@@ -3490,6 +3490,9 @@ func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, string(out))
 }
 
+// POSTS
+
+// Post a post
 func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 	ld := new(pb.Post)
 	err := jsonpb.Unmarshal(r.Body, ld)
@@ -3569,6 +3572,7 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// PUT a post
 func (i *jsonAPIHandler) PUTPost(w http.ResponseWriter, r *http.Request) {
 	ld := new(pb.Post)
 	err := jsonpb.Unmarshal(r.Body, ld)
@@ -3636,6 +3640,7 @@ func (i *jsonAPIHandler) PUTPost(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// DELETE a post
 func (i *jsonAPIHandler) DELETEPost(w http.ResponseWriter, r *http.Request) {
 	_, slug := path.Split(r.URL.Path)
 	postPath := path.Join(i.node.RepoPath, "root", "posts", slug+".json")
@@ -3662,6 +3667,7 @@ func (i *jsonAPIHandler) DELETEPost(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// GET a list of posts (self or peer)
 func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IpfsNode.Identity.Pretty() {
@@ -3688,6 +3694,7 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GET a post (self or peer)
 func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 	urlPath, postId := path.Split(r.URL.Path)
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
