@@ -255,7 +255,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 	pro, _ := service.node.GetProfile()
 	if !pro.Vendor {
-		return nil, errors.New("Vendor's store is turned off")
+		return errorResponse("The vendor turn his store off and is not accepting orders at this time"), errors.New("Vendor's store is turned off")
 	}
 
 	if pmes.Payload == nil {
