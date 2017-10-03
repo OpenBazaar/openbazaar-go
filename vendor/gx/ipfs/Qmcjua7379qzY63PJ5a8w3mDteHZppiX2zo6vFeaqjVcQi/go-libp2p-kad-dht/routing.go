@@ -276,6 +276,7 @@ func (dht *IpfsDHT) Provide(ctx context.Context, key *cid.Cid, brdcst bool) erro
 	wg.Wait()
 	return nil
 }
+
 func (dht *IpfsDHT) makeProvRecord(skey *cid.Cid) (*pb.Message, error) {
 	pi := pstore.PeerInfo{
 		ID:    dht.self,

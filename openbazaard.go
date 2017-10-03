@@ -512,7 +512,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	gatewayUrlStrings, err := repo.GetCrosspostGateway(configFile)
+	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -566,7 +566,7 @@ func (x *Start) Execute(args []string) error {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		gatewayUrlStrings = []string{}
+		dataSharing.PushTo = []string{}
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -827,17 +827,15 @@ func (x *Start) Execute(args []string) error {
 		log.Fatal("Unknown wallet type")
 	}
 
-	// Crosspost gateway
-	var gatewayUrls []*url.URL
-	for _, gw := range gatewayUrlStrings {
-		if gw != "" {
-			u, err := url.Parse(gw)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			gatewayUrls = append(gatewayUrls, u)
+	// Push nodes
+	var pushNodes []peer.ID
+	for _, pnd := range dataSharing.PushTo {
+		p, err := peer.IDB58Decode(pnd)
+		if err != nil {
+			log.Error("Invalid peerID in DataSharing config")
+			return err
 		}
+		pushNodes = append(pushNodes, p)
 	}
 
 	// Authenticated gateway
@@ -895,32 +893,7 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	// Offline messaging storage
-	var storage sto.OfflineMessagingStorage
-	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer)
-	} else if x.Storage == "dropbox" {
-		if usingTor && !usingClearnet {
-			log.Error("Dropbox can not be used with Tor")
-			return errors.New("Dropbox can not be used with Tor")
-		}
-
-		if dropboxToken == "" {
-			err = errors.New("Dropbox token not set in config file")
-			log.Error(err)
-			return err
-		}
-		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-	} else {
-		err = errors.New("Invalid storage option")
-		log.Error(err)
-		return err
-	}
-
+	// Exchange rates
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
@@ -959,20 +932,47 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:           ctx,
-		IpfsNode:          nd,
-		RootHash:          ipath.Path(e.Value).String(),
-		RepoPath:          repoPath,
-		Datastore:         sqliteDB,
-		Wallet:            cryptoWallet,
-		MessageStorage:    storage,
-		NameSystem:        ns,
-		ExchangeRates:     exchangeRates,
-		CrosspostGateways: gatewayUrls,
-		TorDialer:         torDialer,
-		UserAgent:         core.USERAGENT,
-		BanManager:        bm,
+		Context:             ctx,
+		IpfsNode:            nd,
+		RootHash:            ipath.Path(e.Value).String(),
+		RepoPath:            repoPath,
+		Datastore:           sqliteDB,
+		Wallet:              cryptoWallet,
+		NameSystem:          ns,
+		ExchangeRates:       exchangeRates,
+		PushNodes:           pushNodes,
+		AcceptStoreRequests: dataSharing.AcceptStoreRequests,
+		TorDialer:           torDialer,
+		UserAgent:           core.USERAGENT,
+		BanManager:          bm,
 	}
+
+	// Offline messaging storage
+	var storage sto.OfflineMessagingStorage
+	if x.Storage == "self-hosted" || x.Storage == "" {
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, pushNodes, core.Node.SendStore)
+	} else if x.Storage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
+		}
+
+		if dropboxToken == "" {
+			err = errors.New("Dropbox token not set in config file")
+			log.Error(err)
+			return err
+		}
+		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		err = errors.New("Invalid storage option")
+		log.Error(err)
+		return err
+	}
+	core.Node.MessageStorage = storage
 
 	if len(cfg.Addresses.Gateway) <= 0 {
 		return ErrNoGateways
@@ -988,12 +988,12 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
-		<-ipfscore.DefaultBootstrapConfig.DoneChan
+		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, torDialer, core.Node.CrosspostGateways, core.Node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.IsModerator)
+		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
 		go PR.Run()
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {

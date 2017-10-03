@@ -12,8 +12,6 @@ import (
 	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
-	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 
 	"github.com/ipfs/go-ipfs/core"
 
@@ -21,9 +19,8 @@ import (
 	"time"
 
 	routing "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
+	dhtpb "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/pb"
 	pb "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/pb"
-
-	ctxio "github.com/jbenet/go-context/io"
 )
 
 const MAGIC string = "000000000000000000000000"
@@ -91,9 +88,23 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 	return providers, nil
 }
 
+func PutPointerToPeer(node *core.IpfsNode, ctx context.Context, peer peer.ID, pointer Pointer) error {
+	dht := node.Routing.(*routing.IpfsDHT)
+	return putPointer(ctx, dht, peer, pointer.Value, pointer.Cid.KeyString())
+}
+
+func GetPointersFromPeer(node *core.IpfsNode, ctx context.Context, p peer.ID, key *cid.Cid) ([]*ps.PeerInfo, error) {
+	dht := node.Routing.(*routing.IpfsDHT)
+	pmes := pb.NewMessage(pb.Message_GET_PROVIDERS, key.KeyString(), 0)
+	resp, err := dht.SendRequest(ctx, p, pmes)
+	if err != nil {
+		return []*ps.PeerInfo{}, err
+	}
+	return dhtpb.PBPeersToPeerInfos(resp.GetProviderPeers()), nil
+}
+
 func addPointer(node *core.IpfsNode, ctx context.Context, k *cid.Cid, pi ps.PeerInfo) error {
 	dht := node.Routing.(*routing.IpfsDHT)
-	peerHosts := node.PeerHost
 	peers, err := dht.GetClosestPeers(ctx, k.KeyString())
 	if err != nil {
 		return err
@@ -103,35 +114,19 @@ func addPointer(node *core.IpfsNode, ctx context.Context, k *cid.Cid, pi ps.Peer
 		wg.Add(1)
 		go func(p peer.ID) {
 			defer wg.Done()
-			putPointer(ctx, peerHosts.(host.Host), p, pi, k.KeyString())
+			putPointer(ctx, dht, p, pi, k.KeyString())
 		}(p)
 	}
 	wg.Wait()
 	return nil
 }
 
-func putPointer(ctx context.Context, peerHosts host.Host, p peer.ID, pi ps.PeerInfo, skey string) error {
+func putPointer(ctx context.Context, dht *routing.IpfsDHT, p peer.ID, pi ps.PeerInfo, skey string) error {
 	pmes := pb.NewMessage(pb.Message_ADD_PROVIDER, skey, 0)
 	pmes.ProviderPeers = pb.RawPeerInfosToPBPeers([]ps.PeerInfo{pi})
 
-	err := sendMessage(ctx, peerHosts, p, pmes)
+	err := dht.SendMessage(ctx, p, pmes)
 	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func sendMessage(ctx context.Context, host host.Host, p peer.ID, pmes *pb.Message) error {
-	s, err := host.NewStream(ctx, p, routing.ProtocolDHT)
-	if err != nil {
-		return err
-	}
-	defer s.Close()
-
-	cw := ctxio.NewWriter(ctx, s)
-	w := ggio.NewDelimitedWriter(cw)
-
-	if err := w.WriteMsg(pmes); err != nil {
 		return err
 	}
 	return nil

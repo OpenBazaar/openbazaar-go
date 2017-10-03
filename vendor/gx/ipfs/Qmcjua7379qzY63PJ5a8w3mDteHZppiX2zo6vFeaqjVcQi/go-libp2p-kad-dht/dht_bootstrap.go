@@ -22,9 +22,10 @@ import (
 // number of queries. We could support a higher period with less
 // queries.
 type BootstrapConfig struct {
-	Queries int           // how many queries to run per period
-	Period  time.Duration // how often to run periodi cbootstrap.
-	Timeout time.Duration // how long to wait for a bootstrao query to run
+	Queries  int           // how many queries to run per period
+	Period   time.Duration // how often to run periodi cbootstrap.
+	Timeout  time.Duration // how long to wait for a bootstrao query to run
+	DoneChan chan struct{}
 }
 
 var DefaultBootstrapConfig = BootstrapConfig{
@@ -40,7 +41,11 @@ var DefaultBootstrapConfig = BootstrapConfig{
 	Period: time.Duration(5 * time.Minute),
 
 	Timeout: time.Duration(10 * time.Second),
+
+	DoneChan: make(chan struct{}),
 }
+
+var bootstrapOnce sync.Once
 
 // Bootstrap ensures the dht routing table remains healthy as peers come and go.
 // it builds up a list of peers by requesting random peer IDs. The Bootstrap
@@ -78,6 +83,11 @@ func (dht *IpfsDHT) BootstrapWithConfig(cfg BootstrapConfig) (goprocess.Process,
 		return nil, fmt.Errorf("invalid number of queries: %d", cfg.Queries)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	defer bootstrapOnce.Do(func() { close(DefaultBootstrapConfig.DoneChan) })
+
+	dht.runBootstrap(ctx, cfg)
 	proc := periodicproc.Tick(cfg.Period, dht.bootstrapWorker(cfg))
 
 	return proc, nil
@@ -107,7 +117,6 @@ func (dht *IpfsDHT) bootstrapWorker(cfg BootstrapConfig) func(worker goprocess.P
 	return func(worker goprocess.Process) {
 		// it would be useful to be able to send out signals of when we bootstrap, too...
 		// maybe this is a good case for whole module event pub/sub?
-
 		ctx := dht.Context()
 		if err := dht.runBootstrap(ctx, cfg); err != nil {
 			log.Warning(err)
