@@ -22,22 +22,21 @@ import (
 const (
 	PostTitleMaxCharacters    = 280
 	PostLongFormMaxCharacters = 50000
+	MaxPostTags               = 50
+	PostTagsMaxCharacters     = 80
 )
 
+// JSON structure returned for each post from GETPosts
 type postData struct {
 	Hash      string    `json:"hash"`
 	Slug      string    `json:"slug"`
 	Title     string    `json:"title"`
 	Thumbnail thumbnail `json:"thumbnail"`
-	Reference reference `json:"reference"`
+	Tags      []string  `json:"tags"`
 	Timestamp string    `json:"timestamp"`
 }
 
-type reference struct {
-	PeerId		string		`json:"peerId"`
-	Listings	[]string	`json:"listings"`
-}
-
+// Create a slug for the post based on the title, if a slug is missing
 func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
@@ -62,7 +61,7 @@ func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
 	}
 }
 
-// Add our identity to the post and sign it
+// Add the peer's identity to the post and sign it
 func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 
 	sl := new(pb.SignedPost)
@@ -110,6 +109,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	return sl, nil
 }
 
+// Update the posts index 
 func (n *OpenBazaarNode) UpdatePostIndex(post *pb.SignedPost) error {
 	ld, err := n.extractpostData(post)
 	if err != nil {
@@ -119,17 +119,21 @@ func (n *OpenBazaarNode) UpdatePostIndex(post *pb.SignedPost) error {
 	if err != nil {
 		return err
 	}
-	return n.updatePostOnDisk(index, ld, false)
+	return n.updatePostOnDisk(index, ld)
 }
 
+// Extract data from the post, used to make postData and in GETPosts
 func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) {
 	postPath := path.Join(n.RepoPath, "root", "posts", post.Post.Slug+".json")
 
+	// Get the hash of the post's file and add to postHash variable
 	postHash, err := ipfs.GetHashOfFile(n.Context, postPath)
 	if err != nil {
 		return postData{}, err
 	}
 
+	/* Generic function to loop through each element in an array
+	and check if a certain string-type variable exists */
 	contains := func(s []string, e string) bool {
 		for _, a := range s {
 			if a == e {
@@ -139,24 +143,29 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		return false
 	}
 
-	referenceListings := []string{}
-	for _, listing := range post.Post.Reference.Listings {
-		if !contains(referenceListings, listing) {
-			referenceListings = append(referenceListings, listing)
+	/* Add a tag in the post to an array called tags,
+	which will be added to the postData object below */
+	tags := []string{}
+	for _, tag := range post.Post.Tags {
+		if !contains(tags, tag) {
+			tags = append(tags, tag)
 		}
 	}
 
+	// Create the postData object
 	ld := postData{
 		Hash:      postHash,
 		Slug:      post.Post.Slug,
 		Title:     post.Post.Title,
-		Reference: reference{post.Post.Reference.PeerId, referenceListings},
+		Tags:      tags,
 	}
 
+	// Add a timestamp to postData if it doesn't exist
 	if post.Post.Timestamp != nil {
 		ld.Timestamp = FormatRFC3339PB(*post.Post.Timestamp)
 	}
 
+	// Add images to postData if they exist
 	if len(post.Post.Images) > 0 {
 		ld.Thumbnail = thumbnail{
 			post.Post.Images[0].Tiny,
@@ -164,9 +173,12 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 			post.Post.Images[0].Medium,
 		}
 	}
+
+	// Returns postData in its final form
 	return ld, nil
 }
 
+// Get the post's index
 func (n *OpenBazaarNode) getPostIndex() ([]postData, error) {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 
@@ -188,7 +200,7 @@ func (n *OpenBazaarNode) getPostIndex() ([]postData, error) {
 }
 
 // Update the posts.json file in the posts directory
-func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData, updateRatings bool) error {
+func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData) error {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 	// Check to see if the post we are adding already exists in the list. If so delete it.
 	for i, d := range index {
@@ -342,6 +354,7 @@ func (n *OpenBazaarNode) DeletePost(slug string) error {
 	return n.updateProfileCounts()
 }
 
+// Get a list of the posts
 func (n *OpenBazaarNode) GetPosts() ([]byte, error) {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 	file, err := ioutil.ReadFile(indexPath)
@@ -362,6 +375,7 @@ func (n *OpenBazaarNode) GetPosts() ([]byte, error) {
 	return file, nil
 }
 
+// Get a post based on the hash
 func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	// Read posts.json
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
@@ -392,6 +406,7 @@ func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	return n.GetPostFromSlug(slug)
 }
 
+// Get a post based on the slug
 func (n *OpenBazaarNode) GetPostFromSlug(slug string) (*pb.SignedPost, error) {
 	// Read post file
 	postPath := path.Join(n.RepoPath, "root", "posts", slug+".json")
@@ -411,7 +426,7 @@ func (n *OpenBazaarNode) GetPostFromSlug(slug string) (*pb.SignedPost, error) {
 }
 
 /* Performs a ton of checks to make sure the posts is formatted correctly. We should not allow
-   invalid posts to be saved. This function needs to be maintained in conjunction with contracts.proto */
+   invalid posts to be saved. This function needs to be maintained in conjunction with posts.proto */
 func validatePost(post *pb.Post) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -453,6 +468,19 @@ func validatePost(post *pb.Post) (err error) {
 		return fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
 	}
 
+	// Tags
+	if len(post.Tags) > MaxPostTags {
+		return fmt.Errorf("Tags in the post is longer than the max of %d characters", MaxPostTags)
+	}
+	for _, tag := range post.Tags {
+		if tag == "" {
+			return errors.New("Tags must not be empty")
+		}
+		if len(tag) > PostTagsMaxCharacters {
+			return fmt.Errorf("Tags must be less than max of %d", PostTagsMaxCharacters)
+		}
+	}
+
 	// Images
 	if len(post.Images) > MaxListItems {
 		return fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
@@ -489,6 +517,7 @@ func validatePost(post *pb.Post) (err error) {
 	return nil
 }
 
+// Verify the signatures in the post
 func verifySignaturesOnPost(sl *pb.SignedPost) error {
 	// Verify identity signature on the post
 	if err := verifySignature(

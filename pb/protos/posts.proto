@@ -11,7 +11,7 @@ message Post {
     string title                        = 3;
     string longForm                     = 4;
     repeated Image images               = 5;
-    Reference reference                 = 6;
+    repeated string tags                = 6;
     google.protobuf.Timestamp timestamp = 7;
 
     message Image {
@@ -21,11 +21,6 @@ message Post {
         string medium   = 4;
         string small    = 5;
         string tiny     = 6;
-    }
-
-    message Reference {
-        string peerId               = 1;
-        repeated string listings    = 2;
     }
 }
 
