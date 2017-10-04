@@ -98,6 +98,7 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
+var PublishLock sync.Mutex
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
@@ -117,6 +118,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 		seedLock.Unlock()
 		return aerr
 	}
+	n.RootHash = rootHash
 	seedLock.Unlock()
 	id, err := cid.Decode(rootHash)
 	if err != nil {
@@ -145,6 +147,14 @@ func (n *OpenBazaarNode) SeedNode() error {
 }
 
 func (n *OpenBazaarNode) publish(hash string) {
+	// Multiple publishes may have been queued
+	// We only need to publish the most recent
+	PublishLock.Lock()
+	defer PublishLock.Unlock()
+	if hash != n.RootHash {
+		return
+	}
+
 	if inflightPublishRequests == 0 {
 		n.Broadcast <- notifications.StatusNotification{"publishing"}
 	}
