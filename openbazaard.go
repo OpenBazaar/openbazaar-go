@@ -1011,7 +1011,9 @@ func (x *Start) Execute(args []string) error {
 		}
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
-		core.Node.SeedNode()
+		if !core.InitalPublishComplete {
+			core.Node.SeedNode()
+		}
 	}()
 
 	// Start gateway

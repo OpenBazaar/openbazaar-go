@@ -99,6 +99,7 @@ type OpenBazaarNode struct {
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
 var PublishLock sync.Mutex
+var InitalPublishComplete bool = false
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
@@ -120,28 +121,7 @@ func (n *OpenBazaarNode) SeedNode() error {
 	}
 	n.RootHash = rootHash
 	seedLock.Unlock()
-	id, err := cid.Decode(rootHash)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	var graph []cid.Cid
-	if len(n.PushNodes) > 0 {
-		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
-		if err != nil {
-			return err
-		}
-	}
-	for _, p := range n.PushNodes {
-		go func(pid peer.ID) {
-			err := n.SendStore(pid.Pretty(), graph)
-			if err != nil {
-				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
-			}
-		}(p)
-	}
-
+	InitalPublishComplete = true
 	go n.publish(rootHash)
 	return nil
 }
@@ -158,7 +138,30 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		n.Broadcast <- notifications.StatusNotification{"publishing"}
 	}
-	var err error
+
+	id, err := cid.Decode(hash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	var graph []cid.Cid
+	if len(n.PushNodes) > 0 {
+		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
+	for _, p := range n.PushNodes {
+		go func(pid peer.ID) {
+			err := n.SendStore(pid.Pretty(), graph)
+			if err != nil {
+				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
+			}
+		}(p)
+	}
+
 	inflightPublishRequests++
 	_, err = ipfs.Publish(n.Context, hash)
 
