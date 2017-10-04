@@ -163,6 +163,7 @@ func main() {
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
 				core.OfflineMessageWaitGroup.Wait()
+				core.PublishLock.Lock()
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 				os.Remove(repoLockFile)
@@ -946,6 +947,7 @@ func (x *Start) Execute(args []string) error {
 		UserAgent:           core.USERAGENT,
 		BanManager:          bm,
 	}
+	core.PublishLock.Lock()
 
 	// Offline messaging storage
 	var storage sto.OfflineMessagingStorage
@@ -1007,8 +1009,11 @@ func (x *Start) Execute(args []string) error {
 			go su.Start()
 			go cryptoWallet.Start()
 		}
+		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
-		core.Node.SeedNode()
+		if !core.InitalPublishComplete {
+			core.Node.SeedNode()
+		}
 	}()
 
 	// Start gateway

@@ -98,6 +98,8 @@ type OpenBazaarNode struct {
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
+var PublishLock sync.Mutex
+var InitalPublishComplete bool = false
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
@@ -117,18 +119,38 @@ func (n *OpenBazaarNode) SeedNode() error {
 		seedLock.Unlock()
 		return aerr
 	}
+	n.RootHash = rootHash
 	seedLock.Unlock()
-	id, err := cid.Decode(rootHash)
+	InitalPublishComplete = true
+	go n.publish(rootHash)
+	return nil
+}
+
+func (n *OpenBazaarNode) publish(hash string) {
+	// Multiple publishes may have been queued
+	// We only need to publish the most recent
+	PublishLock.Lock()
+	defer PublishLock.Unlock()
+	if hash != n.RootHash {
+		return
+	}
+
+	if inflightPublishRequests == 0 {
+		n.Broadcast <- notifications.StatusNotification{"publishing"}
+	}
+
+	id, err := cid.Decode(hash)
 	if err != nil {
 		log.Error(err)
-		return err
+		return
 	}
 
 	var graph []cid.Cid
 	if len(n.PushNodes) > 0 {
 		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
 		if err != nil {
-			return err
+			log.Error(err)
+			return
 		}
 	}
 	for _, p := range n.PushNodes {
@@ -140,15 +162,6 @@ func (n *OpenBazaarNode) SeedNode() error {
 		}(p)
 	}
 
-	go n.publish(rootHash)
-	return nil
-}
-
-func (n *OpenBazaarNode) publish(hash string) {
-	if inflightPublishRequests == 0 {
-		n.Broadcast <- notifications.StatusNotification{"publishing"}
-	}
-	var err error
 	inflightPublishRequests++
 	_, err = ipfs.Publish(n.Context, hash)
 
