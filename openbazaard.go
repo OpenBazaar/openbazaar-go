@@ -391,8 +391,12 @@ func (x *Init) Execute(args []string) error {
 }
 
 func (x *Start) Execute(args []string) error {
+	err := core.CheckAndSetUlimit()
+	if err != nil {
+		return err
+	}
+
 	printSplashScreen()
-	var err error
 
 	if x.Testnet && x.Regtest {
 		return errors.New("Invalid combination of testnet and regtest modes")
