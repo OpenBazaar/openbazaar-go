@@ -19,6 +19,7 @@ import (
 	"github.com/kennygrant/sanitize"
 )
 
+// Constants for validation
 const (
 	PostTitleMaxCharacters    = 280
 	PostLongFormMaxCharacters = 50000
@@ -28,15 +29,21 @@ const (
 
 // JSON structure returned for each post from GETPosts
 type postData struct {
-	Hash      string    `json:"hash"`
-	Slug      string    `json:"slug"`
-	Title     string    `json:"title"`
-	Thumbnail thumbnail `json:"thumbnail"`
-	Tags      []string  `json:"tags"`
-	Timestamp string    `json:"timestamp"`
+	Hash      string      `json:"hash"`
+	Slug      string      `json:"slug"`
+	Title     string      `json:"title"`
+	Images    []postImage `json:"images"`
+	Tags      []string    `json:"tags"`
+	Timestamp string      `json:"timestamp"`
 }
 
-// Create a slug for the post based on the title, if a slug is missing
+type postImage struct {
+	Tiny   string `json:"tiny"`
+	Small  string `json:"small"`
+	Medium string `json:"medium"`
+}
+
+//GeneratePostSlug  [Create a slug for the post based on the title, if a slug is missing]
 func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
@@ -61,7 +68,7 @@ func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
 	}
 }
 
-// Add the peer's identity to the post and sign it
+//SignPost  [Add the peer's identity to the post and sign it]
 func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 
 	sp := new(pb.SignedPost)
@@ -114,7 +121,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	return sp, nil
 }
 
-// Update the posts index 
+//UpdatePostIndex  [Update the posts index] 
 func (n *OpenBazaarNode) UpdatePostIndex(post *pb.SignedPost) error {
 	ld, err := n.extractpostData(post)
 	if err != nil {
@@ -127,7 +134,7 @@ func (n *OpenBazaarNode) UpdatePostIndex(post *pb.SignedPost) error {
 	return n.updatePostOnDisk(index, ld)
 }
 
-// Extract data from the post, used to make postData and in GETPosts
+//extractpostData  [Extract data from the post, used to make postData and in GETPosts]
 func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) {
 	postPath := path.Join(n.RepoPath, "root", "posts", post.Post.Slug+".json")
 
@@ -171,19 +178,20 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	}
 
 	// Add images to postData if they exist
+	imageArray := []postImage{}
 	if len(post.Post.Images) > 0 {
-		ld.Thumbnail = thumbnail{
-			post.Post.Images[0].Tiny,
-			post.Post.Images[0].Small,
-			post.Post.Images[0].Medium,
+		for _, imageSlice := range post.Post.Images {
+			imageObject := postImage{imageSlice.Tiny, imageSlice.Small, imageSlice.Medium}
+			imageArray = append(imageArray, imageObject)
 		}
+		ld.Images = imageArray
 	}
 
 	// Returns postData in its final form
 	return ld, nil
 }
 
-// Get the post's index
+//getPostIndex  [Get the post's index]
 func (n *OpenBazaarNode) getPostIndex() ([]postData, error) {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 
@@ -204,7 +212,7 @@ func (n *OpenBazaarNode) getPostIndex() ([]postData, error) {
 	return index, nil
 }
 
-// Update the posts.json file in the posts directory
+//updatePostOnDisk  [Update the posts.json file in the posts directory]
 func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData) error {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 	// Check to see if the post we are adding already exists in the list. If so delete it.
@@ -241,7 +249,7 @@ func (n *OpenBazaarNode) updatePostOnDisk(index []postData, ld postData) error {
 	return nil
 }
 
-// Update the hashes in the posts.json file
+//UpdatePostHashes  [Update the hashes in the posts.json file]
 func (n *OpenBazaarNode) UpdatePostHashes(hashes map[string]string) error {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 
@@ -287,7 +295,7 @@ func (n *OpenBazaarNode) UpdatePostHashes(hashes map[string]string) error {
 	return nil
 }
 
-// Return the current number of posts
+//GetPostCount  [Return the current number of posts]
 func (n *OpenBazaarNode) GetPostCount() int {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 
@@ -305,7 +313,7 @@ func (n *OpenBazaarNode) GetPostCount() int {
 	return len(index)
 }
 
-// Deletes the post directory, and removes the post from the index
+//DeletePost  [Deletes the post directory, and removes the post from the index]
 func (n *OpenBazaarNode) DeletePost(slug string) error {
 	toDelete := path.Join(n.RepoPath, "root", "posts", slug+".json")
 	err := os.Remove(toDelete)
@@ -359,7 +367,7 @@ func (n *OpenBazaarNode) DeletePost(slug string) error {
 	return n.updateProfileCounts()
 }
 
-// Get a list of the posts
+//GetPosts  [Get a list of the posts]
 func (n *OpenBazaarNode) GetPosts() ([]byte, error) {
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
 	file, err := ioutil.ReadFile(indexPath)
@@ -380,7 +388,7 @@ func (n *OpenBazaarNode) GetPosts() ([]byte, error) {
 	return file, nil
 }
 
-// Get a post based on the hash
+//GetPostFromHash  [Get a post based on the hash]
 func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	// Read posts.json
 	indexPath := path.Join(n.RepoPath, "root", "posts.json")
@@ -411,7 +419,7 @@ func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	return n.GetPostFromSlug(slug)
 }
 
-// Get a post based on the slug
+//GetPostFromSlug  [Get a post based on the slug]
 func (n *OpenBazaarNode) GetPostFromSlug(slug string) (*pb.SignedPost, error) {
 	// Read post file
 	postPath := path.Join(n.RepoPath, "root", "posts", slug+".json")
@@ -430,6 +438,7 @@ func (n *OpenBazaarNode) GetPostFromSlug(slug string) (*pb.SignedPost, error) {
 	return sl, nil
 }
 
+//validatePost  [Validate the post]
 /* Performs a ton of checks to make sure the posts is formatted correctly. We should not allow
    invalid posts to be saved. This function needs to be maintained in conjunction with posts.proto */
 func validatePost(post *pb.Post) (err error) {
@@ -522,7 +531,7 @@ func validatePost(post *pb.Post) (err error) {
 	return nil
 }
 
-// Verify the signatures in the post
+//verifySignaturesOnPost  [Verify the signatures in the post]
 func verifySignaturesOnPost(sl *pb.SignedPost) error {
 	// Verify identity signature on the post
 	if err := verifySignature(
