@@ -22,6 +22,7 @@ var TestnetBootstrapAddresses = []string{
 var DataPushNodes = []string{
 	"QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ",
 	"QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o",
+	"QmPPegaeM4rXfQDF3uu784d93pLEzV8A4zXU7akEgYnTFd",
 }
 
 type APIConfig struct {
