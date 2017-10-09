@@ -631,12 +631,13 @@ listingLoop:
 				return
 			}
 
-			// Add listing data
-			data, err := n.extractListingData(signedListing)
 			if _, err := f.WriteString(out); err != nil {
 				errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
 				return
 			}
+
+			// Add listing data
+			data, err := n.extractListingData(signedListing)
 			indexLock.Lock()
 			ld = append(ld, data)
 			indexLock.Unlock()

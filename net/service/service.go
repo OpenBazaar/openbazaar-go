@@ -3,13 +3,12 @@ package service
 import (
 	"context"
 	"errors"
-	inet "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net"
-	host "gx/ipfs/QmUywuGNZoUKV8B9iyvup9bPkLiMrhTsyVMkeSXW5VxAfC/go-libp2p-host"
-	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
+	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
+	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
-	"io"
+	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
+	"io"
 )
 
 var log = logging.MustGetLogger("service")
@@ -55,27 +55,39 @@ func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datasto
 	return service
 }
 
+func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
+	log.Debugf("Disconnecting from %s", p.Pretty())
+	service.senderlk.Lock()
+	defer service.senderlk.Unlock()
+	ms, ok := service.sender[p]
+	if !ok {
+		return nil
+	}
+	ms.s.Close()
+	delete(service.sender, p)
+	return nil
+}
+
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
 	go service.handleNewMessage(s, true)
 }
 
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
-	cr := ctxio.NewReader(service.ctx, s)
+	defer s.Close()
+	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
-	var ms *messageSender
-	if incoming {
-		// if this is an inbound stream
-		// ensure the message sender for this peer is updated with this stream, so we reply over it
-		ms = service.messageSenderForPeer(mPeer, &s)
-	} else {
-		ms = service.messageSenderForPeer(mPeer, nil)
+
+	ms, err := service.messageSenderForPeer(mPeer)
+	if err != nil {
+		log.Error("Error getting message sender")
+		return
 	}
-	defer s.Close()
+
 	for {
 		select {
 		// end loop on context close
@@ -86,12 +98,11 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		// Receive msg
 		pmes := new(pb.Message)
 		if err := r.ReadMsg(pmes); err != nil {
+			s.Reset()
 			if err == io.EOF {
-				// EOF error means the sender closed the stream
-				return
+				log.Debugf("Disconnected from peer %s", mPeer.Pretty())
 			}
-			log.Errorf("Error unmarshaling data: %s", err)
-			continue
+			return
 		}
 
 		if pmes.IsResponse {
@@ -112,21 +123,22 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 				log.Debug("received response message with unknown request id: requesting function may have timed out")
 			}
 			ms.requestlk.Unlock()
-			continue
+			s.Reset()
+			return
 		}
 
 		// Get handler for this msg type
 		handler := service.HandlerForMsgType(pmes.MessageType)
 		if handler == nil {
+			s.Reset()
 			log.Debug("Got back nil handler from handlerForMsgType")
-			continue
+			return
 		}
 
 		// Dispatch handler
 		rpmes, err := handler(mPeer, pmes, nil)
 		if err != nil {
 			log.Debugf("%s handle message error: %s", pmes.MessageType.String(), err)
-			continue
 		}
 
 		// If nil response, return it before serializing
@@ -138,17 +150,21 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 		rpmes.RequestId = pmes.RequestId
 		rpmes.IsResponse = true
 
-		// Send out response msg
+		// send out response msg
 		if err := ms.SendMessage(service.ctx, rpmes); err != nil {
+			s.Reset()
 			log.Debugf("send response error: %s", err)
-			continue
+			return
 		}
 	}
 }
 
 func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Sending %s request to %s", pmes.MessageType.String(), p.Pretty())
-	ms := service.messageSenderForPeer(p, nil)
+	ms, err := service.messageSenderForPeer(p)
+	if err != nil {
+		return nil, err
+	}
 
 	rpmes, err := ms.SendRequest(ctx, pmes)
 	if err != nil {
@@ -162,13 +178,17 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 	}
 
 	log.Debugf("Received response from %s", p.Pretty())
-
 	return rpmes, nil
 }
 
 func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
-	log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
-	ms := service.messageSenderForPeer(p, nil)
+	if pmes.MessageType != pb.Message_BLOCK {
+		log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
+	}
+	ms, err := service.messageSenderForPeer(p)
+	if err != nil {
+		return err
+	}
 
 	if err := ms.SendMessage(ctx, pmes); err != nil {
 		return err

@@ -29,6 +29,12 @@ class CompleteDirectOnlineTest(OpenBazaarTestFramework):
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(20)
 
+        # post profile for alice
+        with open('testdata/profile.json') as profile_file:
+            profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
+        api_url = alice["gateway_url"] + "ob/profile"
+        requests.post(api_url, data=json.dumps(profile_json, indent=4))
+
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)

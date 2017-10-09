@@ -71,6 +71,6 @@ func TestMigration000(t *testing.T) {
 		t.Error("Failed to write new repo version")
 	}
 
-	os.RemoveAll("./config")
-	os.RemoveAll("./repover")
+	os.Remove("./config")
+	os.Remove("./repover")
 }

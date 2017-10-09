@@ -2,8 +2,8 @@ package net
 
 import (
 	"context"
-	inet "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -23,4 +23,7 @@ type NetworkService interface {
 
 	// Send a message to a peer without requiring a response
 	SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error
+
+	// Disconnect from the given peer
+	DisconnectFromPeer(p peer.ID) error
 }

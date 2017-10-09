@@ -54,6 +54,12 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         moderatorId = charlie["peerId"]
         time.sleep(4)
 
+        # post profile for alice
+        with open('testdata/profile.json') as profile_file:
+            profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
+        api_url = alice["gateway_url"] + "ob/profile"
+        requests.post(api_url, data=json.dumps(profile_json, indent=4))
+
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)

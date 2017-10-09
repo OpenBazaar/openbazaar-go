@@ -20,6 +20,12 @@ class SMTPTest(OpenBazaarTestFramework):
         alice = self.nodes[0]
         bob = self.nodes[1]
 
+        # post profile for alice
+        with open('testdata/profile.json') as profile_file:
+            profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
+        api_url = alice["gateway_url"] + "ob/profile"
+        requests.post(api_url, data=json.dumps(profile_json, indent=4))
+
         # configure SMTP notifications
         time.sleep(4)
         api_url = alice["gateway_url"] + "ob/settings"

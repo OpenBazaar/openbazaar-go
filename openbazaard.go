@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
+	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
+	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
-	manet "gx/ipfs/Qmf1Gq7N45Rpuw7ev47uWgH6dLPtdnvcMRNPkVBwqjLJg2/go-multiaddr-net"
 	"net"
 	"os"
 	"os/signal"
@@ -56,11 +56,10 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	dht "github.com/ipfs/go-ipfs/routing/dht"
-	dhtutil "github.com/ipfs/go-ipfs/routing/dht/util"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/jessevdk/go-flags"
 	"github.com/mitchellh/go-homedir"
@@ -68,17 +67,21 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	"gx/ipfs/QmPsBptED6X43GYg3347TAUruN3UfsAhaGTP9xbinYX7uf/go-libp2p-interface-pnet"
-	p2pbhost "gx/ipfs/QmQA5mdxru8Bh6dpC9PJfSkumqnmHgJX7knxSgBo5Lpime/go-libp2p/p2p/host/basic"
-	p2phost "gx/ipfs/QmUywuGNZoUKV8B9iyvup9bPkLiMrhTsyVMkeSXW5VxAfC/go-libp2p-host"
-	swarm "gx/ipfs/QmVkDnNm71vYyY6s6rXwtmyDYis3WkKyrEhMECwT6R12uJ/go-libp2p-swarm"
-	recpb "gx/ipfs/QmWYCqr6UDqqD1bfRybaAPtbAqcN3TSJpveaBXMwbQ3ePZ/go-libp2p-record/pb"
-	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
-	oniontp "gx/ipfs/QmY8QEk1PqyiNr7b4ZF1o4318cu9wNzTD2bP1qBb2yqkvB/go-onion-transport"
-	addrutil "gx/ipfs/QmbH3urJHTrZSUETgvQRriWM6mMFqyNSwCqnhknxfSGVWv/go-addr-util"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
-	metrics "gx/ipfs/QmdibiN2wzuuXXz4JvqQ1ZGW3eUkoAy1AWznHFau6iePCc/go-libp2p-metrics"
-	smux "gx/ipfs/QmeZBgYBHvxMukGK5ojg28BCNLB9SeXqT7XXg6o7r2GbJy/go-stream-muxer"
+	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
+	pstore "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
+	metrics "gx/ipfs/QmQbh3Rb7KM37As3vkHYnEFnzkVXNCP8EYGtHz6g2fXk14/go-libp2p-metrics"
+	"gx/ipfs/QmQq9YzmdFdWNTDdArueGyD7L5yyiRQigrRHJnTGkxcEjT/go-libp2p-interface-pnet"
+	p2pbhost "gx/ipfs/QmRQ76P5dgvxTujhfPsCRAG83rC15jgb1G9bKLuomuC6dQ/go-libp2p/p2p/host/basic"
+	addrutil "gx/ipfs/QmVJGsPeK3vwtEyyTxpCs47yjBYMmYsAhEouPDF3Gb2eK3/go-addr-util"
+	oniontp "gx/ipfs/QmVYZ6jGE4uogWAZK2w8PrKWDEKMvYaQWTSXWCbYJLEuKs/go-onion-transport"
+	swarm "gx/ipfs/QmWpJ4y2vxJ6GZpPfQbpVpQxAYS3UeR6AKNbAHxw7wN3qw/go-libp2p-swarm"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
+	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
+	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
+	dht "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
+	dhtutil "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/util"
+	"io"
 	"syscall"
 	"time"
 )
@@ -115,7 +118,8 @@ type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
 	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" defaut:"debug"`
+	NoLogFiles           bool     `short:"f" long:"nologfiles" description:"save logs on disk"`
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
@@ -159,6 +163,7 @@ func main() {
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
 				core.OfflineMessageWaitGroup.Wait()
+				core.PublishLock.Lock()
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
 				os.Remove(repoLockFile)
@@ -387,7 +392,11 @@ func (x *Init) Execute(args []string) error {
 
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
-	var err error
+
+	err := core.CheckAndSetUlimit()
+	if err != nil {
+		return err
+	}
 
 	if x.Testnet && x.Regtest {
 		return errors.New("Invalid combination of testnet and regtest modes")
@@ -427,19 +436,41 @@ func (x *Start) Execute(args []string) error {
 		MaxAge:     30, // Days
 	}
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendFile := logging.NewLogBackend(w, "", 0)
 	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+	logging.SetBackend(backendStdoutFormatter)
 
-	ipfslogging.LdJSONFormatter()
-	w2 := &lumberjack.Logger{
-		Filename:   path.Join(repoPath, "logs", "ipfs.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	if !x.NoLogFiles {
+		backendFile := logging.NewLogBackend(w, "", 0)
+		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+		logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		ipfslogging.LdJSONFormatter()
+		w2 := &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
+		ipfslogging.Output(w2)()
 	}
-	ipfslogging.Output(w2)()
+
+	var level logging.Level
+	switch strings.ToLower(x.LogLevel) {
+	case "debug":
+		level = logging.DEBUG
+	case "info":
+		level = logging.INFO
+	case "notice":
+		level = logging.NOTICE
+	case "warning":
+		level = logging.WARNING
+	case "error":
+		level = logging.ERROR
+	case "critical":
+		level = logging.CRITICAL
+	default:
+		level = logging.DEBUG
+	}
+	logging.SetLevel(level, "")
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -486,7 +517,7 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
-	gatewayUrlStrings, err := repo.GetCrosspostGateway(configFile)
+	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -540,7 +571,7 @@ func (x *Start) Execute(args []string) error {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		gatewayUrlStrings = []string{}
+		dataSharing.PushTo = []string{}
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -671,6 +702,7 @@ func (x *Start) Execute(args []string) error {
 			"mplex": true,
 		},
 		DNSResolver: dnsResolver,
+		Routing:     DHTOption,
 	}
 
 	if onionTransport != nil {
@@ -699,6 +731,7 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		dhtutil.QuerySize = 16
 	}
+	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
@@ -734,15 +767,21 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
-	w3 := &lumberjack.Logger{
-		Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	var w3 io.Writer
+	if x.NoLogFiles {
+		w3 = &DummyWriter{}
+	} else {
+		w3 = &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
 	}
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
+
 	var cryptoWallet wallet.Wallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
@@ -793,17 +832,15 @@ func (x *Start) Execute(args []string) error {
 		log.Fatal("Unknown wallet type")
 	}
 
-	// Crosspost gateway
-	var gatewayUrls []*url.URL
-	for _, gw := range gatewayUrlStrings {
-		if gw != "" {
-			u, err := url.Parse(gw)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			gatewayUrls = append(gatewayUrls, u)
+	// Push nodes
+	var pushNodes []peer.ID
+	for _, pnd := range dataSharing.PushTo {
+		p, err := peer.IDB58Decode(pnd)
+		if err != nil {
+			log.Error("Invalid peerID in DataSharing config")
+			return err
 		}
+		pushNodes = append(pushNodes, p)
 	}
 
 	// Authenticated gateway
@@ -861,32 +898,7 @@ func (x *Start) Execute(args []string) error {
 		}
 	}
 
-	// Offline messaging storage
-	var storage sto.OfflineMessagingStorage
-	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, gatewayUrls, torDialer)
-	} else if x.Storage == "dropbox" {
-		if usingTor && !usingClearnet {
-			log.Error("Dropbox can not be used with Tor")
-			return errors.New("Dropbox can not be used with Tor")
-		}
-
-		if dropboxToken == "" {
-			err = errors.New("Dropbox token not set in config file")
-			log.Error(err)
-			return err
-		}
-		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-	} else {
-		err = errors.New("Invalid storage option")
-		log.Error(err)
-		return err
-	}
-
+	// Exchange rates
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
@@ -925,20 +937,48 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:           ctx,
-		IpfsNode:          nd,
-		RootHash:          ipath.Path(e.Value).String(),
-		RepoPath:          repoPath,
-		Datastore:         sqliteDB,
-		Wallet:            cryptoWallet,
-		MessageStorage:    storage,
-		NameSystem:        ns,
-		ExchangeRates:     exchangeRates,
-		CrosspostGateways: gatewayUrls,
-		TorDialer:         torDialer,
-		UserAgent:         core.USERAGENT,
-		BanManager:        bm,
+		Context:             ctx,
+		IpfsNode:            nd,
+		RootHash:            ipath.Path(e.Value).String(),
+		RepoPath:            repoPath,
+		Datastore:           sqliteDB,
+		Wallet:              cryptoWallet,
+		NameSystem:          ns,
+		ExchangeRates:       exchangeRates,
+		PushNodes:           pushNodes,
+		AcceptStoreRequests: dataSharing.AcceptStoreRequests,
+		TorDialer:           torDialer,
+		UserAgent:           core.USERAGENT,
+		BanManager:          bm,
 	}
+	core.PublishLock.Lock()
+
+	// Offline messaging storage
+	var storage sto.OfflineMessagingStorage
+	if x.Storage == "self-hosted" || x.Storage == "" {
+		storage = selfhosted.NewSelfHostedStorage(repoPath, ctx, pushNodes, core.Node.SendStore)
+	} else if x.Storage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
+		}
+
+		if dropboxToken == "" {
+			err = errors.New("Dropbox token not set in config file")
+			log.Error(err)
+			return err
+		}
+		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+	} else {
+		err = errors.New("Invalid storage option")
+		log.Error(err)
+		return err
+	}
+	core.Node.MessageStorage = storage
 
 	if len(cfg.Addresses.Gateway) <= 0 {
 		return ErrNoGateways
@@ -947,19 +987,19 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("SSL cert and key files must be set when SSL is enabled")
 	}
 
-	gateway, err := newHTTPGateway(core.Node, authCookie, *apiConfig)
+	gateway, err := newHTTPGateway(core.Node, authCookie, *apiConfig, x.NoLogFiles)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
 	go func() {
-		<-ipfscore.DefaultBootstrapConfig.DoneChan
+		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, torDialer, core.Node.CrosspostGateways, core.Node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.IsModerator)
+		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
 		go PR.Run()
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {
@@ -973,8 +1013,11 @@ func (x *Start) Execute(args []string) error {
 			go su.Start()
 			go cryptoWallet.Start()
 		}
+		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
-		core.Node.SeedNode()
+		if !core.InitalPublishComplete {
+			core.Node.SeedNode()
+		}
 	}()
 
 	// Start gateway
@@ -1014,6 +1057,12 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	}
 }
 
+type DummyWriter struct{}
+
+func (d *DummyWriter) Write(p []byte) (n int, err error) {
+	return 0, nil
+}
+
 type DummyListener struct {
 	addr net.Addr
 }
@@ -1032,7 +1081,7 @@ func (d *DummyListener) Close() error {
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig, noLogFiles bool) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {
@@ -1071,7 +1120,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
@@ -1083,11 +1132,16 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 	}
 
 	// Create and return an API gateway
-	w4 := &lumberjack.Logger{
-		Filename:   path.Join(node.RepoPath, "logs", "api.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
+	var w4 io.Writer
+	if noLogFiles {
+		w4 = &DummyWriter{}
+	} else {
+		w4 = &lumberjack.Logger{
+			Filename:   path.Join(node.RepoPath, "logs", "api.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
 	}
 	apiFile := logging.NewLogBackend(w4, "", 0)
 	apiFileFormatter := logging.NewBackendFormatter(apiFile, fileLogFormat)
@@ -1124,6 +1178,15 @@ func getRepoPath(isTestnet bool) (string, error) {
 
 	// Return the shortest lexical representation of the path
 	return filepath.Clean(fullPath), nil
+}
+
+var DHTOption ipfscore.RoutingOption = constructDHTRouting
+
+func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ipfsrepo.Datastore) (routing.IpfsRouting, error) {
+	dhtRouting := dht.NewDHT(ctx, host, dstore)
+	dhtRouting.Validator[ipfscore.IpnsValidatorTag] = namesys.IpnsRecordValidator
+	dhtRouting.Selector[ipfscore.IpnsValidatorTag] = namesys.IpnsSelectorFunc
+	return dhtRouting, nil
 }
 
 func printSplashScreen() {

@@ -30,6 +30,8 @@ message Message {
         OFFLINE_RELAY           = 15;
         MODERATOR_ADD           = 16;
         MODERATOR_REMOVE        = 17;
+        STORE                   = 18;
+        BLOCK                   = 19;
         ERROR                   = 500;
     }
 }
@@ -64,4 +66,13 @@ message SignedData {
         Message.MessageType type            = 2;
         google.protobuf.Timestamp timestamp = 3;
     }
+}
+
+message CidList {
+    repeated string cids = 1;
+}
+
+message Block {
+    bytes rawData = 1;
+    string cid    = 2;
 }

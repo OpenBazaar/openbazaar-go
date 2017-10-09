@@ -10,16 +10,16 @@ import (
 
 	config "github.com/ipfs/go-ipfs/repo/config"
 	math2 "github.com/ipfs/go-ipfs/thirdparty/math2"
-	lgbl "gx/ipfs/QmVesPmqbPp7xRGyY96tnBwzDtVV1nqv4SCVxo5zCqKyH8/go-libp2p-loggables"
+	lgbl "gx/ipfs/QmT4PgCNdv73hnFAqzHqwW44q7M9PWpykSswHDxndquZbc/go-libp2p-loggables"
 
 	context "context"
-	inet "gx/ipfs/QmRscs8KxrSmSv4iuevHv8JfuUzHBMoqiaHzxfDRiksd6e/go-libp2p-net"
+	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
+	pstore "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	procctx "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context"
 	periodicproc "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/periodic"
-	host "gx/ipfs/QmUywuGNZoUKV8B9iyvup9bPkLiMrhTsyVMkeSXW5VxAfC/go-libp2p-host"
-	pstore "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 )
 
 // ErrNotEnoughBootstrapPeers signals that we do not have enough bootstrap
@@ -51,9 +51,6 @@ type BootstrapConfig struct {
 	// for the bootstrap process to use. This makes it possible for clients
 	// to control the peers the process uses at any moment.
 	BootstrapPeers func() []pstore.PeerInfo
-
-	// Chan to return on when complete
-	DoneChan chan struct{}
 }
 
 // DefaultBootstrapConfig specifies default sane parameters for bootstrapping.
@@ -61,7 +58,6 @@ var DefaultBootstrapConfig = BootstrapConfig{
 	MinPeerThreshold:  4,
 	Period:            30 * time.Second,
 	ConnectionTimeout: (30 * time.Second) / 3, // Perod / 3
-	DoneChan:          make(chan struct{}),
 }
 
 func BootstrapConfigWithPeers(pis []pstore.PeerInfo) BootstrapConfig {
@@ -72,6 +68,8 @@ func BootstrapConfigWithPeers(pis []pstore.PeerInfo) BootstrapConfig {
 	return cfg
 }
 
+var bootstrapOnce sync.Once
+
 // Bootstrap kicks off IpfsNode bootstrapping. This function will periodically
 // check the number of open connections and -- if there are too few -- initiate
 // connections to well-known bootstrap peers. It also kicks off subsystem
@@ -80,9 +78,9 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 
 	// make a signal to wait for one bootstrap round to complete.
 	//doneWithRound := make(chan struct{})
+	ch := make(chan struct{})
 
 	// the periodic bootstrap function -- the connection supervisor
-	var once sync.Once
 	periodic := func(worker goprocess.Process) {
 		ctx := procctx.OnClosingContext(worker)
 		defer log.EventBegin(ctx, "periodicBootstrap", n.Identity).Done()
@@ -92,24 +90,21 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 			log.Debugf("%s bootstrap error: %s", n.Identity, err)
 		}
 
-		once.Do(func() {
-			close(cfg.DoneChan)
-		})
-		//<-doneWithRound
+		bootstrapOnce.Do(func() { close(ch) })
 	}
 
 	// kick off the node's periodic bootstrapping
 	proc := periodicproc.Tick(cfg.Period, periodic)
 	proc.Go(periodic) // run one right now.
 
-	// kick off Routing.Bootstrap
-	if n.Routing != nil {
-		ctx := procctx.OnClosingContext(proc)
-		if err := n.Routing.Bootstrap(ctx); err != nil {
-			proc.Close()
-			return nil, err
+	go func() {
+		<-ch
+		// kick off Routing.Bootstrap
+		if n.Routing != nil {
+			ctx := procctx.OnClosingContext(proc)
+			n.Routing.Bootstrap(ctx)
 		}
-	}
+	}()
 
 	//doneWithRound <- struct{}{}
 	//close(doneWithRound) // it no longer blocks periodic

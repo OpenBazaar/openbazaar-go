@@ -3,40 +3,29 @@ package selfhosted
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	ma "gx/ipfs/QmcyqRMCAXVtYPS4DiBrA7sezL9rRGfW8Ctx7cywL4TXJj/go-multiaddr"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"os"
 	"path"
 
-	"bytes"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/commands"
-	"golang.org/x/net/proxy"
-	"net"
-	"net/http"
-	"net/url"
-	"time"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 )
 
 type SelfHostedStorage struct {
-	repoPath          string
-	context           commands.Context
-	crossPostGateways []*url.URL
-	httpClient        *http.Client
+	repoPath  string
+	context   commands.Context
+	pushNodes []peer.ID
+	store     func(peerId string, ids []cid.Cid) error
 }
 
-func NewSelfHostedStorage(repoPath string, context commands.Context, crossPostGateways []*url.URL, dialer proxy.Dialer) *SelfHostedStorage {
-	dial := net.Dial
-	if dialer != nil {
-		dial = dialer.Dial
-	}
-	tbTransport := &http.Transport{Dial: dial}
-	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
+func NewSelfHostedStorage(repoPath string, context commands.Context, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
 	return &SelfHostedStorage{
-		repoPath:          repoPath,
-		context:           context,
-		crossPostGateways: crossPostGateways,
-		httpClient:        client,
+		repoPath:  repoPath,
+		context:   context,
+		pushNodes: pushNodes,
+		store:     store,
 	}
 }
 
@@ -57,8 +46,12 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if err != nil {
 		return nil, err
 	}
-	for _, g := range s.crossPostGateways {
-		s.httpClient.Post(g.String()+"ipfs/", "application/x-www-form-urlencoded", bytes.NewReader(ciphertext))
+	id, err := cid.Decode(addr)
+	if err != nil {
+		return nil, err
+	}
+	for _, peer := range s.pushNodes {
+		go s.store(peer.Pretty(), []cid.Cid{*id})
 	}
 	maAddr, err := ma.NewMultiaddr("/ipfs/" + addr + "/")
 	if err != nil {

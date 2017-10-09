@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/icrowley/fake"
 )
 
@@ -16,12 +17,7 @@ var imageHTTPClient = &http.Client{
 	Timeout: time.Second * 10,
 }
 
-type randomImage struct {
-	filename string
-	*core.Images
-}
-
-func newRandomImage(node *core.OpenBazaarNode) (*randomImage, error) {
+func newRandomImage(node *core.OpenBazaarNode) (*pb.Profile_Image, error) {
 	// Get random image
 	resp, err := imageHTTPClient.Get(randomImageURL)
 	if err != nil {
@@ -37,11 +33,9 @@ func newRandomImage(node *core.OpenBazaarNode) (*randomImage, error) {
 	base64Img := base64.StdEncoding.EncodeToString(buf)
 
 	// Decode image and save
-	img := &randomImage{filename: fake.Word()}
-	img.Images, err = node.SetProductImages(base64Img, img.filename)
+	img, err := node.SetProductImages(base64Img, fake.Word())
 	if err != nil {
 		return nil, err
 	}
-
 	return img, nil
 }

@@ -1,22 +1,18 @@
 package core
 
 import (
-	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
-	multihash "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
-	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 
-	"bytes"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	dhtpb "github.com/ipfs/go-ipfs/routing/dht/pb"
 	"golang.org/x/net/context"
-	gonet "net"
-	"net/http"
-	"net/url"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"sync"
 	"time"
 )
@@ -99,28 +95,19 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		if err != nil {
 			log.Error(err)
 		}
-		OfflineMessageWaitGroup.Done()
-	}()
 
-	// Post provider to gateway if we have one set in the config
-	if len(n.CrosspostGateways) > 0 {
-		dial := gonet.Dial
-		if n.TorDialer != nil {
-			dial = n.TorDialer.Dial
-		}
-		tbTransport := &http.Transport{Dial: dial}
-		client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
-		pmes := dhtpb.NewMessage(dhtpb.Message_ADD_PROVIDER, pointer.Cid.KeyString(), 0)
-		pmes.ProviderPeers = dhtpb.RawPeerInfosToPBPeers([]ps.PeerInfo{pointer.Value})
-		ser, err := proto.Marshal(pmes)
-		if err == nil {
-			for _, g := range n.CrosspostGateways {
-				go func(u *url.URL) {
-					client.Post(u.String()+"ipfs/providers", "application/x-www-form-urlencoded", bytes.NewReader(ser))
-				}(g)
+		// Push provider to our push nodes for redundancy
+		for _, p := range n.PushNodes {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			err := ipfs.PutPointerToPeer(n.IpfsNode, ctx, p, pointer)
+			if err != nil {
+				log.Error(err)
 			}
 		}
-	}
+
+		OfflineMessageWaitGroup.Done()
+	}()
 	return nil
 }
 
@@ -521,6 +508,89 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
 	err = n.sendMessage(peerId, nil, m)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (n *OpenBazaarNode) SendBlock(peerId string, id cid.Cid) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	block, err := n.IpfsNode.Blocks.GetBlock(ctx, &id)
+	if err != nil {
+		return err
+	}
+
+	b := &pb.Block{
+		Cid:     block.Cid().String(),
+		RawData: block.RawData(),
+	}
+	a, err := ptypes.MarshalAny(b)
+	if err != nil {
+		return err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_BLOCK,
+		Payload:     a,
+	}
+
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	return n.Service.SendMessage(context.Background(), p, &m)
+}
+
+func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
+	var s []string
+	for _, d := range ids {
+		s = append(s, d.String())
+	}
+	cList := new(pb.CidList)
+	cList.Cids = s
+
+	a, err := ptypes.MarshalAny(cList)
+	if err != nil {
+		return err
+	}
+
+	m := pb.Message{
+		MessageType: pb.Message_STORE,
+		Payload:     a,
+	}
+
+	p, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return err
+	}
+	pmes, err := n.Service.SendRequest(context.Background(), p, &m)
+	if err != nil {
+		return err
+	}
+	defer n.Service.DisconnectFromPeer(p)
+	if pmes.Payload == nil {
+		return errors.New("Peer responded with nil payload")
+	}
+	if pmes.MessageType == pb.Message_ERROR {
+		log.Errorf("Error response from %s: %s", peerId, string(pmes.Payload.Value))
+		return errors.New("Peer responded with error message")
+	}
+
+	resp := new(pb.CidList)
+	err = ptypes.UnmarshalAny(pmes.Payload, resp)
+	if err != nil {
+		return err
+	}
+	if len(resp.Cids) == 0 {
+		log.Debugf("Peer %s requested no blocks", peerId)
+		return nil
+	}
+	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerId)
+	for _, id := range resp.Cids {
+		decoded, err := cid.Decode(id)
+		if err != nil {
+			continue
+		}
+		n.SendBlock(peerId, *decoded)
 	}
 	return nil
 }

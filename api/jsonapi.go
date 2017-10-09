@@ -1,10 +1,11 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	mh "gx/ipfs/QmVGtdTZdTFaLsaj2RwdVG8jcjNNcp1DE914DKZ2kHmXHw/go-multihash"
+	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -19,8 +20,8 @@ import (
 	"encoding/hex"
 
 	"crypto/sha256"
-	ps "gx/ipfs/QmXZSd1qR5BxZkPyuwfT5jpqQFScZccoZvDneXsKzCNHWX/go-libp2p-peerstore"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
+	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"sync"
 
 	"bytes"
@@ -40,9 +41,8 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	routing "github.com/ipfs/go-ipfs/routing/dht"
-	"golang.org/x/net/context"
-	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	routing "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
 	"io/ioutil"
 )
 
@@ -1817,43 +1817,51 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
 			found := make(map[string]bool)
+			foundMu := sync.Mutex{}
 			for p := range peerChan {
 				go func(pi ps.PeerInfo) {
 					pid, err := core.ExtractIDFromPointer(pi)
 					if err != nil {
 						return
 					}
-					if !found[pid] {
-						found[pid] = true
-						if strings.ToLower(include) == "profile" {
-							profile, err := i.node.FetchProfile(pid, false)
-							if err != nil {
-								return
-							}
-							resp := pb.PeerAndProfileWithID{id, pid, &profile}
-							m := jsonpb.Marshaler{
-								EnumsAsInts:  false,
-								EmitDefaults: true,
-								Indent:       "    ",
-								OrigName:     false,
-							}
-							respJson, err := m.MarshalToString(&resp)
-							if err != nil {
-								return
-							}
-							b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
-							if err != nil {
-								return
-							}
-							i.node.Broadcast <- b
-						} else {
-							resp := wsResp{id, pid}
-							respJson, err := json.MarshalIndent(resp, "", "    ")
-							if err != nil {
-								return
-							}
-							i.node.Broadcast <- []byte(respJson)
+
+					// Check and set the peer in `found` with locking
+					foundMu.Lock()
+					if found[pid] {
+						foundMu.Unlock()
+						return
+					}
+					found[pid] = true
+					foundMu.Unlock()
+
+					if strings.ToLower(include) == "profile" {
+						profile, err := i.node.FetchProfile(pid, false)
+						if err != nil {
+							return
 						}
+						resp := pb.PeerAndProfileWithID{id, pid, &profile}
+						m := jsonpb.Marshaler{
+							EnumsAsInts:  false,
+							EmitDefaults: true,
+							Indent:       "    ",
+							OrigName:     false,
+						}
+						respJson, err := m.MarshalToString(&resp)
+						if err != nil {
+							return
+						}
+						b, err := SanitizeProtobuf(respJson, new(pb.PeerAndProfileWithID))
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- b
+					} else {
+						resp := wsResp{id, pid}
+						respJson, err := json.MarshalIndent(resp, "", "    ")
+						if err != nil {
+							return
+						}
+						i.node.Broadcast <- []byte(respJson)
 					}
 				}(p)
 			}

@@ -1,14 +1,10 @@
 package core
 
 import (
-	"bytes"
 	"errors"
-	routing "gx/ipfs/QmNdaQ8itUU9jEZUwTsG4gHMaPmRfi6FEe89QjQAFbep3M/go-libp2p-routing"
-	libp2p "gx/ipfs/QmP1DfoUjiWH2ZBo1PBH6FupdBucbDepx3HpWmEY6JMUpY/go-libp2p-crypto"
-	peer "gx/ipfs/QmdS9KpbDyPrieswibZhkod1oXqRwZJrUPzxCofAMWpFGq/go-libp2p-peer"
-	gonet "net"
-	"net/http"
-	"net/url"
+	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
+	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"path"
 	"time"
 
@@ -27,11 +23,12 @@ import (
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"sync"
 )
 
 var (
-	VERSION   = "0.9.2"
+	VERSION   = "0.9.3"
 	USERAGENT = "/openbazaar-go:" + VERSION + "/"
 )
 
@@ -83,8 +80,8 @@ type OpenBazaarNode struct {
 	// A service that periodically fetches and caches the bitcoin exchange rates
 	ExchangeRates bitcoin.ExchangeRates
 
-	// An optional gateway URL where we can crosspost data to ensure persistence
-	CrosspostGateways []*url.URL
+	// Optional nodes to push user data to
+	PushNodes []peer.ID
 
 	// The user-agent for this node
 	UserAgent string
@@ -94,10 +91,15 @@ type OpenBazaarNode struct {
 
 	// Manage blocked peers
 	BanManager *net.BanManager
+
+	// Allow other nodes to push data to this node for storage
+	AcceptStoreRequests bool
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
+var PublishLock sync.Mutex
+var InitalPublishComplete bool = false
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
@@ -117,34 +119,52 @@ func (n *OpenBazaarNode) SeedNode() error {
 		seedLock.Unlock()
 		return aerr
 	}
+	n.RootHash = rootHash
 	seedLock.Unlock()
-
-	for _, g := range n.CrosspostGateways {
-		go func(u *url.URL) {
-			req, err := http.NewRequest("PUT", u.String()+path.Join("ipfs", rootHash), new(bytes.Buffer))
-			if err != nil {
-				return
-			}
-			dial := gonet.Dial
-			if n.TorDialer != nil {
-				dial = n.TorDialer.Dial
-			}
-			tbTransport := &http.Transport{Dial: dial}
-			client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
-			client.Do(req)
-		}(g)
-	}
+	InitalPublishComplete = true
 	go n.publish(rootHash)
 	return nil
 }
 
 func (n *OpenBazaarNode) publish(hash string) {
+	// Multiple publishes may have been queued
+	// We only need to publish the most recent
+	PublishLock.Lock()
+	defer PublishLock.Unlock()
+	if hash != n.RootHash {
+		return
+	}
+
 	if inflightPublishRequests == 0 {
 		n.Broadcast <- notifications.StatusNotification{"publishing"}
 	}
-	var err error
+
+	id, err := cid.Decode(hash)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	var graph []cid.Cid
+	if len(n.PushNodes) > 0 {
+		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+	}
+	for _, p := range n.PushNodes {
+		go func(pid peer.ID) {
+			err := n.SendStore(pid.Pretty(), graph)
+			if err != nil {
+				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
+			}
+		}(p)
+	}
+
 	inflightPublishRequests++
 	_, err = ipfs.Publish(n.Context, hash)
+
 	inflightPublishRequests--
 	if inflightPublishRequests == 0 {
 		if err != nil {

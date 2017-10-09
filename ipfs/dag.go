@@ -3,7 +3,7 @@ package ipfs
 import (
 	"context"
 	"github.com/ipfs/go-ipfs/merkledag"
-	"gx/ipfs/QmYhQaCYEcaPPjxJX7YcPcVKkQfRy6sJ7B3XmGFk82XYdQ/go-cid"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"sync"
 )
 
