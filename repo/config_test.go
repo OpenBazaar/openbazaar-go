@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const testConfigFolder = "testdata"
@@ -125,6 +126,28 @@ func TestGetDropboxApiToken(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("GetDropboxApiToken didn't throw an error")
+	}
+}
+
+func TestRepublishInterval(t *testing.T) {
+	configFile, err := ioutil.ReadFile(testConfigPath)
+	if err != nil {
+		t.Error(err)
+	}
+	interval, err := GetRepublishInterval(configFile)
+	if interval != time.Hour*24 {
+		t.Error("RepublishInterval does not equal expected value")
+	}
+	if err != nil {
+		t.Error("RepublishInterval threw an unexpected error")
+	}
+
+	interval, err = GetRepublishInterval([]byte{})
+	if interval != time.Second*0 {
+		t.Error("Expected zero duration, got ", interval)
+	}
+	if err == nil {
+		t.Error("GetRepublishInterval didn't throw an error")
 	}
 }
 

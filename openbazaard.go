@@ -48,6 +48,7 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
+	tm "github.com/buger/goterm"
 	"github.com/fatih/color"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -394,11 +395,6 @@ func (x *Init) Execute(args []string) error {
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
 
-	err := core.CheckAndSetUlimit()
-	if err != nil {
-		return err
-	}
-
 	if x.Testnet && x.Regtest {
 		return errors.New("Invalid combination of testnet and regtest modes")
 	}
@@ -442,7 +438,7 @@ func (x *Start) Execute(args []string) error {
 		backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 		logging.SetBackend(backendStdoutFormatter)
 	} else {
-		printInPlace("initializing...")
+		DrawTerminal("initializing...")
 	}
 
 	if !x.NoLogFiles {
@@ -481,6 +477,11 @@ func (x *Start) Execute(args []string) error {
 		level = logging.DEBUG
 	}
 	logging.SetLevel(level, "")
+
+	err = core.CheckAndSetUlimit()
+	if err != nil {
+		return err
+	}
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -538,6 +539,11 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	resolverConfig, err := repo.GetResolverConfig(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	republishInterval, err := repo.GetRepublishInterval(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -1005,11 +1011,11 @@ func (x *Start) Execute(args []string) error {
 
 	go func() {
 		if !x.Verbose {
-			printInPlace("bootstrapping...")
+			DrawTerminal("bootstrapping...")
 		}
 		<-dht.DefaultBootstrapConfig.DoneChan
 		if !x.Verbose {
-			printInPlace("downloading messages...")
+			DrawTerminal("downloading messages...")
 		}
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
@@ -1032,17 +1038,18 @@ func (x *Start) Execute(args []string) error {
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
 		if !x.Verbose {
-			printInPlace("publishing...")
+			DrawTerminal("publishing...")
 		}
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
+		core.Node.SetUpRepublisher(republishInterval)
 		if !x.Verbose {
+			time.Sleep(time.Second * 3)
 			core.PublishLock.Lock()
-			printInPlace("Running...")
+			DrawTerminal("running...")
 			core.PublishLock.Unlock()
 		}
-
 	}()
 
 	// Start gateway
@@ -1232,11 +1239,22 @@ func printSplashScreen() {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v" + core.VERSION + " starting...")
+	fmt.Println("OpenBazaar Server v" + core.VERSION)
+	fmt.Println("")
+	fmt.Println("Welcome to OpenBazaar! Make sure you read the server docs to learn how to configure your node privately and securely <https://github.com/OpenBazaar/openbazaar-go/tree/master/docs>.")
+	fmt.Println("")
 }
 
-func printInPlace(s string) {
-	fmt.Printf("\033[0;0H")
-	fmt.Println(s)
-	fmt.Println("[Press Ctrl+C to exit]")
+var drawStarted bool
+
+func DrawTerminal(s string) {
+	if drawStarted {
+		tm.MoveCursorUp(3)
+	}
+	tm.ResetLine(" ")
+	tm.Println(fmt.Sprintf("- %s%s", s, strings.Repeat(" ", 100)))
+	tm.Println("[Press Ctrl+C to exit]")
+	tm.MoveCursorUp(1)
+	tm.Flush()
+	drawStarted = true
 }

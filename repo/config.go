@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"time"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -367,6 +368,33 @@ func GetDropboxApiToken(cfgBytes []byte) (string, error) {
 	}
 
 	return tokenStr, nil
+}
+
+func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
+	var cfgIface interface{}
+	json.Unmarshal(cfgBytes, &cfgIface)
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return time.Duration(0), MalformedConfigError
+	}
+
+	interval, ok := cfg["RepublishInterval"]
+	if !ok {
+		return time.Duration(0), MalformedConfigError
+	}
+	intervalStr, ok := interval.(string)
+	if !ok {
+		return time.Duration(0), MalformedConfigError
+	}
+	if intervalStr == "" {
+		return time.Duration(0), nil
+	}
+	d, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		return d, err
+	}
+	return d, nil
 }
 
 func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
