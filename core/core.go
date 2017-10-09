@@ -176,6 +176,18 @@ func (n *OpenBazaarNode) publish(hash string) {
 	}
 }
 
+func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
+	if interval == 0 {
+		return
+	}
+	ticker := time.NewTicker(interval)
+	go func() {
+		for range ticker.C {
+			n.SeedNode()
+		}
+	}()
+}
+
 /* This is a placeholder until the libsignal is operational.
    For now we will just encrypt outgoing offline messages with the long lived identity key.
    Optionally you may provide a public key, to avoid doing an IPFS lookup */

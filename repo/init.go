@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const RepoVersion = "3"
+const RepoVersion = "4"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -239,6 +239,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		return err
 	}
 	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+		return err
+	}
+	if err := extendConfigFile(r, "RepublishInterval", "24h"); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "JSON-API", a); err != nil {

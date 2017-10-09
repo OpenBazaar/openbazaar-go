@@ -532,6 +532,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error(err)
 		return err
 	}
+	republishInterval, err := repo.GetRepublishInterval(configFile)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -1018,6 +1023,7 @@ func (x *Start) Execute(args []string) error {
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
+		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
 	// Start gateway
