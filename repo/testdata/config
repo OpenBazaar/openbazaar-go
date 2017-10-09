@@ -111,6 +111,7 @@
     "Interval": "",
     "Strategy": ""
   },
+  "RepublishInterval": "24h",
   "Resolvers": {
     ".id": "https://resolver.onename.com/"
   },

@@ -309,6 +309,15 @@ func (n *Node) Start() error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 	n.node.RootHash = ipath.Path(e.Value).String()
 
+	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
+	if err != nil {
+		return nil, err
+	}
+	republishInterval, err := repo.GetRepublishInterval(configFile)
+	if err != nil {
+		return nil, err
+	}
+
 	// Offline messaging storage
 	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, ctx, n.node.PushNodes, n.node.SendStore)
 
@@ -350,6 +359,7 @@ func (n *Node) Start() error {
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
+		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
 	return nil
