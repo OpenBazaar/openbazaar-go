@@ -1246,15 +1246,17 @@ func printSplashScreen() {
 }
 
 var drawStarted bool
+var lastDrawnStateLen = 0
 
 func DrawTerminal(s string) {
 	if drawStarted {
 		tm.MoveCursorUp(3)
 	}
 	tm.ResetLine(" ")
-	tm.Println(fmt.Sprintf("- %s%s", s, strings.Repeat(" ", 100)))
+	tm.Printf(fmt.Sprintf("- %s%s\n\n", s, strings.Repeat(" ", lastDrawnStateLen)))
 	tm.Println("[Press Ctrl+C to exit]")
 	tm.MoveCursorUp(1)
 	tm.Flush()
 	drawStarted = true
+	lastDrawnStateLen = len(s)
 }
