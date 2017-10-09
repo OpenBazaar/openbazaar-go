@@ -125,6 +125,7 @@ type Start struct {
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	AuthCookie           string   `short:"c" long:"authcookie" description:"turn on API authentication and use this specific cookie"`
 	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
+	Verbose              bool     `short:"v" long:"verbose" description:"print openbazaar logs to stdout"`
 	TorPassword          string   `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
 	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
 	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
@@ -435,14 +436,23 @@ func (x *Start) Execute(args []string) error {
 		MaxBackups: 3,
 		MaxAge:     30, // Days
 	}
-	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(backendStdoutFormatter)
+	var backendStdoutFormatter logging.Backend
+	if x.Verbose {
+		backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
+		backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+		logging.SetBackend(backendStdoutFormatter)
+	} else {
+		printInPlace("initializing...")
+	}
 
 	if !x.NoLogFiles {
 		backendFile := logging.NewLogBackend(w, "", 0)
 		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-		logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		if x.Verbose {
+			logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		} else {
+			logging.SetBackend(backendFileFormatter)
+		}
 		ipfslogging.LdJSONFormatter()
 		w2 := &lumberjack.Logger{
 			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
@@ -994,7 +1004,13 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
+		if !x.Verbose {
+			printInPlace("bootstrapping...")
+		}
 		<-dht.DefaultBootstrapConfig.DoneChan
+		if !x.Verbose {
+			printInPlace("downloading messages...")
+		}
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
@@ -1015,9 +1031,18 @@ func (x *Start) Execute(args []string) error {
 		}
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
+		if !x.Verbose {
+			printInPlace("publishing...")
+		}
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
+		if !x.Verbose {
+			core.PublishLock.Lock()
+			printInPlace("Running...")
+			core.PublishLock.Unlock()
+		}
+
 	}()
 
 	// Start gateway
@@ -1208,4 +1233,10 @@ func printSplashScreen() {
 	white.DisableColor()
 	fmt.Println("")
 	fmt.Println("OpenBazaar Server v" + core.VERSION + " starting...")
+}
+
+func printInPlace(s string) {
+	fmt.Printf("\033[0;0H")
+	fmt.Println(s)
+	fmt.Println("[Press Ctrl+C to exit]")
 }

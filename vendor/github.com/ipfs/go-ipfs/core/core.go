@@ -75,7 +75,6 @@ import (
 	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 	circuit "gx/ipfs/QmbMNjK69isbpzVGKKrsnM7Sqyh3TVKAphRn5WuUhwTFbW/go-libp2p-circuit"
 	floodsub "gx/ipfs/Qmdnza7rLi7CMNNwNhNkcs9piX5sf6rxE8FrCsPzYtUEUi/floodsub"
-
 )
 
 const IpnsValidatorTag = "ipns"
