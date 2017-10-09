@@ -88,6 +88,7 @@ func (dht *IpfsDHT) BootstrapWithConfig(cfg BootstrapConfig) (goprocess.Process,
 	defer bootstrapOnce.Do(func() { close(DefaultBootstrapConfig.DoneChan) })
 
 	dht.runBootstrap(ctx, cfg)
+
 	proc := periodicproc.Tick(cfg.Period, dht.bootstrapWorker(cfg))
 
 	return proc, nil
@@ -117,6 +118,7 @@ func (dht *IpfsDHT) bootstrapWorker(cfg BootstrapConfig) func(worker goprocess.P
 	return func(worker goprocess.Process) {
 		// it would be useful to be able to send out signals of when we bootstrap, too...
 		// maybe this is a good case for whole module event pub/sub?
+
 		ctx := dht.Context()
 		if err := dht.runBootstrap(ctx, cfg); err != nil {
 			log.Warning(err)

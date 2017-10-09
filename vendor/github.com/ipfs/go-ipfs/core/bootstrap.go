@@ -53,6 +53,8 @@ type BootstrapConfig struct {
 	BootstrapPeers func() []pstore.PeerInfo
 }
 
+var bootstrapOnce sync.Once
+
 // DefaultBootstrapConfig specifies default sane parameters for bootstrapping.
 var DefaultBootstrapConfig = BootstrapConfig{
 	MinPeerThreshold:  4,
@@ -67,8 +69,6 @@ func BootstrapConfigWithPeers(pis []pstore.PeerInfo) BootstrapConfig {
 	}
 	return cfg
 }
-
-var bootstrapOnce sync.Once
 
 // Bootstrap kicks off IpfsNode bootstrapping. This function will periodically
 // check the number of open connections and -- if there are too few -- initiate
