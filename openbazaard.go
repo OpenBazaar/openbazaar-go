@@ -48,6 +48,7 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
+	tm "github.com/buger/goterm"
 	"github.com/fatih/color"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -125,6 +126,7 @@ type Start struct {
 	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	AuthCookie           string   `short:"c" long:"authcookie" description:"turn on API authentication and use this specific cookie"`
 	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
+	Verbose              bool     `short:"v" long:"verbose" description:"print openbazaar logs to stdout"`
 	TorPassword          string   `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
 	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
 	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
@@ -393,11 +395,6 @@ func (x *Init) Execute(args []string) error {
 func (x *Start) Execute(args []string) error {
 	printSplashScreen()
 
-	err := core.CheckAndSetUlimit()
-	if err != nil {
-		return err
-	}
-
 	if x.Testnet && x.Regtest {
 		return errors.New("Invalid combination of testnet and regtest modes")
 	}
@@ -435,14 +432,23 @@ func (x *Start) Execute(args []string) error {
 		MaxBackups: 3,
 		MaxAge:     30, // Days
 	}
-	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(backendStdoutFormatter)
+	var backendStdoutFormatter logging.Backend
+	if x.Verbose {
+		backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
+		backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+		logging.SetBackend(backendStdoutFormatter)
+	} else {
+		DrawTerminal("initializing...")
+	}
 
 	if !x.NoLogFiles {
 		backendFile := logging.NewLogBackend(w, "", 0)
 		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-		logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		if x.Verbose {
+			logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		} else {
+			logging.SetBackend(backendFileFormatter)
+		}
 		ipfslogging.LdJSONFormatter()
 		w2 := &lumberjack.Logger{
 			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
@@ -471,6 +477,11 @@ func (x *Start) Execute(args []string) error {
 		level = logging.DEBUG
 	}
 	logging.SetLevel(level, "")
+
+	err = core.CheckAndSetUlimit()
+	if err != nil {
+		return err
+	}
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -999,7 +1010,13 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
+		if !x.Verbose {
+			DrawTerminal("bootstrapping...")
+		}
 		<-dht.DefaultBootstrapConfig.DoneChan
+		if !x.Verbose {
+			DrawTerminal("downloading messages...")
+		}
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
 		go MR.Run()
@@ -1020,10 +1037,19 @@ func (x *Start) Execute(args []string) error {
 		}
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
+		if !x.Verbose {
+			DrawTerminal("publishing...")
+		}
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
 		core.Node.SetUpRepublisher(republishInterval)
+		if !x.Verbose {
+			time.Sleep(time.Second * 3)
+			core.PublishLock.Lock()
+			DrawTerminal("running...")
+			core.PublishLock.Unlock()
+		}
 	}()
 
 	// Start gateway
@@ -1213,5 +1239,24 @@ func printSplashScreen() {
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")
-	fmt.Println("OpenBazaar Server v" + core.VERSION + " starting...")
+	fmt.Println("OpenBazaar Server v" + core.VERSION)
+	fmt.Println("")
+	fmt.Println("Welcome to OpenBazaar! Make sure you read the server docs to learn how to configure your node privately and securely <https://github.com/OpenBazaar/openbazaar-go/tree/master/docs>.")
+	fmt.Println("")
+}
+
+var drawStarted bool
+var lastDrawnStateLen = 0
+
+func DrawTerminal(s string) {
+	if drawStarted {
+		tm.MoveCursorUp(3)
+	}
+	tm.ResetLine(" ")
+	tm.Printf(fmt.Sprintf("- %s%s\n\n", s, strings.Repeat(" ", lastDrawnStateLen)))
+	tm.Println("[Press Ctrl+C to exit]")
+	tm.MoveCursorUp(1)
+	tm.Flush()
+	drawStarted = true
+	lastDrawnStateLen = len(s)
 }
