@@ -418,7 +418,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {
