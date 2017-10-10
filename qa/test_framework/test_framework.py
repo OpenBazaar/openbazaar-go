@@ -103,7 +103,7 @@ class OpenBazaarTestFramework(object):
                     return
 
     def start_node(self, node):
-        args = [self.binary, "start", "-d", node["data_dir"], *self.options]
+        args = [self.binary, "start", "-v", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process, node)
         node["peerId"] = peerId
