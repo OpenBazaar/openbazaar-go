@@ -3,9 +3,10 @@ package repo
 import (
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
-	"time"
 )
 
 var DefaultBootstrapAddresses = []string{
@@ -573,11 +574,11 @@ func datastoreConfig(repoRoot string) config.Datastore {
 				map[string]interface{}{
 					"mountpoint": "/",
 					"type":       "measure",
-					"prefix":     "badgerds.datastore",
+					"prefix":     "leveldb.datastore",
 					"child": map[string]interface{}{
-						"type":        "badgerds",
+						"type":        "levelds",
 						"path":        "datastore",
-						"syncWrites": false,
+						"compression": "none",
 					},
 				},
 			},
