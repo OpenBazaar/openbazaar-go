@@ -594,11 +594,11 @@ func datastoreConfig(repoRoot string) config.Datastore {
 				map[string]interface{}{
 					"mountpoint": "/",
 					"type":       "measure",
-					"prefix":     "leveldb.datastore",
+					"prefix":     "badgerds.datastore",
 					"child": map[string]interface{}{
-						"type":        "levelds",
+						"type":        "badgerds",
 						"path":        "datastore",
-						"compression": "none",
+						"syncWrites": false,
 					},
 				},
 			},
