@@ -9,10 +9,10 @@ sudo apt-get update
 sudo apt-get install build-essential git -y
 ```
 
-### Install Go 1.8 or greater
+### Install Go 1.9 or greater
 ```
-wget https://storage.googleapis.com/golang/go1.7.1.linux-amd64.tar.gz
-sudo tar -zxvf  go1.7.1.linux-amd64.tar.gz -C /usr/local/
+wget https://storage.googleapis.com/golang/go1.9.1.linux-amd64.tar.gz
+sudo tar -zxvf  go1.9.1.linux-amd64.tar.gz -C /usr/local/
 ```
 
 ### Setup Go
