@@ -35,7 +35,7 @@ func MigrateUp(repoPath string) error {
 	}
 	x := v
 	for _, m := range Migrations[v:] {
-		log.Noticef("Migrationg repo to version %d\n", x+1)
+		log.Noticef("Migrating repo to version %d\n", x+1)
 		err := m.Up(repoPath)
 		if err != nil {
 			return err
