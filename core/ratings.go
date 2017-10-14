@@ -3,15 +3,15 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"os"
 	"io/ioutil"
-	"encoding/json"
+	"os"
 	"path"
 )
 
