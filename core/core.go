@@ -183,6 +183,7 @@ func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for range ticker.C {
+			n.UpdateFollow()
 			n.SeedNode()
 		}
 	}()
