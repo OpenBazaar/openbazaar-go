@@ -417,7 +417,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
-		order.RefundAddress = n.Wallet.CurrentAddress(wallet.INTERNAL).EncodeAddress()
+		order.RefundAddress = n.Wallet.NewAddress(wallet.INTERNAL).EncodeAddress()
 	}
 	shipping := &pb.Order_Shipping{
 		ShipTo:       data.ShipTo,
