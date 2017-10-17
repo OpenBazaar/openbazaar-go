@@ -191,14 +191,14 @@ const profileJSON = `{
 const profileUpdateJSON = `{
     "handle": "satoshi",
     "name": "Craig Wright",
-    "location": "Austrailia"
+    "location": "Australia"
 }`
 
 const profileUpdatedJSON = `{
     "peerID": "QmSpuEe2XZy5DNYQHgL5uhe6DiaJWDiDkH2q1yjhoFd9PP",
     "handle": "satoshi",
     "name": "Craig Wright",
-    "location": "Austrailia",
+    "location": "Australia",
     "about": "",
     "shortDescription": "",
     "nsfw": false,

@@ -884,7 +884,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	comboMap := make(map[string]bool)
 	for _, sku := range listing.Item.Skus {
 		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
-			return errors.New("Skus must specifiy a variant combo when options are used")
+			return errors.New("Skus must specify a variant combo when options are used")
 		}
 		if len(sku.ProductID) > WordMaxCharacters {
 			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
@@ -932,7 +932,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		}
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
-			return errors.New("Unkown shipping option type")
+			return errors.New("Unknown shipping option type")
 		}
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
@@ -1011,7 +1011,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
 		}
 		if len(tax.TaxRegions) == 0 {
-			return errors.New("Tax must specifiy at least one region")
+			return errors.New("Tax must specify at least one region")
 		}
 		if len(tax.TaxRegions) > MaxCountryCodes {
 			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)

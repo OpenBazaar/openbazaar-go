@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"bytes"
+	"strconv"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -23,7 +25,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	ipfspath "github.com/ipfs/go-ipfs/path"
-	"strconv"
 )
 
 type option struct {
@@ -1396,7 +1397,7 @@ func validateVersionNumber(listing *pb.Listing) error {
 		return errors.New("Listing does not contain metadata")
 	}
 	if listing.Metadata.Version > ListingVersion {
-		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
+		return errors.New("Unknown listing version. You must upgrade to purchase this listing.")
 	}
 	return nil
 }

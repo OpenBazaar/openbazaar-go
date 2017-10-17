@@ -12,10 +12,11 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/test"
 
-	"github.com/op/go-logging"
 	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	"os"
+
+	"github.com/op/go-logging"
 )
 
 // testURIRoot is the root http URI to hit for testing
@@ -147,7 +148,7 @@ func runAPITest(t *testing.T, test apiTest) {
 		t.Fatal(err)
 	}
 
-	// Unless explicity saying any JSON is expected check for equality
+	// Unless explicitly saying any JSON is expected check for equality
 	if test.expectedResponseBody != anyResponseJSON {
 		var expectedJSON interface{}
 		err = json.Unmarshal([]byte(test.expectedResponseBody), &expectedJSON)
