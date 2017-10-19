@@ -403,6 +403,10 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
 	}
 
+	if vendorContract.VendorOrderConfirmation == nil {
+		return nil, errors.New("Received ORDER_CONFIRMATION message with nil confirmation object")
+	}
+
 	// Calc order ID
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
@@ -504,9 +508,13 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
+	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_DECLINED {
+		return nil, fmt.Errorf("Received duplicate REJECT message for order %s", rejectMsg.OrderID)
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -672,14 +680,22 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, err
 	}
 
+	if rc.Refund == nil {
+		return nil, errors.New("Received REFUND message with nil refund object")
+	}
+
 	if err := service.node.VerifySignaturesOnRefund(rc); err != nil {
 		return nil, err
 	}
 
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
+	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state != pb.OrderState_PARTIALLY_FULFILLED || state != pb.OrderState_AWAITING_FULFILLMENT {
+		return nil, fmt.Errorf("Received unexpected REFUND message for order %s", rc.Refund.OrderID)
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -795,10 +811,17 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		return nil, err
 	}
 
+	if len(rc.VendorOrderFulfillment) == 0 {
+		return nil, errors.New("Received FULFILLMENT message with no VendorOrderFulfillment objects")
+	}
+
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
+	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+	if state != pb.OrderState_PARTIALLY_FULFILLED || state != pb.OrderState_AWAITING_FULFILLMENT {
+		return nil, fmt.Errorf("Received unexpected FULFILLMENT message for order %s", rc.VendorOrderFulfillment[0].OrderId)
 	}
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
@@ -852,10 +875,18 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	if rc.BuyerOrderCompletion == nil {
+		return nil, errors.New("Recieved ORDER_COMPLETION with nil BuyerOrderCompletion object")
+	}
+
 	// Load the order
 	contract, state, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_COMPLETED {
+		return nil, fmt.Errorf("Received duplate ORDER_COMPLETION message for order %s", rc.BuyerOrderCompletion.OrderId)
 	}
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
