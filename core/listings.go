@@ -964,9 +964,20 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
 				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
-			for _, rule := range shippingOption.ShippingRules.Rules {
+			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
+				return fmt.Errorf("Shipping rules exceeds max of %d", MaxListItems)
+			}
+			for i, rule := range shippingOption.ShippingRules.Rules {
 				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
 					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+				}
+				for x, checkRule := range shippingOption.ShippingRules.Rules {
+					if x == i {
+						continue
+					}
+					if (rule.MinRange >= checkRule.MinRange && rule.MinRange <= checkRule.MaxRange) || (rule.MaxRange <= checkRule.MaxRange && rule.MaxRange >= checkRule.MinRange) {
+						return errors.New("Shipping rule ranges must not overlap")
+					}
 				}
 			}
 		}
