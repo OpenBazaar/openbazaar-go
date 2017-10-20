@@ -694,7 +694,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, net.OutOfOrderMessage
 	}
 
-	if state != pb.OrderState_PARTIALLY_FULFILLED || state != pb.OrderState_AWAITING_FULFILLMENT {
+	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
 		return nil, fmt.Errorf("Received unexpected REFUND message for order %s", rc.Refund.OrderID)
 	}
 
@@ -820,7 +820,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
-	if state != pb.OrderState_PARTIALLY_FULFILLED || state != pb.OrderState_AWAITING_FULFILLMENT {
+	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
 		return nil, fmt.Errorf("Received unexpected FULFILLMENT message for order %s", rc.VendorOrderFulfillment[0].OrderId)
 	}
 
