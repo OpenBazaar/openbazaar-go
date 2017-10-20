@@ -83,9 +83,9 @@ func TestSettingsUpdate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	l := "English"
+	l := "/openbazaar-go:0.4/"
 	setUpdt := repo.SettingsData{
-		Language: &l,
+		Version: &l,
 	}
 	err = sdb.Update(setUpdt)
 	if err != nil {
@@ -106,7 +106,7 @@ func TestSettingsUpdate(t *testing.T) {
 	if *set.Country != "UNITED_STATES" {
 		t.Error("Settings update failed to put correct value")
 	}
-	if *set.Language != "English" {
+	if *set.Version != "/openbazaar-go:0.4/" {
 		t.Error("Settings update failed to put correct value")
 	}
 	if *set.TermsAndConditions != "None" {

@@ -86,9 +86,6 @@ func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	if settings.Country == nil {
 		settings.Country = current.Country
 	}
-	if settings.Language == nil {
-		settings.Language = current.Language
-	}
 	if settings.TermsAndConditions == nil {
 		settings.TermsAndConditions = current.TermsAndConditions
 	}
@@ -106,6 +103,9 @@ func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	}
 	if settings.SMTPSettings == nil {
 		settings.SMTPSettings = current.SMTPSettings
+	}
+	if settings.Version == nil {
+		settings.Version = current.Version
 	}
 	err = s.Put(settings)
 	if err != nil {
