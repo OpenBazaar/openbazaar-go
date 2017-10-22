@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -148,6 +149,9 @@ func (c *CasesDB) MarkAsUnread(orderID string) error {
 }
 
 func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error {
+	if resolution == nil {
+		return errors.New("Dispute resolution should not be nil")
+	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
 		EmitDefaults: true,
@@ -156,11 +160,9 @@ func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) 
 	}
 	var rOut string
 	var err error
-	if resolution != nil {
-		rOut, err = m.MarshalToString(resolution)
-		if err != nil {
-			return err
-		}
+	rOut, err = m.MarshalToString(resolution)
+	if err != nil {
+		return err
 	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
