@@ -1,0 +1,49 @@
+package resync
+
+import (
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/wallet-interface"
+	"github.com/op/go-logging"
+	"time"
+)
+
+var log = logging.MustGetLogger("ResyncManager")
+
+var ResyncInterval = time.Hour
+
+type ResyncManager struct {
+	sales repo.Sales
+	w     wallet.Wallet
+}
+
+func NewResyncManager(salesDB repo.Sales, w wallet.Wallet) *ResyncManager {
+	return &ResyncManager{salesDB, w}
+}
+
+func (r *ResyncManager) Start() {
+	t := time.NewTicker(ResyncInterval)
+	for ; true; <-t.C {
+		r.checkUnfunded()
+	}
+}
+
+func (r *ResyncManager) checkUnfunded() {
+	unfunded, err := r.sales.GetNeedsResync()
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	if len(unfunded) == 0 {
+		return
+	}
+	rollbackTime := time.Unix(2147483647, 0)
+	for _, uf := range unfunded {
+		if uf.Timestamp.Before(rollbackTime) {
+			rollbackTime = uf.Timestamp.Add(-time.Hour * 24)
+		}
+		r.sales.SetNeedsResync(uf.OrderId, false)
+	}
+	if r.w != nil {
+		r.w.ReSyncBlockchain(rollbackTime)
+	}
+}

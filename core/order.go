@@ -77,6 +77,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
+
 		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
 		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 		if err != nil {
@@ -260,6 +261,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+
 		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
 		contract, err = n.SignOrder(contract)

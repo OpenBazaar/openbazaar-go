@@ -135,3 +135,8 @@ type Case struct {
 	Read               bool      `json:"read"`
 	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
+
+type UnfundedSale struct {
+	OrderId   string
+	Timestamp time.Time
+}

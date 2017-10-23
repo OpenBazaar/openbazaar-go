@@ -31,22 +31,12 @@ func (migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 	if err != nil {
 		return err
 	}
-	stmt1, err := tx.Prepare("ALTER TABLE sales ADD COLUMN height integer;")
+	stmt, err := tx.Prepare("ALTER TABLE sales ADD COLUMN needsSync integer;")
 	if err != nil {
 		return err
 	}
-	defer stmt1.Close()
-	_, err = stmt1.Exec()
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	stmt2, err := tx.Prepare("ALTER TABLE sales ADD COLUMN needsSync integer;")
-	if err != nil {
-		return err
-	}
-	defer stmt2.Close()
-	_, err = stmt2.Exec()
+	defer stmt.Close()
+	_, err = stmt.Exec()
 	if err != nil {
 		tx.Rollback()
 		return err

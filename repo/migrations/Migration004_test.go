@@ -28,7 +28,7 @@ func TestMigration004(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, err = db.Exec("UPDATE sales set height=?, needsSync=? WHERE orderID=?", 400000, 1, "asdf")
+	_, err = db.Exec("UPDATE sales set needsSync=? WHERE orderID=?", 1, "asdf")
 	if err != nil {
 		t.Error(err)
 		return
@@ -38,7 +38,7 @@ func TestMigration004(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	_, err = db.Exec("UPDATE sales set height=?, needsSync=? WHERE orderID=?", 400000, 1, "asdf")
+	_, err = db.Exec("UPDATE sales set needsSync=? WHERE orderID=?", 1, "asdf")
 	if err == nil {
 		t.Error("Failed to drop columns")
 		return
