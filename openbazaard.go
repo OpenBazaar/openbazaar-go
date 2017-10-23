@@ -847,9 +847,6 @@ func (x *Start) Execute(args []string) error {
 			usetor = true
 		}
 		cryptoWallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
-
-		// Bitcoind bizarrely doesn't offer rescan from height/timestamp so this is too heavyweight to do automatically
-		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	default:
 		log.Fatal("Unknown wallet type")
 	}
@@ -1040,7 +1037,9 @@ func (x *Start) Execute(args []string) error {
 			su := bitcoin.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
-			go resyncManager.Start()
+			if resyncManager != nil {
+				go resyncManager.Start()
+			}
 		}
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
