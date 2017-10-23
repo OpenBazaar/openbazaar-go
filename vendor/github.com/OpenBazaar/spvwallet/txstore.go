@@ -365,7 +365,6 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 		ts.cbMutex.Unlock()
 		ts.PopulateAdrs()
-		hits++
 	}
 	return hits, err
 }

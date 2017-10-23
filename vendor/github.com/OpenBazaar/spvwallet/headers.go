@@ -33,6 +33,9 @@ type Headers interface {
 	// Delete all headers after the MAX_HEADERS most recent
 	Prune() error
 
+	// Delete all headers after the given height
+	DeleteAfter(height uint32) error
+
 	// Returns all information about the previous header
 	GetPreviousHeader(header wire.BlockHeader) (StoredHeader, error)
 
@@ -197,6 +200,35 @@ func (h *HeaderDB) Prune() error {
 				}
 			}
 
+		}
+		return nil
+	})
+}
+
+func (h *HeaderDB) DeleteAfter(height uint32) error {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+	return h.db.Update(func(btx *bolt.Tx) error {
+		hdrs := btx.Bucket(BKTHeaders)
+		var toDelete [][]byte
+		err := hdrs.ForEach(func(k, v []byte) error {
+			sh, err := deserializeHeader(v)
+			if err != nil {
+				return err
+			}
+			if sh.height > height {
+				toDelete = append(toDelete, k)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		for _, k := range toDelete {
+			err := hdrs.Delete(k)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})

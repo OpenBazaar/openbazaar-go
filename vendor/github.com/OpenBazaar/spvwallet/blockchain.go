@@ -34,10 +34,11 @@ const (
 
 // Wrapper around Headers implementation that handles all blockchain operations
 type Blockchain struct {
-	lock   *sync.Mutex
-	params *chaincfg.Params
-	db     Headers
-	state  ChainState
+	lock        *sync.Mutex
+	params      *chaincfg.Params
+	db          Headers
+	state       ChainState
+	crationDate time.Time
 }
 
 func NewBlockchain(filePath string, walletCreationDate time.Time, params *chaincfg.Params) (*Blockchain, error) {
@@ -46,9 +47,10 @@ func NewBlockchain(filePath string, walletCreationDate time.Time, params *chainc
 		return nil, err
 	}
 	b := &Blockchain{
-		lock:   new(sync.Mutex),
-		params: params,
-		db:     hdb,
+		lock:        new(sync.Mutex),
+		params:      params,
+		db:          hdb,
+		crationDate: walletCreationDate,
 	}
 
 	h, err := b.db.Height()
@@ -339,6 +341,51 @@ func (b *Blockchain) GetCommonAncestor(bestHeader, prevBestHeader StoredHeader) 
 			return nil, err
 		}
 	}
+}
+
+// Rollback the header database to the last header before time t.
+// We shouldn't go back further than the checkpoint
+func (b *Blockchain) Rollback(t time.Time) error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+	checkpoint := GetCheckpoint(b.crationDate, b.params)
+	checkPointHash := checkpoint.Header.BlockHash()
+	sh, err := b.db.GetBestHeader()
+	if err != nil {
+		return err
+	}
+	// If t is greater than the timestamp at the tip then do nothing
+	if sh.header.Timestamp.Before(t) {
+		return nil
+	}
+	// If the tip is our checkpoint then do nothing
+	checkHash := sh.header.BlockHash()
+	if checkHash.IsEqual(&checkPointHash) {
+		return nil
+	}
+	rollbackHeight := uint32(0)
+	for i := 0; i < 1000000000; i++ {
+		sh, err = b.db.GetPreviousHeader(sh.header)
+		if err != nil {
+			return err
+		}
+		checkHash := sh.header.BlockHash()
+		// If we rolled back to the checkpoint then stop here and set the checkpoint as the tip
+		if checkHash.IsEqual(&checkPointHash) {
+			rollbackHeight = checkpoint.Height
+			break
+		}
+		// If we hit a header created before t then stop here and set this header as the tip
+		if sh.header.Timestamp.Before(t) {
+			rollbackHeight = sh.height
+			break
+		}
+	}
+	err = b.db.DeleteAfter(rollbackHeight)
+	if err != nil {
+		return err
+	}
+	return b.db.Put(sh, true)
 }
 
 func (b *Blockchain) ChainState() ChainState {
