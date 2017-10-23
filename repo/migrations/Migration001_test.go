@@ -37,7 +37,7 @@ func TestMigration001(t *testing.T) {
 	var m migration001
 
 	// Up
-	err = m.Up("./")
+	err = m.Up("./", "", false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -114,7 +114,7 @@ func TestMigration001(t *testing.T) {
 	}
 
 	// Down
-	err = m.Down("./")
+	err = m.Down("./", "", false)
 	if err != nil {
 		t.Error(err)
 	}
