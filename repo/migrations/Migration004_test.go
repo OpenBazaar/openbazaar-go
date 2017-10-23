@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -33,6 +34,14 @@ func TestMigration004(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	repoVer, err := ioutil.ReadFile("./repover")
+	if err != nil {
+		t.Error(err)
+	}
+	if string(repoVer) != "5" {
+		t.Error("Failed to write new repo version")
+	}
+
 	err = m.Down("./", "letmein", false)
 	if err != nil {
 		t.Error(err)
@@ -43,5 +52,13 @@ func TestMigration004(t *testing.T) {
 		t.Error("Failed to drop columns")
 		return
 	}
+	repoVer, err = ioutil.ReadFile("./repover")
+	if err != nil {
+		t.Error(err)
+	}
+	if string(repoVer) != "4" {
+		t.Error("Failed to write new repo version")
+	}
 	os.RemoveAll("./datastore")
+	os.RemoveAll("./repover")
 }

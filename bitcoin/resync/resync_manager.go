@@ -44,6 +44,7 @@ func (r *ResyncManager) checkUnfunded() {
 		r.sales.SetNeedsResync(uf.OrderId, false)
 	}
 	if r.w != nil {
+		log.Infof("Rolling back blockchain %s looking for payments for %d orders\n", time.Now().Sub(rollbackTime), len(unfunded))
 		r.w.ReSyncBlockchain(rollbackTime)
 	}
 }

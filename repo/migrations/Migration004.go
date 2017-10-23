@@ -5,9 +5,10 @@ import (
 	"path"
 
 	_ "github.com/mutecomm/go-sqlcipher"
+	"os"
 )
 
-var Migration004 migration003
+var Migration004 migration004
 
 type migration004 struct{}
 
@@ -42,6 +43,15 @@ func (migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 	tx.Commit()
+	f1, err := os.Create(path.Join(repoPath, "repover"))
+	if err != nil {
+		return err
+	}
+	_, err = f1.Write([]byte("5"))
+	if err != nil {
+		return err
+	}
+	f1.Close()
 	return nil
 }
 
@@ -105,5 +115,14 @@ func (migration004) Down(repoPath string, dbPassword string, testnet bool) error
 		return err
 	}
 	tx.Commit()
+	f1, err := os.Create(path.Join(repoPath, "repover"))
+	if err != nil {
+		return err
+	}
+	_, err = f1.Write([]byte("4"))
+	if err != nil {
+		return err
+	}
+	f1.Close()
 	return nil
 }

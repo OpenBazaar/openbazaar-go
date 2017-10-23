@@ -39,6 +39,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 		log.Noticef("Migrating repo to version %d\n", x+1)
 		err := m.Up(repoPath, dbPassword, testnet)
 		if err != nil {
+			log.Error(err)
 			return err
 		}
 		x++
