@@ -63,7 +63,9 @@ func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
 	if !ok {
 		return nil
 	}
-	ms.s.Close()
+	if ms != nil && ms.s != nil {
+		ms.s.Close()
+	}
 	delete(service.sender, p)
 	return nil
 }
