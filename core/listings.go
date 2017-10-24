@@ -968,7 +968,9 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 				return fmt.Errorf("Shipping rules exceeds max of %d", MaxListItems)
 			}
 			for i, rule := range shippingOption.ShippingRules.Rules {
-				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
+				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE ||
+					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE ||
+					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT) && rule.MaxRange <= rule.MinRange {
 					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
 				}
 				for x, checkRule := range shippingOption.ShippingRules.Rules {
