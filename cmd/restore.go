@@ -20,7 +20,9 @@ import (
 	"strings"
 
 	"bufio"
+	"errors"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -46,18 +48,24 @@ import (
 )
 
 type Restore struct {
-	Password    string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	DataDir     string `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	Testnet     bool   `short:"t" long:"testnet" description:"use the test network"`
-	TorPassword string `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
-	Tor         bool   `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
+	Password           string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
+	DataDir            string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Testnet            bool   `short:"t" long:"testnet" description:"use the test network"`
+	TorPassword        string `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
+	Tor                bool   `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
+	Mnemonic           string `short:"m" long:"mnemonic" description:"specify a mnemonic seed to use to derive the keychain"`
+	WalletCreationDate string `short:"w" long:"walletcreationdate" description:"specify the date the seed was created. if omitted the wallet will sync from the oldest checkpoint."`
 }
 
 func (x *Restore) Execute(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("This command will override your current user data if successful. Do you want to continue (y/n)?: ")
+	if x.Mnemonic == "" {
+		fmt.Print("This command will override any current user data. Do you want to continue? (y/n): ")
+	} else {
+		fmt.Print("This command will override any current user data as well as destroy your existing keys and history. Are you really, really sure you want to continue? (y/n): ")
+	}
 	yn, _ := reader.ReadString('\n')
-	if strings.ToLower(yn)[:1] != "y" {
+	if !(strings.ToLower(yn) == "y\n" || strings.ToLower(yn) == "yes\n" || strings.ToLower(yn)[:1] == "y") {
 		return nil
 	}
 
@@ -70,10 +78,23 @@ func (x *Restore) Execute(args []string) error {
 		repoPath = x.DataDir
 	}
 
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", x.Testnet, time.Now())
+	// Initialize repo if they included a mnemonic
+	creationDate := time.Now()
+	var sqliteDB *db.SQLiteDatastore
+	if x.Mnemonic != "" {
+		if x.WalletCreationDate != "" {
+			creationDate, err = time.Parse(time.RFC3339, x.WalletCreationDate)
+			if err != nil {
+				return errors.New("Wallet creation date timestamp must be in RFC3339 format")
+			}
+		}
+		os.RemoveAll(repoPath)
+	}
+	sqliteDB, err = InitializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet, creationDate)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
+
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
@@ -271,7 +292,7 @@ func (x *Restore) Execute(args []string) error {
 	wg := new(sync.WaitGroup)
 	wg.Add(10)
 	k, err := ipfs.Resolve(ctx, identity.PeerID)
-	if err != nil {
+	if err != nil || k == "" {
 		PrintError(fmt.Sprintf("IPNS record for %s not found on network\n", identity.PeerID))
 		return err
 	}
