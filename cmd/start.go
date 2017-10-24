@@ -417,7 +417,6 @@ func (x *Start) Execute(args []string) error {
 
 		var host *p2pbhost.BasicHost
 		if usingTor && !usingClearnet {
-
 			host = p2pbhost.New(network)
 		} else {
 			hostOpts := []interface{}{bwr}
