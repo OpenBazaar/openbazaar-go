@@ -32,6 +32,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/resync"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
@@ -798,6 +799,7 @@ func (x *Start) Execute(args []string) error {
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 
+	var resyncManager *resync.ResyncManager
 	var cryptoWallet wallet.Wallet
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
@@ -835,6 +837,7 @@ func (x *Start) Execute(args []string) error {
 			log.Error(err)
 			return err
 		}
+		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	case "bitcoind":
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
@@ -1034,6 +1037,9 @@ func (x *Start) Execute(args []string) error {
 			su := bitcoin.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
+			if resyncManager != nil {
+				go resyncManager.Start()
+			}
 		}
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()

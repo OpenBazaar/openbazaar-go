@@ -391,3 +391,63 @@ func TestSalesDB_GetAll(t *testing.T) {
 		t.Error("Returned incorrect number of query sales")
 	}
 }
+
+func TestSalesDB_SetNeedsResync(t *testing.T) {
+	saldb.Put("orderID", *contract, 0, false)
+	err := saldb.SetNeedsResync("orderID", true)
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := saldb.db.Prepare("select needsSync from sales where orderID=?")
+	defer stmt.Close()
+	var needsSyncInt int
+	err = stmt.QueryRow("orderID").Scan(&needsSyncInt)
+	if err != nil {
+		t.Error(err)
+	}
+	if needsSyncInt != 1 {
+		t.Errorf(`Expected %d got %d`, 1, needsSyncInt)
+	}
+	err = saldb.SetNeedsResync("orderID", false)
+	if err != nil {
+		t.Error(err)
+	}
+	err = stmt.QueryRow("orderID").Scan(&needsSyncInt)
+	if err != nil {
+		t.Error(err)
+	}
+	if needsSyncInt != 0 {
+		t.Errorf(`Expected %d got %d`, 0, needsSyncInt)
+	}
+}
+
+func TestSalesDB_GetNeedsResync(t *testing.T) {
+	saldb.Put("orderID", *contract, 1, false)
+	saldb.Put("orderID1", *contract, 1, false)
+	err := saldb.SetNeedsResync("orderID", true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = saldb.SetNeedsResync("orderID1", true)
+	if err != nil {
+		t.Error(err)
+	}
+	unfunded, err := saldb.GetNeedsResync()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(unfunded) != 2 {
+		t.Error("Return incorrect number of unfunded orders")
+	}
+	var a, b bool
+	for _, uf := range unfunded {
+		if uf.OrderId == "orderID" {
+			a = true
+		} else if uf.OrderId == "orderID1" {
+			b = true
+		}
+	}
+	if !a || !b {
+		t.Error("Failed to return correct unfunded orders")
+	}
+}

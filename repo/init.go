@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const RepoVersion = "4"
+const RepoVersion = "5"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -27,7 +27,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	if fsrepo.IsInitialized(repoRoot) {
-		err := MigrateUp(repoRoot)
+		err := MigrateUp(repoRoot, password, testnet)
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -20,6 +21,10 @@ type SalesDB struct {
 func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	if contract.BuyerOrder == nil || contract.BuyerOrder.Payment == nil {
+		return errors.New("BuyerOrder and BuyerOrder.Payment must not be nil")
+	}
 
 	readInt := 0
 	if read {
@@ -272,4 +277,42 @@ func (s *SalesDB) Count() int {
 	var count int
 	row.Scan(&count)
 	return count
+}
+
+func (s *SalesDB) GetNeedsResync() ([]repo.UnfundedSale, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	var ret []repo.UnfundedSale
+	rows, err := s.db.Query(`select orderID, timestamp from sales where state=? and needsSync=?`, 1, 1)
+	if err != nil {
+		return ret, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var orderID string
+		var timestamp int
+		err := rows.Scan(&orderID, &timestamp)
+		if err != nil {
+			return ret, err
+		}
+		if timestamp > 0 {
+			ret = append(ret, repo.UnfundedSale{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0)})
+		}
+	}
+	return ret, nil
+}
+
+func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	resyncInt := 0
+	if needsResync {
+		resyncInt = 1
+	}
+	_, err := s.db.Exec("update sales set needsSync=? where orderID=?", resyncInt, orderId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
