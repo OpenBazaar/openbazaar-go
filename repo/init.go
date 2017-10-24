@@ -11,8 +11,11 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/mitchellh/go-homedir"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -266,4 +269,34 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 		return "", err
 	}
 	return mnemonic, nil
+}
+
+/* Returns the directory to store repo data in.
+   It depends on the OS and whether or not we are on testnet. */
+func GetRepoPath(isTestnet bool) (string, error) {
+	// Set default base path and directory name
+	path := "~"
+	directoryName := "OpenBazaar2.0"
+
+	// Override OS-specific names
+	switch runtime.GOOS {
+	case "linux":
+		directoryName = ".openbazaar2.0"
+	case "darwin":
+		path = "~/Library/Application Support"
+	}
+
+	// Append testnet flag if on testnet
+	if isTestnet {
+		directoryName += "-testnet"
+	}
+
+	// Join the path and directory name, then expand the home path
+	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
+	if err != nil {
+		return "", err
+	}
+
+	// Return the shortest lexical representation of the path
+	return filepath.Clean(fullPath), nil
 }
