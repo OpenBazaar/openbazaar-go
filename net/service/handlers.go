@@ -425,9 +425,13 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
-	contract, _, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	contract, state, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if funded && state == pb.OrderState_AWAITING_FULFILLMENT || !funded && state == pb.OrderState_AWAITING_PAYMENT {
+		return nil, net.DuplicateMessage
 	}
 
 	// Validate the order confirmation
@@ -481,9 +485,13 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
+	contract, state, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_CANCELED {
+		return nil, net.DuplicateMessage
 	}
 
 	// Set message state to canceled
@@ -528,7 +536,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	if state == pb.OrderState_DECLINED {
-		return nil, fmt.Errorf("Received duplicate REJECT message for order %s", rejectMsg.OrderID)
+		return nil, net.DuplicateMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -709,7 +717,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
-		return nil, fmt.Errorf("Received unexpected REFUND message for order %s", rc.Refund.OrderID)
+		return nil, net.DuplicateMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -835,7 +843,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		return nil, net.OutOfOrderMessage
 	}
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
-		return nil, fmt.Errorf("Received unexpected FULFILLMENT message for order %s", rc.VendorOrderFulfillment[0].OrderId)
+		return nil, net.DuplicateMessage
 	}
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
@@ -900,7 +908,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	if state == pb.OrderState_COMPLETED {
-		return nil, fmt.Errorf("Received duplate ORDER_COMPLETION message for order %s", rc.BuyerOrderCompletion.OrderId)
+		return nil, net.DuplicateMessage
 	}
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion

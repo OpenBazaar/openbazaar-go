@@ -9,7 +9,10 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
-var OutOfOrderMessage error = errors.New("Message arrived out of order")
+var (
+	OutOfOrderMessage error = errors.New("Message arrived out of order")
+	DuplicateMessage  error = errors.New("Duplicate Message")
+)
 
 type NetworkService interface {
 	// Handle incoming streams
