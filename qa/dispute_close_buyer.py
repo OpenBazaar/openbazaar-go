@@ -259,7 +259,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         self.send_bitcoin_cmd("generate", 1)
-        time.sleep(2)
+        time.sleep(5)
 
         # Check bob received payout
         api_url = bob["gateway_url"] + "wallet/balance"

@@ -124,6 +124,9 @@ func (w *SPVWallet) onTx(p *peer.Peer, m *wire.MsgTx) {
 	w.mutex.Lock()
 	height, err := w.peerManager.DequeueTx(p, m.TxHash())
 	if err != nil {
+		if w.blockchain.ChainState() == SYNCING {
+			log.Warningf("Received unqued tx id: %s\n", m.TxHash().String())
+		}
 		w.mutex.Unlock()
 		return
 	}

@@ -138,7 +138,7 @@ class OpenBazaarTestFramework(object):
         self.send_bitcoin_cmd("generate", 1)
         self.bitcoin_address = self.send_bitcoin_cmd("getnewaddress")
         self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
-        self.send_bitcoin_cmd("generate", 432)
+        self.send_bitcoin_cmd("generate", 435)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
         while True:
