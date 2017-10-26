@@ -630,6 +630,10 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		}
 	}
 
+	if len(utxos) == 0 {
+		return errors.New("Cannot cancel order because utxo has already been spent")
+	}
+
 	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 	if err != nil {
 		return err
