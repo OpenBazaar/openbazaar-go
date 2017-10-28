@@ -10,18 +10,32 @@ import (
 	mafmt "gx/ipfs/QmZQa5J7j7kd44GGC4aKX8J9JGGzCMqwGzcEFqGV1YD57A/mafmt"
 
 	"context"
+	"crypto"
 	"crypto/rsa"
 	"encoding/base32"
-	"encoding/pem"
 	"github.com/yawning/bulb"
-	"github.com/yawning/bulb/utils/pkcs1"
 	"golang.org/x/net/proxy"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"net/url"
 	"strconv"
 	"strings"
 )
+
+type TorControl interface {
+	Dialer(auth *proxy.Auth) (proxy.Dialer, error)
+	Listener(port uint16, key crypto.PrivateKey) (net.Listener, error)
+}
+
+type ManualControl struct {
+	dialer proxy.Dialer
+}
+
+func (m *ManualControl) Dialer(auth *proxy.Auth) (proxy.Dialer, error) {
+	return m.dialer, nil
+}
+
+func (m *ManualControl) Listener(port uint16, key crypto.PrivateKey) (net.Listener, error) {
+	return net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(int(port)))
+}
 
 // IsValidOnionMultiAddr is used to validate that a multiaddr
 // is representing a Tor onion service
@@ -69,45 +83,73 @@ func IsValidOnionMultiAddr(a ma.Multiaddr) bool {
 
 // OnionTransport implements go-libp2p-transport's Transport interface
 type OnionTransport struct {
-	controlConn *bulb.Conn
+	controlConn TorControl
 	auth        *proxy.Auth
-	keysDir     string
-	keys        map[string]*rsa.PrivateKey
+	onionKey    *rsa.PrivateKey
 	onlyOnion   bool
 }
 
+type TransportConfig struct {
+	// AutoConfig controls whether the transport will use the bulb library to connect to the
+	// Tor control port and attempt to automatically configure a Tor Hidden Service. It will also
+	// use the Tor control to acquire the socks5 proxy. If AutoConfig is true the ControlAddr
+	// and KeysDir must be provided.
+	//
+	// If AutoConfig is false the user must have manually configured a Tor Hidden Service and must
+	// provide the onion url to when calling Listen(). If AutoConfig is false the socks5 proxy address
+	// must be provided as we wont be able to get it from the control port.
+	AutoConfig bool
+
+	// Must be provided if AutoConfig is true
+	ControlAddr string
+
+	// The Tor Control auth if password authentication is set in the torrc file.
+	Auth *proxy.Auth
+
+	// The 1024 bit RSA private key used for the onion address. Must be provided if AutoConfig is true.
+	OnionKey *rsa.PrivateKey
+
+	// If OnlyOnion is true the dialer will only be used to dial out on onion addresses. This is a
+	// useful configuration for dual stack nodes which want to dial to clearnet nodes using the clearnet.
+	OnlyOnion bool
+
+	// Must be provided is AutoConfig is false
+	SocksAddr string
+}
+
 // NewOnionTransport creates a OnionTransport
-//
-// controlNet and controlAddr contain the connecting information
-// for the tor control port; either TCP or UNIX domain socket.
-//
-// auth contains the optional tor control password
-// keysDir is the key material for the Tor onion service.
-//
-// if onlyOnion is true the dialer will only be used to dial out on onion addresses
-func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir string, onlyOnion bool) (*OnionTransport, error) {
-	conn, err := bulb.Dial(controlNet, controlAddr)
-	if err != nil {
-		return nil, err
-	}
-	var pw string
-	if auth != nil {
-		pw = auth.Password
-	}
-	if err := conn.Authenticate(pw); err != nil {
-		return nil, fmt.Errorf("Authentication failed: %v", err)
+func NewOnionTransport(config TransportConfig) (*OnionTransport, error) {
+	var conn TorControl
+	if config.AutoConfig {
+		torControlConn, err := bulb.Dial("tcp4", config.ControlAddr)
+		if err != nil {
+			return nil, err
+		}
+		var pw string
+		if config.Auth != nil {
+			pw = config.Auth.Password
+		}
+		if err := torControlConn.Authenticate(pw); err != nil {
+			return nil, fmt.Errorf("Authentication failed: %v", err)
+		}
+		conn = torControlConn
+	} else {
+		tbProxyURL, err := url.Parse("socks5://" + config.SocksAddr)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to parse proxy URL: %v\n", err)
+		}
+		tbDialer, err := proxy.FromURL(tbProxyURL, proxy.Direct)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to obtain proxy dialer: %v\n", err)
+		}
+		conn = &ManualControl{tbDialer}
 	}
 	o := OnionTransport{
 		controlConn: conn,
-		auth:        auth,
-		keysDir:     keysDir,
-		onlyOnion:   onlyOnion,
+		auth:        config.Auth,
+		onionKey:    config.OnionKey,
+		onlyOnion:   config.OnlyOnion,
 	}
-	keys, err := o.loadKeys()
-	if err != nil {
-		return nil, err
-	}
-	o.keys = keys
 	return &o, nil
 }
 
@@ -120,39 +162,6 @@ func (t *OnionTransport) TorDialer() (proxy.Dialer, error) {
 		return nil, err
 	}
 	return dialer, nil
-}
-
-// loadKeys loads keys into our keys map from files in the keys directory
-func (t *OnionTransport) loadKeys() (map[string]*rsa.PrivateKey, error) {
-	keys := make(map[string]*rsa.PrivateKey)
-	absPath, err := filepath.Abs(t.keysDir)
-	if err != nil {
-		return nil, err
-	}
-	walkpath := func(path string, f os.FileInfo, err error) error {
-		if strings.HasSuffix(path, ".onion_key") {
-			file, err := os.Open(path)
-			defer file.Close()
-			if err != nil {
-				return err
-			}
-
-			key, err := ioutil.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			onionName := strings.Replace(filepath.Base(file.Name()), ".onion_key", "", 1)
-			block, _ := pem.Decode(key)
-			privKey, _, err := pkcs1.DecodePrivateKeyDER(block.Bytes)
-			if err != nil {
-				return err
-			}
-			keys[onionName] = privKey
-		}
-		return nil
-	}
-	err = filepath.Walk(absPath, walkpath)
-	return keys, err
 }
 
 // Dialer creates and returns a go-libp2p-transport Dialer
@@ -186,23 +195,12 @@ func (t *OnionTransport) Listen(laddr ma.Multiaddr) (tpt.Listener, error) {
 		return nil, fmt.Errorf("failed to convert onion service port to int")
 	}
 
-	onionKey, ok := t.keys[addr[0]]
-	if !ok {
-		return nil, fmt.Errorf("missing onion service key material for %s", addr[0])
-	}
-
 	listener := OnionListener{
-		port:  uint16(port),
-		key:   onionKey,
 		laddr: laddr,
 	}
 
-	// setup bulb listener
-	_, err = pkcs1.OnionAddr(&onionKey.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to derive onion ID: %v", err)
-	}
-	listener.listener, err = t.controlConn.Listener(uint16(port), onionKey)
+	// setup listener
+	listener.listener, err = t.controlConn.Listener(uint16(port), t.onionKey)
 	if err != nil {
 		return nil, err
 	}
@@ -210,8 +208,7 @@ func (t *OnionTransport) Listen(laddr ma.Multiaddr) (tpt.Listener, error) {
 	return &listener, nil
 }
 
-// Matches returns true if onlyOnion and the given multiaddr represents a Tor onion service otherwise it checks
-// for onion, TCP, and WS.
+// Matches returns true if the address is a valid onion multiaddr
 func (t *OnionTransport) Matches(a ma.Multiaddr) bool {
 	return IsValidOnionMultiAddr(a)
 }
@@ -273,8 +270,6 @@ func (d *OnionDialer) Matches(a ma.Multiaddr) bool {
 
 // OnionListener implements go-libp2p-transport's Listener interface
 type OnionListener struct {
-	port      uint16
-	key       *rsa.PrivateKey
 	laddr     ma.Multiaddr
 	listener  net.Listener
 	transport tpt.Transport

@@ -215,7 +215,19 @@ func (x *Restore) Execute(args []string) error {
 			torPw = x.TorPassword
 		}
 		auth := &proxy.Auth{Password: torPw}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
+		key, err := obnet.LoadOnionKey(repoPath)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		onionCfg := oniontp.TransportConfig{
+			AutoConfig:  true,
+			ControlAddr: torControl,
+			Auth:        auth,
+			OnlyOnion:   (usingTor && usingClearnet),
+			OnionKey:    key,
+		}
+		onionTransport, err = oniontp.NewOnionTransport(onionCfg)
 		if err != nil {
 			PrintError(err.Error())
 			return err

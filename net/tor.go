@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/yawning/bulb"
 	"github.com/yawning/bulb/utils/pkcs1"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -79,4 +80,33 @@ func MaybeCreateHiddenServiceKey(repoPath string) (onionAddr string, err error) 
 	}
 
 	return CreateHiddenServiceKey(repoPath)
+}
+
+func LoadOnionKey(repoPath string) (*rsa.PrivateKey, error) {
+	d, err := os.Open(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	defer d.Close()
+
+	files, err := d.Readdir(-1)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range files {
+		if filepath.Ext(file.Name()) == ".onion_key" {
+			keyBytes, err := ioutil.ReadFile(path.Join(repoPath, file.Name()))
+			if err != nil {
+				return nil, err
+			}
+			block, _ := pem.Decode(keyBytes)
+			privKey, _, err := pkcs1.DecodePrivateKeyDER(block.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			return privKey, nil
+		}
+	}
+	return nil, errors.New("Key not found")
 }
