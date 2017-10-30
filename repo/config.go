@@ -40,8 +40,10 @@ type APIConfig struct {
 }
 
 type TorConfig struct {
-	Password   string
-	TorControl string
+	Password          string
+	TorControl        string
+	Socks5            string
+	AutoHiddenService bool
 }
 
 type ResolverConfig struct {
@@ -345,8 +347,24 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 	if !ok {
 		return nil, MalformedConfigError
 	}
+	socksUrl, ok := tc["Socks5"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	socksUrlStr, ok := socksUrl.(string)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	auto, ok := tc["AutoHiddenService"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	autoBool, ok := auto.(bool)
+	if !ok {
+		return nil, MalformedConfigError
+	}
 
-	return &TorConfig{TorControl: controlUrlStr, Password: pwStr}, nil
+	return &TorConfig{TorControl: controlUrlStr, Password: pwStr, Socks5: socksUrlStr, AutoHiddenService: autoBool}, nil
 }
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {

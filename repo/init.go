@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-const RepoVersion = "5"
+const RepoVersion = "6"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -225,7 +225,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		PushTo:              DataPushNodes,
 	}
 
-	var t TorConfig = TorConfig{}
+	var t TorConfig = TorConfig{AutoHiddenService: true}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
 	}

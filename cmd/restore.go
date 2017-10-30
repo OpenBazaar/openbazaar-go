@@ -220,12 +220,16 @@ func (x *Restore) Execute(args []string) error {
 			log.Error(err)
 			return err
 		}
+		if !torConfig.AutoHiddenService && torConfig.Socks5 == "" {
+			return errors.New("Socks5 proxy must be set in the config file if not using AutoHiddenService")
+		}
 		onionCfg := oniontp.TransportConfig{
-			AutoConfig:  true,
+			AutoConfig:  torConfig.AutoHiddenService,
 			ControlAddr: torControl,
 			Auth:        auth,
 			OnlyOnion:   (usingTor && usingClearnet),
 			OnionKey:    key,
+			SocksAddr:   torConfig.Socks5,
 		}
 		onionTransport, err = oniontp.NewOnionTransport(onionCfg)
 		if err != nil {
