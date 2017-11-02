@@ -774,69 +774,61 @@ const peerNotFoundInTableJSON = `{
 //
 
 const postJSON = `{
-	"post": {
-			"slug": "test1",
-			"vendorID": {
-					"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
-					"handle": "",
-					"pubkeys": {
-							"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
-							"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
-					},
-					"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
+	"slug": "test1",
+	"vendorID": {
+			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
+			"handle": "",
+			"pubkeys": {
+					"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
+					"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
 			},
-			"title": "test1",
-			"longForm": "This is a test post dawg.",
-			"images": [
-					{
-							"filename": "cat",
-							"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
-							"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
-							"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
-							"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
-							"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
-					}
-			],
-			"tags": [
-					"Yo"
-			],
-			"timestamp": "2017-11-02T04:15:07.972887695Z"
+			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
-	"hash": "zb2rhf1xN9k6qbLE4D36MGVMCyhAebU2562S2yjPbFBbK35gC",
-	"signature": "QWjo+G5CMtApPrVOdFzL87guvHKhJTtNCsRtM40tZ23ePO+kxqzE3OVMluZ/w7A0Oa2snyAMckNDitVznvqvBg=="
+	"title": "test1",
+	"longForm": "This is a test post dawg.",
+	"images": [
+			{
+					"filename": "cat",
+					"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
+					"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
+					"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
+					"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
+					"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
+			}
+	],
+	"tags": [
+			"Yo"
+	],
+	"timestamp": "2017-11-02T04:15:07.972887695Z"
 }`
 
 const postJSONResponse = `{"slug": "test1"}`
 
 const postUpdateJSON = `{
-	"post": {
-			"slug": "test1",
-			"vendorID": {
-					"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
-					"handle": "",
-					"pubkeys": {
-							"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
-							"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
-					},
-					"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
+	"slug": "test1",
+	"vendorID": {
+			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
+			"handle": "",
+			"pubkeys": {
+					"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
+					"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
 			},
-			"title": "test1",
-			"longForm": "This is a test post dawgs and cats.",
-			"images": [
-					{
-							"filename": "cat",
-							"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
-							"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
-							"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
-							"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
-							"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
-					}
-			],
-			"tags": [
-					"Yo"
-			],
-			"timestamp": "2017-11-02T04:16:09.281618842Z"
+			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
-	"hash": "zb2rhXTxp5mBf9dvfoRNhvJNMkekxYajbqjgpLxMzttUfdRz3",
-	"signature": "yz3rxNGsgj87e9gL080PXp00dtadfHRW7Kb+cuAZqT81IcBrRkDK/jdknaTbYx2hxgt9FNtc7wtRJ36c+dzsDA=="
+	"title": "test1",
+	"longForm": "This is a test post dawgs and cats.",
+	"images": [
+			{
+					"filename": "cat",
+					"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
+					"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
+					"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
+					"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
+					"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
+			}
+	],
+	"tags": [
+			"Yo"
+	],
+	"timestamp": "2017-11-02T04:16:09.281618842Z"
 }`
