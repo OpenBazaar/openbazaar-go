@@ -6,11 +6,11 @@ import (
 	"fmt"
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path"
-	"strings"
 	"strconv"
-	"net/url"	
+	"strings"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -121,7 +121,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	return sp, nil
 }
 
-//UpdatePostIndex  [Update the posts index] 
+//UpdatePostIndex  [Update the posts index]
 func (n *OpenBazaarNode) UpdatePostIndex(post *pb.SignedPost) error {
 	ld, err := n.extractpostData(post)
 	if err != nil {
@@ -162,14 +162,17 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		if !contains(tags, tag) {
 			tags = append(tags, tag)
 		}
+		if len(tags) > 15 {
+			tags = tags[0:15]
+		}
 	}
 
 	// Create the postData object
 	ld := postData{
-		Hash:      postHash,
-		Slug:      post.Post.Slug,
-		Title:     post.Post.Title,
-		Tags:      tags,
+		Hash:  postHash,
+		Slug:  post.Post.Slug,
+		Title: post.Post.Title,
+		Tags:  tags,
 	}
 
 	// Add a timestamp to postData if it doesn't exist
@@ -183,6 +186,9 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		for _, imageSlice := range post.Post.Images {
 			imageObject := postImage{imageSlice.Tiny, imageSlice.Small, imageSlice.Medium}
 			imageArray = append(imageArray, imageObject)
+		}
+		if len(imageArray) > 8 {
+			imageArray = imageArray[0:8]
 		}
 		ld.Images = imageArray
 	}
