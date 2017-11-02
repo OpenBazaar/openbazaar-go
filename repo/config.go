@@ -5,17 +5,25 @@ import (
 	"errors"
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
+	"time"
 )
 
 var DefaultBootstrapAddresses = []string{
 	"/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K", // Le Marché Serpette
-	"/ip4/139.59.174.197/tcp/4001/ipfs/QmcCoBtYyduyurcLHRF14QhhA88YojJJpGFuMHoMZuU8sc", // Brixton Village
+	"/ip4/139.59.174.197/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM", // Brixton Village
 	"/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg",   // Johari
 	"/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX", // Duo Search
 }
 
 var TestnetBootstrapAddresses = []string{
 	"/ip4/165.227.117.91/tcp/4001/ipfs/Qmaa6De5QYNqShzPb9SGSo8vLmoUte8mnWgzn4GYwzuUYA", // Brooklyn Flea
+	"/ip4/46.101.221.165/tcp/4001/ipfs/QmVAQYg7ygAWTWegs8HSV2kdW1MqW8WMrmpqKG1PQtkgTC", // Shipshewana
+}
+
+var DataPushNodes = []string{
+	"QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ",
+	"QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o",
+	"QmPPegaeM4rXfQDF3uu784d93pLEzV8A4zXU7akEgYnTFd",
 }
 
 type APIConfig struct {
@@ -52,6 +60,11 @@ type WalletConfig struct {
 	TrustedPeer      string
 	RPCUser          string
 	RPCPassword      string
+}
+
+type DataSharing struct {
+	AcceptStoreRequests bool
+	PushTo              []string
 }
 
 var MalformedConfigError error = errors.New("Config file is malformed")
@@ -357,34 +370,79 @@ func GetDropboxApiToken(cfgBytes []byte) (string, error) {
 	return tokenStr, nil
 }
 
-func GetCrosspostGateway(cfgBytes []byte) ([]string, error) {
+func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 	var cfgIface interface{}
 	json.Unmarshal(cfgBytes, &cfgIface)
-	var urls []string
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return urls, MalformedConfigError
+		return time.Duration(0), MalformedConfigError
 	}
 
-	gwys, ok := cfg["Crosspost-gateways"]
+	interval, ok := cfg["RepublishInterval"]
 	if !ok {
-		return urls, MalformedConfigError
+		return time.Duration(0), MalformedConfigError
 	}
-	gatewayList, ok := gwys.([]interface{})
+	intervalStr, ok := interval.(string)
 	if !ok {
-		return urls, MalformedConfigError
+		return time.Duration(0), MalformedConfigError
+	}
+	if intervalStr == "" {
+		return time.Duration(0), nil
+	}
+	d, err := time.ParseDuration(intervalStr)
+	if err != nil {
+		return d, err
+	}
+	return d, nil
+}
+
+func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
+	var cfgIface interface{}
+	json.Unmarshal(cfgBytes, &cfgIface)
+	dataSharing := new(DataSharing)
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return dataSharing, MalformedConfigError
 	}
 
-	for _, gw := range gatewayList {
-		gwStr, ok := gw.(string)
+	dscfg, ok := cfg["DataSharing"]
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	ds, ok := dscfg.(map[string]interface{})
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+
+	acceptcfg, ok := ds["AcceptStoreRequests"]
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	accept, ok := acceptcfg.(bool)
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	dataSharing.AcceptStoreRequests = accept
+
+	pushcfg, ok := ds["PushTo"]
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+	pushList, ok := pushcfg.([]interface{})
+	if !ok {
+		return dataSharing, MalformedConfigError
+	}
+
+	for _, nd := range pushList {
+		ndStr, ok := nd.(string)
 		if !ok {
-			return urls, MalformedConfigError
+			return dataSharing, MalformedConfigError
 		}
-		urls = append(urls, gwStr)
+		dataSharing.PushTo = append(dataSharing.PushTo, ndStr)
 	}
-
-	return urls, nil
+	return dataSharing, nil
 }
 
 func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {

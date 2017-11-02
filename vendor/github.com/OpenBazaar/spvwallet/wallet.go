@@ -14,8 +14,6 @@ import (
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
 	"io"
-	"os"
-	"path"
 	"sync"
 	"time"
 )
@@ -376,17 +374,14 @@ func (w *SPVWallet) Close() {
 }
 
 func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
-	w.Close()
-	os.Remove(path.Join(w.repoPath, "headers.bin"))
-	blockchain, err := NewBlockchain(w.repoPath, fromDate, w.params)
-	if err != nil {
-		return
-	}
-	w.blockchain = blockchain
+	w.peerManager.Stop()
+	w.blockchain.Rollback(fromDate)
+	w.blockchain.SetChainState(SYNCING)
 	w.txstore.PopulateAdrs()
+	var err error
 	w.peerManager, err = NewPeerManager(w.config)
 	if err != nil {
 		return
 	}
-	go w.Start()
+	go w.peerManager.Start()
 }

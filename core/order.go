@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"bytes"
+	"strconv"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -23,7 +25,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	ipfspath "github.com/ipfs/go-ipfs/path"
-	"strconv"
 )
 
 type option struct {
@@ -76,6 +77,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
+
 		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
 		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
 		if err != nil {
@@ -259,6 +261,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+
 		payment.Amount = total
 		contract.BuyerOrder.Payment = payment
 		contract, err = n.SignOrder(contract)
@@ -417,7 +420,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
-		order.RefundAddress = n.Wallet.CurrentAddress(wallet.INTERNAL).EncodeAddress()
+		order.RefundAddress = n.Wallet.NewAddress(wallet.INTERNAL).EncodeAddress()
 	}
 	shipping := &pb.Order_Shipping{
 		ShipTo:       data.ShipTo,
@@ -625,6 +628,10 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 			u.Value = r.Value
 			utxos = append(utxos, u)
 		}
+	}
+
+	if len(utxos) == 0 {
+		return errors.New("Cannot cancel order because utxo has already been spent")
 	}
 
 	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -1396,7 +1403,7 @@ func validateVersionNumber(listing *pb.Listing) error {
 		return errors.New("Listing does not contain metadata")
 	}
 	if listing.Metadata.Version > ListingVersion {
-		return errors.New("Unkown listing version. You must upgrade to purchase this listing.")
+		return errors.New("Unknown listing version. You must upgrade to purchase this listing.")
 	}
 	return nil
 }

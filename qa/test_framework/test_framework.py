@@ -103,7 +103,7 @@ class OpenBazaarTestFramework(object):
                     return
 
     def start_node(self, node):
-        args = [self.binary, "start", "-d", node["data_dir"], *self.options]
+        args = [self.binary, "start", "-v", "-d", node["data_dir"], *self.options]
         process = subprocess.Popen(args, stdout=PIPE)
         peerId = self.wait_for_start_success(process, node)
         node["peerId"] = peerId
@@ -138,7 +138,7 @@ class OpenBazaarTestFramework(object):
         self.send_bitcoin_cmd("generate", 1)
         self.bitcoin_address = self.send_bitcoin_cmd("getnewaddress")
         self.send_bitcoin_cmd("generatetoaddress", 1, self.bitcoin_address)
-        self.send_bitcoin_cmd("generate", 432)
+        self.send_bitcoin_cmd("generate", 435)
 
     def wait_for_bitcoind_start(self, process, btc_conf_file):
         while True:

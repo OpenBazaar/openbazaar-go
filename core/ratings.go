@@ -3,12 +3,16 @@ package core
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
 func ValidateRating(rating *pb.Rating) (bool, error) {
@@ -107,4 +111,33 @@ func ValidateRating(rating *pb.Rating) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (n *OpenBazaarNode) GetRatingCounts() (uint32, float32, error) {
+	indexPath := path.Join(n.RepoPath, "root", "ratings.json")
+
+	var index []SavedRating
+
+	_, ferr := os.Stat(indexPath)
+	if !os.IsNotExist(ferr) {
+		// Read existing file
+		file, err := ioutil.ReadFile(indexPath)
+		if err != nil {
+			return 0, 0, err
+		}
+		err = json.Unmarshal(file, &index)
+		if err != nil {
+			return 0, 0, err
+		}
+	} else {
+		return 0, 0, nil
+	}
+	var ratingCount uint32
+	var totalRating float32
+	for _, i := range index {
+		ratingCount += uint32(i.Count)
+		totalRating += (float32(i.Count) * i.Average)
+	}
+	averageRating := (totalRating / float32(ratingCount))
+	return ratingCount, averageRating, nil
 }

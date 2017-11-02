@@ -25,8 +25,9 @@ protos:
 ## Docker
 ##
 DOCKER_PROFILE ?= openbazaar
-DOCKER_SERVER_IMAGE_NAME ?= $(DOCKER_PROFILE)/server
-DOCKER_DUMMY_IMAGE_NAME ?= $(DOCKER_PROFILE)/server_dummy
+DOCKER_SERVER_VERSION ?= $(shell git describe --tags --abbrev=0)
+DOCKER_SERVER_IMAGE_NAME ?= $(DOCKER_PROFILE)/server:$(DOCKER_SERVER_VERSION)
+DOCKER_DUMMY_IMAGE_NAME ?= $(DOCKER_PROFILE)/server_dummy:$(DOCKER_SERVER_VERSION)
 
 docker:
 	docker build -t $(DOCKER_SERVER_IMAGE_NAME) .

@@ -9,7 +9,10 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
-var OutOfOrderMessage error = errors.New("Message arrived out of order")
+var (
+	OutOfOrderMessage error = errors.New("Message arrived out of order")
+	DuplicateMessage  error = errors.New("Duplicate Message")
+)
 
 type NetworkService interface {
 	// Handle incoming streams
@@ -23,4 +26,7 @@ type NetworkService interface {
 
 	// Send a message to a peer without requiring a response
 	SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error
+
+	// Disconnect from the given peer
+	DisconnectFromPeer(p peer.ID) error
 }

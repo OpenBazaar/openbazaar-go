@@ -43,12 +43,12 @@ import (
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"github.com/op/go-logging"
 	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
+	dht "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
+	dhtutil "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht/util"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
-	dht "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/util"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -94,11 +94,12 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	walletCfg, err := repo.GetWalletConfig(configFile)
+	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	gatewayUrlStrings, err := repo.GetCrosspostGateway(configFile)
+
+	walletCfg, err := repo.GetWalletConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +145,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		gatewayUrlStrings = []string{}
+		dataSharing.PushTo = []string{}
 	}
 
 	ncfg := &ipfscore.BuildCfg{
@@ -201,21 +202,10 @@ func NewNode(config NodeConfig) (*Node, error) {
 		TrustedPeer:  tp,
 		Logger:       logger,
 	}
+	core.PublishLock.Lock()
 	wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
 	if err != nil {
 		return nil, err
-	}
-
-	// Crosspost gateway
-	var gatewayUrls []*url.URL
-	for _, gw := range gatewayUrlStrings {
-		if gw != "" {
-			u, err := url.Parse(gw)
-			if err != nil {
-				return nil, err
-			}
-			gatewayUrls = append(gatewayUrls, u)
-		}
 	}
 
 	exchangeRates := exchange.NewBitcoinPriceFetcher(nil)
@@ -247,16 +237,26 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
+	// Push nodes
+	var pushNodes []peer.ID
+	for _, pnd := range dataSharing.PushTo {
+		p, err := peer.IDB58Decode(pnd)
+		if err != nil {
+			return err
+		}
+		pushNodes = append(pushNodes, p)
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:          config.RepoPath,
-		Datastore:         sqliteDB,
-		Wallet:            wallet,
-		NameSystem:        ns,
-		ExchangeRates:     exchangeRates,
-		CrosspostGateways: gatewayUrls,
-		UserAgent:         core.USERAGENT,
-		BanManager:        bm,
+		RepoPath:      config.RepoPath,
+		Datastore:     sqliteDB,
+		Wallet:        wallet,
+		NameSystem:    ns,
+		ExchangeRates: exchangeRates,
+		UserAgent:     core.USERAGENT,
+		PushNodes:     pushNodes,
+		BanManager:    bm,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -309,8 +309,17 @@ func (n *Node) Start() error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 	n.node.RootHash = ipath.Path(e.Value).String()
 
+	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
+	if err != nil {
+		return nil, err
+	}
+	republishInterval, err := repo.GetRepublishInterval(configFile)
+	if err != nil {
+		return nil, err
+	}
+
 	// Offline messaging storage
-	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, ctx, n.node.CrosspostGateways, nil)
+	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, ctx, n.node.PushNodes, n.node.SendStore)
 
 	// Start gateway
 	// Create authentication cookie
@@ -328,12 +337,12 @@ func (n *Node) Start() error {
 	go gateway.Serve()
 
 	go func() {
-		<-ipfscore.DefaultBootstrapConfig.DoneChan
+		<-dht.DefaultBootstrapConfig.DoneChan
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
-		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, nil, n.node.CrosspostGateways, n.node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, n.node.PushNodes, nil, n.node.SendOfflineAck)
 		go MR.Run()
 		n.node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.IsModerator)
+		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
 		go PR.Run()
 		n.node.PointerRepublisher = PR
 		MR.Wait()
@@ -345,8 +354,12 @@ func (n *Node) Start() error {
 		go su.Start()
 		go n.node.Wallet.Start()
 
-		n.node.UpdateFollow()
-		n.node.SeedNode()
+		core.PublishLock.Unlock()
+		core.Node.UpdateFollow()
+		if !core.InitalPublishComplete {
+			core.Node.SeedNode()
+		}
+		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
 	return nil
@@ -405,7 +418,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config re
 		corehttp.CommandsROOption(node.Context),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
-		corehttp.GatewayOption(config.Authenticated, config.AllowedIPs, authCookie, config.Username, config.Password, cfg.Gateway.Writable, "/ipfs", "/ipns"),
+		corehttp.GatewayOption(cfg.Gateway.Writable, "/ipfs", "/ipns"),
 	}
 
 	if len(cfg.Gateway.RootRedirect) > 0 {

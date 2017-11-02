@@ -2,6 +2,9 @@ package bitcoin
 
 import (
 	"encoding/hex"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -11,8 +14,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
-	"sync"
-	"time"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -180,7 +181,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 	if !funded {
 		requestedAmount := int64(contract.BuyerOrder.Payment.Amount)
 		if funding >= requestedAmount {
-			log.Debugf("Recieved payment for order %s", orderId)
+			log.Debugf("Received payment for order %s", orderId)
 			funded = true
 
 			if state == pb.OrderState_AWAITING_PAYMENT && contract.VendorOrderConfirmation != nil { // Confirmed orders go to AWAITING_FULFILLMENT

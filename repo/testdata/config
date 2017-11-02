@@ -19,9 +19,13 @@
     "/ip4/139.59.174.197/tcp/4001/ipfs/QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
     "/ip4/139.59.6.222/tcp/4001/ipfs/QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
   ],
-  "Crosspost-gateways": [
-    "http://gateway.ob1.io/"
-  ],
+  "DataSharing": {
+    "AcceptStoreRequests": false,
+    "PushTo": [
+        "QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
+        "QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
+    ]
+  },
   "Datastore": {
     "BloomFilterSize": 0,
     "GCPeriod": "1h",
@@ -107,6 +111,7 @@
     "Interval": "",
     "Strategy": ""
   },
+  "RepublishInterval": "24h",
   "Resolvers": {
     ".id": "https://resolver.onename.com/"
   },

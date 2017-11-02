@@ -20,6 +20,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	blocks "gx/ipfs/QmSn9Td7xgxm9EV7iEjTckpUWmWApggzPxu7eFGWkkpwin/go-block-format"
 	"strconv"
 )
 
@@ -61,6 +63,10 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleModeratorAdd
 	case pb.Message_MODERATOR_REMOVE:
 		return service.handleModeratorRemove
+	case pb.Message_BLOCK:
+		return service.handleBlock
+	case pb.Message_STORE:
+		return service.handleStore
 	default:
 		return nil
 	}
@@ -249,7 +255,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 	pro, _ := service.node.GetProfile()
 	if !pro.Vendor {
-		return nil, errors.New("Vendor's store is turned off")
+		return errorResponse("The vendor turn his store off and is not accepting orders at this time"), errors.New("Store is turned off")
 	}
 
 	if pmes.Payload == nil {
@@ -263,31 +269,31 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 
 	err = service.node.ValidateOrder(contract)
 	if err != nil {
-		log.Error(err)
-		return errorResponse(err.Error()), nil
+		return errorResponse(err.Error()), err
 	}
+	currentTime := time.Now()
+	purchaseTime := time.Unix(contract.BuyerOrder.Timestamp.Seconds, int64(contract.BuyerOrder.Timestamp.Nanos))
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
-			log.Error("Error calculating payment amount")
-			return errorResponse("Error calculating payment amount"), nil
+			return errorResponse("Error calculating payment amount"), err
 		}
 		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
-			log.Error("Calculated a different payment amount")
-			return errorResponse("Calculated a different payment amount"), nil
+			return errorResponse("Calculated a different payment amount"), err
 		}
 		contract, err = service.node.NewOrderConfirmation(contract, true, true)
 		if err != nil {
-			log.Error(err)
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
-			log.Error(err)
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), err
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if currentTime.After(purchaseTime) {
+			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
+		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -297,70 +303,64 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT {
 		err := service.node.ValidateDirectPaymentAddress(contract.BuyerOrder)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		script, err := service.node.Wallet.AddressToScript(addr)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if currentTime.After(purchaseTime) {
+			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
+		}
 		log.Debugf("Received direct ORDER message from %s", peer.Pretty())
 		return nil, nil
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED && !offline {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
-			log.Error("Error calculating payment amount")
-			return errorResponse("Error calculating payment amount"), nil
+			return errorResponse("Error calculating payment amount"), errors.New("Error calculating payment amount")
 		}
 		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
-			log.Error("Calculated a different payment amount")
-			return errorResponse("Calculated a different payment amount"), nil
+			return errorResponse("Calculated a different payment amount"), errors.New("Calculated different payment amount")
 		}
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		err = service.node.ValidateModeratedPaymentAddress(contract.BuyerOrder, timeout)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		script, err := service.node.Wallet.AddressToScript(addr)
 		if err != nil {
-			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
 		contract, err = service.node.NewOrderConfirmation(contract, false, true)
 		if err != nil {
-			log.Error(err)
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), errors.New("Error building order confirmation")
 		}
 		a, err := ptypes.MarshalAny(contract)
 		if err != nil {
-			log.Error(err)
-			return errorResponse("Error building order confirmation"), nil
+			return errorResponse("Error building order confirmation"), errors.New("Error building order confirmation")
 		}
 		service.node.Datastore.Sales().Put(contract.VendorOrderConfirmation.OrderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if currentTime.After(purchaseTime) {
+			service.node.Datastore.Sales().SetNeedsResync(contract.VendorOrderConfirmation.OrderID, true)
+		}
 		m := pb.Message{
 			MessageType: pb.Message_ORDER_CONFIRMATION,
 			Payload:     a,
@@ -396,10 +396,13 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		if currentTime.After(purchaseTime) {
+			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
+		}
 		return nil, nil
 	}
 	log.Error("Unrecognized payment type")
-	return errorResponse("Unrecognized payment type"), nil
+	return errorResponse("Unrecognized payment type"), errors.New("Unrecognized payment type")
 }
 
 func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
@@ -414,13 +417,21 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 		return nil, fmt.Errorf("Could not unmarshal ORDER_CONFIRMATION from %s", p.Pretty())
 	}
 
+	if vendorContract.VendorOrderConfirmation == nil {
+		return nil, errors.New("Received ORDER_CONFIRMATION message with nil confirmation object")
+	}
+
 	// Calc order ID
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
-	contract, _, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	contract, state, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if funded && state == pb.OrderState_AWAITING_FULFILLMENT || !funded && state == pb.OrderState_AWAITING_PAYMENT {
+		return nil, net.DuplicateMessage
 	}
 
 	// Validate the order confirmation
@@ -474,9 +485,13 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
+	contract, state, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_CANCELED {
+		return nil, net.DuplicateMessage
 	}
 
 	// Set message state to canceled
@@ -515,9 +530,13 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
+	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_DECLINED {
+		return nil, net.DuplicateMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -683,14 +702,22 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, err
 	}
 
+	if rc.Refund == nil {
+		return nil, errors.New("Received REFUND message with nil refund object")
+	}
+
 	if err := service.node.VerifySignaturesOnRefund(rc); err != nil {
 		return nil, err
 	}
 
 	// Load the order
-	contract, _, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
+	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
+		return nil, net.DuplicateMessage
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -806,10 +833,17 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 		return nil, err
 	}
 
+	if len(rc.VendorOrderFulfillment) == 0 {
+		return nil, errors.New("Received FULFILLMENT message with no VendorOrderFulfillment objects")
+	}
+
 	// Load the order
-	contract, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
+	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
+		return nil, net.DuplicateMessage
 	}
 
 	contract.VendorOrderFulfillment = append(contract.VendorOrderFulfillment, rc.VendorOrderFulfillment[0])
@@ -863,10 +897,18 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
+	if rc.BuyerOrderCompletion == nil {
+		return nil, errors.New("Recieved ORDER_COMPLETION with nil BuyerOrderCompletion object")
+	}
+
 	// Load the order
 	contract, state, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
+	}
+
+	if state == pb.OrderState_COMPLETED {
+		return nil, net.DuplicateMessage
 	}
 
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
@@ -1324,4 +1366,86 @@ func (service *OpenBazaarService) handleModeratorRemove(pid peer.ID, pmes *pb.Me
 	log.Debugf("Received MODERATOR_REMOVE message from %s", id.Pretty())
 
 	return nil, nil
+}
+
+func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	// If we aren't accepting store requests then ban this peer
+	if !service.node.AcceptStoreRequests {
+		service.node.BanManager.AddBlockedId(pid)
+		return nil, nil
+	}
+
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
+	b := new(pb.Block)
+	err := ptypes.UnmarshalAny(pmes.Payload, b)
+	if err != nil {
+		return nil, err
+	}
+	id, err := cid.Decode(b.Cid)
+	if err != nil {
+		return nil, err
+	}
+	block, err := blocks.NewBlockWithCid(b.RawData, id)
+	if err != nil {
+		return nil, err
+	}
+	_, err = service.node.IpfsNode.Blocks.AddBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("Received BLOCK message from %s", pid.Pretty())
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	// If we aren't accepting store requests then ban this peer
+	if !service.node.AcceptStoreRequests {
+		service.node.BanManager.AddBlockedId(pid)
+		return nil, nil
+	}
+
+	errorResponse := func(error string) *pb.Message {
+		a := &any.Any{Value: []byte(error)}
+		m := &pb.Message{
+			MessageType: pb.Message_ERROR,
+			Payload:     a,
+		}
+		return m
+	}
+
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
+	cList := new(pb.CidList)
+	err := ptypes.UnmarshalAny(pmes.Payload, cList)
+	if err != nil {
+		return errorResponse("Could not unmarshall message"), err
+	}
+	var need []string
+	for _, id := range cList.Cids {
+		decoded, err := cid.Decode(id)
+		if err != nil {
+			continue
+		}
+		has, err := service.node.IpfsNode.Blockstore.Has(decoded)
+		if err != nil || !has {
+			need = append(need, decoded.String())
+		}
+	}
+	log.Debugf("Received STORE message from %s", pid.Pretty())
+	log.Debugf("Requesting %d blocks from %s", len(need), pid.Pretty())
+
+	resp := new(pb.CidList)
+	resp.Cids = need
+	a, err := ptypes.MarshalAny(resp)
+	if err != nil {
+		return errorResponse("Error marshalling response"), err
+	}
+	m := &pb.Message{
+		MessageType: pb.Message_STORE,
+		Payload:     a,
+	}
+	return m, nil
 }

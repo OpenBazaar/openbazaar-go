@@ -211,6 +211,12 @@ type Sales interface {
 	// Return the metadata for all sales. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Sale, int, error)
 
+	// Return unfunded orders which failed to detect funding because the chain was synced passed the block containing the transaction when the order was recorded.
+	GetNeedsResync() ([]UnfundedSale, error)
+
+	// Set whether the given order needs a blockchain resync
+	SetNeedsResync(orderID string, needsResync bool) error
+
 	// Return the number of sales in the database
 	Count() int
 }

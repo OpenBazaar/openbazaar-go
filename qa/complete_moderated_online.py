@@ -236,9 +236,9 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
-                raise TestFailure("RefundDirectTest - FAIL: Alice failed to receive the multisig payout")
+                raise TestFailure("CompleteModeratedOnlineTest - FAIL: Alice failed to receive the multisig payout")
         else:
-            raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
+            raise TestFailure("CompleteModeratedOnlineTest - FAIL: Failed to query Alice's balance")
 
         print("CompleteModeratedOnlineTest - PASS")
 

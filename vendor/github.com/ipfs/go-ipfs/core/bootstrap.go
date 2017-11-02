@@ -51,17 +51,15 @@ type BootstrapConfig struct {
 	// for the bootstrap process to use. This makes it possible for clients
 	// to control the peers the process uses at any moment.
 	BootstrapPeers func() []pstore.PeerInfo
-
-	// Chan to return on when complete
-	DoneChan chan struct{}
 }
+
+var bootstrapOnce sync.Once
 
 // DefaultBootstrapConfig specifies default sane parameters for bootstrapping.
 var DefaultBootstrapConfig = BootstrapConfig{
 	MinPeerThreshold:  4,
 	Period:            30 * time.Second,
 	ConnectionTimeout: (30 * time.Second) / 3, // Perod / 3
-	DoneChan:          make(chan struct{}),
 }
 
 func BootstrapConfigWithPeers(pis []pstore.PeerInfo) BootstrapConfig {
@@ -80,9 +78,9 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 
 	// make a signal to wait for one bootstrap round to complete.
 	//doneWithRound := make(chan struct{})
+	ch := make(chan struct{})
 
 	// the periodic bootstrap function -- the connection supervisor
-	var once sync.Once
 	periodic := func(worker goprocess.Process) {
 		ctx := procctx.OnClosingContext(worker)
 		defer log.EventBegin(ctx, "periodicBootstrap", n.Identity).Done()
@@ -92,24 +90,21 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 			log.Debugf("%s bootstrap error: %s", n.Identity, err)
 		}
 
-		once.Do(func() {
-			close(cfg.DoneChan)
-		})
-		//<-doneWithRound
+		bootstrapOnce.Do(func() { close(ch) })
 	}
 
 	// kick off the node's periodic bootstrapping
 	proc := periodicproc.Tick(cfg.Period, periodic)
 	proc.Go(periodic) // run one right now.
 
-	// kick off Routing.Bootstrap
-	if n.Routing != nil {
-		ctx := procctx.OnClosingContext(proc)
-		if err := n.Routing.Bootstrap(ctx); err != nil {
-			proc.Close()
-			return nil, err
+	go func() {
+		<-ch
+		// kick off Routing.Bootstrap
+		if n.Routing != nil {
+			ctx := procctx.OnClosingContext(proc)
+			n.Routing.Bootstrap(ctx)
 		}
-	}
+	}()
 
 	//doneWithRound <- struct{}{}
 	//close(doneWithRound) // it no longer blocks periodic

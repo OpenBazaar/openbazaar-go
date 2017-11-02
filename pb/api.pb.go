@@ -44,6 +44,8 @@ It has these top-level messages:
 	Envelope
 	Chat
 	SignedData
+	CidList
+	Block
 	Moderator
 	DisputeUpdate
 	Post

@@ -76,6 +76,9 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		var rs *pb.RatingSignature
 		var rk []byte
 		if contract.DisputeResolution != nil {
+			if contract.VendorOrderConfirmation == nil {
+				return errors.New("Cannot leave review because the vendor never accepted this order")
+			}
 			for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 				if sig.Metadata.ListingSlug == r.Slug {
 					rs = sig

@@ -884,7 +884,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	comboMap := make(map[string]bool)
 	for _, sku := range listing.Item.Skus {
 		if maxCombos > 1 && len(sku.VariantCombo) == 0 {
-			return errors.New("Skus must specifiy a variant combo when options are used")
+			return errors.New("Skus must specify a variant combo when options are used")
 		}
 		if len(sku.ProductID) > WordMaxCharacters {
 			return fmt.Errorf("Product ID length must be less than the max of %d", WordMaxCharacters)
@@ -932,7 +932,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		}
 		shippingTitles = append(shippingTitles, shippingOption.Name)
 		if shippingOption.Type > pb.Listing_ShippingOption_FIXED_PRICE {
-			return errors.New("Unkown shipping option type")
+			return errors.New("Unknown shipping option type")
 		}
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
@@ -964,9 +964,22 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
 				return errors.New("Selected shipping rule type can only have a maximum of one rule")
 			}
-			for _, rule := range shippingOption.ShippingRules.Rules {
-				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE) && rule.MaxRange <= rule.MinRange {
+			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
+				return fmt.Errorf("Shipping rules exceeds max of %d", MaxListItems)
+			}
+			for i, rule := range shippingOption.ShippingRules.Rules {
+				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE ||
+					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE ||
+					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT) && rule.MaxRange <= rule.MinRange {
 					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
+				}
+				for x, checkRule := range shippingOption.ShippingRules.Rules {
+					if x == i {
+						continue
+					}
+					if (rule.MinRange >= checkRule.MinRange && rule.MinRange <= checkRule.MaxRange) || (rule.MaxRange <= checkRule.MaxRange && rule.MaxRange >= checkRule.MinRange) {
+						return errors.New("Shipping rule ranges must not overlap")
+					}
 				}
 			}
 		}
@@ -1011,7 +1024,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
 		}
 		if len(tax.TaxRegions) == 0 {
-			return errors.New("Tax must specifiy at least one region")
+			return errors.New("Tax must specify at least one region")
 		}
 		if len(tax.TaxRegions) > MaxCountryCodes {
 			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)

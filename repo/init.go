@@ -11,12 +11,15 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/mitchellh/go-homedir"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
-const RepoVersion = "2"
+const RepoVersion = "5"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -27,7 +30,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	if fsrepo.IsInitialized(repoRoot) {
-		err := MigrateUp(repoRoot)
+		err := MigrateUp(repoRoot, password, testnet)
 		if err != nil {
 			return err
 		}
@@ -220,6 +223,11 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		HTTPHeaders: nil,
 	}
 
+	var ds DataSharing = DataSharing{
+		AcceptStoreRequests: false,
+		PushTo:              DataPushNodes,
+	}
+
 	var t TorConfig = TorConfig{}
 	if err := extendConfigFile(r, "Wallet", w); err != nil {
 		return err
@@ -227,16 +235,19 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	var resolvers ResolverConfig = ResolverConfig{
 		Id: "https://resolver.onename.com/",
 	}
+	if err := extendConfigFile(r, "DataSharing", ds); err != nil {
+		return err
+	}
 	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Crosspost-gateways", []string{"https://gateway.ob1.io/", "https://gateway.duosear.ch/"}); err != nil {
+	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+	if err := extendConfigFile(r, "RepublishInterval", "24h"); err != nil {
 		return err
 	}
 	if err := extendConfigFile(r, "JSON-API", a); err != nil {
@@ -261,4 +272,34 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 		return "", err
 	}
 	return mnemonic, nil
+}
+
+/* Returns the directory to store repo data in.
+   It depends on the OS and whether or not we are on testnet. */
+func GetRepoPath(isTestnet bool) (string, error) {
+	// Set default base path and directory name
+	path := "~"
+	directoryName := "OpenBazaar2.0"
+
+	// Override OS-specific names
+	switch runtime.GOOS {
+	case "linux":
+		directoryName = ".openbazaar2.0"
+	case "darwin":
+		path = "~/Library/Application Support"
+	}
+
+	// Append testnet flag if on testnet
+	if isTestnet {
+		directoryName += "-testnet"
+	}
+
+	// Join the path and directory name, then expand the home path
+	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
+	if err != nil {
+		return "", err
+	}
+
+	// Return the shortest lexical representation of the path
+	return filepath.Clean(fullPath), nil
 }

@@ -273,6 +273,12 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 		profile.Stats.FollowingCount = followingCount
 		changed = true
 	}
+	ratingCount, averageRating, err := n.GetRatingCounts()
+	if err == nil && (ratingCount != profile.Stats.RatingCount || averageRating != profile.Stats.AverageRating) {
+		profile.Stats.RatingCount = ratingCount
+		profile.Stats.AverageRating = averageRating
+		changed = true
+	}
 	return profile, changed, nil
 }
 

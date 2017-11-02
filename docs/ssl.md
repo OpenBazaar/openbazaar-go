@@ -13,13 +13,13 @@ cd .openbazaar2.0
 Next enter the following commands to generate a self-signed server certificate. If running a remote server, on the fourth line, be sure to replace \<server-ip\> with the ip of your remote server.
 ```
 openssl genrsa -out rootCA.key 4096
-openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out rootCA.crt -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=rootCA"
+openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out OpenBazaar.crt -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=rootCA"
 openssl genrsa -out server.key 4096
 openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=<server-ip>"
-openssl x509 -req -in server.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateserial -out server.crt
+openssl x509 -req -in server.csr -CA OpenBazaar.crt -CAkey rootCA.key -CAcreateserial -out server.crt
 ```
 
-The above commands will generate three files that are of interest to us: `server.crt`, `server.key`, and `rootCA.crt`.
+The above commands will generate three files that are of interest to us: `server.crt`, `server.key`, and `OpenBazaar.crt`.
 
 ### Step 2: Edit the config file
 
@@ -43,11 +43,11 @@ If you skipped Step 1 because you have your own SSL cert, then set the paths to 
 
 If you used your own SSL cert issued by a CA, you can skip this step as the OpenBazaar client should recoginize it as a valid certificate.
 
-If you followed Step 1 and generated a self-signed certificate you will need to install the `rootCA.crt` in the operating system of the computer on which you plan to run the client. By default self-signed certificates are rejected, which is why you need to install this root certificate.
+If you followed Step 1 and generated a self-signed certificate you will need to install the `OpenBazaar.crt` in the operating system of the computer on which you plan to run the client. By default self-signed certificates are rejected, which is why you need to install this root certificate.
 
-To download the `rootCA.crt` from your remote server you can use any file transfer program such as `SFTP`.
+To download the `OpenBazaar.crt` from your remote server you can use any file transfer program such as `SFTP`.
 
-Once `rootCA.crt` is on your local computer you should just be able to double click it to install it.
+Once `OpenBazaar.crt` is on your local computer you should just be able to double click it to install it.
 
 From here you can run openbazaar-go as normal. In the client you will need to check `Use SSL` in the server configuration screen.
 

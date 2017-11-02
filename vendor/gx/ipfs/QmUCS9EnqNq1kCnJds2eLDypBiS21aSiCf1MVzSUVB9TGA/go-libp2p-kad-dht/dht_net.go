@@ -8,9 +8,9 @@ import (
 
 	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
 	ctxio "gx/ipfs/QmTKsRYeY4simJyf37K93juSq75Lo8MVCDJ7owjmf46u8W/go-context/io"
+	pb "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht/pb"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	pb "gx/ipfs/Qmcjua7379qzY63PJ5a8w3mDteHZppiX2zo6vFeaqjVcQi/go-libp2p-kad-dht/pb"
 )
 
 var dhtReadMessageTimeout = time.Minute
@@ -74,6 +74,10 @@ func (dht *IpfsDHT) handleNewMessage(s inet.Stream) {
 	}
 }
 
+func (dht *IpfsDHT) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	return dht.sendRequest(ctx, p, pmes)
+}
+
 // sendRequest sends out a request, but also makes sure to
 // measure the RTT for latency measurements.
 func (dht *IpfsDHT) sendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
@@ -96,6 +100,10 @@ func (dht *IpfsDHT) sendRequest(ctx context.Context, p peer.ID, pmes *pb.Message
 	dht.peerstore.RecordLatency(p, time.Since(start))
 	log.Event(ctx, "dhtReceivedMessage", dht.self, p, rpmes)
 	return rpmes, nil
+}
+
+func (dht *IpfsDHT) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
+	return dht.sendMessage(ctx, p, pmes)
 }
 
 // sendMessage sends out a message

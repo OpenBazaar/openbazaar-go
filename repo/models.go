@@ -11,7 +11,6 @@ type SettingsData struct {
 	ShippingAddresses  *[]ShippingAddress `json:"shippingAddresses"`
 	LocalCurrency      *string            `json:"localCurrency"`
 	Country            *string            `json:"country"`
-	Language           *string            `json:"language"`
 	TermsAndConditions *string            `json:"termsAndConditions"`
 	RefundPolicy       *string            `json:"refundPolicy"`
 	BlockedNodes       *[]string          `json:"blockedNodes"`
@@ -135,4 +134,9 @@ type Case struct {
 	State              string    `json:"state"`
 	Read               bool      `json:"read"`
 	UnreadChatMessages int       `json:"unreadChatMessages"`
+}
+
+type UnfundedSale struct {
+	OrderId   string
+	Timestamp time.Time
 }

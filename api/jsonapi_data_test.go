@@ -44,7 +44,6 @@ const settingsJSON = `{
     }],
     "localCurrency": "USD",
     "country": "UNITED_STATES",
-    "language": "English",
     "termsAndConditions": "By purchasing this item you agree to the following...",
     "refundPolicy": "All sales are final.",
     "blockedNodes": ["QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG", "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr", "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"],
@@ -78,7 +77,6 @@ const settingsUpdateJSON = `{
     }],
     "localCurrency": "BTC",
     "country": "UNITED_STATES",
-    "language": "English",
     "termsAndConditions": "By purchasing this item you agree to the following...",
     "refundPolicy": "All sales are final.",
     "blockedNodes": ["QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG", "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr", "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"],
@@ -100,8 +98,7 @@ const settingsPatchJSON = `{
     "showNsfw": true,
     "shippingAddresses": [{
         "name": "Craig Wright"
-    }],
-    "language": "Klingon"
+    }]
 }`
 
 const settingsPatchedJSON = `{
@@ -122,7 +119,6 @@ const settingsPatchedJSON = `{
     }],
     "localCurrency": "BTC",
     "country": "UNITED_STATES",
-    "language": "Klingon",
     "termsAndConditions": "By purchasing this item you agree to the following...",
     "refundPolicy": "All sales are final.",
     "blockedNodes": ["QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG", "QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr", "QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"],
@@ -191,14 +187,14 @@ const profileJSON = `{
 const profileUpdateJSON = `{
     "handle": "satoshi",
     "name": "Craig Wright",
-    "location": "Austrailia"
+    "location": "Australia"
 }`
 
 const profileUpdatedJSON = `{
     "peerID": "QmSpuEe2XZy5DNYQHgL5uhe6DiaJWDiDkH2q1yjhoFd9PP",
     "handle": "satoshi",
     "name": "Craig Wright",
-    "location": "Austrailia",
+    "location": "Australia",
     "about": "",
     "shortDescription": "",
     "nsfw": false,
@@ -216,11 +212,11 @@ const avatarValidJSON = `{
 }`
 
 const avatarValidJSONResponse = `{
-    "large": "zb2rhcGSp5aytRMabdQPLCNwtbQBGj9CtMPvgxtCG88Ynv2GR",
-    "medium": "zb2rhehj452AhU2aB97Zjn3MQcgBfWM2VXAGuPiPTFwQ5xPtS",
-    "original": "zb2rhhRiyDk1VtoeKrM5iYEJHMAkAqXBSYrt5KVNJbtwXDYcz",
-    "small": "zb2rhYuY8rMeDVv54yq7C1Ma1Aa9FGTb7wCzKdKkw76PqUUY1",
-    "tiny": "zb2rhhyKWGWBDKvznMvPeFURFbbUrvYMKaTurBcH4Kc3zjWFQ"
+    "large": "zb2rhbEB183zRmazfsY7ytQWfyPEQUuLy3Ryso4h8jkwSxQY6",
+    "medium": "zb2rhhf3ZxHrUyb43sQ2ivQTJvWUPgTyF5T2h4fM8xLxmtHuU",
+    "original": "zb2rhmfTQq3yixcKnEy5q68ujAayJLP3KsxjAR5gMocFcRQy5",
+    "small": "zb2rhY2W79RCbZDM87t9pVL4CHicYjQxmVih3q7u7QRDc5xqP",
+    "tiny": "zb2rhbrsSgjXymYSGqH6pvma72g6WRmx69sbCsc5ANCbVMAJs"
 }`
 
 const avatarUnexpectedEOFJSON = `{
@@ -247,11 +243,11 @@ const imageValidJSON = `[{
 const imageValidJSONResponse = `[{
         "filename": "blue_tshirt.jpg",
         "hashes": {
-            "large": "zb2rhbQY5U167P6jic6c7UZ1x6AXXcmrhfcKKeNbJdwGJxXJi",
-            "medium": "zb2rhcdaKnikBPyNT83ngqnkaAuunqCR7craN34iNKJruXhDF",
-            "original": "zb2rhdTuwSdUe3DP9KuHjiwhoM5ppb6ws4i6j2rWFF3yTTP92",
-            "small": "zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15",
-            "tiny": "zb2rhjqhgN4Pv1SJFNpCQMjv2h8PQEGqAioMhkZjkKDyPW5E2"
+            "large": "zb2rhkProdDprVM9jGYwyN1sGTrTVQXebAup6oLLpQfcC9WsK",
+            "medium": "zb2rhZqKFguaaEodgYKHUUmvDVWeFpF2eWMNgvhxrdoKYjUKw",
+            "original": "zb2rhcuzHEovhfy4u2mvGkghj5FyEHZKu1fkzMB8t7MXo7fru",
+            "small": "zb2rhgKxh4gLKrqoVYmE3gzJve61PVwHP277rSQh4jyL4ftrK",
+            "tiny": "zb2rhnmhLobuoHHpbXoz3YE2aaptRvxMg4DCUY62MVr56ooUL"
         }
 }]`
 
@@ -260,11 +256,11 @@ const headerValidJSON = `{
 }`
 
 const headerValidJSONResponse = `{
-    "large": "zb2rhZtBYss96ZztvD7LDb48bNdfiUAzq3qPYDtgx6spZBJGG",
-    "medium": "zb2rhf3ejQ2Tp2bi8mvs3VWannYMrX9RfZiXRjqtQb2mzv2ng",
-    "original": "zb2rhhRiyDk1VtoeKrM5iYEJHMAkAqXBSYrt5KVNJbtwXDYcz",
-    "small": "zb2rhfuwHxf5Bw8CE3PtzQpPVhiomMjd7URS9m64D7zPbwWxh",
-    "tiny": "zb2rhbzfPS9QKfa2yeKQF57NARSrMGoHF7Go7nZQg87SDbgNy"
+    "large": "zb2rhmowivBcCAR9XQFm8yTYiescwZjzYqJzyiqsVuQwEpYFr",
+    "medium": "zb2rhhwb8anfu1GmJrD1yZcqp6AmxHA3h4yfNr1RdV8gqci5y",
+    "original": "zb2rhmfTQq3yixcKnEy5q68ujAayJLP3KsxjAR5gMocFcRQy5",
+    "small": "zb2rhXFSGMLsi5sSmVb5rrTx7E9biwycYzYVpAAbAkk7pypB5",
+    "tiny": "zb2rhbQwzGdgYeiqy213dqrFJkDruvid3EVVFUgkWn6samyCA"
 }`
 
 //
