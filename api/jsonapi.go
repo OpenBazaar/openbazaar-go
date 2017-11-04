@@ -1406,6 +1406,13 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+			for _, so := range sl.Listing.ShippingOptions {
+				for _, ser := range so.Services {
+					ser.AdditionalItemPrice = ser.Price
+				}
+			}
+		}
 
 		out, err := m.MarshalToString(sl)
 		if err != nil {
