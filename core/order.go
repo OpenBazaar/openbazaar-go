@@ -830,7 +830,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 		var secondarySatoshi uint64
 		if service.AdditionalItemPrice > 0 {
-			secondarySatoshi, err = n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
+			secondarySatoshi, err = n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
 			if err != nil {
 				return 0, err
 			}
@@ -860,12 +860,12 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 	var shippingTotal uint64
 	if len(is) == 1 {
-		shippingTotal = (is[0].primary * uint64((1+is[0].shippingTaxPercentage)*100)) / 100
+		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
-				shippingTotal += ((is[0].primary * uint64((1+is[0].shippingTaxPercentage)*100)) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else if is[0].version == 2 {
-				shippingTotal += ((is[0].secondary * uint64((1+is[0].shippingTaxPercentage)*100)) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else {
 				return 0, errors.New("Unknown listing version")
 			}
@@ -878,13 +878,12 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				highest = s.primary
 				i = x
 			}
-			shippingTotal += ((s.secondary * uint64((1+s.shippingTaxPercentage)*100)) / 100) * uint64(s.quantity)
+			shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
 		}
-		shippingTotal -= ((is[i].secondary * uint64((1+is[i].shippingTaxPercentage)*100)) / 100)
-		shippingTotal += ((is[i].primary * uint64((1+is[i].shippingTaxPercentage)*100)) / 100)
+		shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+		shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
 	}
-
-	return shippingTotal, nil
+	return total + shippingTotal, nil
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
