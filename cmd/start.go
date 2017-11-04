@@ -54,6 +54,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/zcashd"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
@@ -500,6 +501,11 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
+	// Wallet setup
+	var exchangeRates bitcoin.ExchangeRates
+	if !x.DisableExchangeRates {
+		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
+	}
 	var w3 io.Writer
 	if x.NoLogFiles {
 		w3 = &DummyWriter{}
@@ -563,6 +569,18 @@ func (x *Start) Execute(args []string) error {
 			usetor = true
 		}
 		cryptoWallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
+	case "zcashd":
+		if walletCfg.Binary == "" {
+			return errors.New("The path to the zcashd binary must be specified in the config file when using zcashd")
+		}
+		usetor := false
+		if usingTor && !usingClearnet {
+			usetor = true
+		}
+		cryptoWallet = zcashd.NewZcashdWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
+		if !x.DisableExchangeRates {
+			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
+		}
 	default:
 		log.Fatal("Unknown wallet type")
 	}
@@ -631,12 +649,6 @@ func (x *Start) Execute(args []string) error {
 			split := strings.SplitAfter(string(cookie), cookiePrefix)
 			authCookie.Value = split[1]
 		}
-	}
-
-	// Exchange rates
-	var exchangeRates bitcoin.ExchangeRates
-	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
 
 	// Set up the ban manager

@@ -1,15 +1,13 @@
-package bitcoind
+package zcashd
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -29,13 +27,13 @@ import (
 	"time"
 )
 
-var log = logging.MustGetLogger("bitcoind")
+var log = logging.MustGetLogger("zcashd")
 
 const (
 	Account = "OpenBazaar"
 )
 
-type BitcoindWallet struct {
+type ZcashdWallet struct {
 	params           *chaincfg.Params
 	repoPath         string
 	trustedPeer      string
@@ -52,13 +50,13 @@ type BitcoindWallet struct {
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	Host:                 "localhost:8332",
-	HTTPPostMode:         true, // Bitcoin core only supports HTTP POST mode
-	DisableTLS:           true, // Bitcoin core does not provide TLS by default
+	HTTPPostMode:         true, // Zcash core only supports HTTP POST mode
+	DisableTLS:           true, // Zcash core does not provide TLS by default
 	DisableAutoReconnect: false,
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string, useTor bool, torControlPort int) *BitcoindWallet {
+func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string, useTor bool, torControlPort int) *ZcashdWallet {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -74,7 +72,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
 
-	w := BitcoindWallet{
+	w := ZcashdWallet{
 		params:           params,
 		repoPath:         repoPath,
 		trustedPeer:      trustedPeer,
@@ -87,7 +85,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 	return &w
 }
 
-func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
+func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	notify := `curl -d %s http://localhost:8330/`
 	args := []string{"-walletnotify=" + notify, "-server"}
 	if rescan {
@@ -104,25 +102,25 @@ func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
 		args = append(args, "-connect="+w.trustedPeer)
 	}
 	if w.useTor {
-		socksPort := DefaultSocksPort(w.controlPort)
+		socksPort := bitcoind.DefaultSocksPort(w.controlPort)
 		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
 	return args
 }
 
-func (w *BitcoindWallet) Start() {
+func (w *ZcashdWallet) Start() {
 	w.shutdownIfActive()
 	args := w.BuildArguments(false)
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
-	go StartNotificationListener(client, w.listeners)
+	go bitcoind.StartNotificationListener(client, w.listeners)
 
 	cmd := exec.Command(w.binary, args...)
 	go cmd.Start()
 	ticker := time.NewTicker(time.Second * 30)
 	go func() {
 		for range ticker.C {
-			log.Fatal("Failed to connect to bitcoind")
+			log.Fatal("Failed to connect to zcashd")
 		}
 	}()
 	for {
@@ -133,19 +131,19 @@ func (w *BitcoindWallet) Start() {
 		time.Sleep(time.Second)
 	}
 	ticker.Stop()
-	log.Info("Connected to bitcoind")
+	log.Info("Connected to zcashd")
 	w.started = true
 	go w.addScripts()
 }
 
-func (w *BitcoindWallet) addScripts() {
+func (w *ZcashdWallet) addScripts() {
 	for _, script := range w.scriptsToAdd {
 		w.AddWatchedScript(script)
 	}
 }
 
-// If bitcoind is already running let's shut it down so we restart it with our options
-func (w *BitcoindWallet) shutdownIfActive() {
+// If zcashd is already running let's shut it down so we restart it with our options
+func (w *ZcashdWallet) shutdownIfActive() {
 	client, err := btcrpcclient.New(connCfg, nil)
 	if err != nil {
 		return
@@ -155,56 +153,55 @@ func (w *BitcoindWallet) shutdownIfActive() {
 	time.Sleep(5 * time.Second)
 }
 
-func (w *BitcoindWallet) CurrencyCode() string {
+func (w *ZcashdWallet) CurrencyCode() string {
 	if w.params.Name == chaincfg.MainNetParams.Name {
-		return "btc"
+		return "zec"
 	} else {
-		return "tbtc"
+		return "tzec"
 	}
 }
 
-func (w *BitcoindWallet) IsDust(amount int64) bool {
+func (w *ZcashdWallet) IsDust(amount int64) bool {
 	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
 }
 
-func (w *BitcoindWallet) MasterPrivateKey() *hd.ExtendedKey {
+func (w *ZcashdWallet) MasterPrivateKey() *hd.ExtendedKey {
 	return w.masterPrivateKey
 }
 
-func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
+func (w *ZcashdWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
-func (w *BitcoindWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
-	addr, _ := w.rpcClient.GetAccountAddress(Account)
+func (w *ZcashdWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
+	resp, _ := w.rpcClient.RawRequest("getaccountaddress", []json.RawMessage{json.RawMessage([]byte(`""`))})
+	var a string
+	json.Unmarshal(resp, &a)
+	addr, _ := DecodeAddress(a, w.params)
 	return addr
 }
 
-func (w *BitcoindWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
-	addr, _ := w.rpcClient.GetNewAddress(Account)
+func (w *ZcashdWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
+	resp, _ := w.rpcClient.RawRequest("getnewaddress", []json.RawMessage{json.RawMessage([]byte(`""`))})
+	var a string
+	json.Unmarshal(resp, &a)
+	addr, _ := DecodeAddress(a, w.params)
 	return addr
 }
 
-func (w *BitcoindWallet) DecodeAddress(addr string) (btc.Address, error) {
-	return btc.DecodeAddress(addr, w.params)
+func (w *ZcashdWallet) DecodeAddress(addr string) (btc.Address, error) {
+	return DecodeAddress(addr, w.params)
 }
 
-func (w *BitcoindWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
-	if err != nil {
-		return nil, err
-	}
-	if len(addrs) == 0 {
-		return nil, errors.New("unknown script")
-	}
-	return addrs[0], nil
+func (w *ZcashdWallet) ScriptToAddress(script []byte) (btc.Address, error) {
+	return ExtractPkScriptAddrs(script, w.params)
 }
 
-func (w *BitcoindWallet) AddressToScript(addr btc.Address) ([]byte, error) {
-	return txscript.PayToAddrScript(addr)
+func (w *ZcashdWallet) AddressToScript(addr btc.Address) ([]byte, error) {
+	return PayToAddrScript(addr)
 }
 
-func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
+func (w *ZcashdWallet) HasKey(addr btc.Address) bool {
 	_, err := w.rpcClient.DumpPrivKey(addr)
 	if err != nil {
 		return false
@@ -212,7 +209,7 @@ func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 	return true
 }
 
-func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *ZcashdWallet) Balance() (confirmed, unconfirmed int64) {
 	resp, _ := w.rpcClient.RawRequest("getwalletinfo", []json.RawMessage{})
 	type walletInfo struct {
 		Balance     float64 `json:"balance"`
@@ -226,7 +223,7 @@ func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
-func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
+func (w *ZcashdWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	blockinfo, err := w.rpcClient.GetBlockHeaderVerbose(hash)
 	if err != nil {
 		return 0, err
@@ -234,7 +231,7 @@ func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	return blockinfo.Height, nil
 }
 
-func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
+func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
 	var ret []wallet.Txn
 	resp, err := w.rpcClient.ListTransactions(Account)
 	if err != nil {
@@ -268,7 +265,7 @@ func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
 	return ret, nil
 }
 
-func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
+func (w *ZcashdWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 	includeWatchOnly := false
 	t := wallet.Txn{}
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
@@ -283,7 +280,7 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error)
 	return t, nil
 }
 
-func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
+func (w *ZcashdWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
 	includeWatchOnly := true
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
@@ -292,7 +289,7 @@ func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, 
 	return uint32(resp.Confirmations), uint32(resp.BlockIndex), nil
 }
 
-func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
+func (w *ZcashdWallet) ChainTip() (uint32, chainhash.Hash) {
 	var ch chainhash.Hash
 	info, err := w.rpcClient.GetInfo()
 	if err != nil {
@@ -305,7 +302,7 @@ func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
 	return uint32(info.Blocks), *h
 }
 
-func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
+func (w *ZcashdWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
 	utxos, err := w.rpcClient.ListUnspent()
 	if err != nil {
@@ -319,7 +316,7 @@ func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error)
 		if err != nil {
 			return m, err
 		}
-		addr, err := btc.DecodeAddress(u.Address, w.params)
+		addr, err := DecodeAddress(u.Address, w.params)
 		if err != nil {
 			return m, err
 		}
@@ -346,7 +343,7 @@ func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error)
 	return m, nil
 }
 
-func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZcashdWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	tx, err := w.buildTx(amount, addr, feeLevel)
 	if err != nil {
 		return nil, err
@@ -354,8 +351,8 @@ func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.F
 	return w.rpcClient.SendRawTransaction(tx, false)
 }
 
-func (w *BitcoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
-	script, _ := txscript.PayToAddrScript(addr)
+func (w *ZcashdWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
+	script, _ := PayToAddrScript(addr)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
 		return nil, wallet.ErrorDustAmount
 	}
@@ -411,7 +408,7 @@ func (w *BitcoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet
 	// Create change source
 	changeSource := func() ([]byte, error) {
 		addr := w.CurrentAddress(wallet.INTERNAL)
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := PayToAddrScript(addr)
 		if err != nil {
 			return []byte{}, err
 		}
@@ -450,7 +447,7 @@ func (w *BitcoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet
 	return authoredTx.Tx, nil
 }
 
-func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+func (w *ZcashdWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	includeWatchOnly := false
 	tx, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
@@ -482,7 +479,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 				Value:        int64(u.Amount / 100000000),
 				ScriptPubkey: script,
 			}
-			addr, err := btc.DecodeAddress(u.Address, w.params)
+			addr, err := DecodeAddress(u.Address, w.params)
 			if err != nil {
 				continue
 			}
@@ -502,7 +499,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	return nil, spvwallet.BumpFeeNotFoundError
 }
 
-func (w *BitcoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
+func (w *ZcashdWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	defautlFee := uint64(50)
 	var nBlocks json.RawMessage
 	switch feeLevel {
@@ -530,7 +527,7 @@ func (w *BitcoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	return uint64(fee)
 }
 
-func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
+func (w *ZcashdWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
@@ -541,9 +538,8 @@ func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []walle
 	return uint64(fee)
 }
 
-func (w *BitcoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
-	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
-	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", w.params)
+func (w *ZcashdWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
+	addr, err := DecodeAddress("t1VpYecBW4UudbGcy4ufh61eWxQCoFaUrPs", w.params)
 	if err != nil {
 		return 0, err
 	}
@@ -574,9 +570,9 @@ func (w *BitcoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel
 	return uint64(inval - outval), err
 }
 
-func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {
+func (w *ZcashdWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {
 	var sigs []wallet.Signature
-	tx := wire.NewMsgTx(1)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -592,18 +588,11 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 	}
 
 	// Subtract fee
-	txType := spvwallet.P2SH_2of3_Multisig
-	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
-	if err == nil {
-		txType = spvwallet.P2SH_Multisig_Timelock_2Sigs
-	}
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2SH_2of3_Multisig)
 	fee := estimatedSize * int(feePerByte)
-	if len(tx.TxOut) > 0 {
-		feePerOutput := fee / len(tx.TxOut)
-		for _, output := range tx.TxOut {
-			output.Value -= int64(feePerOutput)
-		}
+	feePerOutput := fee / len(tx.TxOut)
+	for _, output := range tx.TxOut {
+		output.Value -= int64(feePerOutput)
 	}
 
 	// BIP 69 sorting
@@ -614,9 +603,8 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 		return sigs, err
 	}
 
-	hashes := txscript.NewTxSigHashes(tx)
 	for i := range tx.TxIn {
-		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, redeemScript, txscript.SigHashAll, signingKey)
+		sig, err := txscript.RawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey)
 		if err != nil {
 			continue
 		}
@@ -626,8 +614,8 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 	return sigs, nil
 }
 
-func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, sigs1 []wallet.Signature, sigs2 []wallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	tx := wire.NewMsgTx(1)
+func (w *ZcashdWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, sigs1 []wallet.Signature, sigs2 []wallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -643,28 +631,15 @@ func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.
 	}
 
 	// Subtract fee
-	txType := spvwallet.P2SH_2of3_Multisig
-	_, err := spvwallet.LockTimeFromRedeemScript(redeemScript)
-	if err == nil {
-		txType = spvwallet.P2SH_Multisig_Timelock_2Sigs
-	}
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, txType)
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2SH_2of3_Multisig)
 	fee := estimatedSize * int(feePerByte)
-	if len(tx.TxOut) > 0 {
-		feePerOutput := fee / len(tx.TxOut)
-		for _, output := range tx.TxOut {
-			output.Value -= int64(feePerOutput)
-		}
+	feePerOutput := fee / len(tx.TxOut)
+	for _, output := range tx.TxOut {
+		output.Value -= int64(feePerOutput)
 	}
 
 	// BIP 69 sorting
 	txsort.InPlaceSort(tx)
-
-	// Check if time locked
-	var timeLocked bool
-	if redeemScript[0] == txscript.OP_IF {
-		timeLocked = true
-	}
 
 	for i, input := range tx.TxIn {
 		var sig1 []byte
@@ -672,44 +647,44 @@ func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.
 		for _, sig := range sigs1 {
 			if int(sig.InputIndex) == i {
 				sig1 = sig.Signature
-				break
 			}
 		}
 		for _, sig := range sigs2 {
 			if int(sig.InputIndex) == i {
 				sig2 = sig.Signature
-				break
 			}
 		}
-
-		witness := wire.TxWitness{[]byte{}, sig1, sig2}
-
-		if timeLocked {
-			witness = append(witness, []byte{0x01})
+		builder := txscript.NewScriptBuilder()
+		builder.AddOp(txscript.OP_0)
+		builder.AddData(sig1)
+		builder.AddData(sig2)
+		builder.AddData(redeemScript)
+		scriptSig, err := builder.Script()
+		if err != nil {
+			return nil, err
 		}
-		witness = append(witness, redeemScript)
-		input.Witness = witness
+		input.SignatureScript = scriptSig
 	}
-	// broadcast
+	// Broadcast
 	if broadcast {
-		_, err = w.rpcClient.SendRawTransaction(tx, false)
+		_, err := w.rpcClient.SendRawTransaction(tx, false)
 		if err != nil {
 			return nil, err
 		}
 	}
 	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
+	tx.BtcEncode(&buf, 1, wire.BaseEncoding)
 	return buf.Bytes(), nil
 }
 
-func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZcashdWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
 	} else {
 		internalAddr = w.CurrentAddress(wallet.INTERNAL)
 	}
-	script, err := txscript.PayToAddrScript(internalAddr)
+	script, err := PayToAddrScript(internalAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -728,16 +703,24 @@ func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address,
 	txType := spvwallet.P2PKH
 	if redeemScript != nil {
 		txType = spvwallet.P2SH_1of2_Multisig
-		_, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
-		if err == nil {
-			txType = spvwallet.P2SH_Multisig_Timelock_1Sig
-		}
 	}
+
 	estimatedSize := spvwallet.EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
-	feePerByte := int(w.GetFeePerByte(feeLevel))
-	fee := estimatedSize * feePerByte
+	b := json.RawMessage([]byte(`1`))
+	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{b})
+	if err != nil {
+		return nil, err
+	}
+	feePerKb, err := strconv.Atoi(string(resp))
+	if err != nil {
+		return nil, err
+	}
+	if feePerKb <= 0 {
+		feePerKb = 50000
+	}
+	fee := estimatedSize * (feePerKb / 1000)
 
 	outVal := val - int64(fee)
 	if outVal < 0 {
@@ -756,22 +739,16 @@ func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address,
 	txsort.InPlaceSort(tx)
 
 	// Sign tx
-	privKey, err := key.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	pk := privKey.PubKey().SerializeCompressed()
-	addressPub, err := btc.NewAddressPubKey(pk, w.params)
-
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
-		if addressPub.EncodeAddress() == addr.EncodeAddress() {
-			wif, err := btc.NewWIF(privKey, w.params, true)
-			if err != nil {
-				return nil, false, err
-			}
-			return wif.PrivKey, wif.CompressPubKey, nil
+		privKey, err := key.ECPrivKey()
+		if err != nil {
+			return nil, false, err
 		}
-		return nil, false, errors.New("Not found")
+		wif, err := btc.NewWIF(privKey, w.params, true)
+		if err != nil {
+			return nil, false, err
+		}
+		return wif.PrivKey, wif.CompressPubKey, nil
 	})
 	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
 		if redeemScript == nil {
@@ -780,51 +757,18 @@ func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address,
 		return *redeemScript, nil
 	})
 
-	// Check if time locked
-	var timeLocked bool
-	if redeemScript != nil {
-		rs := *redeemScript
-		if rs[0] == txscript.OP_IF {
-			timeLocked = true
-			tx.Version = 2
-		}
-		for _, txIn := range tx.TxIn {
-			locktime, err := spvwallet.LockTimeFromRedeemScript(*redeemScript)
-			if err != nil {
-				return nil, err
-			}
-			txIn.Sequence = locktime
-		}
-	}
-
-	hashes := txscript.NewTxSigHashes(tx)
 	for i, txIn := range tx.TxIn {
-		if redeemScript == nil {
-			prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
-			script, err := txscript.SignTxOutput(w.params,
-				tx, i, prevOutScript, txscript.SigHashAll, getKey,
-				getScript, txIn.SignatureScript)
-			if err != nil {
-				return nil, errors.New("Failed to sign transaction")
-			}
-			txIn.SignatureScript = script
-		} else {
-			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, utxos[i].Value, *redeemScript, txscript.SigHashAll, privKey)
-			if err != nil {
-				return nil, err
-			}
-			var witness wire.TxWitness
-			if timeLocked {
-				witness = wire.TxWitness{sig, []byte{}}
-			} else {
-				witness = wire.TxWitness{[]byte{}, sig}
-			}
-			witness = append(witness, *redeemScript)
-			txIn.Witness = witness
+		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
+		script, err := txscript.SignTxOutput(w.params,
+			tx, i, prevOutScript, txscript.SigHashAll, getKey,
+			getScript, txIn.SignatureScript)
+		if err != nil {
+			return nil, errors.New("Failed to sign transaction")
 		}
+		txIn.SignatureScript = script
 	}
 
-	// broadcast
+	// Broadcast
 	_, err = w.rpcClient.SendRawTransaction(tx, false)
 	if err != nil {
 		return nil, err
@@ -833,92 +777,47 @@ func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address,
 	return &txid, nil
 }
 
-func (w *BitcoindWallet) Params() *chaincfg.Params {
+func (w *ZcashdWallet) Params() *chaincfg.Params {
 	return w.params
 }
 
-func (w *BitcoindWallet) AddTransactionListener(callback func(wallet.TransactionCallback)) {
+func (w *ZcashdWallet) AddTransactionListener(callback func(wallet.TransactionCallback)) {
 	w.listeners = append(w.listeners, callback)
 }
 
-func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
-	if uint32(timeout.Hours()) > 0 && timeoutKey == nil {
-		return nil, nil, errors.New("Timeout key must be non nil when using an escrow timeout")
-	}
-
-	if len(keys) < threshold {
-		return nil, nil, fmt.Errorf("unable to generate multisig script with "+
-			"%d required signatures when there are only %d public "+
-			"keys available", threshold, len(keys))
-	}
-
-	var ecKeys []*btcec.PublicKey
+func (w *ZcashdWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
+	var addrPubKeys []*btc.AddressPubKey
 	for _, key := range keys {
 		ecKey, err := key.ECPubKey()
 		if err != nil {
 			return nil, nil, err
 		}
-		ecKeys = append(ecKeys, ecKey)
-	}
-
-	builder := txscript.NewScriptBuilder()
-	if uint32(timeout.Hours()) == 0 {
-
-		builder.AddInt64(int64(threshold))
-		for _, key := range ecKeys {
-			builder.AddData(key.SerializeCompressed())
-		}
-		builder.AddInt64(int64(len(ecKeys)))
-		builder.AddOp(txscript.OP_CHECKMULTISIG)
-
-	} else {
-		ecKey, err := timeoutKey.ECPubKey()
+		k, err := btc.NewAddressPubKey(ecKey.SerializeCompressed(), w.params)
 		if err != nil {
 			return nil, nil, err
 		}
-		sequenceLock := blockchain.LockTimeToSequence(false, uint32(timeout.Hours()*6))
-		builder.AddOp(txscript.OP_IF)
-		builder.AddInt64(int64(threshold))
-		for _, key := range ecKeys {
-			builder.AddData(key.SerializeCompressed())
-		}
-		builder.AddInt64(int64(len(ecKeys)))
-		builder.AddOp(txscript.OP_CHECKMULTISIG)
-		builder.AddOp(txscript.OP_ELSE).
-			AddInt64(int64(sequenceLock)).
-			AddOp(txscript.OP_CHECKSEQUENCEVERIFY).
-			AddOp(txscript.OP_DROP).
-			AddData(ecKey.SerializeCompressed()).
-			AddOp(txscript.OP_CHECKSIG).
-			AddOp(txscript.OP_ENDIF)
+		addrPubKeys = append(addrPubKeys, k)
 	}
-	redeemScript, err = builder.Script()
+	redeemScript, err = txscript.MultiSigScript(addrPubKeys, threshold)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	witnessProgram := sha256.Sum256(redeemScript)
-
-	addr, err = btc.NewAddressWitnessScriptHash(witnessProgram[:], w.params)
+	addr, err = NewAddressScriptHash(redeemScript, w.params)
 	if err != nil {
 		return nil, nil, err
 	}
 	return addr, redeemScript, nil
 }
 
-func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
-	if !w.started {
-		w.scriptsToAdd = append(w.scriptsToAdd, script)
-		return nil
-	}
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+func (w *ZcashdWallet) AddWatchedScript(script []byte) error {
+	addr, err := ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err
 	}
-	return w.rpcClient.ImportAddressRescan(addrs[0].EncodeAddress(), false)
+	return w.rpcClient.ImportAddress(addr.EncodeAddress())
 }
 
-func (w *BitcoindWallet) ReSyncBlockchain(fromDate time.Time) {
+func (w *ZcashdWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
@@ -928,23 +827,14 @@ func (w *BitcoindWallet) ReSyncBlockchain(fromDate time.Time) {
 
 	client, err := btcrpcclient.New(connCfg, nil)
 	if err != nil {
-		log.Error("Could not connect to bitcoind during rescan")
+		log.Error("Could not connect to zcashd during rescan")
 	}
 	w.rpcClient = client
 }
 
-func (w *BitcoindWallet) Close() {
+func (w *ZcashdWallet) Close() {
 	if w.rpcClient != nil {
 		w.rpcClient.RawRequest("stop", []json.RawMessage{})
 		w.rpcClient.Shutdown()
 	}
-}
-
-func DefaultSocksPort(controlPort int) int {
-	socksPort := 9050
-	if controlPort == 9151 || controlPort == 9051 {
-		controlPort--
-		socksPort = controlPort
-	}
-	return socksPort
 }
