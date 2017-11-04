@@ -49,7 +49,7 @@ type ZcashdWallet struct {
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
-	Host:                 "localhost:8332",
+	Host:                 "localhost:8232",
 	HTTPPostMode:         true, // Zcash core only supports HTTP POST mode
 	DisableTLS:           true, // Zcash core does not provide TLS by default
 	DisableAutoReconnect: false,
@@ -62,7 +62,7 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 	mPubKey, _ := mPrivKey.Neuter()
 
 	if params.Name == chaincfg.TestNet3Params.Name || params.Name == chaincfg.RegressionNetParams.Name {
-		connCfg.Host = "localhost:18332"
+		connCfg.Host = "localhost:18232"
 	}
 
 	connCfg.User = username
