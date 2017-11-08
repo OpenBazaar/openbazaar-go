@@ -539,7 +539,7 @@ func (w *ZcashdWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.
 }
 
 func (w *ZcashdWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
-	addr, err := DecodeAddress("t1VpYecBW4UudbGcy4ufh61eWxQCoFaUrPs", w.params)
+	addr, err := DecodeAddress("t1VpYecBW4UudbGcy4ufh61eWxQCoFaUrPs", &chaincfg.MainNetParams)
 	if err != nil {
 		return 0, err
 	}
