@@ -543,7 +543,7 @@ func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []walle
 
 func (w *BitcoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
 	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
-	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", w.params)
+	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", &chaincfg.MainNetParams)
 	if err != nil {
 		return 0, err
 	}
