@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	ListingVersion           = 1
+	ListingVersion           = 2
 	TitleMaxCharacters       = 140
 	ShortDescriptionLength   = 160
 	DescriptionMaxCharacters = 50000
@@ -947,41 +947,6 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
-		}
-		if shippingOption.ShippingRules != nil {
-			if len(shippingOption.ShippingRules.Rules) == 0 {
-				return errors.New("At least on rule must be specified if ShippingRules is selected")
-			}
-			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
-				return fmt.Errorf("Number of shipping rules is greater than the max of %d", MaxListItems)
-			}
-			if shippingOption.ShippingRules.RuleType > pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT {
-				return errors.New("Unknown shipping rule")
-			}
-			if shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE && listing.Item.Grams == 0 {
-				return errors.New("Item weight must be specified when using FLAT_FEE_WEIGHT_RANGE shipping rule")
-			}
-			if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD || shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT) && len(shippingOption.ShippingRules.Rules) > 1 {
-				return errors.New("Selected shipping rule type can only have a maximum of one rule")
-			}
-			if len(shippingOption.ShippingRules.Rules) > MaxListItems {
-				return fmt.Errorf("Shipping rules exceeds max of %d", MaxListItems)
-			}
-			for i, rule := range shippingOption.ShippingRules.Rules {
-				if (shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE ||
-					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE ||
-					shippingOption.ShippingRules.RuleType == pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT) && rule.MaxRange <= rule.MinRange {
-					return errors.New("Shipping rule max range cannot be less than or equal to the min range")
-				}
-				for x, checkRule := range shippingOption.ShippingRules.Rules {
-					if x == i {
-						continue
-					}
-					if (rule.MinRange >= checkRule.MinRange && rule.MinRange <= checkRule.MaxRange) || (rule.MaxRange <= checkRule.MaxRange && rule.MaxRange >= checkRule.MinRange) {
-						return errors.New("Shipping rule ranges must not overlap")
-					}
-				}
-			}
 		}
 		if len(shippingOption.Services) == 0 && shippingOption.Type != pb.Listing_ShippingOption_LOCAL_PICKUP {
 			return errors.New("At least one service must be specified for a shipping option when not local pickup")

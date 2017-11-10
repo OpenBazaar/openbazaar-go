@@ -20,6 +20,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 				Format:             pb.Listing_Metadata_FIXED_PRICE,
 				AcceptedCurrencies: []string{"BTC"},
 				PricingCurrency:    "BTC",
+				Version:            2,
 			},
 			Item: &pb.Listing_Item{
 				Price: 100000,
@@ -31,8 +32,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 					Type:    pb.Listing_ShippingOption_FIXED_PRICE,
 					Services: []*pb.Listing_ShippingOption_Service{
 						{
-							Name:  "Standard shipping",
-							Price: 25000,
+							Name:                "Standard shipping",
+							Price:               25000,
+							AdditionalItemPrice: 10000,
 						},
 					},
 				},
@@ -72,6 +74,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	if total != 125000 {
 		t.Error("Calculated wrong order total")
+		return
 	}
 
 	// Test higher quantity
@@ -80,7 +83,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if total != 250000 {
+	if total != 235000 {
 		t.Error("Calculated wrong order total")
 	}
 
@@ -261,6 +264,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	if total != 72450 {
 		t.Error("Calculated wrong order total")
+		return
 	}
 
 	// Test local pickup
@@ -334,172 +338,4 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		},
 	}
 	contract2.BuyerOrder = order2
-
-	// Test quantity discount
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				MinRange: 2,
-				MaxRange: 5,
-				Price:    10000,
-			},
-		},
-	}
-	contract2.BuyerOrder.Items[0].Quantity = 3
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 365000 {
-		t.Error("Calculated wrong order total")
-	}
-
-	// Test flat fee quantity range
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				MinRange: 2,
-				MaxRange: 5,
-				Price:    10000,
-			},
-		},
-	}
-	contract2.BuyerOrder.Items[0].Quantity = 3
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 310000 {
-		t.Error("Calculated wrong order total")
-	}
-
-	// Test flat fee quantity range
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				MinRange: 2,
-				MaxRange: 5,
-				Price:    10000,
-			},
-		},
-	}
-	contract2.BuyerOrder.Items[0].Quantity = 3
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 310000 {
-		t.Error("Calculated wrong order total")
-	}
-
-	// Test flat fee weight range
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				MinRange: 10,
-				MaxRange: 50,
-				Price:    20000,
-			},
-		},
-	}
-	contract2.VendorListings[0].Item.Grams = 5
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 320000 {
-		t.Error("Calculated wrong order total")
-	}
-
-	// Test flat fee weight range
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				Price: 5000,
-			},
-		},
-	}
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 335000 {
-		t.Error("Calculated wrong order total")
-	}
-
-	// Test flat fee weight range
-	contract2.VendorListings[0].ShippingOptions[0].ShippingRules = &pb.Listing_ShippingOption_ShippingRules{
-		RuleType: pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT,
-		Rules: []*pb.Listing_ShippingOption_ShippingRules_Rule{
-			{
-				Price: 5000,
-			},
-		},
-	}
-	ser, err = proto.Marshal(contract2.VendorListings[0])
-	if err != nil {
-		t.Error(err)
-	}
-	listingID, err = core.EncodeCID(ser)
-	if err != nil {
-		t.Error(err)
-	}
-	contract2.BuyerOrder.Items[0].ListingHash = listingID.String()
-	total, err = node.CalculateOrderTotal(contract2)
-	if err != nil {
-		t.Error(err)
-	}
-	if total != 315000 {
-		t.Error("Calculated wrong order total")
-	}
 }
