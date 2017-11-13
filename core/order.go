@@ -774,21 +774,21 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	}
 
 	// Add in shipping costs
-	type combinedShipping struct {
-		quantity int
-		price    uint64
-		add      bool
-		modifier uint64
+	type itemShipping struct {
+		primary               uint64
+		secondary             uint64
+		quantity              uint32
+		shippingTaxPercentage float32
+		version               uint32
 	}
-	var combinedOptions []combinedShipping
+	var is []itemShipping
 
-	var shippingTotal uint64
+	// First loop through to validate and filter out non-physical items
 	for _, item := range contract.BuyerOrder.Items {
 		listing, ok := physicalGoods[item.ListingHash]
 		if !ok { // Not physical good no need to calculate shipping
 			continue
 		}
-		var itemShipping uint64
 		// Check selected option exists
 		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
 		for _, so := range listing.ShippingOptions {
@@ -827,11 +827,17 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		if err != nil {
 			return 0, err
 		}
-		shippingPrice := uint64(item.Quantity) * shippingSatoshi
-		itemShipping += shippingPrice
-		shippingTaxPercentage := float32(0)
+
+		var secondarySatoshi uint64
+		if service.AdditionalItemPrice > 0 {
+			secondarySatoshi, err = n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
+			if err != nil {
+				return 0, err
+			}
+		}
 
 		// Calculate tax percentage
+		var shippingTaxPercentage float32
 		for _, tax := range listing.Taxes {
 			regions := make(map[pb.CountryCode]bool)
 			for _, taxRegion := range tax.TaxRegions {
@@ -843,98 +849,41 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			}
 		}
 
-		// Apply shipping rules
-		if option.ShippingRules != nil {
-			for _, rule := range option.ShippingRules.Rules {
-				switch option.ShippingRules.RuleType {
-				case pb.Listing_ShippingOption_ShippingRules_QUANTITY_DISCOUNT:
-					if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
-						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-						if err != nil {
-							return 0, err
-						}
-						itemShipping -= rulePrice
-					}
-				case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_QUANTITY_RANGE:
-					if item.Quantity >= rule.MinRange && item.Quantity <= rule.MaxRange {
-						itemShipping -= shippingPrice
-						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-						if err != nil {
-							return 0, err
-						}
-						itemShipping += rulePrice
-					}
-				case pb.Listing_ShippingOption_ShippingRules_FLAT_FEE_WEIGHT_RANGE:
-					weight := listing.Item.Grams * float32(item.Quantity)
-					if uint32(weight) >= rule.MinRange && uint32(weight) <= rule.MaxRange {
-						itemShipping -= shippingPrice
-						rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-						if err != nil {
-							return 0, err
-						}
-						itemShipping += rulePrice
-					}
-				case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_ADD:
-					itemShipping -= shippingPrice
-					rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-					rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
-					shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
-					if err != nil {
-						return 0, err
-					}
-					cs := combinedShipping{
-						quantity: int(item.Quantity),
-						price:    shippingSatoshi,
-						add:      true,
-						modifier: rulePrice,
-					}
-					combinedOptions = append(combinedOptions, cs)
-
-				case pb.Listing_ShippingOption_ShippingRules_COMBINED_SHIPPING_SUBTRACT:
-					itemShipping -= shippingPrice
-					rulePrice, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, rule.Price)
-					rulePrice += uint64(float32(rulePrice) * shippingTaxPercentage)
-					shippingSatoshi += uint64(float32(shippingSatoshi) * shippingTaxPercentage)
-					if err != nil {
-						return 0, err
-					}
-					cs := combinedShipping{
-						quantity: int(item.Quantity),
-						price:    shippingSatoshi,
-						add:      false,
-						modifier: rulePrice,
-					}
-					combinedOptions = append(combinedOptions, cs)
-				}
-			}
-		}
-		// Apply tax
-		itemShipping += uint64(float32(itemShipping) * shippingTaxPercentage)
-		shippingTotal += itemShipping
+		is = append(is, itemShipping{
+			primary:               shippingSatoshi,
+			secondary:             secondarySatoshi,
+			quantity:              item.Quantity,
+			shippingTaxPercentage: shippingTaxPercentage,
+			version:               listing.Metadata.Version,
+		})
 	}
 
-	// Process combined shipping rules
-	if len(combinedOptions) > 0 {
-		lowestPrice := int64(-1)
-		for _, v := range combinedOptions {
-			if int64(v.price) < lowestPrice || lowestPrice == -1 {
-				lowestPrice = int64(v.price)
-			}
-		}
-		shippingTotal += uint64(lowestPrice)
-		for _, o := range combinedOptions {
-			modifier := o.modifier
-			modifier *= (uint64(o.quantity) - 1)
-			if o.add {
-				shippingTotal += modifier
+	var shippingTotal uint64
+	if len(is) == 1 {
+		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
+		if is[0].quantity > 1 {
+			if is[0].version == 1 {
+				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
+			} else if is[0].version == 2 {
+				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else {
-				shippingTotal -= modifier
+				return 0, errors.New("Unknown listing version")
 			}
 		}
+	} else if len(is) > 1 {
+		var highest uint64
+		var i int
+		for x, s := range is {
+			if s.primary > highest {
+				highest = s.primary
+				i = x
+			}
+			shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
+		}
+		shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+		shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
 	}
-
-	total += shippingTotal
-	return total, nil
+	return total + shippingTotal, nil
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {

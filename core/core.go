@@ -24,6 +24,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	"sync"
 )
 
@@ -151,6 +152,25 @@ func (n *OpenBazaarNode) publish(hash string) {
 		if err != nil {
 			log.Error(err)
 			return
+		}
+		pointers, err := n.Datastore.Pointers().GetByPurpose(ipfs.MESSAGE)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		// Check if we're seeding any outgoing messages and add their CIDs to the graph
+		for _, p := range pointers {
+			if len(p.Value.Addrs) > 0 {
+				s, err := p.Value.Addrs[0].ValueForProtocol(ma.P_IPFS)
+				if err != nil {
+					continue
+				}
+				c, err := cid.Decode(s)
+				if err != nil {
+					continue
+				}
+				graph = append(graph, *c)
+			}
 		}
 	}
 	for _, p := range n.PushNodes {
