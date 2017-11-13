@@ -105,7 +105,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if i.config.Cors != nil {
 		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
-		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE")
+		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE,GET,OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
@@ -127,6 +127,13 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
+      
+      if r.Method == "OPTIONS" {
+        w.WriteHeader(http.StatusOK)
+        fmt.Fprint(w, "200 - OK")
+        return
+      }
+      
 			username, password, ok := r.BasicAuth()
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
