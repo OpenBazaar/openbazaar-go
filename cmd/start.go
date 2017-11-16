@@ -54,6 +54,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cpacia/BitcoinCash-Wallet"
+	cashrates "github.com/cpacia/BitcoinCash-Wallet/exchangerates"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
@@ -483,6 +485,12 @@ func (x *Start) Execute(args []string) error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Wallet
+	// Exchange rates
+	var exchangeRates bitcoin.ExchangeRates
+	if !x.DisableExchangeRates {
+		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
+	}
+
 	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
 		log.Error(err)
@@ -549,6 +557,44 @@ func (x *Start) Execute(args []string) error {
 			Logger:       ml,
 		}
 		cryptoWallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
+	case "bitcoincash":
+		var tp net.Addr
+		if walletCfg.TrustedPeer != "" {
+			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+		}
+		feeApi, err := url.Parse(walletCfg.FeeAPI)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		exchangeRates = cashrates.NewBitcoinCashPriceFetcher(torDialer)
+		spvwalletConfig := &bitcoincash.Config{
+			Mnemonic:             mn,
+			Params:               &params,
+			MaxFee:               uint64(walletCfg.MaxFee),
+			LowFee:               uint64(walletCfg.LowFeeDefault),
+			MediumFee:            uint64(walletCfg.MediumFeeDefault),
+			HighFee:              uint64(walletCfg.HighFeeDefault),
+			FeeAPI:               *feeApi,
+			RepoPath:             repoPath,
+			CreationDate:         creationDate,
+			DB:                   sqliteDB,
+			UserAgent:            "OpenBazaar",
+			TrustedPeer:          tp,
+			Proxy:                torDialer,
+			Logger:               ml,
+			ExchangeRateProvider: exchangeRates,
+		}
+		cryptoWallet, err = bitcoincash.NewSPVWallet(spvwalletConfig)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -631,12 +677,6 @@ func (x *Start) Execute(args []string) error {
 			split := strings.SplitAfter(string(cookie), cookiePrefix)
 			authCookie.Value = split[1]
 		}
-	}
-
-	// Exchange rates
-	var exchangeRates bitcoin.ExchangeRates
-	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
 
 	// Set up the ban manager

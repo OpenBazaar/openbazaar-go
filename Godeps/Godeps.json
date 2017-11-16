@@ -169,16 +169,26 @@
 			"Rev": "31079b6807923eb23992c421b114992b95131b55"
 		},
 		{
-			"ImportPath": "github.com/buger/goterm",
-			"Rev": "d443b9114f9c050367638a536310fbec36a0de11"
-		},
-		{
 			"ImportPath": "github.com/ccding/go-stun/stun",
 			"Rev": "ed7f5c90fa94fa3c4159ba5fa646421650f727b0"
 		},
 		{
 			"ImportPath": "github.com/cevaris/ordered_map",
 			"Rev": "531fd444821a2eda0e8d1ed033ae207641e03b54"
+		},
+		{
+			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
+			"Comment": "v0.3.0-4-g6890c0b",
+			"Rev": "6890c0b18e29138f469c640f8863251a12c6e24e"
+		},
+		{
+			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
+			"Comment": "v0.3.0-4-g6890c0b",
+			"Rev": "6890c0b18e29138f469c640f8863251a12c6e24e"
+		},
+		{
+			"ImportPath": "github.com/cpacia/bchutil",
+			"Rev": "9369b4c6393b0a83c2207fab5e8d0acf528f5347"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
