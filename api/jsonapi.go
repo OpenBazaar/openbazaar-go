@@ -127,13 +127,13 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		} else {
-      
-      if r.Method == "OPTIONS" {
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprint(w, "200 - OK")
-        return
-      }
-      
+
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				fmt.Fprint(w, "200 - OK")
+				return
+			}
+
 			username, password, ok := r.BasicAuth()
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
