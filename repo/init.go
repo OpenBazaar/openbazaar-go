@@ -7,6 +7,10 @@ import (
 	"os"
 	"path"
 
+	"path/filepath"
+	"runtime"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/ipfs/go-ipfs/core"
@@ -161,7 +165,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		return err
 	}
 	var w WalletConfig = WalletConfig{
-		Type:             "spvwallet",
+		Type:             "bitcoincash",
 		MaxFee:           2000,
 		FeeAPI:           "https://btc.fees.openbazaar.org",
 		HighFeeDefault:   160,
