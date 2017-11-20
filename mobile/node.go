@@ -67,24 +67,22 @@ type Node struct {
 	ipfsConfig *ipfscore.BuildCfg
 	apiConfig  *repo.APIConfig
 }
-type Mobile struct { }
-
+type Mobile struct{}
 
 func NewOB(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 
 	nodeconfig := NodeConfig{
-		RepoPath: repoPath,
+		RepoPath:            repoPath,
 		AuthenticationToken: "",
-		Testnet: testnet,
-		UserAgent: userAgent,
-		WalletTrustedPeer: walletTrustedPeer,
+		Testnet:             testnet,
+		UserAgent:           userAgent,
+		WalletTrustedPeer:   walletTrustedPeer,
 	}
-
 
 	var m Mobile
 	node, err := m.NewNode(nodeconfig, password, mnemonic)
 	//n.Start()
-	if(err != nil) {
+	if err != nil {
 		fmt.Println(err)
 	}
 	return node
@@ -222,10 +220,12 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 		MediumFee:            uint64(walletCfg.MediumFeeDefault),
 		HighFee:              uint64(walletCfg.HighFeeDefault),
 		FeeAPI:               *feeApi,
+		RepoPath:             config.RepoPath,
 		CreationDate:         creationDate,
 		DB:                   sqliteDB,
 		UserAgent:            "OpenBazaar",
 		TrustedPeer:          tp,
+		Logger:               logger,
 		ExchangeRateProvider: exchangeRates,
 	}
 	core.PublishLock.Lock()
