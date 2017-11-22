@@ -68,6 +68,7 @@ message Profile {
         uint32 followingCount = 2;
         uint32 listingCount   = 3;
         uint32 ratingCount    = 4;
-        float averageRating   = 5;
+        uint32 postCount      = 5;
+        float averageRating   = 6;
     }
 }
