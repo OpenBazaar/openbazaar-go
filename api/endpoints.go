@@ -15,8 +15,6 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.PUTModerator(w, r)
 	case strings.HasPrefix(path, "/ob/listing"):
 		i.PUTListing(w, r)
-	case strings.HasPrefix(path, "/ob/post"):
-		i.PUTPost(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -102,8 +100,6 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTPurgeCache(w, r)
 	case strings.HasPrefix(path, "/ob/testemailnotifications"):
 		i.POSTTestEmailNotifications(w, r)
-	case strings.HasPrefix(path, "/ob/post"):
-		i.POSTPost(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -187,10 +183,6 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETResolve(w, r)
 	case strings.HasPrefix(path, "/ob/peerinfo"):
 		i.GETPeerInfo(w, r)
-	case strings.HasPrefix(path, "/ob/posts"):
-		i.GETPosts(w, r)
-	case strings.HasPrefix(path, "/ob/post"):
-		i.GETPost(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
@@ -221,15 +213,13 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 		i.DELETENotification(w, r)
 	case strings.HasPrefix(path, "/ob/blocknode"):
 		i.DELETEBlockNode(w, r)
-	case strings.HasPrefix(path, "/ob/post"):
-		i.DELETEPost(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
 }
 
 func gatewayAllowedPath(path, method string) bool {
-	allowedGets := []string{"/ob/followers", "/ob/following", "/ob/profile", "/ob/listing", "/ob/listings", "/ob/image", "/ob/avatar", "/ob/header", "/ob/rating", "/ob/ratings", "/ob/posts", "/ob/post"}
+	allowedGets := []string{"/ob/followers", "/ob/following", "/ob/profile", "/ob/listing", "/ob/listings", "/ob/image", "/ob/avatar", "/ob/header", "/ob/rating", "/ob/ratings"}
 	allowedPosts := []string{"/ob/fetchprofiles", "/ob/fetchratings"}
 	if method == "GET" {
 		for _, p := range allowedGets {
