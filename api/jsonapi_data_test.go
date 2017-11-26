@@ -738,3 +738,67 @@ const peerNotFoundInTableJSON = `{
     "success": false,
     "reason": "failed to find any peer in table"
 }`
+
+//
+// Posts
+//
+
+const postJSON = `{
+	"slug": "test1",
+	"vendorID": {
+			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
+			"handle": "",
+			"pubkeys": {
+					"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
+					"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
+			},
+			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
+	},
+	"title": "test1",
+	"longForm": "This is a test post dawg.",
+	"images": [
+			{
+					"filename": "cat",
+					"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
+					"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
+					"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
+					"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
+					"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
+			}
+	],
+	"tags": [
+			"Yo"
+	],
+	"timestamp": "2017-11-02T04:15:07.972887695Z"
+}`
+
+const postJSONResponse = `{"slug": "test1"}`
+
+const postUpdateJSON = `{
+	"slug": "test1",
+	"vendorID": {
+			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
+			"handle": "",
+			"pubkeys": {
+					"identity": "CAESIPdtZDIN2wNQU0BLXgVJjPBr75qTwXU5DDn6kQkZPsd7",
+					"bitcoin": "AleyRDzqIrUSnORZvR/qcICSRWSkooFkODE3qzT5k1fY"
+			},
+			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
+	},
+	"title": "test1",
+	"longForm": "This is a test post dawgs and cats.",
+	"images": [
+			{
+					"filename": "cat",
+					"original": "zb2rhe2o6WbHqcER5VUKsMUbQrmpCC6ihg8qZ4JS9wVgKz9wm",
+					"large": "zb2rhmBUB9i7UkfmeD3obJYK3FFS5K8N8QHaUanG8UWLVBHiY",
+					"medium": "zb2rhaFhqziCWk1zo5tMRxQEUchfvJFaGG4DY1anEoR4GnYrN",
+					"small": "zb2rhbDCeEiTTunugWPaRRKFCfNKUaB7aCR53nrPnMa9usZXY",
+					"tiny": "zb2rhgqJDbshwAgPjs7X2h4mDm3V3BpLbp4tFGqkg1LNkg9yV"
+			}
+	],
+	"tags": [
+			"Yo"
+	],
+	"timestamp": "2017-11-02T04:16:09.281618842Z"
+}`

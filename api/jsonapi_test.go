@@ -220,3 +220,35 @@ func Test404(t *testing.T) {
 		{"DELETE", "/ob/a", "{}", 404, notFoundJSON},
 	})
 }
+
+func TestPosts(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"GET", "/ob/posts", "", 200, `[]`},
+
+		// Invalid creates
+		{"POST", "/ob/post", `{`, 400, jsonUnexpectedEOF},
+
+		{"GET", "/ob/posts", "", 200, `[]`},
+
+		// Create/Get
+		{"GET", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
+		{"POST", "/ob/post", postJSON, 200, postJSONResponse},
+		{"GET", "/ob/post/test1", "", 200, anyResponseJSON},
+		{"POST", "/ob/post", postUpdateJSON, 409, AlreadyExistsUsePUTJSON("Post")},
+
+		{"GET", "/ob/posts", "", 200, anyResponseJSON},
+
+		// Update/Get Post
+		{"PUT", "/ob/post", postUpdateJSON, 200, `{}`},
+		{"GET", "/ob/post/test1", "", 200, anyResponseJSON},
+
+		// Delete/Get
+		{"DELETE", "/ob/post/test1", "", 200, `{}`},
+		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
+		{"GET", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
+
+		// Mutate non-existing listings
+		{"PUT", "/ob/post", postUpdateJSON, 404, NotFoundJSON("Post")},
+		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
+	})
+}
