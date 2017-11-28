@@ -144,6 +144,7 @@ message Order {
     Payment payment                      = 7;
     repeated bytes ratingKeys            = 8;
     string alternateContactInfo          = 9;
+    uint32 version                       = 10;
 
     message Shipping {
         string shipTo       = 1;
@@ -215,6 +216,16 @@ message RatingSignature {
         string listingSlug   = 1;
         bytes  ratingKey     = 2;
         bytes  moderatorKey  = 3; // Only if moderated
+        string listingTitle  = 4;
+        Image  thumbnail     = 5;
+
+        message Image {
+                string tiny     = 1;
+                string small    = 2;
+                string medium   = 3;
+                string large    = 4;
+                string original = 5;
+        }
     }
 }
 

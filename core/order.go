@@ -417,6 +417,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.RicardianContract, error) {
 	contract := new(pb.RicardianContract)
 	order := new(pb.Order)
+	order.Version = 1
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
