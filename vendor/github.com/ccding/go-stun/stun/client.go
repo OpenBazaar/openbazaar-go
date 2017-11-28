@@ -22,28 +22,49 @@ import (
 	"strconv"
 )
 
+// Client is a STUN client, which can be set STUN server address and is used
+// to discover NAT type.
 type Client struct {
 	serverAddr   string
 	softwareName string
+	conn         net.PacketConn
+	logger       *Logger
 }
 
+// NewClient returns a client without network connection. The network
+// connection will be build when calling Discover function.
 func NewClient() *Client {
 	c := new(Client)
 	c.SetSoftwareName(DefaultSoftwareName)
+	c.logger = NewLogger()
 	return c
 }
 
+// NewClientWithConnection returns a client which uses the given connection.
+// Please note the connection should be acquired via net.Listen* method.
+func NewClientWithConnection(conn net.PacketConn) *Client {
+	c := new(Client)
+	c.conn = conn
+	c.SetSoftwareName(DefaultSoftwareName)
+	c.logger = NewLogger()
+	return c
+}
+
+// SetVerbose sets the client to be in the verbose mode, which prints
+// information in the discover process.
+func (c *Client) SetVerbose(v bool) {
+	c.logger.SetDebug(v)
+}
+
+// SetVVerbose sets the client to be in the double verbose mode, which prints
+// information and packet in the discover process.
+func (c *Client) SetVVerbose(v bool) {
+	c.logger.SetInfo(v)
+}
+
 // SetServerHost allows user to set the STUN hostname and port.
-func (c *Client) SetServerHost(host string, port int) error {
-	ips, err := net.LookupHost(host)
-	if err != nil {
-		return err
-	}
-	if len(ips) == 0 {
-		return errors.New("Failed to get IP address of " + host + ".")
-	}
-	c.serverAddr = net.JoinHostPort(ips[0], strconv.Itoa(port))
-	return nil
+func (c *Client) SetServerHost(host string, port int) {
+	c.serverAddr = net.JoinHostPort(host, strconv.Itoa(port))
 }
 
 // SetServerAddr allows user to set the transport layer STUN server address.
@@ -61,10 +82,45 @@ func (c *Client) SetSoftwareName(name string) {
 // for UDP punching.
 func (c *Client) Discover() (NATType, *Host, error) {
 	if c.serverAddr == "" {
-		err := c.SetServerHost(DefaultServerHost, DefaultServerPort)
-		if err != nil {
-			return NAT_ERROR, nil, err
-		}
+		c.SetServerAddr(DefaultServerAddr)
 	}
-	return discover(c.serverAddr)
+	serverUDPAddr, err := net.ResolveUDPAddr("udp", c.serverAddr)
+	if err != nil {
+		return NATError, nil, err
+	}
+	// Use the connection passed to the client if it is not nil, otherwise
+	// create a connection and close it at the end.
+	conn := c.conn
+	if conn == nil {
+		conn, err = net.ListenUDP("udp", nil)
+		if err != nil {
+			return NATError, nil, err
+		}
+		defer conn.Close()
+	}
+	return c.discover(conn, serverUDPAddr)
+}
+
+// Keepalive sends and receives a bind request, which ensures the mapping stays open
+// Only applicable when client was created with a connection.
+func (c *Client) Keepalive() (*Host, error) {
+	if c.conn == nil {
+		return nil, errors.New("no connection available")
+	}
+	if c.serverAddr == "" {
+		c.SetServerAddr(DefaultServerAddr)
+	}
+	serverUDPAddr, err := net.ResolveUDPAddr("udp", c.serverAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.test1(c.conn, serverUDPAddr)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || resp.packet == nil {
+		return nil, errors.New("failed to contact")
+	}
+	return resp.mappedAddr, nil
 }

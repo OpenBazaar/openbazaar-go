@@ -13,7 +13,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcrpcclient"
+	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/coinset"
 	hd "github.com/btcsuite/btcutil/hdkeychain"

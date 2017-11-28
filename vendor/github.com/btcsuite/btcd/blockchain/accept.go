@@ -5,6 +5,8 @@
 package blockchain
 
 import (
+	"fmt"
+
 	"github.com/btcsuite/btcd/database"
 	"github.com/btcsuite/btcutil"
 )
@@ -15,24 +17,24 @@ import (
 // before adding it.  The block is expected to have already gone through
 // ProcessBlock before calling this function with it.
 //
-// The flags modify the behavior of this function as follows:
-//  - BFDryRun: The memory chain index will not be pruned and no accept
-//    notification will be sent since the block is not being accepted.
-//
 // The flags are also passed to checkBlockContext and connectBestChain.  See
 // their documentation for how the flags modify their behavior.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags) (bool, error) {
-	dryRun := flags&BFDryRun == BFDryRun
-
 	// The height of this block is one more than the referenced previous
 	// block.
-	blockHeight := int32(0)
-	prevNode := b.index.LookupNode(&block.MsgBlock().Header.PrevBlock)
-	if prevNode != nil {
-		blockHeight = prevNode.height + 1
+	prevHash := &block.MsgBlock().Header.PrevBlock
+	prevNode := b.index.LookupNode(prevHash)
+	if prevNode == nil {
+		str := fmt.Sprintf("previous block %s is unknown", prevHash)
+		return false, ruleError(ErrPreviousBlockUnknown, str)
+	} else if b.index.NodeStatus(prevNode).KnownInvalid() {
+		str := fmt.Sprintf("previous block %s is known to be invalid", prevHash)
+		return false, ruleError(ErrInvalidAncestorBlock, str)
 	}
+
+	blockHeight := prevNode.height + 1
 	block.SetHeight(blockHeight)
 
 	// The block must pass all of the validation rules which depend on the
@@ -62,11 +64,13 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// block chain (could be either a side chain or the main chain).
 	blockHeader := &block.MsgBlock().Header
 	newNode := newBlockNode(blockHeader, blockHeight)
+	newNode.status = statusDataStored
 	if prevNode != nil {
 		newNode.parent = prevNode
 		newNode.height = blockHeight
 		newNode.workSum.Add(prevNode.workSum, newNode.workSum)
 	}
+	b.index.AddNode(newNode)
 
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
@@ -79,11 +83,9 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// Notify the caller that the new block was accepted into the block
 	// chain.  The caller would typically want to react by relaying the
 	// inventory to other peers.
-	if !dryRun {
-		b.chainLock.Unlock()
-		b.sendNotification(NTBlockAccepted, block)
-		b.chainLock.Lock()
-	}
+	b.chainLock.Unlock()
+	b.sendNotification(NTBlockAccepted, block)
+	b.chainLock.Lock()
 
 	return isMainChain, nil
 }

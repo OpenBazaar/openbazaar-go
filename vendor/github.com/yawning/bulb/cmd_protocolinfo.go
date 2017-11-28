@@ -10,6 +10,8 @@ package bulb
 import (
 	"strconv"
 	"strings"
+
+	"github.com/yawning/bulb/utils"
 )
 
 // ProtocolInfo is the result of the ProtocolInfo command.
@@ -50,7 +52,7 @@ func (c *Conn) ProtocolInfo() (*ProtocolInfo, error) {
 	pi.RawResponse = resp
 	pi.AuthMethods = make(map[string]bool)
 	for i := 1; i < len(resp.Data); i++ {
-		splitLine := strings.Split(resp.Data[i], " ")
+		splitLine := utils.SplitQuoted(resp.Data[i], '"', ' ')
 		switch splitLine[0] {
 		case "AUTH":
 			// Parse an AuthLine detailing how to authenticate.

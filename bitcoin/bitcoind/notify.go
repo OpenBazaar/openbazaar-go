@@ -3,7 +3,7 @@ package bitcoind
 import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcrpcclient"
+	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 	"io/ioutil"
 	"net/http"
 	"time"

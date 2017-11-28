@@ -112,7 +112,7 @@ func (c *Conn) ReadResponse() (*Response, error) {
 			if c.debugLog {
 				log.Printf("S: [dot encoded data]")
 			}
-			resp.Data = append(resp.Data, string(dotBody))
+			resp.Data = append(resp.Data, strings.TrimRight(string(dotBody), "\n\r"))
 			dotLines := strings.Split(string(dotBody), "\n")
 			for _, dotLine := range dotLines[:len(dotLines)-1] {
 				resp.RawLines = append(resp.RawLines, dotLine)

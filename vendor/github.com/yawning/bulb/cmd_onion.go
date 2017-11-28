@@ -1,8 +1,8 @@
 // cmd_onion.go - various onion service commands: ADD_ONION, DEL_ONION...
 //
-// To the extent possible under law, David Stainton waived all copyright
-// and related or neighboring rights to this module of bulb, using the creative
-// commons "cc0" public domain dedication. See LICENSE or
+// To the extent possible under law, David Stainton and Ivan Markin waived
+// all copyright and related or neighboring rights to this module of bulb,
+// using the creative commons "cc0" public domain dedication. See LICENSE or
 // <http://creativecommons.org/publicdomain/zero/1.0/> for full details.
 
 package bulb
@@ -37,16 +37,27 @@ type OnionPortSpec struct {
 	Target   string
 }
 
-// AddOnion issues an ADD_ONION command and returns the parsed response.
-func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bool) (*OnionInfo, error) {
+// NewOnionConfig is a configuration for NewOnion command.
+type NewOnionConfig struct {
+	PortSpecs    []OnionPortSpec
+	PrivateKey   crypto.PrivateKey
+	DiscardPK    bool
+	Detach       bool
+	BasicAuth    bool
+	NonAnonymous bool
+}
+
+// NewOnion issues an ADD_ONION command using configuration config and
+// returns the parsed response.
+func (c *Conn) NewOnion(config *NewOnionConfig) (*OnionInfo, error) {
 	const keyTypeRSA = "RSA1024"
 	var err error
 
 	var portStr string
-	if ports == nil {
+	if config.PortSpecs == nil {
 		return nil, newProtocolError("invalid port specification")
 	}
-	for _, v := range ports {
+	for _, v := range config.PortSpecs {
 		portStr += fmt.Sprintf(" Port=%d", v.VirtPort)
 		if v.Target != "" {
 			portStr += "," + v.Target
@@ -54,10 +65,10 @@ func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bo
 	}
 
 	var hsKeyType, hsKeyStr string
-	if key != nil {
-		switch t := key.(type) {
+	if config.PrivateKey != nil {
+		switch t := config.PrivateKey.(type) {
 		case *rsa.PrivateKey:
-			rsaPK, _ := key.(*rsa.PrivateKey)
+			rsaPK, _ := config.PrivateKey.(*rsa.PrivateKey)
 			if rsaPK.N.BitLen() != 1024 {
 				return nil, newProtocolError("invalid RSA key size")
 			}
@@ -68,24 +79,38 @@ func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bo
 			hsKeyType = keyTypeRSA
 			hsKeyStr = base64.StdEncoding.EncodeToString(pkDER)
 		case *OnionPrivateKey:
-			genericPK, _ := key.(*OnionPrivateKey)
+			genericPK, _ := config.PrivateKey.(*OnionPrivateKey)
 			hsKeyType = genericPK.KeyType
 			hsKeyStr = genericPK.Key
 		default:
 			return nil, newProtocolError("unsupported private key type: %v", t)
 		}
+	} else {
+		hsKeyStr = "BEST"
+		hsKeyType = "NEW"
 	}
 
-	var resp *Response
-	if hsKeyStr == "" {
-		flags := " Flags=DiscardPK"
-		if !oneshot {
-			flags = ""
-		}
-		resp, err = c.Request("ADD_ONION NEW:BEST%s%s", portStr, flags)
-	} else {
-		resp, err = c.Request("ADD_ONION %s:%s%s", hsKeyType, hsKeyStr, portStr)
+	var flags []string
+	var flagsStr string
+
+	if config.DiscardPK {
+		flags = append(flags, "DiscardPK")
 	}
+	if config.Detach {
+		flags = append(flags, "Detach")
+	}
+	if config.BasicAuth {
+		flags = append(flags, "BasicAuth")
+	}
+	if config.NonAnonymous {
+		flags = append(flags, "NonAnonymous")
+	}
+	if flags != nil {
+		flagsStr = " Flags="
+		flagsStr += strings.Join(flags, ",")
+	}
+	request := fmt.Sprintf("ADD_ONION %s:%s%s%s", hsKeyType, hsKeyStr, portStr, flagsStr)
+	resp, err := c.Request(request)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +127,7 @@ func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bo
 		if strings.HasPrefix(l, serviceIDPrefix) {
 			serviceID = strings.TrimPrefix(l, serviceIDPrefix)
 		} else if strings.HasPrefix(l, privateKeyPrefix) {
-			if oneshot || hsKeyStr != "" {
+			if config.DiscardPK || hsKeyStr != "" {
 				return nil, newProtocolError("received an unexpected private key")
 			}
 			hsKeyStr = strings.TrimPrefix(l, privateKeyPrefix)
@@ -140,6 +165,18 @@ func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bo
 	oi.PrivateKey = hsPrivateKey
 
 	return oi, nil
+}
+
+// [DEPRECATED] AddOnion issues an ADD_ONION command and
+// returns the parsed response.
+func (c *Conn) AddOnion(ports []OnionPortSpec, key crypto.PrivateKey, oneshot bool) (*OnionInfo, error) {
+	cfg := &NewOnionConfig{}
+	cfg.PortSpecs = ports
+	if key != nil {
+		cfg.PrivateKey = key
+	}
+	cfg.DiscardPK = oneshot
+	return c.NewOnion(cfg)
 }
 
 // DeleteOnion issues a DEL_ONION command and returns the parsed response.

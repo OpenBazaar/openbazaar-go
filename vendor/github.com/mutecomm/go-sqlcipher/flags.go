@@ -13,9 +13,6 @@ package sqlite3
 // disable loadable extensions in sqlite
 #cgo CFLAGS: -DSQLITE_OMIT_LOAD_EXTENSION=1
 
-// make libtomcrypt thread-safe
-#cgo CFLAGS: -DLTC_PTHREAD
-
 // disable anything "not portable" in libtomcrypt
 #cgo CFLAGS: -DLTC_NO_ASM
 

@@ -165,3 +165,5 @@ Available commands:
 ```
 
 Finally a gRPC API is available on port 8234. The same interface is exposed via the API plus a streaming wallet notifier which fires when a new transaction (either incoming or outgoing) is recorded then again when it gains its first confirmation.
+
+#### This library began it's life as a library called `uspv` written by Thaddeus Dryja for the lnd. Several files still contain the original code. 

@@ -219,6 +219,7 @@ func (m *Marshaler) marshalObject(out *errWriter, v proto.Message, indent, typeU
 			}
 		}
 
+
 		if !firstField {
 			m.writeSep(out)
 		}
@@ -505,15 +506,15 @@ func (m *Marshaler) marshalValue(out *errWriter, prop *proto.Properties, v refle
 	b = bytes.Replace(b, []byte("\\u0026"), []byte("&"), -1)
 
 	var bigInt bool
-	if v.Kind() == reflect.Int64 {
-		if v.Int() >= int64(1<<53) {
-			bigInt = true
-		}
-	} else if v.Kind() == reflect.Uint64 {
-		if v.Uint() >= uint64(1<<53) {
-			bigInt = true
-		}
-	}
+ 	if v.Kind() == reflect.Int64 {
+ 		if v.Int() >= int64(1<<53) {
+ 			bigInt = true
+ 		}
+ 	} else if v.Kind() == reflect.Uint64 {
+ 		if v.Uint() >= uint64(1<<53) {
+ 			bigInt = true
+ 		}
+ 	}
 	needToQuote := string(b[0]) != `"` && ((v.Kind() == reflect.Int64 || v.Kind() == reflect.Uint64) && bigInt)
 	if needToQuote {
 		out.write(`"`)
@@ -844,3 +845,4 @@ func (s mapKeys) Less(i, j int) bool {
 	}
 	return fmt.Sprint(s[i].Interface()) < fmt.Sprint(s[j].Interface())
 }
+

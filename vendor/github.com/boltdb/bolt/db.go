@@ -552,7 +552,10 @@ func (db *DB) removeTx(tx *Tx) {
 	// Remove the transaction.
 	for i, t := range db.txs {
 		if t == tx {
-			db.txs = append(db.txs[:i], db.txs[i+1:]...)
+			last := len(db.txs) - 1
+			db.txs[i] = db.txs[last]
+			db.txs[last] = nil
+			db.txs = db.txs[:last]
 			break
 		}
 	}
@@ -734,9 +737,7 @@ retry:
 
 		// pass success, or bolt internal errors, to all callers
 		for _, c := range b.calls {
-			if c.err != nil {
-				c.err <- err
-			}
+			c.err <- err
 		}
 		break retry
 	}
@@ -952,7 +953,7 @@ func (s *Stats) Sub(other *Stats) Stats {
 	diff.PendingPageN = s.PendingPageN
 	diff.FreeAlloc = s.FreeAlloc
 	diff.FreelistInuse = s.FreelistInuse
-	diff.TxN = other.TxN - s.TxN
+	diff.TxN = s.TxN - other.TxN
 	diff.TxStats = s.TxStats.Sub(&other.TxStats)
 	return diff
 }
