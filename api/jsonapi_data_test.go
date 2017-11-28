@@ -425,22 +425,7 @@ const listingJSON = `{
 				"price": 150000000,
 				"estimatedDelivery": "2-3 days"
 			}
-		],
-		"shippingRules": {
-			"ruleType": "QUANTITY_DISCOUNT",
-			"rules": [
-				{
-					"price": 10000000,
-					"minRange": 5,
-					"maxRange": 10
-				},
-				{
-					"price": 200000,
-					"minRange": 11,
-					"maxRange": 20
-				}
-			]
-		 }
+		]
 	}
 	],
 	"taxes": [
@@ -626,22 +611,7 @@ const listingUpdateJSON = `{
 				"price": 150000000,
 				"estimatedDelivery": "2-3 days"
 			}
-		],
-		"shippingRules": {
-			"ruleType": "QUANTITY_DISCOUNT",
-			"rules": [
-				{
-					"price": 10000000,
-					"minRange": 5,
-					"maxRange": 10
-				},
-				{
-					"price": 200000,
-					"minRange": 11,
-					"maxRange": 20
-				}
-			]
-		 }
+		]
 	}
 	],
 	"taxes": [

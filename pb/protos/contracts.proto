@@ -99,7 +99,6 @@ message Listing {
         string name                         = 1;
         ShippingType type                   = 2;
         repeated CountryCode regions        = 3;
-        ShippingRules shippingRules         = 4;
         repeated Service services           = 5;
 
         enum ShippingType {
@@ -108,28 +107,10 @@ message Listing {
         }
 
         message Service {
-            string name              = 1;
-            uint64 price             = 2;
-            string estimatedDelivery = 3;
-        }
-
-        message ShippingRules {
-                RuleType ruleType            = 1;
-                repeated Rule rules          = 2;
-
-                message Rule {
-                    uint32 minRange              = 1;
-                    uint32 maxRange              = 2;
-                    uint64 price                 = 3;
-                }
-
-                enum RuleType {
-                    QUANTITY_DISCOUNT          = 0;
-                    FLAT_FEE_QUANTITY_RANGE    = 1;
-                    FLAT_FEE_WEIGHT_RANGE      = 2;
-                    COMBINED_SHIPPING_ADD      = 3;
-                    COMBINED_SHIPPING_SUBTRACT = 4;
-                }
+            string name                = 1;
+            uint64 price               = 2;
+            string estimatedDelivery   = 3;
+            uint64 additionalItemPrice = 4;
         }
     }
 
