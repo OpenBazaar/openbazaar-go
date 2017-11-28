@@ -25,7 +25,10 @@ type ExchangeRateDecoder interface {
 	decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error)
 }
 
+type KrakenDecoder struct{}
 type PoloniexDecoder struct{}
+type BitfinexDecoder struct{}
+type BittrexDecoder struct{}
 
 type ZcashPriceFetcher struct {
 	sync.Mutex
@@ -46,6 +49,9 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	z.providers = []*ExchangeRateProvider{
+		{"https://api.kraken.com/0/public/Ticker?pair=ZECXBT", z.cache, client, KrakenDecoder{}, bp},
+		{"https://api.bitfinex.com/v1/pubticker/zecbtc", z.cache, client, BitfinexDecoder{}, bp},
+		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-zec", z.cache, client, BittrexDecoder{}, bp},
 		{"https://poloniex.com/public?command=returnTicker", z.cache, client, PoloniexDecoder{}, bp},
 	}
 	go z.run()
@@ -122,6 +128,125 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 		return err
 	}
 	return provider.decoder.decode(dataMap, provider.cache, provider.bitcoinProvider)
+}
+
+func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
+	rates, err := bp.GetAllRates()
+	if err != nil {
+		return err
+	}
+	obj, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New("KrackenDecoder type assertion failure")
+	}
+	result, ok := obj["result"]
+	if !ok {
+		return errors.New("KrakenDecoder: field `result` not found")
+	}
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return errors.New("KrackenDecoder type assertion failure")
+	}
+	pair, ok := resultMap["BCHXBT"]
+	if !ok {
+		return errors.New("KrakenDecoder: field `BCHXBT` not found")
+	}
+	pairMap, ok := pair.(map[string]interface{})
+	if !ok {
+		return errors.New("KrackenDecoder type assertion failure")
+	}
+	c, ok := pairMap["c"]
+	if !ok {
+		return errors.New("KrakenDecoder: field `c` not found")
+	}
+	cList, ok := c.([]interface{})
+	if !ok {
+		return errors.New("KrackenDecoder type assertion failure")
+	}
+	rateStr, ok := cList[0].(string)
+	if !ok {
+		return errors.New("KrackenDecoder type assertion failure")
+	}
+	price, err := strconv.ParseFloat(rateStr, 64)
+	if err != nil {
+		return err
+	}
+	rate := price
+
+	if rate == 0 {
+		return errors.New("Bitcoin-BitcoinCash price data not available")
+	}
+	for k, v := range rates {
+		cache[k] = v * rate
+	}
+	return nil
+}
+
+func (b BitfinexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
+	rates, err := bp.GetAllRates()
+	if err != nil {
+		return err
+	}
+	obj, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New("BitfinexDecoder type assertion failure")
+	}
+	r, ok := obj["last_price"]
+	if !ok {
+		return errors.New("BitfinexDecoder: field `last_price` not found")
+	}
+	rateStr, ok := r.(string)
+	if !ok {
+		return errors.New("BitfinexDecoder type assertion failure")
+	}
+	price, err := strconv.ParseFloat(rateStr, 64)
+	if err != nil {
+		return err
+	}
+	rate := price
+
+	if rate == 0 {
+		return errors.New("Bitcoin-BitcoinCash price data not available")
+	}
+	for k, v := range rates {
+		cache[k] = v * rate
+	}
+	return nil
+}
+
+func (b BittrexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
+	rates, err := bp.GetAllRates()
+	if err != nil {
+		return err
+	}
+	obj, ok := dat.(map[string]interface{})
+	if !ok {
+		return errors.New("BittrexDecoder type assertion failure")
+	}
+	result, ok := obj["result"]
+	if !ok {
+		return errors.New("BittrexDecoder: field `result` not found")
+	}
+	resultMap, ok := result.(map[string]interface{})
+	if !ok {
+		return errors.New("BittrexDecoder type assertion failure")
+	}
+	exRate, ok := resultMap["Last"]
+	if !ok {
+		return errors.New("BittrexDecoder: field `Last` not found")
+	}
+	rate, ok := exRate.(float64)
+	if !ok {
+		return errors.New("BittrexDecoder type assertion failure")
+	}
+
+	if rate == 0 {
+		return errors.New("Bitcoin-BitcoinCash price data not available")
+	}
+	for k, v := range rates {
+		cache[k] = v * rate
+	}
+	return nil
 }
 
 func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
