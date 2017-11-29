@@ -223,7 +223,7 @@ func (a *BitpayAddressScriptHash) Hash160() *[ripemd160.Size]byte {
 
 // PayToAddrScript creates a new script to pay a transaction output to a the
 // specified address.
-func BitpayPayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func bitpayPayToAddrScript(addr btcutil.Address) ([]byte, error) {
 	const nilAddrErrStr = "unable to generate payment script for nil address"
 
 	switch addr := addr.(type) {

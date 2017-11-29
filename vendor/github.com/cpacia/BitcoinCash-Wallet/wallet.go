@@ -252,21 +252,7 @@ func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
 }
 
 func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
-	var script []byte
-	var err error
-	script, err = txscript.PayToAddrScript(addr)
-	if err == nil {
-		return script, nil
-	}
-	script, err = bchutil.PayToAddrScript(addr)
-	if err == nil {
-		return script, nil
-	}
-	script, err = bchutil.BitpayPayToAddrScript(addr)
-	if err == nil {
-		return script, nil
-	}
-	return script, errors.New("Unrecognized address format")
+	return bchutil.PayToAddrScript(addr)
 }
 
 func (w *SPVWallet) HasKey(addr btc.Address) bool {

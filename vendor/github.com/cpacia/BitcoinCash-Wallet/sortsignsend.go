@@ -448,7 +448,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 	} else {
 		internalAddr = w.CurrentAddress(wallet.INTERNAL)
 	}
-	script, err := txscript.PayToAddrScript(internalAddr)
+	script, err := bchutil.PayToAddrScript(internalAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -572,7 +572,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 
 func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
-	script, _ := txscript.PayToAddrScript(addr)
+	script, _ := bchutil.PayToAddrScript(addr)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
 		return nil, errors.New("Amount is below dust threshold")
 	}
@@ -628,7 +628,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	// Create change source
 	changeSource := func() ([]byte, error) {
 		addr := w.CurrentAddress(wallet.INTERNAL)
-		script, err := txscript.PayToAddrScript(addr)
+		script, err := bchutil.PayToAddrScript(addr)
 		if err != nil {
 			return []byte{}, err
 		}

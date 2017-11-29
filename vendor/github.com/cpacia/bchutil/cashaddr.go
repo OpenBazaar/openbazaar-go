@@ -548,7 +548,7 @@ func (a *CashAddressScriptHash) Hash160() *[ripemd160.Size]byte {
 
 // PayToAddrScript creates a new script to pay a transaction output to a the
 // specified address.
-func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
+func cashPayToAddrScript(addr btcutil.Address) ([]byte, error) {
 	const nilAddrErrStr = "unable to generate payment script for nil address"
 
 	switch addr := addr.(type) {

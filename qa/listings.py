@@ -32,6 +32,8 @@ class ListingsTest(OpenBazaarTestFramework):
         # POST listing
         with open('testdata/listing.json') as listing_file:
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
+        if self.bitcoincash:
+            ljson["metadata"]["pricingCurrency"] = "tbch"
         api_url = node["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(ljson, indent=4))
         if r.status_code == 200:

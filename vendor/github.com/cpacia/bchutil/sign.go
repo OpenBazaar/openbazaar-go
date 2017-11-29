@@ -33,8 +33,8 @@ func RawTxInSignature(tx *wire.MsgTx, idx int, subScript []byte,
 }
 
 func SignTxOutput(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
-pkScript []byte, hashType txscript.SigHashType, kdb txscript.KeyDB, sdb txscript.ScriptDB,
-previousScript []byte, amt int64) ([]byte, error) {
+	pkScript []byte, hashType txscript.SigHashType, kdb txscript.KeyDB, sdb txscript.ScriptDB,
+	previousScript []byte, amt int64) ([]byte, error) {
 
 	sigScript, class, addresses, nrequired, err := sign(chainParams, tx,
 		idx, pkScript, hashType, kdb, sdb, amt)
@@ -167,10 +167,9 @@ func calcBip143SignatureHash(subScript []byte, sigHashes *txscript.TxSigHashes,
 	return chainhash.DoubleHashB(sigHash.Bytes())
 }
 
-
 func sign(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
-subScript []byte, hashType txscript.SigHashType, kdb txscript.KeyDB, sdb txscript.ScriptDB, amt int64) ([]byte,
-txscript.ScriptClass, []btcutil.Address, int, error) {
+	subScript []byte, hashType txscript.SigHashType, kdb txscript.KeyDB, sdb txscript.ScriptDB, amt int64) ([]byte,
+	txscript.ScriptClass, []btcutil.Address, int, error) {
 
 	class, addresses, nrequired, err := txscript.ExtractPkScriptAddrs(subScript,
 		chainParams)
@@ -200,11 +199,50 @@ txscript.ScriptClass, []btcutil.Address, int, error) {
 		}
 
 		return script, class, addresses, nrequired, nil
+	case txscript.MultiSigTy:
+		script, _ := signMultiSig(tx, idx, subScript, hashType,
+			addresses, nrequired, kdb, amt)
+		return script, class, addresses, nrequired, nil
 	default:
 		return nil, class, nil, 0,
 			errors.New("can't sign unknown transactions")
 	}
 }
+
+// signMultiSig signs as many of the outputs in the provided multisig script as
+// possible. It returns the generated script and a boolean if the script fulfils
+// the contract (i.e. nrequired signatures are provided).  Since it is arguably
+// legal to not be able to sign any of the outputs, no error is returned.
+func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType txscript.SigHashType,
+	addresses []btcutil.Address, nRequired int, kdb txscript.KeyDB, amt int64) ([]byte, bool) {
+	// We start with a single OP_FALSE to work around the (now standard)
+	// but in the reference implementation that causes a spurious pop at
+	// the end of OP_CHECKMULTISIG.
+	builder := txscript.NewScriptBuilder().AddOp(txscript.OP_FALSE)
+	signed := 0
+	for _, addr := range addresses {
+		key, _, err := kdb.GetKey(addr)
+		if err != nil {
+			continue
+		}
+		sig, err := RawTxInSignature(tx, idx, subScript, hashType, key, amt)
+		if err != nil {
+			continue
+		}
+
+		builder.AddData(sig)
+		signed++
+		if signed == nRequired {
+			break
+		}
+
+	}
+
+	script, _ := builder.Script()
+	return script, signed == nRequired
+}
+
+
 
 func SignatureScript(tx *wire.MsgTx, idx int, subscript []byte, hashType txscript.SigHashType, privKey *btcec.PrivateKey, compress bool, amt int64) ([]byte, error) {
 	sig, err := RawTxInSignature(tx, idx, subscript, hashType, privKey, amt)
@@ -224,8 +262,8 @@ func SignatureScript(tx *wire.MsgTx, idx int, subscript []byte, hashType txscrip
 }
 
 func mergeScripts(chainParams *chaincfg.Params, tx *wire.MsgTx, idx int,
-pkScript []byte, class txscript.ScriptClass, addresses []btcutil.Address,
-nRequired int, sigScript, prevScript []byte) []byte {
+	pkScript []byte, class txscript.ScriptClass, addresses []btcutil.Address,
+	nRequired int, sigScript, prevScript []byte) []byte {
 	switch class {
 
 	// It doesn't actually make sense to merge anything other than multiig
