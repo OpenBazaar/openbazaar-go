@@ -221,7 +221,22 @@ func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
 }
 
 func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
-	return btc.DecodeAddress(addr, w.params)
+	// Legacy
+	decoded, err := btc.DecodeAddress(addr, w.params)
+	if err == nil {
+		return decoded, nil
+	}
+	// Cashaddr
+	decoded, err = bchutil.DecodeAddress(addr, w.params)
+	if err == nil {
+		return decoded, nil
+	}
+	// Bitpay
+	decoded, err = bchutil.DecodeBitpay(addr, w.params)
+	if err == nil {
+		return decoded, nil
+	}
+	return nil, errors.New("Unrecognized address format")
 }
 
 func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
@@ -236,7 +251,21 @@ func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
 }
 
 func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
-	return txscript.PayToAddrScript(addr)
+	var script []byte
+	var err error
+	script, err = txscript.PayToAddrScript(addr)
+	if err == nil {
+		return script, nil
+	}
+	script, err = bchutil.PayToAddrScript(addr)
+	if err == nil {
+		return script, nil
+	}
+	script, err = bchutil.BitpayPayToAddrScript(addr)
+	if err == nil {
+		return script, nil
+	}
+	return script, errors.New("Unrecognized address format")
 }
 
 func (w *SPVWallet) HasKey(addr btc.Address) bool {
