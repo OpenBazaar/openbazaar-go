@@ -117,6 +117,10 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 	return &w, nil
 }
 
+func (w *BitcoindWallet) InitChan() chan struct{} {
+	return w.initChan
+}
+
 func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
 	notify := `curl -d %s http://localhost:8330/`
 	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "bitcoin.conf")}

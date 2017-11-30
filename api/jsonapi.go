@@ -44,6 +44,8 @@ import (
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
 	"io/ioutil"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/zcashd"
 )
 
 type JsonAPIConfig struct {
@@ -777,6 +779,26 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
+	_, ok := i.node.Wallet.(*bitcoind.BitcoindWallet)
+	if ok {
+		select {
+		case <- i.node.Wallet.(*bitcoind.BitcoindWallet).InitChan():
+			break
+		default:
+			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
+			return
+		}
+	}
+	_, ok = i.node.Wallet.(*zcashd.ZcashdWallet)
+	if ok {
+		select {
+		case <- i.node.Wallet.(*zcashd.ZcashdWallet).InitChan():
+			break
+		default:
+			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
+			return
+		}
+	}
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
 }

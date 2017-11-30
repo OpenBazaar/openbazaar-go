@@ -120,6 +120,7 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 
 func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	notify := `curl -d %s http://localhost:8330/`
+	//notifyWindows := `powershell.exe Invoke-WebRequest -Uri http://localhost:8330/ -Method POST -Body %s`
 	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "zcash.conf")}
 	if rescan {
 		args = append(args, "-rescan")
@@ -138,7 +139,6 @@ func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 		socksPort := bitcoind.DefaultSocksPort(w.controlPort)
 		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
-	log.Notice(args)
 	return args
 }
 
@@ -167,6 +167,10 @@ func (w *ZcashdWallet) Start() {
 	ticker.Stop()
 	log.Info("Connected to zcashd")
 	close(w.initChan)
+}
+
+func (w *ZcashdWallet) InitChan() chan struct{} {
+	return w.initChan
 }
 
 // If zcashd is already running let's shut it down so we restart it with our options
