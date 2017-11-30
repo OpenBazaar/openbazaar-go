@@ -115,8 +115,6 @@ type Start struct {
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
 	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
-	ZCashUsername        string   `long:"zcashusername" description:"zcashd rpcuser"`
-	ZCashPassword        string   `long:"zcashpassword" description:"zcashd rpcpassword"`
 }
 
 func (x *Start) Execute(args []string) error {
@@ -521,8 +519,6 @@ func (x *Start) Execute(args []string) error {
 	} else if x.ZCash != "" {
 		walletCfg.Type = "zcashd"
 		walletCfg.Binary = x.ZCash
-		walletCfg.RPCUser = x.ZCashUsername
-		walletCfg.RPCPassword = x.ZCashPassword
 	}
 	var exchangeRates bitcoin.ExchangeRates
 	if !x.DisableExchangeRates {
@@ -632,7 +628,10 @@ func (x *Start) Execute(args []string) error {
 		if usingTor && !usingClearnet {
 			usetor = true
 		}
-		cryptoWallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
+		cryptoWallet, err = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, usetor, controlPort)
+		if err != nil {
+			return err
+		}
 	case "zcashd":
 		walletTypeStr = "zcashd"
 		if walletCfg.Binary == "" {
@@ -642,7 +641,10 @@ func (x *Start) Execute(args []string) error {
 		if usingTor && !usingClearnet {
 			usetor = true
 		}
-		cryptoWallet = zcashd.NewZcashdWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
+		cryptoWallet, err = zcashd.NewZcashdWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, usetor, controlPort)
+		if err != nil {
+			return err
+		}
 		if !x.DisableExchangeRates {
 			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
 		}

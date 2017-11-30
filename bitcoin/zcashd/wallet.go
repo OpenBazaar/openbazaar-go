@@ -25,6 +25,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path"
+	"os"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"bufio"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -56,7 +62,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string, useTor bool, torControlPort int) *ZcashdWallet {
+func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int) (*ZcashdWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -65,8 +71,33 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		connCfg.Host = "localhost:18232"
 	}
 
-	connCfg.User = username
+	dataDir := path.Join(repoPath, "zcash")
+	os.Mkdir(dataDir, os.ModePerm)
+
+	r := make([]byte, 32)
+	_, err := rand.Read(r)
+	if err != nil {
+		return nil, err
+	}
+	password := base64.StdEncoding.EncodeToString(r)
+
+	connCfg.User = "OpenBazaar"
 	connCfg.Pass = password
+
+	user := fmt.Sprintf(`rpcuser=%s`, connCfg.User)
+	pass := fmt.Sprintf(`rpcpassword=%s`, connCfg.Pass)
+
+
+	f, err := os.Create(path.Join(dataDir, "zcash.conf"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	wr := bufio.NewWriter(f)
+	fmt.Fprintln(wr, user)
+	fmt.Fprintln(wr, pass)
+	wr.Flush()
+
 
 	if trustedPeer != "" {
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
@@ -74,7 +105,7 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 
 	w := ZcashdWallet{
 		params:           params,
-		repoPath:         repoPath,
+		repoPath:         dataDir,
 		trustedPeer:      trustedPeer,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
@@ -83,12 +114,13 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
 	}
-	return &w
+	os.Mkdir(dataDir, os.ModePerm)
+	return &w, nil
 }
 
 func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	notify := `curl -d %s http://localhost:8330/`
-	args := []string{"-walletnotify=" + notify, "-server"}
+	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "zcash.conf")}
 	if rescan {
 		args = append(args, "-rescan")
 	}
@@ -106,6 +138,7 @@ func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 		socksPort := bitcoind.DefaultSocksPort(w.controlPort)
 		args = append(args, "-listen", "-proxy:127.0.0.1:"+strconv.Itoa(socksPort), "-onlynet=onion")
 	}
+	log.Notice(args)
 	return args
 }
 

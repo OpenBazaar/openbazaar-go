@@ -27,6 +27,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"path"
+	"os"
+	"bufio"
+	"encoding/base64"
+	"crypto/rand"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -58,7 +63,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, username string, password string, useTor bool, torControlPort int) *BitcoindWallet {
+func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int) (*BitcoindWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -67,8 +72,32 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		connCfg.Host = "localhost:18332"
 	}
 
-	connCfg.User = username
+	dataDir := path.Join(repoPath, "zcash")
+	os.Mkdir(dataDir, os.ModePerm)
+
+	r := make([]byte, 32)
+	_, err := rand.Read(r)
+	if err != nil {
+		return nil, err
+	}
+	password := base64.StdEncoding.EncodeToString(r)
+
+	connCfg.User = "OpenBazaar"
 	connCfg.Pass = password
+
+	user := fmt.Sprintf(`rpcuser=%s`, connCfg.User)
+	pass := fmt.Sprintf(`rpcpassword=%s`, connCfg.Pass)
+
+
+	f, err := os.Create(path.Join(dataDir, "bitcoin.conf"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	wr := bufio.NewWriter(f)
+	fmt.Fprintln(wr, user)
+	fmt.Fprintln(wr, pass)
+	wr.Flush()
 
 	if trustedPeer != "" {
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
@@ -76,7 +105,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 
 	w := BitcoindWallet{
 		params:           params,
-		repoPath:         repoPath,
+		repoPath:         dataDir,
 		trustedPeer:      trustedPeer,
 		masterPrivateKey: mPrivKey,
 		masterPublicKey:  mPubKey,
@@ -85,12 +114,12 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
 	}
-	return &w
+	return &w, nil
 }
 
 func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
 	notify := `curl -d %s http://localhost:8330/`
-	args := []string{"-walletnotify=" + notify, "-server"}
+	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "bitcoin.conf")}
 	if rescan {
 		args = append(args, "-rescan")
 	}

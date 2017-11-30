@@ -58,8 +58,6 @@ type WalletConfig struct {
 	MediumFeeDefault int
 	LowFeeDefault    int
 	TrustedPeer      string
-	RPCUser          string
-	RPCPassword      string
 }
 
 type DataSharing struct {
@@ -283,22 +281,6 @@ func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
 	if !ok {
 		return nil, MalformedConfigError
 	}
-	rpcUser, ok := wallet["RPCUser"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	rpcUserStr, ok := rpcUser.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	rpcPassword, ok := wallet["RPCPassword"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	rpcPasswordStr, ok := rpcPassword.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
 	wCfg := &WalletConfig{
 		Type:             walletTypeStr,
 		Binary:           binaryStr,
@@ -308,8 +290,6 @@ func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
 		MediumFeeDefault: int(mediumFloat),
 		LowFeeDefault:    int(lowFloat),
 		TrustedPeer:      trustedPeerStr,
-		RPCUser:          rpcUserStr,
-		RPCPassword:      rpcPasswordStr,
 	}
 	return wCfg, nil
 }
