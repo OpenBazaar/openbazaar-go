@@ -808,7 +808,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	}
 	addr, err := i.node.Wallet.DecodeAddress(snd.Address)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
 		return
 	}
 	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel)
