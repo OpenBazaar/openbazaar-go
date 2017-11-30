@@ -115,8 +115,8 @@ type Start struct {
 	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
 	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
 	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
-	ZCashUsername        string   `long:"zcash-username" description:"zcashd rpcuser"`
-	ZCashPassword        string   `long:"zcash-password" description:"zcashd rpcpassword"`
+	ZCashUsername        string   `long:"zcashusername" description:"zcashd rpcuser"`
+	ZCashPassword        string   `long:"zcashpassword" description:"zcashd rpcpassword"`
 }
 
 func (x *Start) Execute(args []string) error {
@@ -545,8 +545,10 @@ func (x *Start) Execute(args []string) error {
 
 	var resyncManager *resync.ResyncManager
 	var cryptoWallet wallet.Wallet
+	var walletTypeStr string
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
+		walletTypeStr = "bitcoin spv"
 		var tp net.Addr
 		if walletCfg.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -583,6 +585,7 @@ func (x *Start) Execute(args []string) error {
 		}
 		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	case "bitcoincash":
+		walletTypeStr = "bitcoin cash spv"
 		var tp net.Addr
 		if walletCfg.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -621,6 +624,7 @@ func (x *Start) Execute(args []string) error {
 		}
 		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	case "bitcoind":
+		walletTypeStr = "bitcoind"
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
@@ -630,6 +634,7 @@ func (x *Start) Execute(args []string) error {
 		}
 		cryptoWallet = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, walletCfg.RPCUser, walletCfg.RPCPassword, usetor, controlPort)
 	case "zcashd":
+		walletTypeStr = "zcashd"
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the zcashd binary must be specified in the config file when using zcashd")
 		}
@@ -815,7 +820,7 @@ func (x *Start) Execute(args []string) error {
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
 			cryptoWallet.AddTransactionListener(TL.OnTransactionReceived)
 			cryptoWallet.AddTransactionListener(WL.OnTransactionReceived)
-			log.Info("Starting bitcoin wallet")
+			log.Infof("Starting %s wallet\n", walletTypeStr)
 			su := bitcoin.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
