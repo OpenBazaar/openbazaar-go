@@ -174,7 +174,7 @@ func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exc
 	rate := price
 
 	if rate == 0 {
-		return errors.New("Bitcoin-BitcoinCash price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
@@ -206,7 +206,7 @@ func (b BitfinexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 	rate := price
 
 	if rate == 0 {
-		return errors.New("Bitcoin-BitcoinCash price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
@@ -241,7 +241,7 @@ func (b BittrexDecoder) decode(dat interface{}, cache map[string]float64, bp *ex
 	}
 
 	if rate == 0 {
-		return errors.New("Bitcoin-BitcoinCash price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
