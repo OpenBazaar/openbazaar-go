@@ -46,8 +46,8 @@ type BitcoindWallet struct {
 	binary           string
 	controlPort      int
 	useTor           bool
-	started          bool
 	scriptsToAdd     [][]byte
+	initChan         chan struct{}
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -83,6 +83,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		binary:           binary,
 		controlPort:      torControlPort,
 		useTor:           useTor,
+		initChan:         make(chan struct{}),
 	}
 	return &w
 }
@@ -134,14 +135,7 @@ func (w *BitcoindWallet) Start() {
 	}
 	ticker.Stop()
 	log.Info("Connected to bitcoind")
-	w.started = true
-	go w.addScripts()
-}
-
-func (w *BitcoindWallet) addScripts() {
-	for _, script := range w.scriptsToAdd {
-		w.AddWatchedScript(script)
-	}
+	close(w.initChan)
 }
 
 // If bitcoind is already running let's shut it down so we restart it with our options
@@ -176,11 +170,13 @@ func (w *BitcoindWallet) MasterPublicKey() *hd.ExtendedKey {
 }
 
 func (w *BitcoindWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
+	<-w.initChan
 	addr, _ := w.rpcClient.GetAccountAddress(Account)
 	return addr
 }
 
 func (w *BitcoindWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
+	<-w.initChan
 	addr, _ := w.rpcClient.GetNewAddress(Account)
 	return addr
 }
@@ -205,6 +201,7 @@ func (w *BitcoindWallet) AddressToScript(addr btc.Address) ([]byte, error) {
 }
 
 func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
+	<-w.initChan
 	_, err := w.rpcClient.DumpPrivKey(addr)
 	if err != nil {
 		return false
@@ -213,6 +210,7 @@ func (w *BitcoindWallet) HasKey(addr btc.Address) bool {
 }
 
 func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
+	<-w.initChan
 	resp, _ := w.rpcClient.RawRequest("getwalletinfo", []json.RawMessage{})
 	type walletInfo struct {
 		Balance     float64 `json:"balance"`
@@ -227,6 +225,7 @@ func (w *BitcoindWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
+	<-w.initChan
 	blockinfo, err := w.rpcClient.GetBlockHeaderVerbose(hash)
 	if err != nil {
 		return 0, err
@@ -235,6 +234,7 @@ func (w *BitcoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 }
 
 func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
+	<-w.initChan
 	var ret []wallet.Txn
 	resp, err := w.rpcClient.ListTransactions(Account)
 	if err != nil {
@@ -269,6 +269,7 @@ func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
 }
 
 func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
+	<-w.initChan
 	includeWatchOnly := false
 	t := wallet.Txn{}
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
@@ -284,6 +285,7 @@ func (w *BitcoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error)
 }
 
 func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, error) {
+	<-w.initChan
 	includeWatchOnly := true
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
@@ -293,6 +295,7 @@ func (w *BitcoindWallet) GetConfirmations(txid chainhash.Hash) (uint32, uint32, 
 }
 
 func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
+	<-w.initChan
 	var ch chainhash.Hash
 	info, err := w.rpcClient.GetInfo()
 	if err != nil {
@@ -306,6 +309,7 @@ func (w *BitcoindWallet) ChainTip() (uint32, chainhash.Hash) {
 }
 
 func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
+	<-w.initChan
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
 	utxos, err := w.rpcClient.ListUnspent()
 	if err != nil {
@@ -347,6 +351,7 @@ func (w *BitcoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error)
 }
 
 func (w *BitcoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+	<-w.initChan
 	tx, err := w.buildTx(amount, addr, feeLevel)
 	if err != nil {
 		return nil, err
@@ -451,6 +456,7 @@ func (w *BitcoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet
 }
 
 func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
+	<-w.initChan
 	includeWatchOnly := false
 	tx, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
@@ -503,6 +509,7 @@ func (w *BitcoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 }
 
 func (w *BitcoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
+	<-w.initChan
 	defautlFee := uint64(50)
 	var nBlocks json.RawMessage
 	switch feeLevel {
@@ -542,6 +549,7 @@ func (w *BitcoindWallet) EstimateFee(ins []wallet.TransactionInput, outs []walle
 }
 
 func (w *BitcoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLevel) (uint64, error) {
+	<-w.initChan
 	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
 	addr, err := btc.DecodeAddress("bc1qxtq7ha2l5qg70atpwp3fus84fx3w0v2w4r2my7gt89ll3w0vnlgspu349h", &chaincfg.MainNetParams)
 	if err != nil {
@@ -627,6 +635,7 @@ func (w *BitcoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, 
 }
 
 func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, sigs1 []wallet.Signature, sigs2 []wallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
+	<-w.initChan
 	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
@@ -703,6 +712,7 @@ func (w *BitcoindWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.
 }
 
 func (w *BitcoindWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+	<-w.initChan
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -907,10 +917,7 @@ func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 }
 
 func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
-	if !w.started {
-		w.scriptsToAdd = append(w.scriptsToAdd, script)
-		return nil
-	}
+	<-w.initChan
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err
@@ -919,6 +926,7 @@ func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
 }
 
 func (w *BitcoindWallet) ReSyncBlockchain(fromDate time.Time) {
+	<-w.initChan
 	w.rpcClient.RawRequest("stop", []json.RawMessage{})
 	w.rpcClient.Shutdown()
 	time.Sleep(5 * time.Second)
