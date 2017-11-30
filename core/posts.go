@@ -190,8 +190,8 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		if len(imageArray) > 8 {
 			imageArray = imageArray[0:8]
 		}
-		ld.Images = imageArray
 	}
+	ld.Images = imageArray
 
 	// Returns postData in its final form
 	return ld, nil
