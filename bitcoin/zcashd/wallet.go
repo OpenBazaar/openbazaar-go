@@ -31,6 +31,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"bufio"
+	"runtime"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -119,8 +120,13 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 }
 
 func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
-	notify := `curl -d %s http://localhost:8330/`
-	//notifyWindows := `powershell.exe Invoke-WebRequest -Uri http://localhost:8330/ -Method POST -Body %s`
+	var notify string
+	switch runtime.GOOS {
+	case "windows":
+		notify = `powershell.exe Invoke-WebRequest -Uri http://localhost:8330/ -Method POST -Body %s`
+	default:
+		notify = `curl -d %s http://localhost:8330/`
+	}
 	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "zcash.conf")}
 	if rescan {
 		args = append(args, "-rescan")

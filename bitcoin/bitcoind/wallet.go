@@ -32,6 +32,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"crypto/rand"
+	"runtime"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -122,7 +123,13 @@ func (w *BitcoindWallet) InitChan() chan struct{} {
 }
 
 func (w *BitcoindWallet) BuildArguments(rescan bool) []string {
-	notify := `curl -d %s http://localhost:8330/`
+	var notify string
+	switch runtime.GOOS {
+	case "windows":
+		notify = `powershell.exe Invoke-WebRequest -Uri http://localhost:8330/ -Method POST -Body %s`
+	default:
+		notify = `curl -d %s http://localhost:8330/`
+	}
 	args := []string{"-walletnotify=" + notify, "-server", "-wallet=ob-wallet.dat", "-conf=" + path.Join(w.repoPath, "bitcoin.conf")}
 	if rescan {
 		args = append(args, "-rescan")
