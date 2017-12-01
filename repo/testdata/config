@@ -22,8 +22,8 @@
   "DataSharing": {
     "AcceptStoreRequests": false,
     "PushTo": [
-        "QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
-        "QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
+      "QmZbLxbrPfGKjhFPwv9g7PkT5jL5DzQ8mF3iioByWMAprj",
+      "QmPZkv392E7VxumGSugQDEpfk6bHxfv271HTdVvdUu5Sod"
     ]
   },
   "Datastore": {
