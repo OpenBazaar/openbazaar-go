@@ -1,10 +1,14 @@
 package zcashd
 
 import (
+	"bufio"
 	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -21,17 +25,13 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
-	"path"
-	"os"
-	"crypto/rand"
-	"encoding/base64"
-	"fmt"
-	"bufio"
-	"runtime"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -88,7 +88,6 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 	user := fmt.Sprintf(`rpcuser=%s`, connCfg.User)
 	pass := fmt.Sprintf(`rpcpassword=%s`, connCfg.Pass)
 
-
 	f, err := os.Create(path.Join(dataDir, "zcash.conf"))
 	if err != nil {
 		return nil, err
@@ -98,7 +97,6 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 	fmt.Fprintln(wr, user)
 	fmt.Fprintln(wr, pass)
 	wr.Flush()
-
 
 	if trustedPeer != "" {
 		trustedPeer = strings.Split(trustedPeer, ":")[0]

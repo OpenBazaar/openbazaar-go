@@ -1,8 +1,11 @@
 package bitcoind
 
 import (
+	"bufio"
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -23,16 +26,13 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"os"
 	"os/exec"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
-	"path"
-	"os"
-	"bufio"
-	"encoding/base64"
-	"crypto/rand"
-	"runtime"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -88,7 +88,6 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 
 	user := fmt.Sprintf(`rpcuser=%s`, connCfg.User)
 	pass := fmt.Sprintf(`rpcpassword=%s`, connCfg.Pass)
-
 
 	f, err := os.Create(path.Join(dataDir, "bitcoin.conf"))
 	if err != nil {
