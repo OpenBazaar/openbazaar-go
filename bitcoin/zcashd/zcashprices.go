@@ -79,7 +79,13 @@ func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) 
 	return price, nil
 }
 
-func (z *ZcashPriceFetcher) GetAllRates() (map[string]float64, error) {
+func (z *ZcashPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, error) {
+	if !cacheOK {
+		err := z.fetchCurrentRates()
+		if err != nil {
+			return nil, err
+		}
+	}
 	z.Lock()
 	defer z.Unlock()
 	return z.cache, nil
@@ -131,7 +137,7 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 }
 
 func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
-	rates, err := bp.GetAllRates()
+	rates, err := bp.GetAllRates(false)
 	if err != nil {
 		return err
 	}
@@ -183,7 +189,7 @@ func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exc
 }
 
 func (b BitfinexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
-	rates, err := bp.GetAllRates()
+	rates, err := bp.GetAllRates(false)
 	if err != nil {
 		return err
 	}
@@ -215,7 +221,7 @@ func (b BitfinexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 }
 
 func (b BittrexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
-	rates, err := bp.GetAllRates()
+	rates, err := bp.GetAllRates(false)
 	if err != nil {
 		return err
 	}
@@ -250,7 +256,7 @@ func (b BittrexDecoder) decode(dat interface{}, cache map[string]float64, bp *ex
 }
 
 func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
-	rates, err := bp.GetAllRates()
+	rates, err := bp.GetAllRates(false)
 	if err != nil {
 		return err
 	}

@@ -74,30 +74,11 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 	}
 
 	dataDir := path.Join(repoPath, "zcash")
-	os.Mkdir(dataDir, os.ModePerm)
-
-	r := make([]byte, 32)
-	_, err := rand.Read(r)
+	var err error
+	connCfg.User, connCfg.Pass, err = GetCredentials(repoPath)
 	if err != nil {
 		return nil, err
 	}
-	password := base64.StdEncoding.EncodeToString(r)
-
-	connCfg.User = "OpenBazaar"
-	connCfg.Pass = password
-
-	user := fmt.Sprintf(`rpcuser=%s`, connCfg.User)
-	pass := fmt.Sprintf(`rpcpassword=%s`, connCfg.Pass)
-
-	f, err := os.Create(path.Join(dataDir, "bitcoin.conf"))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	wr := bufio.NewWriter(f)
-	fmt.Fprintln(wr, user)
-	fmt.Fprintln(wr, pass)
-	wr.Flush()
 
 	if trustedPeer != "" {
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
@@ -115,6 +96,61 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		initChan:         make(chan struct{}),
 	}
 	return &w, nil
+}
+
+func GetCredentials(repoPath string) (username, password string, err error) {
+	p := path.Join(repoPath, "bitcoin", "bitcoin.conf")
+	if _, err := os.Stat(p); os.IsNotExist(err) {
+		dataDir := path.Join(repoPath, "bitcoin")
+		os.Mkdir(dataDir, os.ModePerm)
+
+		r := make([]byte, 32)
+		_, err := rand.Read(r)
+		if err != nil {
+			return "", "", err
+		}
+		password := base64.StdEncoding.EncodeToString(r)
+
+		user := fmt.Sprintf(`rpcuser=%s`, "OpenBazaar")
+		pass := fmt.Sprintf(`rpcpassword=%s`, password)
+
+		f, err := os.Create(p)
+		if err != nil {
+			return "", "", err
+		}
+		defer f.Close()
+		wr := bufio.NewWriter(f)
+		fmt.Fprintln(wr, user)
+		fmt.Fprintln(wr, pass)
+		wr.Flush()
+		return "OpenBazaar", password, nil
+	} else {
+		file, err := os.Open(p)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		var unExists, pwExists bool
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), "rpcuser=") {
+				username = scanner.Text()[8:]
+				unExists = true
+			} else if strings.Contains(scanner.Text(), "rpcpassword=") {
+				password = scanner.Text()[12:]
+				pwExists = true
+			}
+		}
+		if !unExists || !pwExists {
+			return "", "", errors.New("Bitcoin config file does not contain a username and password")
+		}
+
+		if err := scanner.Err(); err != nil {
+			return "", "", err
+		}
+		return username, password, nil
+	}
 }
 
 func (w *BitcoindWallet) InitChan() chan struct{} {

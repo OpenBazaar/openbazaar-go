@@ -1116,7 +1116,7 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
 	_, currencyCode := path.Split(r.URL.Path)
 	if currencyCode == "" || strings.ToLower(currencyCode) == "exchangerate" {
-		currencyMap, err := i.node.ExchangeRates.GetAllRates()
+		currencyMap, err := i.node.ExchangeRates.GetAllRates(true)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
