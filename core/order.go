@@ -890,7 +890,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || "t"+strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
-	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
+	exchangeRate, err := n.ExchangeRates.GetLatestRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
