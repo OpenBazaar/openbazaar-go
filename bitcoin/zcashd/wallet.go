@@ -264,17 +264,30 @@ func (w *ZcashdWallet) Balance() (confirmed, unconfirmed int64) {
 
 func (w *ZcashdWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	<-w.initChan
-	blockinfo, err := w.rpcClient.GetBlockHeaderVerbose(hash)
+	h := ``
+	if hash !=nil {
+		h += `"` + hash.String() + `"`
+	}
+	resp, err := w.rpcClient.RawRequest("getblockheader", []json.RawMessage{json.RawMessage(h)})
 	if err != nil {
 		return 0, err
 	}
-	return blockinfo.Height, nil
+	type Respose struct {
+		Height int32 `json:"height"`
+	}
+	r := new(Respose)
+	err = json.Unmarshal([]byte(resp), r)
+	if err != nil {
+		return 0, err
+	}
+
+	return r.Height, nil
 }
 
 func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
 	<-w.initChan
 	var ret []wallet.Txn
-	resp, err := w.rpcClient.ListTransactions(Account)
+	resp, err := w.rpcClient.ListTransactions("*")
 	if err != nil {
 		return ret, err
 	}
