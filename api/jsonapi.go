@@ -3172,6 +3172,11 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 	urlPath, slug := path.Split(r.URL.Path)
 	_, peerId := path.Split(urlPath[:len(urlPath)-1])
 
+	if peerId == "ratings" {
+		peerId = slug
+		slug = ""
+	}
+
 	var indexBytes []byte
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
 		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")))
@@ -3179,31 +3184,62 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 	} else {
 		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
 	}
-	var rating *core.SavedRating
 	if indexBytes == nil {
-		rating = new(core.SavedRating)
-		rating.Slug = slug
+		rating := new(core.SavedRating)
 		rating.Ratings = []string{}
-	} else {
-		var ratingList []core.SavedRating
-		err := json.Unmarshal(indexBytes, &ratingList)
+		ret, err := json.MarshalIndent(rating, "", "    ")
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		SanitizedResponse(w, string(ret))
+		return
+	}
+
+	var ratingList []core.SavedRating
+	err := json.Unmarshal(indexBytes, &ratingList)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if slug != "" {
+		rating := new(core.SavedRating)
 		for _, r := range ratingList {
 			if r.Slug == slug {
 				rating = &r
 				break
 			}
 		}
+		ret, err := json.MarshalIndent(rating, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(ret))
+	} else {
+		type resp struct {
+			Count   int      `json:"count"`
+			Average float32  `json:"average"`
+			Ratings []string `json:"ratings"`
+		}
+		ratingRet := new(resp)
+		total := float32(0)
+		count := 0
+		for _, r := range ratingList {
+			total += r.Average * float32(r.Count)
+			count += r.Count
+			ratingRet.Ratings = append(ratingRet.Ratings, r.Ratings...)
+		}
+		ratingRet.Count = count
+		ratingRet.Average = total / float32(count)
+		ret, err := json.MarshalIndent(ratingRet, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(ret))
 	}
-	ret, err := json.MarshalIndent(rating, "", "    ")
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	SanitizedResponse(w, string(ret))
 }
 
 func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {

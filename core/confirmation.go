@@ -43,6 +43,19 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 			metadata.ListingSlug = listing.Slug
 			metadata.ModeratorKey = contract.BuyerOrder.Payment.ModeratorKey
 
+			if contract.BuyerOrder.Version > 0 {
+				metadata.ListingTitle = listing.Item.Title
+				if len(listing.Item.Images) > 0 {
+					metadata.Thumbnail = &pb.RatingSignature_TransactionMetadata_Image{
+						Tiny:     listing.Item.Images[0].Tiny,
+						Small:    listing.Item.Images[0].Small,
+						Medium:   listing.Item.Images[0].Medium,
+						Large:    listing.Item.Images[0].Large,
+						Original: listing.Item.Images[0].Original,
+					}
+				}
+			}
+
 			ser, err := proto.Marshal(metadata)
 			if err != nil {
 				return nil, err

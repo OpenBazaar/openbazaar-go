@@ -91,9 +91,11 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		fulfillment.Payout = payout
 	}
 	var keyIndex int
-	for i, listing := range contract.VendorListings {
-		if listing.Slug == fulfillment.Slug {
+	var listing *pb.Listing
+	for i, list := range contract.VendorListings {
+		if list.Slug == fulfillment.Slug {
 			keyIndex = i
+			listing = list
 			break
 		}
 	}
@@ -108,6 +110,20 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	metadata := new(pb.RatingSignature_TransactionMetadata)
 	metadata.RatingKey = contract.BuyerOrder.RatingKeys[keyIndex]
 	metadata.ListingSlug = fulfillment.Slug
+
+	if contract.BuyerOrder.Version > 0 {
+		metadata.ListingTitle = listing.Item.Title
+		if len(listing.Item.Images) > 0 {
+			metadata.Thumbnail = &pb.RatingSignature_TransactionMetadata_Image{
+				Tiny:     listing.Item.Images[0].Tiny,
+				Small:    listing.Item.Images[0].Small,
+				Medium:   listing.Item.Images[0].Medium,
+				Large:    listing.Item.Images[0].Large,
+				Original: listing.Item.Images[0].Original,
+			}
+		}
+	}
+
 	ser, err := proto.Marshal(metadata)
 	if err != nil {
 		return err
