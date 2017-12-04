@@ -11,6 +11,7 @@ It is generated from these files:
 	message.proto
 	moderator.proto
 	orders.proto
+	posts.proto
 	profile.proto
 
 It has these top-level messages:
@@ -47,6 +48,8 @@ It has these top-level messages:
 	Block
 	Moderator
 	DisputeUpdate
+	Post
+	SignedPost
 	Profile
 */
 package pb

@@ -25,6 +25,10 @@ import (
 	"sync"
 
 	"bytes"
+	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
+	"io/ioutil"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -41,9 +45,6 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
-	"io/ioutil"
 )
 
 type JsonAPIConfig struct {
@@ -3546,4 +3547,296 @@ func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponse(w, string(out))
+}
+
+// POSTS
+
+// Post a post
+func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
+	ld := new(pb.Post)
+	err := jsonpb.Unmarshal(r.Body, ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// If the post already exists in path, tell them to use PUT
+	postPath := path.Join(i.node.RepoPath, "root", "posts", ld.Slug+".json")
+	if ld.Slug != "" {
+		_, ferr := os.Stat(postPath)
+		if !os.IsNotExist(ferr) {
+			ErrorResponse(w, http.StatusConflict, "Post already exists. Use PUT.")
+			return
+		}
+	} else {
+		// The post isn't in the path and is new, therefore add required data (slug, timestamp)
+		// Generate a slug from the title
+		ld.Slug, err = i.node.GeneratePostSlug(ld.Title)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	// Add the timestamp
+	ld.Timestamp, err = ptypes.TimestampProto(time.Now())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Sign the post
+	signedPost, err := i.node.SignPost(ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Add to path
+	postPath = path.Join(i.node.RepoPath, "root", "posts", signedPost.Post.Slug+".json")
+	f, err := os.Create(postPath)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(signedPost)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.UpdatePostIndex(signedPost)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, signedPost.Post.Slug))
+	return
+}
+
+// PUT a post
+func (i *jsonAPIHandler) PUTPost(w http.ResponseWriter, r *http.Request) {
+	ld := new(pb.Post)
+	err := jsonpb.Unmarshal(r.Body, ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Check if the post exists
+	postPath := path.Join(i.node.RepoPath, "root", "posts", ld.Slug+".json")
+	_, ferr := os.Stat(postPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Post not found.")
+		return
+	}
+	// Add the timestamp
+	ld.Timestamp, err = ptypes.TimestampProto(time.Now())
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	// Sign the post
+	signedPost, err := i.node.SignPost(ld)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	f, err := os.Create(postPath)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(signedPost)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.UpdatePostIndex(signedPost)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Update followers/following
+	err = i.node.UpdateFollow()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
+		return
+	}
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, `{}`)
+	return
+}
+
+// DELETE a post
+func (i *jsonAPIHandler) DELETEPost(w http.ResponseWriter, r *http.Request) {
+	_, slug := path.Split(r.URL.Path)
+	postPath := path.Join(i.node.RepoPath, "root", "posts", slug+".json")
+	_, ferr := os.Stat(postPath)
+	if os.IsNotExist(ferr) {
+		ErrorResponse(w, http.StatusNotFound, "Post not found.")
+		return
+	}
+	err := i.node.DeletePost(slug)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	err = i.node.UpdateFollow()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
+		return
+	}
+	if err := i.node.SeedNode(); err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, `{}`)
+	return
+}
+
+// GET a list of posts (self or peer)
+func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		postsBytes, err := i.node.GetPosts()
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(postsBytes))
+	} else {
+		pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		peerId = pid.Pretty()
+		postsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts.json")))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(postsBytes))
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+	}
+}
+
+// GET a post (self or peer)
+func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
+	urlPath, postId := path.Split(r.URL.Path)
+	_, peerId := path.Split(urlPath[:len(urlPath)-1])
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IpfsNode.Identity.Pretty() {
+		sl := new(pb.SignedPost)
+		_, err := cid.Decode(postId)
+		if err == nil {
+			sl, err = i.node.GetPostFromHash(postId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, "Post not found.")
+				return
+			}
+			sl.Hash = postId
+		} else {
+			sl, err = i.node.GetPostFromSlug(postId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, "Post not found.")
+				return
+			}
+			hash, err := ipfs.GetHashOfFile(i.node.Context, path.Join(i.node.RepoPath, "root", "posts", postId+".json"))
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			sl.Hash = hash
+		}
+
+		out, err := m.MarshalToString(sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponseM(w, string(out), new(pb.SignedPost))
+		return
+	} else {
+		var postBytes []byte
+		var hash string
+		_, err := cid.Decode(postId)
+		if err == nil {
+			postBytes, err = ipfs.Cat(i.node.Context, postId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+			hash = postId
+			w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+		} else {
+			pid, err := i.node.NameSystem.Resolve(context.Background(), peerId)
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+			peerId = pid.Pretty()
+			postBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts", postId+".json")))
+			if err != nil {
+				ErrorResponse(w, http.StatusNotFound, err.Error())
+				return
+			}
+			hash, err = ipfs.GetHash(i.node.Context, bytes.NewReader(postBytes))
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+		}
+		sl := new(pb.SignedPost)
+		err = jsonpb.UnmarshalString(string(postBytes), sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		sl.Hash = hash
+		out, err := m.MarshalToString(sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponseM(w, out, new(pb.SignedPost))
+	}
 }
