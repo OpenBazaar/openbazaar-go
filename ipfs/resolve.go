@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const ResolveTimeout = 30 * time.Second
+const ResolveTimeout = 60 * time.Second
 
 // Publish a signed IPNS record to our Peer ID
 func Resolve(ctx commands.Context, hash string) (string, error) {

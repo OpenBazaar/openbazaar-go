@@ -381,7 +381,23 @@ func (x *Start) Execute(args []string) error {
 			torPw = x.TorPassword
 		}
 		auth := &proxy.Auth{Password: torPw}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
+		key, err := obnet.LoadOnionKey(repoPath)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		if !torConfig.AutoHiddenService && torConfig.Socks5 == "" {
+			return errors.New("Socks5 proxy must be set in the config file if not using AutoHiddenService")
+		}
+		onionCfg := oniontp.TransportConfig{
+			AutoConfig:  torConfig.AutoHiddenService,
+			ControlAddr: torControl,
+			Auth:        auth,
+			OnlyOnion:   (usingTor && usingClearnet),
+			OnionKey:    key,
+			SocksAddr:   torConfig.Socks5,
+		}
+		onionTransport, err = oniontp.NewOnionTransport(onionCfg)
 		if err != nil {
 			log.Error(err)
 			return err
