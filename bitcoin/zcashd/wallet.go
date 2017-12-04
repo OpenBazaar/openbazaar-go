@@ -51,7 +51,7 @@ type ZcashdWallet struct {
 	binary           string
 	controlPort      int
 	useTor           bool
-	scriptsToAdd     [][]byte
+	addrsToWatch     []btc.Address
 	initChan         chan struct{}
 }
 
@@ -95,7 +95,6 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
 	}
-	os.Mkdir(dataDir, os.ModePerm)
 	return &w, nil
 }
 
@@ -154,6 +153,12 @@ func GetCredentials(repoPath string) (username, password string, err error) {
 	}
 }
 
+func (w *ZcashdWallet) addQueuedWatchAddresses() {
+	for _, addr := range w.addrsToWatch {
+		w.addWatchedScript(addr)
+	}
+}
+
 func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	var notify string
 	switch runtime.GOOS {
@@ -208,6 +213,7 @@ func (w *ZcashdWallet) Start() {
 	ticker.Stop()
 	log.Info("Connected to zcashd")
 	close(w.initChan)
+	go w.addQueuedWatchAddresses()
 }
 
 func (w *ZcashdWallet) InitChan() chan struct{} {
@@ -911,13 +917,23 @@ func (w *ZcashdWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold i
 }
 
 func (w *ZcashdWallet) AddWatchedScript(script []byte) error {
-	<-w.initChan
 	addr, err := ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err
 	}
+
+	select {
+	case <-w.initChan:
+		return w.addWatchedScript(addr)
+	default:
+		w.addrsToWatch = append(w.addrsToWatch, addr)
+	}
+	return nil
+}
+
+func (w *ZcashdWallet) addWatchedScript(addr btc.Address) error {
 	a := `"` + addr.EncodeAddress() + `"`
-	_, err = w.rpcClient.RawRequest("importaddress", []json.RawMessage{json.RawMessage(a), json.RawMessage(`""`), json.RawMessage(`false`)})
+	_, err := w.rpcClient.RawRequest("importaddress", []json.RawMessage{json.RawMessage(a), json.RawMessage(`""`), json.RawMessage(`false`)})
 	return err
 }
 

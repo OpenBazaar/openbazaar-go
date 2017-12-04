@@ -52,7 +52,7 @@ type BitcoindWallet struct {
 	binary           string
 	controlPort      int
 	useTor           bool
-	scriptsToAdd     [][]byte
+	addrsToWatch     []btc.Address
 	initChan         chan struct{}
 }
 
@@ -153,6 +153,12 @@ func GetCredentials(repoPath string) (username, password string, err error) {
 	}
 }
 
+func (w *BitcoindWallet) addQueuedWatchAddresses() {
+	for _, addr := range w.addrsToWatch {
+		w.addWatchedScript(addr)
+	}
+}
+
 func (w *BitcoindWallet) InitChan() chan struct{} {
 	return w.initChan
 }
@@ -211,6 +217,7 @@ func (w *BitcoindWallet) Start() {
 	ticker.Stop()
 	log.Info("Connected to bitcoind")
 	close(w.initChan)
+	go w.addQueuedWatchAddresses()
 }
 
 // If bitcoind is already running let's shut it down so we restart it with our options
@@ -992,12 +999,21 @@ func (w *BitcoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold
 }
 
 func (w *BitcoindWallet) AddWatchedScript(script []byte) error {
-	<-w.initChan
 	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err
 	}
-	return w.rpcClient.ImportAddressRescan(addrs[0].EncodeAddress(), false)
+	select {
+	case <-w.initChan:
+		return w.addWatchedScript(addrs[0])
+	default:
+		w.addrsToWatch = append(w.addrsToWatch, addrs[0])
+	}
+	return nil
+}
+
+func (w *BitcoindWallet) addWatchedScript(addr btc.Address) error {
+	return w.rpcClient.ImportAddressRescan(addr.EncodeAddress(), false)
 }
 
 func (w *BitcoindWallet) ReSyncBlockchain(fromDate time.Time) {
