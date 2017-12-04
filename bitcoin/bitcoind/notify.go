@@ -1,13 +1,13 @@
 package bitcoind
 
 import (
+	"encoding/json"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 	"io/ioutil"
 	"net/http"
 	"time"
-	"encoding/json"
 )
 
 type NotificationListener struct {
@@ -62,7 +62,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h := ``
-		if hash !=nil {
+		if hash != nil {
 			h += `"` + hash.String() + `"`
 		}
 		resp, err := l.client.RawRequest("getblockheader", []json.RawMessage{json.RawMessage(h)})

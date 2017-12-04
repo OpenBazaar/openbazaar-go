@@ -308,7 +308,7 @@ func (w *ZcashdWallet) Balance() (confirmed, unconfirmed int64) {
 func (w *ZcashdWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	<-w.initChan
 	h := ``
-	if hash !=nil {
+	if hash != nil {
 		h += `"` + hash.String() + `"`
 	}
 	resp, err := w.rpcClient.RawRequest("getblockheader", []json.RawMessage{json.RawMessage(h)})
