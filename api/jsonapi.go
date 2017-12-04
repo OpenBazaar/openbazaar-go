@@ -27,8 +27,6 @@ import (
 	"bytes"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/zcashd"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -779,7 +777,7 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
-	_, ok := i.node.Wallet.(*bitcoind.BitcoindWallet)
+	/*_, ok := i.node.Wallet.(*bitcoind.BitcoindWallet)
 	if ok {
 		select {
 		case <-i.node.Wallet.(*bitcoind.BitcoindWallet).InitChan():
@@ -798,7 +796,7 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
 			return
 		}
-	}
+	}*/
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
 }
