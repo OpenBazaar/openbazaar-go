@@ -291,7 +291,7 @@ func (x *Restore) Execute(args []string) error {
 	<-dht.DefaultBootstrapConfig.DoneChan
 	wg := new(sync.WaitGroup)
 	wg.Add(10)
-	k, err := ipfs.Resolve(ctx, identity.PeerID)
+	k, err := ipfs.Resolve(ctx, identity.PeerID, time.Minute)
 	if err != nil || k == "" {
 		PrintError(fmt.Sprintf("IPNS record for %s not found on network\n", identity.PeerID))
 		return err
@@ -334,7 +334,7 @@ func (x *Restore) Execute(args []string) error {
 
 func RestoreFile(repoPath, peerID, filename string, ctx commands.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	b, err := ipfs.ResolveThenCat(ctx, ipfspath.FromString(path.Join(peerID, filename)))
+	b, err := ipfs.ResolveThenCat(ctx, ipfspath.FromString(path.Join(peerID, filename)), time.Minute)
 	if err != nil {
 		PrintError(fmt.Sprintf("Failed to find %s\n", filename))
 	} else {

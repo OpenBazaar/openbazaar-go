@@ -1155,7 +1155,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1213,7 +1213,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")))
+		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1359,7 +1359,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")))
+		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1434,7 +1434,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		var hash string
 		_, err := cid.Decode(listingId)
 		if err == nil {
-			listingBytes, err = ipfs.Cat(i.node.Context, listingId)
+			listingBytes, err = ipfs.Cat(i.node.Context, listingId, time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -1448,7 +1448,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")))
+			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -3179,7 +3179,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 
 	var indexBytes []byte
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")))
+		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
 
 	} else {
 		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
@@ -3245,7 +3245,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {
 	_, ratingID := path.Split(r.URL.Path)
 
-	ratingBytes, err := ipfs.Cat(i.node.Context, ratingID)
+	ratingBytes, err := ipfs.Cat(i.node.Context, ratingID, time.Minute)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -3288,7 +3288,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		for _, id := range rp {
 			wg.Add(1)
 			go func(rid string) {
-				ratingBytes, err := ipfs.Cat(i.node.Context, rid)
+				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
 				if err != nil {
 					return
 				}
@@ -3362,7 +3362,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					i.node.Broadcast <- ret
 					return
 				}
-				ratingBytes, err := ipfs.Cat(i.node.Context, rid)
+				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
 				if err != nil {
 					respondWithError("Not Found")
 					return
@@ -3743,7 +3743,7 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		postsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts.json")))
+		postsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3799,7 +3799,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		var hash string
 		_, err := cid.Decode(postId)
 		if err == nil {
-			postBytes, err = ipfs.Cat(i.node.Context, postId)
+			postBytes, err = ipfs.Cat(i.node.Context, postId, time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -3813,7 +3813,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			postBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts", postId+".json")))
+			postBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts", postId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return

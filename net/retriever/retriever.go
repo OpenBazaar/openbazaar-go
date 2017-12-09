@@ -192,7 +192,7 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 
 func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	ciphertext, err := ipfs.Cat(ctx, addr.String())
+	ciphertext, err := ipfs.Cat(ctx, addr.String(), time.Minute*10)
 	if err != nil {
 		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return

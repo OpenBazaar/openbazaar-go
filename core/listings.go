@@ -495,7 +495,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 		return false
 	}
 	for _, l := range index {
-		b, err := ipfs.Cat(n.Context, l.Hash)
+		b, err := ipfs.Cat(n.Context, l.Hash, time.Minute)
 		if err != nil {
 			log.Error(err)
 			return false

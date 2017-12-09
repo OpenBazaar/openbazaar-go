@@ -79,7 +79,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.Moderator = data.Moderator
 
 		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
-		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
+		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath, time.Minute)
 		if err != nil {
 			return "", "", 0, false, errors.New("Moderator could not be found")
 		}
@@ -499,7 +499,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		listing := new(pb.Listing)
 		if !exists {
 			// Let's fetch the listing, should be cached
-			b, err := ipfs.Cat(n.Context, item.ListingHash)
+			b, err := ipfs.Cat(n.Context, item.ListingHash, time.Minute)
 			if err != nil {
 				return nil, err
 			}
@@ -1222,7 +1222,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath)
+	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath, time.Minute)
 	if err != nil {
 		return err
 	}
