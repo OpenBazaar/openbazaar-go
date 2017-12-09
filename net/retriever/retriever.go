@@ -197,7 +197,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return
 	}
-	log.Debug("Successfully downloaded offline message from %s", addr.String())
+	log.Debugf("Successfully downloaded offline message from %s", addr.String())
 	m.db.OfflineMessages().Put(addr.String())
 	m.attemptDecrypt(ciphertext, pid, addr)
 }
@@ -214,7 +214,7 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return
 	}
-	log.Debug("Successfully downloaded offline message from %s", addr.String())
+	log.Debugf("Successfully downloaded offline message from %s", addr.String())
 	m.db.OfflineMessages().Put(addr.String())
 	m.attemptDecrypt(ciphertext, pid, addr)
 
