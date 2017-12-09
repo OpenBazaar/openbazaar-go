@@ -43,7 +43,6 @@ func (n *OpenBazaarNode) sendMessage(peerId string, k *libp2p.PubKey, message pb
 
 // Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
-	log.Debugf("Sending offline message to %s", p.Pretty())
 	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
 		return err
@@ -87,6 +86,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 			return err
 		}
 	}
+	log.Debugf("Sending offline message to: %s, Message Type: %s, PointerID: %s, Location: %s", p.Pretty(), m.MessageType.String(), pointer.Cid.String(), pointer.Value.Addrs[0].String())
 	OfflineMessageWaitGroup.Add(1)
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())

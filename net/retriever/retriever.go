@@ -116,6 +116,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
 		if len(p.Addrs) > 0 && !m.db.OfflineMessages().Has(p.Addrs[0].String()) {
+			log.Debugf("Found pointer with location %s", p.Addrs[0].String())
 			// IPFS
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS {
 				wg.Add(1)
@@ -193,9 +194,10 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 	defer wg.Done()
 	ciphertext, err := ipfs.Cat(ctx, addr.String())
 	if err != nil {
-		log.Errorf("Error retrieving offline message: %s", err.Error())
+		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return
 	}
+	log.Debug("Successfully downloaded offline message from %s", addr.String())
 	m.db.OfflineMessages().Put(addr.String())
 	m.attemptDecrypt(ciphertext, pid, addr)
 }
@@ -204,14 +206,15 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 	defer wg.Done()
 	resp, err := m.httpClient.Get(url)
 	if err != nil {
-		log.Errorf("Error retrieving offline message: %s", err.Error())
+		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return
 	}
 	ciphertext, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorf("Error retrieving offline message: %s", err.Error())
+		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
 		return
 	}
+	log.Debug("Successfully downloaded offline message from %s", addr.String())
 	m.db.OfflineMessages().Put(addr.String())
 	m.attemptDecrypt(ciphertext, pid, addr)
 
@@ -221,6 +224,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	// Decrypt and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
 	if err != nil {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
@@ -228,30 +232,36 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	env := pb.Envelope{}
 	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	// Validate the signature
 	ser, err := proto.Marshal(env.Message)
 	if err != nil {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 	if err != nil {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
 	if m.bm.IsBanned(id) {
+		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
 		return
 	}
 
