@@ -7,12 +7,10 @@ import (
 	"time"
 )
 
-const CatTimeout = 60 * time.Second
-
 // Fetch data from IPFS given the hash
-func Cat(ctx commands.Context, hash string) ([]byte, error) {
+func Cat(ctx commands.Context, hash string, timeout time.Duration) ([]byte, error) {
 	args := []string{"cat", hash}
-	req, cmd, err := NewRequestWithTimeout(ctx, args, CatTimeout)
+	req, cmd, err := NewRequestWithTimeout(ctx, args, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -32,9 +30,9 @@ func Cat(ctx commands.Context, hash string) ([]byte, error) {
 	return b, nil
 }
 
-func ResolveThenCat(ctx commands.Context, ipnsPath path.Path) ([]byte, error) {
+func ResolveThenCat(ctx commands.Context, ipnsPath path.Path, timeout time.Duration) ([]byte, error) {
 	var ret []byte
-	hash, err := Resolve(ctx, ipnsPath.Segments()[0])
+	hash, err := Resolve(ctx, ipnsPath.Segments()[0], timeout)
 	if err != nil {
 		return ret, err
 	}
@@ -43,7 +41,7 @@ func ResolveThenCat(ctx commands.Context, ipnsPath path.Path) ([]byte, error) {
 	for i := 0; i < len(ipnsPath.Segments())-1; i++ {
 		p[i+1] = ipnsPath.Segments()[i+1]
 	}
-	b, err := Cat(ctx, path.Join(p))
+	b, err := Cat(ctx, path.Join(p), timeout)
 	if err != nil {
 		return ret, err
 	}
