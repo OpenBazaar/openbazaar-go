@@ -15,7 +15,9 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-type EncryptDatabase struct{}
+type EncryptDatabase struct {
+	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
+}
 
 func (x *EncryptDatabase) Execute(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
@@ -24,15 +26,19 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	var filename string
 	var testnet bool
 	var err error
+	if x.DataDir == "" {
+		repoPath, err = repo.GetRepoPath(false)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+	} else {
+		repoPath = x.DataDir
+	}
 	for {
 		fmt.Print("Encrypt the mainnet or testnet db?: ")
 		resp, _ := reader.ReadString('\n')
 		if strings.Contains(strings.ToLower(resp), "mainnet") {
-			repoPath, err = repo.GetRepoPath(false)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
 			filename = "mainnet.db"
 			dbPath = path.Join(repoPath, "datastore", filename)
 			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
@@ -46,11 +52,6 @@ func (x *EncryptDatabase) Execute(args []string) error {
 			}
 			break
 		} else if strings.Contains(strings.ToLower(resp), "testnet") {
-			repoPath, err = repo.GetRepoPath(true)
-			if err != nil {
-				fmt.Println(err)
-				return nil
-			}
 			testnet = true
 			filename = "testnet.db"
 			dbPath = path.Join(repoPath, "datastore", filename)
