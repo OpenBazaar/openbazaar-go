@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-type DecryptDatabase struct{
+type DecryptDatabase struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 }
 
