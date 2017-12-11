@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
+	"sync"
 	"testing"
 )
 
@@ -16,7 +17,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	kdb = KeysDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 }
 

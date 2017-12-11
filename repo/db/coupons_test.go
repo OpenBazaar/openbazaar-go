@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"sync"
 	"testing"
 )
 
@@ -12,7 +13,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	coup = CouponDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 }
 

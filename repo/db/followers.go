@@ -9,7 +9,7 @@ import (
 
 type FollowerDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (f *FollowerDB) Put(follower string, proof []byte) error {
@@ -29,8 +29,8 @@ func (f *FollowerDB) Put(follower string, proof []byte) error {
 }
 
 func (f *FollowerDB) Get(offsetId string, limit int) ([]repo.Follower, error) {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	var stm string
 	if offsetId != "" {
 		stm = "select peerID, proof from followers order by rowid desc limit " + strconv.Itoa(limit) + " offset ((select coalesce(max(rowid)+1, 0) from followers)-(select rowid from followers where peerID='" + offsetId + "'))"
@@ -61,8 +61,8 @@ func (f *FollowerDB) Delete(follower string) error {
 }
 
 func (f *FollowerDB) Count() int {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	row := f.db.QueryRow("select Count(*) from followers")
 	var count int
 	row.Scan(&count)
@@ -70,8 +70,8 @@ func (f *FollowerDB) Count() int {
 }
 
 func (f *FollowerDB) FollowsMe(peerId string) bool {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	stmt, err := f.db.Prepare("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string

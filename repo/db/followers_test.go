@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"strconv"
+	"sync"
 	"testing"
 )
 
@@ -13,7 +14,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	fdb = FollowerDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 }
 

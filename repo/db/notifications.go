@@ -13,7 +13,7 @@ import (
 
 type NotficationsDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error {
@@ -34,8 +34,8 @@ func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType 
 func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]notif.Notification, int, error) {
 	var ret []notif.Notification
 
-	n.lock.RLock()
-	defer n.lock.RUnlock()
+	n.lock.Lock()
+	defer n.lock.Unlock()
 
 	var stm string
 	var cstm string

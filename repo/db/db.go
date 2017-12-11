@@ -36,7 +36,7 @@ type SQLiteDatastore struct {
 	txMetadata      repo.TxMetadata
 	moderatedStores repo.ModeratedStores
 	db              *sql.DB
-	lock            sync.RWMutex
+	lock            *sync.Mutex
 }
 
 func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
@@ -54,7 +54,7 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		p := "pragma key='" + password + "';"
 		conn.Exec(p)
 	}
-	var l sync.RWMutex
+	l := new(sync.Mutex)
 	sqliteDB := &SQLiteDatastore{
 		config: &ConfigDB{
 			db:   conn,
@@ -317,7 +317,7 @@ func initDatabaseTables(db *sql.DB, password string) error {
 
 type ConfigDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 	path string
 }
 
@@ -356,8 +356,8 @@ func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, cr
 }
 
 func (c *ConfigDB) GetMnemonic() (string, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
 	defer stmt.Close()
 	var mnemonic string
@@ -369,8 +369,8 @@ func (c *ConfigDB) GetMnemonic() (string, error) {
 }
 
 func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
 	if err != nil {
 		return nil, err
@@ -385,8 +385,8 @@ func (c *ConfigDB) GetIdentityKey() ([]byte, error) {
 }
 
 func (c *ConfigDB) GetCreationDate() (time.Time, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	var t time.Time
 	stmt, err := c.db.Prepare("select value from config where key=?")
 	if err != nil {
@@ -402,8 +402,8 @@ func (c *ConfigDB) GetCreationDate() (time.Time, error) {
 }
 
 func (c *ConfigDB) IsEncrypted() bool {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	pwdCheck := "select count(*) from sqlite_master;"
 	_, err := c.db.Exec(pwdCheck) // Fails if wrong password is entered
 	if err != nil {

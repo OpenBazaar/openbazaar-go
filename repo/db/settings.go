@@ -13,7 +13,7 @@ var SettingsNotSetError error = errors.New("Settings not set")
 
 type SettingsDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (s *SettingsDB) Put(settings repo.SettingsData) error {
@@ -43,8 +43,8 @@ func (s *SettingsDB) Put(settings repo.SettingsData) error {
 }
 
 func (s *SettingsDB) Get() (repo.SettingsData, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	settings := repo.SettingsData{}
 	stmt, err := s.db.Prepare("select value from config where key=?")
 	if err != nil {

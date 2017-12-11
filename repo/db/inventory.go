@@ -10,7 +10,7 @@ import (
 
 type InventoryDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (i *InventoryDB) Put(slug string, variantIndex int, count int) error {
@@ -35,8 +35,8 @@ func (i *InventoryDB) Put(slug string, variantIndex int, count int) error {
 }
 
 func (i *InventoryDB) GetSpecific(slug string, variantIndex int) (int, error) {
-	i.lock.RLock()
-	defer i.lock.RUnlock()
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	stmt, err := i.db.Prepare("select count from inventory where slug=? and variantIndex=?")
 	if err != nil {
 		return 0, err
@@ -51,8 +51,8 @@ func (i *InventoryDB) GetSpecific(slug string, variantIndex int) (int, error) {
 }
 
 func (i *InventoryDB) Get(slug string) (map[int]int, error) {
-	i.lock.RLock()
-	defer i.lock.RUnlock()
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	ret := make(map[int]int)
 	stmt, err := i.db.Prepare("select slug, variantIndex, count from inventory where slug=?")
 	if err != nil {
@@ -75,8 +75,8 @@ func (i *InventoryDB) Get(slug string) (map[int]int, error) {
 }
 
 func (i *InventoryDB) GetAll() (map[string]map[int]int, error) {
-	i.lock.RLock()
-	defer i.lock.RUnlock()
+	i.lock.Lock()
+	defer i.lock.Unlock()
 
 	ret := make(map[string]map[int]int)
 	stm := "select slug, variantIndex, count from inventory"
