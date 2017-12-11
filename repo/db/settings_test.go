@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"testing"
 	"sync"
+	"testing"
 )
 
 var sdb SettingsDB
@@ -15,7 +15,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	sdb = SettingsDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 	c := "UNITED_STATES"

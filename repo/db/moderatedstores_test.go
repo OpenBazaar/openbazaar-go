@@ -3,8 +3,8 @@ package db
 import (
 	"database/sql"
 	"strconv"
-	"testing"
 	"sync"
+	"testing"
 )
 
 var modDB ModeratedDB
@@ -13,7 +13,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	modDB = ModeratedDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }

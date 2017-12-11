@@ -2,9 +2,9 @@ package db
 
 import (
 	"database/sql"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 var chdb ChatDB
@@ -17,7 +17,7 @@ func setupDB() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	chdb = ChatDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }

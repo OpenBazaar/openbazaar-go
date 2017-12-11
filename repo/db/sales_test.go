@@ -20,7 +20,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	saldb = SalesDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 	contract = new(pb.RicardianContract)

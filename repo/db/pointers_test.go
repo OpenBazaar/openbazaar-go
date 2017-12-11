@@ -9,9 +9,9 @@ import (
 	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 var pdb PointersDB
@@ -21,7 +21,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	pdb = PointersDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 	randBytes := make([]byte, 32)

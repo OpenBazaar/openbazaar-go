@@ -2,8 +2,8 @@ package db
 
 import (
 	"database/sql"
-	"testing"
 	"sync"
+	"testing"
 )
 
 var ivdb InventoryDB
@@ -12,7 +12,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	ivdb = InventoryDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }

@@ -3,8 +3,8 @@ package db
 import (
 	"bytes"
 	"database/sql"
-	"testing"
 	"sync"
+	"testing"
 )
 
 var odb OfflineMessagesDB
@@ -13,7 +13,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	odb = OfflineMessagesDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }

@@ -3,9 +3,9 @@ package db
 import (
 	"database/sql"
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"sync"
 	"testing"
 	"time"
-	"sync"
 )
 
 var notifDB NotficationsDB
@@ -14,7 +14,7 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	notifDB = NotficationsDB{
-		db: conn,
+		db:   conn,
 		lock: new(sync.Mutex),
 	}
 }
