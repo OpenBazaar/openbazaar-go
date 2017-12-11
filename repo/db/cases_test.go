@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
+	"sync"
 )
 
 var casesdb CasesDB
@@ -21,7 +22,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	casesdb = CasesDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)

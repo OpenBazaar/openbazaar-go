@@ -13,7 +13,7 @@ import (
 
 type StxoDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (s *StxoDB) Put(stxo wallet.Stxo) error {
@@ -41,8 +41,8 @@ func (s *StxoDB) Put(stxo wallet.Stxo) error {
 }
 
 func (s *StxoDB) GetAll() ([]wallet.Stxo, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	var ret []wallet.Stxo
 	stm := "select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos"
 	rows, err := s.db.Query(stm)

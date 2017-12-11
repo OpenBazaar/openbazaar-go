@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/btcsuite/btcd/wire"
+	"sync"
 	"testing"
 	"time"
 )
@@ -15,7 +16,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	txdb = TxnsDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 }
 

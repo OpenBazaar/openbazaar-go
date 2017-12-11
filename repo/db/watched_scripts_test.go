@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"sync"
 	"testing"
 )
 
@@ -13,7 +14,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	wsdb = WatchedScriptsDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 }
 

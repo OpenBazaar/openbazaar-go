@@ -13,7 +13,7 @@ import (
 
 type CasesDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {
@@ -184,8 +184,8 @@ func (c *CasesDB) Delete(orderID string) error {
 }
 
 func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]repo.Case, int, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 
 	q := query{
 		table:           "cases",
@@ -287,8 +287,8 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 }
 
 func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, timestamp, buyerOpened, claim, disputeResolution from cases where caseID=?")
 	defer stmt.Close()
 	var buyerCon []byte
@@ -360,8 +360,8 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 }
 
 func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state from cases where caseID=?")
 	var buyerCon []byte
 	var vendorCon []byte
@@ -424,8 +424,8 @@ func (c *CasesDB) GetPayoutDetails(caseID string) (buyerContract, vendorContract
 }
 
 func (c *CasesDB) Count() int {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	row := c.db.QueryRow("select Count(*) from cases")
 	var count int
 	row.Scan(&count)

@@ -12,7 +12,7 @@ import (
 
 type TxnsDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (t *TxnsDB) Put(txn *wire.MsgTx, value, height int, timestamp time.Time, watchOnly bool) error {

@@ -12,7 +12,7 @@ import (
 
 type KeysDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (k *KeysDB) Put(scriptAddress []byte, keyPath wallet.KeyPath) error {
@@ -80,8 +80,8 @@ func (k *KeysDB) MarkKeyAsUsed(scriptAddress []byte) error {
 }
 
 func (k *KeysDB) GetLastKeyIndex(purpose wallet.KeyPurpose) (int, bool, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 
 	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " order by rowid desc limit 1"
 	stmt, err := k.db.Prepare(stm)
@@ -102,8 +102,8 @@ func (k *KeysDB) GetLastKeyIndex(purpose wallet.KeyPurpose) (int, bool, error) {
 }
 
 func (k *KeysDB) GetPathForKey(scriptAddress []byte) (wallet.KeyPath, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 
 	stmt, err := k.db.Prepare("select purpose, keyIndex from keys where scriptAddress=?")
 	if err != nil {
@@ -146,8 +146,8 @@ func (k *KeysDB) GetKey(scriptAddress []byte) (*btcec.PrivateKey, error) {
 }
 
 func (k *KeysDB) GetImported() ([]*btcec.PrivateKey, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 	var ret []*btcec.PrivateKey
 	stm := "select key from keys where purpose=-1"
 	rows, err := k.db.Query(stm)
@@ -172,8 +172,8 @@ func (k *KeysDB) GetImported() ([]*btcec.PrivateKey, error) {
 }
 
 func (k *KeysDB) GetUnused(purpose wallet.KeyPurpose) ([]int, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 	var ret []int
 	stm := "select keyIndex from keys where purpose=" + strconv.Itoa(int(purpose)) + " and used=0 order by rowid asc"
 	rows, err := k.db.Query(stm)
@@ -193,8 +193,8 @@ func (k *KeysDB) GetUnused(purpose wallet.KeyPurpose) ([]int, error) {
 }
 
 func (k *KeysDB) GetAll() ([]wallet.KeyPath, error) {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 	var ret []wallet.KeyPath
 	stm := "select purpose, keyIndex from keys"
 	rows, err := k.db.Query(stm)
@@ -218,8 +218,8 @@ func (k *KeysDB) GetAll() ([]wallet.KeyPath, error) {
 }
 
 func (k *KeysDB) GetLookaheadWindows() map[wallet.KeyPurpose]int {
-	k.lock.RLock()
-	defer k.lock.RUnlock()
+	k.lock.Lock()
+	defer k.lock.Unlock()
 	windows := make(map[wallet.KeyPurpose]int)
 	for i := 0; i < 2; i++ {
 		stm := "select used from keys where purpose=" + strconv.Itoa(i) + " order by rowid desc"

@@ -11,6 +11,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
+	"sync"
 )
 
 var saldb SalesDB
@@ -19,7 +20,8 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	saldb = SalesDB{
-		db: conn,
+		db:   conn,
+		lock: new(sync.Mutex),
 	}
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)

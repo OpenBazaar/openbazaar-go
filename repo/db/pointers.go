@@ -14,7 +14,7 @@ import (
 
 type PointersDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (p *PointersDB) Put(pointer ipfs.Pointer) error {
@@ -63,8 +63,8 @@ func (p *PointersDB) DeleteAll(purpose ipfs.Purpose) error {
 }
 
 func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	stm := "select * from pointers"
 	rows, err := p.db.Query(stm)
 	if err != nil {
@@ -118,8 +118,8 @@ func (p *PointersDB) GetAll() ([]ipfs.Pointer, error) {
 }
 
 func (p *PointersDB) GetByPurpose(purpose ipfs.Purpose) ([]ipfs.Pointer, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	stm := "select * from pointers where purpose=" + strconv.Itoa(int(purpose))
 	rows, err := p.db.Query(stm)
 	if err != nil {
@@ -173,8 +173,8 @@ func (p *PointersDB) GetByPurpose(purpose ipfs.Purpose) ([]ipfs.Pointer, error) 
 }
 
 func (p *PointersDB) Get(id peer.ID) (ipfs.Pointer, error) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	stm := "select * from pointers where pointerID=?"
 	row := p.db.QueryRow(stm, id.Pretty())
 	var pointer ipfs.Pointer
