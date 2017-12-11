@@ -8,7 +8,7 @@ import (
 
 type TxMetadataDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (t *TxMetadataDB) Put(m repo.Metadata) error {
@@ -55,8 +55,8 @@ func (t *TxMetadataDB) Get(txid string) (repo.Metadata, error) {
 }
 
 func (t *TxMetadataDB) GetAll() (map[string]repo.Metadata, error) {
-	t.lock.RLock()
-	defer t.lock.RUnlock()
+	t.lock.Lock()
+	defer t.lock.Unlock()
 	ret := make(map[string]repo.Metadata)
 	stm := "select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata"
 	rows, err := t.db.Query(stm)

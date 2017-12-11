@@ -8,7 +8,7 @@ import (
 
 type FollowingDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (f *FollowingDB) Put(follower string) error {
@@ -27,8 +27,8 @@ func (f *FollowingDB) Put(follower string) error {
 }
 
 func (f *FollowingDB) Get(offsetId string, limit int) ([]string, error) {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	var stm string
 	if offsetId != "" {
 		stm = "select peerID from following order by rowid desc limit " + strconv.Itoa(limit) + " offset ((select coalesce(max(rowid)+1, 0) from following)-(select rowid from following where peerID='" + offsetId + "'))"
@@ -57,8 +57,8 @@ func (f *FollowingDB) Delete(follower string) error {
 }
 
 func (f *FollowingDB) Count() int {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	row := f.db.QueryRow("select Count(*) from following")
 	var count int
 	row.Scan(&count)
@@ -66,8 +66,8 @@ func (f *FollowingDB) Count() int {
 }
 
 func (f *FollowingDB) IsFollowing(peerId string) bool {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	stmt, err := f.db.Prepare("select peerID from following where peerID=?")
 	defer stmt.Close()
 	var follower string

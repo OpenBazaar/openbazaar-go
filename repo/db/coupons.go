@@ -9,7 +9,7 @@ import (
 
 type CouponDB struct {
 	db   *sql.DB
-	lock sync.RWMutex
+	lock *sync.Mutex
 }
 
 func (c *CouponDB) Put(coupons []repo.Coupon) error {
@@ -30,8 +30,8 @@ func (c *CouponDB) Put(coupons []repo.Coupon) error {
 }
 
 func (c *CouponDB) Get(slug string) ([]repo.Coupon, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	var stm string
 	stm = "select slug, code, hash from coupons where slug='" + slug + "';"
 	rows, err := c.db.Query(stm)
