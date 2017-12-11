@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"testing"
+	"sync"
 )
 
 var kdb KeysDB
@@ -17,6 +18,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	kdb = KeysDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

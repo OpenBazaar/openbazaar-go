@@ -11,6 +11,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
+	"sync"
 )
 
 var purdb PurchasesDB
@@ -21,6 +22,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	purdb = PurchasesDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)

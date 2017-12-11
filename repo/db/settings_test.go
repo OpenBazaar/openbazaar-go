@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"testing"
+	"sync"
 )
 
 var sdb SettingsDB
@@ -15,6 +16,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	sdb = SettingsDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 	c := "UNITED_STATES"
 	settings = repo.SettingsData{

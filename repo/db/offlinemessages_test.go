@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"testing"
+	"sync"
 )
 
 var odb OfflineMessagesDB
@@ -13,6 +14,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	odb = OfflineMessagesDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

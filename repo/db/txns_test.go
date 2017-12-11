@@ -7,6 +7,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"testing"
 	"time"
+	"sync"
 )
 
 var txdb TxnsDB
@@ -16,6 +17,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	txdb = TxnsDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

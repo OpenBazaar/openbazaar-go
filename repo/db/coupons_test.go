@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"testing"
+	"sync"
 )
 
 var coup CouponDB
@@ -13,6 +14,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	coup = CouponDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

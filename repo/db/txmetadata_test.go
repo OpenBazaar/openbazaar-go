@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"testing"
+	"sync"
 )
 
 var metDB TxMetadataDB
@@ -14,6 +15,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	metDB = TxMetadataDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 	m = repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
 }

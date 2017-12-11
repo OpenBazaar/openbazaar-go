@@ -11,6 +11,7 @@ import (
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"testing"
 	"time"
+	"sync"
 )
 
 var pdb PointersDB
@@ -21,6 +22,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	pdb = PointersDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 	randBytes := make([]byte, 32)
 	rand.Read(randBytes)

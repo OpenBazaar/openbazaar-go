@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"testing"
+	"sync"
 )
 
 var wsdb WatchedScriptsDB
@@ -14,6 +15,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	wsdb = WatchedScriptsDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

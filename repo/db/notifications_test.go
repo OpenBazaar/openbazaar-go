@@ -5,6 +5,7 @@ import (
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"testing"
 	"time"
+	"sync"
 )
 
 var notifDB NotficationsDB
@@ -14,6 +15,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	notifDB = NotficationsDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

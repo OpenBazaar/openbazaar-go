@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"testing"
+	"sync"
 )
 
 var ivdb InventoryDB
@@ -12,6 +13,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	ivdb = InventoryDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 	"testing"
+	"sync"
 )
 
 var fldb FollowingDB
@@ -13,6 +14,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	fldb = FollowingDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

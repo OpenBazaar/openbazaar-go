@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+	"sync"
 )
 
 var chdb ChatDB
@@ -17,6 +18,7 @@ func setupDB() {
 	initDatabaseTables(conn, "")
 	chdb = ChatDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 

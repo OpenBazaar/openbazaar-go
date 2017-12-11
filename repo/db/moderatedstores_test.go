@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 	"testing"
+	"sync"
 )
 
 var modDB ModeratedDB
@@ -13,6 +14,7 @@ func init() {
 	initDatabaseTables(conn, "")
 	modDB = ModeratedDB{
 		db: conn,
+		lock: new(sync.Mutex),
 	}
 }
 
