@@ -60,7 +60,6 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, pushNodes, new(sync.Mutex), new(sync.WaitGroup)}
-	// Add one for initial wait at start up
 	mr.Add(1)
 	return &mr
 }
@@ -74,8 +73,10 @@ func (m *MessageRetriever) Run() {
 	for {
 		select {
 		case <-dht.C:
+			m.Add(1)
 			go m.fetchPointers(true)
 		case <-peers.C:
+			m.Add(1)
 			go m.fetchPointers(false)
 		}
 	}
@@ -85,7 +86,6 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
 	downloaded := 0
 	mh, _ := multihash.FromB58String(m.node.Identity.Pretty())
 	peerOut := make(chan ps.PeerInfo)
@@ -144,8 +144,6 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 			}
 		}
 	}
-	// We have finished fetching pointers from the DHT
-	wg.Done()
 
 	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
@@ -153,11 +151,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	m.processQueue()
 	m.processOldMessages()
 
-	// For initial start up only
-	if m.WaitGroup != nil {
-		m.Done()
-		m.WaitGroup = nil
-	}
+	m.Done()
 }
 
 func (m *MessageRetriever) getPointersDataPeers() <-chan ps.PeerInfo {
