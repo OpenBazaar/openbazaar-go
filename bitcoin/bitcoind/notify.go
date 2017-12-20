@@ -1,9 +1,10 @@
 package bitcoind
 
 import (
+	"encoding/json"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcrpcclient"
+	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -55,17 +56,30 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 
 	height := int32(0)
 	if txInfo.Confirmations > 0 {
-		h, err := chainhash.NewHashFromStr(txInfo.BlockHash)
+		hash, err := chainhash.NewHashFromStr(txInfo.BlockHash)
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		blockinfo, err := l.client.GetBlockHeaderVerbose(h)
+		h := ``
+		if hash != nil {
+			h += `"` + hash.String() + `"`
+		}
+		resp, err := l.client.RawRequest("getblockheader", []json.RawMessage{json.RawMessage(h)})
 		if err != nil {
 			log.Error(err)
 			return
 		}
-		height = blockinfo.Height
+		type Respose struct {
+			Height int32 `json:"height"`
+		}
+		r := new(Respose)
+		err = json.Unmarshal([]byte(resp), r)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		height = r.Height
 	}
 	cb := wallet.TransactionCallback{
 		Txid:      tx.Hash().CloneBytes(),
@@ -81,7 +95,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func startNotificationListener(client *btcrpcclient.Client, listeners []func(wallet.TransactionCallback)) {
+func StartNotificationListener(client *btcrpcclient.Client, listeners []func(wallet.TransactionCallback)) {
 	l := NotificationListener{
 		client:    client,
 		listeners: listeners,

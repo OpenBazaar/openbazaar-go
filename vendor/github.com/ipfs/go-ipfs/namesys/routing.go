@@ -28,9 +28,9 @@ var UsePersistentCache bool
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
-	routing   routing.ValueStore
-	datastore ds.Datastore
-	cache     *lru.Cache
+	routing            routing.ValueStore
+	datastore          ds.Datastore
+	cache              *lru.Cache
 }
 
 func (r *routingResolver) cacheGet(name string) (path.Path, bool) {
@@ -104,9 +104,9 @@ func NewRoutingResolver(route routing.ValueStore, cachesize int, ds ds.Datastore
 	}
 
 	return &routingResolver{
-		routing:   route,
-		cache:     cache,
-		datastore: ds,
+		routing:            route,
+		cache:              cache,
+		datastore:          ds,
 	}
 }
 

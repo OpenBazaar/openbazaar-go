@@ -23,6 +23,8 @@ import (
 // invalid.
 var ErrBadHandshake = errors.New("websocket: bad handshake")
 
+var errInvalidCompression = errors.New("websocket: invalid compression negotiation")
+
 // NewClient creates a new client connection using the given net connection.
 // The URL u specifies the host and request URI. Use requestHeader to specify
 // the origin (Origin), subprotocols (Sec-WebSocket-Protocol) and cookies
@@ -64,60 +66,27 @@ type Dialer struct {
 	// HandshakeTimeout specifies the duration for the handshake to complete.
 	HandshakeTimeout time.Duration
 
-	// Input and output buffer sizes. If the buffer size is zero, then a
-	// default value of 4096 is used.
+	// ReadBufferSize and WriteBufferSize specify I/O buffer sizes. If a buffer
+	// size is zero, then a useful default size is used. The I/O buffer sizes
+	// do not limit the size of the messages that can be sent or received.
 	ReadBufferSize, WriteBufferSize int
 
 	// Subprotocols specifies the client's requested subprotocols.
 	Subprotocols []string
+
+	// EnableCompression specifies if the client should attempt to negotiate
+	// per message compression (RFC 7692). Setting this value to true does not
+	// guarantee that compression will be supported. Currently only "no context
+	// takeover" modes are supported.
+	EnableCompression bool
+
+	// Jar specifies the cookie jar.
+	// If Jar is nil, cookies are not sent in requests and ignored
+	// in responses.
+	Jar http.CookieJar
 }
 
 var errMalformedURL = errors.New("malformed ws or wss URL")
-
-// parseURL parses the URL.
-//
-// This function is a replacement for the standard library url.Parse function.
-// In Go 1.4 and earlier, url.Parse loses information from the path.
-func parseURL(s string) (*url.URL, error) {
-	// From the RFC:
-	//
-	// ws-URI = "ws:" "//" host [ ":" port ] path [ "?" query ]
-	// wss-URI = "wss:" "//" host [ ":" port ] path [ "?" query ]
-
-	var u url.URL
-	switch {
-	case strings.HasPrefix(s, "ws://"):
-		u.Scheme = "ws"
-		s = s[len("ws://"):]
-	case strings.HasPrefix(s, "wss://"):
-		u.Scheme = "wss"
-		s = s[len("wss://"):]
-	default:
-		return nil, errMalformedURL
-	}
-
-	if i := strings.Index(s, "?"); i >= 0 {
-		u.RawQuery = s[i+1:]
-		s = s[:i]
-	}
-
-	if i := strings.Index(s, "/"); i >= 0 {
-		u.Opaque = s[i:]
-		s = s[:i]
-	} else {
-		u.Opaque = "/"
-	}
-
-	u.Host = s
-
-	if strings.Contains(u.Host, "@") {
-		// Don't bother parsing user information because user information is
-		// not allowed in websocket URIs.
-		return nil, errMalformedURL
-	}
-
-	return &u, nil
-}
 
 func hostPortNoPort(u *url.URL) (hostPort, hostNoPort string) {
 	hostPort = u.Host
@@ -164,7 +133,7 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 		return nil, nil, err
 	}
 
-	u, err := parseURL(urlStr)
+	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -193,6 +162,13 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 		Host:       u.Host,
 	}
 
+	// Set the cookies present in the cookie jar of the dialer
+	if d.Jar != nil {
+		for _, cookie := range d.Jar.Cookies(u) {
+			req.AddCookie(cookie)
+		}
+	}
+
 	// Set the request headers using the capitalization for names and values in
 	// RFC examples. Although the capitalization shouldn't matter, there are
 	// servers that depend on it. The Header.Set method is not used because the
@@ -214,11 +190,16 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 			k == "Connection" ||
 			k == "Sec-Websocket-Key" ||
 			k == "Sec-Websocket-Version" ||
+			k == "Sec-Websocket-Extensions" ||
 			(k == "Sec-Websocket-Protocol" && len(d.Subprotocols) > 0):
 			return nil, nil, errors.New("websocket: duplicate header not allowed: " + k)
 		default:
 			req.Header[k] = vs
 		}
+	}
+
+	if d.EnableCompression {
+		req.Header.Set("Sec-Websocket-Extensions", "permessage-deflate; server_no_context_takeover; client_no_context_takeover")
 	}
 
 	hostPort, hostNoPort := hostPortNoPort(u)
@@ -298,12 +279,8 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 	}
 
 	if u.Scheme == "https" {
-		cfg := d.TLSClientConfig
-		if cfg == nil {
-			cfg = &tls.Config{ServerName: hostNoPort}
-		} else if cfg.ServerName == "" {
-			shallowCopy := *cfg
-			cfg = &shallowCopy
+		cfg := cloneTLSConfig(d.TLSClientConfig)
+		if cfg.ServerName == "" {
 			cfg.ServerName = hostNoPort
 		}
 		tlsConn := tls.Client(netConn, cfg)
@@ -328,6 +305,13 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 	if err != nil {
 		return nil, nil, err
 	}
+
+	if d.Jar != nil {
+		if rc := resp.Cookies(); len(rc) > 0 {
+			d.Jar.SetCookies(u, rc)
+		}
+	}
+
 	if resp.StatusCode != 101 ||
 		!strings.EqualFold(resp.Header.Get("Upgrade"), "websocket") ||
 		!strings.EqualFold(resp.Header.Get("Connection"), "upgrade") ||
@@ -339,6 +323,20 @@ func (d *Dialer) Dial(urlStr string, requestHeader http.Header) (*Conn, *http.Re
 		n, _ := io.ReadFull(resp.Body, buf)
 		resp.Body = ioutil.NopCloser(bytes.NewReader(buf[:n]))
 		return nil, resp, ErrBadHandshake
+	}
+
+	for _, ext := range parseExtensions(resp.Header) {
+		if ext[""] != "permessage-deflate" {
+			continue
+		}
+		_, snct := ext["server_no_context_takeover"]
+		_, cnct := ext["client_no_context_takeover"]
+		if !snct || !cnct {
+			return nil, resp, errInvalidCompression
+		}
+		conn.newCompressionWriter = compressNoContextTakeover
+		conn.newDecompressionReader = decompressNoContextTakeover
+		break
 	}
 
 	resp.Body = ioutil.NopCloser(bytes.NewReader([]byte{}))

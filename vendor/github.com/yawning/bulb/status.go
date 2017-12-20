@@ -9,6 +9,7 @@ package bulb
 
 import (
 	"fmt"
+	"strings"
 	"net/textproto"
 )
 
@@ -61,7 +62,8 @@ func statusCodeToError(code int, reply string) *textproto.Error {
 	err := new(textproto.Error)
 	err.Code = code
 	if msg, ok := statusCodeStringMap[code]; ok {
-		err.Msg = fmt.Sprintf("%s: %s", msg, reply)
+		trimmedReply := strings.TrimSpace(strings.TrimPrefix(reply, msg))
+		err.Msg = fmt.Sprintf("%s: %s", msg, trimmedReply)
 	} else {
 		err.Msg = fmt.Sprintf("Unknown status code (%03d): %s", code, reply)
 	}

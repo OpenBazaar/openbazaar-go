@@ -280,9 +280,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse("Error calculating payment amount"), err
 		}
 		if !service.node.ValidatePaymentAmount(total, contract.BuyerOrder.Payment.Amount) {
-			return errorResponse("Calculated a different payment amount"), err
+			return errorResponse("Calculated a different payment amount"), errors.New("Calculated different payment amount")
 		}
-		contract, err = service.node.NewOrderConfirmation(contract, true, true)
+		contract, err = service.node.NewOrderConfirmation(contract, true, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), err
 		}
@@ -349,7 +349,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		contract, err = service.node.NewOrderConfirmation(contract, false, true)
+		contract, err = service.node.NewOrderConfirmation(contract, false, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("Error building order confirmation")
 		}

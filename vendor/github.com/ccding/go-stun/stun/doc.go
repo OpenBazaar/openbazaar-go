@@ -14,11 +14,12 @@
 //
 // Author: Cong Ding <dinggnu@gmail.com>
 
-// go-stun is a STUN (RFC 3489 and RFC 5389) client implementation in golang.
+// Package stun is a STUN (RFC 3489 and RFC 5389) client implementation in
+// golang.
 //
 // It is extremely easy to use -- just one line of code.
 //
 // 	nat, host, err := stun.NewClient().Discover()
 //
-// More details please go to `example.go`.
+// More details please go to `main.go`.
 package stun

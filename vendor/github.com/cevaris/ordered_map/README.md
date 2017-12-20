@@ -9,7 +9,7 @@
 - Full support Key/Value for all data types
 - Exposes an Iterator that iterates in order of insertion
 - Full Get/Set/Delete map interface
-- Supports Golang v1.3 through v1.7
+- Supports Golang v1.3 through v1.9
 
 ## Download and Install 
   

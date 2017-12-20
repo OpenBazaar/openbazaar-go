@@ -76,12 +76,6 @@ func TestGetWalletConfig(t *testing.T) {
 	if config.Type != "spvwallet" {
 		t.Error("Type does not equal expected value")
 	}
-	if config.RPCUser != "username" {
-		t.Error("RPC user does not equal expected value")
-	}
-	if config.RPCPassword != "password" {
-		t.Error("RPC password does not equal expected value")
-	}
 	if config.Binary != "/path/to/bitcoind" {
 		t.Error("Binary does not equal expected value")
 	}

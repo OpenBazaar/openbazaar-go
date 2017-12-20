@@ -24,6 +24,8 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+        if self.bitcoincash:
+            listing_json["metadata"]["pricingCurrency"] = "tbch"
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -105,7 +107,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
         # check bob detected payment
@@ -163,7 +165,7 @@ class PurchaseDirectOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOfflineTest - FAIL: Order confirmation post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("PurchaseDirectOfflineTest - FAIL: order confirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         self.send_bitcoin_cmd("generate", 1)

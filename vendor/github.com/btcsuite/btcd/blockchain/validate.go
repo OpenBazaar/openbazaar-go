@@ -482,11 +482,12 @@ func checkBlockSanity(block *btcutil.Block, powLimit *big.Int, timeSource Median
 			"any transactions")
 	}
 
-	// A block must not have more transactions than the max block payload.
-	if numTx > wire.MaxBlockPayload {
+	// A block must not have more transactions than the max block payload or
+	// else it is certainly over the weight limit.
+	if numTx > MaxBlockBaseSize {
 		str := fmt.Sprintf("block contains too many transactions - "+
-			"got %d, max %d", numTx, wire.MaxBlockPayload)
-		return ruleError(ErrTooManyTransactions, str)
+			"got %d, max %d", numTx, MaxBlockBaseSize)
+		return ruleError(ErrBlockTooBig, str)
 	}
 
 	// A block must not exceed the maximum allowed block payload when
@@ -644,11 +645,6 @@ func checkSerializedHeight(coinbaseTx *btcutil.Tx, wantHeight int32) error {
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode *blockNode, flags BehaviorFlags) error {
-	// The genesis block is valid by definition.
-	if prevNode == nil {
-		return nil
-	}
-
 	fastAdd := flags&BFFastAdd == BFFastAdd
 	if !fastAdd {
 		// Ensure the difficulty specified in the block header matches
@@ -731,11 +727,6 @@ func (b *BlockChain) checkBlockHeaderContext(header *wire.BlockHeader, prevNode 
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode, flags BehaviorFlags) error {
-	// The genesis block is valid by definition.
-	if prevNode == nil {
-		return nil
-	}
-
 	// Perform all block header related validation checks.
 	header := &block.MsgBlock().Header
 	err := b.checkBlockHeaderContext(header, prevNode, flags)
@@ -822,7 +813,7 @@ func (b *BlockChain) checkBlockContext(block *btcutil.Block, prevNode *blockNode
 				str := fmt.Sprintf("block's weight metric is "+
 					"too high - got %v, max %v",
 					blockWeight, MaxBlockWeight)
-				return ruleError(ErrBlockVersionTooOld, str)
+				return ruleError(ErrBlockWeightTooHigh, str)
 			}
 		}
 	}
@@ -981,14 +972,18 @@ func CheckTransactionInputs(tx *btcutil.Tx, txHeight int32, utxoView *UtxoViewpo
 // represent the state of the chain as if the block were actually connected and
 // consequently the best hash for the view is also updated to passed block.
 //
-// The CheckConnectBlock function makes use of this function to perform the
-// bulk of its work.  The only difference is this function accepts a node which
-// may or may not require reorganization to connect it to the main chain whereas
-// CheckConnectBlock creates a new node which specifically connects to the end
-// of the current main chain and then calls this function with that node.
+// An example of some of the checks performed are ensuring connecting the block
+// would not cause any duplicate transaction hashes for old transactions that
+// aren't already fully spent, double spends, exceeding the maximum allowed
+// signature operations per block, invalid values in relation to the expected
+// block subsidy, or fail transaction script validation.
 //
-// See the comments for CheckConnectBlock for some examples of the type of
-// checks performed by this function.
+// The CheckConnectBlockTemplate function makes use of this function to perform
+// the bulk of its work.  The only difference is this function accepts a node
+// which may or may not require reorganization to connect it to the main chain
+// whereas CheckConnectBlockTemplate creates a new node which specifically
+// connects to the end of the current main chain and then calls this function
+// with that node.
 //
 // This function MUST be called with the chain state lock held (for writes).
 func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, view *UtxoViewpoint, stxos *[]spentTxOut) error {
@@ -1153,7 +1148,7 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	// optimization because running the scripts is the most time consuming
 	// portion of block handling.
 	checkpoint := b.LatestCheckpoint()
-	runScripts := !b.noVerify
+	runScripts := true
 	if checkpoint != nil && node.height <= checkpoint.Height {
 		runScripts = false
 	}
@@ -1243,27 +1238,44 @@ func (b *BlockChain) checkConnectBlock(node *blockNode, block *btcutil.Block, vi
 	return nil
 }
 
-// CheckConnectBlock performs several checks to confirm connecting the passed
-// block to the main chain does not violate any rules.  An example of some of
-// the checks performed are ensuring connecting the block would not cause any
-// duplicate transaction hashes for old transactions that aren't already fully
-// spent, double spends, exceeding the maximum allowed signature operations
-// per block, invalid values in relation to the expected block subsidy, or fail
-// transaction script validation.
+// CheckConnectBlockTemplate fully validates that connecting the passed block to
+// the main chain does not violate any consensus rules, aside from the proof of
+// work requirement. The block must connect to the current tip of the main chain.
 //
 // This function is safe for concurrent access.
-func (b *BlockChain) CheckConnectBlock(block *btcutil.Block) error {
+func (b *BlockChain) CheckConnectBlockTemplate(block *btcutil.Block) error {
 	b.chainLock.Lock()
 	defer b.chainLock.Unlock()
 
-	prevNode := b.bestNode
-	newNode := newBlockNode(&block.MsgBlock().Header, prevNode.height+1)
-	newNode.parent = prevNode
-	newNode.workSum.Add(prevNode.workSum, newNode.workSum)
+	// Skip the proof of work check as this is just a block template.
+	flags := BFNoPoWCheck
+
+	// This only checks whether the block can be connected to the tip of the
+	// current chain.
+	tip := b.bestChain.Tip()
+	header := block.MsgBlock().Header
+	if tip.hash != header.PrevBlock {
+		str := fmt.Sprintf("previous block must be the current chain tip %v, "+
+			"instead got %v", tip.hash, header.PrevBlock)
+		return ruleError(ErrPrevBlockNotBest, str)
+	}
+
+	err := checkBlockSanity(block, b.chainParams.PowLimit, b.timeSource, flags)
+	if err != nil {
+		return err
+	}
+
+	err = b.checkBlockContext(block, tip, flags)
+	if err != nil {
+		return err
+	}
 
 	// Leave the spent txouts entry nil in the state since the information
 	// is not needed and thus extra work can be avoided.
 	view := NewUtxoViewpoint()
-	view.SetBestHash(&prevNode.hash)
+	view.SetBestHash(&tip.hash)
+	newNode := newBlockNode(&header, tip.height+1)
+	newNode.parent = tip
+	newNode.workSum = newNode.workSum.Add(tip.workSum, newNode.workSum)
 	return b.checkConnectBlock(newNode, block, view, nil)
 }

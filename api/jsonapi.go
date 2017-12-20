@@ -778,6 +778,26 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
+	/*_, ok := i.node.Wallet.(*bitcoind.BitcoindWallet)
+	if ok {
+		select {
+		case <-i.node.Wallet.(*bitcoind.BitcoindWallet).InitChan():
+			break
+		default:
+			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
+			return
+		}
+	}
+	_, ok = i.node.Wallet.(*zcashd.ZcashdWallet)
+	if ok {
+		select {
+		case <-i.node.Wallet.(*zcashd.ZcashdWallet).InitChan():
+			break
+		default:
+			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
+			return
+		}
+	}*/
 	confirmed, unconfirmed := i.node.Wallet.Balance()
 	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
 }
@@ -809,7 +829,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	}
 	addr, err := i.node.Wallet.DecodeAddress(snd.Address)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
 		return
 	}
 	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel)
@@ -1095,7 +1115,7 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
 	_, currencyCode := path.Split(r.URL.Path)
 	if currencyCode == "" || strings.ToLower(currencyCode) == "exchangerate" {
-		currencyMap, err := i.node.ExchangeRates.GetAllRates()
+		currencyMap, err := i.node.ExchangeRates.GetAllRates(true)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
