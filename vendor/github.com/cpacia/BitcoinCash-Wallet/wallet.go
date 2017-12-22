@@ -7,7 +7,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/txscript"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -209,7 +208,8 @@ func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
 func (w *SPVWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 	key, _ := w.keyManager.GetCurrentKey(purpose)
 	addr, _ := key.Address(w.params)
-	return btc.Address(addr)
+	cashaddr, _ := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+	return btc.Address(cashaddr)
 }
 
 func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
@@ -218,7 +218,8 @@ func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
 	addr, _ := key.Address(w.params)
 	w.txstore.Keys().MarkKeyAsUsed(addr.ScriptAddress())
 	w.txstore.PopulateAdrs()
-	return btc.Address(addr)
+	cashaddr, _ := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+	return btc.Address(cashaddr)
 }
 
 func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
@@ -241,14 +242,11 @@ func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
 }
 
 func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	addr, err := bchutil.ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return nil, err
 	}
-	if len(addrs) == 0 {
-		return nil, errors.New("unknown script")
-	}
-	return addrs[0], nil
+	return btc.Address(addr), nil
 }
 
 func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
@@ -279,7 +277,11 @@ func (w *SPVWallet) ListAddresses() []btc.Address {
 		if err != nil {
 			continue
 		}
-		addrs = append(addrs, addr)
+		cashaddr, err := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+		if err != nil {
+			continue
+		}
+		addrs = append(addrs, cashaddr)
 	}
 	return addrs
 }
