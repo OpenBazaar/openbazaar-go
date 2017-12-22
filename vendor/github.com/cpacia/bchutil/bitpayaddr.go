@@ -170,7 +170,13 @@ func NewBitpayAddressScriptHash(serializedScript []byte, net *chaincfg.Params) (
 // NewAddressScriptHashFromHash returns a new AddressScriptHash.  scriptHash
 // must be 20 bytes.
 func NewBitpayAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*BitpayAddressScriptHash, error) {
-	return newBitpayAddressScriptHashFromHash(scriptHash, net.ScriptHashAddrID)
+	var v byte
+	if net.Name == chaincfg.MainNetParams.Name {
+		v = bitpayP2SH
+	} else {
+		v = net.ScriptHashAddrID
+	}
+	return newBitpayAddressScriptHashFromHash(scriptHash, v)
 }
 
 // newAddressScriptHashFromHash is the internal API to create a script hash
