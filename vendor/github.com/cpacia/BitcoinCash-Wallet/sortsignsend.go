@@ -305,7 +305,7 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int,
 	if err != nil {
 		return nil, nil, err
 	}
-	addr, err = btc.NewAddressScriptHash(redeemScript, w.params)
+	addr, err = bchutil.NewCashAddressScriptHash(redeemScript, w.params)
 	if err != nil {
 		return nil, nil, err
 	}

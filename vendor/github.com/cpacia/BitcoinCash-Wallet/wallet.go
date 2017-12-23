@@ -18,11 +18,17 @@ import (
 	"github.com/cpacia/bchutil"
 )
 
-func setupNetworkParams() {
-	chaincfg.MainNetParams.Net = bchutil.MainnetMagic
-	chaincfg.TestNet3Params.Net = bchutil.TestnetMagic
-	chaincfg.RegressionNetParams.Net = bchutil.Regtestmagic
+func setupNetworkParams(params *chaincfg.Params) {
+	switch(params.Name){
+	case chaincfg.MainNetParams.Name:
+		params.Net = bchutil.MainnetMagic
+	case chaincfg.TestNet3Params.Name:
+		params.Net = bchutil.TestnetMagic
+	case chaincfg.RegressionNetParams.Name:
+		params.Net = bchutil.Regtestmagic
+	}
 }
+
 
 type SPVWallet struct {
 	params *chaincfg.Params
@@ -58,7 +64,7 @@ var log = logging.MustGetLogger("bitcoin")
 const WALLET_VERSION = "0.1.0"
 
 func NewSPVWallet(config *Config) (*SPVWallet, error) {
-	setupNetworkParams()
+	setupNetworkParams(config.Params)
 
 	log.SetBackend(logging.AddModuleLevel(config.Logger))
 

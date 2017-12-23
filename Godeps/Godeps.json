@@ -13,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "39731f3ea2cbd53dff23e66827ca2d86124d85dc"
+			"Rev": "2a251b1d0430f0ab6931179e3eeb287708081884"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
@@ -175,17 +175,17 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-13-g9342e32",
-			"Rev": "9342e3212598daebbdb53d7815f306e6f7e5b576"
+			"Comment": "v0.3.0-15-g33d14b1",
+			"Rev": "33d14b1ae619608ca9a3cc6f57e23cbc8c9d5805"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-13-g9342e32",
-			"Rev": "9342e3212598daebbdb53d7815f306e6f7e5b576"
+			"Comment": "v0.3.0-15-g33d14b1",
+			"Rev": "33d14b1ae619608ca9a3cc6f57e23cbc8c9d5805"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
-			"Rev": "b2650fe069de3740c74a077bf98dff43258a52cb"
+			"Rev": "ac379748cc20c3ea1c92693812ab6134f9357f67"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
