@@ -347,18 +347,18 @@ func CheckDecodeCashAddress(input string) (result []byte, prefix string, t Addre
 	if err != nil {
 		return data, prefix, P2PKH, err
 	}
-	switch(data[0]){
-	case 0x00:
-		t = P2PKH
-	case 0x08:
-		t = P2SH
-	}
 	data, err = convertBits(data, 5, 8, false)
 	if err != nil {
 		return data, prefix, P2PKH, err
 	}
 	if len(data) != 21 {
 		return data, prefix, P2PKH, errors.New("Incorrect data length")
+	}
+	switch(data[0]){
+	case 0x00:
+		t = P2PKH
+	case 0x08:
+		t = P2SH
 	}
 	return data[1:21], prefix, t, nil
 }

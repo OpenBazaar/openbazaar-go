@@ -7,7 +7,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/peer"
-	"github.com/btcsuite/btcd/txscript"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -19,11 +18,17 @@ import (
 	"github.com/cpacia/bchutil"
 )
 
-func setupNetworkParams() {
-	chaincfg.MainNetParams.Net = bchutil.MainnetMagic
-	chaincfg.TestNet3Params.Net = bchutil.TestnetMagic
-	chaincfg.RegressionNetParams.Net = bchutil.Regtestmagic
+func setupNetworkParams(params *chaincfg.Params) {
+	switch(params.Name){
+	case chaincfg.MainNetParams.Name:
+		params.Net = bchutil.MainnetMagic
+	case chaincfg.TestNet3Params.Name:
+		params.Net = bchutil.TestnetMagic
+	case chaincfg.RegressionNetParams.Name:
+		params.Net = bchutil.Regtestmagic
+	}
 }
+
 
 type SPVWallet struct {
 	params *chaincfg.Params
@@ -59,7 +64,7 @@ var log = logging.MustGetLogger("bitcoin")
 const WALLET_VERSION = "0.1.0"
 
 func NewSPVWallet(config *Config) (*SPVWallet, error) {
-	setupNetworkParams()
+	setupNetworkParams(config.Params)
 
 	log.SetBackend(logging.AddModuleLevel(config.Logger))
 
@@ -209,7 +214,8 @@ func (w *SPVWallet) ConnectedPeers() []*peer.Peer {
 func (w *SPVWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 	key, _ := w.keyManager.GetCurrentKey(purpose)
 	addr, _ := key.Address(w.params)
-	return btc.Address(addr)
+	cashaddr, _ := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+	return btc.Address(cashaddr)
 }
 
 func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
@@ -218,7 +224,8 @@ func (w *SPVWallet) NewAddress(purpose wallet.KeyPurpose) btc.Address {
 	addr, _ := key.Address(w.params)
 	w.txstore.Keys().MarkKeyAsUsed(addr.ScriptAddress())
 	w.txstore.PopulateAdrs()
-	return btc.Address(addr)
+	cashaddr, _ := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+	return btc.Address(cashaddr)
 }
 
 func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
@@ -241,14 +248,11 @@ func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
 }
 
 func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	addr, err := bchutil.ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return nil, err
 	}
-	if len(addrs) == 0 {
-		return nil, errors.New("unknown script")
-	}
-	return addrs[0], nil
+	return btc.Address(addr), nil
 }
 
 func (w *SPVWallet) AddressToScript(addr btc.Address) ([]byte, error) {
@@ -279,7 +283,11 @@ func (w *SPVWallet) ListAddresses() []btc.Address {
 		if err != nil {
 			continue
 		}
-		addrs = append(addrs, addr)
+		cashaddr, err := bchutil.NewCashAddressPubKeyHash(addr.ScriptAddress(), w.params)
+		if err != nil {
+			continue
+		}
+		addrs = append(addrs, cashaddr)
 	}
 	return addrs
 }
