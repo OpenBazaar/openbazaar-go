@@ -898,7 +898,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	if rc.BuyerOrderCompletion == nil {
-		return nil, errors.New("Recieved ORDER_COMPLETION with nil BuyerOrderCompletion object")
+		return nil, errors.New("Received ORDER_COMPLETION with nil BuyerOrderCompletion object")
 	}
 
 	// Load the order
