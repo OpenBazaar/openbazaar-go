@@ -185,7 +185,7 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
-			"Rev": "ac379748cc20c3ea1c92693812ab6134f9357f67"
+			"Rev": "14c9655d51877dcdc7ff93e8b5968d26fc733cc1"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",

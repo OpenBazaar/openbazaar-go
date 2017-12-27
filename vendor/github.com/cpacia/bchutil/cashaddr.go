@@ -376,9 +376,14 @@ func encodeCashAddress(hash160 []byte, prefix string, t AddressType) string {
 //
 // The bitcoin cash network the address is associated with is extracted if possible.
 func DecodeAddress(addr string, defaultNet *chaincfg.Params) (btcutil.Address, error) {
-	_, ok := Prefixes[defaultNet.Name]
+	pre, ok := Prefixes[defaultNet.Name]
 	if !ok {
 		return nil, errors.New("unknown network parameters")
+	}
+
+	// Add prefix if it does not exist
+	if addr[:len(pre)+1] != pre + ":" {
+		addr = pre + ":" + addr
 	}
 
 	// Switch on decoded length to determine the type.
