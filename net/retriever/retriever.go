@@ -44,6 +44,7 @@ type MessageRetriever struct {
 	httpClient   *http.Client
 	dataPeers    []peer.ID
 	queueLock    *sync.Mutex
+	DoneChan     chan struct{}
 	*sync.WaitGroup
 }
 
@@ -59,7 +60,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, pushNodes, new(sync.Mutex), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, pushNodes, new(sync.Mutex), make(chan struct{}), new(sync.WaitGroup)}
 	mr.Add(1)
 	return &mr
 }
@@ -186,32 +187,60 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 
 func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	ciphertext, err := ipfs.Cat(ctx, addr.String(), time.Minute*5)
-	if err != nil {
-		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
+
+	c := make(chan struct{})
+	var ciphertext []byte
+	var err error
+
+	go func() {
+		ciphertext, err = ipfs.Cat(ctx, addr.String(), time.Minute*5)
+		c <- struct{}{}
+	}()
+
+	select {
+	case <-c:
+		if err != nil {
+			log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
+			return
+		}
+		log.Debugf("Successfully downloaded offline message from %s", addr.String())
+		m.db.OfflineMessages().Put(addr.String())
+		m.attemptDecrypt(ciphertext, pid, addr)
+	case <-m.DoneChan:
 		return
 	}
-	log.Debugf("Successfully downloaded offline message from %s", addr.String())
-	m.db.OfflineMessages().Put(addr.String())
-	m.attemptDecrypt(ciphertext, pid, addr)
 }
 
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
-	resp, err := m.httpClient.Get(url)
-	if err != nil {
-		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
-		return
-	}
-	ciphertext, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
-		return
-	}
-	log.Debugf("Successfully downloaded offline message from %s", addr.String())
-	m.db.OfflineMessages().Put(addr.String())
-	m.attemptDecrypt(ciphertext, pid, addr)
 
+	c := make(chan struct{})
+	var ciphertext []byte
+	var err error
+
+	go func() {
+		var resp *http.Response
+		resp, err = m.httpClient.Get(url)
+		if err != nil {
+			log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
+			c <- struct{}{}
+			return
+		}
+		ciphertext, err = ioutil.ReadAll(resp.Body)
+	}()
+
+	select {
+	case <-c:
+		if err != nil {
+			log.Errorf("Error retrieving offline message from %s, %s", addr.String(), err.Error())
+			return
+		}
+		log.Debugf("Successfully downloaded offline message from %s", addr.String())
+		m.db.OfflineMessages().Put(addr.String())
+		m.attemptDecrypt(ciphertext, pid, addr)
+	case <-m.DoneChan:
+		return
+	}
 }
 
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr ma.Multiaddr) {

@@ -36,6 +36,7 @@ func main() {
 			log.Info("OpenBazaar Server shutting down...")
 			if core.Node != nil {
 				if core.Node.MessageRetriever != nil {
+					close(core.Node.MessageRetriever.DoneChan)
 					core.Node.MessageRetriever.Wait()
 				}
 				core.OfflineMessageWaitGroup.Wait()
