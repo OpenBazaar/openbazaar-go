@@ -26,6 +26,7 @@ type ExchangeRateDecoder interface {
 	decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error)
 }
 
+type OpenBazaarDecoder struct{}
 type KrakenDecoder struct{}
 type BitfinexDecoder struct{}
 type BittrexDecoder struct{}
@@ -50,6 +51,7 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	b.providers = []*ExchangeRateProvider{
+		{"https://ticker.openbazaar.org/api", b.cache, client, OpenBazaarDecoder{}, nil},
 		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-bcc", b.cache, client, BittrexDecoder{}, bp},
 		{"https://api.bitfinex.com/v1/pubticker/bchbtc", b.cache, client, BitfinexDecoder{}, bp},
 		{"https://poloniex.com/public?command=returnTicker", b.cache, client, PoloniexDecoder{}, bp},
@@ -133,6 +135,37 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 		return err
 	}
 	return provider.decoder.decode(dataMap, provider.cache, provider.bitcoinProvider)
+}
+
+func (b OpenBazaarDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
+	data := dat.(map[string]interface{})
+
+	bch, ok := data["BCH"]
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'BCH' field")
+	}
+	val, ok := bch.(map[string]interface{})
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
+	bchRate, ok := val["last"].(float64)
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (float) field")
+	}
+	for k, v := range data {
+		if k != "timestamp" {
+			val, ok := v.(map[string]interface{})
+			if !ok {
+				return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+			}
+			price, ok := val["last"].(float64)
+			if !ok {
+				return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (float) field")
+			}
+			cache[k] = price*(1/bchRate)
+		}
+	}
+	return nil
 }
 
 func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
