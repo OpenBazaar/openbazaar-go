@@ -60,6 +60,12 @@ type PurchaseData struct {
 	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
 }
 
+// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
+// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
+// TODO: this probably should not be hardcoded but making it adaptive requires all wallet implementations to provide this data.
+// TODO: for now, this is probably OK as it's just an approximation.
+const EscrowReleaseSize = 337
+
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
@@ -109,6 +115,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return "", "", 0, false, err
 		}
 		payment.Amount = total
+		fpb := n.Wallet.GetFeePerByte(wallet.NORMAL)
+		if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
+			return "", "", 0, false, errors.New("Transaction fee too high for moderated payment")
+		}
 
 		/* Generate a payment address using the first child key derived from the buyers's,
 		   vendors's and moderator's masterPubKey and a random chaincode. */
@@ -273,6 +283,11 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil { // Vendor offline
 			// Change payment code to direct
+
+			fpb := n.Wallet.GetFeePerByte(wallet.NORMAL)
+			if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
+				return "", "", 0, false, errors.New("Transaction fee too high for offline 2of2 multisig payment")
+			}
 			payment.Method = pb.Order_Payment_DIRECT
 
 			/* Generate a payment address using the first child key derived from the buyer's
