@@ -50,10 +50,10 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	b.providers = []*ExchangeRateProvider{
-		{"https://api.kraken.com/0/public/Ticker?pair=BCHXBT", b.cache, client, KrakenDecoder{}, bp},
-		{"https://api.bitfinex.com/v1/pubticker/bchbtc", b.cache, client, BitfinexDecoder{}, bp},
 		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-bcc", b.cache, client, BittrexDecoder{}, bp},
+		{"https://api.bitfinex.com/v1/pubticker/bchbtc", b.cache, client, BitfinexDecoder{}, bp},
 		{"https://poloniex.com/public?command=returnTicker", b.cache, client, PoloniexDecoder{}, bp},
+		{"https://api.kraken.com/0/public/Ticker?pair=BCHXBT", b.cache, client, KrakenDecoder{}, bp},
 	}
 	go b.run()
 	return &b
