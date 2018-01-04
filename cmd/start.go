@@ -307,7 +307,7 @@ func (x *Start) Execute(args []string) error {
 	cfg.Identity = identity
 
 	// Setup testnet
-	if x.Testnet {
+	if x.Testnet || x.Regtest {
 		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			log.Error(err)

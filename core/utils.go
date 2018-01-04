@@ -123,7 +123,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			}
 			confirmations, height, err := n.Wallet.GetConfirmations(*ch)
 			if err != nil {
-				return paymentRecords, refundRecord, err
+				return paymentRecords, refundRecord, nil
 			}
 			refundRecord.Txid = contract.Refund.RefundTransaction.Txid
 			refundRecord.Value = int64(contract.Refund.RefundTransaction.Value)
