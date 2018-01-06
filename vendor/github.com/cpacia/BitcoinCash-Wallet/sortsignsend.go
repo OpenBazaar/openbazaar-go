@@ -579,6 +579,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 
 	var additionalPrevScripts map[wire.OutPoint][]byte
 	var additionalKeysByAddress map[string]*btc.WIF
+	var inVals map[wire.OutPoint]int64
 
 	// Create input source
 	coinMap := w.gatherCoins()
@@ -586,7 +587,6 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	for k := range coinMap {
 		coins = append(coins, k)
 	}
-	var inVals []int64
 	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
@@ -594,6 +594,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 			return total, inputs, scripts, errors.New("insuffient funds")
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
+		inVals = make(map[wire.OutPoint]int64)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
 		for _, c := range coins.Coins() {
 			total += c.Value()
@@ -614,7 +615,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
 			val := c.Value()
 			sat := val.ToUnit(btc.AmountSatoshi)
-			inVals = append(inVals, int64(sat))
+			inVals[*outpoint] = int64(sat)
 		}
 		return total, inputs, scripts, nil
 	}
@@ -654,14 +655,14 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
 	getScript := txscript.ScriptClosure(func(
-	addr btc.Address) ([]byte, error) {
+		addr btc.Address) ([]byte, error) {
 		return []byte{}, nil
 	})
 	for i, txIn := range authoredTx.Tx.TxIn {
 		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
 		script, err := bchutil.SignTxOutput(w.params,
 			authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, getKey,
-			getScript, txIn.SignatureScript, inVals[i])
+			getScript, txIn.SignatureScript, inVals[txIn.PreviousOutPoint])
 		if err != nil {
 			return nil, errors.New("Failed to sign transaction")
 		}

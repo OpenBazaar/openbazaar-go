@@ -144,8 +144,8 @@ func calcBip143SignatureHash(subScript []byte, sigHashes *txscript.TxSigHashes,
 	// re-use the pre-generated hashoutputs sighash fragment. Otherwise,
 	// we'll serialize and add only the target output index to the signature
 	// pre-image.
-	if hashType&txscript.SigHashSingle != txscript.SigHashSingle &&
-		hashType&txscript.SigHashNone != txscript.SigHashNone {
+	if hashType&sigHashMask != txscript.SigHashSingle &&
+		hashType&sigHashMask != txscript.SigHashNone {
 		sigHash.Write(sigHashes.HashOutputs[:])
 	} else if hashType&sigHashMask == txscript.SigHashSingle && idx < len(tx.TxOut) {
 		var b bytes.Buffer

@@ -66,7 +66,7 @@ func (w *SPVWallet) onMerkleBlock(p *peer.Peer, m *wire.MsgMerkleBlock) {
 	}
 	newBlock, reorg, height, err := w.blockchain.CommitHeader(m.Header)
 	if err != nil {
-		log.Warning(err)
+		log.Warningf("Commit header error from peer%d: %s", p.ID(), err.Error())
 		return
 	}
 	if !newBlock {

@@ -406,11 +406,11 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) error {
 		// Get the peer ID from the public key
 		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 		if err != nil {
-			return nil
+			return err
 		}
 		i, err := peer.IDFromPublicKey(pubkey)
 		if err != nil {
-			return nil
+			return err
 		}
 		id = &i
 	}
