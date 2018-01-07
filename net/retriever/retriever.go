@@ -27,7 +27,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-	"fmt"
 )
 
 const DefaultPointerPrefixLength = 14
