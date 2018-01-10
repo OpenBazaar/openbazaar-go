@@ -14,7 +14,7 @@ import (
 
 	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
 
-	"fmt"
+	"errors"
 	"github.com/op/go-logging"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
@@ -34,18 +34,17 @@ const DefaultPointerPrefixLength = 14
 var log = logging.MustGetLogger("retriever")
 
 type MessageRetriever struct {
-	db           repo.Datastore
-	node         *core.IpfsNode
-	bm           *net.BanManager
-	ctx          commands.Context
-	service      net.NetworkService
-	prefixLen    int
-	sendAck      func(peerId string, pointerID peer.ID) error
-	messageQueue map[pb.Message_MessageType][]offlineMessage
-	httpClient   *http.Client
-	dataPeers    []peer.ID
-	queueLock    *sync.Mutex
-	DoneChan     chan struct{}
+	db         repo.Datastore
+	node       *core.IpfsNode
+	bm         *net.BanManager
+	ctx        commands.Context
+	service    net.NetworkService
+	prefixLen  int
+	sendAck    func(peerId string, pointerID peer.ID) error
+	httpClient *http.Client
+	dataPeers  []peer.ID
+	queueLock  *sync.Mutex
+	DoneChan   chan struct{}
 	*sync.WaitGroup
 }
 
@@ -61,7 +60,7 @@ func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.Ipf
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, make(map[pb.Message_MessageType][]offlineMessage), client, pushNodes, new(sync.Mutex), make(chan struct{}), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, client, pushNodes, new(sync.Mutex), make(chan struct{}), new(sync.WaitGroup)}
 	mr.Add(1)
 	return &mr
 }
@@ -150,12 +149,12 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 	// Wait for each goroutine to finish then process any remaining messages that needed to be processed last
 	wg.Wait()
 
-	m.processQueue()
-	m.processOldMessages()
+	m.processQueuedMessages()
 
 	m.Done()
 }
 
+// Connect directly to our data peers and ask them if they have the pointer we're interested in
 func (m *MessageRetriever) getPointersDataPeers() <-chan ps.PeerInfo {
 	peerOut := make(chan ps.PeerInfo, 100000)
 	go m.getPointersFromDataPeersRoutine(peerOut)
@@ -186,6 +185,8 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 	wg.Wait()
 }
 
+// fetchIPFS will attempt to download an encrypted message using IPFS. If the message downloads successfully, we save the
+// address to the database to prevent us from wasting bandwidth downloading it again.
 func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -212,6 +213,8 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 	}
 }
 
+// fetchHTTPS will attempt to download an encrypted message from an HTTPS endpoint. If the message downloads successfully, we save the
+// address to the database to prevent us from wasting bandwidth downloading it again.
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	defer wg.Done()
 
@@ -244,6 +247,9 @@ func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr
 	}
 }
 
+// attemptDecrypt will try to decrypt the message using our identity private key. If it decrypts it will be passed to
+// a handler for processing. Not all messages will decrypt. Given the natural of the prefix addressing, we may download
+// some messages intended for others. If we can't decrypt it, we can just discard it.
 func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr ma.Multiaddr) {
 	// Decrypt and unmarshal plaintext
 	plaintext, err := net.Decrypt(m.node.PrivateKey, ciphertext)
@@ -296,133 +302,24 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 		m.sendAck(id.Pretty(), pid)
 	}
 
-	// Queue
-	m.queueMessage(env, addr.String())
+	// handle
+	m.handleMessage(env, addr.String(), nil)
 }
 
-func (m *MessageRetriever) queueMessage(env pb.Envelope, addr string) {
-	// Order messages need to be processed in the correct order so let's cue them up
-	m.queueLock.Lock()
-	defer m.queueLock.Unlock()
-	switch env.Message.MessageType {
-	case pb.Message_ORDER:
-		m.messageQueue[pb.Message_ORDER] = append(m.messageQueue[pb.Message_ORDER], offlineMessage{addr, env})
-	case pb.Message_ORDER_CANCEL:
-		m.messageQueue[pb.Message_ORDER_CANCEL] = append(m.messageQueue[pb.Message_ORDER_CANCEL], offlineMessage{addr, env})
-	case pb.Message_ORDER_REJECT:
-		m.messageQueue[pb.Message_ORDER_REJECT] = append(m.messageQueue[pb.Message_ORDER_REJECT], offlineMessage{addr, env})
-	case pb.Message_ORDER_CONFIRMATION:
-		m.messageQueue[pb.Message_ORDER_CONFIRMATION] = append(m.messageQueue[pb.Message_ORDER_CONFIRMATION], offlineMessage{addr, env})
-	case pb.Message_ORDER_FULFILLMENT:
-		m.messageQueue[pb.Message_ORDER_FULFILLMENT] = append(m.messageQueue[pb.Message_ORDER_FULFILLMENT], offlineMessage{addr, env})
-	case pb.Message_ORDER_COMPLETION:
-		m.messageQueue[pb.Message_ORDER_COMPLETION] = append(m.messageQueue[pb.Message_ORDER_COMPLETION], offlineMessage{addr, env})
-	case pb.Message_DISPUTE_OPEN:
-		m.messageQueue[pb.Message_DISPUTE_OPEN] = append(m.messageQueue[pb.Message_DISPUTE_OPEN], offlineMessage{addr, env})
-	case pb.Message_DISPUTE_UPDATE:
-		m.messageQueue[pb.Message_DISPUTE_UPDATE] = append(m.messageQueue[pb.Message_DISPUTE_UPDATE], offlineMessage{addr, env})
-	case pb.Message_DISPUTE_CLOSE:
-		m.messageQueue[pb.Message_DISPUTE_CLOSE] = append(m.messageQueue[pb.Message_DISPUTE_CLOSE], offlineMessage{addr, env})
-	case pb.Message_REFUND:
-		m.messageQueue[pb.Message_REFUND] = append(m.messageQueue[pb.Message_REFUND], offlineMessage{addr, env})
-	default:
-		err := m.handleMessage(env, nil)
-		if err != nil {
-			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
-		}
-	}
-}
-
-func (m *MessageRetriever) processQueue() {
-	processMessages := func(queue []offlineMessage) {
-		for _, om := range queue {
-			err := m.handleMessage(om.env, nil)
-			if err != nil && err == net.OutOfOrderMessage {
-				ser, err := proto.Marshal(&om.env)
-				if err == nil {
-					err := m.db.OfflineMessages().SetMessage(om.addr, ser)
-					if err != nil {
-						log.Errorf("Error saving offline message %s to database: %s", om.addr, err.Error())
-					}
-				} else {
-					log.Errorf("Error serializing offline message %s for storage")
-				}
-			} else if err != nil {
-				log.Errorf("Error processing message %s. Type %s: %s", om.addr, om.env.Message.MessageType, err.Error())
-			}
-		}
-	}
-
-	queue, ok := m.messageQueue[pb.Message_ORDER]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_CANCEL]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_REJECT]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_CONFIRMATION]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_FULFILLMENT]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_REFUND]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_OPEN]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_UPDATE]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_DISPUTE_CLOSE]
-	if ok {
-		processMessages(queue)
-	}
-	queue, ok = m.messageQueue[pb.Message_ORDER_COMPLETION]
-	if ok {
-		processMessages(queue)
-	}
-	m.messageQueue = make(map[pb.Message_MessageType][]offlineMessage)
-}
-
-func (m *MessageRetriever) processOldMessages() {
-	messages, err := m.db.OfflineMessages().GetMessages()
-	if err != nil {
-		return
-	}
-	for url, ser := range messages {
-		env := new(pb.Envelope)
-		err := proto.Unmarshal(ser, env)
-		if err == nil {
-			m.queueMessage(*env, url)
-		} else {
-			log.Error("Error unmarshalling serialized offline message from database")
-		}
-		m.db.OfflineMessages().DeleteMessage(url)
-	}
-	m.processQueue()
-}
-
-func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) error {
+// handleMessage loads the hander for this message type and attempts to process the message. Some message types (such
+// as those partaining to an order) need to be processed in order. In these cases the handler returns a net.OutOfOrderMessage error
+// and we must save the message to the database to await further processing.
+func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.ID) error {
 	if id == nil {
 		// Get the peer ID from the public key
 		pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 		if err != nil {
+			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
 			return err
 		}
 		i, err := peer.IDFromPublicKey(pubkey)
 		if err != nil {
+			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
 			return err
 		}
 		id = &i
@@ -431,10 +328,85 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, id *peer.ID) error {
 	// Get handler for this message type
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
-		return fmt.Errorf("Nil handler for message type %s", env.Message.MessageType)
+		log.Errorf("Nil handler for message type %s", env.Message.MessageType)
+		return errors.New("Nil handler for message")
 	}
 
 	// Dispatch handler
 	_, err := handler(*id, env.Message, true)
-	return err
+	if err != nil && err == net.OutOfOrderMessage {
+		ser, err := proto.Marshal(&env)
+		if err == nil {
+			err := m.db.OfflineMessages().SetMessage(addr, ser)
+			if err != nil {
+				log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+			}
+		} else {
+			log.Errorf("Error serializing offline message %s for storage")
+		}
+	} else if err != nil {
+		log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
+		return err
+	}
+	return nil
+}
+
+var MessageProcessingOrder = []pb.Message_MessageType{
+	pb.Message_ORDER,
+	pb.Message_ORDER_CANCEL,
+	pb.Message_ORDER_REJECT,
+	pb.Message_ORDER_CONFIRMATION,
+	pb.Message_ORDER_FULFILLMENT,
+	pb.Message_ORDER_COMPLETION,
+	pb.Message_DISPUTE_OPEN,
+	pb.Message_DISPUTE_UPDATE,
+	pb.Message_DISPUTE_CLOSE,
+	pb.Message_REFUND,
+	pb.Message_CHAT,
+	pb.Message_FOLLOW,
+	pb.Message_UNFOLLOW,
+	pb.Message_MODERATOR_ADD,
+	pb.Message_MODERATOR_REMOVE,
+	pb.Message_OFFLINE_ACK,
+}
+
+// processQueuedMessages loads all the saved messaged from the database for processing. For each message it sorts them into a
+// queue based on message type and then processes the queue in order. Any messages that successfully process can then be deleted
+// from the databse.
+func (m *MessageRetriever) processQueuedMessages() {
+	messageQueue := make(map[pb.Message_MessageType][]offlineMessage)
+
+	// Load stored messages from database
+	messages, err := m.db.OfflineMessages().GetMessages()
+	if err != nil {
+		return
+	}
+	// Sort them into the queue by message type
+	for url, ser := range messages {
+		env := new(pb.Envelope)
+		err := proto.Unmarshal(ser, env)
+		if err == nil {
+			messageQueue[env.Message.MessageType] = append(messageQueue[env.Message.MessageType], offlineMessage{url, *env})
+		} else {
+			log.Error("Error unmarshalling serialized offline message from database")
+		}
+	}
+	var toDelete []string
+	// Process the queue in order
+	for _, messageType := range MessageProcessingOrder {
+		queue, ok := messageQueue[messageType]
+		if !ok {
+			continue
+		}
+		for _, om := range queue {
+			err := m.handleMessage(om.env, om.addr, nil)
+			if err == nil {
+				toDelete = append(toDelete, om.addr)
+			}
+		}
+	}
+	// Delete messages that we're successfully processed from the database
+	for _, url := range toDelete {
+		m.db.OfflineMessages().DeleteMessage(url)
+	}
 }

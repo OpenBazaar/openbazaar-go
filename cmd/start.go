@@ -817,7 +817,10 @@ func (x *Start) Execute(args []string) error {
 		go PR.Run()
 		core.Node.PointerRepublisher = PR
 		if !x.DisableWallet {
-			MR.Wait()
+			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
+			if resyncManager == nil {
+				MR.Wait()
+			}
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
 			cryptoWallet.AddTransactionListener(TL.OnTransactionReceived)
