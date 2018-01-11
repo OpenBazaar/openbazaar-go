@@ -23,11 +23,11 @@ func NewResyncManager(salesDB repo.Sales, w wallet.Wallet) *ResyncManager {
 func (r *ResyncManager) Start() {
 	t := time.NewTicker(ResyncInterval)
 	for ; true; <-t.C {
-		r.checkUnfunded()
+		r.CheckUnfunded()
 	}
 }
 
-func (r *ResyncManager) checkUnfunded() {
+func (r *ResyncManager) CheckUnfunded() {
 	unfunded, err := r.sales.GetNeedsResync()
 	if err != nil {
 		log.Error(err)

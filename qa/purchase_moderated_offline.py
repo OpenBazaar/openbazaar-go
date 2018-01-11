@@ -165,7 +165,7 @@ class PurchaseModeratedOfflineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Couldn't load order from Alice %s", r.status_code)
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
-            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice failed to detect payment")
+            raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice failed to detect initial payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseModeratedOfflineTest - FAIL: Alice incorrectly saved as unfunded")
 
