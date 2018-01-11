@@ -375,6 +375,9 @@ var MessageProcessingOrder = []pb.Message_MessageType{
 // from the databse.
 func (m *MessageRetriever) processQueuedMessages() {
 	messageQueue := make(map[pb.Message_MessageType][]offlineMessage)
+	for _, messageType := range MessageProcessingOrder {
+		messageQueue[messageType] = []offlineMessage{}
+	}
 
 	// Load stored messages from database
 	messages, err := m.db.OfflineMessages().GetMessages()
