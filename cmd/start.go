@@ -831,6 +831,10 @@ func (x *Start) Execute(args []string) error {
 			go cryptoWallet.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()
+				go func() {
+					MR.Wait()
+					resyncManager.CheckUnfunded()
+				}()
 			}
 		}
 		core.PublishLock.Unlock()
