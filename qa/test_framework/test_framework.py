@@ -77,7 +77,7 @@ class OpenBazaarTestFramework(object):
         for node in BOOTSTRAP_NODES:
             if config["Addresses"]["Swarm"][0] not in node:
                 to_boostrap.append(node)
-        config["Bootstrap"] = to_boostrap
+        config["Bootstrap-testnet"] = to_boostrap
         config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
         config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
