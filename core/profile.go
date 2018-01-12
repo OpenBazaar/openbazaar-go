@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	cachePrefix       = "IPNSPERSISENTCACHE_"
+	CachePrefix       = "IPNSPERSISENTCACHE_"
 	CachedProfileTime = time.Hour * 24 * 7
 )
 
@@ -73,7 +73,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 	var recordAvailable bool
 	var val interface{}
 	if useCache {
-		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
 		if err != nil { // No record in datastore
 			pro, err = fetch("")
 			if err != nil {
@@ -89,7 +89,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			if err != nil {
 				return pb.Profile{}, err
 			}
-			eol, ok := checkEOL(entry)
+			eol, ok := CheckEOL(entry)
 			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
 			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
@@ -117,7 +117,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 	// Update the record with a new EOL
 	go func() {
 		if !recordAvailable {
-			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
 			if err != nil {
 				return
 			}
@@ -132,12 +132,12 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		if err != nil {
 			return
 		}
-		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix+peerId), v)
+		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
 	}()
 	return pro, nil
 }
 
-func checkEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
+func CheckEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
 	if e.GetValidityType() == ipnspb.IpnsEntry_EOL {
 		eol, err := u.ParseRFC3339(string(e.GetValidity()))
 		if err != nil {

@@ -45,6 +45,8 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 )
 
 type JsonAPIConfig struct {
@@ -3528,6 +3530,31 @@ func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, pid.Pretty())
+}
+
+func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+
+	val, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.CachePrefix + peerId))
+	if err != nil { // No record in datastore
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	entry := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(val.([]byte), entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	b, err := proto.Marshal(entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.Header().Add("Content-Transfer-Encoding", "binary")
+	go ipfs.Resolve(i.node.Context, peerId, time.Minute)
+	fmt.Fprint(w, b)
 }
 
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
