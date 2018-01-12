@@ -842,6 +842,11 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
+
+	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		return nil, net.OutOfOrderMessage
+	}
+
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
 		return nil, net.DuplicateMessage
 	}
