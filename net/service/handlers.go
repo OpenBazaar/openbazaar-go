@@ -842,6 +842,11 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
+
+	if state == pb.OrderState_PENDING || state == pb.OrderState_AWAITING_PAYMENT {
+		return nil, net.OutOfOrderMessage
+	}
+
 	if !(state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_AWAITING_FULFILLMENT) {
 		return nil, net.DuplicateMessage
 	}
@@ -1153,7 +1158,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	if state != pb.OrderState_DISPUTED {
-		return nil, fmt.Errorf("Order is in %s state. Must be DISPUTED", state.String())
+		return nil, net.OutOfOrderMessage
 	}
 
 	// Validate
