@@ -1158,7 +1158,7 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	}
 
 	if state != pb.OrderState_DISPUTED {
-		return nil, fmt.Errorf("Order is in %s state. Must be DISPUTED", state.String())
+		return nil, net.OutOfOrderMessage
 	}
 
 	// Validate

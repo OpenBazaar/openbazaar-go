@@ -114,7 +114,6 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 		close(c)
 	}(peerOut)
 
-
 	inFlight := make(map[string]bool)
 	// Iterate over the pointers, adding 1 to the waitgroup for each pointer found
 	for p := range peerOut {
