@@ -1,12 +1,12 @@
 {
-  "name": "openbazaar-go",
-  "author": "chris",
+  "name": "bb-go",
+  "author": "lars",
   "version": "0.11.0",
   "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
   "language": "english",
   "license": "",
   "bugs": {
-    "url": "https://github.com/OpenBazaar/openbazaar-go"
+    "url": "https://github.com/larslarsen/bb-go"
   },
   "gxVersion": "0.11.0"
 }
