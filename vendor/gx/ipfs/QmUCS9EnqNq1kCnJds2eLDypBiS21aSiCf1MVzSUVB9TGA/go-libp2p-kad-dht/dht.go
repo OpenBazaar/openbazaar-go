@@ -33,8 +33,8 @@ import (
 
 var log = logging.Logger("dht")
 
-var ProtocolDHT protocol.ID = "/openbazaar/kad/1.0.0"
-var ProtocolDHTOld protocol.ID = "/openbazaar/dht"
+var ProtocolDHT protocol.ID = "/bitbook/kad/1.0.0"
+var ProtocolDHTOld protocol.ID = "/bitbook/dht"
 
 // NumBootstrapQueries defines the number of random dht queries to do to
 // collect members of the routing table.
