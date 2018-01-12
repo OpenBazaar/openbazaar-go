@@ -24,6 +24,7 @@ import (
 
 var log = logging.Logger("namesys")
 var cachePrefix = "IPNSPERSISENTCACHE_"
+var keyCachePrefix= "IPNSPUBKEYCACHE_"
 var UsePersistentCache bool
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
@@ -203,6 +204,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 	if ok, err := pubkey.Verify(ipnsEntryDataForSig(entry), entry.GetSignature()); err != nil || !ok {
 		return "", fmt.Errorf("Invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
 	}
+	pubkeyBytes, _ := pubkey.Bytes()
 
 	// ok sig checks out. this is a valid name.
 
@@ -216,14 +218,20 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		}
 
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+		go func() {
+			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+		}()
 		return p, nil
 	} else {
 		// Its an old style multihash record
 		log.Warning("Detected old style multihash record")
 		p := path.FromCid(cid.NewCidV0(valh))
 		r.cacheSet(name, p, entry)
-		go r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+		go func() {
+			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+		}()
 		return p, nil
 	}
 }

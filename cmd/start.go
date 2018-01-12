@@ -764,6 +764,7 @@ func (x *Start) Execute(args []string) error {
 		TorDialer:           torDialer,
 		UserAgent:           core.USERAGENT,
 		BanManager:          bm,
+		IPNSBackupAPI:       cfg.Ipns.BackUpAPI,
 	}
 	core.PublishLock.Lock()
 

@@ -79,7 +79,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.Moderator = data.Moderator
 
 		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
-		profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath, time.Minute)
+		profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute)
 		if err != nil {
 			return "", "", 0, false, errors.New("Moderator could not be found")
 		}
@@ -1222,7 +1222,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := ipfs.ResolveThenCat(n.Context, ipnsPath, time.Minute)
+	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute)
 	if err != nil {
 		return err
 	}

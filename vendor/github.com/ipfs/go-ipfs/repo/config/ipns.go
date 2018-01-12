@@ -8,4 +8,6 @@ type Ipns struct {
 	QuerySize        int
 
 	UsePersistentCache bool
+
+	BackUpAPI string
 }

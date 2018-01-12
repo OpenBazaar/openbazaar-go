@@ -26,6 +26,7 @@ import (
 
 const (
 	CachePrefix       = "IPNSPERSISENTCACHE_"
+	KeyCachePrefix= "IPNSPUBKEYCACHE_"
 	CachedProfileTime = time.Hour * 24 * 7
 )
 
@@ -51,7 +52,8 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		var profile []byte
 		var err error
 		if rootHash == "" {
-			profile, err = ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
+
+			profile, err = n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
 			if err != nil || len(profile) == 0 {
 				return pro, err
 			}
