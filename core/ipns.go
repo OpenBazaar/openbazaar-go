@@ -1,33 +1,31 @@
 package core
 
 import (
-
-	"time"
-	"net/http"
-	"net"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	"io/ioutil"
-	"fmt"
-	"encoding/json"
-	"encoding/hex"
 	"bytes"
-	npb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
-	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
-	"strings"
-	ipfspath "github.com/ipfs/go-ipfs/path"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	npb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipfspath "github.com/ipfs/go-ipfs/path"
+	ipnspath "github.com/ipfs/go-ipfs/path"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"strings"
+	"time"
 )
 
 /*
 These functions wrap the IPNS Resolve commands with code that will try fetching the record from an API
 as a last ditch effort if it fails to find the record in the DHT. The API endpoint is loaded from the config file.
 We need to take care to observe the Tor preference.
- */
-
+*/
 
 func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time.Duration) ([]byte, error) {
 	var ret []byte
@@ -55,8 +53,8 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 			dial = n.TorDialer.Dial
 		}
 		tbTransport := &http.Transport{Dial: dial}
-		client := &http.Client{Transport: tbTransport, Timeout: time.Second*5}
-		resp, err := client.Get(n.IPNSBackupAPI+peerId)
+		client := &http.Client{Transport: tbTransport, Timeout: time.Second * 5}
+		resp, err := client.Get(n.IPNSBackupAPI + peerId)
 		if err != nil {
 			return "", err
 		}
@@ -88,7 +86,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 			return "", err
 		}
 
-		pubkeyBytes, err :=  hex.DecodeString(rec.Pubkey)
+		pubkeyBytes, err := hex.DecodeString(rec.Pubkey)
 		if err != nil {
 			return "", err
 		}
