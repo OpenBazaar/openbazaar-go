@@ -358,6 +358,10 @@ func (x *Convert) Execute(args []string) error {
 		}
 	}
 	nd.Close()
+	
+	// Remove headers.bin
+	os.Remove(path.Join(repoPath, "headers.bin"))
+
 	fmt.Println("Done")
 	return nil
 }
