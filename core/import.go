@@ -38,7 +38,7 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	countLock := new(sync.Mutex)
 	count := 0
 
-	var ld []listingData
+	var ld []ListingData
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 

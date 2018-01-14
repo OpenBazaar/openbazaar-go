@@ -86,6 +86,10 @@ func main() {
 		"restore user data",
 		"This command will attempt to restore user data (profile, listings, ratings, etc) by downloading them from the network. This will only work if the IPNS mapping is still available in the DHT. Optionally it will take a mnemonic seed to restore from.",
 		&cmd.Restore{})
+	parser.AddCommand("convert",
+		"convert this node to a different coin type",
+		"This command will convert the node to use a different cryptocurrency",
+		&cmd.Convert{})
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
 		fmt.Println(core.VERSION)
 		return
