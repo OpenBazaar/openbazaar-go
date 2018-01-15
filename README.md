@@ -11,7 +11,7 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 ## Table of Contents
 
 - [Install](#install)
-  - [Install prebuilt packages](#install-prebuilt-packages)
+  - [Install prebuilt packages](#install-pre-built-packages)
   - [Build from Source](#build-from-source)
 - [Dependency Management](#dependency-management)
   - [IPFS Dependency](#ipfs-dependency)
