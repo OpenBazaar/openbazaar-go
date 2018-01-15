@@ -75,7 +75,7 @@ func (x *Convert) Execute(args []string) error {
 	}
 
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("This command will convert your wallet to %s. It will delete any coins you have in your wallet and will prevent you from completing any outstanding orders. Please make sure you have emptied the wallet and completed all your orders before running this command.\n", str)
+	fmt.Printf("This command will convert your wallet to %s. It will delete any coins you have in your wallet and will prevent you from completing any outstanding orders. Please make sure you have emptied the wallet and completed all your orders before running this command. You will also need to select a new moderator.\n", str)
 	fmt.Println("Are you sure you want to continue (y/n)?")
 	yn, _ := reader.ReadString('\n')
 	if !(strings.ToLower(yn) == "y\n" || strings.ToLower(yn) == "yes\n" || strings.ToLower(yn)[:1] == "y") {
@@ -264,6 +264,7 @@ func (x *Convert) Execute(args []string) error {
 			return err
 		}
 		sl.Listing.Metadata.AcceptedCurrencies = []string{currencyCode}
+		sl.Listing.Moderators = []string{}
 
 		serializedListing, err := proto.Marshal(sl.Listing)
 		if err != nil {
@@ -358,7 +359,7 @@ func (x *Convert) Execute(args []string) error {
 		}
 	}
 	nd.Close()
-	
+
 	// Remove headers.bin
 	os.Remove(path.Join(repoPath, "headers.bin"))
 
