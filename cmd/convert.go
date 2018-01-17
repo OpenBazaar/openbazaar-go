@@ -360,6 +360,13 @@ func (x *Convert) Execute(args []string) error {
 	}
 	nd.Close()
 
+	// Remove moderators from settings
+	settings, err := sqliteDB.Settings().Get()
+	if err == nil {
+		settings.StoreModerators = &[]string{}
+		sqliteDB.Settings().Put(settings)
+	}
+
 	// Remove headers.bin
 	os.Remove(path.Join(repoPath, "headers.bin"))
 
