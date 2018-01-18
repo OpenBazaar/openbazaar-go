@@ -43,8 +43,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 )
 
 type JsonAPIConfig struct {
@@ -1175,7 +1177,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")), time.Minute)
+		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "followers.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1233,7 +1235,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")), time.Minute)
+		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "following.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1379,7 +1381,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")), time.Minute)
+		listingsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "listings.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1468,7 +1470,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")), time.Minute)
+			listingBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -3199,7 +3201,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 
 	var indexBytes []byte
 	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
+		indexBytes, _ = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
 
 	} else {
 		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
@@ -3530,6 +3532,63 @@ func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, pid.Pretty())
 }
 
+func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+
+	val, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.CachePrefix + peerId))
+	if err != nil { // No record in datastore
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var keyBytes []byte
+	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
+	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
+		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.KeyCachePrefix + peerId))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		keyBytes = keyval.([]byte)
+	} else {
+		keyBytes, err = pubkey.Bytes()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	type KeyAndRecord struct {
+		Pubkey           string `json:"pubkey"`
+		SerializedRecord string `json:"serializedRecord"`
+	}
+
+	entry := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(val.([]byte), entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	b, err := proto.Marshal(entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret := KeyAndRecord{hex.EncodeToString(keyBytes), hex.EncodeToString(b)}
+	retBytes, err := json.MarshalIndent(ret, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	go ipfs.Resolve(i.node.Context, peerId, time.Minute)
+	fmt.Fprint(w, string(retBytes))
+}
+
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var settings repo.SMTPSettings
@@ -3763,7 +3822,7 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		postsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts.json")), time.Minute)
+		postsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "posts.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3833,7 +3892,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			postBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts", postId+".json")), time.Minute)
+			postBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "posts", postId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return

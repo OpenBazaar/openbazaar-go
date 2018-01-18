@@ -19,6 +19,7 @@ import (
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
@@ -29,7 +30,10 @@ import (
 	"time"
 )
 
-const DefaultPointerPrefixLength = 14
+const (
+	DefaultPointerPrefixLength = 14
+	KeyCachePrefix             = "IPNSPUBKEYCACHE_"
+)
 
 var log = logging.MustGetLogger("retriever")
 
@@ -293,11 +297,12 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	}
 
 	if m.bm.IsBanned(id) {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warning("Received and dropped offline message from banned user: %s ", id.String())
 		return
 	}
 
 	m.node.Peerstore.AddPubKey(id, pubkey)
+	m.node.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+id.String()), env.Pubkey)
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
