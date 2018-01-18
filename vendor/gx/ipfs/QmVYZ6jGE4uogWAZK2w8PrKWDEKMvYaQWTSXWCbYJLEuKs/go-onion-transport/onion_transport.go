@@ -125,7 +125,7 @@ func (t *OnionTransport) TorDialer() (proxy.Dialer, error) {
 // loadKeys loads keys into our keys map from files in the keys directory
 func (t *OnionTransport) loadKeys() (map[string]*rsa.PrivateKey, error) {
 	keys := make(map[string]*rsa.PrivateKey)
-	absPath, err := filepath.Abs(t.keysDir)
+	absPath, err := filepath.EvalSymlinks(t.keysDir)
 	if err != nil {
 		return nil, err
 	}
