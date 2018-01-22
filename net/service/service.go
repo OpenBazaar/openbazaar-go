@@ -79,6 +79,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool)
 	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
 	mPeer := s.Conn().RemotePeer()
+
 	// Check if banned
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
