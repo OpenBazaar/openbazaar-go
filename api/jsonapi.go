@@ -1731,8 +1731,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED && state != pb.OrderState_DISPUTED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, PARTIALLY_FULFILLED, or DISPUTED to refund")
+	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, or PARTIALLY_FULFILLED")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)
