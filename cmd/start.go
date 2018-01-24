@@ -648,6 +648,7 @@ func (x *Start) Execute(args []string) error {
 		if !x.DisableExchangeRates {
 			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
 		}
+		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	default:
 		log.Fatal("Unknown wallet type")
 	}
