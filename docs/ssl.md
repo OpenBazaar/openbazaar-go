@@ -41,7 +41,7 @@ If you skipped Step 1 because you have your own SSL cert, then set the paths to 
 
 ### Step 3: Install the CA cert in the operating system of your client's computer.
 
-If you used your own SSL cert issued by a CA, you can skip this step as the OpenBazaar client should recoginize it as a valid certificate.
+If you used your own SSL cert issued by a CA, you can skip this step as the OpenBazaar client should recognize it as a valid certificate.
 
 If you followed Step 1 and generated a self-signed certificate you will need to install the `OpenBazaar.crt` in the operating system of the computer on which you plan to run the client. By default self-signed certificates are rejected, which is why you need to install this root certificate.
 
