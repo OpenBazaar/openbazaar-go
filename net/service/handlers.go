@@ -267,7 +267,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return errorResponse("Could not unmarshal order"), err
 	}
 
-	err = service.node.ValidateOrder(contract)
+	err = service.node.ValidateOrder(contract, !offline)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
@@ -478,7 +478,6 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 }
 
 func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-
 	if pmes.Payload == nil {
 		return nil, errors.New("Payload is nil")
 	}
