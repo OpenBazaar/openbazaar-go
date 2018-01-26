@@ -129,6 +129,10 @@ func (x *Convert) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	_, err = sqlitedb.Exec("DELETE FROM keys;")
+	if err != nil {
+		return err
+	}
 
 	// Update coin type in config file
 	cf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
