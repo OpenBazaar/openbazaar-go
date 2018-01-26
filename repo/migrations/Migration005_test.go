@@ -45,7 +45,7 @@ func TestMigration005(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if string(repoVer) != "5" {
+	if string(repoVer) != "6" {
 		t.Error("Failed to write new repo version")
 	}
 
@@ -68,7 +68,7 @@ func TestMigration005(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if string(repoVer) != "4" {
+	if string(repoVer) != "5" {
 		t.Error("Failed to write new repo version")
 	}
 
