@@ -206,7 +206,7 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 }
 
 func (w *SPVWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(1)
 	for _, out := range outs {
 		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
@@ -314,7 +314,7 @@ func (w *SPVWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold int,
 
 func (w *SPVWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {
 	var sigs []wallet.Signature
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -364,7 +364,7 @@ func (w *SPVWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs 
 }
 
 func (w *SPVWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, sigs1 []wallet.Signature, sigs2 []wallet.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-	tx := new(wire.MsgTx)
+	tx := wire.NewMsgTx(1)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
