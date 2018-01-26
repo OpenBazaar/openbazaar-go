@@ -42,7 +42,7 @@ func Bip44Derivation(masterPrivKey *hd.ExtendedKey) (internal, external *hd.Exte
 		return nil, nil, err
 	}
 	// Cointype = bitcoin
-	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 0)
+	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 145)
 	if err != nil {
 		return nil, nil, err
 	}
