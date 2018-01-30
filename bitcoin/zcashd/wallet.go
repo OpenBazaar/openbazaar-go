@@ -971,6 +971,7 @@ func (w *ZcashdWallet) addWatchedScript(addr btc.Address) error {
 }
 
 func (w *ZcashdWallet) ReSyncBlockchain(fromDate time.Time) {
+	<-w.initChan
 	height, err := w.FindHeightBeforeTime(fromDate)
 	if err != nil {
 		log.Error(err)
