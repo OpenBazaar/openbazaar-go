@@ -3010,6 +3010,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
+	go ipfs.RemoveAll(i.node.Context, peerId)
 	nodes = append(nodes, peerId)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
