@@ -98,6 +98,21 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 	return &w, nil
 }
 
+// TestNetworkEnabled indicates if the current network being used is Test Network
+func (w *ZcashdWallet) TestNetworkEnabled() bool {
+	return w.params.Name == chaincfg.TestNet3Params.Name
+}
+
+// RegressionNetworkEnabled indicates if the current network being used is Regression Network
+func (w *ZcashdWallet) RegressionNetworkEnabled() bool {
+	return w.params.Name == chaincfg.RegressionNetParams.Name
+}
+
+// MainNetworkEnabled indicates if the current network being used is the live Network
+func (w *ZcashdWallet) MainNetworkEnabled() bool {
+	return w.params.Name == chaincfg.MainNetParams.Name
+}
+
 func GetCredentials(repoPath string) (username, password string, err error) {
 	p := path.Join(repoPath, "zcash", "zcash.conf")
 	if _, err := os.Stat(p); os.IsNotExist(err) {
@@ -173,9 +188,9 @@ func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	}
 	args = append(args, "-torcontrol=127.0.0.1:"+strconv.Itoa(w.controlPort))
 
-	if w.params.Name == chaincfg.TestNet3Params.Name {
+	if w.TestNetworkEnabled() {
 		args = append(args, "-testnet")
-	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
+	} else if w.RegressionNetworkEnabled() {
 		args = append(args, "-regtest")
 	}
 	if w.trustedPeer != "" {
@@ -232,7 +247,7 @@ func (w *ZcashdWallet) shutdownIfActive() {
 }
 
 func (w *ZcashdWallet) CurrencyCode() string {
-	if w.params.Name == chaincfg.MainNetParams.Name {
+	if w.MainNetworkEnabled() {
 		return "zec"
 	} else {
 		return "tzec"
