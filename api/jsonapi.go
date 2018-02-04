@@ -2149,31 +2149,56 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 }
 
 func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Request) {
-	type release struct {
-		OrderID string `json:"orderId"`
-	}
+	var (
+		rel struct {
+			OrderID string `json:"orderId"`
+		}
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		records  []*wallet.TransactionRecord
+	)
+
 	decoder := json.NewDecoder(r.Body)
-	var rel release
 	err := decoder.Decode(&rel)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	var isSale bool
-	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+
+	contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
-		isSale = true
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Order not found")
-			return
-		}
+		ErrorResponse(w, http.StatusNotFound, "Order not found")
+		return
 	}
 
-	if isSale && state == pb.OrderState_FULFILLED {
+	switch state {
+	case pb.OrderState_DISPUTED:
+		disputeStart, err := ptypes.Timestamp(contract.GetDispute().Timestamp)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		fourtyFiveDaysInHours := 45 * 24
+		disputeDuration := time.Duration(fourtyFiveDaysInHours) * time.Hour
+
+		// Time hack until we can stub this more nicely in test env
+		if i.node.TestNetworkEnabled() || i.node.RegressionNetworkEnabled() {
+			disputeDuration = time.Duration(10) * time.Second
+		}
+
+		disputeTimeout := disputeStart.Add(disputeDuration)
+		if time.Now().Before(disputeTimeout) {
+			expiresIn := disputeTimeout.Sub(time.Now())
+			ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow can only be called when in dispute for %s or longer, expires in %s", disputeDuration.String(), expiresIn.String()))
+			return
+		}
+		err = i.node.ReleaseFundsAfterTimeout(contract, records)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	case pb.OrderState_FULFILLED:
 		err = i.node.ReleaseFundsAfterTimeout(contract, records)
 		if err != nil {
 			if err == core.EscrowTimeLockedError {
@@ -2184,10 +2209,11 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 				return
 			}
 		}
-	} else {
-		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called after fulfillment and timeout")
+	default:
+		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called when in dispute for 45 days or fulfilled for longer than escrow timeout")
 		return
 	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }

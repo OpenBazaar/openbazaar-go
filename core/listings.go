@@ -105,7 +105,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	sl := new(pb.SignedListing)
 
 	// Temporary hack to work around test env shortcomings
-	if n.TestNetworkEnabled() {
+	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
 		if listing.Metadata.EscrowTimeoutHours == 0 {
 			listing.Metadata.EscrowTimeoutHours = 1
 		}
@@ -135,7 +135,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Check the listing data is correct for continuing
-	if err := validateListing(listing, n.TestNetworkEnabled()); err != nil {
+	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
+	if err := validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
