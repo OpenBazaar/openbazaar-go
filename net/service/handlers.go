@@ -244,6 +244,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 }
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	contract := new(pb.RicardianContract)
 	offline, _ := options.(bool)
 	errorResponse := func(error string) *pb.Message {
 		a := &any.Any{Value: []byte(error)}
@@ -253,22 +254,22 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		}
 		return m
 	}
-	pro, _ := service.node.GetProfile()
-	if !pro.Vendor {
-		return errorResponse("The vendor turn his store off and is not accepting orders at this time"), errors.New("Store is turned off")
-	}
 
 	if pmes.Payload == nil {
 		return nil, errors.New("Payload is nil")
 	}
-	contract := new(pb.RicardianContract)
 	err := ptypes.UnmarshalAny(pmes.Payload, contract)
 	if err != nil {
 		return errorResponse("Could not unmarshal order"), err
 	}
 
+	pro, _ := service.node.GetProfile()
+	if !pro.Vendor {
+		return errorResponse("The vendor turn his store off and is not accepting orders at this time"), errors.New("Store is turned off")
+	}
+
 	err = service.node.ValidateOrder(contract, !offline)
-	if err != nil {
+	if err != nil && err != core.UnknowListingError{
 		return errorResponse(err.Error()), err
 	}
 	currentTime := time.Now()
