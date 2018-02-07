@@ -1,6 +1,13 @@
 version: '3'
 
 services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - obdata_dev:/var/lib/openbazaar
+      - .:/go/src/github.com/OpenBazaar/openbazaar-go
   server:
     image: openbazaar/server
     ports:
@@ -12,3 +19,4 @@ services:
 
 volumes:
   obdata:
+  obdata_dev:

@@ -1,0 +1,25 @@
+FROM golang:1.9
+EXPOSE 4001 4002 9005
+VOLUME /var/lib/openbazaar
+
+RUN wget https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tgz && \
+    tar xvf Python-3.6.0.tgz && \
+    cd Python-3.6.0 && \
+    ./configure --enable-optimizations && \
+    make -j8
+RUN apt-get update && apt-get install -yq zlib1g-dev libssl-dev
+RUN cd Python-3.6.0 && \
+    make altinstall && \
+    ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
+
+RUN pip3.6 install requests python-bitcoinlib && \
+    wget https://bitcoin.org/bin/bitcoin-core-0.13.0/bitcoin-0.13.0-x86_64-linux-gnu.tar.gz && \
+    tar -xvzf bitcoin-0.13.0-x86_64-linux-gnu.tar.gz -C /opt
+
+WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
+RUN go get -u github.com/gogo/protobuf/proto \
+              github.com/icrowley/fake
+
+COPY . .
+
+ENTRYPOINT ["/bin/bash"]
