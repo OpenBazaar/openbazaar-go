@@ -45,6 +45,7 @@ type MessageRetriever struct {
 	service    net.NetworkService
 	prefixLen  int
 	sendAck    func(peerId string, pointerID peer.ID) error
+	sendError  func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
 	httpClient *http.Client
 	dataPeers  []peer.ID
 	queueLock  *sync.Mutex
@@ -58,14 +59,14 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, pushNodes []peer.ID, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, pushNodes []peer.ID, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error, sendError  func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error) *MessageRetriever {
 	dial := gonet.Dial
 	if dialer != nil {
 		dial = dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, client, pushNodes, new(sync.Mutex), make(chan struct{}), make(chan struct{}, 5), new(sync.WaitGroup)}
+	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, sendError, client, pushNodes, new(sync.Mutex), make(chan struct{}), make(chan struct{}, 5), new(sync.WaitGroup)}
 	mr.Add(1)
 	return &mr
 }
@@ -349,7 +350,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	}
 
 	// Dispatch handler
-	_, err := handler(*id, env.Message, true)
+	resp, err := handler(*id, env.Message, true)
 	if err != nil && err == net.OutOfOrderMessage {
 		ser, err := proto.Marshal(&env)
 		if err == nil {
@@ -360,6 +361,10 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 		} else {
 			log.Errorf("Error serializing offline message %s for storage")
 		}
+	} else if env.Message.MessageType == pb.Message_ORDER && err != nil && resp != nil {
+		log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
+		m.sendError(id.Pretty(), nil, *resp)
+		return err
 	} else if err != nil {
 		log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
 		return err

@@ -234,7 +234,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+				var errStr string
+				errMsg := new(pb.Error)
+				err := ptypes.UnmarshalAny(resp.Payload, errMsg)
+				if err == nil {
+					errStr = errMsg.ErrorMessage
+				} else { // For backwards compatibility check for a string payload
+					errStr = string(resp.Payload.Value)
+				}
+				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -384,7 +392,15 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+				var errStr string
+				errMsg := new(pb.Error)
+				err := ptypes.UnmarshalAny(resp.Payload, errMsg)
+				if err == nil {
+					errStr = errMsg.ErrorMessage
+				} else { // For backwards compatibility check for a string payload
+					errStr = string(resp.Payload.Value)
+				}
+				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")

@@ -812,7 +812,7 @@ func (x *Start) Execute(args []string) error {
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck, core.Node.SendError)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)

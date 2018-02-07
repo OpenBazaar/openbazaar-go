@@ -244,13 +244,22 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 }
 
 func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
-	contract := new(pb.RicardianContract)
 	offline, _ := options.(bool)
+	contract := new(pb.RicardianContract)
+	var orderId string
 	errorResponse := func(error string) *pb.Message {
-		a := &any.Any{Value: []byte(error)}
+		e := &pb.Error{
+			Code: 0,
+			ErrorMessage: error,
+			OrderID: orderId,
+		}
+		a, _ := ptypes.MarshalAny(e)
 		m := &pb.Message{
 			MessageType: pb.Message_ERROR,
 			Payload:     a,
+		}
+		if offline {
+			service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false)
 		}
 		return m
 	}
@@ -260,7 +269,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 	err := ptypes.UnmarshalAny(pmes.Payload, contract)
 	if err != nil {
-		return errorResponse("Could not unmarshal order"), err
+		return nil, err
+	}
+
+	orderId, err = service.node.CalcOrderId(contract.BuyerOrder)
+	if err != nil {
+		return errorResponse(err.Error()), err
 	}
 
 	pro, _ := service.node.GetProfile()
@@ -269,7 +283,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 
 	err = service.node.ValidateOrder(contract, !offline)
-	if err != nil && err != core.UnknowListingError{
+	if err != nil && (err != core.UnknowListingError || !offline) {
 		return errorResponse(err.Error()), err
 	}
 	currentTime := time.Now()
@@ -315,10 +329,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
-		if err != nil {
-			return errorResponse(err.Error()), err
-		}
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
 			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
@@ -390,11 +400,6 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedScript(script)
-		orderId, err := service.node.CalcOrderId(contract.BuyerOrder)
-		if err != nil {
-			log.Error(err)
-			return errorResponse(err.Error()), err
-		}
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
