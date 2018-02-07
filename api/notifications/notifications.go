@@ -6,6 +6,7 @@ import (
 	"fmt"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 	"time"
+	"gx/ipfs/Qmc5do1bC3JH73MThEgKgKkgNKLmqrvh2uaE6919yDmUaa/procfs"
 )
 
 type Notification struct {
@@ -103,6 +104,15 @@ type RefundNotification struct {
 }
 
 type FulfillmentNotification struct {
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
+}
+
+type ProcessingErrorNotification struct {
 	ID           string    `json:"notificationId"`
 	Type         string    `json:"type"`
 	OrderId      string    `json:"orderId"`
@@ -260,6 +270,10 @@ func wrap(i interface{}) interface{} {
 	case FulfillmentNotification:
 		n := i.(FulfillmentNotification)
 		n.Type = "fulfillment"
+		return notificationWrapper{n}
+	case ProcessingErrorNotification:
+		n := i.(FulfillmentNotification)
+		n.Type = "processingError"
 		return notificationWrapper{n}
 	case CompletionNotification:
 		n := i.(CompletionNotification)

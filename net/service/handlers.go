@@ -67,6 +67,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleBlock
 	case pb.Message_STORE:
 		return service.handleStore
+	case pb.Message_ERROR:
+		return service.handleError
 	default:
 		return nil
 	}
@@ -1458,4 +1460,47 @@ func (service *OpenBazaarService) handleStore(pid peer.ID, pmes *pb.Message, opt
 		Payload:     a,
 	}
 	return m, nil
+}
+
+func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
+	errorMessage := new(pb.Error)
+	err := ptypes.UnmarshalAny(pmes.Payload, errorMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the order
+	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(errorMessage.OrderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if state == pb.OrderState_PROCESSING_ERROR {
+		return nil, net.DuplicateMessage
+	}
+
+	service.datastore.Purchases().Put(errorMessage.OrderID, *contract, pb.OrderState_PROCESSING_ERROR, false)
+
+	var thumbnailTiny string
+	var thumbnailSmall string
+	var vendorHandle string
+	var vendorID string
+	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
+		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
+		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
+		if contract.VendorListings[0].VendorID != nil {
+			vendorID = contract.VendorListings[0].VendorID.PeerID
+			vendorHandle = contract.VendorListings[0].VendorID.Handle
+		}
+	}
+
+	// Send notification to websocket
+	n := notifications.ProcessingErrorNotification{notifications.NewID(), "processingError", errorMessage.OrderID, notifications.Thumbnail{thumbnailTiny, thumbnailSmall}, vendorHandle, vendorID}
+	service.broadcast <- n
+	service.datastore.Notifications().Put(n.ID, n, n.Type, time.Now())
+	log.Debugf("Received ERROR message from %s:%s", peer.Pretty(), errorMessage.ErrorMessage)
+	return nil, nil
 }
