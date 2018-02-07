@@ -16,7 +16,7 @@ openssl genrsa -out rootCA.key 4096
 openssl req -x509 -new -nodes -key rootCA.key -days 1024 -out OpenBazaar.crt -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=OpenBazaar.crt"
 openssl genrsa -out server.key 4096
 openssl req -new -key server.key -out server.csr -subj "/C=DE/ST=Germany/L=Walldorf/O=SAP SE/OU=Tools/CN=<server-ip>"
-openssl x509 -req -in server.csr -CA OpenBazaar.crt -CAkey rootCA.key -CAcreateserial -out server.crt
+openssl x509 -req -in server.csr -CA OpenBazaar.crt -CAkey rootCA.key -CAcreateserial -out server.crt -days 1024
 ```
 
 The above commands will generate three files that are of interest to us: `server.crt`, `server.key`, and `OpenBazaar.crt`.
