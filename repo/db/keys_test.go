@@ -5,21 +5,19 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"sync"
 	"testing"
 )
 
-var kdb KeysDB
+var kdb repo.KeyStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	kdb = KeysDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	kdb = NewKeyStore(conn, new(sync.Mutex))
 }
 
 func TestGetAll(t *testing.T) {
@@ -43,7 +41,7 @@ func TestPutKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
+	stmt, _ := kdb.PrepareQuery("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
 	defer stmt.Close()
 
 	var scriptAddress string
@@ -103,7 +101,7 @@ func TestImportKey(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, used, key from keys where scriptAddress=?")
+	stmt, _ := kdb.PrepareQuery("select scriptAddress, purpose, used, key from keys where scriptAddress=?")
 	defer stmt.Close()
 
 	var scriptAddress string
@@ -151,7 +149,7 @@ func TestMarkKeyAsUsed(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := kdb.db.Prepare("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
+	stmt, _ := kdb.PrepareQuery("select scriptAddress, purpose, keyIndex, used from keys where scriptAddress=?")
 	defer stmt.Close()
 
 	var scriptAddress string

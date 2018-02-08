@@ -3,19 +3,17 @@ package db
 import (
 	"bytes"
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
 )
 
-var odb OfflineMessagesDB
+var odb repo.OfflineMessageStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	odb = OfflineMessagesDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	odb = NewOfflineMessageStore(conn, new(sync.Mutex))
 }
 
 func TestOfflineMessagesPut(t *testing.T) {
@@ -24,7 +22,7 @@ func TestOfflineMessagesPut(t *testing.T) {
 		t.Error(err)
 	}
 
-	stmt, _ := odb.db.Prepare("select url, timestamp from offlinemessages where url=?")
+	stmt, _ := odb.PrepareQuery("select url, timestamp from offlinemessages where url=?")
 	defer stmt.Close()
 
 	var url string

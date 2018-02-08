@@ -12,11 +12,11 @@ var log = logging.MustGetLogger("ResyncManager")
 var ResyncInterval = time.Hour
 
 type ResyncManager struct {
-	sales repo.Sales
+	sales repo.SaleStore
 	w     wallet.Wallet
 }
 
-func NewResyncManager(salesDB repo.Sales, w wallet.Wallet) *ResyncManager {
+func NewResyncManager(salesDB repo.SaleStore, w wallet.Wallet) *ResyncManager {
 	return &ResyncManager{salesDB, w}
 }
 

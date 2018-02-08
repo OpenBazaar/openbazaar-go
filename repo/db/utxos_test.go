@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -12,16 +13,13 @@ import (
 	"testing"
 )
 
-var uxdb UtxoDB
+var uxdb repo.UnspentTransactionOutputStore
 var utxo wallet.Utxo
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	uxdb = UtxoDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	uxdb = NewUnspentTransactionStore(conn, new(sync.Mutex))
 	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
 	outpoint := wire.NewOutPoint(sh1, 0)
 	utxo = wallet.Utxo{
@@ -38,7 +36,7 @@ func TestUtxoPut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := uxdb.db.Prepare("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
+	stmt, _ := uxdb.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var outpoint string
@@ -99,7 +97,7 @@ func TestSetWatchOnlyUtxo(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := uxdb.db.Prepare("select watchOnly from utxos where outpoint=?")
+	stmt, _ := uxdb.PrepareQuery("select watchOnly from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var watchOnlyInt int

@@ -2,12 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
 	"time"
 )
 
-var chdb ChatDB
+var chdb repo.ChatStore
 
 func init() {
 	setupDB()
@@ -16,10 +17,7 @@ func init() {
 func setupDB() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	chdb = ChatDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	chdb = NewChatStore(conn, new(sync.Mutex))
 }
 
 func TestChatDB_Put(t *testing.T) {
@@ -27,7 +25,7 @@ func TestChatDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select messageID, peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
+	stmt, err := chdb.PrepareQuery("select messageID, peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
 	defer stmt.Close()
 	var msgId string
 	var peerId string
@@ -208,7 +206,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if !updated {
 		t.Error("Updated bool returned incorrectly")
 	}
-	stmt, err := chdb.db.Prepare("select read from chat where messageID=?")
+	stmt, err := chdb.PrepareQuery("select read from chat where messageID=?")
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow("11111").Scan(&read)
@@ -221,7 +219,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if last != "11111" {
 		t.Error("Returned incorrect last message Id")
 	}
-	stmt2, err := chdb.db.Prepare("select read from chat where messageID=?")
+	stmt2, err := chdb.PrepareQuery("select read from chat where messageID=?")
 	defer stmt2.Close()
 	err = stmt2.QueryRow("22222").Scan(&read)
 	if err != nil {
@@ -237,7 +235,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if !updated {
 		t.Error("Updated bool returned incorrectly")
 	}
-	stmt3, err := chdb.db.Prepare("select read from chat where messageID=?")
+	stmt3, err := chdb.PrepareQuery("select read from chat where messageID=?")
 	defer stmt3.Close()
 	err = stmt3.QueryRow("22222").Scan(&read)
 	if err != nil {
@@ -257,7 +255,10 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Updated bool returned incorrectly")
 	}
 	stm := `select read, messageID from chat where peerID="xyz"`
-	rows, _ := chdb.db.Query(stm)
+	rows, err := chdb.PrepareAndExecuteQuery(stm)
+	if err != nil {
+		t.Error(err.Error())
+	}
 	defer rows.Close()
 	for rows.Next() {
 		var msgID string
@@ -309,7 +310,7 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select messageID from chat where messageID=?")
+	stmt, err := chdb.PrepareQuery("select messageID from chat where messageID=?")
 	defer stmt.Close()
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
@@ -337,7 +338,7 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select messageID from chat where messageID=?")
+	stmt, err := chdb.PrepareQuery("select messageID from chat where messageID=?")
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
 	if err == nil {

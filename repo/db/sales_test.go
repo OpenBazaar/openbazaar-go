@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -14,15 +15,12 @@ import (
 	"sync"
 )
 
-var saldb SalesDB
+var saldb repo.SaleStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	saldb = SalesDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	saldb = NewSaleStore(conn, new(sync.Mutex))
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)
 	item := new(pb.Listing_Item)
@@ -74,7 +72,7 @@ func TestPutSale(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.db.Prepare("select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress from sales where orderID=?")
+	stmt, _ := saldb.PrepareQuery("select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress from sales where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -135,7 +133,7 @@ func TestDeleteSale(t *testing.T) {
 		t.Error("Sale delete failed")
 	}
 
-	stmt, _ := saldb.db.Prepare("select orderID, contract, state from sales where orderID=?")
+	stmt, _ := saldb.PrepareQuery("select orderID, contract, state from sales where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -153,7 +151,7 @@ func TestMarkSaleAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.db.Prepare("select read from sales where orderID=?")
+	stmt, _ := saldb.PrepareQuery("select read from sales where orderID=?")
 	defer stmt.Close()
 
 	var read int
@@ -176,7 +174,7 @@ func TestMarkSaleAsUnread(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.db.Prepare("select read from sales where orderID=?")
+	stmt, _ := saldb.PrepareQuery("select read from sales where orderID=?")
 	defer stmt.Close()
 
 	var read int
@@ -400,7 +398,7 @@ func TestSalesDB_SetNeedsResync(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.db.Prepare("select needsSync from sales where orderID=?")
+	stmt, _ := saldb.PrepareQuery("select needsSync from sales where orderID=?")
 	defer stmt.Close()
 	var needsSyncInt int
 	err = stmt.QueryRow("orderID").Scan(&needsSyncInt)

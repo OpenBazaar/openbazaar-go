@@ -7,8 +7,11 @@ import (
 )
 
 type TxMetadataDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewTransactionMetadataStore(db *sql.DB, lock *sync.Mutex) repo.TransactionMetadataStore {
+	return &TxMetadataDB{modelStore{db, lock}}
 }
 
 func (t *TxMetadataDB) Put(m repo.Metadata) error {

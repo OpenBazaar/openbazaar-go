@@ -3,20 +3,18 @@ package db
 import (
 	"database/sql"
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
 	"time"
 )
 
-var notifDB NotficationsDB
+var notifDB repo.NotificationStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	notifDB = NotficationsDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	notifDB = NewNotificationStore(conn, new(sync.Mutex))
 }
 
 func TestNotficationsDB_Put(t *testing.T) {
@@ -25,7 +23,7 @@ func TestNotficationsDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := notifDB.db.Prepare("select * from notifications")
+	stmt, err := notifDB.PrepareQuery("select * from notifications")
 	defer stmt.Close()
 	var notifID string
 	var data []byte
@@ -64,7 +62,7 @@ func TestNotficationsDB_Delete(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.db.Prepare("select notifID from notifications where notifID='1'")
+	stmt, err := chdb.PrepareQuery("select notifID from notifications where notifID='1'")
 	defer stmt.Close()
 	var notifId int
 	err = stmt.QueryRow().Scan(&notifId)
@@ -136,7 +134,7 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := notifDB.db.Prepare("select read from notifications where notifID='5'")
+	stmt, err := notifDB.PrepareQuery("select read from notifications where notifID='5'")
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow().Scan(&read)
@@ -163,7 +161,7 @@ func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	rows, err := notifDB.db.Query("select * from notifications where read=0")
+	rows, err := notifDB.PrepareAndExecuteQuery("select * from notifications where read=0")
 	if err != nil {
 		t.Error(err)
 	}
