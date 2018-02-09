@@ -251,9 +251,9 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	var orderId string
 	errorResponse := func(error string) *pb.Message {
 		e := &pb.Error{
-			Code: 0,
+			Code:         0,
 			ErrorMessage: error,
-			OrderID: orderId,
+			OrderID:      orderId,
 		}
 		a, _ := ptypes.MarshalAny(e)
 		m := &pb.Message{
@@ -261,6 +261,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			Payload:     a,
 		}
 		if offline {
+			contract.Errors = []string{error}
 			service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PROCESSING_ERROR, false)
 		}
 		return m
@@ -1482,6 +1483,7 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 		return nil, net.DuplicateMessage
 	}
 
+	contract.Errors = []string{errorMessage.ErrorMessage}
 	service.datastore.Purchases().Put(errorMessage.OrderID, *contract, pb.OrderState_PROCESSING_ERROR, false)
 
 	var thumbnailTiny string

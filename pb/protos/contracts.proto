@@ -16,6 +16,7 @@ message RicardianContract {
     DisputeAcceptance disputeAcceptance                = 8;
     Refund refund                                      = 9;
     repeated Signature signatures                      = 10;
+    repeated string errors                             = 11;
 }
 
 message Listing {
