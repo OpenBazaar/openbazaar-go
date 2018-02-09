@@ -23,6 +23,7 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
@@ -235,9 +236,9 @@ func (w *LitecoindWallet) shutdownIfActive() {
 
 func (w *LitecoindWallet) CurrencyCode() string {
 	if w.params.Name == chaincfg.MainNetParams.Name {
-		return "LTC"
+		return "ltc"
 	} else {
-		return "TLTC"
+		return "tltc"
 	}
 }
 
@@ -256,7 +257,6 @@ func (w *LitecoindWallet) MasterPublicKey() *hd.ExtendedKey {
 func (w *LitecoindWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 	<-w.initChan
 	resp, _ := w.rpcClient.RawRequest("getaccountaddress", []json.RawMessage{json.RawMessage([]byte(`""`))})
-	fmt.Println("Account address: ", resp)
 	var a string
 	json.Unmarshal(resp, &a)
 	addr, _ := DecodeAddress(a, w.params)
@@ -277,14 +277,7 @@ func (w *LitecoindWallet) DecodeAddress(addr string) (btc.Address, error) {
 }
 
 func (w *LitecoindWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
-	if err != nil {
-		return nil, err
-	}
-	if len(addrs) == 0 {
-		return nil, errors.New("unknown script")
-	}
-	return addrs[0], nil
+	return ExtractPkScriptAddrs(script, w.params)
 }
 
 func (w *LitecoindWallet) AddressToScript(addr btc.Address) ([]byte, error) {
@@ -303,7 +296,6 @@ func (w *LitecoindWallet) HasKey(addr btc.Address) bool {
 func (w *LitecoindWallet) Balance() (confirmed, unconfirmed int64) {
 	<-w.initChan
 	resp, _ := w.rpcClient.RawRequest("getwalletinfo", []json.RawMessage{})
-
 	type walletInfo struct {
 		Balance     float64 `json:"balance"`
 		Unconfirmed float64 `json:"unconfirmed_balance"`
@@ -312,10 +304,7 @@ func (w *LitecoindWallet) Balance() (confirmed, unconfirmed int64) {
 	i := new(walletInfo)
 	json.Unmarshal(respBytes, i)
 	c, _ := btc.NewAmount(i.Balance)
-
-	fmt.Println("Balance: ", c)
 	u, _ := btc.NewAmount(i.Unconfirmed)
-	fmt.Println("Unconfirmed: ", u)
 	return int64(c.ToUnit(btc.AmountSatoshi)), int64(u.ToUnit(btc.AmountSatoshi))
 }
 
@@ -343,37 +332,56 @@ func (w *LitecoindWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 
 func (w *LitecoindWallet) Transactions() ([]wallet.Txn, error) {
 	<-w.initChan
-	var ret []wallet.Txn
-	resp, err := w.rpcClient.ListTransactions("*")
-
-	fmt.Println("Transactions (resp): ", resp)
+	var ret []wallet.Txn                                         //initialize transactions to return
+	resp, err := w.rpcClient.ListTransactionsCount("*", 9999999) //Bogus value... assume that no one will have over 9999999 transactions...
+	//I'd be impressed if they sold this much.
 	if err != nil {
 		return ret, err
 	}
+	fmt.Println("Transactions: ", resp)
+	var checkTx btcjson.ListTransactionsResult //initialize a checkTx that will follow behind resp iterations
+
+	if resp != nil {
+		checkTx = resp[0] //if resp is not empty, then set checkTx to 1st element
+	}
+
+	acc := 0.0 //set accumulator to 0.0 initially
+
 	for _, r := range resp {
-		amt, err := btc.NewAmount(r.Amount)
-		if err != nil {
-			return ret, err
-		}
-		ts := time.Unix(r.TimeReceived, 0)
-		height := int32(0)
-		if r.Confirmations > 0 {
-			h, err := chainhash.NewHashFromStr(r.BlockHash)
+		//Check to see if the transaction list is of the same transaction
+		if checkTx.TxID == r.TxID {
+			acc += r.Amount //if so then add the amount to the accumulator
+		} else {
+			//transfer the total txn amount to total LTC amount
+			amt, err := btc.NewAmount(acc)
 			if err != nil {
 				return ret, err
 			}
-			height, err = w.GetBlockHeight(h)
-			if err != nil {
-				return ret, err
+			//reset the accumulator to the next amount
+			acc = r.Amount
+
+			ts := time.Unix(checkTx.TimeReceived, 0) //Get time
+			height := int32(0)                       //Get height
+			if checkTx.Confirmations > 0 {           //only if confirmations are greater than zero, continue
+				h, err := chainhash.NewHashFromStr(checkTx.BlockHash)
+				if err != nil {
+					return ret, err
+				}
+				height, err = w.GetBlockHeight(h)
+				if err != nil {
+					return ret, err
+				}
 			}
+			t := wallet.Txn{ //transaction information including ID, value, height, time
+				Txid:      checkTx.TxID,
+				Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
+				Height:    height,
+				Timestamp: ts,
+			}
+			ret = append(ret, t) //add to transaction sheet
+
+			checkTx = r //set checkTx to r and iterate r
 		}
-		t := wallet.Txn{
-			Txid:      r.TxID,
-			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height:    height,
-			Timestamp: ts,
-		}
-		ret = append(ret, t)
 	}
 	return ret, nil
 }
@@ -382,16 +390,17 @@ func (w *LitecoindWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error
 	<-w.initChan
 	includeWatchOnly := false
 	t := wallet.Txn{}
+
 	resp, err := w.rpcClient.GetTransaction(&txid, &includeWatchOnly)
 	if err != nil {
 		return t, err
 	}
+
 	t.Txid = resp.TxID
 	t.Value = int64(resp.Amount * 100000000)
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
-	fmt.Println("Transaction: ", t)
 	return t, nil
 }
 
@@ -419,6 +428,7 @@ func (w *LitecoindWallet) ChainTip() (uint32, chainhash.Hash) {
 	return uint32(info.Blocks), *h
 }
 
+//If 1 UTXO is not enough, we must gather coins to see if we can fund transaction
 func (w *LitecoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
 	<-w.initChan
 	m := make(map[coinset.Coin]*hd.ExtendedKey)
@@ -442,12 +452,14 @@ func (w *LitecoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error
 		if err != nil {
 			return m, err
 		}
+
 		c := spvwallet.NewCoin(txhash.CloneBytes(), u.Vout, btc.Amount(u.Amount*100000000), u.Confirmations, scriptPubkey)
 
 		wif, err := w.rpcClient.DumpPrivKey(addr)
 		if err != nil {
 			return m, err
 		}
+
 		key := hd.NewExtendedKey(
 			w.params.HDPrivateKeyID[:],
 			wif.PrivKey.Serialize(),
@@ -461,18 +473,21 @@ func (w *LitecoindWallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error
 	return m, nil
 }
 
+//Will call buildTx on actual addr that we are sending
 func (w *LitecoindWallet) Spend(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	<-w.initChan
 	tx, err := w.buildTx(amount, addr, feeLevel)
 	if err != nil {
 		return nil, err
 	}
-
 	return w.rpcClient.SendRawTransaction(tx, false)
 }
 
+//Build transaction function. Uses the mock address listed in estimatefee
 func (w *LitecoindWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeLevel) (*wire.MsgTx, error) {
-	script, _ := PayToAddrScript(addr)
+	script, _ := PayToAddrScript(addr) //First determine type of script (P2PKH, P2SH, ...)
+
+	//Checks to see if transaction amount is negligible (dust)
 	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
 		return nil, wallet.ErrorDustAmount
 	}
@@ -480,15 +495,18 @@ func (w *LitecoindWallet) buildTx(amount int64, addr btc.Address, feeLevel walle
 	var additionalPrevScripts map[wire.OutPoint][]byte
 	var additionalKeysByAddress map[string]*btc.WIF
 
-	// Create input source
+	// Create input source and gather input coins
 	coinMap, err := w.gatherCoins()
 	if err != nil {
 		return nil, err
 	}
+
 	coins := make([]coinset.Coin, 0, len(coinMap))
 	for k := range coinMap {
 		coins = append(coins, k)
 	}
+
+	//Input source will use collective coins and obtain scripts for input transactions
 	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
@@ -520,15 +538,14 @@ func (w *LitecoindWallet) buildTx(amount int64, addr btc.Address, feeLevel walle
 	}
 
 	// Get the fee per kilobyte
-	feePerKB := int64(w.GetFeePerByte(feeLevel)) * 1000
+	feePerKB := int64(w.GetFeePerByte(feeLevel)) * 4500 //Set the fee a little higher in order to avoid not sending txn to mempool
 
-	// outputs
+	//Outputs
 	out := wire.NewTxOut(amount, script)
-	fmt.Println("Out amount: ", out)
 
 	// Create change source
 	changeSource := func() ([]byte, error) {
-		addr := w.CurrentAddress(wallet.INTERNAL)
+		addr := w.CurrentAddress(wallet.INTERNAL) //set change to current wallet addr
 		script, err := PayToAddrScript(addr)
 		if err != nil {
 			return []byte{}, err
@@ -538,8 +555,6 @@ func (w *LitecoindWallet) buildTx(amount int64, addr btc.Address, feeLevel walle
 
 	outputs := []*wire.TxOut{out}
 	authoredTx, err := spvwallet.NewUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
-	fmt.Println("Authored Tx: ", authoredTx)
-	fmt.Println("Outputs: ", outputs)
 	if err != nil {
 		return nil, err
 	}
@@ -547,16 +562,19 @@ func (w *LitecoindWallet) buildTx(amount int64, addr btc.Address, feeLevel walle
 	// BIP 69 sorting
 	txsort.InPlaceSort(authoredTx.Tx)
 
-	// Sign tx
+	// Sign the txn
 	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
 		addrStr := addr.EncodeAddress()
 		wif := additionalKeysByAddress[addrStr]
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
+
+	// Obtain script
 	getScript := txscript.ScriptClosure(func(
 		addr btc.Address) ([]byte, error) {
 		return []byte{}, nil
 	})
+
 	for i, txIn := range authoredTx.Tx.TxIn {
 		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
 		script, err := txscript.SignTxOutput(w.params,
@@ -625,7 +643,7 @@ func (w *LitecoindWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) 
 
 func (w *LitecoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	<-w.initChan
-	defautlFee := uint64(50)
+	defaultFee := uint64(50)
 	var nBlocks json.RawMessage
 	switch feeLevel {
 	case wallet.PRIOIRTY:
@@ -635,21 +653,21 @@ func (w *LitecoindWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	case wallet.ECONOMIC:
 		nBlocks = json.RawMessage([]byte(`6`))
 	default:
-		return defautlFee
+		return defaultFee
 	}
-	resp, err := w.rpcClient.RawRequest("estimatefee", []json.RawMessage{nBlocks})
-	fmt.Println("Fee estimate: ", resp)
+	resp, err := w.rpcClient.RawRequest("estimatesmartfee", []json.RawMessage{nBlocks})
 	if err != nil {
-		return defautlFee
+		return defaultFee
 	}
-	feePerKb, err := strconv.Atoi(string(resp))
+	feePerKb, err := strconv.Atoi(string(resp[23 : len(resp)-1]))
 	if err != nil {
-		return defautlFee
+		return defaultFee
 	}
 	if feePerKb <= 0 {
-		return defautlFee
+		return defaultFee
 	}
-	fee := feePerKb / 1000
+	fee := feePerKb
+
 	return uint64(fee)
 }
 
@@ -700,7 +718,7 @@ func (w *LitecoindWallet) EstimateSpendFee(amount int64, feeLevel wallet.FeeLeve
 
 func (w *LitecoindWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wallet.Signature, error) {
 	var sigs []wallet.Signature
-	tx := wire.NewMsgTx(1)
+	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -1030,15 +1048,15 @@ func (w *LitecoindWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshol
 }
 
 func (w *LitecoindWallet) AddWatchedScript(script []byte) error {
-	_, addrs, _, err := txscript.ExtractPkScriptAddrs(script, w.params)
+	addr, err := ExtractPkScriptAddrs(script, w.params)
 	if err != nil {
 		return err
 	}
 	select {
 	case <-w.initChan:
-		return w.addWatchedScript(addrs[0])
+		return w.addWatchedScript(addr)
 	default:
-		w.addrsToWatch = append(w.addrsToWatch, addrs[0])
+		w.addrsToWatch = append(w.addrsToWatch, addr)
 	}
 	return nil
 }

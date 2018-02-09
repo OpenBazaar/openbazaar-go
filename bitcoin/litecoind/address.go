@@ -116,10 +116,14 @@ func encodeSegWitAddress(hrp string, witnessVersion byte, witnessProgram []byte)
 // public key, the address will be associated with the passed defaultNet.
 func DecodeAddress(addr string, defaultNet *chaincfg.Params) (btc.Address, error) {
 	// Bech32 encoded segwit addresses start with a human-readable part
-	// (hrp) followed by '1'. For Bitcoin mainnet the hrp is "bc", and for
+	// (hrp) followed by '1'. For litecoin mainnet the hrp is "bc", and for
 	// testnet it is "tb". If the address string has a prefix that matches
 	// one of the prefixes for the known networks, we try to decode it as
 	// a segwit address.
+	checkID, ok := NetIDs[defaultNet.Name]
+	if !ok {
+		return nil, errors.New("unknown network parameters")
+	}
 	oneIndex := strings.LastIndexByte(addr, '1')
 	if oneIndex > 1 {
 		prefix := addr[:oneIndex+1]
@@ -137,6 +141,12 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (btc.Address, error
 
 			// The HRP is everything before the found '1'.
 			hrp := prefix[:len(prefix)-1]
+
+			if hrp == "bc" {
+				hrp = "ltc"
+			} else if hrp == "tb" {
+				hrp = "tltc"
+			}
 
 			switch len(witnessProg) {
 			case 20:
@@ -159,11 +169,6 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (btc.Address, error
 		return NewAddressPubKey(serializedPubKey, defaultNet)
 	}
 
-	checkID, ok := NetIDs[defaultNet.Name]
-	if !ok {
-		return nil, errors.New("unknown network parameters")
-	}
-
 	// Switch on decoded length to determine the type.
 	decoded, netID, err := base58.CheckDecode(addr)
 	if err != nil {
@@ -174,15 +179,15 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (btc.Address, error
 	}
 	switch len(decoded) {
 	case ripemd160.Size: // P2PKH or P2SH
-		isP2PKH := bytes.Equal([]byte{netID}, []byte{checkID.AddressPubKeyHash})
-		isP2SH := bytes.Equal([]byte{netID}, []byte{checkID.AddressScriptHash})
+		isP2PKH := netID == checkID.AddressPubKeyHash
+		isP2SH := netID == checkID.AddressScriptHash
 		switch hash160 := decoded; {
 		case isP2PKH && isP2SH:
 			return nil, ErrAddressCollision
 		case isP2PKH:
 			return newAddressPubKeyHash(hash160, defaultNet)
 		case isP2SH:
-			return newAddressScriptHashFromHash(hash160, netID)
+			return newAddressScriptHashFromHash(hash160, defaultNet)
 		default:
 			return nil, ErrUnknownAddressType
 		}
@@ -233,111 +238,6 @@ func decodeSegWitAddress(address string) (byte, []byte, error) {
 	}
 
 	return version, regrouped, nil
-}
-
-type AddressScriptHash struct {
-	hash  [ripemd160.Size]byte
-	netID byte
-}
-
-// NewAddressScriptHash returns a new AddressScriptHash.
-func NewAddressScriptHash(serializedScript []byte, net *chaincfg.Params) (*AddressScriptHash, error) {
-	scriptHash := Hash160(serializedScript)
-	return newAddressScriptHashFromHash(scriptHash, net.ScriptHashAddrID)
-}
-
-// NewAddressScriptHashFromHash returns a new AddressScriptHash.  scriptHash
-// must be 20 bytes.
-func NewAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*AddressScriptHash, error) {
-	return newAddressScriptHashFromHash(scriptHash, net.ScriptHashAddrID)
-}
-
-// newAddressScriptHashFromHash is the internal API to create a script hash
-// address with a known leading identifier byte for a network, rather than
-// looking it up through its parameters.  This is useful when creating a new
-// address structure from a string encoding where the identifer byte is already
-// known.
-func newAddressScriptHashFromHash(scriptHash []byte, netID byte) (*AddressScriptHash, error) {
-	// Check for a valid script hash length.
-	if len(scriptHash) != ripemd160.Size {
-		return nil, errors.New("scriptHash must be 20 bytes")
-	}
-
-	addr := &AddressScriptHash{netID: netID}
-	copy(addr.hash[:], scriptHash)
-	return addr, nil
-}
-
-// EncodeAddress returns the string encoding of a pay-to-script-hash
-// address.  Part of the Address interface.
-func (a *AddressScriptHash) EncodeAddress() string {
-	return encodeAddress(a.hash[:], a.netID)
-}
-
-// ScriptAddress returns the bytes to be included in a txout script to pay
-// to a script hash.  Part of the Address interface.
-func (a *AddressScriptHash) ScriptAddress() []byte {
-	return a.hash[:]
-}
-
-// IsForNet returns whether or not the pay-to-script-hash address is associated
-// with the passed bitcoin network.
-func (a *AddressScriptHash) IsForNet(net *chaincfg.Params) bool {
-	return a.netID == net.ScriptHashAddrID
-}
-
-// String returns a human-readable string for the pay-to-script-hash address.
-// This is equivalent to calling EncodeAddress, but is provided so the type can
-// be used as a fmt.Stringer.
-func (a *AddressScriptHash) String() string {
-	return a.EncodeAddress()
-}
-
-// Hash160 returns the underlying array of the script hash.  This can be useful
-// when an array is more appropiate than a slice (for example, when used as map
-// keys).
-func (a *AddressScriptHash) Hash160() *[ripemd160.Size]byte {
-	return &a.hash
-}
-
-// PayToAddrScript creates a new script to pay a transaction output to a the
-// specified address.
-func PayToAddrScript(addr btc.Address) ([]byte, error) {
-	const nilAddrErrStr = "unable to generate payment script for nil address"
-
-	switch addr := addr.(type) {
-	case *AddressPubKeyHash:
-		if addr == nil {
-			return nil, errors.New(nilAddrErrStr)
-		}
-		return payToPubKeyHashScript(addr.ScriptAddress())
-
-	case *AddressScriptHash:
-		if addr == nil {
-			return nil, errors.New(nilAddrErrStr)
-		}
-		return payToScriptHashScript(addr.ScriptAddress())
-
-	case *AddressPubKey:
-		if addr == nil {
-			return nil, errors.New(nilAddrErrStr)
-		}
-		return payToPubKeyScript(addr.ScriptAddress())
-
-	case *AddressWitnessPubKeyHash:
-		if addr == nil {
-			return nil, errors.New(nilAddrErrStr)
-		}
-		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
-	case *AddressWitnessScriptHash:
-		if addr == nil {
-			return nil, errors.New(nilAddrErrStr)
-		}
-		return payToWitnessScriptHashScript(addr.ScriptAddress())
-	}
-
-	return nil, fmt.Errorf("unable to generate payment script for unsupported "+
-		"address type %T", addr)
 }
 
 // AddressPubKeyHash is an Address for a pay-to-pubkey-hash (P2PKH)
@@ -409,6 +309,122 @@ func (a *AddressPubKeyHash) String() string {
 // keys).
 func (a *AddressPubKeyHash) Hash160() *[ripemd160.Size]byte {
 	return &a.hash
+}
+
+type AddressScriptHash struct {
+	hash  [ripemd160.Size]byte
+	netID byte
+}
+
+// NewAddressScriptHash returns a new AddressScriptHash.
+func NewAddressScriptHash(serializedScript []byte, net *chaincfg.Params) (*AddressScriptHash, error) {
+	scriptHash := Hash160(serializedScript)
+	return newAddressScriptHashFromHash(scriptHash, net)
+}
+
+// NewAddressScriptHashFromHash returns a new AddressScriptHash.  scriptHash
+// must be 20 bytes.
+func NewAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*AddressScriptHash, error) {
+	return newAddressScriptHashFromHash(scriptHash, net)
+}
+
+// newAddressScriptHashFromHash is the internal API to create a script hash
+// address with a known leading identifier byte for a network, rather than
+// looking it up through its parameters.  This is useful when creating a new
+// address structure from a string encoding where the identifer byte is already
+// known.
+func newAddressScriptHashFromHash(scriptHash []byte, net *chaincfg.Params) (*AddressScriptHash, error) {
+	// Check for a valid script hash length.
+	if len(scriptHash) != ripemd160.Size {
+		return nil, errors.New("scriptHash must be 20 bytes")
+	}
+
+	netID, ok := NetIDs[net.Name]
+	if !ok {
+		return nil, errors.New("unknown network parameters")
+	}
+
+	addr := &AddressScriptHash{netID: netID.AddressScriptHash}
+	copy(addr.hash[:], scriptHash)
+	return addr, nil
+}
+
+// EncodeAddress returns the string encoding of a pay-to-script-hash
+// address.  Part of the Address interface.
+func (a *AddressScriptHash) EncodeAddress() string {
+	return encodeAddress(a.hash[:], a.netID)
+}
+
+// ScriptAddress returns the bytes to be included in a txout script to pay
+// to a script hash.  Part of the Address interface.
+func (a *AddressScriptHash) ScriptAddress() []byte {
+	return a.hash[:]
+}
+
+// IsForNet returns whether or not the pay-to-script-hash address is associated
+// with the passed bitcoin network.
+func (a *AddressScriptHash) IsForNet(net *chaincfg.Params) bool {
+	checkID, ok := NetIDs[net.Name]
+	if !ok {
+		return false
+	}
+
+	return a.netID == checkID.AddressScriptHash
+}
+
+// String returns a human-readable string for the pay-to-script-hash address.
+// This is equivalent to calling EncodeAddress, but is provided so the type can
+// be used as a fmt.Stringer.
+func (a *AddressScriptHash) String() string {
+	return a.EncodeAddress()
+}
+
+// Hash160 returns the underlying array of the script hash.  This can be useful
+// when an array is more appropiate than a slice (for example, when used as map
+// keys).
+func (a *AddressScriptHash) Hash160() *[ripemd160.Size]byte {
+	return &a.hash
+}
+
+// PayToAddrScript creates a new script to pay a transaction output to the
+// specified address.
+func PayToAddrScript(addr btc.Address) ([]byte, error) {
+	const nilAddrErrStr = "unable to generate payment script for nil address"
+
+	switch addr := addr.(type) {
+
+	case *AddressScriptHash:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToScriptHashScript(addr.ScriptAddress())
+
+	case *AddressPubKeyHash:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToPubKeyHashScript(addr.ScriptAddress())
+
+	case *AddressPubKey:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToPubKeyScript(addr.ScriptAddress())
+
+	case *AddressWitnessPubKeyHash:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToWitnessPubKeyHashScript(addr.ScriptAddress())
+	case *AddressWitnessScriptHash:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToWitnessScriptHashScript(addr.ScriptAddress())
+	}
+
+	return nil, fmt.Errorf("unable to generate payment script for unsupported "+
+		"address type %T", addr)
 }
 
 // PubKeyFormat describes what format to use for a pay-to-pubkey address.
@@ -502,7 +518,12 @@ func (a *AddressPubKey) ScriptAddress() []byte {
 // IsForNet returns whether or not the pay-to-pubkey address is associated
 // with the passed bitcoin network.
 func (a *AddressPubKey) IsForNet(net *chaincfg.Params) bool {
-	return a.pubKeyHashID == net.PubKeyHashAddrID
+	checkID, ok := NetIDs[net.Name]
+	if !ok {
+		return false
+	}
+
+	return a.pubKeyHashID == checkID.AddressPubKeyHash
 }
 
 // String returns the hex-encoded human-readable string for the pay-to-pubkey
@@ -775,4 +796,27 @@ func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
 func payToPubKeyScript(serializedPubKey []byte) ([]byte, error) {
 	return txscript.NewScriptBuilder().AddData(serializedPubKey).
 		AddOp(txscript.OP_CHECKSIG).Script()
+}
+
+//--------------------------------------------------------------------------------
+
+// ExtractPkScriptAddrs returns the type of script, addresses and required
+// signatures associated with the passed PkScript.  Note that it only works for
+// 'standard' transaction script types.  Any data such as public keys which are
+// invalid are omitted from the results.
+func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (btc.Address, error) {
+	// No valid addresses or required signatures if the script doesn't
+	// parse.
+	if len(pkScript) == 1+1+20+1 && pkScript[0] == 0xa9 && pkScript[1] == 0x14 && pkScript[22] == 0x87 {
+		return NewAddressScriptHashFromHash(pkScript[2:22], chainParams)
+	} else if len(pkScript) == 1+1+1+20+1+1 && pkScript[0] == 0x76 && pkScript[1] == 0xa9 && pkScript[2] == 0x14 && pkScript[23] == 0x88 && pkScript[24] == 0xac {
+		return NewAddressPubKeyHash(pkScript[3:23], chainParams)
+	} else if len(pkScript) == 1+1+20 && pkScript[0] == 0x00 && pkScript[1] == 0x14 {
+		return NewAddressWitnessPubKeyHash(pkScript[2:21], chainParams)
+	} else if len(pkScript) == 1+1+20 && pkScript[0] == 0x00 && pkScript[1] == 0x14 {
+		return NewAddressWitnessScriptHash(pkScript, chainParams)
+	} else if len(pkScript) == 1+20+1 && pkScript[0] == 0x14 && pkScript[21] == 0xac {
+		return NewAddressPubKey(pkScript, chainParams)
+	}
+	return nil, errors.New("unknown script type")
 }
