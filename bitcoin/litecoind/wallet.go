@@ -338,7 +338,7 @@ func (w *LitecoindWallet) Transactions() ([]wallet.Txn, error) {
 	if err != nil {
 		return ret, err
 	}
-	fmt.Println("Transactions: ", resp)
+
 	var checkTx btcjson.ListTransactionsResult //initialize a checkTx that will follow behind resp iterations
 
 	if resp != nil {
