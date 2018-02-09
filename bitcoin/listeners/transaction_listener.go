@@ -39,7 +39,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addr)
-		if err == nil {
+		if err == nil && state != pb.OrderState_PROCESSING_ERROR{
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
