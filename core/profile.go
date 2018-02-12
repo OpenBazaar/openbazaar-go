@@ -167,6 +167,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		Indent:       "    ",
 		OrigName:     false,
 	}
+
+	if profile.Currencies == nil {
+		profile.Currencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+	}
+
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
 	}
