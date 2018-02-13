@@ -8,14 +8,12 @@ import (
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/mitchellh/go-homedir"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	"path/filepath"
-	"runtime"
 	"time"
 )
 
@@ -25,7 +23,11 @@ var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
-	if err := maybeCreateOBDirectories(repoRoot); err != nil {
+	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+		RootPath:        repoRoot,
+		TestModeEnabled: testnet,
+	})
+	if err := paths.BuildSchemaDirectories(); err != nil {
 		return err
 	}
 
@@ -90,55 +92,6 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	f.Close()
 
 	return initializeIpnsKeyspace(repoRoot, identityKey)
-}
-
-func maybeCreateOBDirectories(repoRoot string) error {
-	if err := os.MkdirAll(path.Join(repoRoot, "root"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "listings"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "ratings"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "tiny"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "small"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "medium"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "large"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "images", "original"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "feed"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "posts"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "channel"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "root", "files"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "outbox"), os.ModePerm); err != nil {
-		return err
-	}
-	if err := os.MkdirAll(path.Join(repoRoot, "logs"), os.ModePerm); err != nil {
-		return err
-	}
-	return nil
 }
 
 func checkWriteable(dir string) error {
@@ -277,29 +230,11 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 /* Returns the directory to store repo data in.
    It depends on the OS and whether or not we are on testnet. */
 func GetRepoPath(isTestnet bool) (string, error) {
-	// Set default base path and directory name
-	path := "~"
-	directoryName := "OpenBazaar2.0"
-
-	// Override OS-specific names
-	switch runtime.GOOS {
-	case "linux":
-		directoryName = ".openbazaar2.0"
-	case "darwin":
-		path = "~/Library/Application Support"
-	}
-
-	// Append testnet flag if on testnet
-	if isTestnet {
-		directoryName += "-testnet"
-	}
-
-	// Join the path and directory name, then expand the home path
-	fullPath, err := homedir.Expand(filepath.Join(path, directoryName))
+	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+		TestModeEnabled: isTestnet,
+	})
 	if err != nil {
 		return "", err
 	}
-
-	// Return the shortest lexical representation of the path
-	return filepath.Clean(fullPath), nil
+	return paths.RootPath(), nil
 }
