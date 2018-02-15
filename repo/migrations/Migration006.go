@@ -56,14 +56,16 @@ type migration006_listingDataAfterMigration struct {
 	Language      string                 `json:"language"`
 	AverageRating float32                `json:"averageRating"`
 	RatingCount   uint32                 `json:"ratingCount"`
-	ModeratorIDs  []string               `json:"moderatorIDs"`
+
+	// Adding ModeratorIDs
+	ModeratorIDs []string `json:"moderators"`
 }
 
 type migration006 struct{}
 
 func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
-		RootPath:        repoPath,
+		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})
 
@@ -97,7 +99,7 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		listingRecords  []migration006_listingDataBeforeMigration
 		migratedRecords []migration006_listingDataAfterMigration
 	)
-	listingJSON, err = ioutil.ReadFile(paths.RootPathJoin("listings.json"))
+	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("listings.json"))
 	if err != nil {
 		return err
 	}
@@ -127,13 +129,13 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(paths.RootPathJoin("listings.json"), listingJSON, os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("listings.json"), listingJSON, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(paths.RootPathJoin("repover"), []byte("7"), os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("7"), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -142,7 +144,7 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
-		RootPath:        repoPath,
+		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})
 	if err != nil {
@@ -155,7 +157,7 @@ func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		listingRecords  []migration006_listingDataAfterMigration
 		migratedRecords []migration006_listingDataBeforeMigration
 	)
-	listingJSON, err = ioutil.ReadFile(paths.RootPathJoin("listings.json"))
+	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("listings.json"))
 	if err != nil {
 		return err
 	}
@@ -184,13 +186,13 @@ func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(paths.RootPathJoin("listings.json"), listingJSON, os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("listings.json"), listingJSON, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	// Revert schema version
-	err = ioutil.WriteFile(paths.RootPathJoin("repover"), []byte("6"), os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("6"), os.ModePerm)
 	if err != nil {
 		return err
 	}

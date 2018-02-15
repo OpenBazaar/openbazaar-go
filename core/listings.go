@@ -70,6 +70,7 @@ type ListingData struct {
 	Language      string    `json:"language"`
 	AverageRating float32   `json:"averageRating"`
 	RatingCount   uint32    `json:"ratingCount"`
+	ModeratorIDs  []string  `json:"moderators"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {

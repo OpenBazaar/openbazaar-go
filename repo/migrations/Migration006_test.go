@@ -21,18 +21,18 @@ func TestMigration006(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{RootPath: testRepoPath, TestModeEnabled: true})
+	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.MkdirAll(paths.RootPathJoin("datastore"), os.ModePerm); err != nil {
+	if err = os.MkdirAll(paths.DataPathJoin("datastore"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	defer paths.DestroySchemaDirectories()
 	var (
 		databasePath = paths.DatastorePath()
-		listingPath  = paths.RootPathJoin("listings.json")
-		schemaPath   = paths.RootPathJoin("repover")
+		listingPath  = paths.DataPathJoin("listings.json")
+		schemaPath   = paths.DataPathJoin("repover")
 
 		schemaSql               = "PRAGMA key = 'foobarbaz';"
 		configCreateSql         = "CREATE TABLE `config` (`key` text NOT NULL, `value` blob, PRIMARY KEY(`key`));"
@@ -41,8 +41,8 @@ func TestMigration006(t *testing.T) {
 			"storemoderator_peerid_2",
 		}
 		listingFixtures = []migration006_listingDataBeforeMigration{
-			migration006_listingDataBeforeMigration{Hash: "Listing1"},
-			migration006_listingDataBeforeMigration{Hash: "Listing2"},
+			{Hash: "Listing1"},
+			{Hash: "Listing2"},
 		}
 		configRecord         = migration006_configRecord{StoreModerators: expectedStoreModerators}
 		insertConfigTemplate = "INSERT INTO config (key,value) VALUES ('settings','%s');"
@@ -89,7 +89,7 @@ func TestMigration006(t *testing.T) {
 	}
 
 	// Migration Up Assertions
-	if err = paths.MustVerifySchemaVersion("7"); err != nil {
+	if err = paths.VerifySchemaVersion("7"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,7 +128,7 @@ func TestMigration006(t *testing.T) {
 	}
 
 	// Migration Down Assertions
-	if err = paths.MustVerifySchemaVersion("6"); err != nil {
+	if err = paths.VerifySchemaVersion("6"); err != nil {
 		t.Error(err)
 	}
 

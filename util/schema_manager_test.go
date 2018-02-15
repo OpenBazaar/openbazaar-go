@@ -19,9 +19,9 @@ func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 		t.Error("Expected default OS to be set via runtime.GOOS constant")
 	}
 
-	expectedRootPath := "/foobarbaz"
+	expectedDataPath := "/foobarbaz"
 	subject, err = NewCustomSchemaManager(SchemaContext{
-		RootPath:        expectedRootPath,
+		DataPath:        expectedDataPath,
 		TestModeEnabled: true,
 	})
 	if err != nil {
@@ -30,15 +30,15 @@ func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	if subject.testModeEnabled != true {
 		t.Error("Expected test mode to be enabled")
 	}
-	if strings.HasPrefix(subject.RootPath(), expectedRootPath) != true {
-		t.Errorf("Expected rootPath to start with %s", expectedRootPath)
+	if strings.HasPrefix(subject.DataPath(), expectedDataPath) != true {
+		t.Errorf("Expected DataPath to start with %s", expectedDataPath)
 	}
 }
 
 func TestNewSchemaManagerServiceDatastorePath(t *testing.T) {
-	rootPath := "/root"
+	dataPath := "/root"
 	subject, err := NewCustomSchemaManager(SchemaContext{
-		RootPath:        rootPath,
+		DataPath:        dataPath,
 		TestModeEnabled: false,
 	})
 	if err != nil {
@@ -54,7 +54,7 @@ func TestNewSchemaManagerServiceDatastorePath(t *testing.T) {
 	}
 
 	subject, err = NewCustomSchemaManager(SchemaContext{
-		RootPath:        rootPath,
+		DataPath:        dataPath,
 		TestModeEnabled: true,
 	})
 	if err != nil {
@@ -70,7 +70,7 @@ func TestNewSchemaManagerServiceDatastorePath(t *testing.T) {
 	}
 }
 
-func TestMustVerifySchemaVersion(t *testing.T) {
+func TestVerifySchemaVersion(t *testing.T) {
 	var (
 		expectedVersion = "123"
 	)
@@ -78,10 +78,10 @@ func TestMustVerifySchemaVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.MkdirAll(paths.RootPath(), os.ModePerm); err != nil {
+	if err = os.MkdirAll(paths.DataPath(), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	versionFile, err := os.Create(paths.RootPathJoin("repover"))
+	versionFile, err := os.Create(paths.DataPathJoin("repover"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,24 +91,24 @@ func TestMustVerifySchemaVersion(t *testing.T) {
 	}
 	versionFile.Close()
 
-	if err = paths.MustVerifySchemaVersion(expectedVersion); err != nil {
+	if err = paths.VerifySchemaVersion(expectedVersion); err != nil {
 		t.Fatal("Expected schema version verification to pass with expected version. Error:", err)
 	}
-	if err = paths.MustVerifySchemaVersion("anotherversion"); err == nil {
+	if err = paths.VerifySchemaVersion("anotherversion"); err == nil {
 		t.Fatal("Expected schema version verification to fail with wrong version. Error:", err)
 	}
 
-	if err = os.Remove(paths.RootPathJoin("repover")); err != nil {
+	if err = os.Remove(paths.DataPathJoin("repover")); err != nil {
 		t.Fatal(err)
 	}
-	if err = paths.MustVerifySchemaVersion("missingfile!"); err == nil {
+	if err = paths.VerifySchemaVersion("missingfile!"); err == nil {
 		t.Fatal("Expected schema version verification to fail when file is missing. Error:", err)
 	}
 }
 
 func TestBuildSchemaDirectories(t *testing.T) {
 	paths, err := NewCustomSchemaManager(SchemaContext{
-		RootPath:        GenerateTempPath(),
+		DataPath:        GenerateTempPath(),
 		TestModeEnabled: true,
 	})
 	err = paths.BuildSchemaDirectories()
@@ -117,20 +117,20 @@ func TestBuildSchemaDirectories(t *testing.T) {
 	}
 	defer paths.DestroySchemaDirectories()
 
-	checkDirectoryCreation(t, paths.RootPathJoin("root"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "listings"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "feed"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "channel"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "files"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images", "tiny"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images", "small"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images", "medium"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images", "large"))
-	checkDirectoryCreation(t, paths.RootPathJoin("root", "images", "original"))
-	checkDirectoryCreation(t, paths.RootPathJoin("outbox"))
-	checkDirectoryCreation(t, paths.RootPathJoin("logs"))
-	checkDirectoryCreation(t, paths.RootPathJoin("datastore"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "listings"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "feed"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "channel"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "files"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images", "tiny"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images", "small"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images", "medium"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images", "large"))
+	checkDirectoryCreation(t, paths.DataPathJoin("root", "images", "original"))
+	checkDirectoryCreation(t, paths.DataPathJoin("outbox"))
+	checkDirectoryCreation(t, paths.DataPathJoin("logs"))
+	checkDirectoryCreation(t, paths.DataPathJoin("datastore"))
 }
 
 func checkDirectoryCreation(t *testing.T, directory string) {

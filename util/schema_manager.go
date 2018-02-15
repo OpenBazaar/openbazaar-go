@@ -14,7 +14,7 @@ import (
 
 type openbazaarSchemaManager struct {
 	os              string
-	rootPath        string
+	dataPath        string
 	testModeEnabled bool
 }
 
@@ -22,7 +22,7 @@ type openbazaarSchemaManager struct {
 // truth. When their zero values are provided, a reasonable default will be
 // assumed during runtime.
 type SchemaContext struct {
-	RootPath        string
+	DataPath        string
 	TestModeEnabled bool
 	OS              string
 }
@@ -47,17 +47,17 @@ func GenerateTempPath() string {
 	return filepath.Join(os.TempDir(), fmt.Sprintf("ob_tempdir_%d", r.Intn(999)))
 }
 
-// NewSchemaManager returns a service that handles the root storage directory
+// NewSchemaManager returns a service that handles the data storage directory
 // required during runtime. This service also ensures no errors can be produced
 // at runtime after initial creation. An error may be produced if the SchemaManager
-// is unable to verify the availability of the root storage directory.
+// is unable to verify the availability of the data storage directory.
 func NewSchemaManager() (*openbazaarSchemaManager, error) {
-	transformedPath, err := OpenbazaarPathTransform(defaultRootPath(), false)
+	transformedPath, err := OpenbazaarPathTransform(defaultDataPath(), false)
 	if err != nil {
 		return nil, err
 	}
 	return NewCustomSchemaManager(SchemaContext{
-		RootPath:        transformedPath,
+		DataPath:        transformedPath,
 		TestModeEnabled: false,
 		OS:              runtime.GOOS,
 	})
@@ -65,25 +65,25 @@ func NewSchemaManager() (*openbazaarSchemaManager, error) {
 
 // NewCustomSchemaManger allows a custom SchemaContext to be provided to change
 func NewCustomSchemaManager(ctx SchemaContext) (*openbazaarSchemaManager, error) {
-	if len(ctx.RootPath) == 0 {
-		path, err := OpenbazaarPathTransform(defaultRootPath(), ctx.TestModeEnabled)
+	if len(ctx.DataPath) == 0 {
+		path, err := OpenbazaarPathTransform(defaultDataPath(), ctx.TestModeEnabled)
 		if err != nil {
 			return nil, err
 		}
-		ctx.RootPath = path
+		ctx.DataPath = path
 	}
 	if len(ctx.OS) == 0 {
 		ctx.OS = runtime.GOOS
 	}
 
 	return &openbazaarSchemaManager{
-		rootPath:        ctx.RootPath,
+		dataPath:        ctx.DataPath,
 		testModeEnabled: ctx.TestModeEnabled,
 		os:              ctx.OS,
 	}, nil
 }
 
-func defaultRootPath() (path string) {
+func defaultDataPath() (path string) {
 	if runtime.GOOS == "darwin" {
 		return "~/Library/Application Support"
 	}
@@ -103,29 +103,29 @@ func directoryName(isTestnet bool) (directoryName string) {
 	return
 }
 
-// RootPath returns the expected location of the root storage directory
-func (m *openbazaarSchemaManager) RootPath() string { return m.rootPath }
+// DataPath returns the expected location of the data storage directory
+func (m *openbazaarSchemaManager) DataPath() string { return m.dataPath }
 
 // DatastorePath returns the expected location of the datastore file
 func (m *openbazaarSchemaManager) DatastorePath() string {
 	if m.testModeEnabled {
-		return m.RootPathJoin("datastore", "testnet.db")
+		return m.DataPathJoin("datastore", "testnet.db")
 	}
-	return m.RootPathJoin("datastore", "mainnet.db")
+	return m.DataPathJoin("datastore", "mainnet.db")
 }
 
-// RootPathJoin is a helper function which joins the pathArgs to the service's
-// rootPath and returns the result
-func (m *openbazaarSchemaManager) RootPathJoin(pathArgs ...string) string {
-	allPathArgs := append([]string{m.rootPath}, pathArgs...)
+// DataPathJoin is a helper function which joins the pathArgs to the service's
+// dataPath and returns the result
+func (m *openbazaarSchemaManager) DataPathJoin(pathArgs ...string) string {
+	allPathArgs := append([]string{m.dataPath}, pathArgs...)
 	return filepath.Join(allPathArgs...)
 }
 
-// MustVerifySchemaVersion will ensure that the schema is currently
+// VerifySchemaVersion will ensure that the schema is currently
 // the same as the expectedVersion otherwise returning an error. If the
 // schema is exactly the same, nil will be returned.
-func (m *openbazaarSchemaManager) MustVerifySchemaVersion(expectedVersion string) error {
-	schemaVersion, err := ioutil.ReadFile(m.RootPathJoin("repover"))
+func (m *openbazaarSchemaManager) VerifySchemaVersion(expectedVersion string) error {
+	schemaVersion, err := ioutil.ReadFile(m.DataPathJoin("repover"))
 	if err != nil {
 		return fmt.Errorf("Accessing schema version: %s", err.Error())
 	}
@@ -136,57 +136,57 @@ func (m *openbazaarSchemaManager) MustVerifySchemaVersion(expectedVersion string
 }
 
 func (m *openbazaarSchemaManager) BuildSchemaDirectories() error {
-	if err := os.MkdirAll(m.RootPathJoin("datastore"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("datastore"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "listings"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "listings"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "ratings"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "ratings"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images", "tiny"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images", "tiny"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images", "small"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images", "small"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images", "medium"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images", "medium"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images", "large"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images", "large"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "images", "original"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "images", "original"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "feed"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "feed"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "posts"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "posts"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "channel"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "channel"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("root", "files"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("root", "files"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("outbox"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("outbox"), os.ModePerm); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(m.RootPathJoin("logs"), os.ModePerm); err != nil {
+	if err := os.MkdirAll(m.DataPathJoin("logs"), os.ModePerm); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (m *openbazaarSchemaManager) DestroySchemaDirectories() {
-	os.RemoveAll(m.rootPath)
+	os.RemoveAll(m.dataPath)
 }
