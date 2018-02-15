@@ -809,6 +809,13 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	if cfg.Addresses.API != "" {
+		if _, err := serveHTTPApi(&core.Node.Context); err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
@@ -969,6 +976,68 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ipfsrepo
 	dhtRouting.Validator[ipfscore.IpnsValidatorTag] = namesys.IpnsRecordValidator
 	dhtRouting.Selector[ipfscore.IpnsValidatorTag] = namesys.IpnsSelectorFunc
 	return dhtRouting, nil
+}
+
+// serveHTTPApi collects options, creates listener, prints status message and starts serving requests
+func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
+	cfg, err := cctx.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: GetConfig() failed: %s", err)
+	}
+
+	apiAddr := cfg.Addresses.API
+	apiMaddr, err := ma.NewMultiaddr(apiAddr)
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr, err)
+	}
+
+	apiLis, err := manet.Listen(apiMaddr)
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
+	}
+	// we might have listened to /tcp/0 - lets see what we are listing on
+	apiMaddr = apiLis.Multiaddr()
+	fmt.Printf("API server listening on %s\n", apiMaddr)
+
+	// by default, we don't let you load arbitrary ipfs objects through the api,
+	// because this would open up the api to scripting vulnerabilities.
+	// only the webui objects are allowed.
+	// if you know what you're doing, go ahead and pass --unrestricted-api.
+	unrestricted := false
+	gatewayOpt := corehttp.GatewayOption(false, corehttp.WebUIPaths...)
+	if unrestricted {
+		gatewayOpt = corehttp.GatewayOption(true, "/ipfs", "/ipns")
+	}
+
+	var opts = []corehttp.ServeOption{
+		corehttp.MetricsCollectionOption("api"),
+		corehttp.CommandsOption(*cctx),
+		corehttp.WebUIOption,
+		gatewayOpt,
+		corehttp.VersionOption(),
+		corehttp.MetricsScrapingOption("/debug/metrics/prometheus"),
+		corehttp.LogOption(),
+	}
+
+	if len(cfg.Gateway.RootRedirect) > 0 {
+		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
+	}
+
+	node, err := cctx.ConstructNode()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: ConstructNode() failed: %s", err)
+	}
+
+	if err := node.Repo.SetAPIAddr(apiMaddr); err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: SetAPIAddr() failed: %s", err)
+	}
+
+	errc := make(chan error)
+	go func() {
+		errc <- corehttp.Serve(node, apiLis.NetListener(), opts...)
+		close(errc)
+	}()
+	return errc, nil
 }
 
 func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
