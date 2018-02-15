@@ -1,3 +1,4 @@
+//Litecoin Support for OpenBazaar
 package litecoind
 
 import (
