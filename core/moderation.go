@@ -227,7 +227,21 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	if err != nil {
 		return err
 	}
-	return n.UpdateIndexHashes(hashes)
+
+	settings, err := n.Datastore.Settings().Get()
+	if err != nil {
+		return err
+	}
+
+	// Update moderators and hashes on index
+	updater := func(listing *ListingData) error {
+		listing.ModeratorIDs = *settings.StoreModerators
+		if hash, ok := hashes[listing.Slug]; ok {
+			listing.Hash = hash
+		}
+		return nil
+	}
+	return n.UpdateEachListingOnIndex(updater)
 }
 
 func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {

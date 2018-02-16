@@ -359,6 +359,13 @@ func (n *OpenBazaarNode) updateListingOnDisk(index []ListingData, ld ListingData
 		index = append(index[:i], index[i+1:]...)
 	}
 
+	// Include current ModeratorIDs
+	settings, err := n.Datastore.Settings().Get()
+	if err != nil {
+		return err
+	}
+	ld.ModeratorIDs = *settings.StoreModerators
+
 	// Append our listing with the new hash to the list
 	if !updateRatings {
 		ld.AverageRating = avgRating
@@ -408,8 +415,10 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	return n.updateListingOnDisk(index, ld, true)
 }
 
-// Update the hashes in the listings.json file
-func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
+// UpdateEachListingOnIndex will visit each listing in the index and execute the function
+// with a pointer to the listing passed as the argument. The function should return
+// an error to further processing.
+func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingData) error) error {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	var index []ListingData
@@ -418,7 +427,6 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 	if os.IsNotExist(ferr) {
 		return nil
 	}
-	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return err
@@ -428,15 +436,12 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 		return err
 	}
 
-	// Update hashes
 	for _, d := range index {
-		hash, ok := hashes[d.Slug]
-		if ok {
-			d.Hash = hash
+		if err := updateListing(&d); err != nil {
+			return err
 		}
 	}
 
-	// Write it back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
