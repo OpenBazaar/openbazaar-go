@@ -10,6 +10,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
+type Migration006 struct{}
+
 type migration006_configRecord struct {
 	StoreModerators []string `json:"storeModerators"`
 }
@@ -61,9 +63,7 @@ type migration006_listingDataAfterMigration struct {
 	ModeratorIDs []string `json:"moderators"`
 }
 
-type migration006 struct{}
-
-func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
@@ -99,7 +99,7 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		listingRecords  []migration006_listingDataBeforeMigration
 		migratedRecords []migration006_listingDataAfterMigration
 	)
-	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("listings.json"))
+	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(paths.DataPathJoin("listings.json"), listingJSON, os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	return nil
 }
 
-func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
@@ -157,7 +157,7 @@ func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		listingRecords  []migration006_listingDataAfterMigration
 		migratedRecords []migration006_listingDataBeforeMigration
 	)
-	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("listings.json"))
+	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
 	if err != nil {
 		return err
 	}
@@ -183,10 +183,10 @@ func (migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 			RatingCount:   listing.RatingCount,
 		})
 	}
-	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
+	if listingJSON, err = json.MarshalIndent(migratedRecords, "", "    "); err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(paths.DataPathJoin("listings.json"), listingJSON, os.ModePerm)
+	err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
 	if err != nil {
 		return err
 	}

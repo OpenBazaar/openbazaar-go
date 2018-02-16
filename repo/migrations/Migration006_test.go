@@ -25,13 +25,13 @@ func TestMigration006(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = os.MkdirAll(paths.DataPathJoin("datastore"), os.ModePerm); err != nil {
+	if err = paths.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
 	defer paths.DestroySchemaDirectories()
 	var (
 		databasePath = paths.DatastorePath()
-		listingPath  = paths.DataPathJoin("listings.json")
+		listingPath  = paths.DataPathJoin("root", "listings.json")
 		schemaPath   = paths.DataPathJoin("repover")
 
 		schemaSql               = "PRAGMA key = 'foobarbaz';"
@@ -83,7 +83,7 @@ func TestMigration006(t *testing.T) {
 	}
 
 	// Execute Migration Up
-	migration := migration006{}
+	migration := Migration006{}
 	if err := migration.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
