@@ -82,15 +82,22 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		}
 	}
 	var (
-		configJSON   []byte
-		configRecord migration006_configRecord
+		configJSON      []byte
+		configRecord    migration006_configRecord
+		storeModerators []string
 	)
 	configQuery := db.QueryRow("SELECT value FROM config WHERE key = 'settings' LIMIT 1")
-	if err = configQuery.Scan(&configJSON); err != nil {
-		return err
-	}
-	if err = json.Unmarshal(configJSON, &configRecord); err != nil {
-		return err
+	err = configQuery.Scan(&configJSON)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			return err
+		}
+		storeModerators = make([]string, 0)
+	} else {
+		if err = json.Unmarshal(configJSON, &configRecord); err != nil {
+			return err
+		}
+		storeModerators = configRecord.StoreModerators
 	}
 
 	// Listing transformation
@@ -123,7 +130,7 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			Language:      listing.Language,
 			AverageRating: listing.AverageRating,
 			RatingCount:   listing.RatingCount,
-			ModeratorIDs:  configRecord.StoreModerators,
+			ModeratorIDs:  storeModerators,
 		})
 	}
 	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
