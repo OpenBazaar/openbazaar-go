@@ -7,16 +7,13 @@ import (
 	"testing"
 )
 
-var metDB TxMetadataDB
+var metDB repo.TransactionMetadataStore
 var m repo.Metadata
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	metDB = TxMetadataDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	metDB = NewTransactionMetadataStore(conn, new(sync.Mutex))
 	m = repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
 }
 
@@ -25,7 +22,7 @@ func TestTxMetadataDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := metDB.db.Prepare("select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata where txid=?")
+	stmt, err := metDB.PrepareQuery("select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata where txid=?")
 	defer stmt.Close()
 	var txid, addr, memo, orderId, thumbnail string
 	var canBumpFee int

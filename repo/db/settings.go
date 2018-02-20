@@ -12,8 +12,11 @@ import (
 var SettingsNotSetError error = errors.New("Settings not set")
 
 type SettingsDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewConfigurationStore(db *sql.DB, lock *sync.Mutex) repo.ConfigurationStore {
+	return &SettingsDB{modelStore{db, lock}}
 }
 
 func (s *SettingsDB) Put(settings repo.SettingsData) error {

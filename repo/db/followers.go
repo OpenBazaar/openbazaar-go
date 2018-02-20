@@ -8,8 +8,11 @@ import (
 )
 
 type FollowerDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewFollowerStore(db *sql.DB, lock *sync.Mutex) repo.FollowerStore {
+	return &FollowerDB{modelStore{db, lock}}
 }
 
 func (f *FollowerDB) Put(follower string, proof []byte) error {

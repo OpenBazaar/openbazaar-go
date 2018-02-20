@@ -13,8 +13,11 @@ import (
 )
 
 type PurchasesDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewPurchaseStore(db *sql.DB, lock *sync.Mutex) repo.PurchaseStore {
+	return &PurchasesDB{modelStore{db, lock}}
 }
 
 func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {

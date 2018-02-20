@@ -7,15 +7,12 @@ import (
 	"testing"
 )
 
-var coup CouponDB
+var coup repo.CouponStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	coup = CouponDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	coup = NewCouponStore(conn, new(sync.Mutex))
 }
 
 func TestPutCoupons(t *testing.T) {
@@ -28,7 +25,7 @@ func TestPutCoupons(t *testing.T) {
 		t.Error(err)
 	}
 	stm := "select slug, code, hash from coupons where slug=slug;"
-	rows, err := coup.db.Query(stm)
+	rows, err := coup.PrepareAndExecuteQuery(stm)
 	if err != nil {
 		t.Error(err)
 		return

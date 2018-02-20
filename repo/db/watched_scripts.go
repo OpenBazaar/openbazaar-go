@@ -3,12 +3,16 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 )
 
 type WatchedScriptsDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewWatchedScriptStore(db *sql.DB, lock *sync.Mutex) repo.WatchedScriptStore {
+	return &WatchedScriptsDB{modelStore{db, lock}}
 }
 
 func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {

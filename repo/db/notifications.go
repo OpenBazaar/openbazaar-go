@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,8 +13,11 @@ import (
 )
 
 type NotficationsDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewNotificationStore(db *sql.DB, lock *sync.Mutex) repo.NotificationStore {
+	return &NotficationsDB{modelStore{db, lock}}
 }
 
 func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error {
@@ -24,7 +28,7 @@ func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType 
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	_, err = n.db.Exec("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", notifID, string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
+	_, err = n.ExecuteQuery("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", notifID, string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
 	if err != nil {
 		return err
 	}
@@ -136,14 +140,14 @@ func (n *NotficationsDB) MarkAsRead(notifID string) error {
 func (n *NotficationsDB) MarkAllAsRead() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	_, err := n.db.Exec("update notifications set read=1")
+	_, err := n.ExecuteQuery("update notifications set read=1")
 	return err
 }
 
 func (n *NotficationsDB) Delete(notifID string) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	n.db.Exec("delete from notifications where notifID=?", notifID)
+	n.ExecuteQuery("delete from notifications where notifID=?", notifID)
 	return nil
 }
 

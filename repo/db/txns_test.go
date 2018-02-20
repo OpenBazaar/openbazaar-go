@@ -4,21 +4,19 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 	"testing"
 	"time"
 )
 
-var txdb TxnsDB
+var txdb repo.TransactionStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	txdb = TxnsDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	txdb = NewTransactionStore(conn, new(sync.Mutex))
 }
 
 func TestTxnsPut(t *testing.T) {
@@ -32,7 +30,7 @@ func TestTxnsPut(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := txdb.db.Prepare("select tx, value, height, watchOnly from txns where txid=?")
+	stmt, err := txdb.PrepareQuery("select tx, value, height, watchOnly from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
 	var val int

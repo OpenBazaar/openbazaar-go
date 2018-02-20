@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
@@ -14,16 +15,13 @@ import (
 	"time"
 )
 
-var pdb PointersDB
+var pdb repo.PointerStore
 var pointer ipfs.Pointer
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	pdb = PointersDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	pdb = NewPointerStore(conn, new(sync.Mutex))
 	randBytes := make([]byte, 32)
 	rand.Read(randBytes)
 	h, _ := multihash.Encode(randBytes, multihash.SHA2_256)
@@ -50,7 +48,7 @@ func TestPointersPut(t *testing.T) {
 		t.Error(err)
 	}
 
-	stmt, _ := pdb.db.Prepare("select pointerID, key, address, cancelID, purpose, timestamp from pointers where pointerID=?")
+	stmt, _ := pdb.PrepareQuery("select pointerID, key, address, cancelID, purpose, timestamp from pointers where pointerID=?")
 	defer stmt.Close()
 
 	var pointerID string
@@ -78,7 +76,7 @@ func TestDeletePointer(t *testing.T) {
 	if err != nil {
 		t.Error("Pointer delete failed")
 	}
-	stmt, _ := pdb.db.Prepare("select pointerID from pointers where pointerID=?")
+	stmt, _ := pdb.PrepareQuery("select pointerID from pointers where pointerID=?")
 	defer stmt.Close()
 
 	var pointerID string
@@ -96,7 +94,7 @@ func TestDeleteAllPointers(t *testing.T) {
 	if err != nil {
 		t.Error("Pointer delete failed")
 	}
-	stmt, _ := pdb.db.Prepare("select pointerID from pointers where purpose=?")
+	stmt, _ := pdb.PrepareQuery("select pointerID from pointers where purpose=?")
 	defer stmt.Close()
 
 	var pointerID string
