@@ -64,8 +64,30 @@ type Node struct {
 	ipfsConfig *ipfscore.BuildCfg
 	apiConfig  *repo.APIConfig
 }
+type Mobile struct { }
 
-func NewNode(config NodeConfig) (*Node, error) {
+
+func NewOB(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
+
+	nodeconfig := NodeConfig{
+		RepoPath: repoPath,
+		AuthenticationToken: "",
+		Testnet: testnet,
+		UserAgent: userAgent,
+		WalletTrustedPeer: walletTrustedPeer,
+	}
+
+
+	var m Mobile
+	node, err := m.NewNode(nodeconfig, password, mnemonic)
+	//n.Start()
+	if(err != nil) {
+		fmt.Println(err)
+	}
+	return node
+}
+
+func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*Node, error) {
 
 	repoLockFile := filepath.Join(config.RepoPath, lockfile.LockFile)
 	os.Remove(repoLockFile)
@@ -75,7 +97,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now())
+	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now())
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -96,7 +118,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 
 	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	walletCfg, err := repo.GetWalletConfig(configFile)
@@ -242,7 +264,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	for _, pnd := range dataSharing.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pushNodes = append(pushNodes, p)
 	}
@@ -263,7 +285,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, errors.New("No gateway addresses configured")
 	}
 
-	return &Node{node: core.Node, config: config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	return &Node{config: config, node: core.Node, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
 }
 
 func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfscore.IpfsNode, commands.Context, error) {
@@ -288,6 +310,8 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 }
 
 func (n *Node) Start() error {
+	fmt.Println("Starting IPFS Node")
+	fmt.Println("Repository: ", n.config.RepoPath)
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
@@ -297,6 +321,7 @@ func (n *Node) Start() error {
 	n.node.IpfsNode = nd
 
 	// Get current directory root hash
+	fmt.Println("Getting IPNS keys")
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if hasherr != nil {
@@ -309,13 +334,14 @@ func (n *Node) Start() error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 	n.node.RootHash = ipath.Path(e.Value).String()
 
+	fmt.Println("Reading config file...")
 	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	republishInterval, err := repo.GetRepublishInterval(configFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Offline messaging storage
@@ -330,14 +356,17 @@ func (n *Node) Start() error {
 		authCookie.Value = n.config.AuthenticationToken
 		n.apiConfig.Authenticated = true
 	}
+	fmt.Println("Starting HTTP Gateway...")
 	gateway, err := newHTTPGateway(core.Node, authCookie, *n.apiConfig)
 	if err != nil {
 		return err
 	}
 	go gateway.Serve()
+	fmt.Println("Gateway serving...")
 
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
+		fmt.Println("Creating new node service...")
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
 		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, n.node.PushNodes, nil, n.node.SendOfflineAck)
 		go MR.Run()
@@ -351,7 +380,9 @@ func (n *Node) Start() error {
 		n.node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
 		n.node.Wallet.AddTransactionListener(WL.OnTransactionReceived)
 		su := bitcoin.NewStatusUpdater(n.node.Wallet, n.node.Broadcast, n.node.IpfsNode.Context())
+		fmt.Println("Starting Status Updater...")
 		go su.Start()
+		fmt.Println("Starting wallet...")
 		go n.node.Wallet.Start()
 
 		core.PublishLock.Unlock()
@@ -359,6 +390,7 @@ func (n *Node) Start() error {
 		if !core.InitalPublishComplete {
 			core.Node.SeedNode()
 		}
+		fmt.Println("Initial publish complete")
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
@@ -393,12 +425,15 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 // Collects options, creates listener, prints status message and starts serving requests
 func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
+	fmt.Println("Getting config...")
 	cfg, err := node.Context.GetConfig()
+
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a network listener
+	fmt.Println("Getting gateway multi-address...")
 	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
