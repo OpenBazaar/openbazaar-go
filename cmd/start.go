@@ -752,20 +752,22 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:             ctx,
-		IpfsNode:            nd,
-		RootHash:            ipath.Path(e.Value).String(),
-		RepoPath:            repoPath,
-		Datastore:           sqliteDB,
-		Wallet:              cryptoWallet,
-		NameSystem:          ns,
-		ExchangeRates:       exchangeRates,
-		PushNodes:           pushNodes,
-		AcceptStoreRequests: dataSharing.AcceptStoreRequests,
-		TorDialer:           torDialer,
-		UserAgent:           core.USERAGENT,
-		BanManager:          bm,
-		IPNSBackupAPI:       cfg.Ipns.BackUpAPI,
+		Context:              ctx,
+		IpfsNode:             nd,
+		RootHash:             ipath.Path(e.Value).String(),
+		RepoPath:             repoPath,
+		Datastore:            sqliteDB,
+		Wallet:               cryptoWallet,
+		NameSystem:           ns,
+		ExchangeRates:        exchangeRates,
+		PushNodes:            pushNodes,
+		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
+		TorDialer:            torDialer,
+		UserAgent:            core.USERAGENT,
+		BanManager:           bm,
+		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
+		TestnetEnable:        x.Testnet,
+		RegressionTestEnable: x.Regtest,
 	}
 	core.PublishLock.Lock()
 
