@@ -519,6 +519,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	order.RatingKeys = ratingKeys
 
 	addedListings := make(map[string]*pb.Listing)
+	containsPhysicalGood := false
 	for _, item := range data.Items {
 		i := new(pb.Order_Item)
 
@@ -557,6 +558,9 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			if err := verifySignaturesOnListing(sl); err != nil {
 				return nil, err
 			}
+			if sl.Listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+				containsPhysicalGood = true
+			}
 			contract.VendorListings = append(contract.VendorListings, sl.Listing)
 			s := new(pb.Signature)
 			s.Section = pb.Signature_LISTING
@@ -570,6 +574,19 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 
 		if strings.ToLower(listing.Metadata.AcceptedCurrencies[0]) != strings.ToLower(n.Wallet.CurrencyCode()) {
 			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrencies[0], n.Wallet.CurrencyCode())
+		}
+
+		// Make sure shipping fields are filled if the order contains a physical good
+		if containsPhysicalGood {
+			if order.Shipping == nil {
+				return nil, errors.New("Order is missing shipping object")
+			}
+			if contract.BuyerOrder.Shipping.Address == "" {
+				return nil, errors.New("Shipping address is empty")
+			}
+			if contract.BuyerOrder.Shipping.ShipTo == "" {
+				return nil, errors.New("Ship to name is empty")
+			}
 		}
 
 		// Remove any duplicate coupons

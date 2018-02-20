@@ -1615,7 +1615,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !(state == pb.OrderState_PENDING && len(records) > 0) || state != pb.OrderState_PENDING || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING or partially funded and only a direct payment to cancel")
 		return
 	}
@@ -2025,8 +2025,8 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT or FULFILLED to start a dispute")
 		return
 	}
-	if !isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PENDING, or FULFILLED to start a dispute")
+	if !isSale && !(state == pb.OrderState_AWAITING_FULFILLMENT || state == pb.OrderState_PENDING || state == pb.OrderState_FULFILLED || state == pb.OrderState_PROCESSING_ERROR) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PENDING, PROCESSING_ERROR or FULFILLED to start a dispute")
 		return
 	}
 
