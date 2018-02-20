@@ -572,7 +572,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		}
 
 		// Make sure shipping fields are filled if the order contains a physical good
-		if containsPhysicalGood && !(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()){
+		if containsPhysicalGood && !(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()) {
 			if order.Shipping == nil {
 				return nil, errors.New("Order is missing shipping object")
 			}
