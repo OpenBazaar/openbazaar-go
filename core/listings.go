@@ -1052,8 +1052,6 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
-		case noSigError:
-			return errors.New("Contract does not contain listing signature")
 		case invalidSigError:
 			return errors.New("Vendor's identity signature on contact failed to verify")
 		case matchKeyError:
