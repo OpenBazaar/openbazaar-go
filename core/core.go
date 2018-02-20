@@ -99,12 +99,21 @@ type OpenBazaarNode struct {
 
 	// Last ditch API to find records that dropped out of the DHT
 	IPNSBackupAPI string
+
+	TestnetEnable        bool
+	RegressionTestEnable bool
 }
 
 // Unpin the current node repo, re-add it, then publish to IPNS
 var seedLock sync.Mutex
 var PublishLock sync.Mutex
 var InitalPublishComplete bool = false
+
+// TestNetworkEnabled indicates whether the node is operating with test parameters
+func (n *OpenBazaarNode) TestNetworkEnabled() bool { return n.TestnetEnable }
+
+// RegressionNetworkEnabled indicates whether the node is operating with regression parameters
+func (n *OpenBazaarNode) RegressionNetworkEnabled() bool { return n.RegressionTestEnable }
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
