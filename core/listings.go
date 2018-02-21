@@ -19,7 +19,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
 	"github.com/microcosm-cc/bluemonday"
@@ -106,15 +105,13 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	sl := new(pb.SignedListing)
 
-	// Set hardcode escrow timeout. This may change in the future
-	var testnet bool
-	if n.Wallet.Params().Name == chaincfg.MainNetParams.Name {
-		listing.Metadata.EscrowTimeoutHours = EscrowTimeout
-	} else {
-		testnet = true
+	// Temporary hack to work around test env shortcomings
+	if n.TestNetworkEnabled() || n.RegressionNetworkEnabled() {
 		if listing.Metadata.EscrowTimeoutHours == 0 {
 			listing.Metadata.EscrowTimeoutHours = 1
 		}
+	} else {
+		listing.Metadata.EscrowTimeoutHours = EscrowTimeout
 	}
 
 	// Set crypto currency
@@ -139,7 +136,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Check the listing data is correct for continuing
-	if err := validateListing(listing, testnet); err != nil {
+	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
+	if err := validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
@@ -1060,8 +1058,6 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
-		case noSigError:
-			return errors.New("Contract does not contain listing signature")
 		case invalidSigError:
 			return errors.New("Vendor's identity signature on contact failed to verify")
 		case matchKeyError:

@@ -547,8 +547,6 @@ func verifySignaturesOnPost(sl *pb.SignedPost) error {
 		sl.Post.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
-		case noSigError:
-			return errors.New("Post does not contain signature")
 		case invalidSigError:
 			return errors.New("Vendor's identity signature on post failed to verify")
 		case matchKeyError:
