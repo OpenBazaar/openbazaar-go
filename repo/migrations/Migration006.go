@@ -68,77 +68,88 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})
-
-	// Get ModeratorIDs
-	db, err := sql.Open("sqlite3", paths.DatastorePath())
 	if err != nil {
 		return err
 	}
-	if databasePassword != "" {
-		p := fmt.Sprintf("PRAGMA key = '%s';", databasePassword)
-		_, err := db.Exec(p)
+
+	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
+	indexExists := true
+	if _, err := os.Stat(paths.DataPathJoin("root", "listings.json")); os.IsNotExist(err) {
+		indexExists = false
+	}
+
+	if indexExists {
+		// Get ModeratorIDs
+		db, err := sql.Open("sqlite3", paths.DatastorePath())
 		if err != nil {
 			return err
 		}
-	}
-	var (
-		configJSON      []byte
-		configRecord    migration006_configRecord
-		storeModerators []string
-	)
-	configQuery := db.QueryRow("SELECT value FROM config WHERE key = 'settings' LIMIT 1")
-	err = configQuery.Scan(&configJSON)
-	if err != nil {
-		if err != sql.ErrNoRows {
+		if databasePassword != "" {
+			p := fmt.Sprintf("PRAGMA key = '%s';", databasePassword)
+			_, err := db.Exec(p)
+			if err != nil {
+				return err
+			}
+		}
+		var (
+			configJSON      []byte
+			configRecord    migration006_configRecord
+			storeModerators []string
+		)
+		configQuery := db.QueryRow("SELECT value FROM config WHERE key = 'settings' LIMIT 1")
+		err = configQuery.Scan(&configJSON)
+		if err != nil {
+			if err != sql.ErrNoRows {
+				return err
+			}
+			storeModerators = make([]string, 0)
+		} else {
+			if err = json.Unmarshal(configJSON, &configRecord); err != nil {
+				return err
+			}
+			storeModerators = configRecord.StoreModerators
+		}
+
+		// Listing transformation
+		var (
+			listingJSON     []byte
+			listingRecords  []migration006_listingDataBeforeMigration
+			migratedRecords []migration006_listingDataAfterMigration
+		)
+		listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
+		if err != nil {
 			return err
 		}
-		storeModerators = make([]string, 0)
-	} else {
-		if err = json.Unmarshal(configJSON, &configRecord); err != nil {
+		if err = json.Unmarshal(listingJSON, &listingRecords); err != nil {
 			return err
 		}
-		storeModerators = configRecord.StoreModerators
-	}
 
-	// Listing transformation
-	var (
-		listingJSON     []byte
-		listingRecords  []migration006_listingDataBeforeMigration
-		migratedRecords []migration006_listingDataAfterMigration
-	)
-	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(listingJSON, &listingRecords); err != nil {
-		return err
-	}
-
-	for _, listing := range listingRecords {
-		migratedRecords = append(migratedRecords, migration006_listingDataAfterMigration{
-			Hash:          listing.Hash,
-			Slug:          listing.Slug,
-			Title:         listing.Title,
-			Categories:    listing.Categories,
-			NSFW:          listing.NSFW,
-			ContractType:  listing.ContractType,
-			Description:   listing.Description,
-			Thumbnail:     listing.Thumbnail,
-			Price:         listing.Price,
-			ShipsTo:       listing.ShipsTo,
-			FreeShipping:  listing.FreeShipping,
-			Language:      listing.Language,
-			AverageRating: listing.AverageRating,
-			RatingCount:   listing.RatingCount,
-			ModeratorIDs:  storeModerators,
-		})
-	}
-	if listingJSON, err = json.Marshal(migratedRecords); err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
-	if err != nil {
-		return err
+		for _, listing := range listingRecords {
+			migratedRecords = append(migratedRecords, migration006_listingDataAfterMigration{
+				Hash:          listing.Hash,
+				Slug:          listing.Slug,
+				Title:         listing.Title,
+				Categories:    listing.Categories,
+				NSFW:          listing.NSFW,
+				ContractType:  listing.ContractType,
+				Description:   listing.Description,
+				Thumbnail:     listing.Thumbnail,
+				Price:         listing.Price,
+				ShipsTo:       listing.ShipsTo,
+				FreeShipping:  listing.FreeShipping,
+				Language:      listing.Language,
+				AverageRating: listing.AverageRating,
+				RatingCount:   listing.RatingCount,
+				ModeratorIDs:  storeModerators,
+			})
+		}
+		if listingJSON, err = json.Marshal(migratedRecords); err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Bump schema version
@@ -158,44 +169,51 @@ func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		return err
 	}
 
-	// Listing transformation
-	var (
-		listingJSON     []byte
-		listingRecords  []migration006_listingDataAfterMigration
-		migratedRecords []migration006_listingDataBeforeMigration
-	)
-	listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
-	if err != nil {
-		return err
-	}
-	if err = json.Unmarshal(listingJSON, &listingRecords); err != nil {
-		return err
+	indexExists := true
+	if _, err := os.Stat(paths.DataPathJoin("root", "listings.json")); os.IsNotExist(err) {
+		indexExists = false
 	}
 
-	for _, listing := range listingRecords {
-		migratedRecords = append(migratedRecords, migration006_listingDataBeforeMigration{
-			Hash:          listing.Hash,
-			Slug:          listing.Slug,
-			Title:         listing.Title,
-			Categories:    listing.Categories,
-			NSFW:          listing.NSFW,
-			ContractType:  listing.ContractType,
-			Description:   listing.Description,
-			Thumbnail:     listing.Thumbnail,
-			Price:         listing.Price,
-			ShipsTo:       listing.ShipsTo,
-			FreeShipping:  listing.FreeShipping,
-			Language:      listing.Language,
-			AverageRating: listing.AverageRating,
-			RatingCount:   listing.RatingCount,
-		})
-	}
-	if listingJSON, err = json.MarshalIndent(migratedRecords, "", "    "); err != nil {
-		return err
-	}
-	err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
-	if err != nil {
-		return err
+	if indexExists {
+		// Listing transformation
+		var (
+			listingJSON     []byte
+			listingRecords  []migration006_listingDataAfterMigration
+			migratedRecords []migration006_listingDataBeforeMigration
+		)
+		listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
+		if err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listingJSON, &listingRecords); err != nil {
+			return err
+		}
+
+		for _, listing := range listingRecords {
+			migratedRecords = append(migratedRecords, migration006_listingDataBeforeMigration{
+				Hash:          listing.Hash,
+				Slug:          listing.Slug,
+				Title:         listing.Title,
+				Categories:    listing.Categories,
+				NSFW:          listing.NSFW,
+				ContractType:  listing.ContractType,
+				Description:   listing.Description,
+				Thumbnail:     listing.Thumbnail,
+				Price:         listing.Price,
+				ShipsTo:       listing.ShipsTo,
+				FreeShipping:  listing.FreeShipping,
+				Language:      listing.Language,
+				AverageRating: listing.AverageRating,
+				RatingCount:   listing.RatingCount,
+			})
+		}
+		if listingJSON, err = json.MarshalIndent(migratedRecords, "", "    "); err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Revert schema version
