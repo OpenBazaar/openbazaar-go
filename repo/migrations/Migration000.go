@@ -8,11 +8,9 @@ import (
 	"path"
 )
 
-var Migration000 migration000
+type Migration000 struct{}
 
-type migration000 struct{}
-
-func (migration000) Up(repoPath string, dbPassword string, testnet bool) error {
+func (Migration000) Up(repoPath string, dbPassword string, testnet bool) error {
 	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
 		return err
@@ -69,7 +67,7 @@ func (migration000) Up(repoPath string, dbPassword string, testnet bool) error {
 	return nil
 }
 
-func (migration000) Down(repoPath string, dbPassword string, testnet bool) error {
+func (Migration000) Down(repoPath string, dbPassword string, testnet bool) error {
 	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
 		return err

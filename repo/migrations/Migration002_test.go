@@ -21,7 +21,7 @@ func TestMigration002(t *testing.T) {
 	}
 	f.Write([]byte(testConfig2))
 	f.Close()
-	var m migration002
+	var m Migration002
 
 	// Up
 	err = m.Up("./", "", false)

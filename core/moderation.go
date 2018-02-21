@@ -218,7 +218,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			}
 			hashes[sl.Listing.Slug] = hash
 
-			return n.UpdateListingIndex(sl)
+			return nil
 		}
 		return nil
 	}
@@ -227,7 +227,16 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	if err != nil {
 		return err
 	}
-	return n.UpdateIndexHashes(hashes)
+
+	// Update moderators and hashes on index
+	updater := func(listing *ListingData) error {
+		listing.ModeratorIDs = moderators
+		if hash, ok := hashes[listing.Slug]; ok {
+			listing.Hash = hash
+		}
+		return nil
+	}
+	return n.UpdateEachListingOnIndex(updater)
 }
 
 func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {
