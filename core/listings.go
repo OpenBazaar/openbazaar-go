@@ -313,6 +313,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		ShipsTo:      shipsTo,
 		FreeShipping: freeShipping,
 		Language:     listing.Listing.Metadata.Language,
+		ModeratorIDs: listing.Listing.Moderators,
 	}
 	return ld, nil
 }
@@ -356,13 +357,6 @@ func (n *OpenBazaarNode) updateListingOnDisk(index []ListingData, ld ListingData
 		}
 		index = append(index[:i], index[i+1:]...)
 	}
-
-	// Include current ModeratorIDs
-	settings, err := n.Datastore.Settings().Get()
-	if err != nil {
-		return err
-	}
-	ld.ModeratorIDs = *settings.StoreModerators
 
 	// Append our listing with the new hash to the list
 	if !updateRatings {
@@ -434,10 +428,11 @@ func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingDat
 		return err
 	}
 
-	for _, d := range index {
+	for i, d := range index {
 		if err := updateListing(&d); err != nil {
 			return err
 		}
+		index[i] = d
 	}
 
 	f, err := os.Create(indexPath)
