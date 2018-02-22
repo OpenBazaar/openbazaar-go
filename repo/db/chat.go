@@ -9,8 +9,11 @@ import (
 )
 
 type ChatDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewChatStore(db *sql.DB, lock *sync.Mutex) repo.ChatStore {
+	return &ChatDB{modelStore{db, lock}}
 }
 
 func (c *ChatDB) Put(messageId string, peerId string, subject string, message string, timestamp time.Time, read bool, outgoing bool) error {

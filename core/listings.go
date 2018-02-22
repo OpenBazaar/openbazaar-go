@@ -69,6 +69,7 @@ type ListingData struct {
 	Language      string    `json:"language"`
 	AverageRating float32   `json:"averageRating"`
 	RatingCount   uint32    `json:"ratingCount"`
+	ModeratorIDs  []string  `json:"moderators"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -312,6 +313,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		ShipsTo:      shipsTo,
 		FreeShipping: freeShipping,
 		Language:     listing.Listing.Metadata.Language,
+		ModeratorIDs: listing.Listing.Moderators,
 	}
 	return ld, nil
 }
@@ -405,8 +407,10 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	return n.updateListingOnDisk(index, ld, true)
 }
 
-// Update the hashes in the listings.json file
-func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
+// UpdateEachListingOnIndex will visit each listing in the index and execute the function
+// with a pointer to the listing passed as the argument. The function should return
+// an error to further processing.
+func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingData) error) error {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
 	var index []ListingData
@@ -415,7 +419,6 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 	if os.IsNotExist(ferr) {
 		return nil
 	}
-	// Read existing file
 	file, err := ioutil.ReadFile(indexPath)
 	if err != nil {
 		return err
@@ -425,15 +428,13 @@ func (n *OpenBazaarNode) UpdateIndexHashes(hashes map[string]string) error {
 		return err
 	}
 
-	// Update hashes
-	for _, d := range index {
-		hash, ok := hashes[d.Slug]
-		if ok {
-			d.Hash = hash
+	for i, d := range index {
+		if err := updateListing(&d); err != nil {
+			return err
 		}
+		index[i] = d
 	}
 
-	// Write it back to file
 	f, err := os.Create(indexPath)
 	defer f.Close()
 	if err != nil {
@@ -1052,8 +1053,6 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		sl.Listing.VendorID.PeerID,
 	); err != nil {
 		switch err.(type) {
-		case noSigError:
-			return errors.New("Contract does not contain listing signature")
 		case invalidSigError:
 			return errors.New("Vendor's identity signature on contact failed to verify")
 		case matchKeyError:

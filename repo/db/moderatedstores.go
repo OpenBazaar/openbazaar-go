@@ -2,13 +2,17 @@ package db
 
 import (
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
 )
 
 type ModeratedDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewModeratedStore(db *sql.DB, lock *sync.Mutex) repo.ModeratedStore {
+	return &ModeratedDB{modelStore{db, lock}}
 }
 
 func (m *ModeratedDB) Put(peerId string) error {

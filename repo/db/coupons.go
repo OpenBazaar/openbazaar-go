@@ -8,8 +8,11 @@ import (
 )
 
 type CouponDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewCouponStore(db *sql.DB, lock *sync.Mutex) repo.CouponStore {
+	return &CouponDB{modelStore{db, lock}}
 }
 
 func (c *CouponDB) Put(coupons []repo.Coupon) error {

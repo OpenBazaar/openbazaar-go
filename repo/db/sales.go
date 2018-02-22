@@ -14,8 +14,11 @@ import (
 )
 
 type SalesDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewSaleStore(db *sql.DB, lock *sync.Mutex) repo.SaleStore {
+	return &SalesDB{modelStore{db, lock}}
 }
 
 func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.OrderState, read bool) error {

@@ -2,19 +2,17 @@ package db
 
 import (
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
 )
 
-var ivdb InventoryDB
+var ivdb repo.InventoryStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	ivdb = InventoryDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	ivdb = NewInventoryStore(conn, new(sync.Mutex))
 }
 
 func TestPutInventory(t *testing.T) {
@@ -22,7 +20,7 @@ func TestPutInventory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := ivdb.db.Prepare("select slug, variantIndex, count from inventory where slug=?")
+	stmt, err := ivdb.PrepareQuery("select slug, variantIndex, count from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
 	var variant int
@@ -68,7 +66,7 @@ func TestDeleteInventory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := ivdb.db.Prepare("select slug from inventory where slug=?")
+	stmt, _ := ivdb.PrepareQuery("select slug from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
 	stmt.QueryRow("inventory").Scan(&slug)
@@ -84,7 +82,7 @@ func TestDeleteAllInventory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := ivdb.db.Prepare("select slug from inventory where slug=?")
+	stmt, _ := ivdb.PrepareQuery("select slug from inventory where slug=?")
 	defer stmt.Close()
 	var slug string
 	stmt.QueryRow("slug").Scan(&slug)

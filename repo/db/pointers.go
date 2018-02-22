@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
@@ -13,8 +14,11 @@ import (
 )
 
 type PointersDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewPointerStore(db *sql.DB, lock *sync.Mutex) repo.PointerStore {
+	return &PointersDB{modelStore{db, lock}}
 }
 
 func (p *PointersDB) Put(pointer ipfs.Pointer) error {

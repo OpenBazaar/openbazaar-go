@@ -24,7 +24,7 @@ func TestMigration004(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var m migration004
+	var m Migration004
 	err = m.Up("./", "letmein", false)
 	if err != nil {
 		t.Error(err)

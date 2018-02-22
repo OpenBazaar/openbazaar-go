@@ -2,13 +2,17 @@ package db
 
 import (
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"time"
 )
 
 type OfflineMessagesDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewOfflineMessageStore(db *sql.DB, lock *sync.Mutex) repo.OfflineMessageStore {
+	return &OfflineMessagesDB{modelStore{db, lock}}
 }
 
 func (o *OfflineMessagesDB) Put(url string) error {

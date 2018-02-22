@@ -12,8 +12,11 @@ import (
 )
 
 type CasesDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewCaseStore(db *sql.DB, lock *sync.Mutex) repo.CaseStore {
+	return &CasesDB{modelStore{db, lock}}
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {

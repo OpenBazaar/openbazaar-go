@@ -4,11 +4,16 @@ import (
 	"database/sql"
 	"strconv"
 	"sync"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type FollowingDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewFollowingStore(db *sql.DB, lock *sync.Mutex) repo.FollowingStore {
+	return &FollowingDB{modelStore{db, lock}}
 }
 
 func (f *FollowingDB) Put(follower string) error {

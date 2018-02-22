@@ -4,19 +4,17 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
 )
 
-var wsdb WatchedScriptsDB
+var wsdb repo.WatchedScriptStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	wsdb = WatchedScriptsDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	wsdb = NewWatchedScriptStore(conn, new(sync.Mutex))
 }
 
 func TestWatchedScriptsDB_Put(t *testing.T) {
@@ -24,7 +22,7 @@ func TestWatchedScriptsDB_Put(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := wsdb.db.Prepare("select * from watchedscripts")
+	stmt, _ := wsdb.PrepareQuery("select * from watchedscripts")
 	defer stmt.Close()
 
 	var out string

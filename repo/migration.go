@@ -14,12 +14,13 @@ type Migration interface {
 }
 
 var Migrations = []Migration{
-	migrations.Migration000,
-	migrations.Migration001,
-	migrations.Migration002,
-	migrations.Migration003,
-	migrations.Migration004,
-	migrations.Migration005,
+	migrations.Migration000{},
+	migrations.Migration001{},
+	migrations.Migration002{},
+	migrations.Migration003{},
+	migrations.Migration004{},
+	migrations.Migration005{},
+	migrations.Migration006{},
 }
 
 // MigrateUp looks at the currently active migration version
