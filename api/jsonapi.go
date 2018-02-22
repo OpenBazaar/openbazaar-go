@@ -2019,12 +2019,12 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT or FULFILLED to start a dispute")
+	if isSale && (state != pb.OrderState_PARTIALLY_FULFILLED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either PARTIALLY_FULFILLED or FULFILLED to start a dispute")
 		return
 	}
-	if !isSale && !(state == pb.OrderState_AWAITING_FULFILLMENT || state == pb.OrderState_PENDING || state == pb.OrderState_FULFILLED || state == pb.OrderState_PROCESSING_ERROR) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PENDING, PROCESSING_ERROR or FULFILLED to start a dispute")
+	if !isSale && !(state == pb.OrderState_AWAITING_FULFILLMENT || state == pb.OrderState_PENDING || state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_FULFILLED || state == pb.OrderState_PROCESSING_ERROR) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PARTIALLY_FULFILLED, PENDING, PROCESSING_ERROR or FULFILLED to start a dispute")
 		return
 	}
 

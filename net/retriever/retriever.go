@@ -37,6 +37,19 @@ const (
 
 var log = logging.MustGetLogger("retriever")
 
+type MRConfig struct {
+	Db repo.Datastore
+	Ctx commands.Context
+	IPFSNode *core.IpfsNode
+	BanManger *net.BanManager
+	Service net.NetworkService
+	PrefixLen int
+	PushNodes []peer.ID
+	Dialer proxy.Dialer
+	SendAck func(peerId string, pointerID peer.ID) error
+	SendError func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
+}
+
 type MessageRetriever struct {
 	db         repo.Datastore
 	node       *core.IpfsNode
@@ -59,14 +72,29 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, pushNodes []peer.ID, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error, sendError func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error) *MessageRetriever {
+func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	dial := gonet.Dial
-	if dialer != nil {
-		dial = dialer.Dial
+	if cfg.Dialer != nil {
+		dial = cfg.Dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, sendError, client, pushNodes, new(sync.Mutex), make(chan struct{}), make(chan struct{}, 5), new(sync.WaitGroup)}
+	mr := MessageRetriever{
+		cfg.Db,
+		cfg.Node,
+		cfg.Bm,
+		cfg.Ctx,
+		cfg.Service,
+		cfg.PrefixLen,
+		cfg.SendAck,
+		cfg.SendError,
+		client,
+		cfg.PushNodes,
+		new(sync.Mutex),
+		make(chan struct{}),
+		make(chan struct{}, 5),
+		new(sync.WaitGroup),
+	}
 	mr.Add(1)
 	return &mr
 }
