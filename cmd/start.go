@@ -822,15 +822,15 @@ func (x *Start) Execute(args []string) error {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
 		mrCfg := ret.MRConfig{
-			Db: sqliteDB,
-			Ctx: ctx,
-			IPFSNode: nd,
+			Db:        sqliteDB,
+			Ctx:       ctx,
+			IPFSNode:  nd,
 			BanManger: bm,
-			Service: core.Node.Service,
+			Service:   core.Node.Service,
 			PrefixLen: 14,
 			PushNodes: core.Node.PushNodes,
-			Dialer: torDialer,
-			SendAck: core.Node.SendOfflineAck,
+			Dialer:    torDialer,
+			SendAck:   core.Node.SendOfflineAck,
 			SendError: core.Node.SendError,
 		}
 		MR := ret.NewMessageRetriever(mrCfg)

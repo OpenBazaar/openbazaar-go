@@ -2028,6 +2028,11 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if !isSale && state == pb.OrderState_PROCESSING_ERROR && len(records) == 0 {
+		ErrorResponse(w, http.StatusBadRequest, "Cannot dispute an unfunded order")
+		return
+	}
+
 	err = i.node.OpenDispute(d.OrderID, contract, records, d.Claim)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())

@@ -38,15 +38,15 @@ const (
 var log = logging.MustGetLogger("retriever")
 
 type MRConfig struct {
-	Db repo.Datastore
-	Ctx commands.Context
-	IPFSNode *core.IpfsNode
+	Db        repo.Datastore
+	Ctx       commands.Context
+	IPFSNode  *core.IpfsNode
 	BanManger *net.BanManager
-	Service net.NetworkService
+	Service   net.NetworkService
 	PrefixLen int
 	PushNodes []peer.ID
-	Dialer proxy.Dialer
-	SendAck func(peerId string, pointerID peer.ID) error
+	Dialer    proxy.Dialer
+	SendAck   func(peerId string, pointerID peer.ID) error
 	SendError func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
 }
 
@@ -81,8 +81,8 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{
 		cfg.Db,
-		cfg.Node,
-		cfg.Bm,
+		cfg.IPFSNode,
+		cfg.BanManger,
 		cfg.Ctx,
 		cfg.Service,
 		cfg.PrefixLen,
