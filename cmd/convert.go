@@ -345,6 +345,7 @@ func (x *Convert) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	profile.Currencies = []string{currencyCode}
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = []string{currencyCode}
 		m := jsonpb.Marshaler{
