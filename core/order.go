@@ -1058,14 +1058,6 @@ collectListings:
 		return errors.New("Item hashes in the order do not match the included listings")
 	}
 
-	// Validate the each item in the order is for sale
-	knownListings := true
-	for _, listing := range contract.VendorListings {
-		if !n.IsItemForSale(listing) {
-			knownListings = false
-		}
-	}
-
 	// Validate no duplicate coupons
 	for _, item := range contract.BuyerOrder.Items {
 		couponMap := make(map[string]bool)
@@ -1216,10 +1208,20 @@ collectListings:
 		return err
 	}
 
-	if !knownListings {
+	// Validate the each item in the order is for sale
+	if !n.hasKnownListings(contract){
 		return UnknownListingError
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) hasKnownListings(contract *pb.RicardianContract) bool {
+	for _, listing := range contract.VendorListings {
+		if !n.IsItemForSale(listing) {
+			return false
+		}
+	}
+	return true
 }
 
 func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
