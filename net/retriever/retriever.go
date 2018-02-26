@@ -379,23 +379,25 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 
 	// Dispatch handler
 	resp, err := handler(*id, env.Message, true)
-	if err != nil && err == net.OutOfOrderMessage {
-		ser, err := proto.Marshal(&env)
-		if err == nil {
-			err := m.db.OfflineMessages().SetMessage(addr, ser)
-			if err != nil {
-				log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+	if err != nil {
+		if err == net.OutOfOrderMessage {
+			ser, err := proto.Marshal(&env)
+			if err == nil {
+				err := m.db.OfflineMessages().SetMessage(addr, ser)
+				if err != nil {
+					log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+				}
+			} else {
+				log.Errorf("Error serializing offline message %s for storage")
 			}
+		} else if env.Message.MessageType == pb.Message_ORDER && resp != nil {
+			log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
+			m.sendError(id.Pretty(), nil, *resp)
+			return err
 		} else {
-			log.Errorf("Error serializing offline message %s for storage")
+			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
+			return err
 		}
-	} else if env.Message.MessageType == pb.Message_ORDER && err != nil && resp != nil {
-		log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
-		m.sendError(id.Pretty(), nil, *resp)
-		return err
-	} else if err != nil {
-		log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
-		return err
 	}
 	return nil
 }
