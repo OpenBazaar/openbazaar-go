@@ -65,6 +65,8 @@ type PurchaseData struct {
 // TODO: for now, this is probably OK as it's just an approximation.
 const EscrowReleaseSize = 337
 
+var UnknownListingError = errors.New("Order contains a hash of a listing that is not currently for sale")
+
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
@@ -230,7 +232,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+				errStr := extractErrorMessage(resp)
+				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -380,7 +383,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", string(resp.Payload.Value))
+				errStr := extractErrorMessage(resp)
+				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -425,6 +429,16 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			}
 			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
+	}
+}
+
+func extractErrorMessage(m *pb.Message) string {
+	errMsg := new(pb.Error)
+	err := ptypes.UnmarshalAny(m.Payload, errMsg)
+	if err == nil {
+		return errMsg.ErrorMessage
+	} else { // For backwards compatibility check for a string payload
+		return string(m.Payload.Value)
 	}
 }
 
@@ -603,8 +617,30 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		order.Items = append(order.Items, i)
 	}
 
+	// Make sure shipping fields are filled if the order contains a physical good
+	if containsPhysicalGood(addedListings) && !(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()) {
+		if order.Shipping == nil {
+			return nil, errors.New("Order is missing shipping object")
+		}
+		if contract.BuyerOrder.Shipping.Address == "" {
+			return nil, errors.New("Shipping address is empty")
+		}
+		if contract.BuyerOrder.Shipping.ShipTo == "" {
+			return nil, errors.New("Ship to name is empty")
+		}
+	}
+
 	contract.BuyerOrder = order
 	return contract, nil
+}
+
+func containsPhysicalGood(addedListings map[string]*pb.Listing) bool {
+	for _, listing := range addedListings {
+		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) {
@@ -1027,13 +1063,6 @@ collectListings:
 		return errors.New("Item hashes in the order do not match the included listings")
 	}
 
-	// Validate the each item in the order is for sale
-	for _, listing := range contract.VendorListings {
-		if !n.IsItemForSale(listing) {
-			return errors.New("Contract contained item that is not for sale")
-		}
-	}
-
 	// Validate no duplicate coupons
 	for _, item := range contract.BuyerOrder.Items {
 		couponMap := make(map[string]bool)
@@ -1183,7 +1212,21 @@ collectListings:
 	if err != nil {
 		return err
 	}
+
+	// Validate the each item in the order is for sale
+	if !n.hasKnownListings(contract) {
+		return UnknownListingError
+	}
 	return nil
+}
+
+func (n *OpenBazaarNode) hasKnownListings(contract *pb.RicardianContract) bool {
+	for _, listing := range contract.VendorListings {
+		if !n.IsItemForSale(listing) {
+			return false
+		}
+	}
+	return true
 }
 
 func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {

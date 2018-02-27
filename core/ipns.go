@@ -73,6 +73,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 
 		err = json.Unmarshal(b, rec)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 

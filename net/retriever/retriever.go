@@ -37,6 +37,19 @@ const (
 
 var log = logging.MustGetLogger("retriever")
 
+type MRConfig struct {
+	Db        repo.Datastore
+	Ctx       commands.Context
+	IPFSNode  *core.IpfsNode
+	BanManger *net.BanManager
+	Service   net.NetworkService
+	PrefixLen int
+	PushNodes []peer.ID
+	Dialer    proxy.Dialer
+	SendAck   func(peerId string, pointerID peer.ID) error
+	SendError func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
+}
+
 type MessageRetriever struct {
 	db         repo.Datastore
 	node       *core.IpfsNode
@@ -45,6 +58,7 @@ type MessageRetriever struct {
 	service    net.NetworkService
 	prefixLen  int
 	sendAck    func(peerId string, pointerID peer.ID) error
+	sendError  func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
 	httpClient *http.Client
 	dataPeers  []peer.ID
 	queueLock  *sync.Mutex
@@ -58,14 +72,29 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, pushNodes []peer.ID, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	dial := gonet.Dial
-	if dialer != nil {
-		dial = dialer.Dial
+	if cfg.Dialer != nil {
+		dial = cfg.Dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, client, pushNodes, new(sync.Mutex), make(chan struct{}), make(chan struct{}, 5), new(sync.WaitGroup)}
+	mr := MessageRetriever{
+		cfg.Db,
+		cfg.IPFSNode,
+		cfg.BanManger,
+		cfg.Ctx,
+		cfg.Service,
+		cfg.PrefixLen,
+		cfg.SendAck,
+		cfg.SendError,
+		client,
+		cfg.PushNodes,
+		new(sync.Mutex),
+		make(chan struct{}),
+		make(chan struct{}, 5),
+		new(sync.WaitGroup),
+	}
 	mr.Add(1)
 	return &mr
 }
@@ -349,20 +378,26 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	}
 
 	// Dispatch handler
-	_, err := handler(*id, env.Message, true)
-	if err != nil && err == net.OutOfOrderMessage {
-		ser, err := proto.Marshal(&env)
-		if err == nil {
-			err := m.db.OfflineMessages().SetMessage(addr, ser)
-			if err != nil {
-				log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+	resp, err := handler(*id, env.Message, true)
+	if err != nil {
+		if err == net.OutOfOrderMessage {
+			ser, err := proto.Marshal(&env)
+			if err == nil {
+				err := m.db.OfflineMessages().SetMessage(addr, ser)
+				if err != nil {
+					log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+				}
+			} else {
+				log.Errorf("Error serializing offline message %s for storage")
 			}
+		} else if env.Message.MessageType == pb.Message_ORDER && resp != nil {
+			log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
+			m.sendError(id.Pretty(), nil, *resp)
+			return err
 		} else {
-			log.Errorf("Error serializing offline message %s for storage")
+			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
+			return err
 		}
-	} else if err != nil {
-		log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
-		return err
 	}
 	return nil
 }
