@@ -27,8 +27,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
-	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
-	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
@@ -821,28 +819,14 @@ func (x *Start) Execute(args []string) error {
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		mrCfg := ret.MRConfig{
-			Db:        sqliteDB,
-			Ctx:       ctx,
-			IPFSNode:  nd,
-			BanManger: bm,
-			Service:   core.Node.Service,
-			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
-			Dialer:    torDialer,
-			SendAck:   core.Node.SendOfflineAck,
-			SendError: core.Node.SendError,
-		}
-		MR := ret.NewMessageRetriever(mrCfg)
-		go MR.Run()
-		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
-		go PR.Run()
-		core.Node.PointerRepublisher = PR
+
+		core.Node.StartMessageRetriever()
+		core.Node.StartPointerRepublisher()
+
 		if !x.DisableWallet {
 			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
 			if resyncManager == nil {
-				MR.Wait()
+				core.Node.WaitForMessageRetrieverCompletion()
 			}
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
@@ -855,7 +839,7 @@ func (x *Start) Execute(args []string) error {
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {
-					MR.Wait()
+					core.Node.WaitForMessageRetrieverCompletion()
 					resyncManager.CheckUnfunded()
 				}()
 			}
