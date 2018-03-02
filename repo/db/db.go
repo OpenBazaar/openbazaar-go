@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"path"
+	"strings"
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -217,45 +218,39 @@ func (s *SQLiteDatastore) InitTables(password string) error {
 	return initDatabaseTables(s.db, password)
 }
 
-func initDatabaseTables(db *sql.DB, password string) error {
-	var sqlStmt string
-	if password != "" {
-		sqlStmt = "PRAGMA key = '" + password + "';"
+func initDatabaseTables(db *sql.DB, password string) (err error) {
+	initializeStatement := []string{
+		PragmaKey(password),
+		PragmaUserVersionSQL,
+		CreateTableConfigSQL,
+		CreateTableFollowersSQL,
+		CreateTableFollowingSQL,
+		CreateTableOfflineMessagesSQL,
+		CreateTablePointersSQL,
+		CreateTableKeysSQL,
+		CreateTableUnspentTransactionOutputsSQL,
+		CreateTableSpentTransactionOutputsSQL,
+		CreateTableTransactionsSQL,
+		CreateTableTransactionMetadataSQL,
+		CreateTableInventorySQL,
+		CreateIndexInventorySQL,
+		CreateTablePurchasesSQL,
+		CreateIndexPurchasesSQL,
+		CreateTableSalesSQL,
+		CreateIndexSalesSQL,
+		CreatedTableWatchedScriptsSQL,
+		CreateTableDisputedCasesSQL,
+		CreateIndexDisputedCasesSQL,
+		CreateTableChatSQL,
+		CreateIndexChatSQL,
+		CreateTableNotificationsSQL,
+		CreateIndexNotificationsSQL,
+		CreateTableCouponsSQL,
+		CreateIndexCouponsSQL,
+		CreateTableModeratedStoresSQL,
 	}
-	sqlStmt += `
-	PRAGMA user_version = 0;
-	create table config (key text primary key not null, value blob);
-	create table followers (peerID text primary key not null, proof blob);
-	create table following (peerID text primary key not null);
-	create table offlinemessages (url text primary key not null, timestamp integer, message blob);
-	create table pointers (pointerID text primary key not null, key text, address text, cancelID text, purpose integer, timestamp integer);
-	create table keys (scriptAddress text primary key not null, purpose integer, keyIndex integer, used integer, key text);
-	create table utxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer);
-	create table stxos (outpoint text primary key not null, value integer, height integer, scriptPubKey text, watchOnly integer, spendHeight integer, spendTxid text);
-	create table txns (txid text primary key not null, value integer, height integer, timestamp integer, watchOnly integer, tx blob);
-	create table txmetadata (txid text primary key not null, address text, memo text, orderID text, thumbnail text, canBumpFee integer);
-	create table inventory (invID text primary key not null, slug text, variantIndex integer, count integer);
-	create index index_inventory on inventory (slug);
-	create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);
-	create index index_purchases on purchases (paymentAddr, timestamp);
-	create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer);
-	create index index_sales on sales (paymentAddr, timestamp);
-	create table watchedscripts (scriptPubKey text primary key not null);
-	create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);
-	create index index_cases on cases (timestamp);
-	create table chat (messageID text primary key not null, peerID text, subject text, message text, read integer, timestamp integer, outgoing integer);
-	create index index_chat on chat (peerID, subject, read, timestamp);
-	create table notifications (notifID text primary key not null, serializedNotification blob, type text, timestamp integer, read integer);
-	create index index_notifications on notifications (read, type, timestamp);
-	create table coupons (slug text, code text, hash text);
-	create index index_coupons on coupons (slug);
-	create table moderatedstores (peerID text primary key not null);
-	`
-	_, err := db.Exec(sqlStmt)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err = db.Exec(strings.Join(initializeStatement, " "))
+	return
 }
 
 type ConfigDB struct {
