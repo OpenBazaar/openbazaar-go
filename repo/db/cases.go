@@ -467,3 +467,28 @@ func (c *CasesDB) GetDisputesForNotification() ([]*repo.DisputeCaseRecord, error
 	}
 	return result, nil
 }
+
+// UpdateDisputesLastNotifiedAt accepts []*repo.DisputeCaseRecord and updates
+// each DisputeCaseRecord by their CaseID to the set LastNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (c *CasesDB) UpdateDisputesLastNotifiedAt(disputeCases []*repo.DisputeCaseRecord) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	tx, err := c.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update disputes transaction: %s", err.Error())
+	}
+	for _, d := range disputeCases {
+		_, err = tx.Exec("update cases set lastNotifiedAt = ? where caseID = ?", d.LastNotifiedAt, d.CaseID)
+		if err != nil {
+			return fmt.Errorf("update dispute case: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update disputes transaction: %s", err.Error())
+	}
+
+	return nil
+}

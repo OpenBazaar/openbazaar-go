@@ -584,5 +584,69 @@ func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
 	if sawFinallyNotifiedCase == true {
 		t.Error("Expected NOT to see case which recieved it's final notification")
 	}
+}
 
+func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	setupSQL := []string{
+		PragmaKey(""),
+		CreateTableDisputedCasesSQL,
+	}
+	_, err := database.Exec(strings.Join(setupSQL, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Artificially start disputes 50 days ago
+	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
+	disputeOne := &repo.DisputeCaseRecord{
+		CaseID:         "case1",
+		Timestamp:      timeStart.Unix(),
+		LastNotifiedAt: 123,
+	}
+	disputeTwo := &repo.DisputeCaseRecord{
+		CaseID:         "case2",
+		Timestamp:      timeStart.Unix(),
+		LastNotifiedAt: 456,
+	}
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeOne.CaseID, disputeOne.Timestamp, disputeOne.LastNotifiedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, disputeTwo.Timestamp, disputeTwo.LastNotifiedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	disputeOne.LastNotifiedAt = 987
+	disputeTwo.LastNotifiedAt = 765
+	casesdb := NewCaseStore(database, new(sync.Mutex))
+	err = casesdb.UpdateDisputesLastNotifiedAt([]*repo.DisputeCaseRecord{disputeOne, disputeTwo})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := database.Query("select caseID, lastNotifiedAt from cases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var r repo.DisputeCaseRecord
+		if err = rows.Scan(&r.CaseID, &r.LastNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+		switch r.CaseID {
+		case disputeOne.CaseID:
+			if r.LastNotifiedAt != disputeOne.LastNotifiedAt {
+				t.Error("Expected disputeOne.LastNotifiedAt to be updated")
+			}
+		case disputeTwo.CaseID:
+			if r.LastNotifiedAt != disputeTwo.LastNotifiedAt {
+				t.Error("Expected disputeTwo.LastNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected dispute case encounted")
+			t.Error(r)
+		}
+
+	}
 }
