@@ -514,3 +514,75 @@ func TestCasesDB_GetAll(t *testing.T) {
 		t.Error("Returned incorrect number of query cases")
 	}
 }
+
+func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	setupSQL := []string{
+		PragmaKey(""),
+		CreateTableDisputedCasesSQL,
+	}
+	_, err := database.Exec(strings.Join(setupSQL, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Artificially start disputes 50 days ago
+	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
+	neverNotified := &repo.DisputeCaseRecord{
+		CaseID:         "neverNotified",
+		Timestamp:      timeStart.Unix(),
+		LastNotifiedAt: 0,
+	}
+	initialNotified := &repo.DisputeCaseRecord{
+		CaseID:         "initialNotificationSent",
+		Timestamp:      timeStart.Unix(),
+		LastNotifiedAt: timeStart.Unix(),
+	}
+	finallyNotified := &repo.DisputeCaseRecord{
+		CaseID:         "finalNotificationSent",
+		Timestamp:      timeStart.Unix(),
+		LastNotifiedAt: time.Now().Unix(),
+	}
+	existingRecords := []*repo.DisputeCaseRecord{
+		neverNotified,
+		initialNotified,
+		finallyNotified,
+	}
+
+	for _, r := range existingRecords {
+		_, err := database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.CaseID, r.Timestamp, r.LastNotifiedAt)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	casesdb := NewCaseStore(database, new(sync.Mutex))
+	cases, err := casesdb.GetDisputesForNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawNeverNotifiedCase, sawInitialNotifiedCase, sawFinallyNotifiedCase bool
+	for _, c := range cases {
+		switch c.CaseID {
+		case neverNotified.CaseID:
+			sawNeverNotifiedCase = true
+		case initialNotified.CaseID:
+			sawInitialNotifiedCase = true
+		case finallyNotified.CaseID:
+			sawFinallyNotifiedCase = true
+		default:
+			t.Error("Found unexpected dispute case: %+v", c)
+		}
+	}
+
+	if sawNeverNotifiedCase == false {
+		t.Error("Expected to see case which was never notified")
+	}
+	if sawInitialNotifiedCase == false {
+		t.Error("Expected to see case which was initially notified")
+	}
+	if sawFinallyNotifiedCase == true {
+		t.Error("Expected NOT to see case which recieved it's final notification")
+	}
+
+}

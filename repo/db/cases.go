@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"sync"
-	"time"
 )
 
 type CasesDB struct {
@@ -433,4 +435,35 @@ func (c *CasesDB) Count() int {
 	var count int
 	row.Scan(&count)
 	return count
+}
+
+// GetDisputesForNotification returns []*repo.DisputeCaseRecord including
+// each record which needs Notifications to be generated. Currently,
+// notifications are generated at 0, 15, 30, 44, and 45 days after opening.
+func (c *CasesDB) GetDisputesForNotification() ([]*repo.DisputeCaseRecord, error) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	fourtyFiveDays := time.Duration(45*24) * time.Hour
+	rows, err := c.db.Query("select caseID, timestamp, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	if err != nil {
+		return nil, fmt.Errorf("selecting cases: %s", err.Error())
+	}
+	result := make([]*repo.DisputeCaseRecord, 0)
+	for rows.Next() {
+		var (
+			r         = &repo.DisputeCaseRecord{}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.CaseID, &timestamp, &r.LastNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning case: %s", err.Error())
+		}
+		if timestamp.Valid {
+			r.Timestamp = timestamp.Int64
+		} else {
+			r.Timestamp = time.Now().Unix()
+		}
+		result = append(result, r)
+	}
+	return result, nil
 }

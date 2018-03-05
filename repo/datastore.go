@@ -280,6 +280,10 @@ type CaseStore interface {
 
 	// Return the number of cases in the database
 	Count() int
+
+	// GetDisputesForNotification returns []*DisputeCaseRecord including
+	// each record which needs Notifications to be generated.
+	GetDisputesForNotification() ([]*DisputeCaseRecord, error)
 }
 
 type ChatStore interface {
