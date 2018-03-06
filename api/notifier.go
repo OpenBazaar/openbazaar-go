@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
@@ -29,7 +28,7 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 			// enough to let us send any data to the websocket. You can technically do that by
 			// sending over a []byte as the serialize function ignores []bytes but it's kind of hacky.
 			manager.sendNotification(n)
-			sanitized, err := SanitizeJSON(notifications.Serialize(n))
+			sanitized, err := SanitizeJSON(repo.Serialize(n))
 			if err != nil {
 				log.Error(err)
 				continue
@@ -84,7 +83,7 @@ func (notifier *smtpNotifier) notify(n interface{}) error {
 		"Subject: [OpenBazaar] %s\r\n",
 		"%s\r\n",
 	}, "\r\n")
-	head, body := notifications.Describe(n)
+	head, body := repo.Describe(n)
 	if head == "" || body == "" {
 		return nil
 	}

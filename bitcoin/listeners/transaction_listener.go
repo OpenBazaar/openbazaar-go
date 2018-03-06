@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -111,11 +110,11 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					contract.DisputeAcceptance = accept
 					buyerHandle := contract.BuyerOrder.BuyerID.Handle
 
-					n := notifications.DisputeAcceptedNotification{
-						notifications.NewID(),
+					n := repo.DisputeAcceptedNotification{
+						repo.NewID(),
 						"disputeAccepted",
 						orderId,
-						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 						accept.ClosedBy,
 						buyerHandle,
 						accept.ClosedBy,
@@ -141,11 +140,11 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 						buyer = contract.BuyerOrder.BuyerID.PeerID
 					}
 
-					n := notifications.DisputeAcceptedNotification{
-						notifications.NewID(),
+					n := repo.DisputeAcceptedNotification{
+						repo.NewID(),
 						"disputeAccepted",
 						orderId,
-						notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 						accept.ClosedBy,
 						vendorHandle,
 						buyer,
@@ -191,13 +190,13 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 			}
 			l.adjustInventory(contract)
 
-			n := notifications.OrderNotification{
-				notifications.NewID(),
+			n := repo.OrderNotification{
+				repo.NewID(),
 				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
 				contract.BuyerOrder.BuyerID.Handle,
-				notifications.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+				repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
 				orderId,
 				contract.VendorListings[0].Slug,
 			}
@@ -259,8 +258,8 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_PENDING, false)
 			}
 		}
-		n := notifications.PaymentNotification{
-			notifications.NewID(),
+		n := repo.PaymentNotification{
+			repo.NewID(),
 			"payment",
 			orderId,
 			uint64(funding),

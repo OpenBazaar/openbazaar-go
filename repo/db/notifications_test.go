@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
@@ -18,7 +17,7 @@ func init() {
 }
 
 func TestNotficationsDB_Put(t *testing.T) {
-	n := notif.FollowNotification{"1", "follow", "abc"}
+	n := repo.FollowNotification{"1", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
@@ -53,7 +52,7 @@ func TestNotficationsDB_Put(t *testing.T) {
 }
 
 func TestNotficationsDB_Delete(t *testing.T) {
-	n := notif.FollowNotification{"1", "follow", "abc"}
+	n := repo.FollowNotification{"1", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
@@ -72,17 +71,17 @@ func TestNotficationsDB_Delete(t *testing.T) {
 }
 
 func TestNotficationsDB_GetAll(t *testing.T) {
-	n := notif.FollowNotification{"1", "follow", "abc"}
+	n := repo.FollowNotification{"1", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"2", "order", "123"}
+	n = repo.FollowNotification{"2", "order", "123"}
 	err = notifDB.Put(n.ID, n, n.Type, time.Now().Add(time.Second))
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"3", "order", "56778"}
+	n = repo.FollowNotification{"3", "order", "56778"}
 	err = notifDB.Put(n.ID, n, n.Type, time.Now().Add(time.Second*2))
 	if err != nil {
 		t.Error(err)
@@ -125,7 +124,7 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAsRead(t *testing.T) {
-	n := notif.FollowNotification{"5", "follow", "abc"}
+	n := repo.FollowNotification{"5", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
@@ -147,12 +146,12 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
-	n := notif.FollowNotification{"6", "follow", "abc"}
+	n := repo.FollowNotification{"6", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"7", "follow", "123"}
+	n = repo.FollowNotification{"7", "follow", "123"}
 	err = notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
@@ -171,7 +170,7 @@ func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
 }
 
 func TestNotificationDB_GetUnreadCount(t *testing.T) {
-	n := notif.FollowNotification{"8", "follow", "abc"}
+	n := repo.FollowNotification{"8", "follow", "abc"}
 	err := notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)
@@ -180,7 +179,7 @@ func TestNotificationDB_GetUnreadCount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	n = notif.FollowNotification{"9", "follow", "xyz"}
+	n = repo.FollowNotification{"9", "follow", "xyz"}
 	err = notifDB.Put(n.ID, n, n.Type, time.Now())
 	if err != nil {
 		t.Error(err)

@@ -3,7 +3,6 @@
 set -e
 pwd
 go test -coverprofile=api.cover.out ./api
-go test -coverprofile=api.notifications.cover.out ./api/notifications
 go test -coverprofile=bitcoin.cover.out ./bitcoin
 go test -coverprofile=bitcoin.exchange.cover.out ./bitcoin/exchange
 go test -coverprofile=bitcoin.listeners.cover.out ./bitcoin/listeners

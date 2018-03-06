@@ -2,7 +2,6 @@ package bitcoin
 
 import (
 	"encoding/hex"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -32,7 +31,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 		if err != nil {
 			return
 		}
-		n := notifications.IncomingTransaction{
+		n := repo.IncomingTransaction{
 			Txid:          ch.String(),
 			Value:         cb.Value,
 			Address:       metadata.Address,

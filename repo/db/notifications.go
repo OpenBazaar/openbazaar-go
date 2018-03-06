@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"strings"
@@ -20,7 +19,7 @@ func NewNotificationStore(db *sql.DB, lock *sync.Mutex) repo.NotificationStore {
 	return &NotficationsDB{modelStore{db, lock}}
 }
 
-func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error {
+func (n *NotficationsDB) Put(notifID string, notification repo.Data, notifType string, timestamp time.Time) error {
 	ser, err := json.Marshal(notification)
 	if err != nil {
 		return err
@@ -35,8 +34,8 @@ func (n *NotficationsDB) Put(notifID string, notification notif.Data, notifType 
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]notif.Notification, int, error) {
-	var ret []notif.Notification
+func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]repo.Notification, int, error) {
+	var ret []repo.Notification
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -102,7 +101,7 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 			fmt.Println(err)
 			continue
 		}
-		n := notif.Notification{
+		n := repo.Notification{
 			Data:      ni,
 			Timestamp: timestamp,
 			Read:      read,

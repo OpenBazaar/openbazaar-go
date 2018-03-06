@@ -8,7 +8,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/namesys"
@@ -150,7 +149,7 @@ func (n *OpenBazaarNode) publish(hash string) {
 	}
 
 	if inflightPublishRequests == 0 {
-		n.Broadcast <- notifications.StatusNotification{"publishing"}
+		n.Broadcast <- repo.StatusNotification{"publishing"}
 	}
 
 	id, err := cid.Decode(hash)
@@ -202,9 +201,9 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- notifications.StatusNotification{"error publishing"}
+			n.Broadcast <- repo.StatusNotification{"error publishing"}
 		} else {
-			n.Broadcast <- notifications.StatusNotification{"publish complete"}
+			n.Broadcast <- repo.StatusNotification{"publish complete"}
 		}
 	}
 }

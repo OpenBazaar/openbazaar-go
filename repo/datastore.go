@@ -4,7 +4,6 @@ import (
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 
 	"database/sql"
-	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
@@ -320,7 +319,7 @@ type NotificationStore interface {
 	Queryable
 
 	// Put a new notification to the database
-	Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error
+	Put(notifID string, notification Data, notifType string, timestamp time.Time) error
 
 	// Mark notification as read
 	MarkAsRead(notifID string) error
@@ -329,7 +328,7 @@ type NotificationStore interface {
 	MarkAllAsRead() error
 
 	// Fetch notifications from database
-	GetAll(offsetID string, limit int, typeFilter []string) ([]notif.Notification, int, error)
+	GetAll(offsetID string, limit int, typeFilter []string) ([]Notification, int, error)
 
 	// Returns the unread count for all notifications
 	GetUnreadCount() (int, error)

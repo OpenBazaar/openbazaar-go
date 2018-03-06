@@ -1,4 +1,4 @@
-package notifications
+package repo
 
 import (
 	"crypto/rand"
@@ -199,14 +199,6 @@ type ModeratorRemoveNotification struct {
 
 type StatusNotification struct {
 	Status string `json:"status"`
-}
-
-type ChatMessage struct {
-	MessageId string    `json:"messageId"`
-	PeerId    string    `json:"peerId"`
-	Subject   string    `json:"subject"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
 }
 
 type ChatRead struct {

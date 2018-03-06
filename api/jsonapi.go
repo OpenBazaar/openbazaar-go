@@ -30,7 +30,6 @@ import (
 	"io/ioutil"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -2477,9 +2476,9 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 	}
 
 	type notifData struct {
-		Unread        int                          `json:"unread"`
-		Total         int                          `json:"total"`
-		Notifications []notifications.Notification `json:"notifications"`
+		Unread        int                 `json:"unread"`
+		Total         int                 `json:"total"`
+		Notifications []repo.Notification `json:"notifications"`
 	}
 	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
 	if err != nil {
@@ -3628,7 +3627,7 @@ func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *ht
 		return
 	}
 	notifier := smtpNotifier{&settings}
-	err = notifier.notify(notifications.TestNotification{})
+	err = notifier.notify(repo.TestNotification{})
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
