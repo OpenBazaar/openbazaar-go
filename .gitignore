@@ -40,3 +40,7 @@ dist
 
 # macOS
 .DS_Store
+
+# Mobile
+*.aar
+*.jar
