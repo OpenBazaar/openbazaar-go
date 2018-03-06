@@ -11,10 +11,10 @@ linux_binary:
 	./build.sh linux/amd64
 
 ios_framework:
-	gomobile bind -target=ios github.com/OpenBazaar/openbazaar-go/mobile
+	gomobile bind -target=ios/arm64 github.com/OpenBazaar/openbazaar-go/mobile
 
 android_framework:
-        gomobile bind -target=android github.com/OpenBazaar/openbazaar-go/mobile
+	gomobile bind -target=android/arm64 github.com/OpenBazaar/openbazaar-go/mobile
 
 ##
 ## Protobuf compilation

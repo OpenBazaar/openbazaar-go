@@ -372,12 +372,13 @@ func (n *Node) Start() error {
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
 		mrCfg := ret.MRConfig{
 			Db:        n.node.Datastore,
-			Ctx:       ctx,
+			Ctx:       n.node.Context,
 			IPFSNode:  nd,
 			BanManger: n.node.BanManager,
 			Service:   core.Node.Service,
 			PrefixLen: 14,
 			PushNodes: core.Node.PushNodes,
+			Dialer:    nil,
 			SendAck:   core.Node.SendOfflineAck,
 			SendError: core.Node.SendError,
 		}
