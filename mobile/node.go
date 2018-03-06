@@ -96,7 +96,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 
 	dataSharing, err := repo.GetDataSharing(configFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	walletCfg, err := repo.GetWalletConfig(configFile)
@@ -242,7 +242,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	for _, pnd := range dataSharing.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pushNodes = append(pushNodes, p)
 	}
@@ -311,11 +311,11 @@ func (n *Node) Start() error {
 
 	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	republishInterval, err := repo.GetRepublishInterval(configFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Offline messaging storage
@@ -339,7 +339,19 @@ func (n *Node) Start() error {
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
-		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, n.node.PushNodes, nil, n.node.SendOfflineAck)
+		mrCfg := ret.MRConfig{
+			Db:        n.node.Datastore,
+			Ctx:       n.node.Context,
+			IPFSNode:  n.node.IpfsNode,
+			BanManger: n.node.BanManager,
+			Service:   core.Node.Service,
+			PrefixLen: 14,
+			PushNodes: core.Node.PushNodes,
+			Dialer:    nil,
+			SendAck:   n.node.SendOfflineAck,
+			SendError: n.node.SendError,
+		}
+		MR := ret.NewMessageRetriever(mrCfg)
 		go MR.Run()
 		n.node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
