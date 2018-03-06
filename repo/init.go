@@ -7,10 +7,6 @@ import (
 	"os"
 	"path"
 
-	"path/filepath"
-	"runtime"
-	"time"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/util"
 	"github.com/ipfs/go-ipfs/core"

@@ -370,7 +370,18 @@ func (n *Node) Start() error {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		fmt.Println("Creating new node service...")
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
-		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, n.node.PushNodes, nil, n.node.SendOfflineAck)
+		mrCfg := ret.MRConfig{
+			Db:        n.node.Datastore,
+			Ctx:       ctx,
+			IPFSNode:  nd,
+			BanManger: n.node.BanManager,
+			Service:   core.Node.Service,
+			PrefixLen: 14,
+			PushNodes: core.Node.PushNodes,
+			SendAck:   core.Node.SendOfflineAck,
+			SendError: core.Node.SendError,
+		}
+		MR := ret.NewMessageRetriever(mrCfg)
 		go MR.Run()
 		n.node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
