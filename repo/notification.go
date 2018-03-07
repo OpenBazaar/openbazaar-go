@@ -8,6 +8,38 @@ import (
 	"time"
 )
 
+const (
+	// Notification Type Constants
+	NotificationTypeZeroDaysOld       = "disputeNotificationZeroDaysOld"
+	NotificationTypeFifteenDaysOld    = "disputeNotificationFifteenDaysOld"
+	NotificationTypeThirtyDaysOld     = "disputeNotificationThirtyDaysOld"
+	NotificationTypeFourtyFourDaysOld = "disputeNotificationFourtyFourDaysOld"
+	NotificationTypeFourtyFiveDaysOld = "disputeNotificationFourtyFiveDaysOld"
+)
+
+type Notifier interface {
+	GetNotificationID() string
+	GetNotificationType() string
+}
+
+// GetDisputeCaseID conditionally inspects the underlying struct
+// to ensure it's a DisputeNotification and returns its CaseID field value
+func GetDisputeCaseID(n Notifier) (string, error) {
+	if disputeNotification, ok := n.(*DisputeNotification); ok {
+		return disputeNotification.CaseID, nil
+	}
+	return "", fmt.Errorf("dispute caseID not found")
+}
+
+type DisputeNotification struct {
+	ID     string `json:"notificationId"`
+	Type   string `json:"type"`
+	CaseID string `json:"disputeCaseId"`
+}
+
+func (d *DisputeNotification) GetNotificationID() string   { return d.ID }
+func (d *DisputeNotification) GetNotificationType() string { return d.Type }
+
 type Notification struct {
 	Data      Data      `json:"notification"`
 	Timestamp time.Time `json:"timestamp"`

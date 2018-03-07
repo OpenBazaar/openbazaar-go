@@ -529,18 +529,18 @@ func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
 	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
 	neverNotified := &repo.DisputeCaseRecord{
 		CaseID:         "neverNotified",
-		Timestamp:      timeStart.Unix(),
-		LastNotifiedAt: 0,
+		Timestamp:      timeStart,
+		LastNotifiedAt: time.Unix(0, 0),
 	}
 	initialNotified := &repo.DisputeCaseRecord{
 		CaseID:         "initialNotificationSent",
-		Timestamp:      timeStart.Unix(),
-		LastNotifiedAt: timeStart.Unix(),
+		Timestamp:      timeStart,
+		LastNotifiedAt: timeStart,
 	}
 	finallyNotified := &repo.DisputeCaseRecord{
 		CaseID:         "finalNotificationSent",
-		Timestamp:      timeStart.Unix(),
-		LastNotifiedAt: time.Now().Unix(),
+		Timestamp:      timeStart,
+		LastNotifiedAt: time.Now(),
 	}
 	existingRecords := []*repo.DisputeCaseRecord{
 		neverNotified,
@@ -549,7 +549,7 @@ func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
 	}
 
 	for _, r := range existingRecords {
-		_, err := database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.CaseID, r.Timestamp, r.LastNotifiedAt)
+		_, err := database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.CaseID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -600,25 +600,25 @@ func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
 	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
 	disputeOne := &repo.DisputeCaseRecord{
 		CaseID:         "case1",
-		Timestamp:      timeStart.Unix(),
-		LastNotifiedAt: 123,
+		Timestamp:      timeStart,
+		LastNotifiedAt: time.Unix(123, 0),
 	}
 	disputeTwo := &repo.DisputeCaseRecord{
 		CaseID:         "case2",
-		Timestamp:      timeStart.Unix(),
-		LastNotifiedAt: 456,
+		Timestamp:      timeStart,
+		LastNotifiedAt: time.Unix(456, 0),
 	}
 	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeOne.CaseID, disputeOne.Timestamp, disputeOne.LastNotifiedAt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, disputeTwo.Timestamp, disputeTwo.LastNotifiedAt)
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, int(disputeTwo.Timestamp.Unix()), int(disputeTwo.LastNotifiedAt.Unix()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	disputeOne.LastNotifiedAt = 987
-	disputeTwo.LastNotifiedAt = 765
+	disputeOne.LastNotifiedAt = time.Unix(987, 0)
+	disputeTwo.LastNotifiedAt = time.Unix(765, 0)
 	casesdb := NewCaseStore(database, new(sync.Mutex))
 	err = casesdb.UpdateDisputesLastNotifiedAt([]*repo.DisputeCaseRecord{disputeOne, disputeTwo})
 	if err != nil {
@@ -630,22 +630,25 @@ func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
 		t.Fatal(err)
 	}
 	for rows.Next() {
-		var r repo.DisputeCaseRecord
-		if err = rows.Scan(&r.CaseID, &r.LastNotifiedAt); err != nil {
+		var (
+			caseID         string
+			lastNotifiedAt int64
+		)
+		if err = rows.Scan(&caseID, &lastNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
-		switch r.CaseID {
+		switch caseID {
 		case disputeOne.CaseID:
-			if r.LastNotifiedAt != disputeOne.LastNotifiedAt {
+			if time.Unix(lastNotifiedAt, 0).Equal(disputeOne.LastNotifiedAt) != true {
 				t.Error("Expected disputeOne.LastNotifiedAt to be updated")
 			}
 		case disputeTwo.CaseID:
-			if r.LastNotifiedAt != disputeTwo.LastNotifiedAt {
+			if time.Unix(lastNotifiedAt, 0).Equal(disputeTwo.LastNotifiedAt) != true {
 				t.Error("Expected disputeTwo.LastNotifiedAt to be updated")
 			}
 		default:
 			t.Error("Unexpected dispute case encounted")
-			t.Error(r)
+			t.Error(caseID, lastNotifiedAt)
 		}
 
 	}

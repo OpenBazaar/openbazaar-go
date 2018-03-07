@@ -136,14 +136,6 @@ type Case struct {
 	UnreadChatMessages int       `json:"unreadChatMessages"`
 }
 
-// DisputeCaseRecord is a one-to-one relationship with records in the
-// SQL datastore
-type DisputeCaseRecord struct {
-	CaseID         string
-	Timestamp      int64
-	LastNotifiedAt int64
-}
-
 type UnfundedSale struct {
 	OrderId   string
 	Timestamp time.Time

@@ -447,22 +447,25 @@ func (c *CasesDB) GetDisputesForNotification() ([]*repo.DisputeCaseRecord, error
 	fourtyFiveDays := time.Duration(45*24) * time.Hour
 	rows, err := c.db.Query("select caseID, timestamp, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
 	if err != nil {
-		return nil, fmt.Errorf("selecting cases: %s", err.Error())
+		return nil, fmt.Errorf("selecting dispute case: %s", err.Error())
 	}
 	result := make([]*repo.DisputeCaseRecord, 0)
 	for rows.Next() {
 		var (
+			lastNotifiedAt int64
+
 			r         = &repo.DisputeCaseRecord{}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.CaseID, &timestamp, &r.LastNotifiedAt); err != nil {
-			return nil, fmt.Errorf("scanning case: %s", err.Error())
+		if err := rows.Scan(&r.CaseID, &timestamp, &lastNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
 		}
 		if timestamp.Valid {
-			r.Timestamp = timestamp.Int64
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
 		} else {
-			r.Timestamp = time.Now().Unix()
+			r.Timestamp = time.Now()
 		}
+		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
 		result = append(result, r)
 	}
 	return result, nil
@@ -481,7 +484,7 @@ func (c *CasesDB) UpdateDisputesLastNotifiedAt(disputeCases []*repo.DisputeCaseR
 		return fmt.Errorf("begin update disputes transaction: %s", err.Error())
 	}
 	for _, d := range disputeCases {
-		_, err = tx.Exec("update cases set lastNotifiedAt = ? where caseID = ?", d.LastNotifiedAt, d.CaseID)
+		_, err = tx.Exec("update cases set lastNotifiedAt = ? where caseID = ?", int(d.LastNotifiedAt.Unix()), d.CaseID)
 		if err != nil {
 			return fmt.Errorf("update dispute case: %s", err.Error())
 		}
