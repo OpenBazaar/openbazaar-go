@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 const repoRootFolder = "testdata/repo-root"
@@ -34,28 +36,39 @@ func MockNewMnemonicFail([]byte) (string, error) {
 }
 
 func TestDoInit(t *testing.T) {
-	password := "password"
-	mnemonic := ""
-	testnet := true
+	var (
+		password      = "password"
+		mnemonic      = ""
+		testnet       = true
+		testDirectory = util.GenerateTempPath()
+	)
+	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testDirectory})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Running DoInit on a folder that already contains a config file
-	err := DoInit(testConfigFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
+	err = DoInit(paths.DataPath(), 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
+	if err != nil {
+		t.Error("First DoInit should not have failed:", err.Error())
+	}
+	err = DoInit(paths.DataPath(), 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
 	if err != ErrRepoExists {
-		t.Error("DoInit didn't throw expected error")
+		t.Error("Expected DoInit to fail with ErrRepoExists but did not")
 	}
-	// Running DoInit on an empty, not-writable folder
-	os.Chmod(repoRootFolder, 0444)
-	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
-	if err == nil {
-		t.Error("DoInit didn't throw an error")
+	paths.DestroySchemaDirectories()
+	if err = paths.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
 	}
+
 	// Running DoInit on an empty, writable folder
-	os.Chmod(repoRootFolder, 0755)
-	err = DoInit(repoRootFolder, 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
+	if err = os.Chmod(paths.DataPath(), 0755); err != nil {
+		t.Fatal(err)
+	}
+	err = DoInit(paths.DataPath(), 4096, testnet, password, mnemonic, time.Now(), MockDbInit)
 	if err != nil {
 		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
 	}
-
-	TearDown()
+	paths.DestroySchemaDirectories()
 }
 
 func checkDirectoryCreation(t *testing.T, directory string) {
