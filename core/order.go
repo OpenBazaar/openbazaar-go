@@ -443,22 +443,28 @@ func extractErrorMessage(m *pb.Message) string {
 }
 
 func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.RicardianContract, error) {
-	contract := new(pb.RicardianContract)
-	order := new(pb.Order)
+	var (
+		contract = new(pb.RicardianContract)
+		order    = new(pb.Order)
+
+		shipping = &pb.Order_Shipping{
+			ShipTo:       data.ShipTo,
+			Address:      data.Address,
+			City:         data.City,
+			State:        data.State,
+			PostalCode:   data.PostalCode,
+			Country:      pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
+			AddressNotes: data.AddressNotes,
+		}
+	)
+
+	contract.BuyerOrder = order
 	order.Version = 1
+
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
 		order.RefundAddress = n.Wallet.NewAddress(wallet.INTERNAL).EncodeAddress()
-	}
-	shipping := &pb.Order_Shipping{
-		ShipTo:       data.ShipTo,
-		Address:      data.Address,
-		City:         data.City,
-		State:        data.State,
-		PostalCode:   data.PostalCode,
-		Country:      pb.CountryCode(pb.CountryCode_value[data.CountryCode]),
-		AddressNotes: data.AddressNotes,
 	}
 	order.Shipping = shipping
 
@@ -630,7 +636,6 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		}
 	}
 
-	contract.BuyerOrder = order
 	return contract, nil
 }
 
