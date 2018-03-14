@@ -12,7 +12,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-func TestDisputeNotifierPerformsTask(t *testing.T) {
+func TestRecordAgingNotifierPerformsTask(t *testing.T) {
 	// Start each case 50 days ago and have the lastNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
@@ -109,11 +109,11 @@ func TestDisputeNotifierPerformsTask(t *testing.T) {
 		}
 	}()
 
-	worker := &disputeNotifier{
+	worker := &recordAgingNotifier{
 		disputeCasesDB:  db.NewCaseStore(database, new(sync.Mutex)),
 		notificationsDB: db.NewNotificationStore(database, new(sync.Mutex)),
 		broadcast:       broadcastChannel,
-		logger:          logging.MustGetLogger("testDisputeNotifier"),
+		logger:          logging.MustGetLogger("testRecordAgingNotifier"),
 	}
 	if err := worker.PerformTask(); err != nil {
 		t.Fatal(err)

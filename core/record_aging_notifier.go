@@ -8,7 +8,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-type disputeNotifier struct {
+type recordAgingNotifier struct {
 	// PerformTask dependancies
 	disputeCasesDB  repo.CaseStore
 	notificationsDB repo.NotificationStore
@@ -22,20 +22,20 @@ type disputeNotifier struct {
 	stopWorker    chan bool
 }
 
-func (n *OpenBazaarNode) StartDisputeNotifier() {
-	n.DisputeNotifier = &disputeNotifier{
+func (n *OpenBazaarNode) StartRecordAgingNotifier() {
+	n.RecordAgingNotifier = &recordAgingNotifier{
 		disputeCasesDB:  n.Datastore.Cases(),
 		notificationsDB: n.Datastore.Notifications(),
 		broadcast:       n.Broadcast,
 		intervalDelay:   time.Duration(10) * time.Minute,
-		logger:          logging.MustGetLogger("disputeNotifier"),
+		logger:          logging.MustGetLogger("recordAgingNotifier"),
 	}
-	go n.DisputeNotifier.Run()
+	go n.RecordAgingNotifier.Run()
 }
 
-func (d *disputeNotifier) RunCount() int { return d.runCount }
+func (d *recordAgingNotifier) RunCount() int { return d.runCount }
 
-func (d *disputeNotifier) Run() {
+func (d *recordAgingNotifier) Run() {
 	d.watchdogTimer = time.NewTicker(d.intervalDelay)
 	d.stopWorker = make(chan bool)
 
@@ -56,14 +56,20 @@ func (d *disputeNotifier) Run() {
 	}
 }
 
-func (d *disputeNotifier) Stop() {
+func (d *recordAgingNotifier) Stop() {
 	d.stopWorker <- true
 	close(d.stopWorker)
 }
 
-func (d *disputeNotifier) PerformTask() error {
+func (d *recordAgingNotifier) PerformTask() (err error) {
 	d.runCount += 1
 	d.logger.Infof("performTask started (count %d)", d.runCount)
+
+	err = d.GenerateModeratorNotifications()
+	return
+}
+
+func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
 	disputes, err := d.disputeCasesDB.GetDisputesForNotification()
 	if err != nil {
 		return err

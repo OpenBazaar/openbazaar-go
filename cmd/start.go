@@ -822,7 +822,7 @@ func (x *Start) Execute(args []string) error {
 
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()
-		core.Node.StartDisputeNotifier()
+		core.Node.StartRecordAgingNotifier()
 
 		if !x.DisableWallet {
 			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
