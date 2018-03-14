@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 const migration007_casesCreateSQL = "CREATE TABLE cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);"
@@ -16,7 +16,7 @@ const migration007_casesCreateSQL = "CREATE TABLE cases (caseID text primary key
 type Migration007 struct{}
 
 func (Migration007) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})
@@ -56,7 +56,7 @@ func (Migration007) Up(repoPath, databasePassword string, testnetEnabled bool) e
 }
 
 func (Migration007) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})

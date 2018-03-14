@@ -1,8 +1,4 @@
-package db
-
-import (
-	"fmt"
-)
+package schema
 
 const (
 	PragmaUserVersionSQL                    = "pragma user_version = 0;"
@@ -33,10 +29,3 @@ const (
 	CreateIndexCouponsSQL                   = "create index index_coupons on coupons (slug);"
 	CreateTableModeratedStoresSQL           = "create table moderatedstores (peerID text primary key not null);"
 )
-
-func PragmaKey(password string) string {
-	if len(password) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("pragma key = '%s';", password)
-}

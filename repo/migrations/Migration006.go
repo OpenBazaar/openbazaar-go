@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 type Migration006 struct{}
@@ -64,7 +64,7 @@ type migration006_listingDataAfterMigration struct {
 }
 
 func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})
@@ -161,7 +161,7 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 }
 
 func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoPath,
 		TestModeEnabled: testnetEnabled,
 	})

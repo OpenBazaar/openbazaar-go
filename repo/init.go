@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -23,7 +23,7 @@ var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,
 		TestModeEnabled: testnet,
 	})
@@ -230,7 +230,7 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 /* Returns the directory to store repo data in.
    It depends on the OS and whether or not we are on testnet. */
 func GetRepoPath(isTestnet bool) (string, error) {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		TestModeEnabled: isTestnet,
 	})
 	if err != nil {

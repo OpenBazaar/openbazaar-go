@@ -10,6 +10,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/golang/protobuf/ptypes"
 	"sync"
 )
@@ -518,8 +519,8 @@ func TestCasesDB_GetAll(t *testing.T) {
 func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	setupSQL := []string{
-		PragmaKey(""),
-		CreateTableDisputedCasesSQL,
+		schema.PragmaKey(""),
+		schema.CreateTableDisputedCasesSQL,
 	}
 	_, err := database.Exec(strings.Join(setupSQL, " "))
 	if err != nil {
@@ -589,8 +590,8 @@ func TestGetDisputesForNotificationReturnsRelevantRecords(t *testing.T) {
 func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	setupSQL := []string{
-		PragmaKey(""),
-		CreateTableDisputedCasesSQL,
+		schema.PragmaKey(""),
+		schema.CreateTableDisputedCasesSQL,
 	}
 	_, err := database.Exec(strings.Join(setupSQL, " "))
 	if err != nil {

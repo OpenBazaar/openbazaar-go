@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 const repoRootFolder = "testdata/repo-root"
@@ -40,9 +40,9 @@ func TestDoInit(t *testing.T) {
 		password      = "password"
 		mnemonic      = ""
 		testnet       = true
-		testDirectory = util.GenerateTempPath()
+		testDirectory = schema.GenerateTempPath()
 	)
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testDirectory})
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testDirectory})
 	if err != nil {
 		t.Fatal(err)
 	}

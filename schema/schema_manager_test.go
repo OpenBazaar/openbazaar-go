@@ -1,6 +1,7 @@
-package util
+package schema
 
 import (
+	"database/sql"
 	"os"
 	"runtime"
 	"strings"
@@ -144,5 +145,12 @@ func checkDirectoryCreation(t *testing.T, directory string) {
 	}
 	if fi.Mode().String()[1:3] != "rw" {
 		t.Errorf("the created directory %s is not readable and writable for the owner", directory)
+	}
+}
+
+func TestInitializeDatabaseSQL(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	if _, err := database.Exec(InitializeDatabaseSQL("foobarbaz")); err != nil {
+		t.Fatal("Expected InitializeDatabaseSQL to return executeable SQL, but got error:", err.Error())
 	}
 }

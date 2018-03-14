@@ -3,10 +3,10 @@ package db
 import (
 	"database/sql"
 	"path"
-	"strings"
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
@@ -60,7 +60,6 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		config: &ConfigDB{
 			db:   conn,
 			lock: l,
-			path: dbPath,
 		},
 		followers:       NewFollowerStore(conn, l),
 		following:       NewFollowingStore(conn, l),
@@ -219,44 +218,13 @@ func (s *SQLiteDatastore) InitTables(password string) error {
 }
 
 func initDatabaseTables(db *sql.DB, password string) (err error) {
-	initializeStatement := []string{
-		PragmaKey(password),
-		PragmaUserVersionSQL,
-		CreateTableConfigSQL,
-		CreateTableFollowersSQL,
-		CreateTableFollowingSQL,
-		CreateTableOfflineMessagesSQL,
-		CreateTablePointersSQL,
-		CreateTableKeysSQL,
-		CreateTableUnspentTransactionOutputsSQL,
-		CreateTableSpentTransactionOutputsSQL,
-		CreateTableTransactionsSQL,
-		CreateTableTransactionMetadataSQL,
-		CreateTableInventorySQL,
-		CreateIndexInventorySQL,
-		CreateTablePurchasesSQL,
-		CreateIndexPurchasesSQL,
-		CreateTableSalesSQL,
-		CreateIndexSalesSQL,
-		CreatedTableWatchedScriptsSQL,
-		CreateTableDisputedCasesSQL,
-		CreateIndexDisputedCasesSQL,
-		CreateTableChatSQL,
-		CreateIndexChatSQL,
-		CreateTableNotificationsSQL,
-		CreateIndexNotificationsSQL,
-		CreateTableCouponsSQL,
-		CreateIndexCouponsSQL,
-		CreateTableModeratedStoresSQL,
-	}
-	_, err = db.Exec(strings.Join(initializeStatement, " "))
+	_, err = db.Exec(schema.InitializeDatabaseSQL(password))
 	return
 }
 
 type ConfigDB struct {
 	db   *sql.DB
 	lock *sync.Mutex
-	path string
 }
 
 func (c *ConfigDB) Init(mnemonic string, identityKey []byte, password string, creationDate time.Time) error {

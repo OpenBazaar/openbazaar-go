@@ -10,18 +10,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func TestMigration006(t *testing.T) {
 
 	// Setup
-	basePath := util.GenerateTempPath()
-	testRepoPath, err := util.OpenbazaarPathTransform(basePath, true)
+	basePath := schema.GenerateTempPath()
+	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,12 +157,12 @@ func TestMigration006(t *testing.T) {
 func TestMigration006HandlesMissingSettings(t *testing.T) {
 
 	// Setup
-	basePath := util.GenerateTempPath()
-	testRepoPath, err := util.OpenbazaarPathTransform(basePath, true)
+	basePath := schema.GenerateTempPath()
+	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}

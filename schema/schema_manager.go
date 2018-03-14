@@ -1,20 +1,25 @@
-package util
+package schema
 
 import (
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
+	_ "github.com/mutecomm/go-sqlcipher"
 )
 
 type openbazaarSchemaManager struct {
-	os              string
 	dataPath        string
+	db              *sql.DB
+	os              string
+	schemaPassword  string
 	testModeEnabled bool
 }
 
@@ -23,8 +28,9 @@ type openbazaarSchemaManager struct {
 // assumed during runtime.
 type SchemaContext struct {
 	DataPath        string
-	TestModeEnabled bool
 	OS              string
+	SchemaPassword  string
+	TestModeEnabled bool
 }
 
 // DefaultPathTransform accepts a string path representing the location where
@@ -78,8 +84,9 @@ func NewCustomSchemaManager(ctx SchemaContext) (*openbazaarSchemaManager, error)
 
 	return &openbazaarSchemaManager{
 		dataPath:        ctx.DataPath,
-		testModeEnabled: ctx.TestModeEnabled,
 		os:              ctx.OS,
+		schemaPassword:  ctx.SchemaPassword,
+		testModeEnabled: ctx.TestModeEnabled,
 	}, nil
 }
 
@@ -135,6 +142,7 @@ func (m *openbazaarSchemaManager) VerifySchemaVersion(expectedVersion string) er
 	return nil
 }
 
+// BuildSchemaDirectories creates the underlying directory structure required during runtime
 func (m *openbazaarSchemaManager) BuildSchemaDirectories() error {
 	if err := os.MkdirAll(m.DataPathJoin("datastore"), os.ModePerm); err != nil {
 		return err
@@ -187,6 +195,52 @@ func (m *openbazaarSchemaManager) BuildSchemaDirectories() error {
 	return nil
 }
 
+// DestroySchemaDirectories removes all schema files and folders permitted by the runtime
 func (m *openbazaarSchemaManager) DestroySchemaDirectories() {
 	os.RemoveAll(m.dataPath)
+}
+
+// InitializeDatabaseSQL returns the executeable SQL string which initializes
+// the database schema. It assumes the target is an empty SQLite3 database which
+// supports encryption via the `PRAGMA key` statement
+func InitializeDatabaseSQL(encryptionPassword string) string {
+	initializeStatement := []string{
+		PragmaKey(encryptionPassword),
+		PragmaUserVersionSQL,
+		CreateTableConfigSQL,
+		CreateTableFollowersSQL,
+		CreateTableFollowingSQL,
+		CreateTableOfflineMessagesSQL,
+		CreateTablePointersSQL,
+		CreateTableKeysSQL,
+		CreateTableUnspentTransactionOutputsSQL,
+		CreateTableSpentTransactionOutputsSQL,
+		CreateTableTransactionsSQL,
+		CreateTableTransactionMetadataSQL,
+		CreateTableInventorySQL,
+		CreateIndexInventorySQL,
+		CreateTablePurchasesSQL,
+		CreateIndexPurchasesSQL,
+		CreateTableSalesSQL,
+		CreateIndexSalesSQL,
+		CreatedTableWatchedScriptsSQL,
+		CreateTableDisputedCasesSQL,
+		CreateIndexDisputedCasesSQL,
+		CreateTableChatSQL,
+		CreateIndexChatSQL,
+		CreateTableNotificationsSQL,
+		CreateIndexNotificationsSQL,
+		CreateTableCouponsSQL,
+		CreateIndexCouponsSQL,
+		CreateTableModeratedStoresSQL,
+	}
+	return strings.Join(initializeStatement, " ")
+}
+
+// PragmaKey returns the executable SQL string to encrypt the database
+func PragmaKey(password string) string {
+	if len(password) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("pragma key = '%s';", password)
 }
