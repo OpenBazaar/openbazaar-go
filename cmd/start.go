@@ -82,11 +82,11 @@ import (
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
-	`%{color:reset}%{color}%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+	`%{color:reset}%{color}%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
 var fileLogFormat = logging.MustStringFormatter(
-	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
 var (
