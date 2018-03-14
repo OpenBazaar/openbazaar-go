@@ -9,9 +9,12 @@ import (
 )
 
 type disputeNotifier struct {
+	// PerformTask dependancies
 	disputeCasesDB  repo.CaseStore
 	notificationsDB repo.NotificationStore
+	broadcast       chan interface{}
 
+	// Worker-handling dependancies
 	intervalDelay time.Duration
 	logger        *logging.Logger
 	runCount      int
@@ -23,6 +26,7 @@ func (n *OpenBazaarNode) StartDisputeNotifier() {
 	n.DisputeNotifier = &disputeNotifier{
 		disputeCasesDB:  n.Datastore.Cases(),
 		notificationsDB: n.Datastore.Notifications(),
+		broadcast:       n.Broadcast,
 		intervalDelay:   time.Duration(10) * time.Minute,
 		logger:          logging.MustGetLogger("disputeNotifier"),
 	}
@@ -104,14 +108,14 @@ func (d *disputeNotifier) PerformTask() error {
 	for _, n := range notificationsToAdd {
 		var serializedNotification, err = n.MarshalNotificationToJSON()
 		if err != nil {
-			d.logger.Warning("marshaling notification:", err.Error())
+			d.logger.Warning("marshaling dispute expiration notification:", err.Error())
 			d.logger.Infof("failed marshal: %+v", n)
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
 		_, err = notificationTx.Exec(template, n.GetID(), serializedNotification, n.GetDowncaseType(), n.GetSQLTimestamp(), 0)
 		if err != nil {
-			d.logger.Warning("inserting notification:", err.Error())
+			d.logger.Warning("inserting dispute expiration notification:", err.Error())
 			d.logger.Infof("failed insert: %+v", n)
 			continue
 		}
@@ -121,9 +125,13 @@ func (d *disputeNotifier) PerformTask() error {
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return fmt.Errorf("commiting notifications:", err.Error())
+		return fmt.Errorf("commiting dispute expiration notifications:", err.Error())
 	}
-	d.logger.Infof("created %d dispute notifications", len(notificationsToAdd))
+	d.logger.Infof("created %d dispute expiration notifications", len(notificationsToAdd))
+
+	for _, n := range notificationsToAdd {
+		d.broadcast <- n.Notification
+	}
 
 	err = d.disputeCasesDB.UpdateDisputesLastNotifiedAt(disputes)
 	d.logger.Infof("updated lastNotifiedAt on %d disputes", len(disputes))

@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/op/go-logging"
 )
 
 func TestDisputeNotifierPerformsTask(t *testing.T) {
@@ -16,12 +17,13 @@ func TestDisputeNotifierPerformsTask(t *testing.T) {
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
-		timeStart      = time.Now().Add(time.Duration(-50*24) * time.Hour)
-		twelveHours    = time.Duration(12) * time.Hour
-		fifteenDays    = time.Duration(15*24) * time.Hour
-		thirtyDays     = time.Duration(30*24) * time.Hour
-		fourtyFourDays = time.Duration(44*24) * time.Hour
-		fourtyFiveDays = time.Duration(45*24) * time.Hour
+		broadcastChannel = make(chan interface{}, 0)
+		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		twelveHours      = time.Duration(12) * time.Hour
+		fifteenDays      = time.Duration(15*24) * time.Hour
+		thirtyDays       = time.Duration(30*24) * time.Hour
+		fourtyFourDays   = time.Duration(44*24) * time.Hour
+		fourtyFiveDays   = time.Duration(45*24) * time.Hour
 
 		// Produces notification for 0, 15, 30, 44 and 45 days
 		neverNotified = &repo.DisputeCaseRecord{
@@ -87,14 +89,43 @@ func TestDisputeNotifierPerformsTask(t *testing.T) {
 		}
 	}
 
+	var (
+		closeAsyncChannelVerifier = make(chan bool, 0)
+		broadcastCount            = 0
+	)
+	go func() {
+		for {
+			select {
+			case n := <-broadcastChannel:
+				notifier, ok := n.(repo.Notifier)
+				if !ok {
+					t.Errorf("unable to cast as Notifier: %+v", n)
+				}
+				t.Log("notification broadcast: %s", notifier.GetNotificationType())
+				broadcastCount += 1
+			case <-closeAsyncChannelVerifier:
+				return
+			}
+		}
+	}()
+
 	worker := &disputeNotifier{
 		disputeCasesDB:  db.NewCaseStore(database, new(sync.Mutex)),
 		notificationsDB: db.NewNotificationStore(database, new(sync.Mutex)),
+		broadcast:       broadcastChannel,
+		logger:          logging.MustGetLogger("testDisputeNotifier"),
 	}
 	if err := worker.PerformTask(); err != nil {
 		t.Fatal(err)
 	}
 
+	// Verify Notifications received in channel
+	closeAsyncChannelVerifier <- true
+	if broadcastCount != 15 {
+		t.Error("Expected 15 notifications to be broadcast, found", broadcastCount)
+	}
+
+	// Verify NotificationRecords in datastore
 	rows, err := database.Query("select caseID, lastNotifiedAt from cases")
 	if err != nil {
 		t.Fatal(err)
