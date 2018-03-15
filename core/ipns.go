@@ -56,11 +56,13 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 		client := &http.Client{Transport: tbTransport, Timeout: time.Second * 5}
 		resp, err := client.Get(n.IPNSBackupAPI + peerId)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 
@@ -80,46 +82,54 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 		entry := new(ipnspb.IpnsEntry)
 		entryBytes, err := hex.DecodeString(rec.SerializedRecord)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 		err = proto.Unmarshal(entryBytes, entry)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 
 		pubkeyBytes, err := hex.DecodeString(rec.Pubkey)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 
 		pubkey, err := crypto.UnmarshalPublicKey(pubkeyBytes)
 		if err != nil {
+			log.Error(err)
 			return "", err
-		}
-
-		// check sig with pk
-		if ok, err := pubkey.Verify(ipnsEntryDataForSig(entry), entry.GetSignature()); err != nil || !ok {
-			return "", fmt.Errorf("Invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
 		}
 		id, err := peer.IDB58Decode(peerId)
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 		if !id.MatchesPublicKey(pubkey) {
+			log.Error(err)
 			return "", fmt.Errorf("Invalid key. Does not hash to %s", peerId)
 		}
 
+		// check sig with pk
+		if ok, err := pubkey.Verify(ipnsEntryDataForSig(entry), entry.Signature); err != nil || !ok {
+			log.Errorf("Signature on IPNS record from gateway validated to %t", ok)
+			return "", fmt.Errorf("Invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
+		}
+
 		go func() {
-			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), val)
+			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), entryBytes)
 			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+peerId), pubkeyBytes)
 		}()
 
-		p, err := ipnspath.ParsePath(string(entry.GetValue()))
+		p, err := ipnspath.ParsePath(string(entry.Value))
 		if err != nil {
+			log.Error(err)
 			return "", err
 		}
 		val = strings.TrimPrefix(p.String(), "/ipfs/")
-		err = nil
+		return val, nil
 	}
 	return val, err
 }
