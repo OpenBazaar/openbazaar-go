@@ -15,6 +15,7 @@ go test -coverprofile=net.repointer.cover.out ./net/repointer
 go test -coverprofile=net.retriever.cover.out ./net/retriever
 go test -coverprofile=repo.cover.out ./repo
 go test -coverprofile=repo.db.cover.out ./repo/db
+go test -coverprofile=repo.migrations.db.cover.out ./repo/migrations
 go test -coverprofile=schema.cover.out ./schema
 go test -coverprofile=storage.cover.out ./storage
 go test -coverprofile=storage.dropbox.cover.out ./storage/dropbox
