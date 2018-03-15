@@ -17,7 +17,7 @@ type DisputeCaseRecord struct {
 func (r *DisputeCaseRecord) BuildZeroDayNotification(createdAt time.Time) *NotificationRecord {
 	notification := &DisputeNotification{
 		ID:     GenerateID(),
-		Type:   NotificationTypeZeroDaysOld,
+		Type:   NotifierTypeDisputeAgedZeroDaysOld,
 		CaseID: r.CaseID,
 	}
 	return &NotificationRecord{Notification: notification, CreatedAt: createdAt}
@@ -28,7 +28,7 @@ func (r *DisputeCaseRecord) BuildZeroDayNotification(createdAt time.Time) *Notif
 func (r *DisputeCaseRecord) BuildFifteenDayNotification(createdAt time.Time) *NotificationRecord {
 	notification := &DisputeNotification{
 		ID:     GenerateID(),
-		Type:   NotificationTypeFifteenDaysOld,
+		Type:   NotifierTypeDisputeAgedFifteenDaysOld,
 		CaseID: r.CaseID,
 	}
 	return &NotificationRecord{Notification: notification, CreatedAt: createdAt}
@@ -39,7 +39,7 @@ func (r *DisputeCaseRecord) BuildFifteenDayNotification(createdAt time.Time) *No
 func (r *DisputeCaseRecord) BuildThirtyDayNotification(createdAt time.Time) *NotificationRecord {
 	notification := &DisputeNotification{
 		ID:     GenerateID(),
-		Type:   NotificationTypeThirtyDaysOld,
+		Type:   NotifierTypeDisputeAgedThirtyDaysOld,
 		CaseID: r.CaseID,
 	}
 	return &NotificationRecord{Notification: notification, CreatedAt: createdAt}
@@ -50,7 +50,7 @@ func (r *DisputeCaseRecord) BuildThirtyDayNotification(createdAt time.Time) *Not
 func (r *DisputeCaseRecord) BuildFourtyFourDayNotification(createdAt time.Time) *NotificationRecord {
 	notification := &DisputeNotification{
 		ID:     GenerateID(),
-		Type:   NotificationTypeFourtyFourDaysOld,
+		Type:   NotifierTypeDisputeAgedFourtyFourDaysOld,
 		CaseID: r.CaseID,
 	}
 	return &NotificationRecord{Notification: notification, CreatedAt: createdAt}
@@ -61,7 +61,7 @@ func (r *DisputeCaseRecord) BuildFourtyFourDayNotification(createdAt time.Time) 
 func (r *DisputeCaseRecord) BuildFourtyFiveDayNotification(createdAt time.Time) *NotificationRecord {
 	notification := &DisputeNotification{
 		ID:     GenerateID(),
-		Type:   NotificationTypeFourtyFiveDaysOld,
+		Type:   NotifierTypeDisputeAgedFourtyFiveDaysOld,
 		CaseID: r.CaseID,
 	}
 	return &NotificationRecord{Notification: notification, CreatedAt: createdAt}

@@ -12,7 +12,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-func TestRecordAgingNotifierPerformsTask(t *testing.T) {
+func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 	// Start each case 50 days ago and have the lastNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
@@ -198,70 +198,70 @@ func TestRecordAgingNotifierPerformsTask(t *testing.T) {
 			t.Error("getting dispute case id:", err.Error())
 		}
 		if caseID == neverNotified.CaseID {
-			if n.GetType() == repo.NotificationTypeZeroDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedZeroDaysOld {
 				checkNeverNotified_ZeroDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFifteenDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFifteenDaysOld {
 				checkNeverNotified_FifteenDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeThirtyDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedThirtyDaysOld {
 				checkNeverNotified_ThirtyDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFourDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFourDaysOld {
 				checkNeverNotified_FourtyFourDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFiveDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFiveDaysOld {
 				checkNeverNotified_FourtyFiveDay = true
 				continue
 			}
 		}
 		if caseID == notifiedJustZeroDay.CaseID {
-			if n.GetType() == repo.NotificationTypeFifteenDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFifteenDaysOld {
 				checkZeroDay_FifteenDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeThirtyDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedThirtyDaysOld {
 				checkZeroDay_ThirtyDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFourDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFourDaysOld {
 				checkZeroDay_FourtyFourDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFiveDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFiveDaysOld {
 				checkZeroDay_FourtyFiveDay = true
 				continue
 			}
 		}
 		if caseID == notifiedUpToFifteenDay.CaseID {
-			if n.GetType() == repo.NotificationTypeThirtyDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedThirtyDaysOld {
 				checkFifteenDay_ThirtyDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFourDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFourDaysOld {
 				checkFifteenDay_FourtyFourDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFiveDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFiveDaysOld {
 				checkFifteenDay_FourtyFiveDay = true
 				continue
 			}
 		}
 		if caseID == notifiedUpToThirtyDay.CaseID {
-			if n.GetType() == repo.NotificationTypeFourtyFourDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFourDaysOld {
 				checkThirtyDay_FourtyFourDay = true
 				continue
 			}
-			if n.GetType() == repo.NotificationTypeFourtyFiveDaysOld {
+			if n.GetType() == repo.NotifierTypeDisputeAgedFourtyFiveDaysOld {
 				checkThirtyDay_FourtyFiveDay = true
 				continue
 			}
 		}
-		if caseID == notifiedUpToFourtyFourDays.CaseID && n.GetType() == repo.NotificationTypeFourtyFiveDaysOld {
+		if caseID == notifiedUpToFourtyFourDays.CaseID && n.GetType() == repo.NotifierTypeDisputeAgedFourtyFiveDaysOld {
 			checkFourtyFourDay_FourtyFiveDay = true
 		}
 	}

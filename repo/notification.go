@@ -10,11 +10,11 @@ import (
 
 const (
 	// Notification Type Constants
-	NotificationTypeZeroDaysOld       = "disputeNotificationZeroDaysOld"
-	NotificationTypeFifteenDaysOld    = "disputeNotificationFifteenDaysOld"
-	NotificationTypeThirtyDaysOld     = "disputeNotificationThirtyDaysOld"
-	NotificationTypeFourtyFourDaysOld = "disputeNotificationFourtyFourDaysOld"
-	NotificationTypeFourtyFiveDaysOld = "disputeNotificationFourtyFiveDaysOld"
+	NotifierTypeDisputeAgedZeroDaysOld       = "disputeNotificationZeroDaysOld"
+	NotifierTypeDisputeAgedFifteenDaysOld    = "disputeNotificationFifteenDaysOld"
+	NotifierTypeDisputeAgedThirtyDaysOld     = "disputeNotificationThirtyDaysOld"
+	NotifierTypeDisputeAgedFourtyFourDaysOld = "disputeNotificationFourtyFourDaysOld"
+	NotifierTypeDisputeAgedFourtyFiveDaysOld = "disputeNotificationFourtyFiveDaysOld"
 )
 
 type Notifier interface {
