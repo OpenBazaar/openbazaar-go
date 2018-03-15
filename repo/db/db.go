@@ -56,35 +56,34 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		conn.Exec(p)
 	}
 	l := new(sync.Mutex)
-	sqliteDB := &SQLiteDatastore{
-		config: &ConfigDB{
-			db:   conn,
-			lock: l,
-		},
-		followers:       NewFollowerStore(conn, l),
-		following:       NewFollowingStore(conn, l),
-		offlineMessages: NewOfflineMessageStore(conn, l),
-		pointers:        NewPointerStore(conn, l),
-		keys:            NewKeyStore(conn, l),
-		stxos:           NewSpentTransactionStore(conn, l),
-		txns:            NewTransactionStore(conn, l),
-		utxos:           NewUnspentTransactionStore(conn, l),
-		settings:        NewConfigurationStore(conn, l),
-		inventory:       NewInventoryStore(conn, l),
-		purchases:       NewPurchaseStore(conn, l),
-		sales:           NewSaleStore(conn, l),
-		watchedScripts:  NewWatchedScriptStore(conn, l),
-		cases:           NewCaseStore(conn, l),
-		chat:            NewChatStore(conn, l),
-		notifications:   NewNotificationStore(conn, l),
-		coupons:         NewCouponStore(conn, l),
-		txMetadata:      NewTransactionMetadataStore(conn, l),
-		moderatedStores: NewModeratedStore(conn, l),
-		db:              conn,
+	return NewSQLiteDatastore(conn, l), nil
+}
+
+func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex) *SQLiteDatastore {
+	return &SQLiteDatastore{
+		config:          &ConfigDB{db: db, lock: l},
+		followers:       NewFollowerStore(db, l),
+		following:       NewFollowingStore(db, l),
+		offlineMessages: NewOfflineMessageStore(db, l),
+		pointers:        NewPointerStore(db, l),
+		keys:            NewKeyStore(db, l),
+		stxos:           NewSpentTransactionStore(db, l),
+		txns:            NewTransactionStore(db, l),
+		utxos:           NewUnspentTransactionStore(db, l),
+		settings:        NewConfigurationStore(db, l),
+		inventory:       NewInventoryStore(db, l),
+		purchases:       NewPurchaseStore(db, l),
+		sales:           NewSaleStore(db, l),
+		watchedScripts:  NewWatchedScriptStore(db, l),
+		cases:           NewCaseStore(db, l),
+		chat:            NewChatStore(db, l),
+		notifications:   NewNotificationStore(db, l),
+		coupons:         NewCouponStore(db, l),
+		txMetadata:      NewTransactionMetadataStore(db, l),
+		moderatedStores: NewModeratedStore(db, l),
+		db:              db,
 		lock:            l,
 	}
-
-	return sqliteDB, nil
 }
 
 func (d *SQLiteDatastore) Ping() error {

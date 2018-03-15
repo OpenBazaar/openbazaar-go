@@ -10,9 +10,8 @@ import (
 
 type recordAgingNotifier struct {
 	// PerformTask dependancies
-	disputeCasesDB  repo.CaseStore
-	notificationsDB repo.NotificationStore
-	broadcast       chan interface{}
+	datastore repo.Datastore
+	broadcast chan interface{}
 
 	// Worker-handling dependancies
 	intervalDelay time.Duration
@@ -24,11 +23,10 @@ type recordAgingNotifier struct {
 
 func (n *OpenBazaarNode) StartRecordAgingNotifier() {
 	n.RecordAgingNotifier = &recordAgingNotifier{
-		disputeCasesDB:  n.Datastore.Cases(),
-		notificationsDB: n.Datastore.Notifications(),
-		broadcast:       n.Broadcast,
-		intervalDelay:   time.Duration(10) * time.Minute,
-		logger:          logging.MustGetLogger("recordAgingNotifier"),
+		datastore:     n.Datastore,
+		broadcast:     n.Broadcast,
+		intervalDelay: time.Duration(10) * time.Minute,
+		logger:        logging.MustGetLogger("recordAgingNotifier"),
 	}
 	go n.RecordAgingNotifier.Run()
 }
@@ -70,7 +68,7 @@ func (d *recordAgingNotifier) PerformTask() (err error) {
 }
 
 func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
-	disputes, err := d.disputeCasesDB.GetDisputesForNotification()
+	disputes, err := d.datastore.Cases().GetDisputesForNotification()
 	if err != nil {
 		return err
 	}
@@ -106,7 +104,7 @@ func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
 		}
 	}
 
-	notificationTx, err := d.notificationsDB.BeginTransaction()
+	notificationTx, err := d.datastore.Notifications().BeginTransaction()
 	if err != nil {
 		return err
 	}
@@ -139,7 +137,7 @@ func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
 		d.broadcast <- n.Notification
 	}
 
-	err = d.disputeCasesDB.UpdateDisputesLastNotifiedAt(disputes)
+	err = d.datastore.Cases().UpdateDisputesLastNotifiedAt(disputes)
 	d.logger.Infof("updated lastNotifiedAt on %d disputes", len(disputes))
 	return nil
 }

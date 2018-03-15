@@ -2,13 +2,13 @@ package core
 
 import (
 	"database/sql"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/op/go-logging"
 )
 
@@ -71,13 +71,9 @@ func TestRecordAgingNotifierPerformsTask(t *testing.T) {
 		}
 
 		database, _ = sql.Open("sqlite3", ":memory:")
-		setupSQL    = []string{
-			db.PragmaKey(""),
-			db.CreateTableDisputedCasesSQL,
-			db.CreateTableNotificationsSQL,
-		}
+		datastore   = db.NewSQLiteDatastore(database, new(sync.Mutex))
 	)
-	_, err := database.Exec(strings.Join(setupSQL, " "))
+	_, err := database.Exec(schema.InitializeDatabaseSQL(""))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,10 +106,9 @@ func TestRecordAgingNotifierPerformsTask(t *testing.T) {
 	}()
 
 	worker := &recordAgingNotifier{
-		disputeCasesDB:  db.NewCaseStore(database, new(sync.Mutex)),
-		notificationsDB: db.NewNotificationStore(database, new(sync.Mutex)),
-		broadcast:       broadcastChannel,
-		logger:          logging.MustGetLogger("testRecordAgingNotifier"),
+		datastore: datastore,
+		broadcast: broadcastChannel,
+		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
 	}
 	if err := worker.PerformTask(); err != nil {
 		t.Fatal(err)
