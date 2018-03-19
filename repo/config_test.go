@@ -192,16 +192,3 @@ func TestExtendConfigFile(t *testing.T) {
 	os.RemoveAll(filepath.Join(testConfigFolder, "datastore"))
 	os.RemoveAll(filepath.Join(testConfigFolder, "repo.lock"))
 }
-
-func TestInitConfig(t *testing.T) {
-	config, err := InitConfig(testConfigFolder)
-	if config == nil {
-		t.Error("config empty", err)
-	}
-	if err != nil {
-		t.Error("InitConfig threw an unexpected error")
-	}
-	if config.Addresses.Gateway != "/ip4/127.0.0.1/tcp/4002" {
-		t.Error("config.Addresses.Gateway is not set")
-	}
-}

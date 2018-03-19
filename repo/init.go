@@ -43,10 +43,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		return err
 	}
 
-	conf, err := InitConfig(repoRoot)
-	if err != nil {
-		return err
-	}
+	conf := schema.MustDefaultConfig()
 
 	if mnemonic == "" {
 		mnemonic, err = createMnemonic(bip39.NewEntropy, bip39.NewMnemonic)

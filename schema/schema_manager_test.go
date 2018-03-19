@@ -154,3 +154,13 @@ func TestInitializeDatabaseSQL(t *testing.T) {
 		t.Fatal("Expected InitializeDatabaseSQL to return executeable SQL, but got error:", err.Error())
 	}
 }
+
+func TestMustDefaultConfig(t *testing.T) {
+	config := MustDefaultConfig()
+	if config == nil {
+		t.Error("Expected config to not be empty")
+	}
+	if config.Addresses.Gateway != "/ip4/127.0.0.1/tcp/4002" {
+		t.Error("config.Addresses.Gateway is not set")
+	}
+}

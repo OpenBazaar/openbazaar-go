@@ -11,9 +11,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/mitchellh/go-homedir"
 	_ "github.com/mutecomm/go-sqlcipher"
 )
+
+var DefaultBootstrapAddresses = []string{
+	"/ip4/107.170.133.32/tcp/4001/ipfs/QmUZRGLhcKXF1JyuaHgKm23LvqcoMYwtb9jmh8CkP4og3K", // Le Marché Serpette
+	"/ip4/139.59.174.197/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM", // Brixton Village
+	"/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg",   // Johari
+	"/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX", // Duo Search
+}
 
 type openbazaarSchemaManager struct {
 	dataPath        string
@@ -243,4 +251,88 @@ func PragmaKey(password string) string {
 		return ""
 	}
 	return fmt.Sprintf("pragma key = '%s';", password)
+}
+
+func MustDefaultConfig() *config.Config {
+	bootstrapPeers, err := config.ParseBootstrapPeers(DefaultBootstrapAddresses)
+	if err != nil {
+		// DefaultBootstrapAddresses are local and should never panic
+		panic(err)
+	}
+
+	conf := &config.Config{
+		// Setup the node's default addresses.
+		// NOTE: two swarm listen addrs, one TCP, one UTP.
+		Addresses: config.Addresses{
+			Swarm: []string{
+				"/ip4/0.0.0.0/tcp/4001",
+				"/ip6/::/tcp/4001",
+				"/ip4/0.0.0.0/tcp/9005/ws",
+				"/ip6/::/tcp/9005/ws",
+			},
+			API:     "",
+			Gateway: "/ip4/127.0.0.1/tcp/4002",
+		},
+
+		Datastore: config.Datastore{
+			StorageMax:         "10GB",
+			StorageGCWatermark: 90, // 90%
+			GCPeriod:           "1h",
+			BloomFilterSize:    0,
+			HashOnRead:         false,
+			Spec: map[string]interface{}{
+				"type": "mount",
+				"mounts": []interface{}{
+					map[string]interface{}{
+						"mountpoint": "/blocks",
+						"type":       "measure",
+						"prefix":     "flatfs.datastore",
+						"child": map[string]interface{}{
+							"type":      "flatfs",
+							"path":      "blocks",
+							"sync":      true,
+							"shardFunc": "/repo/flatfs/shard/v1/next-to-last/2",
+						},
+					},
+					map[string]interface{}{
+						"mountpoint": "/",
+						"type":       "measure",
+						"prefix":     "leveldb.datastore",
+						"child": map[string]interface{}{
+							"type":        "levelds",
+							"path":        "datastore",
+							"compression": "none",
+						},
+					},
+				},
+			},
+		},
+		Bootstrap: config.BootstrapPeerStrings(bootstrapPeers),
+		Discovery: config.Discovery{config.MDNS{
+			Enabled:  false,
+			Interval: 10,
+		}},
+
+		// Setup the node mount points
+		Mounts: config.Mounts{
+			IPFS: "/ipfs",
+			IPNS: "/ipns",
+		},
+
+		Ipns: config.Ipns{
+			ResolveCacheSize:   128,
+			RecordLifetime:     "7d",
+			RepublishPeriod:    "24h",
+			QuerySize:          5,
+			UsePersistentCache: true,
+		},
+
+		Gateway: config.Gateway{
+			RootRedirect: "",
+			Writable:     false,
+			PathPrefixes: []string{},
+		},
+	}
+
+	return conf
 }
