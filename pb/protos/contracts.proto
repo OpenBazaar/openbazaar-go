@@ -40,17 +40,19 @@ message Listing {
         string pricingCurrency             = 6;
         string language                    = 7;
         uint32 escrowTimeoutHours          = 8;
+        string coinType                    = 9;
 
         enum ContractType {
-            PHYSICAL_GOOD = 0;
-            DIGITAL_GOOD  = 1;
-            SERVICE       = 2;
-            CROWD_FUND    = 3;
+            PHYSICAL_GOOD  = 0;
+            DIGITAL_GOOD   = 1;
+            SERVICE        = 2;
+            CROWD_FUND     = 3;
+            CRYPTOCURRENCY = 4;
         }
 
         enum Format {
             FIXED_PRICE  = 0;
-            AUCTION      = 1;
+            MARKET_PRICE = 2;
         }
     }
 

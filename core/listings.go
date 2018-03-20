@@ -813,7 +813,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
 		return errors.New("Invalid contract type")
 	}
-	if listing.Metadata.Format > pb.Listing_Metadata_AUCTION {
+	if listing.Metadata.Format > pb.Listing_Metadata_MARKET_PRICE {
 		return errors.New("Invalid listing format")
 	}
 	if listing.Metadata.Expiry == nil {
