@@ -45,6 +45,14 @@ const (
 	SlugBuffer               = 5
 )
 
+var (
+	ErrListingDoesNotExist                   = errors.New("Listing doesn't exist")
+	ErrListingAlreadyExists                  = errors.New("Listing already exists")
+	ErrMarketPriceListingInvalidField        = errors.New("Illegal price listing invalid field")
+	ErrCryptocurrencyListingInvalidField     = errors.New("Illegal cryptocurrency listing field")
+	ErrCryptocurrencyListingCoinTypeRequired = errors.New("Cryptocurrency listings require a coinType")
+)
+
 type price struct {
 	CurrencyCode string `json:"currencyCode"`
 	Amount       uint64 `json:"amount"`
@@ -251,7 +259,114 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) UpdateListingIndex(listing *pb.SignedListing) error {
+func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
+	exists, err := n.listingExists(listing.Slug)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return ErrListingAlreadyExists
+	}
+
+	if listing.Slug == "" {
+		listing.Slug, err = n.GenerateSlug(listing.Item.Title)
+		if err != nil {
+			return err
+		}
+	}
+
+	return n.saveListing(listing)
+}
+
+func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
+	exists, err := n.listingExists(listing.Slug)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return ErrListingDoesNotExist
+	}
+
+	return n.saveListing(listing)
+}
+
+func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
+	err := validateListing(listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled())
+	if err != nil {
+		return err
+	}
+
+	if len(listing.Moderators) == 0 {
+		sd, err := n.Datastore.Settings().Get()
+		if err == nil {
+			listing.Moderators = *sd.StoreModerators
+		}
+	}
+
+	err = n.SetListingInventory(listing)
+	if err != nil {
+		return err
+	}
+	signedListing, err := n.SignListing(listing)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(n.getPathForListingSlug(signedListing.Listing.Slug))
+	if err != nil {
+		return err
+	}
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: false,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	out, err := m.MarshalToString(signedListing)
+	if err != nil {
+		return err
+	}
+
+	if _, err := f.WriteString(out); err != nil {
+		return err
+	}
+	err = n.updateListingIndex(signedListing)
+	if err != nil {
+		return err
+	}
+	// Update followers/following
+	err = n.UpdateFollow()
+	if err != nil {
+		return err
+	}
+	if err = n.SeedNode(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) listingExists(slug string) (bool, error) {
+	if slug == "" {
+		return false, nil
+	}
+	_, ferr := os.Stat(n.getPathForListingSlug(slug))
+	if os.IsNotExist(ferr) {
+		return false, nil
+	}
+	if ferr != nil {
+		return false, ferr
+	}
+	return false, nil
+}
+
+func (n *OpenBazaarNode) getPathForListingSlug(slug string) string {
+	return path.Join(n.RepoPath, "root", "listings", slug+".json")
+}
+
+func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 	ld, err := n.extractListingData(listing)
 	if err != nil {
 		return err
