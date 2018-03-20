@@ -48,8 +48,8 @@ const (
 var (
 	ErrListingDoesNotExist                   = errors.New("Listing doesn't exist")
 	ErrListingAlreadyExists                  = errors.New("Listing already exists")
-	ErrMarketPriceListingInvalidField        = errors.New("Illegal price listing invalid field")
-	ErrCryptocurrencyListingInvalidField     = errors.New("Illegal cryptocurrency listing field")
+	ErrMarketPriceListingIllegalField        = errors.New("Illegal market price listing field")
+	ErrCryptocurrencyListingIllegalField     = errors.New("Illegal cryptocurrency listing field")
 	ErrCryptocurrencyListingCoinTypeRequired = errors.New("Cryptocurrency listings require a coinType")
 )
 
@@ -293,11 +293,6 @@ func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 }
 
 func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
-	err := validateListing(listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled())
-	if err != nil {
-		return err
-	}
-
 	if len(listing.Moderators) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil {
@@ -305,10 +300,20 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 		}
 	}
 
-	err = n.SetListingInventory(listing)
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		err := validateCryptocurrencyListing(listing)
+		if err != nil {
+			return err
+		}
+
+		setCryptocurrencyListingDefaults(listing)
+	}
+
+	err := n.SetListingInventory(listing)
 	if err != nil {
 		return err
 	}
+
 	signedListing, err := n.SignListing(listing)
 	if err != nil {
 		return err
@@ -353,13 +358,16 @@ func (n *OpenBazaarNode) listingExists(slug string) (bool, error) {
 		return false, nil
 	}
 	_, ferr := os.Stat(n.getPathForListingSlug(slug))
+	if slug == "" {
+		return false, nil
+	}
 	if os.IsNotExist(ferr) {
 		return false, nil
 	}
 	if ferr != nil {
 		return false, ferr
 	}
-	return false, nil
+	return true, nil
 }
 
 func (n *OpenBazaarNode) getPathForListingSlug(slug string) string {
@@ -376,6 +384,13 @@ func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 		return err
 	}
 	return n.updateListingOnDisk(index, ld, false)
+}
+
+func setCryptocurrencyListingDefaults(listing *pb.Listing) {
+	listing.Coupons = []*pb.Listing_Coupon{}
+	listing.Item.Options = []*pb.Listing_Item_Option{}
+	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
+	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
 }
 
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
@@ -810,7 +825,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if listing.Metadata == nil {
 		return errors.New("Missing required field: Metadata")
 	}
-	if listing.Metadata.ContractType > pb.Listing_Metadata_SERVICE {
+	if listing.Metadata.ContractType > pb.Listing_Metadata_CRYPTOCURRENCY {
 		return errors.New("Invalid contract type")
 	}
 	if listing.Metadata.Format > pb.Listing_Metadata_MARKET_PRICE {
@@ -821,12 +836,6 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	}
 	if time.Unix(listing.Metadata.Expiry.Seconds, 0).Before(time.Now()) {
 		return errors.New("Listing expiration must be in the future")
-	}
-	if listing.Metadata.PricingCurrency == "" {
-		return errors.New("Listing pricing currency code must not be empty")
-	}
-	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
-		return fmt.Errorf("PricingCurrency is longer than the max of %d characters", WordMaxCharacters)
 	}
 	if len(listing.Metadata.Language) > WordMaxCharacters {
 		return fmt.Errorf("Language is longer than the max of %d characters", WordMaxCharacters)
@@ -851,7 +860,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	if listing.Item.Title == "" {
 		return errors.New("Listing must have a title")
 	}
-	if listing.Item.Price == 0 {
+	if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY && listing.Item.Price == 0 {
 		return errors.New("Zero price listings are not allowed")
 	}
 	if len(listing.Item.Title) > TitleMaxCharacters {
@@ -919,12 +928,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return fmt.Errorf("Category length must be less than the max of %d", WordMaxCharacters)
 		}
 	}
-	if len(listing.Item.Condition) > SentenceMaxCharacters {
-		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
-	}
-	if len(listing.Item.Options) > MaxListItems {
-		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
-	}
+
 	maxCombos := 1
 	variantSizeMap := make(map[int]int)
 	optionMap := make(map[string]struct{})
@@ -1024,8 +1028,111 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 
 	}
 
+	// Taxes
+	if len(listing.Taxes) > MaxListItems {
+		return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
+	}
+	for _, tax := range listing.Taxes {
+		if tax.TaxType == "" {
+			return errors.New("Tax type must be specified")
+		}
+		if len(tax.TaxType) > WordMaxCharacters {
+			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
+		}
+		if len(tax.TaxRegions) == 0 {
+			return errors.New("Tax must specify at least one region")
+		}
+		if len(tax.TaxRegions) > MaxCountryCodes {
+			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)
+		}
+		if tax.Percentage == 0 || tax.Percentage > 100 {
+			return errors.New("Tax percentage must be between 0 and 100")
+		}
+	}
+
+	// Coupons
+	if len(listing.Coupons) > MaxListItems {
+		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
+	}
+	for _, coupon := range listing.Coupons {
+		if len(coupon.Title) > CouponTitleMaxCharacters {
+			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
+		}
+		if len(coupon.GetDiscountCode()) > CodeMaxCharacters {
+			return fmt.Errorf("Coupon code length must be less than the max of %d", CodeMaxCharacters)
+		}
+		if coupon.GetPercentDiscount() > 100 {
+			return errors.New("Percent discount cannot be over 100 percent")
+		}
+		if coupon.GetPriceDiscount() > listing.Item.Price {
+			return errors.New("Price discount cannot be greater than the item price")
+		}
+		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
+			return errors.New("Coupons must have at least one positive discount value")
+		}
+	}
+
+	// Moderators
+	if len(listing.Moderators) > MaxListItems {
+		return fmt.Errorf("Number of moderators is greater than the max of %d", MaxListItems)
+	}
+	for _, moderator := range listing.Moderators {
+		_, err := mh.FromB58String(moderator)
+		if err != nil {
+			return errors.New("Moderator IDs must be multihashes")
+		}
+	}
+
+	// TermsAndConditions
+	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
+		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
+	}
+
+	// RefundPolicy
+	if len(listing.RefundPolicy) > PolicyMaxCharacters {
+		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
+	}
+
+	// Type-specific validations
+	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+		err := validatePhysicalListing(listing)
+		if err != nil {
+			return err
+		}
+	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		err := validateCryptocurrencyListing(listing)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Format-specific validations
+	if listing.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+		err := validateMarketPriceListing(listing)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validatePhysicalListing(listing *pb.Listing) error {
+	if listing.Metadata.PricingCurrency == "" {
+		return errors.New("Listing pricing currency code must not be empty")
+	}
+	if len(listing.Metadata.PricingCurrency) > WordMaxCharacters {
+		return fmt.Errorf("PricingCurrency is longer than the max of %d characters", WordMaxCharacters)
+	}
+	if len(listing.Item.Condition) > SentenceMaxCharacters {
+		return fmt.Errorf("Condition length must be less than the max of %d", SentenceMaxCharacters)
+	}
+	if len(listing.Item.Options) > MaxListItems {
+		return fmt.Errorf("Number of options is greater than the max of %d", MaxListItems)
+	}
+
 	// ShippingOptions
-	if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD && len(listing.ShippingOptions) == 0 {
+	if len(listing.ShippingOptions) == 0 {
 		return errors.New("Must be at least one shipping option for a physical good")
 	}
 	if len(listing.ShippingOptions) > MaxListItems {
@@ -1091,69 +1198,28 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		}
 	}
 
-	// Taxes
-	if len(listing.Taxes) > MaxListItems {
-		return fmt.Errorf("Number of taxes is greater than the max of %d", MaxListItems)
-	}
-	for _, tax := range listing.Taxes {
-		if tax.TaxType == "" {
-			return errors.New("Tax type must be specified")
-		}
-		if len(tax.TaxType) > WordMaxCharacters {
-			return fmt.Errorf("Tax type length must be less than the max of %d", WordMaxCharacters)
-		}
-		if len(tax.TaxRegions) == 0 {
-			return errors.New("Tax must specify at least one region")
-		}
-		if len(tax.TaxRegions) > MaxCountryCodes {
-			return fmt.Errorf("Number of tax regions is greater than the max of %d", MaxCountryCodes)
-		}
-		if tax.Percentage == 0 || tax.Percentage > 100 {
-			return errors.New("Tax percentage must be between 0 and 100")
-		}
+	return nil
+}
+
+func validateCryptocurrencyListing(listing *pb.Listing) error {
+	if len(listing.Coupons) > 0 ||
+		len(listing.Item.Options) > 0 ||
+		len(listing.ShippingOptions) > 0 ||
+		listing.Item.Condition != "" ||
+		listing.Metadata.PricingCurrency != "" {
+		return ErrCryptocurrencyListingIllegalField
 	}
 
-	// Coupons
-	if len(listing.Coupons) > MaxListItems {
-		return fmt.Errorf("Number of coupons is greater than the max of %d", MaxListItems)
-	}
-	for _, coupon := range listing.Coupons {
-		if len(coupon.Title) > CouponTitleMaxCharacters {
-			return fmt.Errorf("Coupon title length must be less than the max of %d", SentenceMaxCharacters)
-		}
-		if len(coupon.GetDiscountCode()) > CodeMaxCharacters {
-			return fmt.Errorf("Coupon code length must be less than the max of %d", CodeMaxCharacters)
-		}
-		if coupon.GetPercentDiscount() > 100 {
-			return errors.New("Percent discount cannot be over 100 percent")
-		}
-		if coupon.GetPriceDiscount() > listing.Item.Price {
-			return errors.New("Price discount cannot be greater than the item price")
-		}
-		if coupon.GetPercentDiscount() == 0 && coupon.GetPriceDiscount() == 0 {
-			return errors.New("Coupons must have at least one positive discount value")
-		}
+	if listing.Metadata.CoinType == "" {
+		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	// Moderators
-	if len(listing.Moderators) > MaxListItems {
-		return fmt.Errorf("Number of moderators is greater than the max of %d", MaxListItems)
-	}
-	for _, moderator := range listing.Moderators {
-		_, err := mh.FromB58String(moderator)
-		if err != nil {
-			return errors.New("Moderator IDs must be multihashes")
-		}
-	}
+	return nil
+}
 
-	// TermsAndConditions
-	if len(listing.TermsAndConditions) > PolicyMaxCharacters {
-		return fmt.Errorf("Terms and conditions length must be less than the max of %d", PolicyMaxCharacters)
-	}
-
-	// RefundPolicy
-	if len(listing.RefundPolicy) > PolicyMaxCharacters {
-		return fmt.Errorf("Refun policy length must be less than the max of %d", PolicyMaxCharacters)
+func validateMarketPriceListing(listing *pb.Listing) error {
+	if listing.Item.Price > 0 {
+		return ErrMarketPriceListingIllegalField
 	}
 
 	return nil

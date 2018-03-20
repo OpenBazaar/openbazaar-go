@@ -527,6 +527,11 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 
 	err = i.node.UpdateListing(ld)
 	if err != nil {
+		if err == core.ErrListingDoesNotExist {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return
+		}
+
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
