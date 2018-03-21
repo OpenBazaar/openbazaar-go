@@ -195,6 +195,73 @@ func TestListings(t *testing.T) {
 	})
 }
 
+func TestCryptoListings(t *testing.T) {
+	listing := factory.NewCryptoListing("crypto")
+	updatedListing := *listing
+
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
+		{"GET", "/ob/listing/crypto", jsonFor(t, &updatedListing), 200, anyResponseJSON},
+
+		{"PUT", "/ob/listing", jsonFor(t, &updatedListing), 200, "{}"},
+		{"PUT", "/ob/listing", jsonFor(t, &updatedListing), 200, "{}"},
+		{"GET", "/ob/listing/crypto", jsonFor(t, &updatedListing), 200, anyResponseJSON},
+
+		{"DELETE", "/ob/listing/crypto", "", 200, `{}`},
+		{"DELETE", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
+		{"GET", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
+	})
+}
+
+func TestCryptoListingsNoCoinType(t *testing.T) {
+	listing := factory.NewCryptoListing("crypto")
+	listing.Metadata.CoinType = ""
+
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false, "reason": "Cryptocurrency listings require a coinType"}`},
+	})
+}
+
+func TestCryptoListingsIllegalFields(t *testing.T) {
+	runTest := func(listing *pb.Listing) {
+		runAPITests(t, apiTests{
+			{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal cryptocurrency listing field"}`},
+		})
+	}
+
+	physicalListing := factory.NewListing("physical")
+
+	listing := factory.NewCryptoListing("crypto")
+	listing.Metadata.PricingCurrency = "btc"
+	runTest(listing)
+
+	listing = factory.NewCryptoListing("crypto")
+	listing.Item.Condition = "new"
+	runTest(listing)
+
+	listing = factory.NewCryptoListing("crypto")
+	listing.Item.Options = physicalListing.Item.Options
+	runTest(listing)
+
+	listing = factory.NewCryptoListing("crypto")
+	listing.ShippingOptions = physicalListing.ShippingOptions
+	runTest(listing)
+
+	listing = factory.NewCryptoListing("crypto")
+	listing.Coupons = physicalListing.Coupons
+	runTest(listing)
+}
+
+func TestMarketRatePrice(t *testing.T) {
+	listing := factory.NewListing("listing")
+	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
+	listing.Item.Price = 1
+
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal market price listing field"}`},
+	})
+}
+
 func TestStatus(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"GET", "/ob/status", "", 400, anyResponseJSON},
