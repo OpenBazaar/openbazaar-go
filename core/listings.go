@@ -44,7 +44,7 @@ const (
 	EscrowTimeout            = 1080
 	SlugBuffer               = 5
 
-	DefaultCoinDivisibility uint32 = 10e7
+	DefaultCoinDivisibility uint32 = 1e8
 )
 
 var (
