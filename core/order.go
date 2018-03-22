@@ -37,12 +37,13 @@ type shippingOption struct {
 }
 
 type item struct {
-	ListingHash string         `json:"listingHash"`
-	Quantity    int            `json:"quantity"`
-	Options     []option       `json:"options"`
-	Shipping    shippingOption `json:"shipping"`
-	Memo        string         `json:"memo"`
-	Coupons     []string       `json:"coupons"`
+	ListingHash    string         `json:"listingHash"`
+	Quantity       int            `json:"quantity"`
+	Options        []option       `json:"options"`
+	Shipping       shippingOption `json:"shipping"`
+	Memo           string         `json:"memo"`
+	Coupons        []string       `json:"coupons"`
+	PaymentAddress string         `json:"paymentAddress"`
 }
 
 type PurchaseData struct {
@@ -66,6 +67,12 @@ type PurchaseData struct {
 const EscrowReleaseSize = 337
 
 var UnknownListingError = errors.New("Order contains a hash of a listing that is not currently for sale")
+
+var (
+	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
+	ErrCryptocurrencyPurchaseIllegalField           = errors.New("Illegal cryptocurrency purchase field")
+	ErrMarketPriceRequiresExchangeRates             = errors.New("Can't purchase market price listings with exchange rates disabled")
+)
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract, err := n.createContractWithOrder(data)
@@ -569,70 +576,75 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrencies[0], n.Wallet.CurrencyCode())
 		}
 
-		// Remove any duplicate coupons
-		couponMap := make(map[string]bool)
-		var coupons []string
-		for _, c := range item.Coupons {
-			if !couponMap[c] {
-				couponMap[c] = true
-				coupons = append(coupons, c)
-			}
-		}
-
-		// Validate the selected options
-		listingOptions := make(map[string]*pb.Listing_Item_Option)
-		for _, opt := range listing.Item.Options {
-			listingOptions[strings.ToLower(opt.Name)] = opt
-		}
-		for _, uopt := range item.Options {
-			_, ok := listingOptions[strings.ToLower(uopt.Name)]
-			if !ok {
-				return nil, errors.New("Selected variant not in listing")
-			}
-			delete(listingOptions, strings.ToLower(uopt.Name))
-		}
-		if len(listingOptions) > 0 {
-			return nil, errors.New("Not all options were selected")
-		}
-
 		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return nil, err
 		}
-		listingId, err := EncodeCID(ser)
+		listingID, err := EncodeCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		i.ListingHash = listingId.String()
+		i.ListingHash = listingID.String()
 		i.Quantity = uint32(item.Quantity)
 
-		for _, option := range item.Options {
-			o := &pb.Order_Item_Option{
-				Name:  option.Name,
-				Value: option.Value,
+		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+			i.Memo = item.Memo
+
+			// Remove any duplicate coupons
+			couponMap := make(map[string]bool)
+			var coupons []string
+			for _, c := range item.Coupons {
+				if !couponMap[c] {
+					couponMap[c] = true
+					coupons = append(coupons, c)
+				}
 			}
-			i.Options = append(i.Options, o)
+			i.CouponCodes = coupons
+
+			// Validate the selected options
+			listingOptions := make(map[string]*pb.Listing_Item_Option)
+			for _, opt := range listing.Item.Options {
+				listingOptions[strings.ToLower(opt.Name)] = opt
+			}
+			for _, uopt := range item.Options {
+				_, ok := listingOptions[strings.ToLower(uopt.Name)]
+				if !ok {
+					return nil, errors.New("Selected variant not in listing")
+				}
+				delete(listingOptions, strings.ToLower(uopt.Name))
+			}
+			if len(listingOptions) > 0 {
+				return nil, errors.New("Not all options were selected")
+			}
+
+			for _, option := range item.Options {
+				o := &pb.Order_Item_Option{
+					Name:  option.Name,
+					Value: option.Value,
+				}
+				i.Options = append(i.Options, o)
+			}
 		}
-		so := &pb.Order_Item_ShippingOption{
-			Name:    item.Shipping.Name,
-			Service: item.Shipping.Service,
+
+		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+			i.ShippingOption = &pb.Order_Item_ShippingOption{
+				Name:    item.Shipping.Name,
+				Service: item.Shipping.Service,
+			}
 		}
-		i.ShippingOption = so
-		i.Memo = item.Memo
-		i.CouponCodes = coupons
+
+		if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+			i.PaymentAddress = item.PaymentAddress
+			validateCryptocurrencyOrderItem(i)
+		}
+
 		order.Items = append(order.Items, i)
 	}
 
-	// Make sure shipping fields are filled if the order contains a physical good
 	if containsPhysicalGood(addedListings) && !(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()) {
-		if order.Shipping == nil {
-			return nil, errors.New("Order is missing shipping object")
-		}
-		if contract.BuyerOrder.Shipping.Address == "" {
-			return nil, errors.New("Shipping address is empty")
-		}
-		if contract.BuyerOrder.Shipping.ShipTo == "" {
-			return nil, errors.New("Ship to name is empty")
+		err := validatePhysicalPurchaseOrder(contract)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -646,6 +658,34 @@ func containsPhysicalGood(addedListings map[string]*pb.Listing) bool {
 		}
 	}
 	return false
+}
+
+func validatePhysicalPurchaseOrder(contract *pb.RicardianContract) error {
+	if contract.BuyerOrder.Shipping == nil {
+		return errors.New("Order is missing shipping object")
+	}
+	if contract.BuyerOrder.Shipping.Address == "" {
+		return errors.New("Shipping address is empty")
+	}
+	if contract.BuyerOrder.Shipping.ShipTo == "" {
+		return errors.New("Ship to name is empty")
+	}
+
+	return nil
+}
+
+func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
+	if len(item.Options) > 0 {
+		return ErrCryptocurrencyPurchaseIllegalField
+	}
+	if len(item.CouponCodes) > 0 {
+		return ErrCryptocurrencyPurchaseIllegalField
+	}
+	if item.PaymentAddress == "" {
+		return ErrCryptocurrencyPurchasePaymentAddressRequired
+	}
+
+	return nil
 }
 
 func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) {
@@ -741,6 +781,19 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	return id.B58String(), nil
 }
 
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(symbol string, quantity uint32) (uint64, error) {
+	if n.ExchangeRates == nil {
+		return 0, ErrMarketPriceRequiresExchangeRates
+	}
+
+	rate, err := n.ExchangeRates.GetExchangeRate(strings.ToUpper(symbol))
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(float64(quantity) / rate), nil
+}
+
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
 	if n.ExchangeRates != nil {
 		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
@@ -751,6 +804,8 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
 		var itemTotal uint64
+		var itemQuantity uint32 = item.Quantity
+
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
@@ -758,7 +813,14 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
 		}
-		satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+
+		var satoshis uint64
+		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+			itemQuantity = 1
+			satoshis, err = n.getMarketPriceInSatoshis(l.Metadata.CoinType, item.Quantity)
+		} else {
+			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+		}
 		if err != nil {
 			return 0, err
 		}
@@ -821,11 +883,14 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 			}
 		}
-		itemTotal *= uint64(item.Quantity)
+		itemTotal *= uint64(itemQuantity)
 		total += itemTotal
 	}
 
-	// Add in shipping costs
+	// Add in shipping costs for physical items
+	if len(physicalGoods) == 0 {
+		return total, nil
+	}
 	type itemShipping struct {
 		primary               uint64
 		secondary             uint64
