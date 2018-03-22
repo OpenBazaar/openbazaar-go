@@ -167,6 +167,7 @@ message Order {
         ShippingOption shippingOption = 4;
         string memo                   = 5;
         repeated string couponCodes   = 6;
+        string paymentAddress         = 7;
 
         message Option {
             string name  = 1;
@@ -258,6 +259,9 @@ message OrderFulfillment {
 
     string note                                = 8;
 
+    // Cryptocurrencies only
+    repeated CryptocurrencyDelivery cryptocurrencyDelivery = 9;
+
     message PhysicalDelivery {
         string shipper            = 1;
         string trackingNumber     = 2;
@@ -266,6 +270,10 @@ message OrderFulfillment {
     message DigitalDelivery {
         string url                = 1;
         string password           = 2;
+    }
+
+    message CryptocurrencyDelivery {
+        string transactionID      = 1;
     }
 
     message Payout {
