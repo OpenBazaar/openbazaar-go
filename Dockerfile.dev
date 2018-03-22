@@ -13,8 +13,8 @@ RUN cd Python-3.6.0 && \
     ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 
 RUN pip3.6 install requests python-bitcoinlib && \
-    wget https://bitcoin.org/bin/bitcoin-core-0.13.0/bitcoin-0.13.0-x86_64-linux-gnu.tar.gz && \
-    tar -xvzf bitcoin-0.13.0-x86_64-linux-gnu.tar.gz -C /opt
+    wget https://bitcoin.org/bin/bitcoin-core-0.16.0/bitcoin-0.16.0-x86_64-linux-gnu.tar.gz && \
+    tar -xvzf bitcoin-0.16.0-x86_64-linux-gnu.tar.gz -C /opt
 
 WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
 RUN go get -u github.com/gogo/protobuf/proto \
