@@ -43,6 +43,8 @@ const (
 	MaxCountryCodes          = 255
 	EscrowTimeout            = 1080
 	SlugBuffer               = 5
+
+	DefaultCoinDivisibility uint32 = 1e8
 )
 
 var (
@@ -387,10 +389,17 @@ func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 }
 
 func setCryptocurrencyListingDefaults(listing *pb.Listing) {
+	if listing.Metadata.CoinDivisibility == 0 {
+		listing.Metadata.CoinDivisibility = coinDivisibilityForType(listing.Metadata.CoinType)
+	}
 	listing.Coupons = []*pb.Listing_Coupon{}
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
+}
+
+func coinDivisibilityForType(coinType string) uint32 {
+	return DefaultCoinDivisibility
 }
 
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
