@@ -36,7 +36,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         requests.post(api_url, data=json.dumps(profile_json, indent=4))
 
         # post listing to alice
-        with open('testdata/crypto_listing.json') as listing_file:
+        with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
 
         api_url = alice["gateway_url"] + "ob/listing"
@@ -46,7 +46,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+
+        slug = json.loads(r.text)["slug"]
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings.json"
@@ -73,7 +74,6 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         payment_amount = resp["amount"]
         if payment_amount <= 0:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Purchase POST failed: paymentAmount is <= 0")
-
 
         # check the purchase saved correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
@@ -145,6 +145,29 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Alice incorrectly saved as unfunded")
+
+        with open('testdata/fulfillment_crypto.json') as fulfillment_file:
+            fulfillment_json = json.load(fulfillment_file, object_pairs_hook=OrderedDict)
+        fulfillment_json["orderId"] = orderId
+        fulfillment_json["slug"] = slug
+        api_url = alice["gateway_url"] + "ob/orderfulfillment"
+        r = requests.post(api_url, data=json.dumps(fulfillment_json, indent=4))
+        if r.status_code == 404:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Fulfillment post endpoint not found")
+        elif r.status_code != 200:
+            resp = json.loads(r.text)
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Fulfillment POST failed. Reason: %s", resp["reason"])
+
+        # check bob received fulfillment
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text)
+        if resp["state"] != "FULFILLED":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Bob failed to detect order fulfillment")
+        if resp["contract"]["vendorOrderFulfillment"][0]["cryptocurrencyDelivery"][0]["transactionID"] != "crypto_transaction_id":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Bob failed to detect transactionID")
 
         print("PurchaseCryptoListingTest - PASS")
 
