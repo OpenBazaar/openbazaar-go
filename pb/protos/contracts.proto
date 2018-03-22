@@ -167,6 +167,7 @@ message Order {
         ShippingOption shippingOption = 4;
         string memo                   = 5;
         repeated string couponCodes   = 6;
+        string paymentAddress         = 7;
 
         message Option {
             string name  = 1;
