@@ -71,7 +71,7 @@ var UnknownListingError = errors.New("Order contains a hash of a listing that is
 var (
 	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
 	ErrCryptocurrencyPurchaseIllegalField           = errors.New("Illegal cryptocurrency purchase field")
-	ErrMarketPriceRequiresExchangeRates             = errors.New("Can't purchase market price listings with exchange rates disabled")
+	ErrPriceCalculationRequiresExchangeRates        = errors.New("Can't calculate price with exchange rates disabled")
 )
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
@@ -781,19 +781,6 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	return id.B58String(), nil
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(symbol string, quantity uint32) (uint64, error) {
-	if n.ExchangeRates == nil {
-		return 0, ErrMarketPriceRequiresExchangeRates
-	}
-
-	rate, err := n.ExchangeRates.GetExchangeRate(strings.ToUpper(symbol))
-	if err != nil {
-		return 0, err
-	}
-
-	return uint64(float64(quantity) / rate), nil
-}
-
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
 	if n.ExchangeRates != nil {
 		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
@@ -1004,6 +991,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
+
 	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || "t"+strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
@@ -1015,6 +1006,19 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 	btc := formatedAmount / exchangeRate
 	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
 	return uint64(satoshis), nil
+}
+
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint32) (uint64, error) {
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
+
+	rate, err := n.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(float64(amount) / rate), nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
