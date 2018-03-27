@@ -1009,17 +1009,18 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
-	if n.ExchangeRates == nil {
-		return 0, ErrPriceCalculationRequiresExchangeRates
-	}
-
 	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || "t"+strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
+	}
+
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
+
 	formatedAmount := float64(amount) / 100
 	btc := formatedAmount / exchangeRate
 	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
