@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/test"
+	"github.com/golang/protobuf/proto"
 
 	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
@@ -80,22 +82,6 @@ func request(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// buildRequest issues an http request directly to the blackbox handler
-func buildRequest(method string, path string, body string) (*http.Request, error) {
-	// Create a JSON request to the given endpoint
-	req, err := http.NewRequest(method, testURIRoot+path, bytes.NewBufferString(body))
-	if err != nil {
-		return nil, err
-	}
-
-	// Set headers/auth/cookie
-	req.Header.Add("Content-Type", "application/json")
-	req.SetBasicAuth("test", "test")
-	req.AddCookie(test.GetAuthCookie())
-
-	return req, nil
-}
-
 func runAPITests(t *testing.T, tests apiTests) {
 	// Create test repo
 	repository, err := test.NewRepository()
@@ -162,4 +148,30 @@ func runAPITest(t *testing.T, test apiTest) {
 			t.Fatal("Incorrect response")
 		}
 	}
+}
+
+// buildRequest issues an http request directly to the blackbox handler
+func buildRequest(method string, path string, body string) (*http.Request, error) {
+	// Create a JSON request to the given endpoint
+	req, err := http.NewRequest(method, testURIRoot+path, bytes.NewBufferString(body))
+	if err != nil {
+		return nil, err
+	}
+
+	// Set headers/auth/cookie
+	req.Header.Add("Content-Type", "application/json")
+	req.SetBasicAuth("test", "test")
+	req.AddCookie(test.GetAuthCookie())
+
+	return req, nil
+}
+
+func jsonFor(t *testing.T, fixture proto.Message) string {
+	m := jsonpb.Marshaler{}
+
+	json, err := m.MarshalToString(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return json
 }
