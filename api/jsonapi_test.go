@@ -5,10 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestMain(m *testing.M) {
@@ -335,14 +333,4 @@ func TestPosts(t *testing.T) {
 		{"PUT", "/ob/post", postUpdateJSON, 404, NotFoundJSON("Post")},
 		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
 	})
-}
-
-func jsonFor(t *testing.T, fixture proto.Message) string {
-	m := jsonpb.Marshaler{}
-
-	json, err := m.MarshalToString(fixture)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return json
 }
