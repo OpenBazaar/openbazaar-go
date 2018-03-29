@@ -50,6 +50,7 @@ const (
 var (
 	ErrListingDoesNotExist                   = errors.New("Listing doesn't exist")
 	ErrListingAlreadyExists                  = errors.New("Listing already exists")
+	ErrListingCoinDivisibilityIncorrect      = errors.New("Incorrect coinDivisibility")
 	ErrMarketPriceListingIllegalField        = errors.New("Illegal market price listing field")
 	ErrCryptocurrencyListingIllegalField     = errors.New("Illegal cryptocurrency listing field")
 	ErrCryptocurrencyListingCoinTypeRequired = errors.New("Cryptocurrency listings require a coinType")
@@ -389,9 +390,6 @@ func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 }
 
 func setCryptocurrencyListingDefaults(listing *pb.Listing) {
-	if listing.Metadata.CoinDivisibility == 0 {
-		listing.Metadata.CoinDivisibility = coinDivisibilityForType(listing.Metadata.CoinType)
-	}
 	listing.Coupons = []*pb.Listing_Coupon{}
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
@@ -1221,6 +1219,10 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 
 	if listing.Metadata.CoinType == "" {
 		return ErrCryptocurrencyListingCoinTypeRequired
+	}
+
+	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+		return ErrListingCoinDivisibilityIncorrect
 	}
 
 	return nil
