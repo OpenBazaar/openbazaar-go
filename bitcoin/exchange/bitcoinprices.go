@@ -64,7 +64,7 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 }
 
 func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
-	currencyCode = normalizeCurrentCode(currencyCode)
+	currencyCode = normalizeCurrencyCode(currencyCode)
 
 	b.Lock()
 	defer b.Unlock()
@@ -76,7 +76,7 @@ func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, err
 }
 
 func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
-	currencyCode = normalizeCurrentCode(currencyCode)
+	currencyCode = normalizeCurrencyCode(currencyCode)
 
 	b.fetchCurrentRates()
 	b.Lock()
@@ -223,6 +223,6 @@ func (b BitcoinChartsDecoder) decode(dat interface{}, cache map[string]float64) 
 	return nil
 }
 
-func normalizeCurrentCode(currencyCode string) string {
+func normalizeCurrencyCode(currencyCode string) string {
 	return strings.ToUpper(currencyCode)
 }
