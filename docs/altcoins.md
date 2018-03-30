@@ -122,12 +122,13 @@ You likely will need to either submit a PR or work with the UI developers to get
 
 ### Cryptocurrency support in reference implementations
 
-The OpenBazaar development team will use their discretion as to whethr or not to integrate a cryptocurrency into the reference implmentations directly. A proposed integration must meet the following conditions:
+The OpenBazaar development team will use their discretion as to whether or not to integrate a cryptocurrency into the reference implmentations directly. A proposed integration must meet the following conditions:
 
 1. The coin must support multisig.
 2. The coin must have an active developer community willing to assist with integration.
 3. The coin must have at least 10 people testing the integration into OpenBazaar.
 4. The coin must have a significant volume of transactions to reasonably guarantee it's being used for real world trade.
+5. An SPV wallet is strictly necessary, but strongly preferred.
 
 
 
