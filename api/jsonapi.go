@@ -815,7 +815,7 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 		Tor            bool   `json:"tor"`
 	}{
 		PeerId:         i.node.IpfsNode.Identity.Pretty(),
-		CryptoCurrency: strings.ToUpper(i.node.Wallet.CurrencyCode()),
+		CryptoCurrency: core.NormalizeCurrencyCode(i.node.Wallet.CurrencyCode()),
 		Testnet:        i.node.TestNetworkEnabled(),
 		Tor:            usingTor,
 	}

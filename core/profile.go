@@ -6,13 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/imdario/mergo"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	u "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
 	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
@@ -22,6 +15,14 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/imdario/mergo"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 const (
@@ -169,11 +170,11 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	}
 
 	if profile.Currencies == nil {
-		profile.Currencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+		profile.Currencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
 	}
 
 	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+		profile.ModeratorInfo.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
 	}
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	ts, err := ptypes.TimestampProto(time.Now())

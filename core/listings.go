@@ -125,7 +125,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Set crypto currency
-	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+	listing.Metadata.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
 
 	// Sanitize a few critical fields
 	if listing.Item == nil {
