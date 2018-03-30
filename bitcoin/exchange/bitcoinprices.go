@@ -3,8 +3,6 @@ package exchange
 import (
 	"encoding/json"
 	"errors"
-	"github.com/op/go-logging"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"reflect"
@@ -12,6 +10,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 )
 
 const SatoshiPerBTC = 100000000

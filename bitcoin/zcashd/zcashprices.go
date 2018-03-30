@@ -3,8 +3,6 @@ package zcashd
 import (
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"reflect"
@@ -12,6 +10,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
+	"golang.org/x/net/proxy"
 )
 
 type ExchangeRateProvider struct {
