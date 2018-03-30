@@ -15,6 +15,11 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+var (
+	ErrFulfillIncorrectDeliveryType      = errors.New("Incorrect delivery type for order")
+	ErrFulfillCryptocurrencyTXIDNotFound = errors.New("A transactionID is required to fulfill crypto listings")
+)
+
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	if fulfillment.Slug == "" && len(contract.VendorListings) == 1 {
 		fulfillment.Slug = contract.VendorListings[0].Slug
@@ -98,6 +103,10 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			listing = list
 			break
 		}
+	}
+
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		validateCryptocurrencyFulfillment(fulfillment)
 	}
 
 	ts, err := ptypes.TimestampProto(time.Now())
@@ -289,6 +298,20 @@ func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
 			}
 		}
 	}
+	return nil
+}
+
+func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
+	if len(fulfillment.PhysicalDelivery)+len(fulfillment.DigitalDelivery) > 0 {
+		return ErrFulfillIncorrectDeliveryType
+	}
+
+	for _, delivery := range fulfillment.CryptocurrencyDelivery {
+		if delivery.TransactionID == "" {
+			return ErrFulfillCryptocurrencyTXIDNotFound
+		}
+	}
+
 	return nil
 }
 

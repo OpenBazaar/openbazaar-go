@@ -71,7 +71,7 @@ var UnknownListingError = errors.New("Order contains a hash of a listing that is
 var (
 	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
 	ErrCryptocurrencyPurchaseIllegalField           = errors.New("Illegal cryptocurrency purchase field")
-	ErrMarketPriceRequiresExchangeRates             = errors.New("Can't purchase market price listings with exchange rates disabled")
+	ErrPriceCalculationRequiresExchangeRates        = errors.New("Can't calculate price with exchange rates disabled")
 )
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
@@ -781,30 +781,21 @@ func (n *OpenBazaarNode) CalcOrderId(order *pb.Order) (string, error) {
 	return id.B58String(), nil
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(symbol string, quantity uint32) (uint64, error) {
-	if n.ExchangeRates == nil {
-		return 0, ErrMarketPriceRequiresExchangeRates
-	}
-
-	rate, err := n.ExchangeRates.GetExchangeRate(strings.ToUpper(symbol))
-	if err != nil {
-		return 0, err
-	}
-
-	return uint64(float64(quantity) / rate), nil
-}
-
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
 	if n.ExchangeRates != nil {
 		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
 	}
+
 	var total uint64
 	physicalGoods := make(map[string]*pb.Listing)
 
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
-		var itemTotal uint64
-		var itemQuantity uint32 = item.Quantity
+		var (
+			satoshis     uint64
+			itemTotal    uint64
+			itemQuantity uint32 = item.Quantity
+		)
 
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
@@ -814,7 +805,6 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			physicalGoods[item.ListingHash] = l
 		}
 
-		var satoshis uint64
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
 			itemQuantity = 1
 			satoshis, err = n.getMarketPriceInSatoshis(l.Metadata.CoinType, item.Quantity)
@@ -887,10 +877,16 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		total += itemTotal
 	}
 
-	// Add in shipping costs for physical items
-	if len(physicalGoods) == 0 {
-		return total, nil
+	shippingTotal, err := n.calculateShippingTotalForListings(contract, physicalGoods)
+	if err != nil {
+		return 0, err
 	}
+	total += shippingTotal
+
+	return total, nil
+}
+
+func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (uint64, error) {
 	type itemShipping struct {
 		primary               uint64
 		secondary             uint64
@@ -898,14 +894,18 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		shippingTaxPercentage float32
 		version               uint32
 	}
-	var is []itemShipping
+	var (
+		is            []itemShipping
+		shippingTotal uint64
+	)
 
 	// First loop through to validate and filter out non-physical items
 	for _, item := range contract.BuyerOrder.Items {
-		listing, ok := physicalGoods[item.ListingHash]
-		if !ok { // Not physical good no need to calculate shipping
+		listing, ok := listings[item.ListingHash]
+		if !ok {
 			continue
 		}
+
 		// Check selected option exists
 		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
 		for _, so := range listing.ShippingOptions {
@@ -975,7 +975,10 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		})
 	}
 
-	var shippingTotal uint64
+	if len(is) == 0 {
+		return 0, nil
+	}
+
 	if len(is) == 1 {
 		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
 		if is[0].quantity > 1 {
@@ -987,34 +990,54 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				return 0, errors.New("Unknown listing version")
 			}
 		}
-	} else if len(is) > 1 {
-		var highest uint64
-		var i int
-		for x, s := range is {
-			if s.primary > highest {
-				highest = s.primary
-				i = x
-			}
-			shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
-		}
-		shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
-		shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+		return shippingTotal, nil
 	}
-	return total + shippingTotal, nil
+
+	var highest uint64
+	var i int
+	for x, s := range is {
+		if s.primary > highest {
+			highest = s.primary
+			i = x
+		}
+		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
+	}
+	shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+
+	return shippingTotal, nil
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
 	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || "t"+strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
+
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
+
 	formatedAmount := float64(amount) / 100
 	btc := formatedAmount / exchangeRate
 	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
 	return uint64(satoshis), nil
+}
+
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint32) (uint64, error) {
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
+
+	rate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(float64(amount) / rate), nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {

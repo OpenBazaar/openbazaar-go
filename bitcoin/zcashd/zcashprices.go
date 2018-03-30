@@ -3,14 +3,16 @@ package zcashd
 import (
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
+	"golang.org/x/net/proxy"
 )
 
 type ExchangeRateProvider struct {
@@ -61,6 +63,8 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 }
 
 func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrencyCode(currencyCode)
+
 	z.Lock()
 	defer z.Unlock()
 	price, ok := z.cache[currencyCode]
@@ -71,6 +75,8 @@ func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error
 }
 
 func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrencyCode(currencyCode)
+
 	z.fetchCurrentRates()
 	z.Lock()
 	defer z.Unlock()
@@ -319,4 +325,8 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 		cache[k] = v * rate
 	}
 	return nil
+}
+
+func normalizeCurrencyCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }
