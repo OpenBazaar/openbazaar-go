@@ -69,8 +69,8 @@ func TestGetAllRates(t *testing.T) {
 
 func TestGetExchangeRate(t *testing.T) {
 	b := setupBitcoinPriceFetcher()
-	b.cache["usd"] = 650.00
-	r, err := b.GetExchangeRate("usd")
+	b.cache["USD"] = 650.00
+	r, err := b.GetExchangeRate("USD")
 	if err != nil {
 		t.Error("Failed to fetch exchange rate")
 	}
@@ -80,6 +80,15 @@ func TestGetExchangeRate(t *testing.T) {
 	r, err = b.GetExchangeRate("EUR")
 	if r != 0 || err == nil {
 		t.Error("Return erroneous exchange rate")
+	}
+
+	// Test that currency symbols are normalized correctly
+	r, err = b.GetExchangeRate("usd")
+	if err != nil {
+		t.Error("Failed to fetch exchange rate")
+	}
+	if r != 650.00 {
+		t.Error("Returned exchange rate incorrect")
 	}
 }
 

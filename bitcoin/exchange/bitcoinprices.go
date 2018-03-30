@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -62,6 +63,8 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 }
 
 func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrentCode(currencyCode)
+
 	b.Lock()
 	defer b.Unlock()
 	price, ok := b.cache[currencyCode]
@@ -72,6 +75,8 @@ func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, err
 }
 
 func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrentCode(currencyCode)
+
 	b.fetchCurrentRates()
 	b.Lock()
 	defer b.Unlock()
@@ -215,4 +220,8 @@ func (b BitcoinChartsDecoder) decode(dat interface{}, cache map[string]float64) 
 		}
 	}
 	return nil
+}
+
+func normalizeCurrentCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }

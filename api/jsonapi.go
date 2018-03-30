@@ -1023,7 +1023,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJson))
 
 	} else {
-		rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+		rate, err := i.node.ExchangeRates.GetExchangeRate(currencyCode)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

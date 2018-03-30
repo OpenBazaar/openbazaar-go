@@ -1032,7 +1032,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount ui
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := n.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+	rate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
