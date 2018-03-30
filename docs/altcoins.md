@@ -128,7 +128,7 @@ The OpenBazaar development team will use their discretion as to whether or not t
 2. The coin must have an active developer community willing to assist with integration.
 3. The coin must have at least 10 people testing the integration into OpenBazaar.
 4. The coin must have a significant volume of transactions to reasonably guarantee it's being used for real world trade.
-5. An SPV wallet is strictly necessary, but strongly preferred.
+5. A SPV wallet is not strictly necessary, but strongly preferred.
 
 
 
