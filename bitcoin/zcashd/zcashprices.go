@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -61,6 +62,8 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 }
 
 func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrentCode(currencyCode)
+
 	z.Lock()
 	defer z.Unlock()
 	price, ok := z.cache[currencyCode]
@@ -71,6 +74,8 @@ func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error
 }
 
 func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
+	currencyCode = normalizeCurrentCode(currencyCode)
+
 	z.fetchCurrentRates()
 	z.Lock()
 	defer z.Unlock()
@@ -319,4 +324,8 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 		cache[k] = v * rate
 	}
 	return nil
+}
+
+func normalizeCurrentCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }
