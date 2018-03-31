@@ -56,35 +56,21 @@ func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, feeAPI s
 }
 
 func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
-	defaultFee := func() uint64 {
-		switch feeLevel {
-		case wallet.PRIOIRTY:
-			return fp.priorityFee
-		case wallet.NORMAL:
-			return fp.normalFee
-		case wallet.ECONOMIC:
-			return fp.economicFee
-		case wallet.FEE_BUMP:
-			return fp.priorityFee * 2
-		default:
-			return fp.normalFee
-		}
-	}
 	if fp.feeAPI == "" {
-		return defaultFee()
+		return fp.defaultFee(feeLevel)
 	}
 	fees := new(Fees)
 	if time.Since(fp.cache.lastUpdated) > time.Minute {
 		resp, err := fp.httpClient.Get(fp.feeAPI)
 		if err != nil {
-			return defaultFee()
+			return fp.defaultFee(feeLevel)
 		}
 
 		defer resp.Body.Close()
 
 		err = json.NewDecoder(resp.Body).Decode(&fees)
 		if err != nil {
-			return defaultFee()
+			return fp.defaultFee(feeLevel)
 		}
 		fp.cache.lastUpdated = time.Now()
 		fp.cache.fees = fees
@@ -93,29 +79,38 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 	}
 	switch feeLevel {
 	case wallet.PRIOIRTY:
-		if fees.Priority > fp.maxFee || fees.Priority == 0 {
-			return fp.maxFee
-		} else {
-			return fees.Priority
-		}
+		return fp.selectFee(fees.Priority, wallet.PRIOIRTY)
 	case wallet.NORMAL:
-		if fees.Normal > fp.maxFee || fees.Normal == 0 {
-			return fp.maxFee
-		} else {
-			return fees.Normal
-		}
+		return fp.selectFee(fees.Normal, wallet.PRIOIRTY)
 	case wallet.ECONOMIC:
-		if fees.Economic > fp.maxFee || fees.Economic == 0 {
-			return fp.maxFee
-		} else {
-			return fees.Economic
-		}
+		return fp.selectFee(fees.Economic, wallet.PRIOIRTY)
 	case wallet.FEE_BUMP:
-		if (fees.Priority*2) > fp.maxFee || fees.Priority == 0 {
-			return fp.maxFee
-		} else {
-			return fees.Priority * 2
-		}
+		return fp.selectFee(fees.Priority, wallet.PRIOIRTY)
+	default:
+		return fp.normalFee
+	}
+}
+
+func (fp *FeeProvider) selectFee(fee uint64, feeLevel wallet.FeeLevel) uint64 {
+	if fee > fp.maxFee {
+		return fp.maxFee
+	} else if fee == 0 {
+		return fp.defaultFee(feeLevel)
+	} else {
+		return fee
+	}
+}
+
+func(fp *FeeProvider) defaultFee(feeLevel wallet.FeeLevel) uint64 {
+	switch feeLevel {
+	case wallet.PRIOIRTY:
+		return fp.priorityFee
+	case wallet.NORMAL:
+		return fp.normalFee
+	case wallet.ECONOMIC:
+		return fp.economicFee
+	case wallet.FEE_BUMP:
+		return fp.priorityFee
 	default:
 		return fp.normalFee
 	}
