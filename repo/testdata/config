@@ -82,6 +82,7 @@
     "PrivKey": "testKey"
   },
   "Ipns": {
+    "BackUpAPI": "",
     "QuerySize": 0,
     "RecordLifetime": "7d",
     "RepublishPeriod": "24h",

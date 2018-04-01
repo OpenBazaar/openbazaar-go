@@ -6,27 +6,26 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-
-	"github.com/OpenBazaar/openbazaar-go/schema"
+	"path"
 )
 
 type Migration006 struct{}
 
-type migration006_configRecord struct {
+type Migration006_configRecord struct {
 	StoreModerators []string `json:"storeModerators"`
 }
 
-type migration006_price struct {
+type Migration006_price struct {
 	CurrencyCode string `json:"currencyCode"`
 	Amount       uint64 `json:"amount"`
 }
-type migration006_thumbnail struct {
+type Migration006_thumbnail struct {
 	Tiny   string `json:"tiny"`
 	Small  string `json:"small"`
 	Medium string `json:"medium"`
 }
 
-type migration006_listingDataBeforeMigration struct {
+type Migration006_listingDataBeforeMigration struct {
 	Hash          string                 `json:"hash"`
 	Slug          string                 `json:"slug"`
 	Title         string                 `json:"title"`
@@ -34,8 +33,8 @@ type migration006_listingDataBeforeMigration struct {
 	NSFW          bool                   `json:"nsfw"`
 	ContractType  string                 `json:"contractType"`
 	Description   string                 `json:"description"`
-	Thumbnail     migration006_thumbnail `json:"thumbnail"`
-	Price         migration006_price     `json:"price"`
+	Thumbnail     Migration006_thumbnail `json:"thumbnail"`
+	Price         Migration006_price     `json:"price"`
 	ShipsTo       []string               `json:"shipsTo"`
 	FreeShipping  []string               `json:"freeShipping"`
 	Language      string                 `json:"language"`
@@ -43,7 +42,7 @@ type migration006_listingDataBeforeMigration struct {
 	RatingCount   uint32                 `json:"ratingCount"`
 }
 
-type migration006_listingDataAfterMigration struct {
+type Migration006_listingDataAfterMigration struct {
 	Hash          string                 `json:"hash"`
 	Slug          string                 `json:"slug"`
 	Title         string                 `json:"title"`
@@ -51,8 +50,8 @@ type migration006_listingDataAfterMigration struct {
 	NSFW          bool                   `json:"nsfw"`
 	ContractType  string                 `json:"contractType"`
 	Description   string                 `json:"description"`
-	Thumbnail     migration006_thumbnail `json:"thumbnail"`
-	Price         migration006_price     `json:"price"`
+	Thumbnail     Migration006_thumbnail `json:"thumbnail"`
+	Price         Migration006_price     `json:"price"`
 	ShipsTo       []string               `json:"shipsTo"`
 	FreeShipping  []string               `json:"freeShipping"`
 	Language      string                 `json:"language"`
@@ -64,23 +63,26 @@ type migration006_listingDataAfterMigration struct {
 }
 
 func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
-		DataPath:        repoPath,
-		TestModeEnabled: testnetEnabled,
-	})
-	if err != nil {
-		return err
+	var (
+		databaseFilePath    string
+		listingsFilePath    = path.Join(repoPath, "root", "listings.json")
+		repoVersionFilePath = path.Join(repoPath, "repover")
+	)
+	if testnetEnabled {
+		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
 	}
 
 	// Non-vendors might not have an listing.json and we don't want to error here if that's the case
 	indexExists := true
-	if _, err := os.Stat(paths.DataPathJoin("root", "listings.json")); os.IsNotExist(err) {
+	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
 		indexExists = false
 	}
 
 	if indexExists {
 		// Get ModeratorIDs
-		db, err := sql.Open("sqlite3", paths.DatastorePath())
+		db, err := sql.Open("sqlite3", databaseFilePath)
 		if err != nil {
 			return err
 		}
@@ -93,7 +95,7 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		}
 		var (
 			configJSON      []byte
-			configRecord    migration006_configRecord
+			configRecord    Migration006_configRecord
 			storeModerators []string
 		)
 		configQuery := db.QueryRow("SELECT value FROM config WHERE key = 'settings' LIMIT 1")
@@ -113,10 +115,10 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		// Listing transformation
 		var (
 			listingJSON     []byte
-			listingRecords  []migration006_listingDataBeforeMigration
-			migratedRecords []migration006_listingDataAfterMigration
+			listingRecords  []Migration006_listingDataBeforeMigration
+			migratedRecords []Migration006_listingDataAfterMigration
 		)
-		listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
+		listingJSON, err = ioutil.ReadFile(listingsFilePath)
 		if err != nil {
 			return err
 		}
@@ -125,7 +127,7 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		}
 
 		for _, listing := range listingRecords {
-			migratedRecords = append(migratedRecords, migration006_listingDataAfterMigration{
+			migratedRecords = append(migratedRecords, Migration006_listingDataAfterMigration{
 				Hash:          listing.Hash,
 				Slug:          listing.Slug,
 				Title:         listing.Title,
@@ -146,14 +148,14 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		if listingJSON, err = json.Marshal(migratedRecords); err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
+		err = ioutil.WriteFile(listingsFilePath, listingJSON, os.ModePerm)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("7"), os.ModePerm)
+	err := ioutil.WriteFile(repoVersionFilePath, []byte("7"), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -161,16 +163,13 @@ func (Migration006) Up(repoPath, databasePassword string, testnetEnabled bool) e
 }
 
 func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
-		DataPath:        repoPath,
-		TestModeEnabled: testnetEnabled,
-	})
-	if err != nil {
-		return err
-	}
+	var (
+		listingsFilePath    = path.Join(repoPath, "root", "listings.json")
+		repoVersionFilePath = path.Join(repoPath, "repover")
+	)
 
 	indexExists := true
-	if _, err := os.Stat(paths.DataPathJoin("root", "listings.json")); os.IsNotExist(err) {
+	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
 		indexExists = false
 	}
 
@@ -178,10 +177,10 @@ func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		// Listing transformation
 		var (
 			listingJSON     []byte
-			listingRecords  []migration006_listingDataAfterMigration
-			migratedRecords []migration006_listingDataBeforeMigration
+			listingRecords  []Migration006_listingDataAfterMigration
+			migratedRecords []Migration006_listingDataBeforeMigration
 		)
-		listingJSON, err = ioutil.ReadFile(paths.DataPathJoin("root", "listings.json"))
+		listingJSON, err := ioutil.ReadFile(listingsFilePath)
 		if err != nil {
 			return err
 		}
@@ -190,7 +189,7 @@ func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		}
 
 		for _, listing := range listingRecords {
-			migratedRecords = append(migratedRecords, migration006_listingDataBeforeMigration{
+			migratedRecords = append(migratedRecords, Migration006_listingDataBeforeMigration{
 				Hash:          listing.Hash,
 				Slug:          listing.Slug,
 				Title:         listing.Title,
@@ -210,14 +209,14 @@ func (Migration006) Down(repoPath, databasePassword string, testnetEnabled bool)
 		if listingJSON, err = json.MarshalIndent(migratedRecords, "", "    "); err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(paths.DataPathJoin("root", "listings.json"), listingJSON, os.ModePerm)
+		err = ioutil.WriteFile(listingsFilePath, listingJSON, os.ModePerm)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Revert schema version
-	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("6"), os.ModePerm)
+	err := ioutil.WriteFile(repoVersionFilePath, []byte("6"), os.ModePerm)
 	if err != nil {
 		return err
 	}

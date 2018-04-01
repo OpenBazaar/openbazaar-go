@@ -8,13 +8,21 @@ import (
 	"time"
 )
 
+// Notification Type Constants
 const (
-	// Notification Type Constants
+	// Dispute Case
 	NotifierTypeDisputeAgedZeroDaysOld       = "disputeNotificationZeroDaysOld"
 	NotifierTypeDisputeAgedFifteenDaysOld    = "disputeNotificationFifteenDaysOld"
 	NotifierTypeDisputeAgedThirtyDaysOld     = "disputeNotificationThirtyDaysOld"
 	NotifierTypeDisputeAgedFourtyFourDaysOld = "disputeNotificationFourtyFourDaysOld"
 	NotifierTypeDisputeAgedFourtyFiveDaysOld = "disputeNotificationFourtyFiveDaysOld"
+
+	// Purchase
+	NotifierTypePurchaseAgedZeroDaysOld       = "purchaseNotificationZeroDaysOld"
+	NotifierTypePurchaseAgedFifteenDaysOld    = "purchaseNotificationFifteenDaysOld"
+	NotifierTypePurchaseAgedFourtyDaysOld     = "purchaseNotificationFourtyDaysOld"
+	NotifierTypePurchaseAgedFourtyFourDaysOld = "purchaseNotificationFourtyFourDaysOld"
+	NotifierTypePurchaseAgedFourtyFiveDaysOld = "purchaseNotificationFourtyFiveDaysOld"
 )
 
 type Notifier interface {
@@ -39,6 +47,24 @@ type DisputeNotification struct {
 
 func (d *DisputeNotification) GetNotificationID() string   { return d.ID }
 func (d *DisputeNotification) GetNotificationType() string { return d.Type }
+
+// GetPurchaseOrderID conditionally inspects the underlying struct
+// to ensure it's a PurchaseNotification and returns its OrderID field value
+func GetPurchaseOrderID(n Notifier) (string, error) {
+	if purchaseNotification, ok := n.(*PurchaseNotification); ok {
+		return purchaseNotification.OrderID, nil
+	}
+	return "", fmt.Errorf("purchase orderID not found")
+}
+
+type PurchaseNotification struct {
+	ID      string `json:"notificationId"`
+	Type    string `json:"type"`
+	OrderID string `json:"purchaseOrderId"`
+}
+
+func (d *PurchaseNotification) GetNotificationID() string   { return d.ID }
+func (d *PurchaseNotification) GetNotificationType() string { return d.Type }
 
 type Notification struct {
 	Data      Data      `json:"notification"`

@@ -70,10 +70,20 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 			notifiedUpToFourtyFiveDays,
 		}
 
-		database, _ = sql.Open("sqlite3", ":memory:")
-		datastore   = db.NewSQLiteDatastore(database, new(sync.Mutex))
+		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+			DataPath:        schema.GenerateTempPath(),
+			TestModeEnabled: true,
+		})
 	)
-	_, err := database.Exec(schema.InitializeDatabaseSQL(""))
+
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+
+	database, err := appSchema.OpenDatabase()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,6 +115,7 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		}
 	}()
 
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -307,6 +318,291 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 	}
 	if checkThirtyDay_FourtyFiveDay != true {
 		t.Errorf("Expected notification missing: checkThirtyDay_FourtyFiveDay")
+	}
+	if checkFourtyFourDay_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkFourtyFourDay_FourtyFiveDay")
+	}
+}
+
+func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
+	// Start each purchase 50 days ago and have the lastNotifiedAt at a day after
+	// each notification is suppose to be sent. With no notifications already queued,
+	// it should produce all the old notifications up to the most recent one expected
+	var (
+		broadcastChannel = make(chan interface{}, 0)
+		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		twelveHours      = time.Duration(12) * time.Hour
+		fifteenDays      = time.Duration(15*24) * time.Hour
+		fourtyDays       = time.Duration(40*24) * time.Hour
+		fourtyFourDays   = time.Duration(44*24) * time.Hour
+		fourtyFiveDays   = time.Duration(45*24) * time.Hour
+
+		// Produces notification for 0, 15, 30, 44 and 45 days
+		neverNotified = &repo.PurchaseRecord{
+			OrderID:        "neverNotified",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
+		}
+		// Produces notification for 15, 30, 44 and 45 days
+		notifiedJustZeroDay = &repo.PurchaseRecord{
+			OrderID:        "notifiedJustZeroDay",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(twelveHours),
+		}
+		// Produces notification for 30, 44 and 45 days
+		notifiedUpToFifteenDay = &repo.PurchaseRecord{
+			OrderID:        "notifiedUpToFifteenDay",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
+		}
+		// Produces notification for 44 and 45 days
+		notifiedUpToFourtyDay = &repo.PurchaseRecord{
+			OrderID:        "notifiedUpToFourtyDay",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
+		}
+		// Produces notification for 45 days
+		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
+			OrderID:        "notifiedUpToFourtyFourDays",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
+		}
+		// Produces no notifications as all have already been created
+		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
+			OrderID:        "notifiedUpToFourtyFiveDays",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+		}
+		existingRecords = []*repo.PurchaseRecord{
+			neverNotified,
+			notifiedJustZeroDay,
+			notifiedUpToFifteenDay,
+			notifiedUpToFourtyDay,
+			notifiedUpToFourtyFourDays,
+			notifiedUpToFourtyFiveDays,
+		}
+
+		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+			DataPath:        schema.GenerateTempPath(),
+			TestModeEnabled: true,
+		})
+	)
+
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, r := range existingRecords {
+		_, err := database.Exec("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?)", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	worker := &recordAgingNotifier{
+		datastore: datastore,
+		broadcast: broadcastChannel,
+		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
+	}
+	if err := worker.PerformTask(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify NotificationRecords in datastore
+	rows, err := database.Query("select orderID, lastNotifiedAt from purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID        string
+			lastNotifiedAt int64
+		)
+		if err := rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+		switch orderID {
+		case neverNotified.OrderID, notifiedJustZeroDay.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID, notifiedUpToFourtyFourDays.OrderID:
+			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
+			if durationFromActual > (time.Duration(5) * time.Second) {
+				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", orderID, time.Unix(lastNotifiedAt, 0).String())
+			}
+		case notifiedUpToFourtyFiveDays.OrderID:
+			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			}
+		default:
+			t.Error("Unexpected dispute case")
+		}
+	}
+
+	var count int64
+	err = database.QueryRow("select count(*) from notifications").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 15 {
+		t.Errorf("Expected 15 notifications to be produced, but found %d", count)
+	}
+
+	rows, err = database.Query("select notifID, serializedNotification, timestamp from notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		checkNeverNotified_ZeroDay       bool
+		checkNeverNotified_FifteenDay    bool
+		checkNeverNotified_FourtyDay     bool
+		checkNeverNotified_FourtyFourDay bool
+		checkNeverNotified_FourtyFiveDay bool
+		checkZeroDay_FifteenDay          bool
+		checkZeroDay_FourtyDay           bool
+		checkZeroDay_FourtyFourDay       bool
+		checkZeroDay_FourtyFiveDay       bool
+		checkFifteenDay_FourtyDay        bool
+		checkFifteenDay_FourtyFourDay    bool
+		checkFifteenDay_FourtyFiveDay    bool
+		checkFourtyDay_FourtyFourDay     bool
+		checkFourtyDay_FourtyFiveDay     bool
+		checkFourtyFourDay_FourtyFiveDay bool
+	)
+	for rows.Next() {
+		var (
+			nID, nJSON string
+			nTimestamp sql.NullInt64
+		)
+		if err = rows.Scan(&nID, &nJSON, &nTimestamp); err != nil {
+			t.Error(err)
+			continue
+		}
+		n, err := repo.UnmarshalNotificationRecord(nJSON, nTimestamp.Int64)
+		if err != nil {
+			t.Error("Failed unmarshalling notification:", err.Error())
+			continue
+		}
+		orderID, err := repo.GetPurchaseOrderID(n.Notification)
+		if err != nil {
+			t.Error("getting dispute case id:", err.Error())
+		}
+		if orderID == neverNotified.OrderID {
+			if n.GetType() == repo.NotifierTypePurchaseAgedZeroDaysOld {
+				checkNeverNotified_ZeroDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFifteenDaysOld {
+				checkNeverNotified_FifteenDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyDaysOld {
+				checkNeverNotified_FourtyDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFourDaysOld {
+				checkNeverNotified_FourtyFourDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFiveDaysOld {
+				checkNeverNotified_FourtyFiveDay = true
+				continue
+			}
+		}
+		if orderID == notifiedJustZeroDay.OrderID {
+			if n.GetType() == repo.NotifierTypePurchaseAgedFifteenDaysOld {
+				checkZeroDay_FifteenDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyDaysOld {
+				checkZeroDay_FourtyDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFourDaysOld {
+				checkZeroDay_FourtyFourDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFiveDaysOld {
+				checkZeroDay_FourtyFiveDay = true
+				continue
+			}
+		}
+		if orderID == notifiedUpToFifteenDay.OrderID {
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyDaysOld {
+				checkFifteenDay_FourtyDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFourDaysOld {
+				checkFifteenDay_FourtyFourDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFiveDaysOld {
+				checkFifteenDay_FourtyFiveDay = true
+				continue
+			}
+		}
+		if orderID == notifiedUpToFourtyDay.OrderID {
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFourDaysOld {
+				checkFourtyDay_FourtyFourDay = true
+				continue
+			}
+			if n.GetType() == repo.NotifierTypePurchaseAgedFourtyFiveDaysOld {
+				checkFourtyDay_FourtyFiveDay = true
+				continue
+			}
+		}
+		if orderID == notifiedUpToFourtyFourDays.OrderID && n.GetType() == repo.NotifierTypePurchaseAgedFourtyFiveDaysOld {
+			checkFourtyFourDay_FourtyFiveDay = true
+		}
+	}
+
+	if checkNeverNotified_ZeroDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotified_ZeroDay")
+	}
+	if checkNeverNotified_FifteenDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotified_FifteenDay")
+	}
+	if checkNeverNotified_FourtyDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotified_FourtyDay")
+	}
+	if checkNeverNotified_FourtyFourDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotified_FourtyFourDay")
+	}
+	if checkNeverNotified_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotified_FourtyFiveDay")
+	}
+	if checkZeroDay_FifteenDay != true {
+		t.Errorf("Expected notification missing: checkZeroDay_FifteenDay")
+	}
+	if checkZeroDay_FourtyDay != true {
+		t.Errorf("Expected notification missing: checkZeroDay_FourtyDay")
+	}
+	if checkZeroDay_FourtyFourDay != true {
+		t.Errorf("Expected notification missing: checkZeroDay_FourtyFourDay")
+	}
+	if checkZeroDay_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkZeroDay_FourtyFiveDay")
+	}
+	if checkFifteenDay_FourtyDay != true {
+		t.Errorf("Expected notification missing: checkFifteenDay_FourtyDay")
+	}
+	if checkFifteenDay_FourtyFourDay != true {
+		t.Errorf("Expected notification missing: checkFifteenDay_FourtyFourDay")
+	}
+	if checkFifteenDay_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkFifteenDay_FourtyFiveDay")
+	}
+	if checkFourtyDay_FourtyFourDay != true {
+		t.Errorf("Expected notification missing: checkFourtyDay_FourtyFourDay")
+	}
+	if checkFourtyDay_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkFourtyDay_FourtyFiveDay")
 	}
 	if checkFourtyFourDay_FourtyFiveDay != true {
 		t.Errorf("Expected notification missing: checkFourtyFourDay_FourtyFiveDay")

@@ -30,6 +30,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
@@ -242,37 +243,37 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	apiConfig, err := repo.GetAPIConfig(configFile)
+	apiConfig, err := schema.GetAPIConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	torConfig, err := repo.GetTorConfig(configFile)
+	torConfig, err := schema.GetTorConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	walletCfg, err := repo.GetWalletConfig(configFile)
+	walletCfg, err := schema.GetWalletConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	dataSharing, err := repo.GetDataSharing(configFile)
+	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	dropboxToken, err := repo.GetDropboxApiToken(configFile)
+	dropboxToken, err := schema.GetDropboxApiToken(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	resolverConfig, err := repo.GetResolverConfig(configFile)
+	resolverConfig, err := schema.GetResolverConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	republishInterval, err := repo.GetRepublishInterval(configFile)
+	republishInterval, err := schema.GetRepublishInterval(configFile)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -306,7 +307,7 @@ func (x *Start) Execute(args []string) error {
 
 	// Setup testnet
 	if x.Testnet || x.Regtest {
-		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -899,7 +900,7 @@ func (d *DummyListener) Close() error {
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig, noLogFiles bool) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig, noLogFiles bool) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {

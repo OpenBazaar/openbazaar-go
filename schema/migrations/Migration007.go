@@ -5,29 +5,30 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 	"time"
-
-	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-const migration007_casesCreateSQL = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);"
-const migration007_purchasesCreateSQL = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);"
+const Migration007_casesCreateSQL = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob);"
+const Migration007_purchasesCreateSQL = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob);"
 
 type Migration007 struct{}
 
 func (Migration007) Up(repoPath, databasePassword string, testnetEnabled bool) error {
-	var executedAt = time.Now()
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
-		DataPath:        repoPath,
-		TestModeEnabled: testnetEnabled,
-	})
-	if err != nil {
-		return err
+	var (
+		databaseFilePath    string
+		executedAt          = time.Now()
+		repoVersionFilePath = path.Join(repoPath, "repover")
+	)
+	if testnetEnabled {
+		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
 	}
 
 	// Add lastNotifiedAt column
-	db, err := sql.Open("sqlite3", paths.DatastorePath())
+	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func (Migration007) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("8"), os.ModePerm)
+	err = ioutil.WriteFile(repoVersionFilePath, []byte("8"), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -66,15 +67,17 @@ func (Migration007) Up(repoPath, databasePassword string, testnetEnabled bool) e
 }
 
 func (Migration007) Down(repoPath, databasePassword string, testnetEnabled bool) error {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
-		DataPath:        repoPath,
-		TestModeEnabled: testnetEnabled,
-	})
-	if err != nil {
-		return err
+	var (
+		databaseFilePath    string
+		repoVersionFilePath = path.Join(repoPath, "repover")
+	)
+	if testnetEnabled {
+		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
+	} else {
+		databaseFilePath = path.Join(repoPath, "datastore", "mainnet.db")
 	}
 
-	db, err := sql.Open("sqlite3", paths.DatastorePath())
+	db, err := sql.Open("sqlite3", databaseFilePath)
 	if err != nil {
 		return err
 	}
@@ -98,11 +101,11 @@ func (Migration007) Down(repoPath, databasePassword string, testnetEnabled bool)
 
 	dropColumnOperation := strings.Join([]string{
 		alterCasesSQL,
-		migration007_casesCreateSQL,
+		Migration007_casesCreateSQL,
 		insertCasesSQL,
 		dropCasesTableSQL,
 		alterPurchasesSQL,
-		migration007_purchasesCreateSQL,
+		Migration007_purchasesCreateSQL,
 		insertPurchasesSQL,
 		dropPurchasesTableSQL,
 	}, " ")
@@ -119,7 +122,7 @@ func (Migration007) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Revert schema version
-	err = ioutil.WriteFile(paths.DataPathJoin("repover"), []byte("7"), os.ModePerm)
+	err = ioutil.WriteFile(repoVersionFilePath, []byte("7"), os.ModePerm)
 	if err != nil {
 		return err
 	}

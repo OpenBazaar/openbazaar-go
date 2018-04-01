@@ -13,82 +13,42 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
-	"github.com/tyler-smith/go-bip39"
 	"time"
 )
-
-const RepoVersion = "8"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,
 		TestModeEnabled: testnet,
+		Mnemonic:        mnemonic,
 	})
-	if err := paths.BuildSchemaDirectories(); err != nil {
+	if err != nil {
 		return err
 	}
-
-	if fsrepo.IsInitialized(repoRoot) {
-		err := MigrateUp(repoRoot, password, testnet)
-		if err != nil {
+	if nodeSchema.IsInitialized() {
+		if err := nodeSchema.MigrateDatabase(); err != nil {
 			return err
 		}
 		return ErrRepoExists
 	}
-
-	if err := checkWriteable(repoRoot); err != nil {
-		return err
-	}
-
-	conf := schema.MustInitConfig(repoRoot)
-
-	if mnemonic == "" {
-		mnemonic, err = createMnemonic(bip39.NewEntropy, bip39.NewMnemonic)
-		if err != nil {
-			return err
-		}
-	}
-	seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
-	fmt.Printf("Generating Ed25519 keypair...")
-	identityKey, err := ipfs.IdentityKeyFromSeed(seed, nBitsForKeypair)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Done\n")
-
-	identity, err := ipfs.IdentityFromKey(identityKey)
-	if err != nil {
-		return err
-	}
-
 	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
-	if err := fsrepo.Init(repoRoot, conf); err != nil {
+
+	if err := checkWriteable(nodeSchema.DataPath()); err != nil {
 		return err
 	}
-	conf.Identity = identity
-
-	if err := addConfigExtensions(repoRoot, testnet); err != nil {
+	if err := nodeSchema.BuildSchemaDirectories(); err != nil {
 		return err
 	}
-
-	if err := dbInit(mnemonic, identityKey, password, creationDate); err != nil {
+	if err := nodeSchema.InitializeDatabase(); err != nil {
 		return err
 	}
-
-	f, err := os.Create(path.Join(repoRoot, "repover"))
-	if err != nil {
+	if err := nodeSchema.InitializeIPFSRepo(); err != nil {
 		return err
 	}
-	_, werr := f.Write([]byte(RepoVersion))
-	if werr != nil {
-		return werr
-	}
-	f.Close()
-
-	return initializeIpnsKeyspace(repoRoot, identityKey)
+	return initializeIpnsKeyspace(repoRoot, nodeSchema.IdentityKey())
 }
 
 func checkWriteable(dir string) error {
@@ -120,9 +80,6 @@ func checkWriteable(dir string) error {
 }
 
 func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
@@ -138,6 +95,8 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	cfg.Identity = identity
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
@@ -150,78 +109,6 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	return namesys.InitializeKeyspace(ctx, nd.DAG, nd.Namesys, nd.Pinning, nd.PrivateKey)
-}
-
-func addConfigExtensions(repoRoot string, testnet bool) error {
-	r, err := fsrepo.Open(repoRoot)
-	if err != nil { // NB: repo is owned by the node
-		return err
-	}
-	var w WalletConfig = WalletConfig{
-		Type:             "spvwallet",
-		MaxFee:           2000,
-		FeeAPI:           "https://btc.fees.openbazaar.org",
-		HighFeeDefault:   160,
-		MediumFeeDefault: 60,
-		LowFeeDefault:    20,
-		TrustedPeer:      "",
-	}
-
-	var a APIConfig = APIConfig{
-		Enabled:     true,
-		AllowedIPs:  []string{},
-		HTTPHeaders: nil,
-	}
-
-	var ds DataSharing = DataSharing{
-		AcceptStoreRequests: false,
-		PushTo:              DataPushNodes,
-	}
-
-	var t TorConfig = TorConfig{}
-	if err := extendConfigFile(r, "Wallet", w); err != nil {
-		return err
-	}
-	var resolvers ResolverConfig = ResolverConfig{
-		Id: "https://resolver.onename.com/",
-	}
-	if err := extendConfigFile(r, "DataSharing", ds); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "RepublishInterval", "24h"); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "JSON-API", a); err != nil {
-		return err
-	}
-	if err := extendConfigFile(r, "Tor-config", t); err != nil {
-		return err
-	}
-	if err := r.Close(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byte) (string, error)) (string, error) {
-	entropy, err := newEntropy(128)
-	if err != nil {
-		return "", err
-	}
-	mnemonic, err := newMnemonic(entropy)
-	if err != nil {
-		return "", err
-	}
-	return mnemonic, nil
 }
 
 /* Returns the directory to store repo data in.

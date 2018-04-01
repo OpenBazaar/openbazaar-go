@@ -3,7 +3,6 @@ package repo
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -83,43 +82,4 @@ func checkDirectoryCreation(t *testing.T, directory string) {
 	if fi.Mode().String()[1:3] != "rw" {
 		t.Errorf("the created directory %s is not readable and writable for the owner", directory)
 	}
-}
-
-func TestCreateMnemonic(t *testing.T) {
-	mnemonic, err := createMnemonic(MockNewEntropyFail, MockNewMnemonicFail)
-	checkCreateMnemonicError(t, mnemonic, err)
-	mnemonic, err = createMnemonic(MockNewEntropy, MockNewMnemonicFail)
-	checkCreateMnemonicError(t, mnemonic, err)
-	mnemonic, err = createMnemonic(MockNewEntropy, MockNewMnemonic)
-	if mnemonic != mnemonicFixture {
-		t.Errorf("The mnemonic should have been %s but it is %s instead", mnemonicFixture, mnemonic)
-	}
-	if err != nil {
-		t.Error("createMnemonic threw an unexpected error")
-	}
-}
-
-func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
-	if mnemonic != "" {
-		t.Errorf("The mnemonic should have been an empty string but it is %s instead", mnemonic)
-	}
-	if err == nil {
-		t.Error("createMnemonic didn't throw an error")
-	}
-}
-
-// Removes files that are created when tests are executed
-func TearDown() {
-	os.RemoveAll(filepath.Join(testConfigFolder, "outbox"))
-	os.RemoveAll(filepath.Join(testConfigFolder, "root"))
-	os.RemoveAll(filepath.Join(testConfigFolder, "datastore"))
-	os.Remove(filepath.Join(testConfigFolder, "repo.lock"))
-
-	os.RemoveAll(filepath.Join(repoRootFolder, "blocks"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "outbox"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "root"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "datastore"))
-	os.Remove(filepath.Join(repoRootFolder, "repo.lock"))
-	os.Remove(filepath.Join(repoRootFolder, "config"))
-	os.Remove(filepath.Join(repoRootFolder, "version"))
 }

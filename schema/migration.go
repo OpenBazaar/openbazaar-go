@@ -1,11 +1,13 @@
-package repo
+package schema
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
+
+	"github.com/OpenBazaar/openbazaar-go/schema/migrations"
+	"github.com/op/go-logging"
 )
 
 type Migration interface {
@@ -27,6 +29,7 @@ var Migrations = []Migration{
 // MigrateUp looks at the currently active migration version
 // and will migrate all the way up (applying all up migrations).
 func MigrateUp(repoPath, dbPassword string, testnet bool) error {
+	var log = logging.MustGetLogger("schema")
 	version, err := ioutil.ReadFile(path.Join(repoPath, "repover"))
 	if err != nil && !os.IsNotExist(err) {
 		return err

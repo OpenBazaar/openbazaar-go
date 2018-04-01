@@ -165,6 +165,9 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	}
 	hashes := make(map[string]string)
 	walkpath := func(p string, f os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 		if !f.IsDir() {
 			file, err := ioutil.ReadFile(p)
 			if err != nil {

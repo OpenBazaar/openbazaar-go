@@ -1,22 +1,39 @@
-package api
+package api_test
 
 import (
 	"net/http"
 	"os"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/op/go-logging"
 )
+
+var jsonTestSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+	DataPath:        schema.GenerateTempPath(),
+	TestModeEnabled: true,
+})
 
 func TestMain(m *testing.M) {
 	// Create a test server
-	gateway, err := newTestGateway()
-	if err != nil {
+	log := logging.MustGetLogger("jsonapi_test")
+	jsonTestSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := jsonTestSchema.BuildSchemaDirectories(); err != nil {
 		log.Fatal(err)
+	}
+	// Create a test server
+	gateway, err := newTestGateway(jsonTestSchema.DataPath())
+	if err != nil {
+		log.Fatal("creating test gateway:", err)
 	}
 
 	go func() {
 		err = gateway.Serve()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("gateway service start error:", err)
 		}
 	}()
 
@@ -26,8 +43,9 @@ func TestMain(m *testing.M) {
 	// Shutdown test server
 	err = gateway.Close()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("gateway service close error:", err)
 	}
+	jsonTestSchema.DestroySchemaDirectories()
 
 	os.Exit(retCode)
 }
@@ -45,13 +63,9 @@ func TestSettings(t *testing.T) {
 		{"PATCH", "/ob/settings", settingsPatchJSON, 200, "{}"},
 		{"GET", "/ob/settings", "", 200, settingsPatchedJSON},
 	})
+}
 
-	// Invalid JSON
-	runAPITests(t, apiTests{
-		{"POST", "/ob/settings", settingsMalformedJSON, 400, settingsMalformedJSONResponse},
-	})
-
-	// Invalid JSON
+func TestSettingsInvalidJSON(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"POST", "/ob/settings", settingsJSON, 200, settingsJSON},
 		{"GET", "/ob/settings", "", 200, settingsJSON},

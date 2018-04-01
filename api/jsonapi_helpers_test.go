@@ -1,4 +1,4 @@
-package api
+package api_test
 
 import (
 	"bytes"
@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/api"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test"
 
+	"github.com/op/go-logging"
 	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
-	"os"
-
-	"github.com/op/go-logging"
 )
 
 // testURIRoot is the root http URI to hit for testing
@@ -31,30 +32,34 @@ var testHTTPClient = &http.Client{
 }
 
 // newTestGateway starts a new API gateway listening on the default test interface
-func newTestGateway() (*Gateway, error) {
+func newTestGateway(rootPath string) (*api.Gateway, error) {
 	// Create a test node, cookie, and config
-	node, err := test.NewNode()
+	node, err := test.NewNode(schema.SchemaContext{
+		DataPath:        rootPath,
+		TestModeEnabled: true,
+		Mnemonic:        test.GetPassword(),
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating node: %s", err)
 	}
 
-	apiConfig, err := test.NewAPIConfig()
+	apiConfig, err := test.NewAPIConfig(rootPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating API config: %s", err)
 	}
 
 	// Create an address to bind the API to
 	addr, err := ma.NewMultiaddr("/ip4/127.0.0.1/tcp/9191")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating multihash: %s", err)
 	}
 
 	listener, err := manet.Listen(addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating listener: %s", err)
 	}
 
-	return NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig, logging.NewLogBackend(os.Stdout, "", 0))
+	return api.NewGateway(node, *test.GetAuthCookie(), listener.NetListener(), *apiConfig, logging.NewLogBackend(os.Stdout, "", 0))
 }
 
 // apiTest is a test case to be run against the api blackbox
@@ -97,21 +102,12 @@ func buildRequest(method string, path string, body string) (*http.Request, error
 }
 
 func runAPITests(t *testing.T, tests apiTests) {
-	// Create test repo
-	repository, err := test.NewRepository()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Reset repo state
-	repository.Reset()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	// Run each test in serial
 	for _, jsonAPITest := range tests {
 		runAPITest(t, jsonAPITest)
+		if err := jsonTestSchema.ResetForJSONApiTest(); err != nil {
+			t.Fatalf("reseting schema: %s", err.Error())
+		}
 	}
 }
 
@@ -157,8 +153,8 @@ func runAPITest(t *testing.T, test apiTest) {
 		}
 
 		if !reflect.DeepEqual(responseJSON, expectedJSON) {
-			fmt.Println("expected:", test.expectedResponseBody)
-			fmt.Println("actual:", string(respBody))
+			t.Error("expected:", test.expectedResponseBody)
+			t.Error("actual:", string(respBody))
 			t.Fatal("Incorrect response")
 		}
 	}

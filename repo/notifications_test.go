@@ -47,3 +47,27 @@ func TestGetDisputeCaseID(t *testing.T) {
 		t.Error("Expected the returned CaseID to match")
 	}
 }
+
+func TestGetPurchaseOrderID(t *testing.T) {
+	negativeCase := simpleNotifier{
+		ID:   "test",
+		Type: "test",
+	}
+	_, err := GetPurchaseOrderID(&negativeCase)
+	if err == nil {
+		t.Error("Expected simpleNotifier to return error when getting dispute-specific CaseID")
+	}
+
+	positiveCase := PurchaseNotification{
+		ID:      "test",
+		Type:    "test",
+		OrderID: "expectedID",
+	}
+	actualID, err := GetPurchaseOrderID(&positiveCase)
+	if err != nil {
+		t.Error(err)
+	}
+	if actualID != positiveCase.OrderID {
+		t.Error("Expected the returned OrderID to match")
+	}
+}

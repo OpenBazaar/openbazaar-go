@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/op/go-logging"
 )
@@ -17,12 +17,12 @@ var log = logging.MustGetLogger("api")
 type Gateway struct {
 	listener   net.Listener
 	handler    http.Handler
-	config     repo.APIConfig
+	config     schema.APIConfig
 	shutdownCh chan struct{}
 }
 
 // NewGateway instantiates a new `Gateway`
-func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config repo.APIConfig, logger logging.Backend, options ...corehttp.ServeOption) (*Gateway, error) {
+func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, config schema.APIConfig, logger logging.Backend, options ...corehttp.ServeOption) (*Gateway, error) {
 
 	log.SetBackend(logging.AddModuleLevel(logger))
 	topMux := http.NewServeMux()
@@ -73,8 +73,11 @@ func (g *Gateway) Close() error {
 	}()
 
 	// Shutdown the listener
+	if err := g.listener.Close(); err != nil {
+		return err
+	}
 	close(g.shutdownCh)
-	return g.listener.Close()
+	return nil
 }
 
 // Serve begins listening on the configured address

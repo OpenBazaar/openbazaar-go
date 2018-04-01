@@ -1,4 +1,4 @@
-package api
+package api_test
 
 import "fmt"
 
@@ -26,6 +26,46 @@ func NotFoundJSON(resource string) string {
 // Settings
 //
 
+//const settingsJSON2 = `{
+//"blockedNodes": [
+//"QmecpJrN9RJ7smyYByQdZUy5mF6aapgCfKLKRmDtycv9aG",
+//"QmamudHQGtztShX7Nc9HcczehdpGGWpFBWu2JvKWcpELxr",
+//"QmPDLS7TV9Q3gtxRXQVqrm2RpEtz1Mq6u2YGeuEJWCqu6B"
+//],
+//"country": "UNITED_STATES",
+//"localCurrency": "BTC",
+//"mispaymentBuffer": 1,
+//"paymentDataInQR": true,
+//"refundPolicy": "All sales are final.",
+//"shippingAddresses": [{
+//"name": "Seymour Butts",
+//"company": "Globex Corporation",
+//"addressLineOne": "31 Spooner Street",
+//"addressLineTwo": "Apt. 124",
+//"city": "Quahog",
+//"state": "RI",
+//"country": "UNITED_STATES",
+//"postalCode": "",
+//"addressNotes": "Leave package at back door"
+//}],
+//"showNotifications": true,
+//"showNsfw": true,
+//"smtpSettings": {
+//"notifications": true,
+//"password": "letmein",
+//"recipientEmail": "Dave@gmail.com",
+//"senderEmail": "notifications@urbanart.com",
+//"serverAddress": "smtp.urbanart.com:465",
+//"username": "urbanart"
+//},
+//"storeModerators": [
+//"QmNedYJ6WmLhacAL2ozxb4k33Gxd9wmKB7HyoxZCwXid1e",
+//"QmQdi7EaJUmuRUtSaCPkijw5cptFfNcX2EPvMyQwR117Y2"
+//],
+//"termsAndConditions": "By purchasing this item you agree to the following...",
+//"version": ""
+//}`
+
 const settingsJSON = `{
     "version": "",
     "paymentDataInQR": true,
@@ -42,7 +82,7 @@ const settingsJSON = `{
         "postalCode": "",
         "addressNotes": "Leave package at back door"
     }],
-    "localCurrency": "USD",
+    "localCurrency": "BTC",
     "country": "UNITED_STATES",
     "termsAndConditions": "By purchasing this item you agree to the following...",
     "refundPolicy": "All sales are final.",
