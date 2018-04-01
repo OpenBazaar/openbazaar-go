@@ -1,4 +1,4 @@
-package migrations
+package migrations_test
 
 import (
 	"database/sql"
@@ -8,28 +8,28 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func TestMigration007(t *testing.T) {
-
 	// Setup
 	basePath := schema.GenerateTempPath()
 	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
+	appSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = paths.BuildSchemaDirectories(); err != nil {
+	if err = appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
-	defer paths.DestroySchemaDirectories()
+	defer appSchema.DestroySchemaDirectories()
 	var (
-		databasePath = paths.DatastorePath()
-		schemaPath   = paths.DataPathJoin("repover")
+		databasePath = appSchema.DatabasePath()
+		schemaPath   = appSchema.DataPathJoin("repover")
 
 		schemaSql         = "pragma key = 'foobarbaz';"
 		insertCaseSQL     = "insert into cases (caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values (?,?,?,?,?,?,?,?);"
@@ -45,8 +45,8 @@ func TestMigration007(t *testing.T) {
 	// Setup datastore
 	dbSetupSql := strings.Join([]string{
 		schemaSql,
-		migration007_casesCreateSQL,
-		migration007_purchasesCreateSQL,
+		migrations.Migration007_casesCreateSQL,
+		migrations.Migration007_purchasesCreateSQL,
 		insertCaseSQL,
 		insertPurchaseSQL,
 	}, " ")
@@ -90,13 +90,13 @@ func TestMigration007(t *testing.T) {
 	}
 
 	// Execute Migration Up
-	migration := Migration007{}
+	migration := migrations.Migration007{}
 	if err := migration.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Assert repo version updated
-	if err = paths.VerifySchemaVersion("8"); err != nil {
+	if err = appSchema.VerifySchemaVersion("8"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -216,7 +216,7 @@ func TestMigration007(t *testing.T) {
 	}
 
 	// Assert repover was reverted
-	if err = paths.VerifySchemaVersion("7"); err != nil {
+	if err = appSchema.VerifySchemaVersion("7"); err != nil {
 		t.Error(err)
 	}
 	db.Close()
