@@ -5,10 +5,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestMain(m *testing.M) {
@@ -218,14 +217,14 @@ func TestCryptoListingsNoCoinType(t *testing.T) {
 	listing.Metadata.CoinType = ""
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false, "reason": "Cryptocurrency listings require a coinType"}`},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingCoinTypeRequired)},
 	})
 }
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
 	runTest := func(listing *pb.Listing) {
 		runAPITests(t, apiTests{
-			{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal cryptocurrency listing field"}`},
+			{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingIllegalField)},
 		})
 	}
 
@@ -258,7 +257,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.Price = 1
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal market price listing field"}`},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField)},
 	})
 }
 
@@ -335,14 +334,4 @@ func TestPosts(t *testing.T) {
 		{"PUT", "/ob/post", postUpdateJSON, 404, NotFoundJSON("Post")},
 		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
 	})
-}
-
-func jsonFor(t *testing.T, fixture proto.Message) string {
-	m := jsonpb.Marshaler{}
-
-	json, err := m.MarshalToString(fixture)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return json
 }
