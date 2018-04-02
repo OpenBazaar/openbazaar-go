@@ -221,6 +221,23 @@ func TestCryptoListingsNoCoinType(t *testing.T) {
 	})
 }
 
+func TestCryptoListingsCoinDivisibilityIncorrect(t *testing.T) {
+	listing := factory.NewCryptoListing("crypto")
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON},
+	})
+
+	listing.Metadata.CoinDivisibility = 1e7
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
+	})
+
+	listing.Metadata.CoinDivisibility = 0
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
+	})
+}
+
 func TestCryptoListingsIllegalFields(t *testing.T) {
 	runTest := func(listing *pb.Listing) {
 		runAPITests(t, apiTests{
