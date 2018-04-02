@@ -239,9 +239,9 @@ func TestCryptoListingsCoinDivisibilityIncorrect(t *testing.T) {
 }
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
-	runTest := func(listing *pb.Listing) {
+	runTest := func(listing *pb.Listing, err error) {
 		runAPITests(t, apiTests{
-			{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingIllegalField)},
+			{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(err)},
 		})
 	}
 
@@ -249,23 +249,23 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	listing := factory.NewCryptoListing("crypto")
 	listing.Metadata.PricingCurrency = "btc"
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Options = physicalListing.Item.Options
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.options"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.ShippingOptions = physicalListing.ShippingOptions
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("shippingOptions"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
 }
 
 func TestMarketRatePrice(t *testing.T) {
@@ -274,7 +274,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.Price = 1
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField)},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
 	})
 }
 

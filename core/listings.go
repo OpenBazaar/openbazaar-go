@@ -47,15 +47,6 @@ const (
 	DefaultCoinDivisibility uint32 = 1e8
 )
 
-var (
-	ErrListingDoesNotExist                   = errors.New("Listing doesn't exist")
-	ErrListingAlreadyExists                  = errors.New("Listing already exists")
-	ErrListingCoinDivisibilityIncorrect      = errors.New("Incorrect coinDivisibility")
-	ErrMarketPriceListingIllegalField        = errors.New("Illegal market price listing field")
-	ErrCryptocurrencyListingIllegalField     = errors.New("Illegal cryptocurrency listing field")
-	ErrCryptocurrencyListingCoinTypeRequired = errors.New("Cryptocurrency listings require a coinType")
-)
-
 type price struct {
 	CurrencyCode string `json:"currencyCode"`
 	Amount       uint64 `json:"amount"`
@@ -1209,15 +1200,18 @@ func validatePhysicalListing(listing *pb.Listing) error {
 }
 
 func validateCryptocurrencyListing(listing *pb.Listing) error {
-	if len(listing.Coupons) > 0 ||
-		len(listing.Item.Options) > 0 ||
-		len(listing.ShippingOptions) > 0 ||
-		listing.Item.Condition != "" ||
-		listing.Metadata.PricingCurrency != "" {
-		return ErrCryptocurrencyListingIllegalField
-	}
-
-	if listing.Metadata.CoinType == "" {
+	switch {
+	case len(listing.Coupons) > 0:
+		return ErrCryptocurrencyListingIllegalField("coupons")
+	case len(listing.Item.Options) > 0:
+		return ErrCryptocurrencyListingIllegalField("item.options")
+	case len(listing.ShippingOptions) > 0:
+		return ErrCryptocurrencyListingIllegalField("shippingOptions")
+	case len(listing.Item.Condition) > 0:
+		return ErrCryptocurrencyListingIllegalField("item.condition")
+	case len(listing.Metadata.PricingCurrency) > 0:
+		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+	case listing.Metadata.CoinType == "":
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
@@ -1230,7 +1224,7 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 
 func validateMarketPriceListing(listing *pb.Listing) error {
 	if listing.Item.Price > 0 {
-		return ErrMarketPriceListingIllegalField
+		return ErrMarketPriceListingIllegalField("item.price")
 	}
 
 	return nil

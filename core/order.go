@@ -66,14 +66,6 @@ type PurchaseData struct {
 // TODO: for now, this is probably OK as it's just an approximation.
 const EscrowReleaseSize = 337
 
-var UnknownListingError = errors.New("Order contains a hash of a listing that is not currently for sale")
-
-var (
-	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
-	ErrCryptocurrencyPurchaseIllegalField           = errors.New("Illegal cryptocurrency purchase field")
-	ErrPriceCalculationRequiresExchangeRates        = errors.New("Can't calculate price with exchange rates disabled")
-)
-
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
@@ -676,10 +668,10 @@ func validatePhysicalPurchaseOrder(contract *pb.RicardianContract) error {
 
 func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 	if len(item.Options) > 0 {
-		return ErrCryptocurrencyPurchaseIllegalField
+		return ErrCryptocurrencyPurchaseIllegalField("item.options")
 	}
 	if len(item.CouponCodes) > 0 {
-		return ErrCryptocurrencyPurchaseIllegalField
+		return ErrCryptocurrencyPurchaseIllegalField("item.couponCodes")
 	}
 	if item.PaymentAddress == "" {
 		return ErrCryptocurrencyPurchasePaymentAddressRequired
@@ -1308,7 +1300,7 @@ collectListings:
 
 	// Validate the each item in the order is for sale
 	if !n.hasKnownListings(contract) {
-		return UnknownListingError
+		return ErrPurchaseUnknownListing
 	}
 	return nil
 }
