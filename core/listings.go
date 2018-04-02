@@ -72,6 +72,7 @@ type ListingData struct {
 	AverageRating float32   `json:"averageRating"`
 	RatingCount   uint32    `json:"ratingCount"`
 	ModeratorIDs  []string  `json:"moderators"`
+	CoinType      string    `json:"coinType"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -434,6 +435,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		Title:        listing.Listing.Item.Title,
 		Categories:   listing.Listing.Item.Categories,
 		NSFW:         listing.Listing.Item.Nsfw,
+		CoinType:     listing.Listing.Metadata.CoinType,
 		ContractType: listing.Listing.Metadata.ContractType.String(),
 		Description:  listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
