@@ -55,6 +55,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
+        if resp[0]["coinType"] != "ETH":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
         listingId = resp[0]["hash"]
 
         # buyer send order
