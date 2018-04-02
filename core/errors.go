@@ -8,13 +8,14 @@ import (
 var (
 	ErrPurchaseUnknownListing = errors.New("Order contains a hash of a listing that is not currently for sale")
 
+	ErrPriceCalculationRequiresExchangeRates = errors.New("Can't calculate price with exchange rates disabled")
+
 	ErrListingDoesNotExist  = errors.New("Listing doesn't exist")
 	ErrListingAlreadyExists = errors.New("Listing already exists")
 
 	ErrCryptocurrencyListingCoinTypeRequired        = errors.New("Cryptocurrency listings require a coinType")
 	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
-
-	ErrPriceCalculationRequiresExchangeRates = errors.New("Can't calculate price with exchange rates disabled")
+	ErrCryptocurrencyPurchasePaymentAddressTooLong  = errors.New("paymentAddress required is too long")
 )
 
 type ErrCryptocurrencyListingIllegalField string
