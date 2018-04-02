@@ -157,53 +157,56 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
-	var w WalletConfig = WalletConfig{
-		Type:             "spvwallet",
-		MaxFee:           2000,
-		FeeAPI:           "https://btc.fees.openbazaar.org",
-		HighFeeDefault:   160,
-		MediumFeeDefault: 60,
-		LowFeeDefault:    20,
-		TrustedPeer:      "",
-	}
+	var (
+		w = schema.WalletConfig{
+			Type:             "spvwallet",
+			MaxFee:           2000,
+			FeeAPI:           "https://btc.fees.openbazaar.org",
+			HighFeeDefault:   160,
+			MediumFeeDefault: 60,
+			LowFeeDefault:    20,
+			TrustedPeer:      "",
+		}
 
-	var a APIConfig = APIConfig{
-		Enabled:     true,
-		AllowedIPs:  []string{},
-		HTTPHeaders: nil,
-	}
+		a = schema.APIConfig{
+			Enabled:     true,
+			AllowedIPs:  []string{},
+			HTTPHeaders: nil,
+		}
 
-	var ds DataSharing = DataSharing{
-		AcceptStoreRequests: false,
-		PushTo:              DataPushNodes,
-	}
+		ds = schema.DataSharing{
+			AcceptStoreRequests: false,
+			PushTo:              schema.DataPushNodes,
+		}
 
-	var t TorConfig = TorConfig{}
-	if err := extendConfigFile(r, "Wallet", w); err != nil {
+		t = schema.TorConfig{}
+
+		resolvers = schema.ResolverConfig{
+			Id: "https://resolver.onename.com/",
+		}
+	)
+	if err := r.SetConfigKey("Wallet", w); err != nil {
 		return err
 	}
-	var resolvers ResolverConfig = ResolverConfig{
-		Id: "https://resolver.onename.com/",
-	}
-	if err := extendConfigFile(r, "DataSharing", ds); err != nil {
+	if err := r.SetConfigKey("DataSharing", ds); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
+	if err := r.SetConfigKey("Resolvers", resolvers); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
+	if err := r.SetConfigKey("Bootstrap-testnet", schema.BootstrapAddressesTestnet); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+	if err := r.SetConfigKey("Dropbox-api-token", ""); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "RepublishInterval", "24h"); err != nil {
+	if err := r.SetConfigKey("RepublishInterval", "24h"); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "JSON-API", a); err != nil {
+	if err := r.SetConfigKey("JSON-API", a); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Tor-config", t); err != nil {
+	if err := r.SetConfigKey("Tor-config", t); err != nil {
 		return err
 	}
 	if err := r.Close(); err != nil {

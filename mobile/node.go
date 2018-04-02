@@ -26,6 +26,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -62,7 +63,7 @@ type Node struct {
 	config     NodeConfig
 	cancel     context.CancelFunc
 	ipfsConfig *ipfscore.BuildCfg
-	apiConfig  *repo.APIConfig
+	apiConfig  *schema.APIConfig
 }
 
 func NewNode(config NodeConfig) (*Node, error) {
@@ -89,21 +90,21 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	apiConfig, err := repo.GetAPIConfig(configFile)
+	apiConfig, err := schema.GetAPIConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
 
-	dataSharing, err := repo.GetDataSharing(configFile)
-	if err != nil {
-		return err
-	}
-
-	walletCfg, err := repo.GetWalletConfig(configFile)
+	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		return nil, err
 	}
-	resolverConfig, err := repo.GetResolverConfig(configFile)
+
+	walletCfg, err := schema.GetWalletConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+	resolverConfig, err := schema.GetResolverConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 
 	// Setup testnet
 	if config.Testnet {
-		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			return nil, err
 		}
@@ -242,7 +243,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	for _, pnd := range dataSharing.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pushNodes = append(pushNodes, p)
 	}
@@ -311,11 +312,11 @@ func (n *Node) Start() error {
 
 	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
 	if err != nil {
-		return nil, err
+		return err
 	}
-	republishInterval, err := repo.GetRepublishInterval(configFile)
+	republishInterval, err := schema.GetRepublishInterval(configFile)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Offline messaging storage
@@ -339,7 +340,18 @@ func (n *Node) Start() error {
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
-		MR := ret.NewMessageRetriever(n.node.Datastore, n.node.Context, n.node.IpfsNode, n.node.BanManager, n.node.Service, 14, n.node.PushNodes, nil, n.node.SendOfflineAck)
+		MR := ret.NewMessageRetriever(ret.MRConfig{
+			Db:        n.node.Datastore,
+			Ctx:       n.node.Context,
+			IPFSNode:  n.node.IpfsNode,
+			BanManger: n.node.BanManager,
+			Service:   n.node.Service,
+			PrefixLen: 14,
+			PushNodes: n.node.PushNodes,
+			Dialer:    nil,
+			SendAck:   n.node.SendOfflineAck,
+			SendError: n.node.SendError,
+		})
 		go MR.Run()
 		n.node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
@@ -391,7 +403,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {

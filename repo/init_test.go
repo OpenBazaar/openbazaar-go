@@ -110,10 +110,10 @@ func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
 
 // Removes files that are created when tests are executed
 func TearDown() {
-	os.RemoveAll(filepath.Join(testConfigFolder, "outbox"))
-	os.RemoveAll(filepath.Join(testConfigFolder, "root"))
-	os.RemoveAll(filepath.Join(testConfigFolder, "datastore"))
-	os.Remove(filepath.Join(testConfigFolder, "repo.lock"))
+	os.RemoveAll(filepath.Join("testdata", "outbox"))
+	os.RemoveAll(filepath.Join("testdata", "root"))
+	os.RemoveAll(filepath.Join("testdata", "datastore"))
+	os.Remove(filepath.Join("testdata", "repo.lock"))
 
 	os.RemoveAll(filepath.Join(repoRootFolder, "blocks"))
 	os.RemoveAll(filepath.Join(repoRootFolder, "outbox"))
