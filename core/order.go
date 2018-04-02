@@ -60,18 +60,13 @@ type PurchaseData struct {
 	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
 }
 
-// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
-// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
-// TODO: this probably should not be hardcoded but making it adaptive requires all wallet implementations to provide this data.
-// TODO: for now, this is probably OK as it's just an approximation.
-const EscrowReleaseSize = 337
-
-var UnknownListingError = errors.New("Order contains a hash of a listing that is not currently for sale")
-
-var (
-	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
-	ErrCryptocurrencyPurchaseIllegalField           = errors.New("Illegal cryptocurrency purchase field")
-	ErrPriceCalculationRequiresExchangeRates        = errors.New("Can't calculate price with exchange rates disabled")
+const (
+	// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
+	// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
+	// TODO: this probably should not be hardcoded but making it adaptive requires all wallet implementations to provide this data.
+	// TODO: for now, this is probably OK as it's just an approximation.
+	EscrowReleaseSize                             = 337
+	CryptocurrencyPurchasePaymentAddressMaxLength = 512
 )
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
@@ -676,13 +671,16 @@ func validatePhysicalPurchaseOrder(contract *pb.RicardianContract) error {
 
 func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
 	if len(item.Options) > 0 {
-		return ErrCryptocurrencyPurchaseIllegalField
+		return ErrCryptocurrencyPurchaseIllegalField("item.options")
 	}
 	if len(item.CouponCodes) > 0 {
-		return ErrCryptocurrencyPurchaseIllegalField
+		return ErrCryptocurrencyPurchaseIllegalField("item.couponCodes")
 	}
 	if item.PaymentAddress == "" {
 		return ErrCryptocurrencyPurchasePaymentAddressRequired
+	}
+	if len(item.PaymentAddress) < CryptocurrencyPurchasePaymentAddressMaxLength {
+		return ErrCryptocurrencyPurchasePaymentAddressTooLong
 	}
 
 	return nil
@@ -1308,7 +1306,7 @@ collectListings:
 
 	// Validate the each item in the order is for sale
 	if !n.hasKnownListings(contract) {
-		return UnknownListingError
+		return ErrPurchaseUnknownListing
 	}
 	return nil
 }
