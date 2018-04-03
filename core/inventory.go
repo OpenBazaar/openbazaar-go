@@ -1,17 +1,17 @@
 package core
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/namesys"
+	ipfsPath "github.com/ipfs/go-ipfs/path"
+	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	"io/ioutil"
 	"os"
 	"path"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"crypto/sha256"
-	"io/ioutil"
-	"encoding/hex"
-	ipfsPath "github.com/ipfs/go-ipfs/path"
 	"time"
-	"github.com/ipfs/go-ipfs/namesys"
-	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 )
 
 func (n *OpenBazaarNode) PublishInventory(inventory interface{}) error {
@@ -21,7 +21,7 @@ func (n *OpenBazaarNode) PublishInventory(inventory interface{}) error {
 	}
 	h := sha256.Sum256(inv)
 
-	tmpPath := path.Join(n.RepoPath, hex.EncodeToString(h[:])+".json" )
+	tmpPath := path.Join(n.RepoPath, hex.EncodeToString(h[:])+".json")
 	err = ioutil.WriteFile(tmpPath, inv, os.ModePerm)
 	if err != nil {
 		return err
