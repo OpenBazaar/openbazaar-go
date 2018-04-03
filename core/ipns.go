@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
@@ -58,6 +59,9 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 		if err != nil {
 			log.Error(err)
 			return "", err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return "", errors.New("IPNS record not found in network")
 		}
 
 		b, err := ioutil.ReadAll(resp.Body)
