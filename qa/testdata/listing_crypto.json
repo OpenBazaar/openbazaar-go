@@ -6,7 +6,7 @@
         "format": "MARKET_PRICE",
         "expiry": "2030-08-17T04:52:19.000Z",
         "coinType": "ETH",
-        "coinDivisibility": 1000000000
+        "coinDivisibility": 100000000
     },
     "item": {
         "title": "Ether",
