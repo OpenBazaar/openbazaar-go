@@ -131,6 +131,9 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 	}
 
 	name = strings.TrimPrefix(name, "/ipns/")
+	split := strings.SplitN(name, ":", 2)
+	name = split[0]
+
 	hash, err := mh.FromB58String(name)
 	if err != nil {
 		// name should be a multihash. if it isn't, error out here.
@@ -138,9 +141,13 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		return "", err
 	}
 
+	if len(split) > 1 {
+		name += ":" + split[1]
+	}
+
 	// use the routing system to get the name.
 	// /ipns/<name>
-	h := []byte("/ipns/" + string(hash))
+	h := []byte("/ipns/" + name)
 
 	var entry *pb.IpnsEntry
 	var pubkey ci.PubKey
@@ -220,7 +227,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		r.cacheSet(name, p, entry)
 		go func() {
 			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+string(hash)), pubkeyBytes)
 		}()
 		return p, nil
 	} else {
@@ -230,7 +237,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		r.cacheSet(name, p, entry)
 		go func() {
 			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+string(hash)), pubkeyBytes)
 		}()
 		return p, nil
 	}
