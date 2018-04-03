@@ -3,21 +3,22 @@ package ipfs
 import (
 	"errors"
 
-	"github.com/ipfs/go-ipfs/commands"
-	coreCmds "github.com/ipfs/go-ipfs/core/commands"
-	"fmt"
-	"time"
-	dshelp "github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"context"
+	"fmt"
+	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
-	dhtpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
+	coreCmds "github.com/ipfs/go-ipfs/core/commands"
 	"github.com/ipfs/go-ipfs/namesys"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
+	dshelp "github.com/ipfs/go-ipfs/thirdparty/ds-help"
 	"gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
+	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	dhtpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
+	"time"
 )
 
 var pubErr = errors.New(`Name publish failed`)
@@ -50,7 +51,11 @@ func PublishAltRoot(ctx commands.Context, altRoot string, value path.Path, eol t
 	if err != nil {
 		return err
 	}
-	ipnskey := "/ipns/" + nd.Identity.Pretty() + ":" + altRoot
+	hash, err := mh.FromB58String(nd.Identity.Pretty())
+	if err != nil {
+		return err
+	}
+	ipnskey := "/ipns/" + string(hash) + ":" + altRoot
 
 	// get previous records sequence number
 	seqnum, err := getPreviousSeqNo(context.Background(), nd, ipnskey)
