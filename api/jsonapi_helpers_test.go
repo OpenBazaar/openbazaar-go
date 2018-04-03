@@ -82,27 +82,34 @@ func request(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func runAPITests(t *testing.T, tests apiTests) {
-	// Create test repo
+func resetTestRepo(t *testing.T) {
 	repository, err := test.NewRepository()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Reset repo state
 	repository.Reset()
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func runAPITests(t *testing.T, tests apiTests) {
+	resetTestRepo(t)
 
 	// Run each test in serial
 	for _, jsonAPITest := range tests {
-		runAPITest(t, jsonAPITest)
+		executeAPITest(t, jsonAPITest)
 	}
 }
 
-// runTest executes the given test against the blackbox
 func runAPITest(t *testing.T, test apiTest) {
+	resetTestRepo(t)
+	executeAPITest(t, test)
+}
+
+// executeAPITest executes the given test against the blackbox
+func executeAPITest(t *testing.T, test apiTest) {
 	// Make the request
 	req, err := buildRequest(test.method, test.path, test.requestBody)
 	if err != nil {
