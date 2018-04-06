@@ -212,6 +212,23 @@ func TestCryptoListings(t *testing.T) {
 	})
 }
 
+func TestListingsQuantity(t *testing.T) {
+	listing := factory.NewListing("crypto")
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Item.Skus[0].Quantity = 0
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
+	})
+
+	listing.Item.Skus[0].Quantity = -1
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
+	})
+}
+
 func TestCryptoListingsQuantity(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
 	runAPITest(t, apiTest{
@@ -220,12 +237,12 @@ func TestCryptoListingsQuantity(t *testing.T) {
 
 	listing.Item.Skus[0].Quantity = 0
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrSkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
 	})
 
 	listing.Item.Skus[0].Quantity = -1
 	runAPITest(t, apiTest{
-		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrSkuQuantityInvalid),
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
 	})
 }
 

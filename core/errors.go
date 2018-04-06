@@ -17,7 +17,7 @@ var (
 	ErrCryptocurrencyPurchasePaymentAddressRequired = errors.New("paymentAddress required for cryptocurrency items")
 	ErrCryptocurrencyPurchasePaymentAddressTooLong  = errors.New("paymentAddress required is too long")
 
-	ErrSkuQuantityInvalid = errors.New("Quantity must be a non-negative integer")
+	ErrCryptocurrencySkuQuantityInvalid = errors.New("Cryptocurrency listing quantity must be a non-negative integer")
 )
 
 type ErrCryptocurrencyListingIllegalField string
