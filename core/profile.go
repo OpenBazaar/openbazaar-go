@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	CachePrefix       = "IPNSPERSISENTCACHE_"
+	CachePrefix       = "IPNSPERSISTENTCACHE_"
 	KeyCachePrefix    = "IPNSPUBKEYCACHE_"
 	CachedProfileTime = time.Hour * 24 * 7
 )
