@@ -496,12 +496,6 @@ func (x *Start) Execute(args []string) error {
 	proto.Unmarshal(dhtrec.GetValue(), e)
 
 	// Wallet
-	// Exchange rates
-	var exchangeRates bitcoin.ExchangeRates
-	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
-	}
-
 	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
 		log.Error(err)

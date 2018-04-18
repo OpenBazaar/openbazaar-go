@@ -161,7 +161,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		return err
 	}
 	var w WalletConfig = WalletConfig{
-		Type:             "bitcoincash",
+		Type:             "spvwallet",
 		MaxFee:           2000,
 		FeeAPI:           "https://btc.fees.openbazaar.org",
 		HighFeeDefault:   160,
