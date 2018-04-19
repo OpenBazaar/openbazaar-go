@@ -1,7 +1,9 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -31,51 +33,132 @@ func (n *OpenBazaarNode) StartRecordAgingNotifier() {
 	go n.RecordAgingNotifier.Run()
 }
 
-func (d *recordAgingNotifier) RunCount() int { return d.runCount }
+func (notifier *recordAgingNotifier) RunCount() int { return notifier.runCount }
 
-func (d *recordAgingNotifier) Run() {
-	d.watchdogTimer = time.NewTicker(d.intervalDelay)
-	d.stopWorker = make(chan bool)
+func (notifier *recordAgingNotifier) Run() {
+	notifier.watchdogTimer = time.NewTicker(notifier.intervalDelay)
+	notifier.stopWorker = make(chan bool)
 
 	// Run once on start, then wait for watchdog
-	if err := d.PerformTask(); err != nil {
-		d.logger.Error("performTask failure:", err.Error())
+	if err := notifier.PerformTask(); err != nil {
+		notifier.logger.Error("performTask failure:", err.Error())
 	}
 	for {
 		select {
-		case <-d.watchdogTimer.C:
-			if err := d.PerformTask(); err != nil {
-				d.logger.Error("performTask failure:", err.Error())
+		case <-notifier.watchdogTimer.C:
+			if err := notifier.PerformTask(); err != nil {
+				notifier.logger.Error("performTask failure:", err.Error())
 			}
-		case <-d.stopWorker:
-			d.watchdogTimer.Stop()
+		case <-notifier.stopWorker:
+			notifier.watchdogTimer.Stop()
 			return
 		}
 	}
 }
 
-func (d *recordAgingNotifier) Stop() {
-	d.stopWorker <- true
-	close(d.stopWorker)
+func (notifier *recordAgingNotifier) Stop() {
+	notifier.stopWorker <- true
+	close(notifier.stopWorker)
 }
 
-func (d *recordAgingNotifier) PerformTask() (err error) {
-	d.runCount += 1
-	d.logger.Infof("performTask started (count %d)", d.runCount)
+func (notifier *recordAgingNotifier) PerformTask() (err error) {
+	notifier.runCount += 1
+	notifier.logger.Infof("performTask started (count %d)", notifier.runCount)
 
-	err = d.GenerateModeratorNotifications()
+	if err = notifier.generateModeratorNotifications(); err != nil {
+		return
+	}
+	err = notifier.generateBuyerNotifications()
 	return
 }
 
-func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
-	disputes, err := d.datastore.Cases().GetDisputesForNotification()
+func (notifier *recordAgingNotifier) generateBuyerNotifications() error {
+	purchases, err := notifier.datastore.Purchases().GetPurchasesForNotification()
 	if err != nil {
 		return err
 	}
 
 	var (
 		executedAt         = time.Now()
-		notificationsToAdd = make([]*repo.NotificationRecord, 0)
+		notificationsToAdd = make([]*repo.Notification, 0)
+
+		fifteenDays    = time.Duration(15*24) * time.Hour
+		fourtyDays     = time.Duration(40*24) * time.Hour
+		fourtyFourDays = time.Duration(44*24) * time.Hour
+		fourtyFiveDays = time.Duration(45*24) * time.Hour
+	)
+
+	for _, p := range purchases {
+		var timeSinceCreation = executedAt.Sub(p.Timestamp)
+		if p.LastNotifiedAt.Before(p.Timestamp) || p.LastNotifiedAt.Equal(p.Timestamp) {
+			notificationsToAdd = append(notificationsToAdd, p.BuildZeroDayNotification(executedAt))
+		}
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(fifteenDays)) && timeSinceCreation > fifteenDays {
+			notificationsToAdd = append(notificationsToAdd, p.BuildFifteenDayNotification(executedAt))
+		}
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyDays)) && timeSinceCreation > fourtyDays {
+			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyDayNotification(executedAt))
+		}
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFourDays)) && timeSinceCreation > fourtyFourDays {
+			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFourDayNotification(executedAt))
+		}
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFiveDays)) && timeSinceCreation > fourtyFiveDays {
+			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
+		}
+		if len(notificationsToAdd) > 0 {
+			p.LastNotifiedAt = executedAt
+		}
+	}
+
+	notifier.datastore.Notifications().Lock()
+	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	for _, n := range notificationsToAdd {
+		var ser, err = json.Marshal(n.NotifierData)
+		if err != nil {
+			notifier.logger.Warning("marshaling purchase dispute notification:", err.Error())
+			notifier.logger.Infof("failed marshal: %+v", n)
+			continue
+		}
+		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
+		if err != nil {
+			notifier.logger.Warning("inserting purchase dispute notification:", err.Error())
+			notifier.logger.Infof("failed insert: %+v", n)
+			continue
+		}
+	}
+
+	if err = notificationTx.Commit(); err != nil {
+		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
+			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
+		}
+		return fmt.Errorf("commiting purchase dispute notifications:", err.Error())
+	}
+	notifier.logger.Infof("created %d purchase dispute notifications", len(notificationsToAdd))
+	notifier.datastore.Notifications().Unlock()
+
+	for _, n := range notificationsToAdd {
+		notifier.broadcast <- n.NotifierData
+	}
+
+	err = notifier.datastore.Purchases().UpdatePurchasesLastNotifiedAt(purchases)
+	notifier.logger.Infof("updated lastNotifiedAt on %d purchases", len(purchases))
+	return nil
+}
+
+func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
+	disputes, err := notifier.datastore.Cases().GetDisputesForNotification()
+	if err != nil {
+		return err
+	}
+
+	var (
+		executedAt         = time.Now()
+		notificationsToAdd = make([]*repo.Notification, 0)
 
 		fifteenDays    = time.Duration(15*24) * time.Hour
 		thirtyDays     = time.Duration(30*24) * time.Hour
@@ -104,23 +187,24 @@ func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
 		}
 	}
 
-	notificationTx, err := d.datastore.Notifications().BeginTransaction()
+	notifier.datastore.Notifications().Lock()
+	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
 	if err != nil {
 		return err
 	}
 
 	for _, n := range notificationsToAdd {
-		var serializedNotification, err = n.MarshalNotificationToJSON()
+		var ser, err = json.Marshal(n.NotifierData)
 		if err != nil {
-			d.logger.Warning("marshaling dispute expiration notification:", err.Error())
-			d.logger.Infof("failed marshal: %+v", n)
+			notifier.logger.Warning("marshaling dispute expiration notification:", err.Error())
+			notifier.logger.Infof("failed marshal: %+v", n)
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
-		_, err = notificationTx.Exec(template, n.GetID(), serializedNotification, n.GetDowncaseType(), n.GetSQLTimestamp(), 0)
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
-			d.logger.Warning("inserting dispute expiration notification:", err.Error())
-			d.logger.Infof("failed insert: %+v", n)
+			notifier.logger.Warning("inserting dispute expiration notification:", err.Error())
+			notifier.logger.Infof("failed insert: %+v", n)
 			continue
 		}
 	}
@@ -131,13 +215,14 @@ func (d *recordAgingNotifier) GenerateModeratorNotifications() error {
 		}
 		return fmt.Errorf("commiting dispute expiration notifications:", err.Error())
 	}
-	d.logger.Infof("created %d dispute expiration notifications", len(notificationsToAdd))
+	notifier.logger.Infof("created %d dispute expiration notifications", len(notificationsToAdd))
+	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
-		d.broadcast <- n.Notification
+		notifier.broadcast <- n.NotifierData
 	}
 
-	err = d.datastore.Cases().UpdateDisputesLastNotifiedAt(disputes)
-	d.logger.Infof("updated lastNotifiedAt on %d disputes", len(disputes))
+	err = notifier.datastore.Cases().UpdateDisputesLastNotifiedAt(disputes)
+	notifier.logger.Infof("updated lastNotifiedAt on %d disputes", len(disputes))
 	return nil
 }
