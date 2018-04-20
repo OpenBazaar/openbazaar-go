@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -317,5 +318,64 @@ func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// GetSalesForNotification returns []*SaleRecord including
+// each record which needs Notifications to be generated.
+func (s *SalesDB) GetSalesForNotification() ([]*repo.SaleRecord, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	fourtyFiveDays := time.Duration(45*24) * time.Hour
+	rows, err := s.db.Query("select orderID, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	if err != nil {
+		return nil, fmt.Errorf("selecting sales: %s", err.Error())
+	}
+
+	result := make([]*repo.SaleRecord, 0)
+	for rows.Next() {
+		var (
+			lastNotifiedAt int64
+
+			r         = &repo.SaleRecord{}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &timestamp, &lastNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning sales: %s", err.Error())
+		}
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
+		result = append(result, r)
+	}
+	return result, nil
+}
+
+// UpdateSalesLastNotifiedAt accepts []*repo.SaleRecord and updates
+// each SaleRecord by their OrderID to the set LastNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (s *SalesDB) UpdateSalesLastNotifiedAt(sales []*repo.SaleRecord) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update sale transaction: %s", err.Error())
+	}
+	for _, sale := range sales {
+		_, err = tx.Exec("update sales set lastNotifiedAt = ? where orderID = ?", int(sale.LastNotifiedAt.Unix()), sale.OrderID)
+		if err != nil {
+			return fmt.Errorf("update sale: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update sale transaction: %s", err.Error())
+	}
+
 	return nil
 }

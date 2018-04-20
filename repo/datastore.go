@@ -251,6 +251,13 @@ type SaleStore interface {
 
 	// Return the number of sales in the database
 	Count() int
+
+	// GetSalesForNotification returns []*SaleRecord including
+	// each record which needs Notifications to be generated.
+	GetSalesForNotification() ([]*SaleRecord, error)
+
+	// UpdateSalesLastNotifiedAt  accepts []*SaleRecord and updates each records lastNotifiedAt by its CaseID
+	UpdateSalesLastNotifiedAt([]*SaleRecord) error
 }
 
 type CaseStore interface {

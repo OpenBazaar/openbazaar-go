@@ -8,6 +8,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -449,5 +450,160 @@ func TestSalesDB_GetNeedsResync(t *testing.T) {
 	}
 	if !a || !b {
 		t.Error("Failed to return correct unfunded orders")
+	}
+}
+
+func TestGetSalesForNotificationReturnsRelevantRecords(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start sales 50 days ago
+	var (
+		timeStart     = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		neverNotified = &repo.SaleRecord{
+			OrderID:        "neverNotified",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
+		}
+		finallyNotified = &repo.SaleRecord{
+			OrderID:        "finalNotificationSent",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Now(),
+		}
+		existingRecords = []*repo.SaleRecord{
+			neverNotified,
+			finallyNotified,
+		}
+	)
+
+	for _, r := range existingRecords {
+		if _, err := database.Exec("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	saleDatabase := NewSaleStore(database, new(sync.Mutex))
+	sales, err := saleDatabase.GetSalesForNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawNeverNotifiedSale, sawFinallyNotifiedSale bool
+	for _, p := range sales {
+		switch p.OrderID {
+		case neverNotified.OrderID:
+			sawNeverNotifiedSale = true
+		case finallyNotified.OrderID:
+			sawFinallyNotifiedSale = true
+		default:
+			t.Error("Found unexpected sale: %+v", p)
+		}
+	}
+
+	if sawNeverNotifiedSale == false {
+		t.Error("Expected to see sale which was never notified")
+	}
+	if sawFinallyNotifiedSale == true {
+		t.Error("Expected NOT to see sale which recieved it's final notification")
+	}
+}
+
+func TestUpdateSaleLastNotifiedAt(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start sales 50 days ago
+	var (
+		timeStart = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		saleOne   = &repo.SaleRecord{
+			OrderID:        "sale1",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(123, 0),
+		}
+		saleTwo = &repo.SaleRecord{
+			OrderID:        "sale2",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(456, 0),
+		}
+		existingSales = []*repo.SaleRecord{saleOne, saleTwo}
+	)
+	s, err := database.Prepare("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range existingSales {
+		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastNotifiedAt.Unix())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Simulate LastNotifiedAt has been changed
+	saleOne.LastNotifiedAt = time.Unix(987, 0)
+	saleTwo.LastNotifiedAt = time.Unix(765, 0)
+	saleDatabase := NewSaleStore(database, new(sync.Mutex))
+	err = saleDatabase.UpdateSalesLastNotifiedAt(existingSales)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err = database.Prepare("select orderID, lastNotifiedAt from sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.Query()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID        string
+			lastNotifiedAt int64
+		)
+		if err = rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+
+		switch orderID {
+		case saleOne.OrderID:
+			if time.Unix(lastNotifiedAt, 0).Equal(saleOne.LastNotifiedAt) != true {
+				t.Error("Expected saleOne.LastNotifiedAt to be updated")
+			}
+		case saleTwo.OrderID:
+			if time.Unix(lastNotifiedAt, 0).Equal(saleTwo.LastNotifiedAt) != true {
+				t.Error("Expected saleTwo.LastNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected sale encounted")
+			t.Error(orderID, lastNotifiedAt)
+		}
+
 	}
 }
