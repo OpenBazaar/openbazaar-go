@@ -68,8 +68,73 @@ func (notifier *recordAgingNotifier) PerformTask() (err error) {
 	if err = notifier.generateModeratorNotifications(); err != nil {
 		return
 	}
+	if err = notifier.generateSellerNotifications(); err != nil {
+		return
+	}
 	err = notifier.generateBuyerNotifications()
 	return
+}
+
+func (notifier *recordAgingNotifier) generateSellerNotifications() error {
+	sales, err := notifier.datastore.Sales().GetSalesForNotification()
+	if err != nil {
+		return err
+	}
+
+	var (
+		executedAt         = time.Now()
+		notificationsToAdd = make([]*repo.Notification, 0)
+		fourtyFiveDays     = time.Duration(45*24) * time.Hour
+	)
+
+	for _, p := range sales {
+		var timeSinceCreation = executedAt.Sub(p.Timestamp)
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFiveDays)) && timeSinceCreation > fourtyFiveDays {
+			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
+		}
+		if len(notificationsToAdd) > 0 {
+			p.LastNotifiedAt = executedAt
+		}
+	}
+
+	notifier.datastore.Notifications().Lock()
+	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
+	if err != nil {
+		return err
+	}
+
+	for _, n := range notificationsToAdd {
+		var ser, err = json.Marshal(n.NotifierData)
+		if err != nil {
+			notifier.logger.Warning("marshaling sale aging notification:", err.Error())
+			notifier.logger.Infof("failed marshal: %+v", n)
+			continue
+		}
+		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
+		if err != nil {
+			notifier.logger.Warning("inserting sale aging notification:", err.Error())
+			notifier.logger.Infof("failed insert: %+v", n)
+			continue
+		}
+	}
+
+	if err = notificationTx.Commit(); err != nil {
+		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
+			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
+		}
+		return fmt.Errorf("commiting sale aging notifications:", err.Error())
+	}
+	notifier.logger.Infof("created %d sale aging notifications", len(notificationsToAdd))
+	notifier.datastore.Notifications().Unlock()
+
+	for _, n := range notificationsToAdd {
+		notifier.broadcast <- n.NotifierData
+	}
+
+	err = notifier.datastore.Sales().UpdateSalesLastNotifiedAt(sales)
+	notifier.logger.Infof("updated lastNotifiedAt on %d sales", len(sales))
+	return nil
 }
 
 func (notifier *recordAgingNotifier) generateBuyerNotifications() error {

@@ -632,3 +632,161 @@ func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
 		t.Errorf("Expected notification missing: checkFourtyFourDayPurchase_FourtyFiveDay")
 	}
 }
+
+// SALES
+func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
+	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
+	// each notification is suppose to be sent. With no notifications already queued,
+	// it should produce all the old notifications up to the most recent one expected
+	var (
+		broadcastChannel = make(chan repo.Notifier, 0)
+		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		twelveHours      = time.Duration(12) * time.Hour
+		fourtyFiveDays   = time.Duration(45*24) * time.Hour
+
+		// Produces notification for 45 days
+		neverNotified = &repo.SaleRecord{
+			OrderID:        "neverNotified",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
+		}
+		// Produces no notifications as all have already been created
+		notifiedUpToFourtyFiveDays = &repo.SaleRecord{
+			OrderID:        "notifiedUpToFourtyFiveDays",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+		}
+		existingRecords = []*repo.SaleRecord{
+			neverNotified,
+			notifiedUpToFourtyFiveDays,
+		}
+
+		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+			DataPath:        schema.GenerateTempPath(),
+			TestModeEnabled: true,
+		})
+	)
+
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, r := range existingRecords {
+		_, err := database.Exec("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?)", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var (
+		closeAsyncChannelVerifier = make(chan bool, 0)
+		broadcastCount            = 0
+	)
+	go func() {
+		for {
+			select {
+			case n := <-broadcastChannel:
+				notifier, ok := n.(repo.Notifier)
+				if !ok {
+					t.Errorf("unable to cast as Notifier: %+v", n)
+				}
+				t.Logf("notification received: %s", notifier.GetType())
+				broadcastCount += 1
+			case <-closeAsyncChannelVerifier:
+				return
+			}
+		}
+	}()
+
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	worker := &recordAgingNotifier{
+		datastore: datastore,
+		broadcast: broadcastChannel,
+		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
+	}
+
+	if err := worker.PerformTask(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify NotificationRecords in datastore
+	rows, err := database.Query("select orderID, lastNotifiedAt from sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID        string
+			lastNotifiedAt int64
+		)
+		if err := rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+		switch orderID {
+		case neverNotified.OrderID:
+			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
+			if durationFromActual > (time.Duration(5) * time.Second) {
+				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", orderID, time.Unix(lastNotifiedAt, 0).String())
+			}
+		case notifiedUpToFourtyFiveDays.OrderID:
+			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			}
+		default:
+			t.Error("Unexpected dispute case")
+		}
+	}
+
+	var count int64
+	err = database.QueryRow("select count(*) from notifications").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 notification to be produced, but found %d", count)
+	}
+
+	rows, err = database.Query("select notifID, serializedNotification, timestamp from notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		checkNeverNotifiedSale_FourtyFiveDay bool
+	)
+	for rows.Next() {
+		var (
+			nID, nJSON string
+			nTimestamp sql.NullInt64
+			n          *repo.Notification
+		)
+		if err = rows.Scan(&nID, &nJSON, &nTimestamp); err != nil {
+			t.Error(err)
+			continue
+		}
+		if err := json.Unmarshal([]byte(nJSON), &n); err != nil {
+			t.Error("Failed unmarshalling notification:", err.Error())
+			continue
+		}
+		var (
+			refID = n.NotifierData.(repo.SaleAgingNotification).OrderID
+		)
+		if refID == neverNotified.OrderID {
+			if n.NotifierType == repo.NotifierTypeSaleAgedFourtyFiveDays {
+				checkNeverNotifiedSale_FourtyFiveDay = true
+				continue
+			}
+		}
+	}
+
+	if checkNeverNotifiedSale_FourtyFiveDay != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedSale_FourtyFiveDay")
+	}
+}
