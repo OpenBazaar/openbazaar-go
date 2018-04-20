@@ -34,11 +34,14 @@ func TestMigration007(t *testing.T) {
 		schemaSql         = "pragma key = 'foobarbaz';"
 		insertCaseSQL     = "insert into cases (caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values (?,?,?,?,?,?,?,?);"
 		insertPurchaseSQL = "insert into purchases (orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
+		insertSaleSQL     = "insert into sales (orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
 		selectCaseSQL     = "select caseID, lastNotifiedAt from cases where caseID = ?;"
 		selectPurchaseSQL = "select orderID, lastNotifiedAt from purchases where orderID = ?;"
+		selectSaleSQL     = "select orderID, lastNotifiedAt from sales where orderID = ?;"
 
 		caseID     = "caseID"
 		purchaseID = "purchaseID"
+		saleID     = "saleID"
 		executedAt = time.Now()
 	)
 
@@ -47,8 +50,10 @@ func TestMigration007(t *testing.T) {
 		schemaSql,
 		migrations.Migration007_casesCreateSQL,
 		migrations.Migration007_purchasesCreateSQL,
+		migrations.Migration007_salesCreateSQL,
 		insertCaseSQL,
 		insertPurchaseSQL,
+		insertSaleSQL,
 	}, " ")
 	db, err := sql.Open("sqlite3", databasePath)
 	if err != nil {
@@ -79,6 +84,22 @@ func TestMigration007(t *testing.T) {
 		"shippingAddress",      // purchase shippingAddress text
 		"paymentAddress",       // purchase paymentAddr text
 		0,                      // purchase funded bool
+
+		saleID, // sale order id
+		"",     // sale contract blob
+		1,      // sale state
+		0,      // sale read bool
+		int(executedAt.Unix()), // sale timestamp
+		int(0),                 // sale total int
+		"thumbnailHash",        // sale thumbnail text
+		"QmBuyerPeerID",        // sale buyerID text
+		"buyer handle",         // sale buyer handle text
+		"An Item Title",        // sale item title
+		"shipping name",        // sale shippingName text
+		"shippingAddress",      // sale shippingAddress text
+		"paymentAddress",       // sale paymentAddr text
+		0,                      // sale funded bool
+		0,                      // sale needsSync bool
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -182,6 +203,47 @@ func TestMigration007(t *testing.T) {
 		}
 	}
 	purchaseRows.Close()
+
+	// Assert lastNotifiedColumn on sales
+	saleRows, err := db.Query(selectSaleSQL, saleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lastNotifierColumnOnSalesExists bool
+	columns, err = saleRows.ColumnTypes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range columns {
+		if c.Name() == "lastNotifiedAt" {
+			lastNotifierColumnOnSalesExists = true
+		}
+	}
+	if lastNotifierColumnOnSalesExists == false {
+		t.Error("Expected lastNotifiedAt column on sales to exist on sales and not be nullable")
+	}
+
+	// Assert lastNotifiedAt column on sales is set to (approx) the
+	// same time the migration was executed
+	var actualSale struct {
+		OrderId        string
+		LastNotifiedAt int64
+	}
+
+	for saleRows.Next() {
+		err := saleRows.Scan(&actualSale.OrderId, &actualSale.LastNotifiedAt)
+		if err != nil {
+			t.Error(err)
+		}
+		if actualSale.OrderId != saleID {
+			t.Error("Unexpected orderID returned")
+		}
+		timeSinceMigration := time.Now().Sub(time.Unix(actualSale.LastNotifiedAt, 0))
+		if timeSinceMigration > (time.Duration(2) * time.Second) {
+			t.Errorf("Expected lastNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
+		}
+	}
+	saleRows.Close()
 	db.Close()
 
 	// Execute Migration Down
@@ -210,6 +272,15 @@ func TestMigration007(t *testing.T) {
 	_, err = db.Query("update purchases set lastNotifiedAt = ? where orderID = ?;", 0, purchaseID)
 	if err == nil {
 		t.Error("Expected lastNotifiedAt update on purchases to fail")
+	}
+	if err != nil && !strings.Contains(err.Error(), "no such column: lastNotifiedAt") {
+		t.Error("Expected error to be 'no such column', was:", err.Error())
+	}
+
+	// Assert lastNotifiedAt column on sales
+	_, err = db.Query("update sales set lastNotifiedAt = ? where orderID = ?;", 0, saleID)
+	if err == nil {
+		t.Error("Expected lastNotifiedAt update on sales to fail")
 	}
 	if err != nil && !strings.Contains(err.Error(), "no such column: lastNotifiedAt") {
 		t.Error("Expected error to be 'no such column', was:", err.Error())
