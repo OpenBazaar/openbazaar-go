@@ -555,7 +555,7 @@ func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
 				t.Error("Expected purchaseTwo.LastNotifiedAt to be updated")
 			}
 		default:
-			t.Error("Unexpected purchase purchase encounted")
+			t.Error("Unexpected purchase encounted")
 			t.Error(orderID, lastNotifiedAt)
 		}
 

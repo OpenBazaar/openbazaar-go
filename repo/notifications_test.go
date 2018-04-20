@@ -101,6 +101,11 @@ func TestNotificationMarshalling(t *testing.T) {
 			Type:    repo.NotifierTypeRefundNotification,
 			OrderId: repo.NewNotificationID(),
 		},
+		repo.SaleAgingNotification{
+			ID:      "saleAgingID",
+			Type:    repo.NotifierTypeSaleAgedFourtyFiveDays,
+			OrderID: repo.NewNotificationID(),
+		},
 		repo.UnfollowNotification{
 			ID:     "unfollowID",
 			Type:   repo.NotifierTypeUnfollowNotification,

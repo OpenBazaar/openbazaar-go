@@ -85,6 +85,13 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 	}
 
 	switch payload.NotifierType {
+	case NotifierTypeSaleAgedFourtyFiveDays:
+		var notifier = SaleAgingNotification{}
+		if err := json.Unmarshal(data, &notifier); err != nil {
+			return err
+		}
+		n.NotifierData = notifier
+
 	case NotifierTypeDisputeAgedZeroDays:
 		fallthrough
 	case NotifierTypeDisputeAgedFifteenDays:
@@ -216,6 +223,8 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		n.NotifierData = notifier
+	default:
+		return fmt.Errorf("unknown notifier type: %t", payload.NotifierType)
 	}
 
 	n.ID = n.NotifierData.GetID()
@@ -615,13 +624,29 @@ func (n IncomingTransaction) GetID() string                               { retu
 func (n IncomingTransaction) GetType() NotificationType                   { return NotifierTypeIncomingTransaction }
 func (n IncomingTransaction) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
-// PurchaseAging represents a notification about a purchase
+// SaleAgingNotification represents a notification about a sale
 // which will soon be unable to dispute. The Type indicates the age of the
 // purchase and OrderID references the purchases orderID in the database schema
-type PurchaseAgingNotification struct {
+type SaleAgingNotification struct {
 	ID      string           `json:"notificationId"`
 	Type    NotificationType `json:"type"`
 	OrderID string           `json:"purchaseOrderId"`
+}
+
+func (n SaleAgingNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n SaleAgingNotification) GetID() string             { return n.ID }
+func (n SaleAgingNotification) GetType() NotificationType { return n.Type }
+func (n SaleAgingNotification) GetSMTPTitleAndBody() (string, string, bool) {
+	return "", "", false
+}
+
+// PurchaseAgingNotification represents a notification about a sale
+// which will soon be unable to dispute. The Type indicates the age of the
+// sale and OrderID references the sale's orderID in the database schema
+type PurchaseAgingNotification struct {
+	ID      string           `json:"notificationId"`
+	Type    NotificationType `json:"type"`
+	OrderID string           `json:"saleOrderId"`
 }
 
 func (n PurchaseAgingNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }

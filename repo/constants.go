@@ -40,6 +40,9 @@ const (
 	NotifierTypePurchaseAgedFourtyDays     NotificationType = "purchaseAgedFourtyDays"
 	NotifierTypePurchaseAgedFourtyFourDays NotificationType = "purchaseAgedFourtyFourDays"
 	NotifierTypePurchaseAgedFourtyFiveDays NotificationType = "purchaseAgedFourtyFiveDays"
+
+	// SaleAging
+	NotifierTypeSaleAgedFourtyFiveDays NotificationType = "saleAgedFourtyFiveDays"
 	// End Notification Types
 )
 
