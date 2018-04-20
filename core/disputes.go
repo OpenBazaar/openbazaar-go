@@ -358,9 +358,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("We are not involved in this dispute")
 	}
 
-	notif := repo.DisputeOpenNotification{repo.NewID(), "disputeOpen", orderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle, buyer}
+	notif := repo.DisputeOpenNotification{repo.NewNotificationID(), "disputeOpen", orderId, repo.Thumbnail{thumbnailTiny, thumbnailSmall}, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle, buyer}
 	n.Broadcast <- notif
-	n.Datastore.Notifications().Put(notif.ID, notif, notif.Type, time.Now())
+	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
 	return nil
 }
 

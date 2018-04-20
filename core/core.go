@@ -61,7 +61,7 @@ type OpenBazaarNode struct {
 	Datastore repo.Datastore
 
 	// Websocket channel used for pushing data to the UI
-	Broadcast chan interface{}
+	Broadcast chan repo.Notifier
 
 	// Bitcoin wallet implementation
 	Wallet wallet.Wallet

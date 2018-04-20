@@ -3,12 +3,12 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type NotficationsDB struct {
@@ -19,26 +19,28 @@ func NewNotificationStore(db *sql.DB, lock *sync.Mutex) repo.NotificationStore {
 	return &NotficationsDB{modelStore{db, lock}}
 }
 
-func (n *NotficationsDB) Put(notifID string, notification repo.Data, notifType string, timestamp time.Time) error {
-	ser, err := json.Marshal(notification)
+func (n *NotficationsDB) PutRecord(record *repo.Notification) error {
+	ser, err := json.Marshal(record.NotifierData)
 	if err != nil {
 		return err
 	}
 
+	var read int
+	if record.IsRead {
+		read = 1
+	}
+
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	_, err = n.ExecuteQuery("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", notifID, string(ser), strings.ToLower(notifType), int(timestamp.Unix()), 0)
+	_, err = n.ExecuteQuery("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", record.GetID(), string(ser), strings.ToLower(record.GetType()), record.GetUnixCreatedAt(), read)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]repo.Notification, int, error) {
-	var ret []repo.Notification
-
-	n.lock.Lock()
-	defer n.lock.Unlock()
+func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string) ([]*repo.Notification, int, error) {
+	var ret []*repo.Notification
 
 	var stm string
 	var cstm string
@@ -57,6 +59,7 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 		typeFilterClause = "type in (" + strings.Join(typeFilterClauseParts, ",") + ")"
 	}
 
+	// Prepare statements
 	var args []interface{}
 	if offsetId != "" {
 		args = append(args, offsetId)
@@ -78,35 +81,45 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 		stm = "select serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
 		cstm = "select Count(*) from notifications" + filter + " order by timestamp desc;"
 	}
+
+	// Gather records
+	n.lock.Lock()
+	defer n.lock.Unlock()
+
 	rows, err := n.db.Query(stm, args...)
 	if err != nil {
 		return ret, 0, err
 	}
 	for rows.Next() {
-		var data []byte
-		var timestampInt int
-		var readInt int
+		var (
+			data         []byte
+			readInt      int
+			timestampInt int
+		)
 		if err := rows.Scan(&data, &timestampInt, &readInt); err != nil {
-			fmt.Println(err)
+			log.Errorf("notifications: GetAll: scanning: %s\n", err.Error())
 			continue
 		}
+		var notification = &repo.Notification{}
+		err := json.Unmarshal(data, notification)
+		if err != nil {
+			log.Errorf("notifications: GetAll: unmarshalling: %s\n", err.Error())
+			continue
+		}
+
+		// TODO: These should get removed when (*Notification).MarshalJSON begins to include
+		// these values. Overriding them here allows for the marshalled representation of
+		// the ID field to become out of sync with the DB version of ID, which is overriden
+		// here. (Making Notification.NotifierData.GetID() != Notification.GetID())
 		var read bool
 		if readInt == 1 {
 			read = true
 		}
-		timestamp := time.Unix(int64(timestampInt), 0)
-		var ni interface{}
-		err := json.Unmarshal(data, &ni)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		n := repo.Notification{
-			Data:      ni,
-			Timestamp: timestamp,
-			Read:      read,
-		}
-		ret = append(ret, n)
+		notification.IsRead = read
+		notification.CreatedAt = time.Unix(int64(timestampInt), 0)
+		// END
+
+		ret = append(ret, notification)
 	}
 	row := n.db.QueryRow(cstm, args...)
 	var count int

@@ -104,7 +104,7 @@ func runAPITests(t *testing.T, tests apiTests) {
 	}
 
 	// Reset repo state
-	repository.Reset()
+	err = repository.Reset()
 	if err != nil {
 		t.Fatal(err)
 	}

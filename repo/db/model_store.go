@@ -10,6 +10,9 @@ type modelStore struct {
 	lock *sync.Mutex
 }
 
+func (m *modelStore) Lock()   { m.lock.Lock() }
+func (m *modelStore) Unlock() { m.lock.Unlock() }
+
 // Begin returns a *sql.Tx for transactional query support
 func (m *modelStore) BeginTransaction() (*sql.Tx, error) {
 	return m.db.Begin()

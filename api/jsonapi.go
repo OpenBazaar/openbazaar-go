@@ -1845,10 +1845,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		SanitizedResponse(w, string(respJson))
 		go func() {
-			type wsResp struct {
-				Id     string `json:"id"`
-				PeerId string `json:"peerId"`
-			}
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
 			found := make(map[string]bool)
@@ -1889,14 +1885,18 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- b
+						i.node.Broadcast <- repo.PremarshalledNotifier{b}
 					} else {
+						type wsResp struct {
+							Id     string `json:"id"`
+							PeerId string `json:"peerId"`
+						}
 						resp := wsResp{id, pid}
-						respJson, err := json.MarshalIndent(resp, "", "    ")
+						data, err := json.MarshalIndent(resp, "", "    ")
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- []byte(respJson)
+						i.node.Broadcast <- repo.PremarshalledNotifier{data}
 					}
 				}(p)
 			}
@@ -2477,9 +2477,9 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 	}
 
 	type notifData struct {
-		Unread        int                 `json:"unread"`
-		Total         int                 `json:"total"`
-		Notifications []repo.Notification `json:"notifications"`
+		Unread        int                  `json:"unread"`
+		Total         int                  `json:"total"`
+		Notifications []*repo.Notification `json:"notifications"`
 	}
 	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
 	if err != nil {
@@ -2669,7 +2669,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- ret
+						i.node.Broadcast <- repo.PremarshalledNotifier{ret}
 						return
 					}
 
@@ -2695,7 +2695,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("Error Marshalling to JSON")
 						return
 					}
-					i.node.Broadcast <- b
+					i.node.Broadcast <- repo.PremarshalledNotifier{b}
 				}(p)
 			}
 		}()
@@ -3411,7 +3411,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- ret
+					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
 					return
 				}
 				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
@@ -3451,7 +3451,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("Error marshalling rating")
 					return
 				}
-				i.node.Broadcast <- b
+				i.node.Broadcast <- repo.PremarshalledNotifier{b}
 			}(r)
 		}
 	}

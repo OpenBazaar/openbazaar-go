@@ -3,6 +3,7 @@ package schema
 import "errors"
 
 const (
+	// SQL Statements
 	PragmaUserVersionSQL                    = "pragma user_version = 0;"
 	CreateTableConfigSQL                    = "create table config (key text primary key not null, value blob);"
 	CreateTableFollowersSQL                 = "create table followers (peerID text primary key not null, proof blob);"
@@ -30,7 +31,9 @@ const (
 	CreateTableCouponsSQL                   = "create table coupons (slug text, code text, hash text);"
 	CreateIndexCouponsSQL                   = "create index index_coupons on coupons (slug);"
 	CreateTableModeratedStoresSQL           = "create table moderatedstores (peerID text primary key not null);"
+	// End SQL Statements
 
+	// Configuration defaults
 	DataPushNodeOne = "QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ"
 	DataPushNodeTwo = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
 
@@ -40,6 +43,13 @@ const (
 	BootstrapNodeDefault_BrixtonVillage   = "/ip4/139.59.174.197/tcp/4001/ipfs/QmZfTbnpvPwxCjpCG3CXJ7pfexgkBZ2kgChAiRJrTK1HsM"
 	BootstrapNodeDefault_Johari           = "/ip4/139.59.6.222/tcp/4001/ipfs/QmRDcEDK9gSViAevCHiE6ghkaBCU7rTuQj4BDpmCzRvRYg"
 	BootstrapNodeDefault_DuoSearch        = "/ip4/46.101.198.170/tcp/4001/ipfs/QmePWxsFT9wY3QuukgVDB7XZpqdKhrqJTHTXU7ECLDWJqX"
+	// End Configuration defaults
+)
+
+var (
+	// Errors
+	ErrorEmptyMnemonic = errors.New("mnemonic string must not be empty")
+	// End Errors
 )
 
 var (
@@ -55,6 +65,4 @@ var (
 		BootstrapNodeTestnet_BrooklynFlea,
 		BootstrapNodeTestnet_Shipshewana,
 	}
-
-	ErrorEmptyMnemonic = errors.New("mnemonic string must not be empty")
 )

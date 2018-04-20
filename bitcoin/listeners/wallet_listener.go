@@ -9,10 +9,10 @@ import (
 
 type WalletListener struct {
 	db        repo.Datastore
-	broadcast chan interface{}
+	broadcast chan repo.Notifier
 }
 
-func NewWalletListener(db repo.Datastore, broadcast chan interface{}) *WalletListener {
+func NewWalletListener(db repo.Datastore, broadcast chan repo.Notifier) *WalletListener {
 	l := &WalletListener{db, broadcast}
 	return l
 }

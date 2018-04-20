@@ -32,6 +32,8 @@ type Datastore interface {
 }
 
 type Queryable interface {
+	Lock()
+	Unlock()
 	BeginTransaction() (*sql.Tx, error)
 	PrepareQuery(string) (*sql.Stmt, error)
 	PrepareAndExecuteQuery(string, ...interface{}) (*sql.Rows, error)
@@ -205,6 +207,13 @@ type PurchaseStore interface {
 
 	// Return the number of purchases in the database
 	Count() int
+
+	// GetPurchasesForNotification returns []*PurchaseRecord including
+	// each record which needs Notifications to be generated.
+	GetPurchasesForNotification() ([]*PurchaseRecord, error)
+
+	// UpdatePurchasesLastNotifiedAt  accepts []*PurchaseRecord and updates each records lastNotifiedAt by its CaseID
+	UpdatePurchasesLastNotifiedAt([]*PurchaseRecord) error
 }
 
 type SaleStore interface {
@@ -284,7 +293,7 @@ type CaseStore interface {
 	// each record which needs Notifications to be generated.
 	GetDisputesForNotification() ([]*DisputeCaseRecord, error)
 
-	// UpdateDisputes accepts []*DisputeCaseRecord and updates each records lastNotifiedAt by its CaseID
+	// UpdateDisputesLastNotifiedAt accepts []*DisputeCaseRecord and updates each records lastNotifiedAt by its CaseID
 	UpdateDisputesLastNotifiedAt([]*DisputeCaseRecord) error
 }
 
@@ -318,8 +327,8 @@ type ChatStore interface {
 type NotificationStore interface {
 	Queryable
 
-	// Put a new notification to the database
-	Put(notifID string, notification Data, notifType string, timestamp time.Time) error
+	// PutRecord persists a Notification to the database
+	PutRecord(*Notification) error
 
 	// Mark notification as read
 	MarkAsRead(notifID string) error
@@ -328,7 +337,7 @@ type NotificationStore interface {
 	MarkAllAsRead() error
 
 	// Fetch notifications from database
-	GetAll(offsetID string, limit int, typeFilter []string) ([]Notification, int, error)
+	GetAll(offsetID string, limit int, typeFilter []string) ([]*Notification, int, error)
 
 	// Returns the unread count for all notifications
 	GetUnreadCount() (int, error)

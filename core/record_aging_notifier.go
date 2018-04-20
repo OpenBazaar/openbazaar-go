@@ -13,7 +13,7 @@ import (
 type recordAgingNotifier struct {
 	// PerformTask dependancies
 	datastore repo.Datastore
-	broadcast chan interface{}
+	broadcast chan repo.Notifier
 
 	// Worker-handling dependancies
 	intervalDelay time.Duration

@@ -3,16 +3,17 @@ package db
 import (
 	"database/sql"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
-	"sync"
 )
 
 var purdb repo.PurchaseStore
@@ -392,5 +393,171 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 	if ct != 1 {
 		t.Error("Returned incorrect number of query purchases")
+	}
+}
+
+func TestGetPurchasesForNotificationReturnsRelevantRecords(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start purchases 50 days ago
+	var (
+		timeStart     = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		neverNotified = &repo.PurchaseRecord{
+			OrderID:        "neverNotified",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
+		}
+		initialNotified = &repo.PurchaseRecord{
+			OrderID:        "initialNotificationSent",
+			Timestamp:      timeStart,
+			LastNotifiedAt: timeStart,
+		}
+		finallyNotified = &repo.PurchaseRecord{
+			OrderID:        "finalNotificationSent",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Now(),
+		}
+		existingRecords = []*repo.PurchaseRecord{
+			neverNotified,
+			initialNotified,
+			finallyNotified,
+		}
+	)
+
+	for _, r := range existingRecords {
+		if _, err := database.Exec("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
+	purchases, err := purchaseDatabase.GetPurchasesForNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawNeverNotifiedPurchase, sawInitialNotifiedPurchase, sawFinallyNotifiedPurchase bool
+	for _, p := range purchases {
+		switch p.OrderID {
+		case neverNotified.OrderID:
+			sawNeverNotifiedPurchase = true
+		case initialNotified.OrderID:
+			sawInitialNotifiedPurchase = true
+		case finallyNotified.OrderID:
+			sawFinallyNotifiedPurchase = true
+		default:
+			t.Error("Found unexpected purchase: %+v", p)
+		}
+	}
+
+	if sawNeverNotifiedPurchase == false {
+		t.Error("Expected to see purchase which was never notified")
+	}
+	if sawInitialNotifiedPurchase == false {
+		t.Error("Expected to see purchase which was initially notified")
+	}
+	if sawFinallyNotifiedPurchase == true {
+		t.Error("Expected NOT to see purchase which recieved it's final notification")
+	}
+}
+
+func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start purchases 50 days ago
+	var (
+		timeStart   = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		purchaseOne = &repo.PurchaseRecord{
+			OrderID:        "purchase1",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(123, 0),
+		}
+		purchaseTwo = &repo.PurchaseRecord{
+			OrderID:        "purchase2",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(456, 0),
+		}
+		existingPurchases = []*repo.PurchaseRecord{purchaseOne, purchaseTwo}
+	)
+	s, err := database.Prepare("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range existingPurchases {
+		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastNotifiedAt.Unix())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Simulate LastNotifiedAt has been changed
+	purchaseOne.LastNotifiedAt = time.Unix(987, 0)
+	purchaseTwo.LastNotifiedAt = time.Unix(765, 0)
+	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
+	err = purchaseDatabase.UpdatePurchasesLastNotifiedAt(existingPurchases)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err = database.Prepare("select orderID, lastNotifiedAt from purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.Query()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID        string
+			lastNotifiedAt int64
+		)
+		if err = rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+
+		switch orderID {
+		case purchaseOne.OrderID:
+			if time.Unix(lastNotifiedAt, 0).Equal(purchaseOne.LastNotifiedAt) != true {
+				t.Error("Expected purchaseOne.LastNotifiedAt to be updated")
+			}
+		case purchaseTwo.OrderID:
+			if time.Unix(lastNotifiedAt, 0).Equal(purchaseTwo.LastNotifiedAt) != true {
+				t.Error("Expected purchaseTwo.LastNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected purchase purchase encounted")
+			t.Error(orderID, lastNotifiedAt)
+		}
+
 	}
 }

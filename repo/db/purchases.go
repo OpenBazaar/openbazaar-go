@@ -3,13 +3,15 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
-	"sync"
-	"time"
 )
 
 type PurchasesDB struct {
@@ -274,4 +276,63 @@ func (p *PurchasesDB) Count() int {
 	var count int
 	row.Scan(&count)
 	return count
+}
+
+// GetPurchasesForNotification returns []*PurchaseRecord including
+// each record which needs Notifications to be generated.
+func (p *PurchasesDB) GetPurchasesForNotification() ([]*repo.PurchaseRecord, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	fourtyFiveDays := time.Duration(45*24) * time.Hour
+	rows, err := p.db.Query("select orderID, timestamp, lastNotifiedAt from purchases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	if err != nil {
+		return nil, fmt.Errorf("selecting purchases: %s", err.Error())
+	}
+
+	result := make([]*repo.PurchaseRecord, 0)
+	for rows.Next() {
+		var (
+			lastNotifiedAt int64
+
+			r         = &repo.PurchaseRecord{}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &timestamp, &lastNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning purchases: %s", err.Error())
+		}
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
+		result = append(result, r)
+	}
+	return result, nil
+}
+
+// UpdatePurchasesLastNotifiedAt accepts []*repo.PurchaseRecord and updates
+// each PurchaseRecord by their OrderID to the set LastNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (p *PurchasesDB) UpdatePurchasesLastNotifiedAt(purchases []*repo.PurchaseRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
+	}
+	for _, p := range purchases {
+		_, err = tx.Exec("update purchases set lastNotifiedAt = ? where orderID = ?", int(p.LastNotifiedAt.Unix()), p.OrderID)
+		if err != nil {
+			return fmt.Errorf("update purchase: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
+	}
+
+	return nil
 }

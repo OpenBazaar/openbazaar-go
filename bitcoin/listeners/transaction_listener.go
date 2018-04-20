@@ -19,12 +19,12 @@ var log = logging.MustGetLogger("transaction-listener")
 
 type TransactionListener struct {
 	db        repo.Datastore
-	broadcast chan interface{}
+	broadcast chan repo.Notifier
 	wallet    wallet.Wallet
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan interface{}, wallet wallet.Wallet) *TransactionListener {
+func NewTransactionListener(db repo.Datastore, broadcast chan repo.Notifier, wallet wallet.Wallet) *TransactionListener {
 	l := &TransactionListener{db, broadcast, wallet, new(sync.Mutex)}
 	return l
 }
@@ -111,7 +111,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					buyerHandle := contract.BuyerOrder.BuyerID.Handle
 
 					n := repo.DisputeAcceptedNotification{
-						repo.NewID(),
+						repo.NewNotificationID(),
 						"disputeAccepted",
 						orderId,
 						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
@@ -121,7 +121,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
+					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
 				l.db.Sales().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -141,7 +141,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					}
 
 					n := repo.DisputeAcceptedNotification{
-						repo.NewID(),
+						repo.NewNotificationID(),
 						"disputeAccepted",
 						orderId,
 						repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
@@ -151,7 +151,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 					}
 
 					l.broadcast <- n
-					l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
+					l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 				}
 				l.db.Purchases().Put(orderId, *contract, pb.OrderState_RESOLVED, false)
 			}
@@ -191,7 +191,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 			l.adjustInventory(contract)
 
 			n := repo.OrderNotification{
-				repo.NewID(),
+				repo.NewNotificationID(),
 				"order",
 				contract.VendorListings[0].Item.Title,
 				contract.BuyerOrder.BuyerID.PeerID,
@@ -202,7 +202,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 			}
 
 			l.broadcast <- n
-			l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
+			l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 		}
 	}
 
@@ -259,13 +259,13 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.
 			}
 		}
 		n := repo.PaymentNotification{
-			repo.NewID(),
+			repo.NewNotificationID(),
 			"payment",
 			orderId,
 			uint64(funding),
 		}
 		l.broadcast <- n
-		l.db.Notifications().Put(n.ID, n, n.Type, time.Now())
+		l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	}
 
 	record := &wallet.TransactionRecord{
@@ -306,7 +306,7 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 				continue
 			}
 			log.Warningf("Order %s purchased more inventory for %s than we have on hand", orderId, listing.Slug)
-			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
+			l.broadcast <- repo.PremarshalledNotifier{[]byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)}
 		}
 		l.db.Inventory().Put(listing.Slug, variant, newCount)
 		if newCount >= 0 {

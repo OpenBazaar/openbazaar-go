@@ -23,11 +23,15 @@ var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
-	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
+	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,
 		TestModeEnabled: testnet,
+		Mnemonic:        mnemonic,
 	})
-	if err := paths.BuildSchemaDirectories(); err != nil {
+	if err != nil {
+		return err
+	}
+	if nodeSchema.BuildSchemaDirectories(); err != nil {
 		return err
 	}
 
@@ -86,9 +90,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if werr != nil {
 		return werr
 	}
-	f.Close()
-
-	return initializeIpnsKeyspace(repoRoot, identityKey)
+	return initializeIpnsKeyspace(repoRoot, nodeSchema.IdentityKey())
 }
 
 func checkWriteable(dir string) error {
@@ -120,9 +122,6 @@ func checkWriteable(dir string) error {
 }
 
 func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
@@ -138,6 +137,8 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	cfg.Identity = identity
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
