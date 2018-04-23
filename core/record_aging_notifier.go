@@ -10,6 +10,23 @@ import (
 	"github.com/op/go-logging"
 )
 
+var (
+	// Seller Notification Intervals
+	soldItemDisputeTimeout_firstNotificationInterval = time.Duration(45*24) * time.Hour
+
+	// Buyer Notitification Intervals
+	boughtItemDisputeTimeout_firstNotificationInterval  = time.Duration(15*24) * time.Hour
+	boughtItenDisputeTimeout_secondNotificationInterval = time.Duration(40*24) * time.Hour
+	boughtItenDisputeTimeout_thirdNotificationInterval  = time.Duration(44*24) * time.Hour
+	boughtItenDisputeTimeout_fourthNotificationInterval = time.Duration(45*24) * time.Hour
+
+	// Moderator Notification Intervals
+	moderatorDisputeTimeout_firstNotificationInterval  = time.Duration(15*24) * time.Hour
+	moderatorDisputeTimeout_secondNotificationInterval = time.Duration(30*24) * time.Hour
+	moderatorDisputeTimeout_thirdNotificationInterval  = time.Duration(44*24) * time.Hour
+	moderatorDisputeTimeout_fourthNotificationInterval = time.Duration(45*24) * time.Hour
+)
+
 type recordAgingNotifier struct {
 	// PerformTask dependancies
 	datastore repo.Datastore
@@ -84,12 +101,11 @@ func (notifier *recordAgingNotifier) generateSellerNotifications() error {
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
-		fourtyFiveDays     = time.Duration(45*24) * time.Hour
 	)
 
 	for _, p := range sales {
 		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFiveDays)) && timeSinceCreation > fourtyFiveDays {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(soldItemDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > soldItemDisputeTimeout_firstNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
@@ -146,11 +162,6 @@ func (notifier *recordAgingNotifier) generateBuyerNotifications() error {
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
-
-		fifteenDays    = time.Duration(15*24) * time.Hour
-		fourtyDays     = time.Duration(40*24) * time.Hour
-		fourtyFourDays = time.Duration(44*24) * time.Hour
-		fourtyFiveDays = time.Duration(45*24) * time.Hour
 	)
 
 	for _, p := range purchases {
@@ -158,16 +169,16 @@ func (notifier *recordAgingNotifier) generateBuyerNotifications() error {
 		if p.LastNotifiedAt.Before(p.Timestamp) || p.LastNotifiedAt.Equal(p.Timestamp) {
 			notificationsToAdd = append(notificationsToAdd, p.BuildZeroDayNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(fifteenDays)) && timeSinceCreation > fifteenDays {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItemDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > boughtItemDisputeTimeout_firstNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildFifteenDayNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyDays)) && timeSinceCreation > fourtyDays {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_secondNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_secondNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyDayNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFourDays)) && timeSinceCreation > fourtyFourDays {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_thirdNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_thirdNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFourDayNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(fourtyFiveDays)) && timeSinceCreation > fourtyFiveDays {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_fourthNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_fourthNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
@@ -224,27 +235,23 @@ func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
-
-		fifteenDays    = time.Duration(15*24) * time.Hour
-		thirtyDays     = time.Duration(30*24) * time.Hour
-		fourtyFourDays = time.Duration(44*24) * time.Hour
-		fourtyFiveDays = time.Duration(45*24) * time.Hour
 	)
+
 	for _, d := range disputes {
 		var timeSinceCreation = executedAt.Sub(d.Timestamp)
 		if d.LastNotifiedAt.Before(d.Timestamp) || d.LastNotifiedAt.Equal(d.Timestamp) {
 			notificationsToAdd = append(notificationsToAdd, d.BuildZeroDayNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(fifteenDays)) && timeSinceCreation > fifteenDays {
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_firstNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildFifteenDayNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(thirtyDays)) && timeSinceCreation > thirtyDays {
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_secondNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_secondNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildThirtyDayNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(fourtyFourDays)) && timeSinceCreation > fourtyFourDays {
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_thirdNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_thirdNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildFourtyFourDayNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(fourtyFiveDays)) && timeSinceCreation > fourtyFiveDays {
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_fourthNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_fourthNotificationInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildFourtyFiveDayNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
