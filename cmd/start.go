@@ -240,49 +240,50 @@ func (x *Start) Execute(args []string) error {
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
+		log.Error("read config:", err)
 		return err
 	}
 
 	apiConfig, err := schema.GetAPIConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan api config:", err)
 		return err
 	}
 	torConfig, err := schema.GetTorConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan tor config:", err)
 		return err
 	}
 	walletCfg, err := schema.GetWalletConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan wallet config:", err)
 		return err
 	}
 	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan data sharing config:", err)
 		return err
 	}
 	dropboxToken, err := schema.GetDropboxApiToken(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan dropbox api token:", err)
 		return err
 	}
 	resolverConfig, err := schema.GetResolverConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan resolver config:", err)
 		return err
 	}
 	republishInterval, err := schema.GetRepublishInterval(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan republish interval config:", err)
 		return err
 	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
-		log.Error(err)
+		log.Error("open repo:", err)
 		return err
 	}
 	cctx, cancel := context.WithCancel(context.Background())
@@ -290,17 +291,18 @@ func (x *Start) Execute(args []string) error {
 
 	cfg, err := r.Config()
 	if err != nil {
-		log.Error(err)
+		log.Error("get repo config:", err)
 		return err
 	}
 
 	identityKey, err := sqliteDB.Config().GetIdentityKey()
 	if err != nil {
-		log.Error(err)
+		log.Error("get identity key:", err)
 		return err
 	}
 	identity, err := ipfs.IdentityFromKey(identityKey)
 	if err != nil {
+		log.Error("get identity from key:", err)
 		return err
 	}
 	cfg.Identity = identity
@@ -322,7 +324,7 @@ func (x *Start) Execute(args []string) error {
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
 	if err != nil {
-		log.Error(err)
+		log.Error("create onion key:", err)
 		return err
 	}
 	onionAddrString := "/onion/" + onionAddr + ":4003"
@@ -345,7 +347,7 @@ func (x *Start) Execute(args []string) error {
 	for i, addr := range cfg.Addresses.Swarm {
 		m, err := ma.NewMultiaddr(addr)
 		if err != nil {
-			log.Error(err)
+			log.Error("creating swarm multihash:", err)
 			return err
 		}
 		p := m.Protocols()
@@ -354,7 +356,7 @@ func (x *Start) Execute(args []string) error {
 			usingClearnet = true
 			port, serr := obnet.Stun()
 			if serr != nil {
-				log.Error(serr)
+				log.Error("stun setup:", serr)
 				return err
 			}
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
@@ -365,14 +367,10 @@ func (x *Start) Execute(args []string) error {
 			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
 			t, err := ma.ProtocolsWithString("/onion")
 			if err != nil {
-				log.Error(err)
+				log.Error("wrapping onion protocol:", err)
 				return err
 			}
 			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
 		} else {
 			usingClearnet = true
 		}
@@ -383,7 +381,7 @@ func (x *Start) Execute(args []string) error {
 		if torControl == "" {
 			controlPort, err = obnet.GetTorControlPort()
 			if err != nil {
-				log.Error(err)
+				log.Error("get tor control port:", err)
 				return err
 			}
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
@@ -395,7 +393,7 @@ func (x *Start) Execute(args []string) error {
 		auth := &proxy.Auth{Password: torPw}
 		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
 		if err != nil {
-			log.Error(err)
+			log.Error("setup tor transport:", err)
 			return err
 		}
 	}
@@ -405,7 +403,7 @@ func (x *Start) Execute(args []string) error {
 		log.Notice("Using Tor exclusively")
 		torDialer, err = onionTransport.TorDialer()
 		if err != nil {
-			log.Error(err)
+			log.Error("dailing tor network:", err)
 			return err
 		}
 		// TODO: maybe create a tor resolver impl later
@@ -455,7 +453,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
-		log.Error(err)
+		log.Error("create new ipfs node:", err)
 		return err
 	}
 
@@ -485,7 +483,7 @@ func (x *Start) Execute(args []string) error {
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if hasherr != nil {
-		log.Error(hasherr)
+		log.Error("get ipns key:", hasherr)
 		return hasherr
 	}
 	val := ival.([]byte)
@@ -497,7 +495,7 @@ func (x *Start) Execute(args []string) error {
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
-		log.Error(err)
+		log.Error("get config mnemonic:", err)
 		return err
 	}
 	var params chaincfg.Params
