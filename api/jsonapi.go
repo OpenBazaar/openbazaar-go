@@ -29,6 +29,8 @@ import (
 	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
 	"io/ioutil"
 
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -45,7 +47,6 @@ import (
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 )
 
 type JsonAPIConfig struct {
@@ -502,77 +503,18 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(ld.Moderators) == 0 {
-		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil && sd.StoreModerators != nil {
-			ld.Moderators = *sd.StoreModerators
-		}
-	}
-
-	// If the listing already exists tell them to use PUT
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
-	if ld.Slug != "" {
-		_, ferr := os.Stat(listingPath)
-		if !os.IsNotExist(ferr) {
+	err = i.node.CreateListing(ld)
+	if err != nil {
+		if err == core.ErrListingAlreadyExists {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
-	} else {
-		ld.Slug, err = i.node.GenerateSlug(ld.Item.Title)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-	err = i.node.SetListingInventory(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	signedListing, err := i.node.SignListing(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	listingPath = path.Join(i.node.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
-	f, err := os.Create(listingPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(signedListing)
-	if err != nil {
+
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if _, err := f.WriteString(out); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.UpdateListingIndex(signedListing)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	// Update followers/following
-	err = i.node.UpdateFollow()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if err := i.node.SeedNode(); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, signedListing.Listing.Slug))
-	return
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, ld.Slug))
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
@@ -582,65 +524,18 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if len(ld.Moderators) == 0 {
-		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil {
-			ld.Moderators = *sd.StoreModerators
+
+	err = i.node.UpdateListing(ld)
+	if err != nil {
+		if err == core.ErrListingDoesNotExist {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return
 		}
-	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
-	_, ferr := os.Stat(listingPath)
-	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-		return
-	}
-	err = i.node.SetListingInventory(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	signedListing, err := i.node.SignListing(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	f, err := os.Create(listingPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(signedListing)
-	if err != nil {
+
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if _, err := f.WriteString(out); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.UpdateListingIndex(signedListing)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Update followers/following
-	err = i.node.UpdateFollow()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
-		return
-	}
-	if err := i.node.SeedNode(); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	SanitizedResponse(w, `{}`)
 	return
 }

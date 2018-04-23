@@ -17,7 +17,7 @@ func Resolve(ctx commands.Context, hash string, timeout time.Duration) (string, 
 	cmd.Run(req, res)
 	resp := res.Output()
 	if res.Error() != nil {
-		log.Error(res.Error())
+		log.Error(res.Error(), hash)
 		return "", res.Error()
 	}
 	returnedVal := resp.(*coreCmds.ResolvedPath)
