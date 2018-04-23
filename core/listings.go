@@ -256,6 +256,12 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 			return err
 		}
 	}
+
+	err = n.PublishInventory()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -705,6 +711,10 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 
 	// Delete inventory for listing
 	err = n.Datastore.Inventory().DeleteAll(slug)
+	if err != nil {
+		return err
+	}
+	err = n.PublishInventory()
 	if err != nil {
 		return err
 	}

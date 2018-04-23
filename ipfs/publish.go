@@ -46,11 +46,7 @@ func Publish(ctx commands.Context, hash string) (string, error) {
 }
 
 // Publish another IPFS record at /ipns/<peerID>:<altRoot>
-func PublishAltRoot(ctx commands.Context, altRoot string, value path.Path, eol time.Time) error {
-	nd, err := ctx.ConstructNode()
-	if err != nil {
-		return err
-	}
+func PublishAltRoot(ctx commands.Context, nd *core.IpfsNode, altRoot string, value path.Path, eol time.Time) error {
 	hash, err := mh.FromB58String(nd.Identity.Pretty())
 	if err != nil {
 		return err

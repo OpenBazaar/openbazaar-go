@@ -1139,30 +1139,87 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
-	type inv struct {
-		Slug     string `json:"slug"`
-		Variant  int    `json:"variant"`
-		Quantity int    `json:"quantity"`
+	// Get optional peerID and slug parameters
+	var (
+		peerIDString string
+		slug         string
+	)
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) > 3 {
+		peerIDString = parts[3]
 	}
-	var invList []inv
-	inventory, err := i.node.Datastore.Inventory().GetAll()
-	if err != nil {
-		fmt.Fprint(w, `[]`)
+	if len(parts) > 4 {
+		slug = parts[4]
+	}
+
+	// If we want our own inventory get it from the local database and return
+	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IpfsNode.Identity.Pretty())
+	if getPersonalInventory {
+		type inv struct {
+			Slug     string `json:"slug"`
+			Variant  int    `json:"variant"`
+			Quantity int    `json:"quantity"`
+		}
+		var invList []inv
+		inventory, err := i.node.Datastore.Inventory().GetAll()
+		if err != nil {
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		for itemSlug, m := range inventory {
+			for variant, count := range m {
+				if slug != "" && slug != itemSlug {
+					continue
+				}
+
+				i := inv{itemSlug, variant, count}
+				invList = append(invList, i)
+			}
+		}
+		ret, _ := json.MarshalIndent(invList, "", "    ")
+		if string(ret) == "null" {
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		SanitizedResponse(w, string(ret))
 		return
 	}
-	for slug, m := range inventory {
-		for variant, count := range m {
-			i := inv{slug, variant, count}
-			invList = append(invList, i)
+
+	// If we want another peer's inventory crawl IPFS with an optional cache
+	var err error
+	useCacheBool := false
+	useCacheString := r.URL.Query().Get("useCache")
+	if len(useCacheString) > 0 {
+		useCacheBool, err = strconv.ParseBool(useCacheString)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
-	ret, _ := json.MarshalIndent(invList, "", "    ")
-	if string(ret) == "null" {
-		fmt.Fprint(w, `[]`)
+
+	peerID, err := peer.IDB58Decode(peerIDString)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, string(ret))
-	return
+
+	if slug == "" {
+		inventoryBytes, err := i.node.GetPublishedInventoryBytes(peerID, useCacheBool)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(inventoryBytes))
+		return
+	}
+
+	inventoryBytes, err := i.node.GetPublishedInventoryBytesForSlug(peerID, slug, useCacheBool)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(inventoryBytes))
 }
 
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
@@ -1185,6 +1242,13 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	err = i.node.PublishInventory()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }

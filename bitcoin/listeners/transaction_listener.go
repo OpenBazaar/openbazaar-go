@@ -281,6 +281,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.
 }
 
 func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
+	inventoryUpdated := false
 	for _, item := range contract.BuyerOrder.Items {
 		listing, err := core.ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
@@ -310,9 +311,14 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 			l.broadcast <- []byte(`{"warning": "order ` + orderId + ` exceeded on hand inventory for ` + listing.Slug + `"`)
 		}
 		l.db.Inventory().Put(listing.Slug, variant, newCount)
+		inventoryUpdated = true
 		if newCount >= 0 {
 			log.Debugf("Adjusting inventory for %s:%d to %d\n", listing.Slug, variant, newCount)
 		}
+	}
+
+	if inventoryUpdated && core.Node != nil {
+		core.Node.PublishInventory()
 	}
 }
 
