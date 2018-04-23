@@ -225,46 +225,37 @@ func (m *mockStxoStore) Delete(stxo wallet.Stxo) error {
 	return nil
 }
 
-type txnStoreEntry struct {
-	txn       *wire.MsgTx
-	value     int
-	height    int
-	timestamp time.Time
-	watchOnly bool
-}
-
 type mockTxnStore struct {
-	txns map[string]*txnStoreEntry
+	txns map[string]*wallet.Txn
 }
 
-func (m *mockTxnStore) Put(txn *wire.MsgTx, value, height int, timestamp time.Time, watchOnly bool) error {
-	m.txns[txn.TxHash().String()] = &txnStoreEntry{
-		txn:       txn,
-		value:     value,
-		height:    height,
-		timestamp: timestamp,
-		watchOnly: watchOnly,
+func (m *mockTxnStore) Put(raw []byte, txid string, value, height int, timestamp time.Time, watchOnly bool) error {
+	m.txns[txid] = &wallet.Txn{
+		Txid:      txid,
+		Value:     int64(value),
+		Height:    int32(height),
+		Timestamp: timestamp,
+		WatchOnly: watchOnly,
+		Bytes:     raw,
 	}
 	return nil
 }
 
-func (m *mockTxnStore) Get(txid chainhash.Hash) (*wire.MsgTx, wallet.Txn, error) {
+func (m *mockTxnStore) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	t, ok := m.txns[txid.String()]
 	if !ok {
-		return nil, wallet.Txn{}, errors.New("Not found")
+		return wallet.Txn{}, errors.New("Not found")
 	}
-	var buf bytes.Buffer
-	t.txn.Serialize(&buf)
-	return t.txn, wallet.Txn{txid.String(), int64(t.value), int32(t.height), t.timestamp, t.watchOnly, buf.Bytes()}, nil
+	return *t, nil
 }
 
 func (m *mockTxnStore) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	var txns []wallet.Txn
 	for _, t := range m.txns {
-		var buf bytes.Buffer
-		t.txn.Serialize(&buf)
-		txn := wallet.Txn{t.txn.TxHash().String(), int64(t.value), int32(t.height), t.timestamp, t.watchOnly, buf.Bytes()}
-		txns = append(txns, txn)
+		if !includeWatchOnly && t.WatchOnly {
+			continue
+		}
+		txns = append(txns, *t)
 	}
 	return txns, nil
 }
@@ -274,7 +265,7 @@ func (m *mockTxnStore) UpdateHeight(txid chainhash.Hash, height int) error {
 	if !ok {
 		return errors.New("Not found")
 	}
-	txn.height = height
+	txn.Height = int32(height)
 	return nil
 }
 
