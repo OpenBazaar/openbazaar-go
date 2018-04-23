@@ -2372,9 +2372,9 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 	}
 
 	type notifData struct {
-		Unread        int                  `json:"unread"`
-		Total         int                  `json:"total"`
-		Notifications []*repo.Notification `json:"notifications"`
+		Unread        int               `json:"unread"`
+		Total         int               `json:"total"`
+		Notifications []json.RawMessage `json:"notifications"`
 	}
 	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
 	if err != nil {
@@ -2387,7 +2387,15 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ret, err := json.MarshalIndent(notifData{unread, total, notifs}, "", "    ")
+	payload := notifData{unread, total, []json.RawMessage{}}
+	for _, n := range notifs {
+		data, err := n.Data()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+		payload.Notifications = append(payload.Notifications, data)
+	}
+	ret, err := json.MarshalIndent(payload, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

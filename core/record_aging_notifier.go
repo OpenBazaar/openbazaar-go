@@ -124,7 +124,7 @@ func (notifier *recordAgingNotifier) generateSellerNotifications() error {
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
-		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting sale aging notification:", err.Error())
 			notifier.logger.Infof("failed insert: %+v", n)
@@ -197,7 +197,7 @@ func (notifier *recordAgingNotifier) generateBuyerNotifications() error {
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
-		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting purchase dispute notification:", err.Error())
 			notifier.logger.Infof("failed insert: %+v", n)
@@ -270,7 +270,7 @@ func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
-		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetType()), n.GetUnixCreatedAt(), 0)
+		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting dispute expiration notification:", err.Error())
 			notifier.logger.Infof("failed insert: %+v", n)

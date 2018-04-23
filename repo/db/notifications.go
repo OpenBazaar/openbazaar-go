@@ -32,7 +32,7 @@ func (n *NotficationsDB) PutRecord(record *repo.Notification) error {
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	_, err = n.ExecuteQuery("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", record.GetID(), string(ser), strings.ToLower(record.GetType()), record.GetUnixCreatedAt(), read)
+	_, err = n.ExecuteQuery("insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)", record.GetID(), string(ser), strings.ToLower(record.GetTypeString()), record.GetUnixCreatedAt(), read)
 	if err != nil {
 		return err
 	}

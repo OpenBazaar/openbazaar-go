@@ -140,3 +140,12 @@ func TestNotificationMarshalling(t *testing.T) {
 		}
 	}
 }
+
+func TestNotificationSatisfiesNotifierInterface(t *testing.T) {
+	notifier := repo.SaleAgingNotification{
+		ID:      "saleAgingID",
+		Type:    repo.NotifierTypeSaleAgedFourtyFiveDays,
+		OrderID: repo.NewNotificationID(),
+	}
+	var _ repo.Notifier = repo.NewNotification(notifier, time.Now(), false)
+}

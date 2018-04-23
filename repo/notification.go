@@ -51,31 +51,32 @@ func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification
 // TODO: Ecapsulate the whole Notification struct inside of MarshalJSON and update persisted
 // serializations to match in the Notifications Datastore
 type Notification struct {
-	ID           string
+	ID           string           `json:"-"`
 	CreatedAt    time.Time        `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData Notifier         `json:"notification"`
-	NotifierType NotificationType `json:"type"`
+	NotifierType NotificationType `json:"-"`
 }
 
-func (n *Notification) GetID() string { return n.ID }
-func (n *Notification) GetType() string {
+func (n *Notification) GetID() string         { return n.ID }
+func (n *Notification) GetTypeString() string { return string(n.GetType()) }
+func (n *Notification) GetType() NotificationType {
 	if string(n.NotifierType) == "" {
 		n.NotifierType = n.NotifierData.GetType()
 	}
-	return string(n.NotifierType)
+	return n.NotifierType
 }
 func (n *Notification) GetUnixCreatedAt() int { return int(n.CreatedAt.Unix()) }
+func (n *Notification) GetSMTPTitleAndBody() (string, string, bool) {
+	return n.NotifierData.GetSMTPTitleAndBody()
+}
+func (n *Notification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
 
 type notificationTransporter struct {
 	CreatedAt    time.Time        `json:"timestamp"`
 	IsRead       bool             `json:"read"`
 	NotifierData json.RawMessage  `json:"notification"`
 	NotifierType NotificationType `json:"type"`
-}
-
-func (n *Notification) MarshalJSON() ([]byte, error) {
-	return json.Marshal(n.NotifierData)
 }
 
 func (n *Notification) UnmarshalJSON(data []byte) error {
