@@ -57,15 +57,11 @@ func (notifier *recordAgingNotifier) Run() {
 	notifier.stopWorker = make(chan bool)
 
 	// Run once on start, then wait for watchdog
-	if err := notifier.PerformTask(); err != nil {
-		notifier.logger.Error("performTask failure:", err.Error())
-	}
+	notifier.PerformTask()
 	for {
 		select {
 		case <-notifier.watchdogTimer.C:
-			if err := notifier.PerformTask(); err != nil {
-				notifier.logger.Error("performTask failure:", err.Error())
-			}
+			notifier.PerformTask()
 		case <-notifier.stopWorker:
 			notifier.watchdogTimer.Stop()
 			return
@@ -78,18 +74,19 @@ func (notifier *recordAgingNotifier) Stop() {
 	close(notifier.stopWorker)
 }
 
-func (notifier *recordAgingNotifier) PerformTask() (err error) {
+func (notifier *recordAgingNotifier) PerformTask() {
 	notifier.runCount += 1
 	notifier.logger.Infof("performTask started (count %d)", notifier.runCount)
 
-	if err = notifier.generateModeratorNotifications(); err != nil {
-		return
+	if err := notifier.generateSellerNotifications(); err != nil {
+		notifier.logger.Error("generateSellerNotifications failed: %s", err)
 	}
-	if err = notifier.generateSellerNotifications(); err != nil {
-		return
+	if err := notifier.generateBuyerNotifications(); err != nil {
+		notifier.logger.Error("generateBuyerNotifications failed: %s", err)
 	}
-	err = notifier.generateBuyerNotifications()
-	return
+	if err := notifier.generateModeratorNotifications(); err != nil {
+		notifier.logger.Error("generateModeratorNotifications failed: %s", err)
+	}
 }
 
 func (notifier *recordAgingNotifier) generateSellerNotifications() error {
