@@ -336,14 +336,6 @@ func TestConfig(t *testing.T) {
 	})
 }
 
-func TestPeers(t *testing.T) {
-	// Follow, Unfollow
-	runAPITests(t, apiTests{
-		{"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 500, peerNotFoundInTableJSON},
-		// {"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 200, `{}`},
-	})
-}
-
 func Test404(t *testing.T) {
 	// Test undefined endpoints
 	runAPITests(t, apiTests{
