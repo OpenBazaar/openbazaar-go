@@ -23,7 +23,7 @@ import (
 )
 
 var log = logging.Logger("namesys")
-var cachePrefix = "IPNSPERSISTENTCACHE_"
+var cachePrefix = "IPNSPERSISENTCACHE_"
 var keyCachePrefix= "IPNSPUBKEYCACHE_"
 var UsePersistentCache bool
 
