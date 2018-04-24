@@ -1189,7 +1189,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	// If we want another peer's inventory crawl IPFS with an optional cache
 	var err error
 	useCacheBool := false
-	useCacheString := r.URL.Query().Get("useCache")
+	useCacheString := r.URL.Query().Get("usecache")
 	if len(useCacheString) > 0 {
 		useCacheBool, err = strconv.ParseBool(useCacheString)
 		if err != nil {
