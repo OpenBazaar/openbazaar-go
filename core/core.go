@@ -257,3 +257,7 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 		return nil, errors.New("peer public key and id do not match")
 	}
 }
+
+func (n *OpenBazaarNode) IPFSIdentityString() string {
+	return n.IpfsNode.Identity.Pretty()
+}
