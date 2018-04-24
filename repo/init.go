@@ -90,7 +90,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if werr != nil {
 		return werr
 	}
-	return initializeIpnsKeyspace(repoRoot, nodeSchema.IdentityKey())
+	return initializeIpnsKeyspace(repoRoot, identityKey)
 }
 
 func checkWriteable(dir string) error {
