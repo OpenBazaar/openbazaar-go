@@ -1164,7 +1164,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 		var invList []inv
 		inventory, err := i.node.Datastore.Inventory().GetAll()
 		if err != nil {
-			fmt.Fprint(w, `[]`)
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		for itemSlug, m := range inventory {
