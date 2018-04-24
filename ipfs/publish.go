@@ -68,7 +68,6 @@ func PublishAltRoot(ctx commands.Context, nd *core.IpfsNode, altRoot string, val
 func getPreviousSeqNo(ctx context.Context, nd *core.IpfsNode, ipnskey string) (uint64, error) {
 	prevrec, err := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if err != nil && err != ds.ErrNotFound {
-		// None found, lets start at zero!
 		return 0, err
 	}
 	var val []byte
