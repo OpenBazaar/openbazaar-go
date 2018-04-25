@@ -47,7 +47,7 @@ class CachedInventoryTest(OpenBazaarTestFramework):
 
         # Get profile
         api_url = alice["gateway_url"] + "ob/profile"
-        r = requests.get(api_url, data=json.dumps(listing_json, indent=4))
+        r = requests.get(api_url)
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("CachedInventoryTest - FAIL: Profile GET failed. Reason: %s", resp["reason"])
