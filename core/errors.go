@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"strconv"
 )
 
 var (
@@ -18,6 +19,10 @@ var (
 	ErrCryptocurrencyPurchasePaymentAddressTooLong  = errors.New("paymentAddress required is too long")
 
 	ErrCryptocurrencySkuQuantityInvalid = errors.New("Cryptocurrency listing quantity must be a non-negative integer")
+
+	ErrFulfillIncorrectDeliveryType      = errors.New("Incorrect delivery type for order")
+	ErrFulfillCryptocurrencyTXIDNotFound = errors.New("A transactionID is required to fulfill crypto listings")
+	ErrFulfillCryptocurrencyTXIDTooLong  = errors.New("transactionID should be no longer than " + strconv.Itoa(MaxTXIDSize))
 )
 
 type ErrCryptocurrencyListingIllegalField string

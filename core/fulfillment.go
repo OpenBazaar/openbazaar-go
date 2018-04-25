@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	ErrFulfillIncorrectDeliveryType      = errors.New("Incorrect delivery type for order")
-	ErrFulfillCryptocurrencyTXIDNotFound = errors.New("A transactionID is required to fulfill crypto listings")
+	MaxTXIDSize = 512
 )
 
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
@@ -312,6 +311,9 @@ func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
 	for _, delivery := range fulfillment.CryptocurrencyDelivery {
 		if delivery.TransactionID == "" {
 			return ErrFulfillCryptocurrencyTXIDNotFound
+		}
+		if len(delivery.TransactionID) > MaxTXIDSize {
+			return ErrFulfillCryptocurrencyTXIDTooLong
 		}
 	}
 
