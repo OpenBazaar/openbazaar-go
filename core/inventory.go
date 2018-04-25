@@ -44,6 +44,10 @@ func (n *OpenBazaarNode) PublishInventory() error {
 			Inventory:   int64(totalCount),
 			LastUpdated: time.Now().UTC().Format(time.RFC3339),
 		}
+
+		go func(name string, itemInventory *IPFSInventoryListing) {
+			repo.PublishObjectToIPFS(n.Context, n.IpfsNode, n.RepoPath, name, itemInventory)
+		}(itemInventoryCacheName(slug), inventory[slug])
 	}
 
 	return repo.PublishObjectToIPFS(n.Context, n.IpfsNode, n.RepoPath, "inventory", inventory)
@@ -62,7 +66,19 @@ func (n *OpenBazaarNode) GetPublishedInventoryBytes(p peer.ID, useCache bool) ([
 // GetPublishedInventoryBytesForSlug gets a byte slice representing the given
 // slug's inventory from IPFS
 func (n *OpenBazaarNode) GetPublishedInventoryBytesForSlug(p peer.ID, slug string, useCache bool) ([]byte, error) {
-	bytes, err := n.GetPublishedInventoryBytes(p, useCache)
+	var cacheLength time.Duration
+	if useCache {
+		cacheLength = ipfsInventoryCacheMaxDuration
+	}
+
+	// Try loading by slug
+	bytes, err := repo.GetObjectFromIPFS(n.Context, p, itemInventoryCacheName(slug), cacheLength)
+	if err == nil {
+		return bytes, nil
+	}
+
+	// Fall back to extracting data from the index
+	bytes, err = n.GetPublishedInventoryBytes(p, useCache)
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +95,8 @@ func (n *OpenBazaarNode) GetPublishedInventoryBytesForSlug(p peer.ID, slug strin
 	}
 
 	return json.Marshal(listingInventory)
+}
+
+func itemInventoryCacheName(slug string) string {
+	return "inventory|" + slug
 }
