@@ -269,7 +269,9 @@ type OrderNotification struct {
 	Slug        string           `json:"slug"`
 }
 
-func (n OrderNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n OrderNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n OrderNotification) GetID() string             { return n.ID }
 func (n OrderNotification) GetType() NotificationType { return NotifierTypeOrderNewNotification }
 func (n OrderNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -290,7 +292,9 @@ type PaymentNotification struct {
 	FundingTotal uint64           `json:"fundingTotal"`
 }
 
-func (n PaymentNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n PaymentNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n PaymentNotification) GetID() string             { return n.ID }
 func (n PaymentNotification) GetType() NotificationType { return NotifierTypePaymentNotification }
 func (n PaymentNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -308,7 +312,7 @@ type OrderConfirmationNotification struct {
 }
 
 func (n OrderConfirmationNotification) Data() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderConfirmationNotification) GetID() string { return n.ID }
 func (n OrderConfirmationNotification) GetType() NotificationType {
@@ -328,8 +332,10 @@ type OrderDeclinedNotification struct {
 	VendorID     string           `json:"vendorId"`
 }
 
-func (n OrderDeclinedNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n OrderDeclinedNotification) GetID() string         { return n.ID }
+func (n OrderDeclinedNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n OrderDeclinedNotification) GetID() string { return n.ID }
 func (n OrderDeclinedNotification) GetType() NotificationType {
 	return NotifierTypeOrderDeclinedNotification
 }
@@ -344,8 +350,10 @@ type OrderCancelNotification struct {
 	BuyerID     string           `json:"buyerId"`
 }
 
-func (n OrderCancelNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n OrderCancelNotification) GetID() string         { return n.ID }
+func (n OrderCancelNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n OrderCancelNotification) GetID() string { return n.ID }
 func (n OrderCancelNotification) GetType() NotificationType {
 	return NotifierTypeOrderCancelNotification
 }
@@ -363,7 +371,9 @@ type RefundNotification struct {
 	VendorID     string           `json:"vendorId"`
 }
 
-func (n RefundNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n RefundNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n RefundNotification) GetID() string             { return n.ID }
 func (n RefundNotification) GetType() NotificationType { return NotifierTypeRefundNotification }
 func (n RefundNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -380,8 +390,10 @@ type FulfillmentNotification struct {
 	VendorID     string           `json:"vendorId"`
 }
 
-func (n FulfillmentNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n FulfillmentNotification) GetID() string         { return n.ID }
+func (n FulfillmentNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n FulfillmentNotification) GetID() string { return n.ID }
 func (n FulfillmentNotification) GetType() NotificationType {
 	return NotifierTypeFulfillmentNotification
 }
@@ -399,8 +411,10 @@ type ProcessingErrorNotification struct {
 	VendorID     string           `json:"vendorId"`
 }
 
-func (n ProcessingErrorNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n ProcessingErrorNotification) GetID() string         { return n.ID }
+func (n ProcessingErrorNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n ProcessingErrorNotification) GetID() string { return n.ID }
 func (n ProcessingErrorNotification) GetType() NotificationType {
 	return NotifierTypeProcessingErrorNotification
 }
@@ -417,7 +431,9 @@ type CompletionNotification struct {
 	BuyerID     string           `json:"buyerId"`
 }
 
-func (n CompletionNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n CompletionNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n CompletionNotification) GetID() string             { return n.ID }
 func (n CompletionNotification) GetType() NotificationType { return NotifierTypeCompletionNotification }
 func (n CompletionNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -437,8 +453,10 @@ type DisputeOpenNotification struct {
 	Buyer          string           `json:"buyer"`
 }
 
-func (n DisputeOpenNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n DisputeOpenNotification) GetID() string         { return n.ID }
+func (n DisputeOpenNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeOpenNotification) GetID() string { return n.ID }
 func (n DisputeOpenNotification) GetType() NotificationType {
 	return NotifierTypeDisputeOpenNotification
 }
@@ -459,8 +477,10 @@ type DisputeUpdateNotification struct {
 	Buyer          string           `json:"buyer"`
 }
 
-func (n DisputeUpdateNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n DisputeUpdateNotification) GetID() string         { return n.ID }
+func (n DisputeUpdateNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeUpdateNotification) GetID() string { return n.ID }
 func (n DisputeUpdateNotification) GetType() NotificationType {
 	return NotifierTypeDisputeUpdateNotification
 }
@@ -479,8 +499,10 @@ type DisputeCloseNotification struct {
 	Buyer            string           `json:"buyer"`
 }
 
-func (n DisputeCloseNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n DisputeCloseNotification) GetID() string         { return n.ID }
+func (n DisputeCloseNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeCloseNotification) GetID() string { return n.ID }
 func (n DisputeCloseNotification) GetType() NotificationType {
 	return NotifierTypeDisputeCloseNotification
 }
@@ -499,8 +521,10 @@ type DisputeAcceptedNotification struct {
 	Buyer            string           `json:"buyer"`
 }
 
-func (n DisputeAcceptedNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n DisputeAcceptedNotification) GetID() string         { return n.ID }
+func (n DisputeAcceptedNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeAcceptedNotification) GetID() string { return n.ID }
 func (n DisputeAcceptedNotification) GetType() NotificationType {
 	return NotifierTypeDisputeAcceptedNotification
 }
@@ -514,8 +538,10 @@ type FollowNotification struct {
 	PeerId string           `json:"peerId"`
 }
 
-func (n FollowNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n FollowNotification) GetID() string         { return n.ID }
+func (n FollowNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n FollowNotification) GetID() string { return n.ID }
 func (n FollowNotification) GetType() NotificationType {
 	return NotifierTypeFollowNotification
 }
@@ -527,7 +553,9 @@ type UnfollowNotification struct {
 	PeerId string           `json:"peerId"`
 }
 
-func (n UnfollowNotification) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n UnfollowNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n UnfollowNotification) GetID() string                               { return n.ID }
 func (n UnfollowNotification) GetType() NotificationType                   { return NotifierTypeUnfollowNotification }
 func (n UnfollowNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -538,8 +566,10 @@ type ModeratorAddNotification struct {
 	PeerId string           `json:"peerId"`
 }
 
-func (n ModeratorAddNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n ModeratorAddNotification) GetID() string         { return n.ID }
+func (n ModeratorAddNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n ModeratorAddNotification) GetID() string { return n.ID }
 func (n ModeratorAddNotification) GetType() NotificationType {
 	return NotifierTypeModeratorAddNotification
 }
@@ -551,8 +581,10 @@ type ModeratorRemoveNotification struct {
 	PeerId string           `json:"peerId"`
 }
 
-func (n ModeratorRemoveNotification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
-func (n ModeratorRemoveNotification) GetID() string         { return n.ID }
+func (n ModeratorRemoveNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n ModeratorRemoveNotification) GetID() string { return n.ID }
 func (n ModeratorRemoveNotification) GetType() NotificationType {
 	return NotifierTypeModeratorRemoveNotification
 }
@@ -579,7 +611,7 @@ type ChatMessage struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func (n ChatMessage) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n ChatMessage) Data() ([]byte, error)                       { return json.MarshalIndent(messageWrapper{n}, "", "    ") }
 func (n ChatMessage) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatMessage) GetType() NotificationType                   { return NotifierTypeChatMessage }
 func (n ChatMessage) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -590,7 +622,7 @@ type ChatRead struct {
 	Subject   string `json:"subject"`
 }
 
-func (n ChatRead) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n ChatRead) Data() ([]byte, error)                       { return json.MarshalIndent(messageReadWrapper{n}, "", "    ") }
 func (n ChatRead) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatRead) GetType() NotificationType                   { return NotifierTypeChatRead }
 func (n ChatRead) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -601,7 +633,9 @@ type ChatTyping struct {
 	Subject   string `json:"subject"`
 }
 
-func (n ChatTyping) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n ChatTyping) Data() ([]byte, error) {
+	return json.MarshalIndent(messageTypingWrapper{n}, "", "    ")
+}
 func (n ChatTyping) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatTyping) GetType() NotificationType                   { return NotifierTypeChatTyping }
 func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -620,7 +654,9 @@ type IncomingTransaction struct {
 	CanBumpFee    bool      `json:"canBumpFee"`
 }
 
-func (n IncomingTransaction) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n IncomingTransaction) Data() ([]byte, error) {
+	return json.MarshalIndent(walletWrapper{n}, "", "    ")
+}
 func (n IncomingTransaction) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n IncomingTransaction) GetType() NotificationType                   { return NotifierTypeIncomingTransaction }
 func (n IncomingTransaction) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -634,7 +670,9 @@ type SaleAgingNotification struct {
 	OrderID string           `json:"purchaseOrderId"`
 }
 
-func (n SaleAgingNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n SaleAgingNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n SaleAgingNotification) GetID() string             { return n.ID }
 func (n SaleAgingNotification) GetType() NotificationType { return n.Type }
 func (n SaleAgingNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -650,7 +688,9 @@ type PurchaseAgingNotification struct {
 	OrderID string           `json:"saleOrderId"`
 }
 
-func (n PurchaseAgingNotification) Data() ([]byte, error)     { return json.MarshalIndent(n, "", "    ") }
+func (n PurchaseAgingNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n PurchaseAgingNotification) GetID() string             { return n.ID }
 func (n PurchaseAgingNotification) GetType() NotificationType { return n.Type }
 func (n PurchaseAgingNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -667,7 +707,9 @@ type DisputeAgingNotification struct {
 	CaseID string           `json:"disputeCaseId"`
 }
 
-func (n DisputeAgingNotification) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n DisputeAgingNotification) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
 func (n DisputeAgingNotification) GetID() string                               { return n.ID }
 func (n DisputeAgingNotification) GetType() NotificationType                   { return n.Type }
 func (n DisputeAgingNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
