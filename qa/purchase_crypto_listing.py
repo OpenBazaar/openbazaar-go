@@ -46,8 +46,16 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-
         slug = json.loads(r.text)["slug"]
+
+        # check inventory
+        api_url = vendor["gateway_url"] + "ob/inventory"
+        r = requests.get(api_url, data=json.dumps(listing_json, indent=4))
+        resp = json.loads(r.text)
+        if r.status_code != 200:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
+        if resp[0]["quantity"] != 350000000:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
         api_url = vendor["gateway_url"] + "ipns/" + vendor["peerId"] + "/listings.json"
@@ -170,6 +178,14 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer failed to detect order fulfillment")
         if resp["contract"]["vendorOrderFulfillment"][0]["cryptocurrencyDelivery"][0]["transactionID"] != "crypto_transaction_id":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer failed to detect transactionID")
+
+        api_url = vendor["gateway_url"] + "ob/inventory"
+        r = requests.get(api_url, data=json.dumps(listing_json, indent=4))
+        resp = json.loads(r.text)
+        if r.status_code != 200:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
+        if resp[0]["quantity"] != 250000000:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")
 
