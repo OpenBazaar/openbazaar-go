@@ -57,7 +57,7 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 			}
 
 			foundNotification = true
-			if actual.GetType() != string(subject.GetType()) {
+			if actual.GetType() != subject.GetType() {
 				t.Error("Expected found notification to match types")
 				t.Errorf("Expected: %s", subject.GetType())
 				t.Errorf("Actual: %s", actual.GetType())

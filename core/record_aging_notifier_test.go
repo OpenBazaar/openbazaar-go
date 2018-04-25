@@ -125,9 +125,8 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		broadcast: broadcastChannel,
 		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
 	}
-	if err := worker.PerformTask(); err != nil {
-		t.Fatal(err)
-	}
+
+	worker.PerformTask()
 
 	// Verify Notifications received in channel
 	closeAsyncChannelVerifier <- true
@@ -437,9 +436,7 @@ func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
 		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
 	}
 
-	if err := worker.PerformTask(); err != nil {
-		t.Fatal(err)
-	}
+	worker.PerformTask()
 
 	// Verify NotificationRecords in datastore
 	rows, err := database.Query("select orderID, lastNotifiedAt from purchases")
@@ -712,9 +709,7 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
 	}
 
-	if err := worker.PerformTask(); err != nil {
-		t.Fatal(err)
-	}
+	worker.PerformTask()
 
 	// Verify NotificationRecords in datastore
 	rows, err := database.Query("select orderID, lastNotifiedAt from sales")
