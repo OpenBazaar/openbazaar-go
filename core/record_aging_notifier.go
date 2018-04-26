@@ -14,12 +14,6 @@ var (
 	// Seller Notification Intervals
 	soldItemDisputeTimeout_firstNotificationInterval = time.Duration(45*24) * time.Hour
 
-	// Buyer Notitification Intervals
-	boughtItemDisputeTimeout_firstNotificationInterval  = time.Duration(15*24) * time.Hour
-	boughtItenDisputeTimeout_secondNotificationInterval = time.Duration(40*24) * time.Hour
-	boughtItenDisputeTimeout_thirdNotificationInterval  = time.Duration(44*24) * time.Hour
-	boughtItenDisputeTimeout_fourthNotificationInterval = time.Duration(45*24) * time.Hour
-
 	// Moderator Notification Intervals
 	moderatorDisputeTimeout_firstNotificationInterval  = time.Duration(15*24) * time.Hour
 	moderatorDisputeTimeout_secondNotificationInterval = time.Duration(30*24) * time.Hour
@@ -163,20 +157,20 @@ func (notifier *recordAgingNotifier) generateBuyerNotifications() error {
 
 	for _, p := range purchases {
 		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		if p.LastNotifiedAt.Before(p.Timestamp) || p.LastNotifiedAt.Equal(p.Timestamp) {
-			notificationsToAdd = append(notificationsToAdd, p.BuildZeroDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) || p.LastNotifiedAt.Equal(p.Timestamp) {
+			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFirstNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItemDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > boughtItemDisputeTimeout_firstNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildFifteenDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
+			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutSecondNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_secondNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_secondNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
+			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutThirdNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_thirdNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_thirdNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFourDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_fourthInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
+			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFourthNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(boughtItenDisputeTimeout_fourthNotificationInterval)) && timeSinceCreation > boughtItenDisputeTimeout_fourthNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_fourthInterval {
+			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutLastNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
 			p.LastNotifiedAt = executedAt

@@ -31,9 +31,9 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 				Type:   repo.NotifierTypeDisputeAgedZeroDays,
 				CaseID: "disputAgingReferenceCaseID",
 			}, now, false),
-			repo.NewNotification(repo.PurchaseAgingNotification{
+			repo.NewNotification(repo.BuyerDisputeTimeout{
 				ID:      "purchaseAgingNotif",
-				Type:    repo.NotifierTypePurchaseAgedFifteenDays,
+				Type:    repo.NotifierTypeBuyerDisputeTimeout,
 				OrderID: "purchaseAgingReferenceOrderID",
 			}, now, true),
 		}

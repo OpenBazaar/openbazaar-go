@@ -91,9 +91,9 @@ func TestNotificationMarshalling(t *testing.T) {
 			Type:    repo.NotifierTypeProcessingErrorNotification,
 			OrderId: repo.NewNotificationID(),
 		},
-		repo.PurchaseAgingNotification{
+		repo.BuyerDisputeTimeout{
 			ID:      "purchaseAgingID",
-			Type:    repo.NotifierTypePurchaseAgedZeroDays,
+			Type:    repo.NotifierTypeBuyerDisputeTimeout,
 			OrderID: repo.NewNotificationID(),
 		},
 		repo.RefundNotification{

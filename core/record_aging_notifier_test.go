@@ -327,7 +327,7 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 	}
 }
 
-func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
+func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	// Start each purchase 50 days ago and have the lastNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
@@ -496,6 +496,12 @@ func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
 		checkFourtyDayPurchase_FourtyFourDay     bool
 		checkFourtyDayPurchase_FourtyFiveDay     bool
 		checkFourtyFourDayPurchase_FourtyFiveDay bool
+
+		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_firstInterval).Seconds())
+		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_secondInterval).Seconds())
+		thirdInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
+		fourthInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_fourthInterval).Seconds())
+		lastInterval_ExpectedExpiresIn   = uint(0)
 	)
 	for rows.Next() {
 		var (
@@ -512,73 +518,74 @@ func TestPerformTaskCreatesPurchaseAgingNotifications(t *testing.T) {
 			continue
 		}
 		var (
-			refID = n.NotifierData.(repo.PurchaseAgingNotification).OrderID
+			refID     = n.NotifierData.(repo.BuyerDisputeTimeout).OrderID
+			expiresIn = n.NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn
 		)
 		if refID == neverNotified.OrderID {
-			if n.NotifierType == repo.NotifierTypePurchaseAgedZeroDays {
+			if expiresIn == firstInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_ZeroDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFifteenDays {
+			if expiresIn == secondInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_FifteenDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyDays {
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_FourtyDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFourDays {
+			if expiresIn == fourthInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFiveDays {
+			if expiresIn == lastInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_FourtyFiveDay = true
 				continue
 			}
 		}
 		if refID == notifiedJustZeroDay.OrderID {
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFifteenDays {
+			if expiresIn == secondInterval_ExpectedExpiresIn {
 				checkZeroDayPurchase_FifteenDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyDays {
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkZeroDayPurchase_FourtyDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFourDays {
+			if expiresIn == fourthInterval_ExpectedExpiresIn {
 				checkZeroDayPurchase_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFiveDays {
+			if expiresIn == lastInterval_ExpectedExpiresIn {
 				checkZeroDayPurchase_FourtyFiveDay = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyDays {
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkFifteenDayPurchase_FourtyDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFourDays {
+			if expiresIn == fourthInterval_ExpectedExpiresIn {
 				checkFifteenDayPurchase_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFiveDays {
+			if expiresIn == lastInterval_ExpectedExpiresIn {
 				checkFifteenDayPurchase_FourtyFiveDay = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFourDays {
+			if expiresIn == fourthInterval_ExpectedExpiresIn {
 				checkFourtyDayPurchase_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFiveDays {
+			if expiresIn == lastInterval_ExpectedExpiresIn {
 				checkFourtyDayPurchase_FourtyFiveDay = true
 				continue
 			}
 		}
-		if refID == notifiedUpToFourtyFourDays.OrderID && n.NotifierType == repo.NotifierTypePurchaseAgedFourtyFiveDays {
+		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastInterval_ExpectedExpiresIn {
 			checkFourtyFourDayPurchase_FourtyFiveDay = true
 		}
 	}

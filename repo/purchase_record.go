@@ -4,6 +4,14 @@ import (
 	"time"
 )
 
+var (
+	BuyerDisputeTimeout_firstInterval  = time.Duration(0)
+	BuyerDisputeTimeout_secondInterval = time.Duration(15*24) * time.Hour
+	BuyerDisputeTimeout_thirdInterval  = time.Duration(30*24) * time.Hour
+	BuyerDisputeTimeout_fourthInterval = time.Duration(44*24) * time.Hour
+	BuyerDisputeTimeout_lastInterval   = time.Duration(45*24) * time.Hour
+)
+
 // PurchaseRecord represents a one-to-one relationship with records
 // in the SQL datastore
 type PurchaseRecord struct {
@@ -12,41 +20,43 @@ type PurchaseRecord struct {
 	LastNotifiedAt time.Time
 }
 
-// BuildZeroDayNotification returns a Notification for a new PurchaseRecord
+// BuildBuyerDisputeTimeoutFirstNotification returns a Notification for a new PurchaseRecord
 // which was just opened
-func (r *PurchaseRecord) BuildZeroDayNotification(createdAt time.Time) *Notification {
-	return r.buildPurchaseAgingNotification(NotifierTypePurchaseAgedZeroDays, createdAt)
+func (r *PurchaseRecord) BuildBuyerDisputeTimeoutFirstNotification(createdAt time.Time) *Notification {
+	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_firstInterval, createdAt)
 }
 
-// BuildFifteenDayNotification returns a Notification that alerts a PurchaseRecord
+// BuildBuyerDisputeTimeoutSecondNotification returns a Notification that alerts a PurchaseRecord
 // is more than 15 days old
-func (r *PurchaseRecord) BuildFifteenDayNotification(createdAt time.Time) *Notification {
-	return r.buildPurchaseAgingNotification(NotifierTypePurchaseAgedFifteenDays, createdAt)
+func (r *PurchaseRecord) BuildBuyerDisputeTimeoutSecondNotification(createdAt time.Time) *Notification {
+	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_secondInterval, createdAt)
 }
 
-// BuildFourtyDayNotification returns a Notification that alerts a PurchaseRecord
+// BuildBuyerDisputeTimeoutThirdNotification returns a Notification that alerts a PurchaseRecord
 // is more than 40 days old
-func (r *PurchaseRecord) BuildFourtyDayNotification(createdAt time.Time) *Notification {
-	return r.buildPurchaseAgingNotification(NotifierTypePurchaseAgedFourtyDays, createdAt)
+func (r *PurchaseRecord) BuildBuyerDisputeTimeoutThirdNotification(createdAt time.Time) *Notification {
+	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_thirdInterval, createdAt)
 }
 
-// BuildFourtyFiveDayNotification returns a Notification that alerts a PurchaseRecord
+// BuildBuyerDisputeTimeoutFourthNotification returns a Notification that alerts a PurchaseRecord
 // is more than 44 days old and about to expire
-func (r *PurchaseRecord) BuildFourtyFourDayNotification(createdAt time.Time) *Notification {
-	return r.buildPurchaseAgingNotification(NotifierTypePurchaseAgedFourtyFourDays, createdAt)
+func (r *PurchaseRecord) BuildBuyerDisputeTimeoutFourthNotification(createdAt time.Time) *Notification {
+	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_fourthInterval, createdAt)
 }
 
-// BuildThirtyDayNotification returns a Notification that alerts a PurchaseRecord
+// BuildBuyerDisputeTimeoutLastNotification returns a Notification that alerts a PurchaseRecord
 // is more than 45 days old and already expired
-func (r *PurchaseRecord) BuildFourtyFiveDayNotification(createdAt time.Time) *Notification {
-	return r.buildPurchaseAgingNotification(NotifierTypePurchaseAgedFourtyFiveDays, createdAt)
+func (r *PurchaseRecord) BuildBuyerDisputeTimeoutLastNotification(createdAt time.Time) *Notification {
+	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_lastInterval, createdAt)
 }
 
-func (r *PurchaseRecord) buildPurchaseAgingNotification(nType NotificationType, createdAt time.Time) *Notification {
-	notification := &PurchaseAgingNotification{
-		ID:      NewNotificationID(),
-		Type:    nType,
-		OrderID: r.OrderID,
+func (r *PurchaseRecord) buildBuyerDisputeTimeout(interval time.Duration, createdAt time.Time) *Notification {
+	timeRemaining := BuyerDisputeTimeout_lastInterval - interval
+	notification := &BuyerDisputeTimeout{
+		ID:        NewNotificationID(),
+		Type:      NotifierTypeBuyerDisputeTimeout,
+		OrderID:   r.OrderID,
+		ExpiresIn: uint(timeRemaining.Seconds()),
 	}
 	return NewNotification(notification, createdAt, false)
 }

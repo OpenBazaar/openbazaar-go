@@ -1,6 +1,7 @@
 package repo
 
 const (
+	NotifierTypeBuyerDisputeTimeout           NotificationType = "buyerDisputeTimeout"
 	NotifierTypeChatMessage                   NotificationType = "chatMessage"
 	NotifierTypeChatRead                      NotificationType = "chatRead"
 	NotifierTypeChatTyping                    NotificationType = "chatTyping"
@@ -33,13 +34,6 @@ const (
 	NotifierTypeDisputeAgedFourtyDays     NotificationType = "disputeAgedFourtyDays"
 	NotifierTypeDisputeAgedFourtyFourDays NotificationType = "disputeAgedFourtyFourDays"
 	NotifierTypeDisputeAgedFourtyFiveDays NotificationType = "disputeAgedFourtyFiveDays"
-
-	// PurchaseAging
-	NotifierTypePurchaseAgedZeroDays       NotificationType = "purchaseAgedZeroDays"
-	NotifierTypePurchaseAgedFifteenDays    NotificationType = "purchaseAgedFifteenDays"
-	NotifierTypePurchaseAgedFourtyDays     NotificationType = "purchaseAgedFourtyDays"
-	NotifierTypePurchaseAgedFourtyFourDays NotificationType = "purchaseAgedFourtyFourDays"
-	NotifierTypePurchaseAgedFourtyFiveDays NotificationType = "purchaseAgedFourtyFiveDays"
 
 	// SaleAging
 	NotifierTypeSaleAgedFourtyFiveDays NotificationType = "saleAgedFourtyFiveDays"
