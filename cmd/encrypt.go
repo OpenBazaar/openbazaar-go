@@ -126,6 +126,6 @@ func (x *EncryptDatabase) Execute(args []string) error {
 		return err
 	}
 	os.RemoveAll(path.Join(tmpPath))
-	fmt.Println("Success! You must now run openbazaard start with the --password flag.")
+	fmt.Println("Success! You must now run openbazaard start with a password.")
 	return nil
 }
