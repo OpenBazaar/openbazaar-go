@@ -208,9 +208,9 @@ type PurchaseStore interface {
 	// Return the number of purchases in the database
 	Count() int
 
-	// GetPurchasesForNotification returns []*PurchaseRecord including
+	// GetPurchasesForDisputeTimeout returns []*PurchaseRecord including
 	// each record which needs Notifications to be generated.
-	GetPurchasesForNotification() ([]*PurchaseRecord, error)
+	GetPurchasesForDisputeTimeout() ([]*PurchaseRecord, error)
 
 	// UpdatePurchasesLastNotifiedAt  accepts []*PurchaseRecord and updates each records lastNotifiedAt by its CaseID
 	UpdatePurchasesLastNotifiedAt([]*PurchaseRecord) error

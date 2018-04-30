@@ -2,11 +2,13 @@ package db
 
 import (
 	"database/sql"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -396,7 +398,7 @@ func TestPurchasesDB_GetAll(t *testing.T) {
 	}
 }
 
-func TestGetPurchasesForNotificationReturnsRelevantRecords(t *testing.T) {
+func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -415,21 +417,56 @@ func TestGetPurchasesForNotificationReturnsRelevantRecords(t *testing.T) {
 
 	// Artificially start purchases 50 days ago
 	var (
-		timeStart     = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		now        = time.Unix(time.Now().Unix(), 0)
+		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
+		nowData, _ = ptypes.TimestampProto(now)
+		order      = &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: "buyerID",
+				Handle: "@buyerID",
+			},
+			Shipping: &pb.Order_Shipping{
+				Address: "1234 Test Ave",
+				ShipTo:  "Buyer Name",
+			},
+			Payment: &pb.Order_Payment{
+				Amount:  10,
+				Method:  pb.Order_Payment_DIRECT,
+				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+			},
+			Timestamp: nowData,
+		}
+		expectedImagesOne   = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		expectedContractOne = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
+			},
+			BuyerOrder: order,
+		}
+		expectedImagesTwo   = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashTwo", Small: "smallimagehashTwo"}}
+		expectedContractTwo = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesTwo}},
+			},
+			BuyerOrder: order,
+		}
 		neverNotified = &repo.PurchaseRecord{
+			Contract:       expectedContractOne,
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		initialNotified = &repo.PurchaseRecord{
+			Contract:       expectedContractTwo,
 			OrderID:        "initialNotificationSent",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart,
 		}
 		finallyNotified = &repo.PurchaseRecord{
+			Contract:       nil,
 			OrderID:        "finalNotificationSent",
 			Timestamp:      timeStart,
-			LastNotifiedAt: time.Now(),
+			LastNotifiedAt: now,
 		}
 		existingRecords = []*repo.PurchaseRecord{
 			neverNotified,
@@ -438,14 +475,24 @@ func TestGetPurchasesForNotificationReturnsRelevantRecords(t *testing.T) {
 		}
 	)
 
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		if _, err := database.Exec("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := database.Exec("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
-	purchases, err := purchaseDatabase.GetPurchasesForNotification()
+	purchases, err := purchaseDatabase.GetPurchasesForDisputeTimeout()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -455,8 +502,18 @@ func TestGetPurchasesForNotificationReturnsRelevantRecords(t *testing.T) {
 		switch p.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedPurchase = true
+			if reflect.DeepEqual(p, neverNotified) != true {
+				t.Error("Expected neverNotified to match, but did not")
+				t.Error("Expected:", neverNotified)
+				t.Error("Actual:", p)
+			}
 		case initialNotified.OrderID:
 			sawInitialNotifiedPurchase = true
+			if reflect.DeepEqual(p, initialNotified) != true {
+				t.Error("Expected initialNotified to match, but did not")
+				t.Error("Expected:", initialNotified)
+				t.Error("Actual:", p)
+			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedPurchase = true
 		default:
@@ -507,13 +564,13 @@ func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
 		}
 		existingPurchases = []*repo.PurchaseRecord{purchaseOne, purchaseTwo}
 	)
-	s, err := database.Prepare("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);")
+	s, err := database.Prepare("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, p := range existingPurchases {
-		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastNotifiedAt.Unix())
+		_, err = s.Exec(p.OrderID, p.Contract, p.Timestamp, p.LastNotifiedAt.Unix())
 		if err != nil {
 			t.Fatal(err)
 		}

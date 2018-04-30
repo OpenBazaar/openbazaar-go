@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -342,36 +344,66 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces notification for 0, 15, 40, 44 and 45 days
 		neverNotified = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "never-tinyimagehashOne", Small: "never-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces notification for 15, 40, 44 and 45 days
 		notifiedJustZeroDay = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "zero-tinyimagehashOne", Small: "zero-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "notifiedJustZeroDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(twelveHours),
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fifteen-tinyimagehashOne", Small: "fifteen-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "notifiedUpToFifteenDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourty-tinyimagehashOne", Small: "fourty-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "notifiedUpToFourtyDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourtyfour-tinyimagehashOne", Small: "fourtyfour-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "notifiedUpToFourtyFourDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourtyfive-tinyimagehashOne", Small: "fourtyfive-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "notifiedUpToFourtyFiveDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
@@ -394,6 +426,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
+	defer appSchema.DestroySchemaDirectories()
 	if err := appSchema.InitializeDatabase(); err != nil {
 		t.Fatal(err)
 	}
@@ -402,8 +435,18 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		_, err := database.Exec("insert into purchases (orderID, timestamp, lastNotifiedAt) values (?, ?, ?)", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = database.Exec("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?)", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -522,6 +565,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			expiresIn = n.NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn
 		)
 		if refID == neverNotified.OrderID {
+			assertThumbnailValuesAreSet(t, n, neverNotified)
 			if expiresIn == firstInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_ZeroDay = true
 				continue
@@ -544,6 +588,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedJustZeroDay.OrderID {
+			assertThumbnailValuesAreSet(t, n, notifiedJustZeroDay)
 			if expiresIn == secondInterval_ExpectedExpiresIn {
 				checkZeroDayPurchase_FifteenDay = true
 				continue
@@ -562,6 +607,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
+			assertThumbnailValuesAreSet(t, n, notifiedUpToFifteenDay)
 			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkFifteenDayPurchase_FourtyDay = true
 				continue
@@ -576,6 +622,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
+			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyDay)
 			if expiresIn == fourthInterval_ExpectedExpiresIn {
 				checkFourtyDayPurchase_FourtyFourDay = true
 				continue
@@ -586,6 +633,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastInterval_ExpectedExpiresIn {
+			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyFourDays)
 			checkFourtyFourDayPurchase_FourtyFiveDay = true
 		}
 	}
@@ -637,6 +685,25 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 }
 
+func assertThumbnailValuesAreSet(t *testing.T, n *repo.Notification, r *repo.PurchaseRecord) {
+	var (
+		actualTinyThumbnail    = n.NotifierData.(repo.BuyerDisputeTimeout).Thumbnail.Tiny
+		actualSmallThumbnail   = n.NotifierData.(repo.BuyerDisputeTimeout).Thumbnail.Small
+		expectedTinyThumbnail  = r.Contract.VendorListings[0].Item.Images[0].Tiny
+		expectedSmallThumbnail = r.Contract.VendorListings[0].Item.Images[0].Small
+	)
+	if expectedTinyThumbnail != actualTinyThumbnail {
+		t.Error("Expected notification to include the tiny thumbnail")
+		t.Error("Actual:", actualTinyThumbnail, "Expected:", expectedTinyThumbnail)
+		t.Errorf("Notification: %+v\n", n)
+	}
+	if expectedSmallThumbnail != actualSmallThumbnail {
+		t.Error("Expected notification to include the small thumbnail")
+		t.Error("Actual:", actualSmallThumbnail, "Expected:", expectedSmallThumbnail)
+		t.Errorf("Notification: %+v\n", n)
+	}
+}
+
 // SALES
 func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
@@ -674,6 +741,7 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
+	defer appSchema.DestroySchemaDirectories()
 	if err := appSchema.InitializeDatabase(); err != nil {
 		t.Fatal(err)
 	}
@@ -701,7 +769,7 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 				if !ok {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
-				t.Logf("notification received: %s", notifier.GetType())
+				t.Logf("notification received: %s", notifier)
 				broadcastCount += 1
 			case <-closeAsyncChannelVerifier:
 				return

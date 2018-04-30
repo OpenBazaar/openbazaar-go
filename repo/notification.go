@@ -678,6 +678,7 @@ type BuyerDisputeTimeout struct {
 	Type      NotificationType `json:"type"`
 	OrderID   string           `json:"orderId"`
 	ExpiresIn uint             `json:"expiresIn"`
+	Thumbnail Thumbnail        `json:"thumbnail"`
 }
 
 func (n BuyerDisputeTimeout) Data() ([]byte, error) {

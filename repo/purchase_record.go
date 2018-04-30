@@ -2,6 +2,8 @@ package repo
 
 import (
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -15,6 +17,7 @@ var (
 // PurchaseRecord represents a one-to-one relationship with records
 // in the SQL datastore
 type PurchaseRecord struct {
+	Contract       *pb.RicardianContract
 	OrderID        string
 	Timestamp      time.Time
 	LastNotifiedAt time.Time
@@ -54,9 +57,13 @@ func (r *PurchaseRecord) buildBuyerDisputeTimeout(interval time.Duration, create
 	timeRemaining := BuyerDisputeTimeout_lastInterval - interval
 	notification := &BuyerDisputeTimeout{
 		ID:        NewNotificationID(),
-		Type:      NotifierTypeBuyerDisputeTimeout,
-		OrderID:   r.OrderID,
 		ExpiresIn: uint(timeRemaining.Seconds()),
+		OrderID:   r.OrderID,
+		Thumbnail: Thumbnail{
+			Tiny:  r.Contract.VendorListings[0].Item.Images[0].Tiny,
+			Small: r.Contract.VendorListings[0].Item.Images[0].Small,
+		},
+		Type: NotifierTypeBuyerDisputeTimeout,
 	}
 	return NewNotification(notification, createdAt, false)
 }
