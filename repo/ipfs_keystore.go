@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -17,7 +18,10 @@ import (
 	ipfsPath "github.com/ipfs/go-ipfs/path"
 )
 
-var getObjectFromIPFSCache = map[string]getObjectFromIPFSCacheEntry{}
+var (
+	getObjectFromIPFSCache   = map[string]getObjectFromIPFSCacheEntry{}
+	getObjectFromIPFSCacheMu = sync.Mutex{}
+)
 
 type getObjectFromIPFSCacheEntry struct {
 	bytes   []byte
@@ -51,14 +55,42 @@ func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir 
 
 // GetObjectFromIPFS gets the requested name from ipfs or the local cache
 func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen time.Duration) ([]byte, error) {
+	getObjectFromIPFSCacheMu.Lock()
+	defer getObjectFromIPFSCacheMu.Unlock()
+
 	entry, ok := getObjectFromIPFSCache[getIPFSCacheKey(p, name)]
 	if !ok {
 		return fetchObjectFromIPFS(ctx, p, name)
 	}
 
 	if entry.created.Add(maxCacheLen).Before(time.Now()) {
-		return fetchObjectFromIPFS(ctx, p, name)
+		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
+		if err != nil {
+			return nil, err
+		}
+
+		getObjectFromIPFSCache[getIPFSCacheKey(p, name)] = getObjectFromIPFSCacheEntry{
+			bytes:   objBytes,
+			created: time.Now(),
+		}
+
+		return objBytes, nil
 	}
+
+	// Update cache in background after a successful read
+	func() {
+		getObjectFromIPFSCacheMu.Lock()
+		defer getObjectFromIPFSCacheMu.Unlock()
+		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
+		if err != nil {
+			log.Error("error update inventory cache:", err)
+		}
+
+		getObjectFromIPFSCache[getIPFSCacheKey(p, name)] = getObjectFromIPFSCacheEntry{
+			bytes:   objBytes,
+			created: time.Now(),
+		}
+	}()
 
 	return entry.bytes, nil
 }
@@ -72,10 +104,6 @@ func fetchObjectFromIPFS(ctx commands.Context, p peer.ID, name string) ([]byte, 
 	bytes, err := ipfs.Cat(ctx, root, time.Minute)
 	if err != nil {
 		return nil, err
-	}
-	getObjectFromIPFSCache[getIPFSCacheKey(p, name)] = getObjectFromIPFSCacheEntry{
-		bytes:   bytes,
-		created: time.Now(),
 	}
 
 	return bytes, nil
