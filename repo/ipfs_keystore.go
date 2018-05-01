@@ -25,28 +25,28 @@ type getObjectFromIPFSCacheEntry struct {
 }
 
 // PublishObjectToIPFS writes the given data to IPFS labeled as the given name
-func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir string, name string, data interface{}) error {
+func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir string, name string, data interface{}) (string, error) {
 	serializedData, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		return err
+		return "", err
 	}
 	h := sha256.Sum256(serializedData)
 
 	tmpPath := path.Join(tempDir, hex.EncodeToString(h[:])+".json")
 	err = ioutil.WriteFile(tmpPath, serializedData, os.ModePerm)
 	if err != nil {
-		return err
+		return "", err
 	}
 	hash, err := ipfs.AddFile(ctx, tmpPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = os.Remove(tmpPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return ipfs.PublishAltRoot(ctx, ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultPublishLifetime))
+	return hash, ipfs.PublishAltRoot(ctx, ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultPublishLifetime))
 }
 
 // GetObjectFromIPFS gets the requested name from ipfs or the local cache
