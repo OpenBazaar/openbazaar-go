@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -111,7 +110,7 @@ func (notifier *recordAgingNotifier) generateSellerNotifications() error {
 	}
 
 	for _, n := range notificationsToAdd {
-		var ser, err = json.Marshal(n.NotifierData)
+		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling sale aging notification:", err.Error())
 			notifier.logger.Infof("failed marshal: %+v", n)
@@ -184,7 +183,7 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 	}
 
 	for _, n := range notificationsToAdd {
-		var ser, err = json.Marshal(n.NotifierData)
+		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling purchase dispute notification:", err.Error())
 			notifier.logger.Infof("failed marshal: %+v", n)
@@ -257,7 +256,7 @@ func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
 	}
 
 	for _, n := range notificationsToAdd {
-		var ser, err = json.Marshal(n.NotifierData)
+		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling dispute expiration notification:", err.Error())
 			notifier.logger.Infof("failed marshal: %+v", n)

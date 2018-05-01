@@ -79,16 +79,146 @@ type notificationTransporter struct {
 	NotifierType NotificationType `json:"type"`
 }
 
+func (n *Notification) MarshalJSON() ([]byte, error) {
+	notifierData, err := json.Marshal(n.NotifierData)
+	if err != nil {
+		return nil, err
+	}
+	payload := notificationTransporter{
+		CreatedAt:    n.CreatedAt,
+		IsRead:       n.IsRead,
+		NotifierData: notifierData,
+		NotifierType: n.GetType(),
+	}
+	return json.Marshal(payload)
+}
+
 func (n *Notification) UnmarshalJSON(data []byte) error {
+	// First check if we have a legacy notification to unravel
+	if legacyType, ok := extractLegacyNotificationType(data); ok {
+		switch legacyType {
+		case NotifierTypeCompletionNotification:
+			var notifier = CompletionNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeDisputeAcceptedNotification:
+			var notifier = DisputeAcceptedNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeDisputeCloseNotification:
+			var notifier = DisputeCloseNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeDisputeOpenNotification:
+			var notifier = DisputeOpenNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeDisputeUpdateNotification:
+			var notifier = DisputeUpdateNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeFollowNotification:
+			var notifier = FollowNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeFulfillmentNotification:
+			var notifier = FulfillmentNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeModeratorAddNotification:
+			var notifier = ModeratorAddNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeModeratorRemoveNotification:
+			var notifier = ModeratorRemoveNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeOrderCancelNotification:
+			var notifier = OrderCancelNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeOrderConfirmationNotification:
+			var notifier = OrderConfirmationNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeOrderDeclinedNotification:
+			var notifier = OrderDeclinedNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeOrderNewNotification:
+			var notifier = OrderNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypePaymentNotification:
+			var notifier = PaymentNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeProcessingErrorNotification:
+			var notifier = ProcessingErrorNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeRefundNotification:
+			var notifier = RefundNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		case NotifierTypeUnfollowNotification:
+			var notifier = UnfollowNotification{}
+			if err := json.Unmarshal(data, &notifier); err != nil {
+				return err
+			}
+			n.NotifierData = notifier
+		}
+	}
+
+	if n.NotifierData != nil {
+		n.NotifierType = n.NotifierData.GetType()
+		n.ID = n.NotifierData.GetID()
+		return nil
+	}
+
+	// Assume we didn't find a legacy Notification. Let's process it as a
+	// properly wrapped payload
 	var payload notificationTransporter
 	if err := json.Unmarshal(data, &payload); err != nil {
-		return err
+		return fmt.Errorf("unmarshal notification: %s", err.Error())
 	}
 
 	switch payload.NotifierType {
 	case NotifierTypeSaleAgedFourtyFiveDays:
 		var notifier = SaleAgingNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
@@ -103,126 +233,139 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 		fallthrough
 	case NotifierTypeDisputeAgedFourtyFiveDays:
 		var notifier = DisputeAgingNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 
 	case NotifierTypeBuyerDisputeTimeout:
 		var notifier = BuyerDisputeTimeout{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeCompletionNotification:
 		var notifier = CompletionNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeDisputeAcceptedNotification:
 		var notifier = DisputeAcceptedNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeDisputeCloseNotification:
 		var notifier = DisputeCloseNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeDisputeOpenNotification:
 		var notifier = DisputeOpenNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeDisputeUpdateNotification:
 		var notifier = DisputeUpdateNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeFollowNotification:
 		var notifier = FollowNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeFulfillmentNotification:
 		var notifier = FulfillmentNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeModeratorAddNotification:
 		var notifier = ModeratorAddNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeModeratorRemoveNotification:
 		var notifier = ModeratorRemoveNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeOrderCancelNotification:
 		var notifier = OrderCancelNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeOrderConfirmationNotification:
 		var notifier = OrderConfirmationNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeOrderDeclinedNotification:
 		var notifier = OrderDeclinedNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeOrderNewNotification:
 		var notifier = OrderNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypePaymentNotification:
 		var notifier = PaymentNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeProcessingErrorNotification:
 		var notifier = ProcessingErrorNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeRefundNotification:
 		var notifier = RefundNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	case NotifierTypeUnfollowNotification:
 		var notifier = UnfollowNotification{}
-		if err := json.Unmarshal(data, &notifier); err != nil {
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
 	default:
-		return fmt.Errorf("unknown notifier type: %t", payload.NotifierType)
+		return fmt.Errorf("unmarshal notification: unknown type: %t\n", payload.NotifierType)
 	}
 
+	n.NotifierType = n.NotifierData.GetType()
 	n.ID = n.NotifierData.GetID()
-	n.NotifierType = payload.NotifierType
 	return nil
+}
+
+// extractLegacyNotificationType indicates whether a JSON payload is likely a legacy notification
+// based on the presence of the "notification" field in the payload and returns the type found
+func extractLegacyNotificationType(data []byte) (NotificationType, bool) {
+	var legacyPayload = make(map[string]interface{})
+	if err := json.Unmarshal(data, &legacyPayload); err != nil {
+		return NotificationType(""), false
+	}
+	if _, ok := legacyPayload["notification"]; !ok {
+		return NotificationType(legacyPayload["type"].(string)), true
+	}
+	return NotificationType(""), false
 }
 
 type Thumbnail struct {

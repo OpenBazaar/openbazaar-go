@@ -463,7 +463,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 			LastNotifiedAt: timeStart,
 		}
 		finallyNotified = &repo.PurchaseRecord{
-			Contract:       nil,
+			Contract:       expectedContractOne,
 			OrderID:        "finalNotificationSent",
 			Timestamp:      timeStart,
 			LastNotifiedAt: now,

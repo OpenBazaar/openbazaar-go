@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,7 +21,7 @@ func NewNotificationStore(db *sql.DB, lock *sync.Mutex) repo.NotificationStore {
 }
 
 func (n *NotficationsDB) PutRecord(record *repo.Notification) error {
-	ser, err := json.Marshal(record.NotifierData)
+	ser, err := json.Marshal(record)
 	if err != nil {
 		return err
 	}

@@ -43,7 +43,7 @@ func (r *DisputeCaseRecord) BuildFourtyFiveDayNotification(createdAt time.Time) 
 }
 
 func (r *DisputeCaseRecord) buildDisputeAgingNotification(nType NotificationType, createdAt time.Time) *Notification {
-	notification := &DisputeAgingNotification{
+	notification := DisputeAgingNotification{
 		ID:     NewNotificationID(),
 		Type:   nType,
 		CaseID: r.CaseID,

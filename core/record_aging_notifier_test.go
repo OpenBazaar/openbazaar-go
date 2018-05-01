@@ -82,6 +82,7 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
+	defer appSchema.DestroySchemaDirectories()
 	if err := appSchema.InitializeDatabase(); err != nil {
 		t.Fatal(err)
 	}
@@ -164,18 +165,13 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		}
 	}
 
-	var count int64
-	err = database.QueryRow("select count(*) from notifications").Scan(&count)
+	actualNotifications, count, err := datastore.Notifications().GetAll("", -1, []string{})
 	if err != nil {
 		t.Fatal(err)
-	}
-	if count != 15 {
-		t.Errorf("Expected 15 notifications to be produced, but found %d", count)
 	}
 
-	rows, err = database.Query("select notifID, serializedNotification, timestamp from notifications")
-	if err != nil {
-		t.Fatal(err)
+	if count != 15 {
+		t.Errorf("Expected 15 notifications to be produced, but found %d", count)
 	}
 
 	var (
@@ -195,20 +191,8 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		checkFourtyDayDispute_FourtyFiveDay     bool
 		checkFourtyFourDayDispute_FourtyFiveDay bool
 	)
-	for rows.Next() {
-		var (
-			nID, nJSON string
-			nTimestamp sql.NullInt64
-			n          *repo.Notification
-		)
-		if err = rows.Scan(&nID, &nJSON, &nTimestamp); err != nil {
-			t.Error(err)
-			continue
-		}
-		if err := json.Unmarshal([]byte(nJSON), &n); err != nil {
-			t.Error("Failed unmarshalling notification:", err.Error())
-			continue
-		}
+
+	for _, n := range actualNotifications {
 		var (
 			refID = n.NotifierData.(repo.DisputeAgingNotification).CaseID
 		)
