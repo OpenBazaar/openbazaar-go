@@ -59,11 +59,14 @@ func (r *PurchaseRecord) buildBuyerDisputeTimeout(interval time.Duration, create
 		ID:        NewNotificationID(),
 		ExpiresIn: uint(timeRemaining.Seconds()),
 		OrderID:   r.OrderID,
-		Thumbnail: Thumbnail{
+		Thumbnail: Thumbnail{},
+		Type:      NotifierTypeBuyerDisputeTimeout,
+	}
+	if len(r.Contract.VendorListings) > 0 && len(r.Contract.VendorListings[0].Item.Images) > 0 {
+		notification.Thumbnail = Thumbnail{
 			Tiny:  r.Contract.VendorListings[0].Item.Images[0].Tiny,
 			Small: r.Contract.VendorListings[0].Item.Images[0].Small,
-		},
-		Type: NotifierTypeBuyerDisputeTimeout,
+		}
 	}
 	return NewNotification(notification, createdAt, false)
 }
