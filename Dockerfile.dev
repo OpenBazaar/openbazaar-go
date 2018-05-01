@@ -18,7 +18,8 @@ RUN pip3.6 install requests python-bitcoinlib && \
 
 WORKDIR /go/src/github.com/OpenBazaar/openbazaar-go
 RUN go get -u github.com/gogo/protobuf/proto \
-              github.com/icrowley/fake
+              github.com/icrowley/fake \
+              github.com/derekparker/delve/cmd/dlv
 
 RUN useradd -ms /bin/bash ob_user
 USER ob_user
