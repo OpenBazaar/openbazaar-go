@@ -194,6 +194,22 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 	fmt.Fprint(w, string(resp))
 }
 
+func JSONErrorResponse(w http.ResponseWriter, errorCode int, err error) {
+	w.WriteHeader(errorCode)
+	fmt.Fprint(w, err.Error())
+}
+
+func RenderJSONOrStringError(w http.ResponseWriter, errorCode int, err error) {
+	errStr := err.Error()
+	var jsonObj map[string]interface{}
+	if json.Unmarshal([]byte(errStr), &jsonObj) == nil {
+		JSONErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	ErrorResponse(w, http.StatusInternalServerError, errStr)
+}
+
 func SanitizedResponse(w http.ResponseWriter, response string) {
 	ret, err := SanitizeJSON([]byte(response))
 	if err != nil {
@@ -576,7 +592,7 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	orderId, paymentAddr, amount, online, err := i.node.Purchase(&data)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		RenderJSONOrStringError(w, http.StatusInternalServerError, err)
 		return
 	}
 	type purchaseReturn struct {
