@@ -151,13 +151,13 @@ func TestListings(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
 		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// TODO: Add support for improved JSON matching to since contracts
 		// change each test run due to signatures

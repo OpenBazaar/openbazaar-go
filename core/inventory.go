@@ -16,45 +16,24 @@ var (
 	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
 )
 
-// IPFSInventoryListing is the listing representation stored on IPFS
-type IPFSInventoryListing struct {
+// InventoryListing is the listing representation stored on IPFS
+type InventoryListing struct {
 	Inventory   int64  `json:"inventory"`
 	LastUpdated string `json:"lastUpdated"`
 }
 
-// IPFSInventory is the complete inventory representation stored on IPFS
+// Inventory is the complete inventory representation stored on IPFS
 // It maps slug -> quantity information
-type IPFSInventory map[string]*IPFSInventoryListing
-
-// GetLocalInventoryForSlug gets the local inventory for the given slug
-func (n *OpenBazaarNode) GetLocalInventoryForSlug(slug string) (*IPFSInventoryListing, error) {
-	variants, err := n.Datastore.Inventory().Get(slug)
-	if err != nil {
-		return nil, err
-	}
-
-	var inventory *IPFSInventoryListing
-	var totalCount int
-	for _, variantCount := range variants {
-		totalCount += variantCount
-	}
-
-	inventory = &IPFSInventoryListing{
-		Inventory:   int64(totalCount),
-		LastUpdated: time.Now().UTC().Format(time.RFC3339),
-	}
-
-	return inventory, nil
-}
+type Inventory map[string]*InventoryListing
 
 // GetLocalInventory gets the inventory from the database
-func (n *OpenBazaarNode) GetLocalInventory() (IPFSInventory, error) {
+func (n *OpenBazaarNode) GetLocalInventory() (Inventory, error) {
 	listings, err := n.Datastore.Inventory().GetAll()
 	if err != nil {
 		return nil, err
 	}
 
-	inventory := make(IPFSInventory, len(listings))
+	inventory := make(Inventory, len(listings))
 	var totalCount int
 	for slug, variants := range listings {
 		totalCount = 0
@@ -62,10 +41,31 @@ func (n *OpenBazaarNode) GetLocalInventory() (IPFSInventory, error) {
 			totalCount += variantCount
 		}
 
-		inventory[slug] = &IPFSInventoryListing{
+		inventory[slug] = &InventoryListing{
 			Inventory:   int64(totalCount),
 			LastUpdated: time.Now().UTC().Format(time.RFC3339),
 		}
+	}
+
+	return inventory, nil
+}
+
+// GetLocalInventoryForSlug gets the local inventory for the given slug
+func (n *OpenBazaarNode) GetLocalInventoryForSlug(slug string) (*InventoryListing, error) {
+	variants, err := n.Datastore.Inventory().Get(slug)
+	if err != nil {
+		return nil, err
+	}
+
+	var inventory *InventoryListing
+	var totalCount int
+	for _, variantCount := range variants {
+		totalCount += variantCount
+	}
+
+	inventory = &InventoryListing{
+		Inventory:   int64(totalCount),
+		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 	}
 
 	return inventory, nil
@@ -116,7 +116,7 @@ func (n *OpenBazaarNode) GetPublishedInventoryBytesForSlug(p peer.ID, slug strin
 		return nil, err
 	}
 
-	inventory := IPFSInventory{}
+	inventory := Inventory{}
 	err = json.Unmarshal(bytes, &inventory)
 	if err != nil {
 		return nil, err

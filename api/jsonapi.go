@@ -1156,28 +1156,27 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	// If we want our own inventory get it from the local database and return
 	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
 	if getPersonalInventory {
-		type inv struct {
-			Slug     string `json:"slug"`
-			Variant  int    `json:"variant"`
-			Quantity int    `json:"quantity"`
+		var (
+			err       error
+			inventory interface{}
+		)
+
+		if slug == "" {
+			inventory, err = i.node.GetLocalInventory()
+		} else {
+			inventory, err = i.node.GetLocalInventoryForSlug(slug)
 		}
-		var invList []inv
-		inventory, err := i.node.Datastore.Inventory().GetAll()
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		for itemSlug, m := range inventory {
-			for variant, count := range m {
-				if slug != "" && slug != itemSlug {
-					continue
-				}
 
-				i := inv{itemSlug, variant, count}
-				invList = append(invList, i)
-			}
+		ret, err := json.MarshalIndent(inventory, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
 		}
-		ret, _ := json.MarshalIndent(invList, "", "    ")
+
 		if string(ret) == "null" {
 			fmt.Fprint(w, `[]`)
 			return
