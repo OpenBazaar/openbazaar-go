@@ -72,7 +72,7 @@ func (notifier *recordAgingNotifier) PerformTask() {
 }
 
 func (notifier *recordAgingNotifier) generateSellerNotifications() error {
-	sales, err := notifier.datastore.Sales().GetSalesForNotification()
+	sales, err := notifier.datastore.Sales().GetSalesForDisputeTimeout()
 	if err != nil {
 		return err
 	}

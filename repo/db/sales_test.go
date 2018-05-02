@@ -2,10 +2,12 @@ package db
 
 import (
 	"database/sql"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -453,7 +455,7 @@ func TestSalesDB_GetNeedsResync(t *testing.T) {
 	}
 }
 
-func TestGetSalesForNotificationReturnsRelevantRecords(t *testing.T) {
+func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -472,13 +474,40 @@ func TestGetSalesForNotificationReturnsRelevantRecords(t *testing.T) {
 
 	// Artificially start sales 50 days ago
 	var (
-		timeStart     = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		now        = time.Unix(time.Now().Unix(), 0)
+		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
+		nowData, _ = ptypes.TimestampProto(now)
+		order      = &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: "buyerID",
+				Handle: "@buyerID",
+			},
+			Shipping: &pb.Order_Shipping{
+				Address: "1234 Test Ave",
+				ShipTo:  "Buyer Name",
+			},
+			Payment: &pb.Order_Payment{
+				Amount:  10,
+				Method:  pb.Order_Payment_DIRECT,
+				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+			},
+			Timestamp: nowData,
+		}
+		expectedImagesOne   = []*pb.Listing_Item_Image{{Tiny: "sale-tinyimagehashOne", Small: "ssale-mallimagehashOne"}}
+		expectedContractOne = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
+			},
+			BuyerOrder: order,
+		}
 		neverNotified = &repo.SaleRecord{
+			Contract:       expectedContractOne,
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
+			Contract:       expectedContractOne,
 			OrderID:        "finalNotificationSent",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Now(),
@@ -489,27 +518,42 @@ func TestGetSalesForNotificationReturnsRelevantRecords(t *testing.T) {
 		}
 	)
 
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		if _, err := database.Exec("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := database.Exec("insert into sales (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	saleDatabase := NewSaleStore(database, new(sync.Mutex))
-	sales, err := saleDatabase.GetSalesForNotification()
+	sales, err := saleDatabase.GetSalesForDisputeTimeout()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var sawNeverNotifiedSale, sawFinallyNotifiedSale bool
-	for _, p := range sales {
-		switch p.OrderID {
+	for _, s := range sales {
+		switch s.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedSale = true
+			if reflect.DeepEqual(s, neverNotified) != true {
+				t.Error("Expected neverNotified to match, but did not")
+				t.Error("Expected:", neverNotified)
+				t.Error("Actual:", s)
+			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedSale = true
 		default:
-			t.Error("Found unexpected sale: %+v", p)
+			t.Error("Found unexpected sale: %+v", s)
 		}
 	}
 

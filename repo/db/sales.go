@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
-	"sync"
-	"time"
 )
 
 type SalesDB struct {
@@ -321,14 +322,14 @@ func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
 	return nil
 }
 
-// GetSalesForNotification returns []*SaleRecord including
+// GetSalesForDisputeTimeout returns []*SaleRecord including
 // each record which needs Notifications to be generated.
-func (s *SalesDB) GetSalesForNotification() ([]*repo.SaleRecord, error) {
+func (s *SalesDB) GetSalesForDisputeTimeout() ([]*repo.SaleRecord, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	fourtyFiveDays := time.Duration(45*24) * time.Hour
-	rows, err := s.db.Query("select orderID, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	rows, err := s.db.Query("select orderID, contract, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
 	if err != nil {
 		return nil, fmt.Errorf("selecting sales: %s", err.Error())
 	}
@@ -337,12 +338,18 @@ func (s *SalesDB) GetSalesForNotification() ([]*repo.SaleRecord, error) {
 	for rows.Next() {
 		var (
 			lastNotifiedAt int64
+			contract       []byte
 
-			r         = &repo.SaleRecord{}
+			r = &repo.SaleRecord{
+				Contract: &pb.RicardianContract{},
+			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.OrderID, &timestamp, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&r.OrderID, &contract, &timestamp, &lastNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning sales: %s", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
+			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
 		}
 		if timestamp.Valid {
 			r.Timestamp = time.Unix(timestamp.Int64, 0)

@@ -2,6 +2,8 @@ package repo
 
 import (
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -11,6 +13,7 @@ var (
 // SaleRecord represents a one-to-one relationship with records
 // in the SQL datastore
 type SaleRecord struct {
+	Contract       *pb.RicardianContract
 	OrderID        string
 	Timestamp      time.Time
 	LastNotifiedAt time.Time
