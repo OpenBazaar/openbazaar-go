@@ -987,7 +987,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
-			} else if is[0].version == 2 {
+			} else if is[0].version >= 2 {
 				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else {
 				return 0, errors.New("Unknown listing version")
