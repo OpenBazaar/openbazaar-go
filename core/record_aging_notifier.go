@@ -12,12 +12,6 @@ import (
 var (
 	// Seller Notification Intervals
 	soldItemDisputeTimeout_firstNotificationInterval = time.Duration(45*24) * time.Hour
-
-	// Moderator Notification Intervals
-	moderatorDisputeTimeout_firstNotificationInterval  = time.Duration(15*24) * time.Hour
-	moderatorDisputeTimeout_secondNotificationInterval = time.Duration(30*24) * time.Hour
-	moderatorDisputeTimeout_thirdNotificationInterval  = time.Duration(44*24) * time.Hour
-	moderatorDisputeTimeout_fourthNotificationInterval = time.Duration(45*24) * time.Hour
 )
 
 type recordAgingNotifier struct {
@@ -229,20 +223,17 @@ func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
 
 	for _, d := range disputes {
 		var timeSinceCreation = executedAt.Sub(d.Timestamp)
-		if d.LastNotifiedAt.Before(d.Timestamp) || d.LastNotifiedAt.Equal(d.Timestamp) {
-			notificationsToAdd = append(notificationsToAdd, d.BuildZeroDayNotification(executedAt))
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_firstInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_firstInterval {
+			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryFirstNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_firstNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, d.BuildFifteenDayNotification(executedAt))
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_secondInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_secondInterval {
+			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpirySecondNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_secondNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_secondNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, d.BuildThirtyDayNotification(executedAt))
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_thirdInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_thirdInterval {
+			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryThirdNotification(executedAt))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_thirdNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_thirdNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, d.BuildFourtyFourDayNotification(executedAt))
-		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(moderatorDisputeTimeout_fourthNotificationInterval)) && timeSinceCreation > moderatorDisputeTimeout_fourthNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, d.BuildFourtyFiveDayNotification(executedAt))
+		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_lastInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_lastInterval {
+			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryLastNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
 			d.LastNotifiedAt = executedAt

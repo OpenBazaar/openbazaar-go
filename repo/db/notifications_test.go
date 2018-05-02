@@ -26,9 +26,9 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 				Type:    repo.NotifierTypeOrderCancelNotification,
 				OrderId: "orderCancelReferenceOrderID",
 			}, now, true),
-			repo.NewNotification(repo.DisputeAgingNotification{
+			repo.NewNotification(repo.ModeratorDisputeExpiry{
 				ID:     "disputeAgingNotif",
-				Type:   repo.NotifierTypeDisputeAgedZeroDays,
+				Type:   repo.NotifierTypeModeratorDisputeExpiry,
 				CaseID: "disputAgingReferenceCaseID",
 			}, now, false),
 			repo.NewNotification(repo.BuyerDisputeTimeout{

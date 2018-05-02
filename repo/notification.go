@@ -222,22 +222,12 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		n.NotifierData = notifier
-
-	case NotifierTypeDisputeAgedZeroDays:
-		fallthrough
-	case NotifierTypeDisputeAgedFifteenDays:
-		fallthrough
-	case NotifierTypeDisputeAgedFourtyDays:
-		fallthrough
-	case NotifierTypeDisputeAgedFourtyFourDays:
-		fallthrough
-	case NotifierTypeDisputeAgedFourtyFiveDays:
-		var notifier = DisputeAgingNotification{}
+	case NotifierTypeModeratorDisputeExpiry:
+		var notifier = ModeratorDisputeExpiry{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
 		n.NotifierData = notifier
-
 	case NotifierTypeBuyerDisputeTimeout:
 		var notifier = BuyerDisputeTimeout{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
@@ -833,22 +823,23 @@ func (n BuyerDisputeTimeout) GetSMTPTitleAndBody() (string, string, bool) {
 	return "", "", false
 }
 
-// DisputeAgingNotification represents a notification about an open dispute
+// ModeratorDisputeExpiry represents a notification about an open dispute
 // which will soon be expired and automatically resolved. The Type indicates
 // the age of the dispute case and the CaseID references the cases caseID
 // in the database schema
-type DisputeAgingNotification struct {
-	ID     string           `json:"notificationId"`
-	Type   NotificationType `json:"type"`
-	CaseID string           `json:"disputeCaseId"`
+type ModeratorDisputeExpiry struct {
+	ID        string           `json:"notificationId"`
+	Type      NotificationType `json:"type"`
+	CaseID    string           `json:"disputeCaseId"`
+	ExpiresIn uint             `json:"expiresIn"`
 }
 
-func (n DisputeAgingNotification) Data() ([]byte, error) {
+func (n ModeratorDisputeExpiry) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
-func (n DisputeAgingNotification) GetID() string                               { return n.ID }
-func (n DisputeAgingNotification) GetType() NotificationType                   { return n.Type }
-func (n DisputeAgingNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
+func (n ModeratorDisputeExpiry) GetID() string                               { return n.ID }
+func (n ModeratorDisputeExpiry) GetType() NotificationType                   { return n.Type }
+func (n ModeratorDisputeExpiry) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 type TestNotification struct{}
 

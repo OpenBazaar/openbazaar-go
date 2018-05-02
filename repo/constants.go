@@ -15,6 +15,7 @@ const (
 	NotifierTypeFulfillmentNotification       NotificationType = "fulfillment"
 	NotifierTypeIncomingTransaction           NotificationType = "incomingTransaction"
 	NotifierTypeModeratorAddNotification      NotificationType = "moderatorAdd"
+	NotifierTypeModeratorDisputeExpiry        NotificationType = "moderatorDisputeExpiry"
 	NotifierTypeModeratorRemoveNotification   NotificationType = "moderatorRemove"
 	NotifierTypeOrderCancelNotification       NotificationType = "cancel"
 	NotifierTypeOrderConfirmationNotification NotificationType = "orderConfirmation"
@@ -27,13 +28,6 @@ const (
 	NotifierTypeStatusUpdateNotification      NotificationType = "statusUpdate"
 	NotifierTypeTestNotification              NotificationType = "testNotification"
 	NotifierTypeUnfollowNotification          NotificationType = "unfollow"
-
-	// DisputeAging
-	NotifierTypeDisputeAgedZeroDays       NotificationType = "disputeAgedZeroDays"
-	NotifierTypeDisputeAgedFifteenDays    NotificationType = "disputeAgedFifteenDays"
-	NotifierTypeDisputeAgedFourtyDays     NotificationType = "disputeAgedFourtyDays"
-	NotifierTypeDisputeAgedFourtyFourDays NotificationType = "disputeAgedFourtyFourDays"
-	NotifierTypeDisputeAgedFourtyFiveDays NotificationType = "disputeAgedFourtyFiveDays"
 
 	// SaleAging
 	NotifierTypeSaleAgedFourtyFiveDays NotificationType = "saleAgedFourtyFiveDays"

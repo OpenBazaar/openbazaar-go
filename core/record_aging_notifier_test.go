@@ -15,7 +15,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
+func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	// Start each case 50 days ago and have the lastNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
@@ -28,15 +28,9 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		fourtyFourDays   = time.Duration(44*24) * time.Hour
 		fourtyFiveDays   = time.Duration(45*24) * time.Hour
 
-		// Produces notification for 0, 15, 40, 44 and 45 days
+		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.DisputeCaseRecord{
 			CaseID:         "neverNotified",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
-		}
-		// Produces notification for 15, 40, 44 and 45 days
-		notifiedJustZeroDay = &repo.DisputeCaseRecord{
-			CaseID:         "notifiedJustZeroDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(twelveHours),
 		}
@@ -66,7 +60,6 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		}
 		existingRecords = []*repo.DisputeCaseRecord{
 			neverNotified,
-			notifiedJustZeroDay,
 			notifiedUpToFifteenDay,
 			notifiedUpToFourtyDays,
 			notifiedUpToFourtyFourDays,
@@ -114,7 +107,7 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 				if !ok {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
-				t.Logf("notification received: %s", notifier.GetType())
+				t.Logf("notification received: %s", notifier)
 				broadcastCount += 1
 			case <-closeAsyncChannelVerifier:
 				return
@@ -133,8 +126,8 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 
 	// Verify Notifications received in channel
 	closeAsyncChannelVerifier <- true
-	if broadcastCount != 15 {
-		t.Error("Expected 15 notifications to be broadcast, found", broadcastCount)
+	if broadcastCount != 10 {
+		t.Error("Expected 10 notifications to be broadcast, found", broadcastCount)
 	}
 
 	// Verify NotificationRecords in datastore
@@ -151,7 +144,7 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		switch caseID {
-		case neverNotified.CaseID, notifiedJustZeroDay.CaseID, notifiedUpToFifteenDay.CaseID, notifiedUpToFourtyDays.CaseID, notifiedUpToFourtyFourDays.CaseID:
+		case neverNotified.CaseID, notifiedUpToFifteenDay.CaseID, notifiedUpToFourtyDays.CaseID, notifiedUpToFourtyFourDays.CaseID:
 			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", caseID, time.Unix(lastNotifiedAt, 0).String())
@@ -170,146 +163,109 @@ func TestPerformTaskCreatesDisputeAgingNotifications(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if count != 15 {
-		t.Errorf("Expected 15 notifications to be produced, but found %d", count)
+	if count != 10 {
+		t.Errorf("Expected 10 notifications to be produced, but found %d", count)
 	}
 
 	var (
-		checkNeverNotifiedDispute_ZeroDay       bool
-		checkNeverNotifiedDispute_FifteenDay    bool
-		checkNeverNotifiedDispute_FourtyDay     bool
-		checkNeverNotifiedDispute_FourtyFourDay bool
-		checkNeverNotifiedDispute_FourtyFiveDay bool
-		checkZeroDayDispute_FifteenDay          bool
-		checkZeroDayDispute_FourtyDay           bool
-		checkZeroDayDispute_FourtyFourDay       bool
-		checkZeroDayDispute_FourtyFiveDay       bool
-		checkFifteenDayDispute_FourtyDay        bool
-		checkFifteenDayDispute_FourtyFourDay    bool
-		checkFifteenDayDispute_FourtyFiveDay    bool
-		checkFourtyDayDispute_FourtyFourDay     bool
-		checkFourtyDayDispute_FourtyFiveDay     bool
-		checkFourtyFourDayDispute_FourtyFiveDay bool
+		checkNeverNotified_FifteenDay               bool
+		checkNeverNotified_FourtyDay                bool
+		checkNeverNotified_FourtyFourDay            bool
+		checkNeverNotified_FourtyFiveDay            bool
+		checkNotifiedToFifteenDays_FourtyDay        bool
+		checkNotifiedToFifteenDays_FourtyFourDay    bool
+		checkNotifiedToFifteenDays_FourtyFiveDay    bool
+		checkNotifiedToFourtyDays_FourtyFourDay     bool
+		checkNotifiedToFourtyDays_FourtyFiveDay     bool
+		checkNotifiedToFourtyFourDays_FourtyFiveDay bool
+
+		firstInterval_ExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_firstInterval).Seconds())
+		secondInterval_ExpectedExpiresIn = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_secondInterval).Seconds())
+		thirdInterval_ExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_thirdInterval).Seconds())
+		lastInterval_ExpectedExpiresIn   = uint(0)
 	)
 
 	for _, n := range actualNotifications {
 		var (
-			refID = n.NotifierData.(repo.DisputeAgingNotification).CaseID
+			refID     = n.NotifierData.(repo.ModeratorDisputeExpiry).CaseID
+			expiresIn = n.NotifierData.(repo.ModeratorDisputeExpiry).ExpiresIn
 		)
-		t.Log("looking for notification:", refID)
 		if refID == neverNotified.CaseID {
-			if n.NotifierType == repo.NotifierTypeDisputeAgedZeroDays {
-				checkNeverNotifiedDispute_ZeroDay = true
+			if expiresIn == firstInterval_ExpectedExpiresIn {
+				checkNeverNotified_FifteenDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFifteenDays {
-				checkNeverNotifiedDispute_FifteenDay = true
+			if expiresIn == secondInterval_ExpectedExpiresIn {
+				checkNeverNotified_FourtyDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyDays {
-				checkNeverNotifiedDispute_FourtyDay = true
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
+				checkNeverNotified_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFourDays {
-				checkNeverNotifiedDispute_FourtyFourDay = true
-				continue
-			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFiveDays {
-				checkNeverNotifiedDispute_FourtyFiveDay = true
-				continue
-			}
-		}
-		if refID == notifiedJustZeroDay.CaseID {
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFifteenDays {
-				checkZeroDayDispute_FifteenDay = true
-				continue
-			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyDays {
-				checkZeroDayDispute_FourtyDay = true
-				continue
-			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFourDays {
-				checkZeroDayDispute_FourtyFourDay = true
-				continue
-			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFiveDays {
-				checkZeroDayDispute_FourtyFiveDay = true
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkNeverNotified_FourtyFiveDay = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFifteenDay.CaseID {
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyDays {
-				checkFifteenDayDispute_FourtyDay = true
+			if expiresIn == secondInterval_ExpectedExpiresIn {
+				checkNotifiedToFifteenDays_FourtyDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFourDays {
-				checkFifteenDayDispute_FourtyFourDay = true
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
+				checkNotifiedToFifteenDays_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFiveDays {
-				checkFifteenDayDispute_FourtyFiveDay = true
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkNotifiedToFifteenDays_FourtyFiveDay = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyDays.CaseID {
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFourDays {
-				checkFourtyDayDispute_FourtyFourDay = true
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
+				checkNotifiedToFourtyDays_FourtyFourDay = true
 				continue
 			}
-			if n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFiveDays {
-				checkFourtyDayDispute_FourtyFiveDay = true
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkNotifiedToFourtyDays_FourtyFiveDay = true
 				continue
 			}
 		}
-		if refID == notifiedUpToFourtyFourDays.CaseID && n.NotifierType == repo.NotifierTypeDisputeAgedFourtyFiveDays {
-			checkFourtyFourDayDispute_FourtyFiveDay = true
+		if refID == notifiedUpToFourtyFourDays.CaseID && expiresIn == lastInterval_ExpectedExpiresIn {
+			checkNotifiedToFourtyFourDays_FourtyFiveDay = true
 		}
 	}
 
-	if checkNeverNotifiedDispute_ZeroDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedDispute_ZeroDay")
+	if checkNeverNotified_FifteenDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FifteenDay")
 	}
-	if checkNeverNotifiedDispute_FifteenDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedDispute_FifteenDay")
+	if checkNeverNotified_FourtyDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyDay")
 	}
-	if checkNeverNotifiedDispute_FourtyDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedDispute_FourtyDay")
+	if checkNeverNotified_FourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyFourDay")
 	}
-	if checkNeverNotifiedDispute_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedDispute_FourtyFourDay")
+	if checkNeverNotified_FourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyFiveDay")
 	}
-	if checkNeverNotifiedDispute_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedDispute_FourtyFiveDay")
+	if checkNotifiedToFifteenDays_FourtyDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyDay")
 	}
-	if checkZeroDayDispute_FifteenDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkZeroDayDispute_FifteenDay")
+	if checkNotifiedToFifteenDays_FourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyFourDay")
 	}
-	if checkZeroDayDispute_FourtyDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkZeroDayDispute_FourtyDay")
+	if checkNotifiedToFifteenDays_FourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyFiveDay")
 	}
-	if checkZeroDayDispute_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkZeroDayDispute_FourtyFourDay")
+	if checkNotifiedToFourtyDays_FourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDays_FourtyFourDay")
 	}
-	if checkZeroDayDispute_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkZeroDayDispute_FourtyFiveDay")
+	if checkNotifiedToFourtyDays_FourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDays_FourtyFiveDay")
 	}
-	if checkFifteenDayDispute_FourtyDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFifteenDayDispute_FourtyDay")
-	}
-	if checkFifteenDayDispute_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFifteenDayDispute_FourtyFourDay")
-	}
-	if checkFifteenDayDispute_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFifteenDayDispute_FourtyFiveDay")
-	}
-	if checkFourtyDayDispute_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFourtyDayDispute_FourtyFourDay")
-	}
-	if checkFourtyDayDispute_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFourtyDayDispute_FourtyFiveDay")
-	}
-	if checkFourtyFourDayDispute_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkFourtyFourDayDispute_FourtyFiveDay")
+	if checkNotifiedToFourtyFourDays_FourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyFourDays_FourtyFiveDay")
 	}
 }
 

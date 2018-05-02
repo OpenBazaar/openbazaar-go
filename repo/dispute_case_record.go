@@ -4,6 +4,13 @@ import (
 	"time"
 )
 
+var (
+	ModeratorDisputeExpiry_firstInterval  = time.Duration(15*24) * time.Hour
+	ModeratorDisputeExpiry_secondInterval = time.Duration(30*24) * time.Hour
+	ModeratorDisputeExpiry_thirdInterval  = time.Duration(44*24) * time.Hour
+	ModeratorDisputeExpiry_lastInterval   = time.Duration(45*24) * time.Hour
+)
+
 // DisputeCaseRecord is a one-to-one relationship with records in the
 // SQL datastore
 type DisputeCaseRecord struct {
@@ -12,41 +19,33 @@ type DisputeCaseRecord struct {
 	LastNotifiedAt time.Time
 }
 
-// BuildZeroDayNotification returns a Notification for a new DisputeCaseRecord
-// which was just opened
-func (r *DisputeCaseRecord) BuildZeroDayNotification(createdAt time.Time) *Notification {
-	return r.buildDisputeAgingNotification(NotifierTypeDisputeAgedZeroDays, createdAt)
+// BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval
+func (r *DisputeCaseRecord) BuildModeratorDisputeExpiryFirstNotification(createdAt time.Time) *Notification {
+	return r.buildModeratorDisputeExpiry(ModeratorDisputeExpiry_firstInterval, createdAt)
 }
 
-// BuildFifteenDayNotification returns a Notification that alerts a DisputeCaseRecord
-// is more than 15 days old
-func (r *DisputeCaseRecord) BuildFifteenDayNotification(createdAt time.Time) *Notification {
-	return r.buildDisputeAgingNotification(NotifierTypeDisputeAgedFifteenDays, createdAt)
+// BuildModeratorDisputeExpirySecondNotification returns a Notification with ExpiresIn set for the Second Interval
+func (r *DisputeCaseRecord) BuildModeratorDisputeExpirySecondNotification(createdAt time.Time) *Notification {
+	return r.buildModeratorDisputeExpiry(ModeratorDisputeExpiry_secondInterval, createdAt)
 }
 
-// BuildFourtyDayNotification returns a Notification that alerts a isputeCaseRecord
-// is more than 40 days old
-func (r *DisputeCaseRecord) BuildThirtyDayNotification(createdAt time.Time) *Notification {
-	return r.buildDisputeAgingNotification(NotifierTypeDisputeAgedFourtyDays, createdAt)
+// BuildModeratorDisputeExpiryThirdNotification returns a Notification with ExpiresIn set for the Third Interval
+func (r *DisputeCaseRecord) BuildModeratorDisputeExpiryThirdNotification(createdAt time.Time) *Notification {
+	return r.buildModeratorDisputeExpiry(ModeratorDisputeExpiry_thirdInterval, createdAt)
 }
 
-// BuildFourtyFiveDayNotification returns a Notification that alerts a DisputeCaseRecord
-// is more than 44 days old and about to expire
-func (r *DisputeCaseRecord) BuildFourtyFourDayNotification(createdAt time.Time) *Notification {
-	return r.buildDisputeAgingNotification(NotifierTypeDisputeAgedFourtyFourDays, createdAt)
+// BuildModeratorDisputeExpiryLastNotification returns a Notification with ExpiresIn set for the Last Interval
+func (r *DisputeCaseRecord) BuildModeratorDisputeExpiryLastNotification(createdAt time.Time) *Notification {
+	return r.buildModeratorDisputeExpiry(ModeratorDisputeExpiry_lastInterval, createdAt)
 }
 
-// BuildThirtyDayNotification returns a Notification that alerts a DisputeCaseRecord
-// is more than 45 days old and already expired
-func (r *DisputeCaseRecord) BuildFourtyFiveDayNotification(createdAt time.Time) *Notification {
-	return r.buildDisputeAgingNotification(NotifierTypeDisputeAgedFourtyFiveDays, createdAt)
-}
-
-func (r *DisputeCaseRecord) buildDisputeAgingNotification(nType NotificationType, createdAt time.Time) *Notification {
-	notification := DisputeAgingNotification{
-		ID:     NewNotificationID(),
-		Type:   nType,
-		CaseID: r.CaseID,
+func (r *DisputeCaseRecord) buildModeratorDisputeExpiry(interval time.Duration, createdAt time.Time) *Notification {
+	timeRemaining := ModeratorDisputeExpiry_lastInterval - interval
+	notification := ModeratorDisputeExpiry{
+		ID:        NewNotificationID(),
+		Type:      NotifierTypeModeratorDisputeExpiry,
+		CaseID:    r.CaseID,
+		ExpiresIn: uint(timeRemaining.Seconds()),
 	}
 	return NewNotification(notification, createdAt, false)
 }

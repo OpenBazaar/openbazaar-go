@@ -21,11 +21,6 @@ func TestNotificationMarshalling(t *testing.T) {
 			Type:    repo.NotifierTypeDisputeAcceptedNotification,
 			OrderId: repo.NewNotificationID(),
 		},
-		repo.DisputeAgingNotification{
-			ID:     "disputeNotificationID",
-			Type:   repo.NotifierTypeDisputeAgedFifteenDays,
-			CaseID: repo.NewNotificationID(),
-		},
 		repo.DisputeCloseNotification{
 			ID:      "disputeCloseID",
 			Type:    repo.NotifierTypeDisputeCloseNotification,
@@ -55,6 +50,11 @@ func TestNotificationMarshalling(t *testing.T) {
 			ID:     "moderatorAddID",
 			Type:   repo.NotifierTypeModeratorAddNotification,
 			PeerId: repo.NewNotificationID(),
+		},
+		repo.ModeratorDisputeExpiry{
+			ID:     "disputeNotificationID",
+			Type:   repo.NotifierTypeModeratorDisputeExpiry,
+			CaseID: repo.NewNotificationID(),
 		},
 		repo.ModeratorRemoveNotification{
 			ID:     "moderatorRemoveID",

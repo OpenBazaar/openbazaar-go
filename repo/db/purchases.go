@@ -303,7 +303,6 @@ func (p *PurchasesDB) GetPurchasesForDisputeTimeout() ([]*repo.PurchaseRecord, e
 		if err := rows.Scan(&r.OrderID, &contract, &timestamp, &lastNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning purchases: %s\n", err.Error())
 		}
-		fmt.Println("contract:", string(contract))
 		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
 			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
 		}
