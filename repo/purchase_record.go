@@ -7,10 +7,9 @@ import (
 )
 
 var (
-	BuyerDisputeTimeout_firstInterval  = time.Duration(0)
-	BuyerDisputeTimeout_secondInterval = time.Duration(15*24) * time.Hour
-	BuyerDisputeTimeout_thirdInterval  = time.Duration(30*24) * time.Hour
-	BuyerDisputeTimeout_fourthInterval = time.Duration(44*24) * time.Hour
+	BuyerDisputeTimeout_firstInterval  = time.Duration(15*24) * time.Hour
+	BuyerDisputeTimeout_secondInterval = time.Duration(40*24) * time.Hour
+	BuyerDisputeTimeout_thirdInterval  = time.Duration(44*24) * time.Hour
 	BuyerDisputeTimeout_lastInterval   = time.Duration(45*24) * time.Hour
 )
 
@@ -23,32 +22,22 @@ type PurchaseRecord struct {
 	LastNotifiedAt time.Time
 }
 
-// BuildBuyerDisputeTimeoutFirstNotification returns a Notification for a new PurchaseRecord
-// which was just opened
+// BuildBuyerDisputeTimeoutFirstNotification returns a Notification with ExpiresIn set for the First Interval
 func (r *PurchaseRecord) BuildBuyerDisputeTimeoutFirstNotification(createdAt time.Time) *Notification {
 	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_firstInterval, createdAt)
 }
 
-// BuildBuyerDisputeTimeoutSecondNotification returns a Notification that alerts a PurchaseRecord
-// is more than 15 days old
+// BuildBuyerDisputeTimeoutSecondNotification returns a Notification with ExpiresIn set for the Second Interval
 func (r *PurchaseRecord) BuildBuyerDisputeTimeoutSecondNotification(createdAt time.Time) *Notification {
 	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_secondInterval, createdAt)
 }
 
-// BuildBuyerDisputeTimeoutThirdNotification returns a Notification that alerts a PurchaseRecord
-// is more than 40 days old
+// BuildBuyerDisputeTimeoutThirdNotification returns a Notification with ExpiresIn set for the Third Interval
 func (r *PurchaseRecord) BuildBuyerDisputeTimeoutThirdNotification(createdAt time.Time) *Notification {
 	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_thirdInterval, createdAt)
 }
 
-// BuildBuyerDisputeTimeoutFourthNotification returns a Notification that alerts a PurchaseRecord
-// is more than 44 days old and about to expire
-func (r *PurchaseRecord) BuildBuyerDisputeTimeoutFourthNotification(createdAt time.Time) *Notification {
-	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_fourthInterval, createdAt)
-}
-
-// BuildBuyerDisputeTimeoutLastNotification returns a Notification that alerts a PurchaseRecord
-// is more than 45 days old and already expired
+// BuildBuyerDisputeTimeoutLastNotification returns a Notification with ExpiresIn set for the Last Interval
 func (r *PurchaseRecord) BuildBuyerDisputeTimeoutLastNotification(createdAt time.Time) *Notification {
 	return r.buildBuyerDisputeTimeout(BuyerDisputeTimeout_lastInterval, createdAt)
 }

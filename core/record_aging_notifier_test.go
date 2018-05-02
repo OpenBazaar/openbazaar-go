@@ -282,7 +282,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		fourtyFourDays   = time.Duration(44*24) * time.Hour
 		fourtyFiveDays   = time.Duration(45*24) * time.Hour
 
-		// Produces notification for 0, 15, 40, 44 and 45 days
+		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.PurchaseRecord{
 			Contract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
@@ -292,17 +292,6 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
-		}
-		// Produces notification for 15, 40, 44 and 45 days
-		notifiedJustZeroDay = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "zero-tinyimagehashOne", Small: "zero-smallimagehashOne"}}}},
-				},
-			},
-			OrderID:        "notifiedJustZeroDay",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(twelveHours),
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
@@ -350,7 +339,6 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		}
 		existingRecords = []*repo.PurchaseRecord{
 			neverNotified,
-			notifiedJustZeroDay,
 			notifiedUpToFifteenDay,
 			notifiedUpToFourtyDay,
 			notifiedUpToFourtyFourDays,
@@ -421,6 +409,12 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 
 	worker.PerformTask()
 
+	// Verify Notifications received in channel
+	closeAsyncChannelVerifier <- true
+	if broadcastCount != 10 {
+		t.Error("Expected 10 notifications to be broadcast, found", broadcastCount)
+	}
+
 	// Verify NotificationRecords in datastore
 	rows, err := database.Query("select orderID, lastNotifiedAt from purchases")
 	if err != nil {
@@ -435,7 +429,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			t.Fatal(err)
 		}
 		switch orderID {
-		case neverNotified.OrderID, notifiedJustZeroDay.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID, notifiedUpToFourtyFourDays.OrderID:
+		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID, notifiedUpToFourtyFourDays.OrderID:
 			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", orderID, time.Unix(lastNotifiedAt, 0).String())
@@ -454,8 +448,8 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count != 15 {
-		t.Errorf("Expected 15 notifications to be produced, but found %d", count)
+	if count != 10 {
+		t.Errorf("Expected 10 notifications to be produced, but found %d", count)
 	}
 
 	rows, err = database.Query("select notifID, serializedNotification, timestamp from notifications")
@@ -464,26 +458,20 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotifiedPurchase_ZeroDay       bool
-		checkNeverNotifiedPurchase_FifteenDay    bool
-		checkNeverNotifiedPurchase_FourtyDay     bool
-		checkNeverNotifiedPurchase_FourtyFourDay bool
-		checkNeverNotifiedPurchase_FourtyFiveDay bool
-		checkZeroDayPurchase_FifteenDay          bool
-		checkZeroDayPurchase_FourtyDay           bool
-		checkZeroDayPurchase_FourtyFourDay       bool
-		checkZeroDayPurchase_FourtyFiveDay       bool
-		checkFifteenDayPurchase_FourtyDay        bool
-		checkFifteenDayPurchase_FourtyFourDay    bool
-		checkFifteenDayPurchase_FourtyFiveDay    bool
-		checkFourtyDayPurchase_FourtyFourDay     bool
-		checkFourtyDayPurchase_FourtyFiveDay     bool
-		checkFourtyFourDayPurchase_FourtyFiveDay bool
+		checkNeverNotifiedPurchase_FirstNotificationSeen  bool
+		checkNeverNotifiedPurchase_SecondNotificationSeen bool
+		checkNeverNotifiedPurchase_ThirdNotificationSeen  bool
+		checkNeverNotifiedPurchase_LastNotificationSeen   bool
+		checkFifteenDayPurchase_SecondNotificationSeen    bool
+		checkFifteenDayPurchase_ThirdNotificationSeen     bool
+		checkFifteenDayPurchase_LastNotificationSeen      bool
+		checkFourtyDayPurchase_ThirdNotificationSeen      bool
+		checkFourtyDayPurchase_LastNotificationSeen       bool
+		checkFourtyFourDayPurchase_LastNotificationSeen   bool
 
 		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_firstInterval).Seconds())
 		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_secondInterval).Seconds())
 		thirdInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
-		fourthInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_fourthInterval).Seconds())
 		lastInterval_ExpectedExpiresIn   = uint(0)
 	)
 	for rows.Next() {
@@ -507,121 +495,83 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		if refID == neverNotified.OrderID {
 			assertThumbnailValuesAreSet(t, n, neverNotified)
 			if expiresIn == firstInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_ZeroDay = true
+				checkNeverNotifiedPurchase_FirstNotificationSeen = true
 				continue
 			}
 			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FifteenDay = true
+				checkNeverNotifiedPurchase_SecondNotificationSeen = true
 				continue
 			}
 			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FourtyDay = true
-				continue
-			}
-			if expiresIn == fourthInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FourtyFourDay = true
+				checkNeverNotifiedPurchase_ThirdNotificationSeen = true
 				continue
 			}
 			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FourtyFiveDay = true
-				continue
-			}
-		}
-		if refID == notifiedJustZeroDay.OrderID {
-			assertThumbnailValuesAreSet(t, n, notifiedJustZeroDay)
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkZeroDayPurchase_FifteenDay = true
-				continue
-			}
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkZeroDayPurchase_FourtyDay = true
-				continue
-			}
-			if expiresIn == fourthInterval_ExpectedExpiresIn {
-				checkZeroDayPurchase_FourtyFourDay = true
-				continue
-			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkZeroDayPurchase_FourtyFiveDay = true
+				checkNeverNotifiedPurchase_LastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
 			assertThumbnailValuesAreSet(t, n, notifiedUpToFifteenDay)
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_FourtyDay = true
+			if expiresIn == secondInterval_ExpectedExpiresIn {
+				checkFifteenDayPurchase_SecondNotificationSeen = true
 				continue
 			}
-			if expiresIn == fourthInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_FourtyFourDay = true
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
+				checkFifteenDayPurchase_ThirdNotificationSeen = true
 				continue
 			}
 			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_FourtyFiveDay = true
+				checkFifteenDayPurchase_LastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
 			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyDay)
-			if expiresIn == fourthInterval_ExpectedExpiresIn {
-				checkFourtyDayPurchase_FourtyFourDay = true
+			if expiresIn == thirdInterval_ExpectedExpiresIn {
+				checkFourtyDayPurchase_ThirdNotificationSeen = true
 				continue
 			}
 			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFourtyDayPurchase_FourtyFiveDay = true
+				checkFourtyDayPurchase_LastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastInterval_ExpectedExpiresIn {
 			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyFourDays)
-			checkFourtyFourDayPurchase_FourtyFiveDay = true
+			checkFourtyFourDayPurchase_LastNotificationSeen = true
 		}
 	}
 
-	if checkNeverNotifiedPurchase_ZeroDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_ZeroDay")
+	if checkNeverNotifiedPurchase_FirstNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FirstNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_FifteenDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FifteenDay")
+	if checkNeverNotifiedPurchase_SecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_SecondNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_FourtyDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FourtyDay")
+	if checkNeverNotifiedPurchase_ThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_ThirdNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_FourtyFourDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FourtyFourDay")
+	if checkNeverNotifiedPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_LastNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FourtyFiveDay")
+	if checkFifteenDayPurchase_SecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchase_SecondNotificationSeen")
 	}
-	if checkZeroDayPurchase_FifteenDay != true {
-		t.Errorf("Expected notification missing: checkZeroDayPurchase_FifteenDay")
+	if checkFifteenDayPurchase_ThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchase_ThirdNotificationSeen")
 	}
-	if checkZeroDayPurchase_FourtyDay != true {
-		t.Errorf("Expected notification missing: checkZeroDayPurchase_FourtyDay")
+	if checkFifteenDayPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchase_LastNotificationSeen")
 	}
-	if checkZeroDayPurchase_FourtyFourDay != true {
-		t.Errorf("Expected notification missing: checkZeroDayPurchase_FourtyFourDay")
+	if checkFourtyDayPurchase_ThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchase_ThirdNotificationSeen")
 	}
-	if checkZeroDayPurchase_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkZeroDayPurchase_FourtyFiveDay")
+	if checkFourtyDayPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchase_LastNotificationSeen")
 	}
-	if checkFifteenDayPurchase_FourtyDay != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_FourtyDay")
-	}
-	if checkFifteenDayPurchase_FourtyFourDay != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_FourtyFourDay")
-	}
-	if checkFifteenDayPurchase_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_FourtyFiveDay")
-	}
-	if checkFourtyDayPurchase_FourtyFourDay != true {
-		t.Errorf("Expected notification missing: checkFourtyDayPurchase_FourtyFourDay")
-	}
-	if checkFourtyDayPurchase_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkFourtyDayPurchase_FourtyFiveDay")
-	}
-	if checkFourtyFourDayPurchase_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkFourtyFourDayPurchase_FourtyFiveDay")
+	if checkFourtyFourDayPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyFourDayPurchase_LastNotificationSeen")
 	}
 }
 

@@ -150,19 +150,16 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 
 	for _, p := range purchases {
 		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) || p.LastNotifiedAt.Equal(p.Timestamp) {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFirstNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutSecondNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutThirdNotification(executedAt))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_fourthInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFourthNotification(executedAt))
-		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_fourthInterval {
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutLastNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
