@@ -216,18 +216,6 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 	}
 
 	switch payload.NotifierType {
-	case NotifierTypeSaleAgedFourtyFiveDays:
-		var notifier = SaleAgingNotification{}
-		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
-			return err
-		}
-		n.NotifierData = notifier
-	case NotifierTypeModeratorDisputeExpiry:
-		var notifier = ModeratorDisputeExpiry{}
-		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
-			return err
-		}
-		n.NotifierData = notifier
 	case NotifierTypeBuyerDisputeTimeout:
 		var notifier = BuyerDisputeTimeout{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
@@ -282,6 +270,12 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		n.NotifierData = notifier
+	case NotifierTypeModeratorDisputeExpiry:
+		var notifier = ModeratorDisputeExpiry{}
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
+			return err
+		}
+		n.NotifierData = notifier
 	case NotifierTypeModeratorRemoveNotification:
 		var notifier = ModeratorRemoveNotification{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
@@ -332,6 +326,12 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 		n.NotifierData = notifier
 	case NotifierTypeUnfollowNotification:
 		var notifier = UnfollowNotification{}
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
+			return err
+		}
+		n.NotifierData = notifier
+	case NotifierTypeVendorDisputeTimeout:
+		var notifier = VendorDisputeTimeout{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
 			return err
 		}
@@ -786,21 +786,22 @@ func (n IncomingTransaction) GetID() string                               { retu
 func (n IncomingTransaction) GetType() NotificationType                   { return NotifierTypeIncomingTransaction }
 func (n IncomingTransaction) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
-// SaleAgingNotification represents a notification about a sale
+// VendorDisputeTimeout represents a notification about a sale
 // which will soon be unable to dispute. The Type indicates the age of the
 // purchase and OrderID references the purchases orderID in the database schema
-type SaleAgingNotification struct {
-	ID      string           `json:"notificationId"`
-	Type    NotificationType `json:"type"`
-	OrderID string           `json:"purchaseOrderId"`
+type VendorDisputeTimeout struct {
+	ID        string           `json:"notificationId"`
+	Type      NotificationType `json:"type"`
+	OrderID   string           `json:"purchaseOrderId"`
+	ExpiresIn uint             `json:"expiresIn"`
 }
 
-func (n SaleAgingNotification) Data() ([]byte, error) {
+func (n VendorDisputeTimeout) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
-func (n SaleAgingNotification) GetID() string             { return n.ID }
-func (n SaleAgingNotification) GetType() NotificationType { return n.Type }
-func (n SaleAgingNotification) GetSMTPTitleAndBody() (string, string, bool) {
+func (n VendorDisputeTimeout) GetID() string             { return n.ID }
+func (n VendorDisputeTimeout) GetType() NotificationType { return NotifierTypeVendorDisputeTimeout }
+func (n VendorDisputeTimeout) GetSMTPTitleAndBody() (string, string, bool) {
 	return "", "", false
 }
 

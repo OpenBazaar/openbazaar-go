@@ -9,11 +9,6 @@ import (
 	"github.com/op/go-logging"
 )
 
-var (
-	// Seller Notification Intervals
-	soldItemDisputeTimeout_firstNotificationInterval = time.Duration(45*24) * time.Hour
-)
-
 type recordAgingNotifier struct {
 	// PerformTask dependancies
 	datastore repo.Datastore
@@ -89,8 +84,8 @@ func (notifier *recordAgingNotifier) generateSellerNotifications() error {
 
 	for _, p := range sales {
 		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(soldItemDisputeTimeout_firstNotificationInterval)) && timeSinceCreation > soldItemDisputeTimeout_firstNotificationInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildFourtyFiveDayNotification(executedAt))
+		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.VendorDisputeTimeout_lastInterval)) && timeSinceCreation > repo.VendorDisputeTimeout_lastInterval {
+			notificationsToAdd = append(notificationsToAdd, p.BuildVendorDisputeTimeoutLastNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
 			p.LastNotifiedAt = executedAt

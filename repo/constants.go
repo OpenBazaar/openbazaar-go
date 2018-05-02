@@ -28,10 +28,7 @@ const (
 	NotifierTypeStatusUpdateNotification      NotificationType = "statusUpdate"
 	NotifierTypeTestNotification              NotificationType = "testNotification"
 	NotifierTypeUnfollowNotification          NotificationType = "unfollow"
-
-	// SaleAging
-	NotifierTypeSaleAgedFourtyFiveDays NotificationType = "saleAgedFourtyFiveDays"
-	// End Notification Types
+	NotifierTypeVendorDisputeTimeout          NotificationType = "vendorDisputeTimeout"
 )
 
 type NotificationType string

@@ -595,7 +595,7 @@ func assertThumbnailValuesAreSet(t *testing.T, n *repo.Notification, r *repo.Pur
 }
 
 // SALES
-func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
+func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
@@ -676,6 +676,12 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 
 	worker.PerformTask()
 
+	// Verify Notifications received in channel
+	closeAsyncChannelVerifier <- true
+	if broadcastCount != 1 {
+		t.Error("Expected 1 notifications to be broadcast, found", broadcastCount)
+	}
+
 	// Verify NotificationRecords in datastore
 	rows, err := database.Query("select orderID, lastNotifiedAt from sales")
 	if err != nil {
@@ -719,7 +725,9 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotifiedSale_FourtyFiveDay bool
+		checkNeverNotifiedSale_LastNotificationSeen bool
+
+		firstInterval_ExpectedExpiresIn = uint(0)
 	)
 	for rows.Next() {
 		var (
@@ -736,17 +744,16 @@ func TestPerformTaskCreatesSaleAgingNotifications(t *testing.T) {
 			continue
 		}
 		var (
-			refID = n.NotifierData.(repo.SaleAgingNotification).OrderID
+			refID     = n.NotifierData.(repo.VendorDisputeTimeout).OrderID
+			expiresIn = n.NotifierData.(repo.VendorDisputeTimeout).ExpiresIn
 		)
-		if refID == neverNotified.OrderID {
-			if n.NotifierType == repo.NotifierTypeSaleAgedFourtyFiveDays {
-				checkNeverNotifiedSale_FourtyFiveDay = true
-				continue
-			}
+		if refID == neverNotified.OrderID && expiresIn == firstInterval_ExpectedExpiresIn {
+			checkNeverNotifiedSale_LastNotificationSeen = true
+			continue
 		}
 	}
 
-	if checkNeverNotifiedSale_FourtyFiveDay != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedSale_FourtyFiveDay")
+	if checkNeverNotifiedSale_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedSale_LastNotificationSeen")
 	}
 }

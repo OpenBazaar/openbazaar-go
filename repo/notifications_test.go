@@ -101,9 +101,9 @@ func TestNotificationMarshalling(t *testing.T) {
 			Type:    repo.NotifierTypeRefundNotification,
 			OrderId: repo.NewNotificationID(),
 		},
-		repo.SaleAgingNotification{
+		repo.VendorDisputeTimeout{
 			ID:      "saleAgingID",
-			Type:    repo.NotifierTypeSaleAgedFourtyFiveDays,
+			Type:    repo.NotifierTypeVendorDisputeTimeout,
 			OrderID: repo.NewNotificationID(),
 		},
 		repo.UnfollowNotification{
@@ -263,9 +263,9 @@ func TestLegacyNotificationMarshalling(t *testing.T) {
 }
 
 func TestNotificationSatisfiesNotifierInterface(t *testing.T) {
-	notifier := repo.SaleAgingNotification{
+	notifier := repo.VendorDisputeTimeout{
 		ID:      "saleAgingID",
-		Type:    repo.NotifierTypeSaleAgedFourtyFiveDays,
+		Type:    repo.NotifierTypeVendorDisputeTimeout,
 		OrderID: repo.NewNotificationID(),
 	}
 	var _ repo.Notifier = repo.NewNotification(notifier, time.Now(), false)
