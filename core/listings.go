@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ListingVersion           = 2
+	ListingVersion           = 3
 	TitleMaxCharacters       = 140
 	ShortDescriptionLength   = 160
 	DescriptionMaxCharacters = 50000
