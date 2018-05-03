@@ -33,30 +33,85 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 			CaseID:         "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(twelveHours),
+			BuyerContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "never-buyer-tinyimagehash", Small: "never-buyer-smallimagehash"}}}},
+				},
+			},
+			VendorContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			IsBuyerInitiated: true,
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFifteenDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
+			BuyerContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			VendorContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fifteen-vendor-tinyimagehash", Small: "fifteen-vendor-smallimagehash"}}}},
+				},
+			},
+			IsBuyerInitiated: false,
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
+			BuyerContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourty-buyer-tinyimagehash", Small: "fourty-buyer-smallimagehash"}}}},
+				},
+			},
+			VendorContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			IsBuyerInitiated: true,
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyFourDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
+			BuyerContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			VendorContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourtyfour-vendor-tinyimagehash", Small: "fourtyfour-vendor-smallimagehash"}}}},
+				},
+			},
+			IsBuyerInitiated: false,
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyFiveDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+			BuyerContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			VendorContract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
+			IsBuyerInitiated: false,
 		}
 		existingRecords = []*repo.DisputeCaseRecord{
 			neverNotified,
@@ -84,12 +139,31 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := database.Prepare("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?)")
+	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt) values (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		_, err := s.Exec(r.CaseID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		var isBuyerInitiated int = 0
+		if r.IsBuyerInitiated {
+			isBuyerInitiated = 1
+		}
+		buyerContractData, err := m.MarshalToString(r.BuyerContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		vendorContractData, err := m.MarshalToString(r.VendorContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = s.Exec(r.CaseID, buyerContractData, vendorContractData, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -187,10 +261,18 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 
 	for _, n := range actualNotifications {
 		var (
+			contract  = &pb.RicardianContract{}
+			thumbnail = n.NotifierData.(repo.ModeratorDisputeExpiry).Thumbnail
 			refID     = n.NotifierData.(repo.ModeratorDisputeExpiry).CaseID
 			expiresIn = n.NotifierData.(repo.ModeratorDisputeExpiry).ExpiresIn
 		)
 		if refID == neverNotified.CaseID {
+			if neverNotified.IsBuyerInitiated {
+				contract = neverNotified.BuyerContract
+			} else {
+				contract = neverNotified.VendorContract
+			}
+			assertThumbnailValuesAreSet(t, thumbnail, contract)
 			if expiresIn == firstInterval_ExpectedExpiresIn {
 				checkNeverNotified_FifteenDay = true
 				continue
@@ -209,6 +291,12 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFifteenDay.CaseID {
+			if notifiedUpToFifteenDay.IsBuyerInitiated {
+				contract = notifiedUpToFifteenDay.BuyerContract
+			} else {
+				contract = notifiedUpToFifteenDay.VendorContract
+			}
+			assertThumbnailValuesAreSet(t, thumbnail, contract)
 			if expiresIn == secondInterval_ExpectedExpiresIn {
 				checkNotifiedToFifteenDays_FourtyDay = true
 				continue
@@ -223,6 +311,12 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyDays.CaseID {
+			if notifiedUpToFourtyDays.IsBuyerInitiated {
+				contract = notifiedUpToFourtyDays.BuyerContract
+			} else {
+				contract = notifiedUpToFourtyDays.VendorContract
+			}
+			assertThumbnailValuesAreSet(t, thumbnail, contract)
 			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkNotifiedToFourtyDays_FourtyFourDay = true
 				continue
@@ -233,6 +327,12 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyFourDays.CaseID && expiresIn == lastInterval_ExpectedExpiresIn {
+			if notifiedUpToFourtyFourDays.IsBuyerInitiated {
+				contract = notifiedUpToFourtyFourDays.BuyerContract
+			} else {
+				contract = notifiedUpToFourtyFourDays.VendorContract
+			}
+			assertThumbnailValuesAreSet(t, thumbnail, contract)
 			checkNotifiedToFourtyFourDays_FourtyFiveDay = true
 		}
 	}

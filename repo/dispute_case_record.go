@@ -51,6 +51,22 @@ func (r *DisputeCaseRecord) buildModeratorDisputeExpiry(interval time.Duration, 
 		Type:      NotifierTypeModeratorDisputeExpiry,
 		CaseID:    r.CaseID,
 		ExpiresIn: uint(timeRemaining.Seconds()),
+		Thumbnail: Thumbnail{},
+	}
+	if r.IsBuyerInitiated {
+		if len(r.BuyerContract.VendorListings) > 0 && len(r.BuyerContract.VendorListings[0].Item.Images) > 0 {
+			notification.Thumbnail = Thumbnail{
+				Tiny:  r.BuyerContract.VendorListings[0].Item.Images[0].Tiny,
+				Small: r.BuyerContract.VendorListings[0].Item.Images[0].Small,
+			}
+		}
+	} else {
+		if len(r.VendorContract.VendorListings) > 0 && len(r.VendorContract.VendorListings[0].Item.Images) > 0 {
+			notification.Thumbnail = Thumbnail{
+				Tiny:  r.VendorContract.VendorListings[0].Item.Images[0].Tiny,
+				Small: r.VendorContract.VendorListings[0].Item.Images[0].Small,
+			}
+		}
 	}
 	return NewNotification(notification, createdAt, false)
 }

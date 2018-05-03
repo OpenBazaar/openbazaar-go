@@ -834,6 +834,7 @@ type ModeratorDisputeExpiry struct {
 	Type      NotificationType `json:"type"`
 	CaseID    string           `json:"disputeCaseId"`
 	ExpiresIn uint             `json:"expiresIn"`
+	Thumbnail Thumbnail        `json:"thumbnail"`
 }
 
 func (n ModeratorDisputeExpiry) Data() ([]byte, error) {

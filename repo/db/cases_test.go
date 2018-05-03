@@ -613,7 +613,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 	}
 
 	casesdb := NewCaseStore(database, new(sync.Mutex))
-	cases, err := casesdb.GetDisputesForDisputeExpiryNotifications()
+	cases, err := casesdb.GetDisputesForDisputeExpiryNotification()
 	if err != nil {
 		t.Fatal(err)
 	}
