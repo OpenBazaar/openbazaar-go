@@ -492,7 +492,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 
 	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
-	purchases, err := purchaseDatabase.GetPurchasesForDisputeTimeout()
+	purchases, err := purchaseDatabase.GetPurchasesForDisputeTimeoutNotification()
 	if err != nil {
 		t.Fatal(err)
 	}

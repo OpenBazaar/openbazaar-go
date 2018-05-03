@@ -322,9 +322,9 @@ func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
 	return nil
 }
 
-// GetSalesForDisputeTimeout returns []*SaleRecord including
+// GetSalesForDisputeTimeoutNotification returns []*SaleRecord including
 // each record which needs Notifications to be generated.
-func (s *SalesDB) GetSalesForDisputeTimeout() ([]*repo.SaleRecord, error) {
+func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

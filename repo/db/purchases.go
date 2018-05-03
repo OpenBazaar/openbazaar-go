@@ -278,9 +278,9 @@ func (p *PurchasesDB) Count() int {
 	return count
 }
 
-// GetPurchasesForDisputeTimeout returns []*PurchaseRecord including
+// GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
 // each record which needs Notifications to be generated.
-func (p *PurchasesDB) GetPurchasesForDisputeTimeout() ([]*repo.PurchaseRecord, error) {
+func (p *PurchasesDB) GetPurchasesForDisputeTimeoutNotification() ([]*repo.PurchaseRecord, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 

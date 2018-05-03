@@ -208,9 +208,9 @@ type PurchaseStore interface {
 	// Return the number of purchases in the database
 	Count() int
 
-	// GetPurchasesForDisputeTimeout returns []*PurchaseRecord including
+	// GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
 	// each record which needs Notifications to be generated.
-	GetPurchasesForDisputeTimeout() ([]*PurchaseRecord, error)
+	GetPurchasesForDisputeTimeoutNotification() ([]*PurchaseRecord, error)
 
 	// UpdatePurchasesLastNotifiedAt  accepts []*PurchaseRecord and updates each records lastNotifiedAt by its CaseID
 	UpdatePurchasesLastNotifiedAt([]*PurchaseRecord) error
@@ -252,9 +252,9 @@ type SaleStore interface {
 	// Return the number of sales in the database
 	Count() int
 
-	// GetSalesForDisputeTimeout returns []*SaleRecord including
+	// GetSalesForDisputeTimeoutNotification returns []*SaleRecord including
 	// each record which needs Notifications to be generated.
-	GetSalesForDisputeTimeout() ([]*SaleRecord, error)
+	GetSalesForDisputeTimeoutNotification() ([]*SaleRecord, error)
 
 	// UpdateSalesLastNotifiedAt  accepts []*SaleRecord and updates each records lastNotifiedAt by its CaseID
 	UpdateSalesLastNotifiedAt([]*SaleRecord) error
@@ -296,9 +296,9 @@ type CaseStore interface {
 	// Return the number of cases in the database
 	Count() int
 
-	// GetDisputesForNotification returns []*DisputeCaseRecord including
+	// GetDisputesForDisputeExpiryNotifications returns []*DisputeCaseRecord including
 	// each record which needs Notifications to be generated.
-	GetDisputesForNotification() ([]*DisputeCaseRecord, error)
+	GetDisputesForDisputeExpiryNotifications() ([]*DisputeCaseRecord, error)
 
 	// UpdateDisputesLastNotifiedAt accepts []*DisputeCaseRecord and updates each records lastNotifiedAt by its CaseID
 	UpdateDisputesLastNotifiedAt([]*DisputeCaseRecord) error

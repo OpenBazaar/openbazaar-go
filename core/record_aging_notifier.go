@@ -72,7 +72,7 @@ func (notifier *recordAgingNotifier) PerformTask() {
 }
 
 func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error {
-	sales, err := notifier.datastore.Sales().GetSalesForDisputeTimeout()
+	sales, err := notifier.datastore.Sales().GetSalesForDisputeTimeoutNotification()
 	if err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 }
 
 func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() error {
-	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeTimeout()
+	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeTimeoutNotification()
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 }
 
 func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
-	disputes, err := notifier.datastore.Cases().GetDisputesForNotification()
+	disputes, err := notifier.datastore.Cases().GetDisputesForDisputeExpiryNotifications()
 	if err != nil {
 		return err
 	}

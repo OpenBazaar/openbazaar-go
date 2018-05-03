@@ -535,7 +535,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 
 	saleDatabase := NewSaleStore(database, new(sync.Mutex))
-	sales, err := saleDatabase.GetSalesForDisputeTimeout()
+	sales, err := saleDatabase.GetSalesForDisputeTimeoutNotification()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -437,10 +437,10 @@ func (c *CasesDB) Count() int {
 	return count
 }
 
-// GetDisputesForNotification returns []*repo.DisputeCaseRecord including
+// GetDisputesForDisputeExpiryNotifications returns []*repo.DisputeCaseRecord including
 // each record which needs Notifications to be generated. Currently,
 // notifications are generated at 0, 15, 30, 44, and 45 days after opening.
-func (c *CasesDB) GetDisputesForNotification() ([]*repo.DisputeCaseRecord, error) {
+func (c *CasesDB) GetDisputesForDisputeExpiryNotifications() ([]*repo.DisputeCaseRecord, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
