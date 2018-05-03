@@ -2,6 +2,8 @@ package repo
 
 import (
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -14,9 +16,12 @@ var (
 // DisputeCaseRecord is a one-to-one relationship with records in the
 // SQL datastore
 type DisputeCaseRecord struct {
-	CaseID         string
-	Timestamp      time.Time
-	LastNotifiedAt time.Time
+	CaseID           string
+	Timestamp        time.Time
+	LastNotifiedAt   time.Time
+	BuyerContract    *pb.RicardianContract
+	VendorContract   *pb.RicardianContract
+	IsBuyerInitiated bool
 }
 
 // BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval

@@ -66,8 +66,8 @@ func (notifier *recordAgingNotifier) PerformTask() {
 	if err := notifier.generateBuyerDisputeTimeoutNotifications(); err != nil {
 		notifier.logger.Errorf("generateBuyerDisputeTimeoutNotifications failed: %s", err)
 	}
-	if err := notifier.generateModeratorNotifications(); err != nil {
-		notifier.logger.Errorf("generateModeratorNotifications failed: %s", err)
+	if err := notifier.generateModeratorDisputeExpiryNotifications(); err != nil {
+		notifier.logger.Errorf("generateModeratorDisputeExpiryNotifications failed: %s", err)
 	}
 }
 
@@ -202,8 +202,8 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 	return nil
 }
 
-func (notifier *recordAgingNotifier) generateModeratorNotifications() error {
-	disputes, err := notifier.datastore.Cases().GetDisputesForDisputeExpiryNotifications()
+func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications() error {
+	disputes, err := notifier.datastore.Cases().GetDisputesForDisputeExpiryNotification()
 	if err != nil {
 		return err
 	}

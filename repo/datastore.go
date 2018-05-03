@@ -296,9 +296,9 @@ type CaseStore interface {
 	// Return the number of cases in the database
 	Count() int
 
-	// GetDisputesForDisputeExpiryNotifications returns []*DisputeCaseRecord including
+	// GetDisputesForDisputeExpiryNotification returns []*DisputeCaseRecord including
 	// each record which needs Notifications to be generated.
-	GetDisputesForDisputeExpiryNotifications() ([]*DisputeCaseRecord, error)
+	GetDisputesForDisputeExpiryNotification() ([]*DisputeCaseRecord, error)
 
 	// UpdateDisputesLastNotifiedAt accepts []*DisputeCaseRecord and updates each records lastNotifiedAt by its CaseID
 	UpdateDisputesLastNotifiedAt([]*DisputeCaseRecord) error

@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"database/sql"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -527,30 +529,84 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Artificially start disputes 50 days ago
-	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
-	neverNotified := &repo.DisputeCaseRecord{
-		CaseID:         "neverNotified",
-		Timestamp:      timeStart,
-		LastNotifiedAt: time.Unix(0, 0),
-	}
-	initialNotified := &repo.DisputeCaseRecord{
-		CaseID:         "initialNotificationSent",
-		Timestamp:      timeStart,
-		LastNotifiedAt: timeStart,
-	}
-	finallyNotified := &repo.DisputeCaseRecord{
-		CaseID:         "finalNotificationSent",
-		Timestamp:      timeStart,
-		LastNotifiedAt: time.Now(),
-	}
-	existingRecords := []*repo.DisputeCaseRecord{
-		neverNotified,
-		initialNotified,
-		finallyNotified,
-	}
+	var (
+		now        = time.Unix(time.Now().Unix(), 0)
+		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
+		nowData, _ = ptypes.TimestampProto(now)
+		order      = &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: "buyerID",
+				Handle: "@buyerID",
+			},
+			Shipping: &pb.Order_Shipping{
+				Address: "1234 Test Ave",
+				ShipTo:  "Buyer Name",
+			},
+			Payment: &pb.Order_Payment{
+				Amount:  10,
+				Method:  pb.Order_Payment_DIRECT,
+				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+			},
+			Timestamp: nowData,
+		}
+		expectedImagesOne = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		contract          = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
+			},
+			BuyerOrder: order,
+		}
+		neverNotified = &repo.DisputeCaseRecord{
+			CaseID:           "neverNotified",
+			Timestamp:        timeStart,
+			LastNotifiedAt:   time.Unix(0, 0),
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+		}
+		initialNotified = &repo.DisputeCaseRecord{
+			CaseID:           "initialNotificationSent",
+			Timestamp:        timeStart,
+			LastNotifiedAt:   timeStart,
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+		}
+		finallyNotified = &repo.DisputeCaseRecord{
+			CaseID:           "finalNotificationSent",
+			Timestamp:        timeStart,
+			LastNotifiedAt:   time.Now(),
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+		}
+		existingRecords = []*repo.DisputeCaseRecord{
+			neverNotified,
+			initialNotified,
+			finallyNotified,
+		}
+	)
 
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		_, err := database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", r.CaseID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		var isBuyerInitiated int = 0
+		if r.IsBuyerInitiated {
+			isBuyerInitiated = 1
+		}
+		buyerContract, err := m.MarshalToString(r.BuyerContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		vendorContract, err := m.MarshalToString(r.VendorContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -567,8 +623,18 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		switch c.CaseID {
 		case neverNotified.CaseID:
 			sawNeverNotifiedCase = true
+			if reflect.DeepEqual(c, neverNotified) != true {
+				t.Error("Expected neverNotified to match, but did not")
+				t.Error("Expected:", neverNotified)
+				t.Error("Actual:", c)
+			}
 		case initialNotified.CaseID:
 			sawInitialNotifiedCase = true
+			if reflect.DeepEqual(c, initialNotified) != true {
+				t.Error("Expected initialNotified to match, but did not")
+				t.Error("Expected:", initialNotified)
+				t.Error("Actual:", c)
+			}
 		case finallyNotified.CaseID:
 			sawFinallyNotifiedCase = true
 		default:

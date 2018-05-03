@@ -437,28 +437,42 @@ func (c *CasesDB) Count() int {
 	return count
 }
 
-// GetDisputesForDisputeExpiryNotifications returns []*repo.DisputeCaseRecord including
+// GetDisputesForDisputeExpiryNotification returns []*repo.DisputeCaseRecord including
 // each record which needs Notifications to be generated. Currently,
 // notifications are generated at 0, 15, 30, 44, and 45 days after opening.
-func (c *CasesDB) GetDisputesForDisputeExpiryNotifications() ([]*repo.DisputeCaseRecord, error) {
+func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCaseRecord, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	fourtyFiveDays := time.Duration(45*24) * time.Hour
-	rows, err := c.db.Query("select caseID, timestamp, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
 	if err != nil {
 		return nil, fmt.Errorf("selecting dispute case: %s", err.Error())
 	}
 	result := make([]*repo.DisputeCaseRecord, 0)
 	for rows.Next() {
 		var (
-			lastNotifiedAt int64
+			lastNotifiedAt                int64
+			isBuyerInitiated              int
+			buyerContract, vendorContract []byte
 
-			r         = &repo.DisputeCaseRecord{}
+			r = &repo.DisputeCaseRecord{
+				BuyerContract:  &pb.RicardianContract{},
+				VendorContract: &pb.RicardianContract{},
+			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.CaseID, &timestamp, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(buyerContract), r.BuyerContract); err != nil {
+			return nil, fmt.Errorf("unmarshaling buyer contract: %s\n", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(vendorContract), r.VendorContract); err != nil {
+			return nil, fmt.Errorf("unmarshaling vendor contract: %s\n", err.Error())
+		}
+		if isBuyerInitiated != 0 {
+			r.IsBuyerInitiated = true
 		}
 		if timestamp.Valid {
 			r.Timestamp = time.Unix(timestamp.Int64, 0)
