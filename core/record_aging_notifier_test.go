@@ -491,9 +491,10 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		var (
 			refID     = n.NotifierData.(repo.BuyerDisputeTimeout).OrderID
 			expiresIn = n.NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn
+			thumbnail = n.NotifierData.(repo.BuyerDisputeTimeout).Thumbnail
 		)
 		if refID == neverNotified.OrderID {
-			assertThumbnailValuesAreSet(t, n, neverNotified)
+			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
 			if expiresIn == firstInterval_ExpectedExpiresIn {
 				checkNeverNotifiedPurchase_FirstNotificationSeen = true
 				continue
@@ -512,7 +513,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
-			assertThumbnailValuesAreSet(t, n, notifiedUpToFifteenDay)
+			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFifteenDay.Contract)
 			if expiresIn == secondInterval_ExpectedExpiresIn {
 				checkFifteenDayPurchase_SecondNotificationSeen = true
 				continue
@@ -527,7 +528,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
-			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyDay)
+			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyDay.Contract)
 			if expiresIn == thirdInterval_ExpectedExpiresIn {
 				checkFourtyDayPurchase_ThirdNotificationSeen = true
 				continue
@@ -538,7 +539,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			}
 		}
 		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastInterval_ExpectedExpiresIn {
-			assertThumbnailValuesAreSet(t, n, notifiedUpToFourtyFourDays)
+			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyFourDays.Contract)
 			checkFourtyFourDayPurchase_LastNotificationSeen = true
 		}
 	}
@@ -575,25 +576,6 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 }
 
-func assertThumbnailValuesAreSet(t *testing.T, n *repo.Notification, r *repo.PurchaseRecord) {
-	var (
-		actualTinyThumbnail    = n.NotifierData.(repo.BuyerDisputeTimeout).Thumbnail.Tiny
-		actualSmallThumbnail   = n.NotifierData.(repo.BuyerDisputeTimeout).Thumbnail.Small
-		expectedTinyThumbnail  = r.Contract.VendorListings[0].Item.Images[0].Tiny
-		expectedSmallThumbnail = r.Contract.VendorListings[0].Item.Images[0].Small
-	)
-	if expectedTinyThumbnail != actualTinyThumbnail {
-		t.Error("Expected notification to include the tiny thumbnail")
-		t.Error("Actual:", actualTinyThumbnail, "Expected:", expectedTinyThumbnail)
-		t.Errorf("Notification: %+v\n", n)
-	}
-	if expectedSmallThumbnail != actualSmallThumbnail {
-		t.Error("Expected notification to include the small thumbnail")
-		t.Error("Actual:", actualSmallThumbnail, "Expected:", expectedSmallThumbnail)
-		t.Errorf("Notification: %+v\n", n)
-	}
-}
-
 // SALES
 func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
@@ -607,12 +589,22 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces notification for 45 days
 		neverNotified = &repo.SaleRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "sale-never-tinyimagehashOne", Small: "sale-never-smallimagehashOne"}}}},
+				},
+			},
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.SaleRecord{
+			Contract: &pb.RicardianContract{
+				VendorListings: []*pb.Listing{
+					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
+				},
+			},
 			OrderID:        "notifiedUpToFourtyFiveDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
@@ -640,8 +632,18 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
 	for _, r := range existingRecords {
-		_, err := database.Exec("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?)", r.OrderID, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = database.Exec("insert into sales (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?)", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -746,8 +748,10 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		var (
 			refID     = n.NotifierData.(repo.VendorDisputeTimeout).OrderID
 			expiresIn = n.NotifierData.(repo.VendorDisputeTimeout).ExpiresIn
+			thumbnail = n.NotifierData.(repo.VendorDisputeTimeout).Thumbnail
 		)
 		if refID == neverNotified.OrderID && expiresIn == firstInterval_ExpectedExpiresIn {
+			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
 			checkNeverNotifiedSale_LastNotificationSeen = true
 			continue
 		}
@@ -756,4 +760,28 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	if checkNeverNotifiedSale_LastNotificationSeen != true {
 		t.Errorf("Expected notification missing: checkNeverNotifiedSale_LastNotificationSeen")
 	}
+}
+
+func assertThumbnailValuesAreSet(t *testing.T, actualThumbnails repo.Thumbnail, contract *pb.RicardianContract) {
+	if len(contract.VendorListings) == 0 {
+		t.Error("Expected contract to have VendorListings but was empty. Unable to assert Thumbnail values.")
+		return
+	}
+	if len(contract.VendorListings[0].Item.Images) == 0 {
+		t.Error("Expected contract to have Item Images but was empty. Unable to assert Thumbnail values.")
+		return
+	}
+	var (
+		expectedTinyThumbnail  = contract.VendorListings[0].Item.Images[0].Tiny
+		expectedSmallThumbnail = contract.VendorListings[0].Item.Images[0].Small
+	)
+	if expectedTinyThumbnail != actualThumbnails.Tiny {
+		t.Error("Expected notification to include the tiny thumbnail")
+		t.Error("Actual:", actualThumbnails.Tiny, "Expected:", expectedTinyThumbnail)
+	}
+	if expectedSmallThumbnail != actualThumbnails.Small {
+		t.Error("Expected notification to include the small thumbnail")
+		t.Error("Actual:", actualThumbnails.Small, "Expected:", expectedSmallThumbnail)
+	}
+	t.Logf("Contract: %+v\n", contract)
 }

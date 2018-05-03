@@ -24,9 +24,16 @@ type SaleRecord struct {
 func (r *SaleRecord) BuildVendorDisputeTimeoutLastNotification(createdAt time.Time) *Notification {
 	notification := &VendorDisputeTimeout{
 		ID:        NewNotificationID(),
-		Type:      NotifierTypeVendorDisputeTimeout,
-		OrderID:   r.OrderID,
 		ExpiresIn: uint(0),
+		OrderID:   r.OrderID,
+		Thumbnail: Thumbnail{},
+		Type:      NotifierTypeVendorDisputeTimeout,
+	}
+	if len(r.Contract.VendorListings) > 0 && len(r.Contract.VendorListings[0].Item.Images) > 0 {
+		notification.Thumbnail = Thumbnail{
+			Tiny:  r.Contract.VendorListings[0].Item.Images[0].Tiny,
+			Small: r.Contract.VendorListings[0].Item.Images[0].Small,
+		}
 	}
 	return NewNotification(notification, createdAt, false)
 }
