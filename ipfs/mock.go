@@ -2,11 +2,6 @@ package ipfs
 
 import (
 	"context"
-	commands "github.com/ipfs/go-ipfs/commands"
-	core "github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/repo"
-	config "github.com/ipfs/go-ipfs/repo/config"
-	ds2 "github.com/ipfs/go-ipfs/thirdparty/datastore2"
 	pstore "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	metrics "gx/ipfs/QmQbh3Rb7KM37As3vkHYnEFnzkVXNCP8EYGtHz6g2fXk14/go-libp2p-metrics"
 	"gx/ipfs/QmQq9YzmdFdWNTDdArueGyD7L5yyiRQigrRHJnTGkxcEjT/go-libp2p-interface-pnet"
@@ -18,6 +13,13 @@ import (
 	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
 	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
 	"net"
+
+	commands "github.com/ipfs/go-ipfs/commands"
+	core "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/repo"
+	config "github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/routing/none"
+	ds2 "github.com/ipfs/go-ipfs/thirdparty/datastore2"
 )
 
 // NewMockNode constructs an IpfsNode for use in tests.
@@ -26,8 +28,9 @@ func NewMockNode() (*core.IpfsNode, error) {
 
 	// Effectively offline, only peer in its network
 	return core.NewNode(ctx, &core.BuildCfg{
-		Online: true,
-		Host:   MockHostOption(mocknet.New(ctx)),
+		Online:  true,
+		Host:    MockHostOption(mocknet.New(ctx)),
+		Routing: nilrouting.ConstructNilRouting,
 	})
 }
 

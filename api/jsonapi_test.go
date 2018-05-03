@@ -151,13 +151,13 @@ func TestListings(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
 		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// TODO: Add support for improved JSON matching to since contracts
 		// change each test run due to signatures
@@ -333,14 +333,6 @@ func TestConfig(t *testing.T) {
 	runAPITests(t, apiTests{
 		// TODO: Need better JSON matching
 		{"GET", "/ob/config", "", 200, anyResponseJSON},
-	})
-}
-
-func TestPeers(t *testing.T) {
-	// Follow, Unfollow
-	runAPITests(t, apiTests{
-		{"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 500, peerNotFoundInTableJSON},
-		// {"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 200, `{}`},
 	})
 }
 

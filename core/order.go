@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
@@ -234,8 +235,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				errStr := extractErrorMessage(resp)
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
+				return "", "", 0, false, extractErrorMessage(resp)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -385,8 +385,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				errStr := extractErrorMessage(resp)
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
+				return "", "", 0, false, extractErrorMessage(resp)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -434,13 +433,19 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 }
 
-func extractErrorMessage(m *pb.Message) string {
+func extractErrorMessage(m *pb.Message) error {
 	errMsg := new(pb.Error)
 	err := ptypes.UnmarshalAny(m.Payload, errMsg)
 	if err == nil {
-		return errMsg.ErrorMessage
+		// if the server sends back JSON don't format it
+		var jsonObj map[string]interface{}
+		if json.Unmarshal([]byte(errMsg.ErrorMessage), &jsonObj) == nil {
+			return errors.New(errMsg.ErrorMessage)
+		}
+
+		return fmt.Errorf("Vendor rejected order, reason: %s", errMsg.ErrorMessage)
 	} else { // For backwards compatibility check for a string payload
-		return string(m.Payload.Value)
+		return errors.New(string(m.Payload.Value))
 	}
 }
 
@@ -982,7 +987,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
-			} else if is[0].version == 2 {
+			} else if is[0].version >= 2 {
 				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else {
 				return 0, errors.New("Unknown listing version")
@@ -1273,7 +1278,7 @@ collectListings:
 				return errors.New("Vendor has no inventory for the selected variant.")
 			}
 			if amt >= 0 && amt < inv.Count {
-				return fmt.Errorf("Not enough inventory for item %s:%d, only %d in stock", inv.Slug, inv.Variant, amt)
+				return NewErrOutOfInventory(amt)
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -24,6 +25,39 @@ var (
 	ErrFulfillCryptocurrencyTXIDNotFound = errors.New("A transactionID is required to fulfill crypto listings")
 	ErrFulfillCryptocurrencyTXIDTooLong  = errors.New("transactionID should be no longer than " + strconv.Itoa(MaxTXIDSize))
 )
+
+// CodedError is an error that is machine readable
+type CodedError struct {
+	Reason string `json:"reason,omitempty"`
+	Code   string `json:"code,omitempty"`
+}
+
+func (err CodedError) Error() string {
+	jsonBytes, _ := json.Marshal(&err)
+	return string(jsonBytes)
+}
+
+// ErrOutOfInventory is a codedError returned from vendor nodes when buyers try
+// purchasing too many of an item
+type ErrOutOfInventory struct {
+	CodedError
+	RemainingInventory int `json:"remainingInventory"`
+}
+
+func NewErrOutOfInventory(inventoryRemaining int) ErrOutOfInventory {
+	return ErrOutOfInventory{
+		CodedError: CodedError{
+			Reason: "not enough inventory",
+			Code:   "ERR_INSUFFICIENT_INVENTORY",
+		},
+		RemainingInventory: inventoryRemaining,
+	}
+}
+
+func (err ErrOutOfInventory) Error() string {
+	jsonBytes, _ := json.Marshal(&err)
+	return string(jsonBytes)
+}
 
 type ErrCryptocurrencyListingIllegalField string
 
