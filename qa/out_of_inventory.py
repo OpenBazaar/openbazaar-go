@@ -82,27 +82,27 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase post endpoint not found")
+            raise TestFailure("OutOfInventoryTest - FAIL: Purchase post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("OutOfInventoryTest - FAIL: Purchase POST failed. Reason: %s", resp["reason"])
         resp = json.loads(r.text)
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
         if resp["vendorOnline"] == True:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Purchase returned vendor is online")
+            raise TestFailure("OutOfInventoryTest - FAIL: Purchase returned vendor is online")
 
         # check the purchase saved correctly
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("OutOfInventoryTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "AWAITING_PAYMENT":
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob purchase saved in incorrect state")
         if resp["funded"] == True:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as funded")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob incorrectly saved as funded")
 
         # fund order
         spend = {
@@ -113,24 +113,24 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "wallet/spend"
         r = requests.post(api_url, data=json.dumps(spend, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Spend post endpoint not found")
+            raise TestFailure("OutOfInventoryTest - FAIL: Spend post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("OutOfInventoryTest - FAIL: Spend POST failed. Reason: %s", resp["reason"])
         time.sleep(20)
 
         # check bob detected payment
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("OutOfInventoryTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if len(resp["paymentAddressTransactions"]) <= 0:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob failed to detect his payment")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob failed to detect his payment")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob incorrectly saved as unfunded")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob incorrectly saved as unfunded")
         if resp["state"] != "PENDING":
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Bob purchase saved in incorrect state")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob purchase saved in incorrect state")
 
         # generate one more block containing this tx
         self.send_bitcoin_cmd("generate", 1)
@@ -143,12 +143,12 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("OutOfInventoryTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "PENDING":
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice failed to detect payment")
+            raise TestFailure("OutOfInventoryTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice incorrectly saved as unfunded")
+            raise TestFailure("OutOfInventoryTest - FAIL: Alice incorrectly saved as unfunded")
 
         # check alice balance is zero
         api_url = alice["gateway_url"] + "wallet/balance"
@@ -158,9 +158,9 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             unconfirmed = int(resp["unconfirmed"])
             if confirmed + unconfirmed > 0:
-                raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice should have zero balance at this point")
+                raise TestFailure("OutOfInventoryTest - FAIL: Alice should have zero balance at this point")
         else:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Failed to query Alice's balance")
+            raise TestFailure("OutOfInventoryTest - FAIL: Failed to query Alice's balance")
         time.sleep(1)
 
         # alice confirm offline order
@@ -171,10 +171,10 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         }
         r = requests.post(api_url, data=json.dumps(oc, indent=4))
         if r.status_code == 404:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Order confirmation post endpoint not found")
+            raise TestFailure("OutOfInventoryTest - FAIL: Order confirmation post endpoint not found")
         elif r.status_code != 200:
             resp = json.loads(r.text)
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: order confirmation POST failed. Reason: %s", resp["reason"])
+            raise TestFailure("OutOfInventoryTest - FAIL: order confirmation POST failed. Reason: %s", resp["reason"])
         time.sleep(10)
 
         self.send_bitcoin_cmd("generate", 1)
@@ -188,9 +188,9 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
             confirmed = int(resp["confirmed"])
             # unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
-                raise TestFailure("PurchaseDirectOfflineTest - FAIL: Alice failed to receive the multisig payout")
+                raise TestFailure("OutOfInventoryTest - FAIL: Alice failed to receive the multisig payout")
         else:
-            raise TestFailure("PurchaseDirectOfflineTest - FAIL: Failed to query Alice's balance")
+            raise TestFailure("OutOfInventoryTest - FAIL: Failed to query Alice's balance")
 
         # check bob detected order confirmation and outgoing transaction
         api_url = bob["gateway_url"] + "ob/order/" + orderId
