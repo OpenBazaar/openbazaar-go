@@ -295,7 +295,12 @@ func (l *TransactionListener) adjustInventory(contract *pb.RicardianContract) {
 		if err != nil {
 			continue
 		}
-		q := int(item.Quantity)
+		var q int64
+		if listing.Metadata.Version < 3 {
+			q = int64(item.Quantity)
+		} else {
+			q = int64(item.Quantity64)
+		}
 		newCount := c - q
 		if c < 0 {
 			newCount = -1
