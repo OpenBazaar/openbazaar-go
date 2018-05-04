@@ -38,7 +38,7 @@ func stringToBytes(s string) ([]byte, error) {
 		}
 
 		if p.Path {
-			// it's a path protocol (terminal).
+			// it's a path protocol (terminal).
 			// consume the rest of the address as the next component.
 			sp = []string{"/" + strings.Join(sp, "/")}
 		}
@@ -146,6 +146,8 @@ func sizeForAddr(p Protocol, b []byte) (int, error) {
 			return 0, err
 		}
 		return size + n, nil
+	case p.Code == P_IPFS:
+		return len(b), nil
 	default:
 		size, n, err := ReadVarintCode(b)
 		if err != nil {
