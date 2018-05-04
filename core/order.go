@@ -585,7 +585,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			return nil, err
 		}
 		i.ListingHash = listingID.String()
-		i.Quantity = uint32(item.Quantity)
+		i.Quantity = uint64(item.Quantity)
 
 		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			i.Memo = item.Memo
@@ -797,7 +797,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		var (
 			satoshis     uint64
 			itemTotal    uint64
-			itemQuantity uint32 = item.Quantity
+			itemQuantity uint64 = item.Quantity
 		)
 
 		l, err := ParseContractForListing(item.ListingHash, contract)
@@ -893,7 +893,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	type itemShipping struct {
 		primary               uint64
 		secondary             uint64
-		quantity              uint32
+		quantity              uint64
 		shippingTaxPercentage float32
 		version               uint32
 	}
@@ -1030,7 +1030,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 	return uint64(satoshis), nil
 }
 
-func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint32) (uint64, error) {
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint64) (uint64, error) {
 	if n.ExchangeRates == nil {
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}

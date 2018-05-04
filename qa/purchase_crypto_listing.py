@@ -54,8 +54,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 350000000:
-            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
+        if resp["ark"]["inventory"] != 6000000000000:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ark"]["inventory"])
 
         # get listing hash
         api_url = vendor["gateway_url"] + "ipns/" + vendor["peerId"] + "/listings.json"
@@ -63,8 +63,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't get listing index")
         resp = json.loads(r.text)
-        if resp[0]["coinType"] != "ETH":
-            raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json without a coinType")
+        if resp[0]["coinType"] != "ARK":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved listings.json with incorrect coinType")
         listingId = resp[0]["hash"]
 
         # buyer send order
@@ -95,7 +95,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ARK":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -110,7 +110,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor purchase saved in incorrect state")
         if resp["funded"] == True:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved as funded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ARK":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
@@ -140,7 +140,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer failed to detect his payment")
         if resp["funded"] == False:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved as unfunded")
-        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ETH":
+        if resp["contract"]["vendorListings"][0]["metadata"]["coinType"] != "ARK":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Buyer incorrectly saved without a paymentAddress")
@@ -184,8 +184,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory get endpoint failed")
-        if resp["ether"]["inventory"] != 250000000:
-            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
+        if resp["ark"]["inventory"] != 5500000000000:
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ark"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")
 

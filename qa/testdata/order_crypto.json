@@ -2,7 +2,7 @@
     "moderator": "",
     "items": [{
         "listingHash": "",
-        "quantity": 100000000,
+        "quantity": 500000000000,
         "paymentAddress": "crypto_payment_address"
     }]
 }
