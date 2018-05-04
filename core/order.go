@@ -812,11 +812,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		}
 
 		// Continue using the old 32-bit quantity field for all listings less than version 3
-		if l.Metadata.Version < 3 {
-			itemQuantity = uint64(item.Quantity)
-		} else {
-			itemQuantity = item.Quantity64
-		}
+		itemQuantity = GetOrderQuantity(l, item)
 
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
@@ -1232,11 +1228,7 @@ collectListings:
 			return errors.New("Not all options were selected")
 		}
 		// Create inventory paths to check later
-		if listingMap[item.ListingHash].Metadata.Version < 3 {
-			inv.Count = int64(item.Quantity)
-		} else {
-			inv.Count = int64(item.Quantity64)
-		}
+		inv.Count = int64(GetOrderQuantity(listingMap[item.ListingHash], item))
 		inventoryList = append(inventoryList, inv)
 	}
 
@@ -1599,4 +1591,11 @@ func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {
 		}
 	}
 	return true
+}
+
+func GetOrderQuantity(l *pb.Listing, item *pb.Order_Item) uint64 {
+	if l.Metadata.Version < 3 {
+		return uint64(item.Quantity)
+	}
+	return item.Quantity64
 }
