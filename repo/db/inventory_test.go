@@ -93,10 +93,10 @@ func TestDeleteAllInventory(t *testing.T) {
 
 func TestGetAllInventory(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug1", i, i)
+		ivdb.Put("slug1", i, int64(i))
 	}
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug2", i, i)
+		ivdb.Put("slug2", i, int64(i))
 	}
 	inventory, err := ivdb.GetAll()
 	if err != nil {
@@ -115,7 +115,7 @@ func TestGetAllInventory(t *testing.T) {
 
 func TestGetInventory(t *testing.T) {
 	for i := 0; i < 100; i++ {
-		ivdb.Put("slug", i, i)
+		ivdb.Put("slug", i, int64(i))
 	}
 	inventory, err := ivdb.Get("slug")
 	if err != nil {
