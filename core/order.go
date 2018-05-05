@@ -626,7 +626,12 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			}
 		}
 
-		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
+		// Add shipping to physical listings, and include it for digital and service
+		// listings for legacy compatibility
+		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD ||
+			listing.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD ||
+			listing.Metadata.ContractType == pb.Listing_Metadata_SERVICE {
+
 			i.ShippingOption = &pb.Order_Item_ShippingOption{
 				Name:    item.Shipping.Name,
 				Service: item.Shipping.Service,
