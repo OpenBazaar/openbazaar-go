@@ -13,6 +13,7 @@ import (
 
 var log = logging.MustGetLogger("cmd")
 
+//Init struct
 type Init struct {
 	Password           string `short:"p" long:"password" description:"the encryption password if the database is to be encrypted"`
 	DataDir            string `short:"d" long:"datadir" description:"specify the data directory to be used"`
@@ -22,6 +23,7 @@ type Init struct {
 	WalletCreationDate string `short:"w" long:"walletcreationdate" description:"specify the date the seed was created. if omitted the wallet will sync from the oldest checkpoint."`
 }
 
+//Execute init command
 func (x *Init) Execute(args []string) error {
 	// Set repo path
 	repoPath, err := repo.GetRepoPath(x.Testnet)
@@ -55,9 +57,8 @@ func (x *Init) Execute(args []string) error {
 			}
 			fmt.Printf("OpenBazaar repo initialized at %s\n", repoPath)
 			return nil
-		} else {
-			return nil
 		}
+		return nil
 	} else if err != nil {
 		return err
 	}

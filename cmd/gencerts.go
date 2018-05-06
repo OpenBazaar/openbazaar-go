@@ -7,11 +7,13 @@ import (
 	"runtime"
 )
 
+//GenerateCertificates struct
 type GenerateCertificates struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet bool   `short:"t" long:"testnet" description:"config file is for testnet node"`
 }
 
+//Execute gencerts command
 func (x *GenerateCertificates) Execute(args []string) error {
 
 	// Set repo path

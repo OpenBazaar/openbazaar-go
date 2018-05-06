@@ -15,10 +15,12 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+//DecryptDatabase struct
 type DecryptDatabase struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 }
 
+//Execute decryptdatabase command
 func (x *DecryptDatabase) Execute(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
 
