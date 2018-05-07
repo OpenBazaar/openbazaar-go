@@ -9,15 +9,50 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
+func TestDataIsUnmarshalable(t *testing.T) {
+	for _, n := range createNotificationExmaples() {
+		var (
+			actual  = make(map[string]interface{})
+			err     error
+			payload []byte
+		)
+		if payload, err = n.Data(); err != nil {
+			t.Error(err)
+		}
+		if err = json.Unmarshal(payload, &actual); err != nil {
+			t.Errorf("failed unmarshaling '%s': %s\n", n.GetType(), err)
+			continue
+		}
+	}
+}
+
+func TestWebsocketDataIsUnmarshalable(t *testing.T) {
+	for _, n := range createNotificationExmaples() {
+		var (
+			actual  = make(map[string]interface{})
+			err     error
+			payload []byte
+		)
+		if payload, err = n.WebsocketData(); err != nil {
+			t.Error(err)
+		}
+		if err = json.Unmarshal(payload, &actual); err != nil {
+			t.Errorf("failed unmarshaling '%s': %s\n", n.GetType(), err)
+			continue
+		}
+		if _, ok := actual["notification"]; ok {
+			t.Errorf("Unexpected 'notification' JSON key in marshalled payload of %s", n.GetType())
+		}
+	}
+}
+
 // TestNotificationMarshalling ensures that the new Notification marshal format is
 // functioning properly. This applies to notifications which have been marshalled in
 // the datastore with json.Marshal(Notification{}). Some notifications have been
 // marshalled in the datastore with json.Marshal(Notification{}.NotifierData), and
 // TestLegacyNotificationMarshalling covers those cases.
 func TestNotificationMarshalling(t *testing.T) {
-	var exampleNotifications = createNotificationExmaples()
-
-	for _, n := range exampleNotifications {
+	for _, n := range createNotificationExmaples() {
 		var (
 			expected = repo.NewNotification(n, time.Now(), false)
 			actual   = &repo.Notification{}
@@ -49,8 +84,7 @@ func TestNotificationMarshalling(t *testing.T) {
 // functioning properly. This applies to notifications which have been marshalled in
 // the datastore with json.Marshal(Notification{}.NotifierData).
 func TestLegacyNotificationMarshalling(t *testing.T) {
-	var exampleNotifications = createLegacyNotificationExamples()
-	for _, n := range exampleNotifications {
+	for _, n := range createLegacyNotificationExamples() {
 		var (
 			actual = &repo.Notification{}
 		)

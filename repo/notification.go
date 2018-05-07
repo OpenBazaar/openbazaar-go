@@ -28,8 +28,12 @@ type Notifier interface {
 	GetSMTPTitleAndBody() (string, string, bool)
 
 	// Data returns the marhsalled []byte suitable for transmission to the client
-	// over a websocket connection
+	// over the HTTP connection
 	Data() ([]byte, error)
+
+	// WebsocketData returns the marhsalled []byte suitable for transmission to the client
+	// over the websocket connection
+	WebsocketData() ([]byte, error)
 }
 
 // NewNotification is a helper that returns a properly instantiated *Notification
@@ -70,7 +74,8 @@ func (n *Notification) GetUnixCreatedAt() int { return int(n.CreatedAt.Unix()) }
 func (n *Notification) GetSMTPTitleAndBody() (string, string, bool) {
 	return n.NotifierData.GetSMTPTitleAndBody()
 }
-func (n *Notification) Data() ([]byte, error) { return json.MarshalIndent(n, "", "    ") }
+func (n *Notification) Data() ([]byte, error)          { return json.MarshalIndent(n, "", "    ") }
+func (n *Notification) WebsocketData() ([]byte, error) { return n.Data() }
 
 type notificationTransporter struct {
 	CreatedAt    time.Time        `json:"timestamp"`
@@ -397,6 +402,9 @@ type OrderNotification struct {
 func (n OrderNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n OrderNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n OrderNotification) GetID() string             { return n.ID }
 func (n OrderNotification) GetType() NotificationType { return NotifierTypeOrderNewNotification }
 func (n OrderNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -420,6 +428,9 @@ type PaymentNotification struct {
 func (n PaymentNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n PaymentNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n PaymentNotification) GetID() string             { return n.ID }
 func (n PaymentNotification) GetType() NotificationType { return NotifierTypePaymentNotification }
 func (n PaymentNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -438,6 +449,9 @@ type OrderConfirmationNotification struct {
 
 func (n OrderConfirmationNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n OrderConfirmationNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n OrderConfirmationNotification) GetID() string { return n.ID }
 func (n OrderConfirmationNotification) GetType() NotificationType {
@@ -460,6 +474,9 @@ type OrderDeclinedNotification struct {
 func (n OrderDeclinedNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n OrderDeclinedNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n OrderDeclinedNotification) GetID() string { return n.ID }
 func (n OrderDeclinedNotification) GetType() NotificationType {
 	return NotifierTypeOrderDeclinedNotification
@@ -477,6 +494,9 @@ type OrderCancelNotification struct {
 
 func (n OrderCancelNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n OrderCancelNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n OrderCancelNotification) GetID() string { return n.ID }
 func (n OrderCancelNotification) GetType() NotificationType {
@@ -499,6 +519,9 @@ type RefundNotification struct {
 func (n RefundNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n RefundNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n RefundNotification) GetID() string             { return n.ID }
 func (n RefundNotification) GetType() NotificationType { return NotifierTypeRefundNotification }
 func (n RefundNotification) GetSMTPTitleAndBody() (string, string, bool) {
@@ -517,6 +540,9 @@ type FulfillmentNotification struct {
 
 func (n FulfillmentNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n FulfillmentNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n FulfillmentNotification) GetID() string { return n.ID }
 func (n FulfillmentNotification) GetType() NotificationType {
@@ -539,6 +565,9 @@ type ProcessingErrorNotification struct {
 func (n ProcessingErrorNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n ProcessingErrorNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n ProcessingErrorNotification) GetID() string { return n.ID }
 func (n ProcessingErrorNotification) GetType() NotificationType {
 	return NotifierTypeProcessingErrorNotification
@@ -558,6 +587,9 @@ type CompletionNotification struct {
 
 func (n CompletionNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n CompletionNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n CompletionNotification) GetID() string             { return n.ID }
 func (n CompletionNotification) GetType() NotificationType { return NotifierTypeCompletionNotification }
@@ -580,6 +612,9 @@ type DisputeOpenNotification struct {
 
 func (n DisputeOpenNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeOpenNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n DisputeOpenNotification) GetID() string { return n.ID }
 func (n DisputeOpenNotification) GetType() NotificationType {
@@ -605,6 +640,9 @@ type DisputeUpdateNotification struct {
 func (n DisputeUpdateNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n DisputeUpdateNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n DisputeUpdateNotification) GetID() string { return n.ID }
 func (n DisputeUpdateNotification) GetType() NotificationType {
 	return NotifierTypeDisputeUpdateNotification
@@ -626,6 +664,9 @@ type DisputeCloseNotification struct {
 
 func (n DisputeCloseNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n DisputeCloseNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n DisputeCloseNotification) GetID() string { return n.ID }
 func (n DisputeCloseNotification) GetType() NotificationType {
@@ -649,6 +690,9 @@ type DisputeAcceptedNotification struct {
 func (n DisputeAcceptedNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n DisputeAcceptedNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n DisputeAcceptedNotification) GetID() string { return n.ID }
 func (n DisputeAcceptedNotification) GetType() NotificationType {
 	return NotifierTypeDisputeAcceptedNotification
@@ -666,6 +710,9 @@ type FollowNotification struct {
 func (n FollowNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n FollowNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n FollowNotification) GetID() string { return n.ID }
 func (n FollowNotification) GetType() NotificationType {
 	return NotifierTypeFollowNotification
@@ -681,6 +728,9 @@ type UnfollowNotification struct {
 func (n UnfollowNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n UnfollowNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n UnfollowNotification) GetID() string                               { return n.ID }
 func (n UnfollowNotification) GetType() NotificationType                   { return NotifierTypeUnfollowNotification }
 func (n UnfollowNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -693,6 +743,9 @@ type ModeratorAddNotification struct {
 
 func (n ModeratorAddNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n ModeratorAddNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n ModeratorAddNotification) GetID() string { return n.ID }
 func (n ModeratorAddNotification) GetType() NotificationType {
@@ -709,6 +762,9 @@ type ModeratorRemoveNotification struct {
 func (n ModeratorRemoveNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n ModeratorRemoveNotification) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n ModeratorRemoveNotification) GetID() string { return n.ID }
 func (n ModeratorRemoveNotification) GetType() NotificationType {
 	return NotifierTypeModeratorRemoveNotification
@@ -722,6 +778,7 @@ type StatusNotification struct {
 }
 
 func (n StatusNotification) Data() ([]byte, error)                       { return json.MarshalIndent(n, "", "    ") }
+func (n StatusNotification) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n StatusNotification) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n StatusNotification) GetType() NotificationType                   { return NotifierTypeStatusUpdateNotification }
 func (n StatusNotification) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -737,6 +794,7 @@ type ChatMessage struct {
 }
 
 func (n ChatMessage) Data() ([]byte, error)                       { return json.MarshalIndent(messageWrapper{n}, "", "    ") }
+func (n ChatMessage) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n ChatMessage) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatMessage) GetType() NotificationType                   { return NotifierTypeChatMessage }
 func (n ChatMessage) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -748,6 +806,7 @@ type ChatRead struct {
 }
 
 func (n ChatRead) Data() ([]byte, error)                       { return json.MarshalIndent(messageReadWrapper{n}, "", "    ") }
+func (n ChatRead) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n ChatRead) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatRead) GetType() NotificationType                   { return NotifierTypeChatRead }
 func (n ChatRead) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -761,6 +820,7 @@ type ChatTyping struct {
 func (n ChatTyping) Data() ([]byte, error) {
 	return json.MarshalIndent(messageTypingWrapper{n}, "", "    ")
 }
+func (n ChatTyping) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n ChatTyping) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n ChatTyping) GetType() NotificationType                   { return NotifierTypeChatTyping }
 func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -782,6 +842,7 @@ type IncomingTransaction struct {
 func (n IncomingTransaction) Data() ([]byte, error) {
 	return json.MarshalIndent(walletWrapper{n}, "", "    ")
 }
+func (n IncomingTransaction) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n IncomingTransaction) GetID() string                               { return "" } // Not persisted, ID is ignored
 func (n IncomingTransaction) GetType() NotificationType                   { return NotifierTypeIncomingTransaction }
 func (n IncomingTransaction) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -799,6 +860,9 @@ type VendorDisputeTimeout struct {
 
 func (n VendorDisputeTimeout) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n VendorDisputeTimeout) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n VendorDisputeTimeout) GetID() string             { return n.ID }
 func (n VendorDisputeTimeout) GetType() NotificationType { return NotifierTypeVendorDisputeTimeout }
@@ -818,6 +882,9 @@ type BuyerDisputeTimeout struct {
 
 func (n BuyerDisputeTimeout) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n BuyerDisputeTimeout) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
 }
 func (n BuyerDisputeTimeout) GetID() string             { return n.ID }
 func (n BuyerDisputeTimeout) GetType() NotificationType { return n.Type }
@@ -840,6 +907,9 @@ type ModeratorDisputeExpiry struct {
 func (n ModeratorDisputeExpiry) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
+func (n ModeratorDisputeExpiry) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(n, "", "    ")
+}
 func (n ModeratorDisputeExpiry) GetID() string                               { return n.ID }
 func (n ModeratorDisputeExpiry) GetType() NotificationType                   { return n.Type }
 func (n ModeratorDisputeExpiry) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
@@ -849,8 +919,9 @@ type TestNotification struct{}
 func (TestNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(TestNotification{}, "", "    ")
 }
-func (TestNotification) GetID() string             { return "" } // Not persisted, ID is ignored
-func (TestNotification) GetType() NotificationType { return NotifierTypeTestNotification }
+func (n TestNotification) WebsocketData() ([]byte, error) { return n.Data() }
+func (TestNotification) GetID() string                    { return "" } // Not persisted, ID is ignored
+func (TestNotification) GetType() NotificationType        { return NotifierTypeTestNotification }
 func (TestNotification) GetSMTPTitleAndBody() (string, string, bool) {
 	return "Test Notification Head", "Test Notification Body", true
 }
@@ -863,10 +934,11 @@ type PremarshalledNotifier struct {
 	Payload []byte
 }
 
-func (p PremarshalledNotifier) Data() ([]byte, error)                       { return p.Payload, nil }
+func (n PremarshalledNotifier) Data() ([]byte, error)                       { return n.Payload, nil }
+func (n PremarshalledNotifier) WebsocketData() ([]byte, error)              { return n.Data() }
 func (n PremarshalledNotifier) GetID() string                               { return "" } // Not persisted, ID is ignored
-func (p PremarshalledNotifier) GetType() NotificationType                   { return NotifierTypePremarshalledNotifier }
-func (p PremarshalledNotifier) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
+func (n PremarshalledNotifier) GetType() NotificationType                   { return NotifierTypePremarshalledNotifier }
+func (n PremarshalledNotifier) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 func NewNotificationID() string {
 	b := make([]byte, 32)

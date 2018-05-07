@@ -28,7 +28,7 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan repo.N
 			// enough to let us send any data to the websocket. You can technically do that by
 			// sending over a []byte as the serialize function ignores []bytes but it's kind of hacky.
 			manager.sendNotification(n)
-			data, err := n.Data()
+			data, err := n.WebsocketData()
 			if err != nil {
 				log.Error("marshal notification:", err)
 				continue
