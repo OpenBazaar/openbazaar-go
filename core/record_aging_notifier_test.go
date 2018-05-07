@@ -12,6 +12,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/op/go-logging"
 )
 
@@ -384,55 +385,35 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "never-tinyimagehashOne", Small: "never-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "neverNotified",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fifteen-tinyimagehashOne", Small: "fifteen-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "notifiedUpToFifteenDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourty-tinyimagehashOne", Small: "fourty-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "notifiedUpToFourtyDay",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourtyfour-tinyimagehashOne", Small: "fourtyfour-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "notifiedUpToFourtyFourDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourtyfive-tinyimagehashOne", Small: "fourtyfive-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "notifiedUpToFourtyFiveDays",
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
@@ -450,6 +431,11 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			TestModeEnabled: true,
 		})
 	)
+	neverNotified.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "never-tinyimagehashOne", Small: "never-smallimagehashOne"}}
+	notifiedUpToFifteenDay.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fifteen-tinyimagehashOne", Small: "fifteen-smallimagehashOne"}}
+	notifiedUpToFourtyDay.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourty-tinyimagehashOne", Small: "fourty-smallimagehashOne"}}
+	notifiedUpToFourtyFourDays.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourtyfour-tinyimagehashOne", Small: "fourtyfour-smallimagehashOne"}}
+	notifiedUpToFourtyFiveDays.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourtyfive-tinyimagehashOne", Small: "fourtyfive-smallimagehashOne"}}
 
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
@@ -474,7 +460,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?)", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}

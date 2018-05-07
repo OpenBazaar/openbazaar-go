@@ -12,6 +12,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -417,38 +418,17 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 
 	// Artificially start purchases 50 days ago
 	var (
-		now        = time.Unix(time.Now().Unix(), 0)
-		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
-		nowData, _ = ptypes.TimestampProto(now)
-		order      = &pb.Order{
-			BuyerID: &pb.ID{
-				PeerID: "buyerID",
-				Handle: "@buyerID",
-			},
-			Shipping: &pb.Order_Shipping{
-				Address: "1234 Test Ave",
-				ShipTo:  "Buyer Name",
-			},
-			Payment: &pb.Order_Payment{
-				Amount:  10,
-				Method:  pb.Order_Payment_DIRECT,
-				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
-			},
-			Timestamp: nowData,
-		}
-		expectedImagesOne   = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
-		expectedContractOne = &pb.RicardianContract{
-			VendorListings: []*pb.Listing{
-				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
-			},
-			BuyerOrder: order,
-		}
-		expectedImagesTwo   = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashTwo", Small: "smallimagehashTwo"}}
-		expectedContractTwo = &pb.RicardianContract{
-			VendorListings: []*pb.Listing{
-				{Item: &pb.Listing_Item{Images: expectedImagesTwo}},
-			},
-			BuyerOrder: order,
+		now                           = time.Unix(time.Now().Unix(), 0)
+		timeStart                     = now.Add(time.Duration(-50*24) * time.Hour)
+		expectedImagesOne             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		expectedContractOne           = factory.NewDisputeableContract()
+		expectedImagesTwo             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashTwo", Small: "smallimagehashTwo"}}
+		expectedContractTwo           = factory.NewDisputeableContract()
+		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
+			Contract:       factory.NewUndisputeableContract(),
+			OrderID:        "neverNotifiedButUndisputed",
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.PurchaseRecord{
 			Contract:       expectedContractOne,
@@ -463,17 +443,20 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 			LastNotifiedAt: timeStart,
 		}
 		finallyNotified = &repo.PurchaseRecord{
-			Contract:       expectedContractOne,
+			Contract:       factory.NewContract(),
 			OrderID:        "finalNotificationSent",
 			Timestamp:      timeStart,
 			LastNotifiedAt: now,
 		}
 		existingRecords = []*repo.PurchaseRecord{
+			neverNotifiedButUndisputeable,
 			neverNotified,
 			initialNotified,
 			finallyNotified,
 		}
 	)
+	expectedContractOne.VendorListings[0].Item.Images = expectedImagesOne
+	expectedContractTwo.VendorListings[0].Item.Images = expectedImagesTwo
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -486,7 +469,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := database.Exec("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		if _, err := database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -497,7 +480,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var sawNeverNotifiedPurchase, sawInitialNotifiedPurchase, sawFinallyNotifiedPurchase bool
+	var sawNeverNotifiedPurchase, sawInitialNotifiedPurchase, sawFinallyNotifiedPurchase, sawNeverNotifiedButUndisputeable bool
 	for _, p := range purchases {
 		switch p.OrderID {
 		case neverNotified.OrderID:
@@ -516,6 +499,8 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedPurchase = true
+		case neverNotifiedButUndisputeable.OrderID:
+			sawNeverNotifiedButUndisputeable = true
 		default:
 			t.Error("Found unexpected purchase: %+v", p)
 		}
@@ -529,6 +514,9 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 	if sawFinallyNotifiedPurchase == true {
 		t.Error("Expected NOT to see purchase which recieved it's final notification")
+	}
+	if sawNeverNotifiedButUndisputeable == true {
+		t.Error("Expected NOT to see undisputeable purchase")
 	}
 }
 

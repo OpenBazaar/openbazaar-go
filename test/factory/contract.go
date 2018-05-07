@@ -37,6 +37,13 @@ func NewContract() *pb.RicardianContract {
 	}
 }
 
+func NewDisputeableContract() *pb.RicardianContract {
+	c := NewContract()
+	c.BuyerOrder.Payment.Moderator = "somemoderatorid"       // Moderator PeerID must be set
+	c.BuyerOrder.Payment.Method = pb.Order_Payment_MODERATED // Method must be Moderated
+	return c
+}
+
 func NewUndisputeableContract() *pb.RicardianContract {
 	c := NewContract()
 	c.BuyerOrder.Payment.Moderator = ""                   // Unmoderated contracts may not be disputed
