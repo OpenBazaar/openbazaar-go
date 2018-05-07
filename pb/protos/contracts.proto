@@ -162,7 +162,8 @@ message Order {
 
     message Item {
         string listingHash            = 1;
-        uint32 quantity               = 2;
+        uint32 quantity               = 2; // order version < 2 used with listing version < 3
+        uint64 quantity64             = 8; // order version >= 2 used with listing version >= 3
         repeated Option options       = 3;
         ShippingOption shippingOption = 4;
         string memo                   = 5;

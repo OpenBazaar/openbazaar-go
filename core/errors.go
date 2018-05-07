@@ -41,10 +41,10 @@ func (err CodedError) Error() string {
 // purchasing too many of an item
 type ErrOutOfInventory struct {
 	CodedError
-	RemainingInventory int `json:"remainingInventory"`
+	RemainingInventory int64 `json:"remainingInventory"`
 }
 
-func NewErrOutOfInventory(inventoryRemaining int) ErrOutOfInventory {
+func NewErrOutOfInventory(inventoryRemaining int64) ErrOutOfInventory {
 	return ErrOutOfInventory{
 		CodedError: CodedError{
 			Reason: "not enough inventory",
