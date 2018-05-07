@@ -18,8 +18,19 @@ var (
 type PurchaseRecord struct {
 	Contract       *pb.RicardianContract
 	OrderID        string
+	OrderState     pb.OrderState
 	Timestamp      time.Time
 	LastNotifiedAt time.Time
+}
+
+func (r *PurchaseRecord) IsDisputeable() bool {
+	if r.Contract != nil && r.Contract.BuyerOrder != nil && r.Contract.BuyerOrder.Payment != nil && r.Contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		switch r.OrderState {
+		case pb.OrderState_PENDING, pb.OrderState_AWAITING_FULFILLMENT, pb.OrderState_FULFILLED:
+			return true
+		}
+	}
+	return false
 }
 
 // BuildBuyerDisputeTimeoutFirstNotification returns a Notification with ExpiresIn set for the First Interval
