@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ListingVersion           = 2
+	ListingVersion           = 3
 	TitleMaxCharacters       = 140
 	ShortDescriptionLength   = 160
 	DescriptionMaxCharacters = 50000
@@ -45,14 +45,6 @@ const (
 	SlugBuffer               = 5
 
 	DefaultCoinDivisibility uint32 = 1e8
-)
-
-var (
-	ErrListingDoesNotExist                   = errors.New("Listing doesn't exist")
-	ErrListingAlreadyExists                  = errors.New("Listing already exists")
-	ErrMarketPriceListingIllegalField        = errors.New("Illegal market price listing field")
-	ErrCryptocurrencyListingIllegalField     = errors.New("Illegal cryptocurrency listing field")
-	ErrCryptocurrencyListingCoinTypeRequired = errors.New("Cryptocurrency listings require a coinType")
 )
 
 type price struct {
@@ -80,6 +72,7 @@ type ListingData struct {
 	AverageRating float32   `json:"averageRating"`
 	RatingCount   uint32    `json:"ratingCount"`
 	ModeratorIDs  []string  `json:"moderators"`
+	CoinType      string    `json:"coinType"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -125,7 +118,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Set crypto currency
-	listing.Metadata.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+	listing.Metadata.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
 
 	// Sanitize a few critical fields
 	if listing.Item == nil {
@@ -224,6 +217,11 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 /* Sets the inventory for the listing in the database. Does some basic validation
    to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
+	err := validateListingSkus(listing)
+	if err != nil {
+		return err
+	}
+
 	// Grab current inventory
 	currentInv, err := n.Datastore.Inventory().Get(listing.Slug)
 	if err != nil {
@@ -231,7 +229,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
-		err = n.Datastore.Inventory().Put(listing.Slug, i, int(s.Quantity))
+		err = n.Datastore.Inventory().Put(listing.Slug, i, int64(s.Quantity))
 		if err != nil {
 			return err
 		}
@@ -258,6 +256,12 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 			return err
 		}
 	}
+
+	err = n.PublishInventory()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -389,9 +393,6 @@ func (n *OpenBazaarNode) updateListingIndex(listing *pb.SignedListing) error {
 }
 
 func setCryptocurrencyListingDefaults(listing *pb.Listing) {
-	if listing.Metadata.CoinDivisibility == 0 {
-		listing.Metadata.CoinDivisibility = coinDivisibilityForType(listing.Metadata.CoinType)
-	}
 	listing.Coupons = []*pb.Listing_Coupon{}
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
@@ -445,6 +446,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		Title:        listing.Listing.Item.Title,
 		Categories:   listing.Listing.Item.Categories,
 		NSFW:         listing.Listing.Item.Nsfw,
+		CoinType:     listing.Listing.Metadata.CoinType,
 		ContractType: listing.Listing.Metadata.ContractType.String(),
 		Description:  listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
@@ -709,6 +711,10 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 
 	// Delete inventory for listing
 	err = n.Datastore.Inventory().DeleteAll(slug)
+	if err != nil {
+		return err
+	}
+	err = n.PublishInventory()
 	if err != nil {
 		return err
 	}
@@ -1211,16 +1217,23 @@ func validatePhysicalListing(listing *pb.Listing) error {
 }
 
 func validateCryptocurrencyListing(listing *pb.Listing) error {
-	if len(listing.Coupons) > 0 ||
-		len(listing.Item.Options) > 0 ||
-		len(listing.ShippingOptions) > 0 ||
-		listing.Item.Condition != "" ||
-		listing.Metadata.PricingCurrency != "" {
-		return ErrCryptocurrencyListingIllegalField
+	switch {
+	case len(listing.Coupons) > 0:
+		return ErrCryptocurrencyListingIllegalField("coupons")
+	case len(listing.Item.Options) > 0:
+		return ErrCryptocurrencyListingIllegalField("item.options")
+	case len(listing.ShippingOptions) > 0:
+		return ErrCryptocurrencyListingIllegalField("shippingOptions")
+	case len(listing.Item.Condition) > 0:
+		return ErrCryptocurrencyListingIllegalField("item.condition")
+	case len(listing.Metadata.PricingCurrency) > 0:
+		return ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency")
+	case listing.Metadata.CoinType == "":
+		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.CoinType == "" {
-		return ErrCryptocurrencyListingCoinTypeRequired
+	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+		return ErrListingCoinDivisibilityIncorrect
 	}
 
 	return nil
@@ -1228,9 +1241,20 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 
 func validateMarketPriceListing(listing *pb.Listing) error {
 	if listing.Item.Price > 0 {
-		return ErrMarketPriceListingIllegalField
+		return ErrMarketPriceListingIllegalField("item.price")
 	}
 
+	return nil
+}
+
+func validateListingSkus(listing *pb.Listing) error {
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		for _, sku := range listing.Item.Skus {
+			if sku.Quantity < 1 {
+				return ErrCryptocurrencySkuQuantityInvalid
+			}
+		}
+	}
 	return nil
 }
 

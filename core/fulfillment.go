@@ -15,6 +15,10 @@ import (
 	"github.com/golang/protobuf/ptypes"
 )
 
+var (
+	MaxTXIDSize = 512
+)
+
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	if fulfillment.Slug == "" && len(contract.VendorListings) == 1 {
 		fulfillment.Slug = contract.VendorListings[0].Slug
@@ -97,6 +101,13 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			keyIndex = i
 			listing = list
 			break
+		}
+	}
+
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+		err := validateCryptocurrencyFulfillment(fulfillment)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -289,6 +300,23 @@ func verifySignaturesOnOrderFulfilment(contract *pb.RicardianContract) error {
 			}
 		}
 	}
+	return nil
+}
+
+func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
+	if len(fulfillment.PhysicalDelivery)+len(fulfillment.DigitalDelivery) > 0 {
+		return ErrFulfillIncorrectDeliveryType
+	}
+
+	for _, delivery := range fulfillment.CryptocurrencyDelivery {
+		if delivery.TransactionID == "" {
+			return ErrFulfillCryptocurrencyTXIDNotFound
+		}
+		if len(delivery.TransactionID) > MaxTXIDSize {
+			return ErrFulfillCryptocurrencyTXIDTooLong
+		}
+	}
+
 	return nil
 }
 

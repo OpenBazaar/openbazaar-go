@@ -194,6 +194,22 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 	fmt.Fprint(w, string(resp))
 }
 
+func JSONErrorResponse(w http.ResponseWriter, errorCode int, err error) {
+	w.WriteHeader(errorCode)
+	fmt.Fprint(w, err.Error())
+}
+
+func RenderJSONOrStringError(w http.ResponseWriter, errorCode int, err error) {
+	errStr := err.Error()
+	var jsonObj map[string]interface{}
+	if json.Unmarshal([]byte(errStr), &jsonObj) == nil {
+		JSONErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	ErrorResponse(w, http.StatusInternalServerError, errStr)
+}
+
 func SanitizedResponse(w http.ResponseWriter, response string) {
 	ret, err := SanitizeJSON([]byte(response))
 	if err != nil {
@@ -576,7 +592,7 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	orderId, paymentAddr, amount, online, err := i.node.Purchase(&data)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		RenderJSONOrStringError(w, http.StatusInternalServerError, err)
 		return
 	}
 	type purchaseReturn struct {
@@ -814,8 +830,8 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 		Testnet        bool   `json:"testnet"`
 		Tor            bool   `json:"tor"`
 	}{
-		PeerId:         i.node.IpfsNode.Identity.Pretty(),
-		CryptoCurrency: strings.ToUpper(i.node.Wallet.CurrencyCode()),
+		PeerId:         i.node.IPFSIdentityString(),
+		CryptoCurrency: core.NormalizeCurrencyCode(i.node.Wallet.CurrencyCode()),
 		Testnet:        i.node.TestNetworkEnabled(),
 		Tor:            usingTor,
 	}
@@ -1023,7 +1039,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJson))
 
 	} else {
-		rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+		rate, err := i.node.ExchangeRates.GetExchangeRate(currencyCode)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1034,7 +1050,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IPFSIdentityString() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
 		if limit == "" {
@@ -1100,7 +1116,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IPFSIdentityString() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
 		if limit == "" {
@@ -1139,37 +1155,93 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
-	type inv struct {
-		Slug     string `json:"slug"`
-		Variant  int    `json:"variant"`
-		Quantity int    `json:"quantity"`
+	// Get optional peerID and slug parameters
+	var (
+		peerIDString string
+		slug         string
+	)
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) > 3 {
+		peerIDString = parts[3]
 	}
-	var invList []inv
-	inventory, err := i.node.Datastore.Inventory().GetAll()
-	if err != nil {
-		fmt.Fprint(w, `[]`)
+	if len(parts) > 4 {
+		slug = parts[4]
+	}
+
+	// If we want our own inventory get it from the local database and return
+	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
+	if getPersonalInventory {
+		var (
+			err       error
+			inventory interface{}
+		)
+
+		if slug == "" {
+			inventory, err = i.node.GetLocalInventory()
+		} else {
+			inventory, err = i.node.GetLocalInventoryForSlug(slug)
+		}
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		ret, err := json.MarshalIndent(inventory, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		if string(ret) == "null" {
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		SanitizedResponse(w, string(ret))
 		return
 	}
-	for slug, m := range inventory {
-		for variant, count := range m {
-			i := inv{slug, variant, count}
-			invList = append(invList, i)
+
+	// If we want another peer's inventory crawl IPFS with an optional cache
+	var err error
+	useCacheBool := false
+	useCacheString := r.URL.Query().Get("usecache")
+	if len(useCacheString) > 0 {
+		useCacheBool, err = strconv.ParseBool(useCacheString)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
-	ret, _ := json.MarshalIndent(invList, "", "    ")
-	if string(ret) == "null" {
-		fmt.Fprint(w, `[]`)
+
+	peerID, err := peer.IDB58Decode(peerIDString)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, string(ret))
-	return
+
+	if slug == "" {
+		inventoryBytes, err := i.node.GetPublishedInventoryBytes(peerID, useCacheBool)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(inventoryBytes))
+		return
+	}
+
+	inventoryBytes, err := i.node.GetPublishedInventoryBytesForSlug(peerID, slug, useCacheBool)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(inventoryBytes))
 }
 
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
 		Variant  int    `json:"variant"`
-		Quantity int    `json:"quantity"`
+		Quantity int64  `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var invList []inv
@@ -1185,6 +1257,13 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	err = i.node.PublishInventory()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }
@@ -1260,7 +1339,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IPFSIdentityString() {
 		listingsBytes, err := i.node.GetListings()
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1293,7 +1372,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IPFSIdentityString() {
 		sl := new(pb.SignedListing)
 		_, err := cid.Decode(listingId)
 		if err == nil {
@@ -1398,7 +1477,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	cacheBool := r.URL.Query().Get("usecache")
 	useCache, _ := strconv.ParseBool(cacheBool)
 
-	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IPFSIdentityString() {
 		profile, err = i.node.GetProfile()
 		if err != nil && err == core.ErrorProfileNotFound {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -3125,7 +3204,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var indexBytes []byte
-	if peerId != i.node.IpfsNode.Identity.Pretty() {
+	if peerId != i.node.IPFSIdentityString() {
 		indexBytes, _ = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
 
 	} else {
@@ -3733,7 +3812,7 @@ func (i *jsonAPIHandler) DELETEPost(w http.ResponseWriter, r *http.Request) {
 // GET a list of posts (self or peer)
 func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IPFSIdentityString() {
 		postsBytes, err := i.node.GetPosts()
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -3767,7 +3846,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IPFSIdentityString() {
 		sl := new(pb.SignedPost)
 		_, err := cid.Decode(postId)
 		if err == nil {

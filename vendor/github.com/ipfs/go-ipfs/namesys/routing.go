@@ -131,6 +131,9 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 	}
 
 	name = strings.TrimPrefix(name, "/ipns/")
+	split := strings.SplitN(name, ":", 2)
+	name = split[0]
+
 	hash, err := mh.FromB58String(name)
 	if err != nil {
 		// name should be a multihash. if it isn't, error out here.
@@ -138,9 +141,15 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		return "", err
 	}
 
+	suffix := ""
+	if len(split) > 1 {
+		suffix = ":" + split[1]
+		name += suffix
+	}
+
 	// use the routing system to get the name.
 	// /ipns/<name>
-	h := []byte("/ipns/" + string(hash))
+	h := []byte("/ipns/" + string(hash) + suffix)
 
 	var entry *pb.IpnsEntry
 	var pubkey ci.PubKey
@@ -162,11 +171,21 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 			resp <- err
 			return
 		}
-
 		resp <- nil
 	}()
 
 	go func() {
+		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + hash.B58String()))
+		if err == nil {
+			b, ok := val.([]byte)
+			if ok {
+				pubkey, err = ci.UnmarshalPublicKey(b)
+				if err == nil {
+					resp <- nil
+					return
+				}
+			}
+		}
 		// name should be a public key retrievable from ipfs
 		pubk, err := routing.GetPublicKey(r.routing, ctx, hash)
 		if err != nil {
@@ -185,6 +204,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 			if err != nil {
 				return "", err
 			}
+
 			entry := new(pb.IpnsEntry)
 			err = proto.Unmarshal(val.([]byte), entry)
 			if err != nil {
@@ -220,7 +240,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		r.cacheSet(name, p, entry)
 		go func() {
 			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+hash.B58String()), pubkeyBytes)
 		}()
 		return p, nil
 	} else {
@@ -230,7 +250,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string) (path.Pa
 		r.cacheSet(name, p, entry)
 		go func() {
 			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+name), pubkeyBytes)
+			r.datastore.Put(ds.NewKey(keyCachePrefix+hash.B58String()), pubkeyBytes)
 		}()
 		return p, nil
 	}

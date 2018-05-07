@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
@@ -37,12 +38,13 @@ type shippingOption struct {
 }
 
 type item struct {
-	ListingHash string         `json:"listingHash"`
-	Quantity    int            `json:"quantity"`
-	Options     []option       `json:"options"`
-	Shipping    shippingOption `json:"shipping"`
-	Memo        string         `json:"memo"`
-	Coupons     []string       `json:"coupons"`
+	ListingHash    string         `json:"listingHash"`
+	Quantity       uint64         `json:"quantity"`
+	Options        []option       `json:"options"`
+	Shipping       shippingOption `json:"shipping"`
+	Memo           string         `json:"memo"`
+	Coupons        []string       `json:"coupons"`
+	PaymentAddress string         `json:"paymentAddress"`
 }
 
 type PurchaseData struct {
@@ -59,13 +61,14 @@ type PurchaseData struct {
 	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
 }
 
-// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
-// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
-// TODO: this probably should not be hardcoded but making it adaptive requires all wallet implementations to provide this data.
-// TODO: for now, this is probably OK as it's just an approximation.
-const EscrowReleaseSize = 337
-
-var UnknownListingError = errors.New("Order contains a hash of a listing that is not currently for sale")
+const (
+	// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
+	// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
+	// TODO: this probably should not be hardcoded but making it adaptive requires all wallet implementations to provide this data.
+	// TODO: for now, this is probably OK as it's just an approximation.
+	EscrowReleaseSize                             = 337
+	CryptocurrencyPurchasePaymentAddressMaxLength = 512
+)
 
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
 	contract, err := n.createContractWithOrder(data)
@@ -232,8 +235,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				errStr := extractErrorMessage(resp)
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
+				return "", "", 0, false, extractErrorMessage(resp)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -383,8 +385,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		} else { // Vendor responded
 			if resp.MessageType == pb.Message_ERROR {
-				errStr := extractErrorMessage(resp)
-				return "", "", 0, false, fmt.Errorf("Vendor rejected order, reason: %s", errStr)
+				return "", "", 0, false, extractErrorMessage(resp)
 			}
 			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
@@ -432,13 +433,19 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 	}
 }
 
-func extractErrorMessage(m *pb.Message) string {
+func extractErrorMessage(m *pb.Message) error {
 	errMsg := new(pb.Error)
 	err := ptypes.UnmarshalAny(m.Payload, errMsg)
 	if err == nil {
-		return errMsg.ErrorMessage
+		// if the server sends back JSON don't format it
+		var jsonObj map[string]interface{}
+		if json.Unmarshal([]byte(errMsg.ErrorMessage), &jsonObj) == nil {
+			return errors.New(errMsg.ErrorMessage)
+		}
+
+		return fmt.Errorf("Vendor rejected order, reason: %s", errMsg.ErrorMessage)
 	} else { // For backwards compatibility check for a string payload
-		return string(m.Payload.Value)
+		return errors.New(string(m.Payload.Value))
 	}
 }
 
@@ -459,7 +466,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	)
 
 	contract.BuyerOrder = order
-	order.Version = 1
+	order.Version = 2
 
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
@@ -569,70 +576,86 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			return nil, fmt.Errorf("Contract only accepts %s, our wallet uses %s", listing.Metadata.AcceptedCurrencies[0], n.Wallet.CurrencyCode())
 		}
 
-		// Remove any duplicate coupons
-		couponMap := make(map[string]bool)
-		var coupons []string
-		for _, c := range item.Coupons {
-			if !couponMap[c] {
-				couponMap[c] = true
-				coupons = append(coupons, c)
-			}
-		}
-
-		// Validate the selected options
-		listingOptions := make(map[string]*pb.Listing_Item_Option)
-		for _, opt := range listing.Item.Options {
-			listingOptions[strings.ToLower(opt.Name)] = opt
-		}
-		for _, uopt := range item.Options {
-			_, ok := listingOptions[strings.ToLower(uopt.Name)]
-			if !ok {
-				return nil, errors.New("Selected variant not in listing")
-			}
-			delete(listingOptions, strings.ToLower(uopt.Name))
-		}
-		if len(listingOptions) > 0 {
-			return nil, errors.New("Not all options were selected")
-		}
-
 		ser, err := proto.Marshal(listing)
 		if err != nil {
 			return nil, err
 		}
-		listingId, err := EncodeCID(ser)
+		listingID, err := EncodeCID(ser)
 		if err != nil {
 			return nil, err
 		}
-		i.ListingHash = listingId.String()
-		i.Quantity = uint32(item.Quantity)
+		i.ListingHash = listingID.String()
 
-		for _, option := range item.Options {
-			o := &pb.Order_Item_Option{
-				Name:  option.Name,
-				Value: option.Value,
+		// If purchasing a listing version >=3 then the Quantity64 field must be used
+		if listing.Metadata.Version < 3 {
+			i.Quantity = uint32(item.Quantity)
+		} else {
+			i.Quantity64 = uint64(item.Quantity)
+		}
+
+		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
+			i.Memo = item.Memo
+
+			// Remove any duplicate coupons
+			couponMap := make(map[string]bool)
+			var coupons []string
+			for _, c := range item.Coupons {
+				if !couponMap[c] {
+					couponMap[c] = true
+					coupons = append(coupons, c)
+				}
 			}
-			i.Options = append(i.Options, o)
+			i.CouponCodes = coupons
+
+			// Validate the selected options
+			listingOptions := make(map[string]*pb.Listing_Item_Option)
+			for _, opt := range listing.Item.Options {
+				listingOptions[strings.ToLower(opt.Name)] = opt
+			}
+			for _, uopt := range item.Options {
+				_, ok := listingOptions[strings.ToLower(uopt.Name)]
+				if !ok {
+					return nil, errors.New("Selected variant not in listing")
+				}
+				delete(listingOptions, strings.ToLower(uopt.Name))
+			}
+			if len(listingOptions) > 0 {
+				return nil, errors.New("Not all options were selected")
+			}
+
+			for _, option := range item.Options {
+				o := &pb.Order_Item_Option{
+					Name:  option.Name,
+					Value: option.Value,
+				}
+				i.Options = append(i.Options, o)
+			}
 		}
-		so := &pb.Order_Item_ShippingOption{
-			Name:    item.Shipping.Name,
-			Service: item.Shipping.Service,
+
+		// Add shipping to physical listings, and include it for digital and service
+		// listings for legacy compatibility
+		if listing.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD ||
+			listing.Metadata.ContractType == pb.Listing_Metadata_DIGITAL_GOOD ||
+			listing.Metadata.ContractType == pb.Listing_Metadata_SERVICE {
+
+			i.ShippingOption = &pb.Order_Item_ShippingOption{
+				Name:    item.Shipping.Name,
+				Service: item.Shipping.Service,
+			}
 		}
-		i.ShippingOption = so
-		i.Memo = item.Memo
-		i.CouponCodes = coupons
+
+		if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
+			i.PaymentAddress = item.PaymentAddress
+			validateCryptocurrencyOrderItem(i)
+		}
+
 		order.Items = append(order.Items, i)
 	}
 
-	// Make sure shipping fields are filled if the order contains a physical good
 	if containsPhysicalGood(addedListings) && !(n.TestNetworkEnabled() || n.RegressionNetworkEnabled()) {
-		if order.Shipping == nil {
-			return nil, errors.New("Order is missing shipping object")
-		}
-		if contract.BuyerOrder.Shipping.Address == "" {
-			return nil, errors.New("Shipping address is empty")
-		}
-		if contract.BuyerOrder.Shipping.ShipTo == "" {
-			return nil, errors.New("Ship to name is empty")
+		err := validatePhysicalPurchaseOrder(contract)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -646,6 +669,37 @@ func containsPhysicalGood(addedListings map[string]*pb.Listing) bool {
 		}
 	}
 	return false
+}
+
+func validatePhysicalPurchaseOrder(contract *pb.RicardianContract) error {
+	if contract.BuyerOrder.Shipping == nil {
+		return errors.New("Order is missing shipping object")
+	}
+	if contract.BuyerOrder.Shipping.Address == "" {
+		return errors.New("Shipping address is empty")
+	}
+	if contract.BuyerOrder.Shipping.ShipTo == "" {
+		return errors.New("Ship to name is empty")
+	}
+
+	return nil
+}
+
+func validateCryptocurrencyOrderItem(item *pb.Order_Item) error {
+	if len(item.Options) > 0 {
+		return ErrCryptocurrencyPurchaseIllegalField("item.options")
+	}
+	if len(item.CouponCodes) > 0 {
+		return ErrCryptocurrencyPurchaseIllegalField("item.couponCodes")
+	}
+	if item.PaymentAddress == "" {
+		return ErrCryptocurrencyPurchasePaymentAddressRequired
+	}
+	if len(item.PaymentAddress) < CryptocurrencyPurchasePaymentAddressMaxLength {
+		return ErrCryptocurrencyPurchasePaymentAddressTooLong
+	}
+
+	return nil
 }
 
 func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) {
@@ -745,20 +799,36 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	if n.ExchangeRates != nil {
 		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
 	}
+
 	var total uint64
 	physicalGoods := make(map[string]*pb.Listing)
 
 	// Calculate the price of each item
 	for _, item := range contract.BuyerOrder.Items {
-		var itemTotal uint64
+		var (
+			satoshis     uint64
+			itemTotal    uint64
+			itemQuantity uint64
+		)
+
 		l, err := ParseContractForListing(item.ListingHash, contract)
 		if err != nil {
 			return 0, fmt.Errorf("Listing not found in contract for item %s", item.ListingHash)
 		}
+
+		// Continue using the old 32-bit quantity field for all listings less than version 3
+		itemQuantity = GetOrderQuantity(l, item)
+
 		if l.Metadata.ContractType == pb.Listing_Metadata_PHYSICAL_GOOD {
 			physicalGoods[item.ListingHash] = l
 		}
-		satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+
+		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
+			satoshis, err = n.getMarketPriceInSatoshis(l.Metadata.CoinType, itemQuantity)
+			itemQuantity = 1
+		} else {
+			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+		}
 		if err != nil {
 			return 0, err
 		}
@@ -821,11 +891,20 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 			}
 		}
-		itemTotal *= uint64(item.Quantity)
+		itemTotal *= uint64(itemQuantity)
 		total += itemTotal
 	}
 
-	// Add in shipping costs
+	shippingTotal, err := n.calculateShippingTotalForListings(contract, physicalGoods)
+	if err != nil {
+		return 0, err
+	}
+	total += shippingTotal
+
+	return total, nil
+}
+
+func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.RicardianContract, listings map[string]*pb.Listing) (uint64, error) {
 	type itemShipping struct {
 		primary               uint64
 		secondary             uint64
@@ -833,14 +912,18 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		shippingTaxPercentage float32
 		version               uint32
 	}
-	var is []itemShipping
+	var (
+		is            []itemShipping
+		shippingTotal uint64
+	)
 
 	// First loop through to validate and filter out non-physical items
 	for _, item := range contract.BuyerOrder.Items {
-		listing, ok := physicalGoods[item.ListingHash]
-		if !ok { // Not physical good no need to calculate shipping
+		listing, ok := listings[item.ListingHash]
+		if !ok {
 			continue
 		}
+
 		// Check selected option exists
 		shippingOptions := make(map[string]*pb.Listing_ShippingOption)
 		for _, so := range listing.ShippingOptions {
@@ -910,46 +993,69 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		})
 	}
 
-	var shippingTotal uint64
+	if len(is) == 0 {
+		return 0, nil
+	}
+
 	if len(is) == 1 {
 		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
-			} else if is[0].version == 2 {
+			} else if is[0].version >= 2 {
 				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
 			} else {
 				return 0, errors.New("Unknown listing version")
 			}
 		}
-	} else if len(is) > 1 {
-		var highest uint64
-		var i int
-		for x, s := range is {
-			if s.primary > highest {
-				highest = s.primary
-				i = x
-			}
-			shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
-		}
-		shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
-		shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+		return shippingTotal, nil
 	}
-	return total + shippingTotal, nil
+
+	var highest uint64
+	var i int
+	for x, s := range is {
+		if s.primary > highest {
+			highest = s.primary
+			i = x
+		}
+		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
+	}
+	shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+
+	return shippingTotal, nil
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
 	if strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) || "t"+strings.ToLower(currencyCode) == strings.ToLower(n.Wallet.CurrencyCode()) {
 		return amount, nil
 	}
+
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
 	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
+
 	formatedAmount := float64(amount) / 100
 	btc := formatedAmount / exchangeRate
 	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
 	return uint64(satoshis), nil
+}
+
+func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint64) (uint64, error) {
+	if n.ExchangeRates == nil {
+		return 0, ErrPriceCalculationRequiresExchangeRates
+	}
+
+	rate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
+	if err != nil {
+		return 0, err
+	}
+
+	return uint64(float64(amount) / rate), nil
 }
 
 func verifySignaturesOnOrder(contract *pb.RicardianContract) error {
@@ -1083,7 +1189,7 @@ collectListings:
 	type inventory struct {
 		Slug    string
 		Variant int
-		Count   int
+		Count   int64
 	}
 	var inventoryList []inventory
 	for _, item := range contract.BuyerOrder.Items {
@@ -1127,7 +1233,7 @@ collectListings:
 			return errors.New("Not all options were selected")
 		}
 		// Create inventory paths to check later
-		inv.Count = int(item.Quantity)
+		inv.Count = int64(GetOrderQuantity(listingMap[item.ListingHash], item))
 		inventoryList = append(inventoryList, inv)
 	}
 
@@ -1187,7 +1293,7 @@ collectListings:
 				return errors.New("Vendor has no inventory for the selected variant.")
 			}
 			if amt >= 0 && amt < inv.Count {
-				return fmt.Errorf("Not enough inventory for item %s:%d, only %d in stock", inv.Slug, inv.Variant, amt)
+				return NewErrOutOfInventory(amt)
 			}
 		}
 	}
@@ -1220,7 +1326,7 @@ collectListings:
 
 	// Validate the each item in the order is for sale
 	if !n.hasKnownListings(contract) {
-		return UnknownListingError
+		return ErrPurchaseUnknownListing
 	}
 	return nil
 }
@@ -1490,4 +1596,11 @@ func SameSku(selectedVariants []int, sku *pb.Listing_Item_Sku) bool {
 		}
 	}
 	return true
+}
+
+func GetOrderQuantity(l *pb.Listing, item *pb.Order_Item) uint64 {
+	if l.Metadata.Version < 3 {
+		return uint64(item.Quantity)
+	}
+	return item.Quantity64
 }
