@@ -675,29 +675,32 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces notification for 45 days
 		neverNotified = &repo.SaleRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "sale-never-tinyimagehashOne", Small: "sale-never-smallimagehashOne"}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "neverNotified",
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.SaleRecord{
-			Contract: &pb.RicardianContract{
-				VendorListings: []*pb.Listing{
-					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
-				},
-			},
+			Contract:       factory.NewDisputeableContract(),
 			OrderID:        "notifiedUpToFourtyFiveDays",
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
 			Timestamp:      timeStart,
 			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+		}
+		// Produces no notifications as contract is undisputeable
+		neverNotifiedButUndisputeable = &repo.SaleRecord{
+			Contract:       factory.NewUndisputeableContract(),
+			OrderID:        "neverNotifiedButUndisputeable",
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
 		}
 		existingRecords = []*repo.SaleRecord{
 			neverNotified,
 			notifiedUpToFourtyFiveDays,
+			neverNotifiedButUndisputeable,
 		}
 
 		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
@@ -705,6 +708,8 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 			TestModeEnabled: true,
 		})
 	)
+	neverNotified.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "never-tinyimagehashOne", Small: "never-smallimagehashOne"}}
+	notifiedUpToFourtyFiveDays.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourtyfive-tinyimagehashOne", Small: "fourtyfive-smallimagehashOne"}}
 
 	if err := appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
@@ -729,7 +734,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into sales (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?)", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		_, err = database.Exec("insert into sales (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -791,6 +796,10 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 			}
 		case notifiedUpToFourtyFiveDays.OrderID:
 			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			}
+		case neverNotifiedButUndisputeable.OrderID:
+			if lastNotifiedAt != neverNotifiedButUndisputeable.LastNotifiedAt.Unix() {
 				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
 			}
 		default:
@@ -864,10 +873,11 @@ func assertThumbnailValuesAreSet(t *testing.T, actualThumbnails repo.Thumbnail, 
 	if expectedTinyThumbnail != actualThumbnails.Tiny {
 		t.Error("Expected notification to include the tiny thumbnail")
 		t.Error("Actual:", actualThumbnails.Tiny, "Expected:", expectedTinyThumbnail)
+		t.Logf("Contract: %+v\n", contract)
 	}
 	if expectedSmallThumbnail != actualThumbnails.Small {
 		t.Error("Expected notification to include the small thumbnail")
 		t.Error("Actual:", actualThumbnails.Small, "Expected:", expectedSmallThumbnail)
+		t.Logf("Contract: %+v\n", contract)
 	}
-	t.Logf("Contract: %+v\n", contract)
 }

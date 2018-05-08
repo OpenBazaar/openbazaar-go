@@ -15,8 +15,27 @@ var (
 type SaleRecord struct {
 	Contract       *pb.RicardianContract
 	OrderID        string
+	OrderState     pb.OrderState
 	Timestamp      time.Time
 	LastNotifiedAt time.Time
+}
+
+// IsDisputeable returns whether the Sale is in a state that it can be disputed with a
+// third-party moderator
+func (r *SaleRecord) IsDisputeable() bool {
+	if r.IsModeratedContract() {
+		switch r.OrderState {
+		case pb.OrderState_PARTIALLY_FULFILLED, pb.OrderState_FULFILLED:
+			return true
+		}
+	}
+	return false
+}
+
+// IsModeratedContract indicates whether the SaleRecord has a contract which includes
+// a third-party moderator
+func (r *SaleRecord) IsModeratedContract() bool {
+	return r.Contract != nil && r.Contract.BuyerOrder != nil && r.Contract.BuyerOrder.Payment != nil && r.Contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED
 }
 
 // BuildVendorDisputeTimeoutLastNotification returns a Notification that alerts a SaleRecord

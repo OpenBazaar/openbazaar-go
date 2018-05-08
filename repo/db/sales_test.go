@@ -11,6 +11,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -474,49 +475,38 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 
 	// Artificially start sales 50 days ago
 	var (
-		now        = time.Unix(time.Now().Unix(), 0)
-		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
-		nowData, _ = ptypes.TimestampProto(now)
-		order      = &pb.Order{
-			BuyerID: &pb.ID{
-				PeerID: "buyerID",
-				Handle: "@buyerID",
-			},
-			Shipping: &pb.Order_Shipping{
-				Address: "1234 Test Ave",
-				ShipTo:  "Buyer Name",
-			},
-			Payment: &pb.Order_Payment{
-				Amount:  10,
-				Method:  pb.Order_Payment_DIRECT,
-				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
-			},
-			Timestamp: nowData,
-		}
-		expectedImagesOne   = []*pb.Listing_Item_Image{{Tiny: "sale-tinyimagehashOne", Small: "ssale-mallimagehashOne"}}
-		expectedContractOne = &pb.RicardianContract{
-			VendorListings: []*pb.Listing{
-				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
-			},
-			BuyerOrder: order,
+		now                           = time.Unix(time.Now().Unix(), 0)
+		timeStart                     = now.Add(time.Duration(-50*24) * time.Hour)
+		expectedImagesOne             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		expectedContractOne           = factory.NewDisputeableContract()
+		neverNotifiedButUndisputeable = &repo.SaleRecord{
+			Contract:       factory.NewUndisputeableContract(),
+			OrderID:        "neverNotifiedButUndisputed",
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.SaleRecord{
 			Contract:       expectedContractOne,
 			OrderID:        "neverNotified",
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
-			Contract:       expectedContractOne,
+			Contract:       factory.NewContract(),
+			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
 			OrderID:        "finalNotificationSent",
 			Timestamp:      timeStart,
 			LastNotifiedAt: time.Now(),
 		}
 		existingRecords = []*repo.SaleRecord{
+			neverNotifiedButUndisputeable,
 			neverNotified,
 			finallyNotified,
 		}
 	)
+	expectedContractOne.VendorListings[0].Item.Images = expectedImagesOne
 
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,
@@ -529,7 +519,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := database.Exec("insert into sales (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);", r.OrderID, contractData, int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		if _, err := database.Exec("insert into sales (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -540,7 +530,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var sawNeverNotifiedSale, sawFinallyNotifiedSale bool
+	var sawNeverNotifiedButUndisputeable, sawNeverNotifiedSale, sawFinallyNotifiedSale bool
 	for _, s := range sales {
 		switch s.OrderID {
 		case neverNotified.OrderID:
@@ -552,6 +542,8 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedSale = true
+		case neverNotifiedButUndisputeable.OrderID:
+			sawNeverNotifiedButUndisputeable = true
 		default:
 			t.Error("Found unexpected sale: %+v", s)
 		}
@@ -562,6 +554,9 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 	if sawFinallyNotifiedSale == true {
 		t.Error("Expected NOT to see sale which recieved it's final notification")
+	}
+	if sawNeverNotifiedButUndisputeable == true {
+		t.Error("Expected NOT to see sale which is undisputeable")
 	}
 }
 

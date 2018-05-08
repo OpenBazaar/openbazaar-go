@@ -329,7 +329,12 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 	defer s.lock.Unlock()
 
 	fourtyFiveDays := time.Duration(45*24) * time.Hour
-	rows, err := s.db.Query("select orderID, contract, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	stmt := fmt.Sprintf("select orderID, contract, state, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < %d and state in (%d, %d)",
+		int(fourtyFiveDays.Seconds()),
+		pb.OrderState_PARTIALLY_FULFILLED,
+		pb.OrderState_FULFILLED,
+	)
+	rows, err := s.db.Query(stmt)
 	if err != nil {
 		return nil, fmt.Errorf("selecting sales: %s", err.Error())
 	}
@@ -339,25 +344,30 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 		var (
 			lastNotifiedAt int64
 			contract       []byte
+			stateInt       int
 
 			r = &repo.SaleRecord{
 				Contract: &pb.RicardianContract{},
 			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.OrderID, &contract, &timestamp, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning sales: %s", err.Error())
 		}
 		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
 			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
 		}
+		r.OrderState = pb.OrderState(stateInt)
 		if timestamp.Valid {
 			r.Timestamp = time.Unix(timestamp.Int64, 0)
 		} else {
 			r.Timestamp = time.Now()
 		}
 		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
-		result = append(result, r)
+
+		if r.IsDisputeable() {
+			result = append(result, r)
+		}
 	}
 	return result, nil
 }
