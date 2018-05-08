@@ -49,6 +49,13 @@ func TestPurchaseRecordIsDisputeable(t *testing.T) {
 	}
 	for _, s := range disputeableStates {
 		subject.OrderState = s
+		subject.Contract.BuyerOrder.Payment.Method = pb.Order_Payment_DIRECT
+		if subject.IsDisputeable() == true {
+			t.Errorf("Expected UNMODERATED order in state '%s' to NOT be disputeable", s)
+		}
+
+		subject.OrderState = s
+		subject.Contract.BuyerOrder.Payment.Method = pb.Order_Payment_MODERATED
 		if subject.IsDisputeable() == false {
 			t.Errorf("Expected order in state '%s' to BE disputeable", s)
 		}

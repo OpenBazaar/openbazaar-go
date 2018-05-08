@@ -23,14 +23,21 @@ type PurchaseRecord struct {
 	LastNotifiedAt time.Time
 }
 
+// IsDisputeable returns whether the Purchase is in a state that it can be disputed with a
+// third-party moderator
 func (r *PurchaseRecord) IsDisputeable() bool {
-	if r.Contract != nil && r.Contract.BuyerOrder != nil && r.Contract.BuyerOrder.Payment != nil && r.Contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+	if r.IsModeratedContract() {
 		switch r.OrderState {
 		case pb.OrderState_PENDING, pb.OrderState_AWAITING_FULFILLMENT, pb.OrderState_FULFILLED:
 			return true
 		}
 	}
 	return false
+}
+
+// IsModeratedContract returns whether the contract includes a third-party moderator
+func (r *PurchaseRecord) IsModeratedContract() bool {
+	return r.Contract != nil && r.Contract.BuyerOrder != nil && r.Contract.BuyerOrder.Payment != nil && r.Contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED
 }
 
 // BuildBuyerDisputeTimeoutFirstNotification returns a Notification with ExpiresIn set for the First Interval
