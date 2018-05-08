@@ -14,10 +14,15 @@ import (
 
 var log = logging.MustGetLogger("main")
 
+//Opts contain version flag
 type Opts struct {
 	Version bool `short:"v" long:"version" description:"Print the version number and exit"`
 }
+
+//Stop struct
 type Stop struct{}
+
+//Restart struct
 type Restart struct{}
 
 var stopServer Stop
