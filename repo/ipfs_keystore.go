@@ -58,12 +58,7 @@ func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen
 	getObjectFromIPFSCacheMu.Lock()
 	defer getObjectFromIPFSCacheMu.Unlock()
 
-	entry, ok := getObjectFromIPFSCache[getIPFSCacheKey(p, name)]
-	if !ok {
-		return fetchObjectFromIPFS(ctx, p, name)
-	}
-
-	if entry.created.Add(maxCacheLen).Before(time.Now()) {
+	fetchAndUpdateCache := func() ([]byte, error) {
 		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
 		if err != nil {
 			return nil, err
@@ -77,19 +72,16 @@ func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen
 		return objBytes, nil
 	}
 
+	entry, ok := getObjectFromIPFSCache[getIPFSCacheKey(p, name)]
+	if !ok || entry.created.Add(maxCacheLen).Before(time.Now()) {
+		return fetchAndUpdateCache()
+	}
+
 	// Update cache in background after a successful read
-	func() {
+	go func() {
 		getObjectFromIPFSCacheMu.Lock()
 		defer getObjectFromIPFSCacheMu.Unlock()
-		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
-		if err != nil {
-			log.Error("error update inventory cache:", err)
-		}
-
-		getObjectFromIPFSCache[getIPFSCacheKey(p, name)] = getObjectFromIPFSCacheEntry{
-			bytes:   objBytes,
-			created: time.Now(),
-		}
+		fetchAndUpdateCache()
 	}()
 
 	return entry.bytes, nil
@@ -101,6 +93,7 @@ func fetchObjectFromIPFS(ctx commands.Context, p peer.ID, name string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
+
 	bytes, err := ipfs.Cat(ctx, root, time.Minute)
 	if err != nil {
 		return nil, err
