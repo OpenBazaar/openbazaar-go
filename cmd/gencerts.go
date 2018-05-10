@@ -118,8 +118,14 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		log.Fatalf("Failed to create certificate: %s", err)
 	}
 
+	// Create ssl directory
+	err = os.MkdirAll(path.Join(repoPath, "ssl"), os.ModePerm)
+	if err != nil {
+		log.Fatalf("Failed to create ssl directory: %s", err)
+	}
+
 	//Create and write cert.pem
-	certOut, err := os.Create("cert.pem")
+	certOut, err := os.Create(path.Join(repoPath, "ssl", "cert.pem"))
 	if err != nil {
 		log.Fatalf("failed to open cert.pem for writing: %s", err)
 	}
@@ -128,7 +134,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	log.Noticef("written cert.pem\n")
 
 	//Create and write key.pem
-	keyOut, err := os.OpenFile("key.pem", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(path.Join(repoPath, "ssl", "key.pem"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Noticef("failed to open key.pem for writing:", err)
 		return err
