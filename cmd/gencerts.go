@@ -7,13 +7,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"flag"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"math/big"
 	"net"
 	"os"
+	"path"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 //GenerateCertificates struct
@@ -49,7 +50,6 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 
 //Execute gencerts command
 func (x *GenerateCertificates) Execute(args []string) error {
-
 	// Set repo path
 	repoPath, err := repo.GetRepoPath(x.Testnet)
 	if err != nil {
@@ -57,11 +57,6 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	}
 	if x.DataDir != "" {
 		repoPath = x.DataDir
-	}
-	r, err := fsrepo.Open(repoPath)
-	if err != nil {
-		log.Error(err)
-		return err
 	}
 
 	flag.Parse()
