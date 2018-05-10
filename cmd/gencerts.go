@@ -19,15 +19,11 @@ import (
 
 //GenerateCertificates struct
 type GenerateCertificates struct {
-	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	Testnet bool   `short:"t" long:"testnet" description:"config file is for testnet node"`
+	DataDir  string        `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	Testnet  bool          `short:"t" long:"testnet" description:"config file is for testnet node"`
+	Host     string        `short:"h" long:"host" description:"comma-separated hostnames and IPs to generate a certificate for"`
+	ValidFor time.Duration `long:"duration" description:"duration that certificate is valid for"`
 }
-
-//flags
-var (
-	host     = flag.String("host", "", "Comma-separated hostnames and IPs to generate a certificate for")
-	validFor = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
-)
 
 //return PublicKey
 func publicKey(priv interface{}) interface{} {
@@ -62,8 +58,13 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	flag.Parse()
 
 	//Check if host entered
-	if len(*host) == 0 {
+	if len(x.Host) == 0 {
 		log.Fatalf("Missing required --host parameter")
+	}
+
+	// Set default duration
+	if x.ValidFor == 0 {
+		x.ValidFor = 365 * 24 * time.Hour
 	}
 
 	var priv interface{}
@@ -76,7 +77,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 
 	//Set creation date
 	var notBefore = time.Now()
-	notAfter := notBefore.Add(*validFor)
+	notAfter := notBefore.Add(x.ValidFor)
 
 	//Crate serial nmuber
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
@@ -99,7 +100,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	}
 
 	//Check if host ip or dns name and count their quantity
-	hosts := strings.Split(*host, ",")
+	hosts := strings.Split(x.Host, ",")
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
