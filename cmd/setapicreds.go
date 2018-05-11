@@ -88,8 +88,10 @@ func (x *SetAPICreds) Execute(args []string) error {
 		apiCfg.AllowedIPs = []string{}
 	}
 
-	if r.SetConfigKey("JSON-API", apiCfg); err != nil {
+	err = r.SetConfigKey("JSON-API", apiCfg)
+	if err != nil {
 		return err
 	}
+
 	return nil
 }

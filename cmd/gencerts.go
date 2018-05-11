@@ -25,27 +25,11 @@ type GenerateCertificates struct {
 	ValidFor time.Duration `long:"duration" description:"duration that certificate is valid for"`
 }
 
-//return PublicKey
-func publicKey(priv interface{}) interface{} {
-	switch k := priv.(type) {
-	case *rsa.PrivateKey:
-		return &k.PublicKey
-	default:
-		return nil
-	}
-}
-
-func pemBlockForKey(priv interface{}) *pem.Block {
-	switch k := priv.(type) {
-	case *rsa.PrivateKey:
-		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
-	default:
-		return nil
-	}
-}
-
 //Execute gencerts command
 func (x *GenerateCertificates) Execute(args []string) error {
+
+	flag.Parse()
+
 	// Set repo path
 	repoPath, err := repo.GetRepoPath(x.Testnet)
 	if err != nil {
@@ -54,8 +38,6 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
-
-	flag.Parse()
 
 	//Check if host entered
 	if len(x.Host) == 0 {
@@ -91,12 +73,12 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		Subject: pkix.Name{
 			Organization: []string{"OpenBazaar"},
 		},
-		NotBefore: notBefore,
-		NotAfter:  notAfter,
-
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
+		IsCA: true,
 	}
 
 	//Check if host ip or dns name and count their quantity
@@ -109,11 +91,8 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		}
 	}
 
-	template.IsCA = true
-	template.KeyUsage |= x509.KeyUsageCertSign
-
 	//Create sertificate
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, publicKey(priv), priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.(*rsa.PrivateKey).PublicKey, priv)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %s", err)
 	}
@@ -139,7 +118,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		log.Noticef("failed to open key.pem for writing:", err)
 		return err
 	}
-	pem.Encode(keyOut, pemBlockForKey(priv))
+	pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv.(*rsa.PrivateKey))})
 	keyOut.Close()
 	log.Noticef("written key.pem\n")
 
