@@ -115,7 +115,7 @@ func TestUpdateWithNil(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, buyerOutpoints, _, _, err := casesdb.GetPayoutDetails("caseID")
+	dispute, err := casesdb.GetByCaseID("caseID")
 	if err != nil {
 		t.Error(err)
 	}
@@ -123,7 +123,7 @@ func TestUpdateWithNil(t *testing.T) {
 	if buyerContract != nil {
 		t.Error("Vendor contract was not nil")
 	}
-	if buyerOutpoints != nil {
+	if dispute.BuyerOutpoints != nil {
 		t.Error("Vendor outpoints was not nil")
 	}
 }
@@ -325,67 +325,71 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	}
 }
 
-func TestGetPayoutDetails(t *testing.T) {
+func TestGetByCaseID(t *testing.T) {
+	var (
+		expectedBuyerOutpoints  []*pb.Outpoint = []*pb.Outpoint{{"hash1", 0, 5}}
+		expectedVendorOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
+	)
 	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.UpdateBuyerInfo("caseID", contract, []string{"someError", "anotherError"}, "addr1", buyerTestOutpoints)
+	err = casesdb.UpdateBuyerInfo("caseID", contract, []string{"someError", "anotherError"}, "addr1", expectedBuyerOutpoints)
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.UpdateVendorInfo("caseID", contract, []string{"someError", "anotherError"}, "addr2", vendorTestOutpoints)
+	err = casesdb.UpdateVendorInfo("caseID", contract, []string{"someError", "anotherError"}, "addr2", expectedVendorOutpoints)
 	if err != nil {
 		t.Error(err)
 	}
 
-	buyerContract, vendorContract, buyerAddr, vendorAddr, buyerOutpoints, vendorOutpoints, state, err := casesdb.GetPayoutDetails("caseID")
+	dispute, err := casesdb.GetByCaseID("caseID")
 	if err != nil {
 		t.Error(err)
 	}
 	ser, _ := proto.Marshal(contract)
-	buyerSer, _ := proto.Marshal(buyerContract)
-	vendorSer, _ := proto.Marshal(vendorContract)
+	buyerSer, _ := proto.Marshal(dispute.BuyerContract)
+	vendorSer, _ := proto.Marshal(dispute.VendorContract)
 
 	if !bytes.Equal(ser, buyerSer) || !bytes.Equal(ser, vendorSer) {
 		t.Error("Failed to fetch case contract from db")
 	}
-	if buyerAddr != "addr1" {
-		t.Errorf("Expected address %s got %s", "addr1", buyerAddr)
+	if dispute.BuyerPayoutAddress != "addr1" {
+		t.Errorf("Expected address %s got %s", "addr1", dispute.BuyerPayoutAddress)
 	}
-	if vendorAddr != "addr2" {
-		t.Errorf("Expected address %s got %s", "addr2", vendorAddr)
+	if dispute.VendorPayoutAddress != "addr2" {
+		t.Errorf("Expected address %s got %s", "addr2", dispute.VendorPayoutAddress)
 	}
-	if len(buyerOutpoints) != len(buyerTestOutpoints) {
+	if len(dispute.BuyerOutpoints) != len(expectedBuyerOutpoints) {
 		t.Error("Incorrect number of buyer outpoints returned")
 	}
-	for i, o := range buyerTestOutpoints {
-		if o.Hash != buyerTestOutpoints[i].Hash {
-			t.Errorf("Expected outpoint hash %s got %s", o.Hash, buyerTestOutpoints[i].Hash)
+	for i, o := range dispute.BuyerOutpoints {
+		if o.Hash != expectedBuyerOutpoints[i].Hash {
+			t.Errorf("Expected outpoint hash %s got %s", o.Hash, expectedBuyerOutpoints[i].Hash)
 		}
-		if o.Index != buyerTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %s got %s", o.Index, buyerTestOutpoints[i].Index)
+		if o.Index != expectedBuyerOutpoints[i].Index {
+			t.Errorf("Expected outpoint index %s got %s", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value != buyerTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %s got %s", o.Value, buyerTestOutpoints[i].Value)
+		if o.Value != expectedBuyerOutpoints[i].Value {
+			t.Errorf("Expected outpoint value %s got %s", o.Value, expectedBuyerOutpoints[i].Value)
 		}
 	}
-	if len(vendorOutpoints) != len(vendorTestOutpoints) {
+	if len(dispute.VendorOutpoints) != len(expectedVendorOutpoints) {
 		t.Error("Incorrect number of buyer outpoints returned")
 	}
-	for i, o := range vendorTestOutpoints {
-		if o.Hash != vendorTestOutpoints[i].Hash {
-			t.Errorf("Expected outpoint hash %s got %s", o.Hash, vendorTestOutpoints[i].Hash)
+	for i, o := range expectedVendorOutpoints {
+		if o.Hash != expectedVendorOutpoints[i].Hash {
+			t.Errorf("Expected outpoint hash %s got %s", o.Hash, expectedVendorOutpoints[i].Hash)
 		}
-		if o.Index != vendorTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %s got %s", o.Index, vendorTestOutpoints[i].Index)
+		if o.Index != expectedVendorOutpoints[i].Index {
+			t.Errorf("Expected outpoint index %s got %s", o.Index, expectedVendorOutpoints[i].Index)
 		}
-		if o.Value != vendorTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %s got %s", o.Value, vendorTestOutpoints[i].Value)
+		if o.Value != expectedVendorOutpoints[i].Value {
+			t.Errorf("Expected outpoint value %s got %s", o.Value, expectedVendorOutpoints[i].Value)
 		}
 	}
-	if state != pb.OrderState_DISPUTED {
-		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, state)
+	if dispute.OrderState != pb.OrderState_DISPUTED {
+		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, dispute.OrderState)
 	}
 }
 

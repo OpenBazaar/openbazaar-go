@@ -287,8 +287,8 @@ type CaseStore interface {
 	// Return the case metadata given a case ID
 	GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error)
 
-	// Return the dispute payout data for a case
-	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
+	// GetByCaseID returns the dispute payout data for a case
+	GetByCaseID(caseID string) (*DisputeCaseRecord, error)
 
 	// Return the metadata for all cases given the search terms. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Case, int, error)
