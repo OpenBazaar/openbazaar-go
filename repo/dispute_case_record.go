@@ -75,3 +75,14 @@ func (r *DisputeCaseRecord) buildModeratorDisputeExpiry(interval time.Duration, 
 	}
 	return NewNotification(notification, createdAt, false)
 }
+
+// IsExpired returns a bool indicating whether the case is still open right now
+func (r *DisputeCaseRecord) IsExpiredNow() bool {
+	return r.IsExpired(time.Now())
+}
+
+// IsExpired returns a bool indicating whether the case is still open
+func (r *DisputeCaseRecord) IsExpired(when time.Time) bool {
+	expiresAt := r.Timestamp.Add(ModeratorDisputeExpiry_lastInterval)
+	return when.Equal(expiresAt) || when.After(expiresAt)
+}
