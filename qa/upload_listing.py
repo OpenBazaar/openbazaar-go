@@ -29,10 +29,11 @@ class UploadListingTest(OpenBazaarTestFramework):
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
-            if len(resp) == 8:
-                print("UploadListingTest - PASS")
-            else:
-                raise TestFailure("UploadListingTest - FAIL: Returned incorrect amount of inventory")
+            inv = resp["ron-swanson-tshirt"]
+            if inv == None:
+                raise TestFailure("UploadListingTest - FAIL: Did not return inventory for listing")
+            if inv["inventory"] != 213:
+                raise TestFailure("UploadListingTest - FAIL: Returned incorrect amount of inventory: %d", inv["inventory"])
         elif r.status_code == 404:
             raise TestFailure("UploadListingTest - FAIL: Listing post endpoint not found")
         else:

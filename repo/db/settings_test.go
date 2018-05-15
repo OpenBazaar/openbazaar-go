@@ -8,16 +8,13 @@ import (
 	"testing"
 )
 
-var sdb SettingsDB
+var sdb repo.ConfigurationStore
 var settings repo.SettingsData
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	sdb = SettingsDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	sdb = NewConfigurationStore(conn, new(sync.Mutex))
 	c := "UNITED_STATES"
 	settings = repo.SettingsData{
 		Country: &c,
@@ -30,7 +27,7 @@ func TestSettingsPut(t *testing.T) {
 		t.Error(err)
 	}
 	set := repo.SettingsData{}
-	stmt, err := sdb.db.Prepare("select value from config where key=?")
+	stmt, err := sdb.PrepareQuery("select value from config where key=?")
 	defer stmt.Close()
 	var settingsBytes []byte
 	err = stmt.QueryRow("settings").Scan(&settingsBytes)
@@ -47,7 +44,7 @@ func TestSettingsPut(t *testing.T) {
 }
 
 func TestInvalidSettingsGet(t *testing.T) {
-	tx, err := sdb.db.Begin()
+	tx, err := sdb.BeginTransaction()
 	if err != nil {
 		t.Error(err)
 	}

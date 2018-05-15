@@ -46,6 +46,7 @@ It has these top-level messages:
 	SignedData
 	CidList
 	Block
+	Error
 	Moderator
 	DisputeUpdate
 	Post

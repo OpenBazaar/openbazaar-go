@@ -26,7 +26,7 @@ type messageSender struct {
 	requestlk sync.Mutex
 }
 
-var ReadMessageTimeout = time.Minute
+var ReadMessageTimeout = time.Minute * 5
 var ErrReadTimeout = fmt.Errorf("timed out reading response")
 
 func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSender, error) {

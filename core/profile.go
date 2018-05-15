@@ -6,13 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/imdario/mergo"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	u "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
 	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
@@ -22,10 +15,19 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/imdario/mergo"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 const (
-	cachePrefix       = "IPNSPERSISENTCACHE_"
+	CachePrefix       = "IPNSPERSISTENTCACHE_"
+	KeyCachePrefix    = "IPNSPUBKEYCACHE_"
 	CachedProfileTime = time.Hour * 24 * 7
 )
 
@@ -51,7 +53,8 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		var profile []byte
 		var err error
 		if rootHash == "" {
-			profile, err = ipfs.ResolveThenCat(n.Context, ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
+
+			profile, err = n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
 			if err != nil || len(profile) == 0 {
 				return pro, err
 			}
@@ -73,7 +76,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 	var recordAvailable bool
 	var val interface{}
 	if useCache {
-		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
 		if err != nil { // No record in datastore
 			pro, err = fetch("")
 			if err != nil {
@@ -89,7 +92,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			if err != nil {
 				return pb.Profile{}, err
 			}
-			eol, ok := checkEOL(entry)
+			eol, ok := CheckEOL(entry)
 			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
 			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
@@ -117,7 +120,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 	// Update the record with a new EOL
 	go func() {
 		if !recordAvailable {
-			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(cachePrefix + peerId))
+			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
 			if err != nil {
 				return
 			}
@@ -132,12 +135,12 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		if err != nil {
 			return
 		}
-		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(cachePrefix+peerId), v)
+		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
 	}()
 	return pro, nil
 }
 
-func checkEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
+func CheckEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
 	if e.GetValidityType() == ipnspb.IpnsEntry_EOL {
 		eol, err := u.ParseRFC3339(string(e.GetValidity()))
 		if err != nil {
@@ -165,8 +168,13 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		Indent:       "    ",
 		OrigName:     false,
 	}
+
+	if profile.Currencies == nil {
+		profile.Currencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	}
+
 	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrencies = []string{strings.ToUpper(n.Wallet.CurrencyCode())}
+		profile.ModeratorInfo.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
 	}
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	ts, err := ptypes.TimestampProto(time.Now())

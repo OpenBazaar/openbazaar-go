@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/ptypes"
 	"sync"
 )
 
-var casesdb CasesDB
+var casesdb repo.CaseStore
 
 var buyerTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash1", 0, 5}}
 var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
@@ -21,10 +22,7 @@ var vendorTestOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	casesdb = CasesDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	casesdb = NewCaseStore(conn, new(sync.Mutex))
 	contract = new(pb.RicardianContract)
 	listing := new(pb.Listing)
 	item := new(pb.Listing_Item)
@@ -76,7 +74,7 @@ func TestPutCase(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := casesdb.db.Prepare("select caseID, state, read, buyerOpened, claim from cases where caseID=?")
+	stmt, err := casesdb.PrepareQuery("select caseID, state, read, buyerOpened, claim from cases where caseID=?")
 	defer stmt.Close()
 
 	var caseID string
@@ -137,7 +135,7 @@ func TestDeleteCase(t *testing.T) {
 		t.Error("Case delete failed")
 	}
 
-	stmt, _ := casesdb.db.Prepare("select caseID from cases where caseID=?")
+	stmt, _ := casesdb.PrepareQuery("select caseID from cases where caseID=?")
 	defer stmt.Close()
 
 	var caseID string
@@ -156,7 +154,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := casesdb.db.Prepare("select read from cases where caseID=?")
+	stmt, _ := casesdb.PrepareQuery("select read from cases where caseID=?")
 	defer stmt.Close()
 
 	var read int
@@ -182,7 +180,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := casesdb.db.Prepare("select read from cases where caseID=?")
+	stmt, _ := casesdb.PrepareQuery("select read from cases where caseID=?")
 	defer stmt.Close()
 
 	var read int
@@ -205,7 +203,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 		t.Error(err)
 	}
 
-	stmt, err := casesdb.db.Prepare("select caseID, buyerContract, buyerValidationErrors, buyerPayoutAddress, buyerOutpoints from cases where caseID=?")
+	stmt, err := casesdb.PrepareQuery("select caseID, buyerContract, buyerValidationErrors, buyerPayoutAddress, buyerOutpoints from cases where caseID=?")
 	defer stmt.Close()
 
 	var caseID string
@@ -244,7 +242,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 		t.Error(err)
 	}
 
-	stmt, err := casesdb.db.Prepare("select caseID, vendorContract, vendorValidationErrors, vendorPayoutAddress, vendorOutpoints from cases where caseID=?")
+	stmt, err := casesdb.PrepareQuery("select caseID, vendorContract, vendorValidationErrors, vendorPayoutAddress, vendorOutpoints from cases where caseID=?")
 	defer stmt.Close()
 
 	var caseID string
@@ -304,13 +302,13 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, state)
 	}
 	if read != false {
-		t.Errorf("Expected read=%s got %s", false, read)
+		t.Errorf("Expected read=%v got %v", false, read)
 	}
 	if date.After(time.Now()) || date.Equal(time.Time{}) {
 		t.Error("Case timestamp invalid")
 	}
 	if !buyerOpened {
-		t.Errorf("Expected buyerOpened=%s got %s", true, buyerOpened)
+		t.Errorf("Expected buyerOpened=%v got %v", true, buyerOpened)
 	}
 	if claim != "blah" {
 		t.Errorf("Expected claim=%s got %s", "blah", claim)
@@ -363,10 +361,10 @@ func TestGetPayoutDetails(t *testing.T) {
 			t.Errorf("Expected outpoint hash %s got %s", o.Hash, buyerTestOutpoints[i].Hash)
 		}
 		if o.Index != buyerTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %s got %s", o.Index, buyerTestOutpoints[i].Index)
+			t.Errorf("Expected outpoint index %v got %v", o.Index, buyerTestOutpoints[i].Index)
 		}
 		if o.Value != buyerTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %s got %s", o.Value, buyerTestOutpoints[i].Value)
+			t.Errorf("Expected outpoint value %v got %v", o.Value, buyerTestOutpoints[i].Value)
 		}
 	}
 	if len(vendorOutpoints) != len(vendorTestOutpoints) {
@@ -377,10 +375,10 @@ func TestGetPayoutDetails(t *testing.T) {
 			t.Errorf("Expected outpoint hash %s got %s", o.Hash, vendorTestOutpoints[i].Hash)
 		}
 		if o.Index != vendorTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %s got %s", o.Index, vendorTestOutpoints[i].Index)
+			t.Errorf("Expected outpoint index %v got %v", o.Index, vendorTestOutpoints[i].Index)
 		}
 		if o.Value != vendorTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %s got %s", o.Value, vendorTestOutpoints[i].Value)
+			t.Errorf("Expected outpoint value %v got %v", o.Value, vendorTestOutpoints[i].Value)
 		}
 	}
 	if state != pb.OrderState_DISPUTED {

@@ -82,7 +82,8 @@
     "PrivKey": "testKey"
   },
   "Ipns": {
-    "QuerySize": 0,
+    "BackUpAPI": "https://gateway.ob1.io/ob/ipns/",
+    "QuerySize": 1,
     "RecordLifetime": "7d",
     "RepublishPeriod": "24h",
     "ResolveCacheSize": 128,

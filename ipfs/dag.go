@@ -2,9 +2,11 @@ package ipfs
 
 import (
 	"context"
+	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/merkledag"
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	"sync"
+	"time"
 )
 
 // This function takes a Cid directory object and walks it returning each linked cid in the graph
@@ -37,4 +39,32 @@ func FetchGraph(dag merkledag.DAGService, id *cid.Cid) ([]cid.Cid, error) {
 		}
 	}
 	return ret, nil
+}
+
+func RemoveAll(ctx commands.Context, peerID string) error {
+	hash, err := Resolve(ctx, peerID, time.Minute*5)
+	if err != nil {
+		return err
+	}
+	c, err := cid.Decode(hash)
+	if err != nil {
+		return err
+	}
+	nd, err := ctx.GetNode()
+	if err != nil {
+		return err
+	}
+	graph, err := FetchGraph(nd.DAG, c)
+	if err != nil {
+		return err
+	}
+	for _, id := range graph {
+		ctx := context.Background()
+		n, err := nd.DAG.Get(ctx, &id)
+		if err != nil {
+			continue
+		}
+		nd.DAG.Remove(n)
+	}
+	return nil
 }

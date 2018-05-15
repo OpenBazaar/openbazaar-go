@@ -98,6 +98,21 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 	return &w, nil
 }
 
+// TestNetworkEnabled indicates if the current network being used is Test Network
+func (w *ZcashdWallet) TestNetworkEnabled() bool {
+	return w.params.Name == chaincfg.TestNet3Params.Name
+}
+
+// RegressionNetworkEnabled indicates if the current network being used is Regression Network
+func (w *ZcashdWallet) RegressionNetworkEnabled() bool {
+	return w.params.Name == chaincfg.RegressionNetParams.Name
+}
+
+// MainNetworkEnabled indicates if the current network being used is the live Network
+func (w *ZcashdWallet) MainNetworkEnabled() bool {
+	return w.params.Name == chaincfg.MainNetParams.Name
+}
+
 func GetCredentials(repoPath string) (username, password string, err error) {
 	p := path.Join(repoPath, "zcash", "zcash.conf")
 	if _, err := os.Stat(p); os.IsNotExist(err) {
@@ -173,9 +188,9 @@ func (w *ZcashdWallet) BuildArguments(rescan bool) []string {
 	}
 	args = append(args, "-torcontrol=127.0.0.1:"+strconv.Itoa(w.controlPort))
 
-	if w.params.Name == chaincfg.TestNet3Params.Name {
+	if w.TestNetworkEnabled() {
 		args = append(args, "-testnet")
-	} else if w.params.Name == chaincfg.RegressionNetParams.Name {
+	} else if w.RegressionNetworkEnabled() {
 		args = append(args, "-regtest")
 	}
 	if w.trustedPeer != "" {
@@ -232,7 +247,7 @@ func (w *ZcashdWallet) shutdownIfActive() {
 }
 
 func (w *ZcashdWallet) CurrencyCode() string {
-	if w.params.Name == chaincfg.MainNetParams.Name {
+	if w.MainNetworkEnabled() {
 		return "zec"
 	} else {
 		return "tzec"
@@ -325,6 +340,39 @@ func (w *ZcashdWallet) GetBlockHeight(hash *chainhash.Hash) (int32, error) {
 	}
 
 	return r.Height, nil
+}
+
+func (w *ZcashdWallet) FindHeightBeforeTime(ts time.Time) (int32, error) {
+	// Get the best block hash
+	resp, err := w.rpcClient.RawRequest("getbestblockhash", []json.RawMessage{})
+	if err != nil {
+		return 0, err
+	}
+	hash := string(resp)[1 : len(string(resp))-1]
+
+	// Iterate over the block headers to check the timestamp
+	for {
+		h := `"` + hash + `"`
+		resp, err = w.rpcClient.RawRequest("getblockheader", []json.RawMessage{json.RawMessage(h)})
+		if err != nil {
+			return 0, err
+		}
+		type Respose struct {
+			Timestamp int64  `json:"time"`
+			PrevBlock string `json:"previousblockhash"`
+			Height    int32  `json:"height"`
+		}
+		r := new(Respose)
+		err = json.Unmarshal([]byte(resp), r)
+		if err != nil {
+			return 0, err
+		}
+		t := time.Unix(r.Timestamp, 0)
+		if t.Before(ts) || r.Height == 1 {
+			return r.Height, nil
+		}
+		hash = r.PrevBlock
+	}
 }
 
 func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
@@ -938,18 +986,18 @@ func (w *ZcashdWallet) addWatchedScript(addr btc.Address) error {
 }
 
 func (w *ZcashdWallet) ReSyncBlockchain(fromDate time.Time) {
-	w.rpcClient.RawRequest("stop", []json.RawMessage{})
-	w.rpcClient.Shutdown()
-	time.Sleep(5 * time.Second)
-	args := w.BuildArguments(true)
-	cmd := exec.Command(w.binary, args...)
-	cmd.Start()
-
-	client, err := btcrpcclient.New(connCfg, nil)
+	<-w.initChan
+	height, err := w.FindHeightBeforeTime(fromDate)
 	if err != nil {
-		log.Error("Could not connect to zcashd during rescan")
+		log.Error(err)
+		return
 	}
-	w.rpcClient = client
+	h := strconv.Itoa(int(height))
+	dummyKey := `"SKxuMmhzeBuEYnZo6Hn6NsHpYoD3uniJWYSn6PtNomod1HQ93eoo"`
+	_, err = w.rpcClient.RawRequest("z_importkey", []json.RawMessage{json.RawMessage(dummyKey), json.RawMessage(`"yes"`), json.RawMessage(h)})
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func (w *ZcashdWallet) Close() {

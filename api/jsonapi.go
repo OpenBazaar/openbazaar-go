@@ -29,6 +29,8 @@ import (
 	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
 	"io/ioutil"
 
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -37,12 +39,12 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
 )
@@ -190,6 +192,22 @@ func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {
 	resp, _ := json.MarshalIndent(err, "", "    ")
 	w.WriteHeader(errorCode)
 	fmt.Fprint(w, string(resp))
+}
+
+func JSONErrorResponse(w http.ResponseWriter, errorCode int, err error) {
+	w.WriteHeader(errorCode)
+	fmt.Fprint(w, err.Error())
+}
+
+func RenderJSONOrStringError(w http.ResponseWriter, errorCode int, err error) {
+	errStr := err.Error()
+	var jsonObj map[string]interface{}
+	if json.Unmarshal([]byte(errStr), &jsonObj) == nil {
+		JSONErrorResponse(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	ErrorResponse(w, http.StatusInternalServerError, errStr)
 }
 
 func SanitizedResponse(w http.ResponseWriter, response string) {
@@ -501,77 +519,18 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(ld.Moderators) == 0 {
-		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil && sd.StoreModerators != nil {
-			ld.Moderators = *sd.StoreModerators
-		}
-	}
-
-	// If the listing already exists tell them to use PUT
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
-	if ld.Slug != "" {
-		_, ferr := os.Stat(listingPath)
-		if !os.IsNotExist(ferr) {
+	err = i.node.CreateListing(ld)
+	if err != nil {
+		if err == core.ErrListingAlreadyExists {
 			ErrorResponse(w, http.StatusConflict, "Listing already exists. Use PUT.")
 			return
 		}
-	} else {
-		ld.Slug, err = i.node.GenerateSlug(ld.Item.Title)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	}
-	err = i.node.SetListingInventory(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	signedListing, err := i.node.SignListing(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	listingPath = path.Join(i.node.RepoPath, "root", "listings", signedListing.Listing.Slug+".json")
-	f, err := os.Create(listingPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(signedListing)
-	if err != nil {
+
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if _, err := f.WriteString(out); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.UpdateListingIndex(signedListing)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	// Update followers/following
-	err = i.node.UpdateFollow()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if err := i.node.SeedNode(); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, signedListing.Listing.Slug))
-	return
+	SanitizedResponse(w, fmt.Sprintf(`{"slug": "%s"}`, ld.Slug))
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
@@ -581,65 +540,18 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if len(ld.Moderators) == 0 {
-		sd, err := i.node.Datastore.Settings().Get()
-		if err == nil {
-			ld.Moderators = *sd.StoreModerators
+
+	err = i.node.UpdateListing(ld)
+	if err != nil {
+		if err == core.ErrListingDoesNotExist {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return
 		}
-	}
-	listingPath := path.Join(i.node.RepoPath, "root", "listings", ld.Slug+".json")
-	_, ferr := os.Stat(listingPath)
-	if os.IsNotExist(ferr) {
-		ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-		return
-	}
-	err = i.node.SetListingInventory(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	signedListing, err := i.node.SignListing(ld)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	f, err := os.Create(listingPath)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	m := jsonpb.Marshaler{
-		EnumsAsInts:  false,
-		EmitDefaults: false,
-		Indent:       "    ",
-		OrigName:     false,
-	}
-	out, err := m.MarshalToString(signedListing)
-	if err != nil {
+
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	if _, err := f.WriteString(out); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = i.node.UpdateListingIndex(signedListing)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	// Update followers/following
-	err = i.node.UpdateFollow()
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, "File Write Error: "+err.Error())
-		return
-	}
-	if err := i.node.SeedNode(); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
 	SanitizedResponse(w, `{}`)
 	return
 }
@@ -680,7 +592,7 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	orderId, paymentAddr, amount, online, err := i.node.Purchase(&data)
 	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		RenderJSONOrStringError(w, http.StatusInternalServerError, err)
 		return
 	}
 	type purchaseReturn struct {
@@ -908,22 +820,21 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 }
 
 func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
-	type cfg struct {
-		PeerId         string `json:"peerID"`
-		CryptoCurrency string `json:"cryptoCurrency"`
-		Testnet        bool   `json:"testnet"`
-		Tor            bool   `json:"tor"`
-	}
-
-	testnet := false
-	if i.node.Wallet.Params().Name != chaincfg.MainNetParams.Name {
-		testnet = true
-	}
 	var usingTor bool
 	if i.node.TorDialer != nil {
 		usingTor = true
 	}
-	c := cfg{i.node.IpfsNode.Identity.Pretty(), strings.ToUpper(i.node.Wallet.CurrencyCode()), testnet, usingTor}
+	c := struct {
+		PeerId         string `json:"peerID"`
+		CryptoCurrency string `json:"cryptoCurrency"`
+		Testnet        bool   `json:"testnet"`
+		Tor            bool   `json:"tor"`
+	}{
+		PeerId:         i.node.IPFSIdentityString(),
+		CryptoCurrency: core.NormalizeCurrencyCode(i.node.Wallet.CurrencyCode()),
+		Testnet:        i.node.TestNetworkEnabled(),
+		Tor:            usingTor,
+	}
 	ser, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1128,7 +1039,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 		SanitizedResponse(w, string(exchangeRateJson))
 
 	} else {
-		rate, err := i.node.ExchangeRates.GetExchangeRate(strings.ToUpper(currencyCode))
+		rate, err := i.node.ExchangeRates.GetExchangeRate(currencyCode)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
@@ -1139,7 +1050,7 @@ func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "followers" || peerId == i.node.IPFSIdentityString() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
 		if limit == "" {
@@ -1175,7 +1086,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "followers.json")), time.Minute)
+		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "followers.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1205,7 +1116,7 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "following" || peerId == i.node.IPFSIdentityString() {
 		offset := r.URL.Query().Get("offsetId")
 		limit := r.URL.Query().Get("limit")
 		if limit == "" {
@@ -1233,7 +1144,7 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		followBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "following.json")), time.Minute)
+		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "following.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1244,37 +1155,93 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
-	type inv struct {
-		Slug     string `json:"slug"`
-		Variant  int    `json:"variant"`
-		Quantity int    `json:"quantity"`
+	// Get optional peerID and slug parameters
+	var (
+		peerIDString string
+		slug         string
+	)
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) > 3 {
+		peerIDString = parts[3]
 	}
-	var invList []inv
-	inventory, err := i.node.Datastore.Inventory().GetAll()
-	if err != nil {
-		fmt.Fprint(w, `[]`)
+	if len(parts) > 4 {
+		slug = parts[4]
+	}
+
+	// If we want our own inventory get it from the local database and return
+	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
+	if getPersonalInventory {
+		var (
+			err       error
+			inventory interface{}
+		)
+
+		if slug == "" {
+			inventory, err = i.node.GetLocalInventory()
+		} else {
+			inventory, err = i.node.GetLocalInventoryForSlug(slug)
+		}
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		ret, err := json.MarshalIndent(inventory, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		if string(ret) == "null" {
+			fmt.Fprint(w, `[]`)
+			return
+		}
+		SanitizedResponse(w, string(ret))
 		return
 	}
-	for slug, m := range inventory {
-		for variant, count := range m {
-			i := inv{slug, variant, count}
-			invList = append(invList, i)
+
+	// If we want another peer's inventory crawl IPFS with an optional cache
+	var err error
+	useCacheBool := false
+	useCacheString := r.URL.Query().Get("usecache")
+	if len(useCacheString) > 0 {
+		useCacheBool, err = strconv.ParseBool(useCacheString)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 	}
-	ret, _ := json.MarshalIndent(invList, "", "    ")
-	if string(ret) == "null" {
-		fmt.Fprint(w, `[]`)
+
+	peerID, err := peer.IDB58Decode(peerIDString)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, string(ret))
-	return
+
+	if slug == "" {
+		inventoryBytes, err := i.node.GetPublishedInventoryBytes(peerID, useCacheBool)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(inventoryBytes))
+		return
+	}
+
+	inventoryBytes, err := i.node.GetPublishedInventoryBytesForSlug(peerID, slug, useCacheBool)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(inventoryBytes))
 }
 
 func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 	type inv struct {
 		Slug     string `json:"slug"`
 		Variant  int    `json:"variant"`
-		Quantity int    `json:"quantity"`
+		Quantity int64  `json:"quantity"`
 	}
 	decoder := json.NewDecoder(r.Body)
 	var invList []inv
@@ -1290,6 +1257,13 @@ func (i *jsonAPIHandler) POSTInventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+
+	err = i.node.PublishInventory()
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }
@@ -1365,7 +1339,7 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 
 func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IPFSIdentityString() {
 		listingsBytes, err := i.node.GetListings()
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1379,7 +1353,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		listingsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings.json")), time.Minute)
+		listingsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "listings.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -1398,7 +1372,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IPFSIdentityString() {
 		sl := new(pb.SignedListing)
 		_, err := cid.Decode(listingId)
 		if err == nil {
@@ -1468,7 +1442,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			listingBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")), time.Minute)
+			listingBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "listings", listingId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -1503,7 +1477,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 	cacheBool := r.URL.Query().Get("usecache")
 	useCache, _ := strconv.ParseBool(cacheBool)
 
-	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "profile" || peerId == i.node.IPFSIdentityString() {
 		profile, err = i.node.GetProfile()
 		if err != nil && err == core.ErrorProfileNotFound {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1613,8 +1587,8 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if !(state == pb.OrderState_PENDING && len(records) > 0) || state != pb.OrderState_PENDING || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING or partially funded and only a direct payment to cancel")
+	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be PENDING or PROCESSING_ERROR and only a direct payment to cancel")
 		return
 	}
 	err = i.node.CancelOfflineOrder(contract, records)
@@ -1729,8 +1703,8 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
-	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED && state != pb.OrderState_DISPUTED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, PARTIALLY_FULFILLED, or DISPUTED to refund")
+	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
+		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, or PARTIALLY_FULFILLED")
 		return
 	}
 	err = i.node.RefundOrder(contract, records)
@@ -2019,12 +1993,17 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT or FULFILLED to start a dispute")
+	if isSale && (state != pb.OrderState_PARTIALLY_FULFILLED && state != pb.OrderState_FULFILLED) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either PARTIALLY_FULFILLED or FULFILLED to start a dispute")
 		return
 	}
-	if !isSale && (state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED) {
-		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PENDING, or FULFILLED to start a dispute")
+	if !isSale && !(state == pb.OrderState_AWAITING_FULFILLMENT || state == pb.OrderState_PENDING || state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_FULFILLED || state == pb.OrderState_PROCESSING_ERROR) {
+		ErrorResponse(w, http.StatusBadRequest, "Order must be either AWAITING_FULFILLMENT, PARTIALLY_FULFILLED, PENDING, PROCESSING_ERROR or FULFILLED to start a dispute")
+		return
+	}
+
+	if !isSale && state == pb.OrderState_PROCESSING_ERROR && len(records) == 0 {
+		ErrorResponse(w, http.StatusBadRequest, "Cannot dispute an unfunded order")
 		return
 	}
 
@@ -2149,31 +2128,56 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 }
 
 func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Request) {
-	type release struct {
-		OrderID string `json:"orderId"`
-	}
+	var (
+		rel struct {
+			OrderID string `json:"orderId"`
+		}
+		contract *pb.RicardianContract
+		state    pb.OrderState
+		records  []*wallet.TransactionRecord
+	)
+
 	decoder := json.NewDecoder(r.Body)
-	var rel release
 	err := decoder.Decode(&rel)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	var isSale bool
-	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+
+	contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
-		isSale = true
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, "Order not found")
-			return
-		}
+		ErrorResponse(w, http.StatusNotFound, "Order not found")
+		return
 	}
 
-	if isSale && state == pb.OrderState_FULFILLED {
+	switch state {
+	case pb.OrderState_DISPUTED:
+		disputeStart, err := ptypes.Timestamp(contract.GetDispute().Timestamp)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		fourtyFiveDaysInHours := 45 * 24
+		disputeDuration := time.Duration(fourtyFiveDaysInHours) * time.Hour
+
+		// Time hack until we can stub this more nicely in test env
+		if i.node.TestNetworkEnabled() || i.node.RegressionNetworkEnabled() {
+			disputeDuration = time.Duration(10) * time.Second
+		}
+
+		disputeTimeout := disputeStart.Add(disputeDuration)
+		if time.Now().Before(disputeTimeout) {
+			expiresIn := disputeTimeout.Sub(time.Now())
+			ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow can only be called when in dispute for %s or longer, expires in %s", disputeDuration.String(), expiresIn.String()))
+			return
+		}
+		err = i.node.ReleaseFundsAfterTimeout(contract, records)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	case pb.OrderState_FULFILLED:
 		err = i.node.ReleaseFundsAfterTimeout(contract, records)
 		if err != nil {
 			if err == core.EscrowTimeLockedError {
@@ -2184,10 +2188,11 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 				return
 			}
 		}
-	} else {
-		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called after fulfillment and timeout")
+	default:
+		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called when in dispute for 45 days or fulfilled for longer than escrow timeout")
 		return
 	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }
@@ -3008,6 +3013,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
+	go ipfs.RemoveAll(i.node.Context, peerId)
 	nodes = append(nodes, peerId)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
@@ -3198,8 +3204,8 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var indexBytes []byte
-	if peerId != i.node.IpfsNode.Identity.Pretty() {
-		indexBytes, _ = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
+	if peerId != i.node.IPFSIdentityString() {
+		indexBytes, _ = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "ratings.json")), time.Minute)
 
 	} else {
 		indexBytes, _ = ioutil.ReadFile(path.Join(i.node.RepoPath, "root", "ratings.json"))
@@ -3530,6 +3536,63 @@ func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, pid.Pretty())
 }
 
+func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
+	_, peerId := path.Split(r.URL.Path)
+
+	val, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.CachePrefix + peerId))
+	if err != nil { // No record in datastore
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var keyBytes []byte
+	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
+	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
+		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.KeyCachePrefix + peerId))
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return
+		}
+		keyBytes = keyval.([]byte)
+	} else {
+		keyBytes, err = pubkey.Bytes()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	type KeyAndRecord struct {
+		Pubkey           string `json:"pubkey"`
+		SerializedRecord string `json:"serializedRecord"`
+	}
+
+	entry := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(val.([]byte), entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	b, err := proto.Marshal(entry)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ret := KeyAndRecord{hex.EncodeToString(keyBytes), hex.EncodeToString(b)}
+	retBytes, err := json.MarshalIndent(ret, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	go ipfs.Resolve(i.node.Context, peerId, time.Minute)
+	fmt.Fprint(w, string(retBytes))
+}
+
 func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	var settings repo.SMTPSettings
@@ -3749,7 +3812,7 @@ func (i *jsonAPIHandler) DELETEPost(w http.ResponseWriter, r *http.Request) {
 // GET a list of posts (self or peer)
 func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
-	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "posts" || peerId == i.node.IPFSIdentityString() {
 		postsBytes, err := i.node.GetPosts()
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -3763,7 +3826,7 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		peerId = pid.Pretty()
-		postsBytes, err := ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts.json")), time.Minute)
+		postsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "posts.json")), time.Minute)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
@@ -3783,7 +3846,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IpfsNode.Identity.Pretty() {
+	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IPFSIdentityString() {
 		sl := new(pb.SignedPost)
 		_, err := cid.Decode(postId)
 		if err == nil {
@@ -3833,7 +3896,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			peerId = pid.Pretty()
-			postBytes, err = ipfs.ResolveThenCat(i.node.Context, ipnspath.FromString(path.Join(peerId, "posts", postId+".json")), time.Minute)
+			postBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "posts", postId+".json")), time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return

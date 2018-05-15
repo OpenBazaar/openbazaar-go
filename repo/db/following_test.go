@@ -2,20 +2,18 @@ package db
 
 import (
 	"database/sql"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
 	"testing"
 )
 
-var fldb FollowingDB
+var fldb repo.FollowingStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	fldb = FollowingDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	fldb = NewFollowingStore(conn, new(sync.Mutex))
 }
 
 func TestPutFollowing(t *testing.T) {
@@ -23,7 +21,7 @@ func TestPutFollowing(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := fldb.db.Prepare("select peerID from following where peerID=?")
+	stmt, err := fldb.PrepareQuery("select peerID from following where peerID=?")
 	defer stmt.Close()
 	var following string
 	err = stmt.QueryRow("abc").Scan(&following)
@@ -62,7 +60,7 @@ func TestDeleteFollowing(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := fldb.db.Prepare("select peerID from followers where peerID=?")
+	stmt, _ := fldb.PrepareQuery("select peerID from followers where peerID=?")
 	defer stmt.Close()
 	var follower string
 	stmt.QueryRow("abc").Scan(&follower)

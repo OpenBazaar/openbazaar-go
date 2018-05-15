@@ -8,6 +8,7 @@ import (
 	util "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
 	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -133,4 +134,9 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 		}
 	}
 	return paymentRecords, refundRecord, nil
+}
+
+// NormalizeCurrencyCode standardizes the format for the given currency code
+func NormalizeCurrencyCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }

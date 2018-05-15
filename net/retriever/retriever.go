@@ -19,6 +19,7 @@ import (
 	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
 	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
 	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
@@ -29,9 +30,25 @@ import (
 	"time"
 )
 
-const DefaultPointerPrefixLength = 14
+const (
+	DefaultPointerPrefixLength = 14
+	KeyCachePrefix             = "IPNSPUBKEYCACHE_"
+)
 
 var log = logging.MustGetLogger("retriever")
+
+type MRConfig struct {
+	Db        repo.Datastore
+	Ctx       commands.Context
+	IPFSNode  *core.IpfsNode
+	BanManger *net.BanManager
+	Service   net.NetworkService
+	PrefixLen int
+	PushNodes []peer.ID
+	Dialer    proxy.Dialer
+	SendAck   func(peerId string, pointerID peer.ID) error
+	SendError func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
+}
 
 type MessageRetriever struct {
 	db         repo.Datastore
@@ -41,10 +58,12 @@ type MessageRetriever struct {
 	service    net.NetworkService
 	prefixLen  int
 	sendAck    func(peerId string, pointerID peer.ID) error
+	sendError  func(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error
 	httpClient *http.Client
 	dataPeers  []peer.ID
 	queueLock  *sync.Mutex
 	DoneChan   chan struct{}
+	inFlight   chan struct{}
 	*sync.WaitGroup
 }
 
@@ -53,14 +72,29 @@ type offlineMessage struct {
 	env  pb.Envelope
 }
 
-func NewMessageRetriever(db repo.Datastore, ctx commands.Context, node *core.IpfsNode, bm *net.BanManager, service net.NetworkService, prefixLen int, pushNodes []peer.ID, dialer proxy.Dialer, sendAck func(peerId string, pointerID peer.ID) error) *MessageRetriever {
+func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	dial := gonet.Dial
-	if dialer != nil {
-		dial = dialer.Dial
+	if cfg.Dialer != nil {
+		dial = cfg.Dialer.Dial
 	}
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
-	mr := MessageRetriever{db, node, bm, ctx, service, prefixLen, sendAck, client, pushNodes, new(sync.Mutex), make(chan struct{}), new(sync.WaitGroup)}
+	mr := MessageRetriever{
+		cfg.Db,
+		cfg.IPFSNode,
+		cfg.BanManger,
+		cfg.Ctx,
+		cfg.Service,
+		cfg.PrefixLen,
+		cfg.SendAck,
+		cfg.SendError,
+		client,
+		cfg.PushNodes,
+		new(sync.Mutex),
+		make(chan struct{}),
+		make(chan struct{}, 5),
+		new(sync.WaitGroup),
+	}
 	mr.Add(1)
 	return &mr
 }
@@ -190,7 +224,11 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 // fetchIPFS will attempt to download an encrypted message using IPFS. If the message downloads successfully, we save the
 // address to the database to prevent us from wasting bandwidth downloading it again.
 func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
-	defer wg.Done()
+	m.inFlight <- struct{}{}
+	defer func() {
+		wg.Done()
+		<-m.inFlight
+	}()
 
 	c := make(chan struct{})
 	var ciphertext []byte
@@ -218,7 +256,11 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 // fetchHTTPS will attempt to download an encrypted message from an HTTPS endpoint. If the message downloads successfully, we save the
 // address to the database to prevent us from wasting bandwidth downloading it again.
 func (m *MessageRetriever) fetchHTTPS(pid peer.ID, url string, addr ma.Multiaddr, wg *sync.WaitGroup) {
-	defer wg.Done()
+	m.inFlight <- struct{}{}
+	defer func() {
+		wg.Done()
+		<-m.inFlight
+	}()
 
 	c := make(chan struct{})
 	var ciphertext []byte
@@ -293,11 +335,12 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	}
 
 	if m.bm.IsBanned(id) {
-		log.Warning("Unable to decrypt offline message from %s: %s", addr.String(), err.Error())
+		log.Warning("Received and dropped offline message from banned user: %s ", id.String())
 		return
 	}
 
 	m.node.Peerstore.AddPubKey(id, pubkey)
+	m.node.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+id.String()), env.Pubkey)
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
@@ -335,20 +378,26 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	}
 
 	// Dispatch handler
-	_, err := handler(*id, env.Message, true)
-	if err != nil && err == net.OutOfOrderMessage {
-		ser, err := proto.Marshal(&env)
-		if err == nil {
-			err := m.db.OfflineMessages().SetMessage(addr, ser)
-			if err != nil {
-				log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+	resp, err := handler(*id, env.Message, true)
+	if err != nil {
+		if err == net.OutOfOrderMessage {
+			ser, err := proto.Marshal(&env)
+			if err == nil {
+				err := m.db.OfflineMessages().SetMessage(addr, ser)
+				if err != nil {
+					log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
+				}
+			} else {
+				log.Errorf("Error serializing offline message %s for storage")
 			}
+		} else if env.Message.MessageType == pb.Message_ORDER && resp != nil {
+			log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())
+			m.sendError(id.Pretty(), nil, *resp)
+			return err
 		} else {
-			log.Errorf("Error serializing offline message %s for storage")
+			log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
+			return err
 		}
-	} else if err != nil {
-		log.Errorf("Error processing message %s. Type %s: %s", addr, env.Message.MessageType, err.Error())
-		return err
 	}
 	return nil
 }

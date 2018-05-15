@@ -185,6 +185,8 @@ func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 		i.GETWalletStatus(w, r)
 	case strings.HasPrefix(path, "/ob/resolve"):
 		i.GETResolve(w, r)
+	case strings.HasPrefix(path, "/ob/ipns"):
+		i.GETIPNS(w, r)
 	case strings.HasPrefix(path, "/ob/peerinfo"):
 		i.GETPeerInfo(w, r)
 	case strings.HasPrefix(path, "/ob/posts"):
@@ -229,7 +231,7 @@ func deleter(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Requ
 }
 
 func gatewayAllowedPath(path, method string) bool {
-	allowedGets := []string{"/ob/followers", "/ob/following", "/ob/profile", "/ob/listing", "/ob/listings", "/ob/image", "/ob/avatar", "/ob/header", "/ob/rating", "/ob/ratings", "/ob/posts", "/ob/post"}
+	allowedGets := []string{"/ob/followers", "/ob/following", "/ob/profile", "/ob/listing", "/ob/listings", "/ob/inventory", "/ob/image", "/ob/avatar", "/ob/header", "/ob/rating", "/ob/ratings", "/ob/posts", "/ob/post", "/ob/ipns"}
 	allowedPosts := []string{"/ob/fetchprofiles", "/ob/fetchratings"}
 	if method == "GET" {
 		for _, p := range allowedGets {

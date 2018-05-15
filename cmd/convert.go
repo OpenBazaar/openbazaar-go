@@ -129,6 +129,10 @@ func (x *Convert) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	_, err = sqlitedb.Exec("DELETE FROM keys;")
+	if err != nil {
+		return err
+	}
 
 	// Update coin type in config file
 	cf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
@@ -341,6 +345,7 @@ func (x *Convert) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
+	profile.Currencies = []string{currencyCode}
 	if profile.ModeratorInfo != nil {
 		profile.ModeratorInfo.AcceptedCurrencies = []string{currencyCode}
 		m := jsonpb.Marshaler{
@@ -369,6 +374,9 @@ func (x *Convert) Execute(args []string) error {
 
 	// Remove headers.bin
 	os.Remove(path.Join(repoPath, "headers.bin"))
+
+	// Remove peers.json
+	os.Remove(path.Join(repoPath, "peers.json"))
 
 	fmt.Println("Done")
 	return nil

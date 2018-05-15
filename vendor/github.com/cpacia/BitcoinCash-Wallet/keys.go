@@ -42,7 +42,7 @@ func Bip44Derivation(masterPrivKey *hd.ExtendedKey) (internal, external *hd.Exte
 		return nil, nil, err
 	}
 	// Cointype = bitcoin
-	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 0)
+	bitcoin, err := fourtyFour.Child(hd.HardenedKeyStart + 145)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -117,6 +117,21 @@ func (km *KeyManager) GetKeys() []*hd.ExtendedKey {
 			continue
 		}
 		keys = append(keys, k)
+	}
+	imported, err := km.datastore.GetImported()
+	if err != nil {
+		return keys
+	}
+	for _, key := range imported {
+		hdKey := hd.NewExtendedKey(
+			km.params.HDPrivateKeyID[:],
+			key.Serialize(),
+			make([]byte, 32),
+			[]byte{0x00, 0x00, 0x00, 0x00},
+			0,
+			0,
+			true)
+		keys = append(keys, hdKey)
 	}
 	return keys
 }

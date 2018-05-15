@@ -111,6 +111,15 @@ type FulfillmentNotification struct {
 	VendorID     string    `json:"vendorId"`
 }
 
+type ProcessingErrorNotification struct {
+	ID           string    `json:"notificationId"`
+	Type         string    `json:"type"`
+	OrderId      string    `json:"orderId"`
+	Thumbnail    Thumbnail `json:"thumbnail"`
+	VendorHandle string    `json:"vendorHandle"`
+	VendorID     string    `json:"vendorId"`
+}
+
 type CompletionNotification struct {
 	ID          string    `json:"notificationId"`
 	Type        string    `json:"type"`
@@ -260,6 +269,10 @@ func wrap(i interface{}) interface{} {
 	case FulfillmentNotification:
 		n := i.(FulfillmentNotification)
 		n.Type = "fulfillment"
+		return notificationWrapper{n}
+	case ProcessingErrorNotification:
+		n := i.(ProcessingErrorNotification)
+		n.Type = "processingError"
 		return notificationWrapper{n}
 	case CompletionNotification:
 		n := i.(CompletionNotification)

@@ -16,6 +16,7 @@ message RicardianContract {
     DisputeAcceptance disputeAcceptance                = 8;
     Refund refund                                      = 9;
     repeated Signature signatures                      = 10;
+    repeated string errors                             = 11;
 }
 
 message Listing {
@@ -39,17 +40,20 @@ message Listing {
         string pricingCurrency             = 6;
         string language                    = 7;
         uint32 escrowTimeoutHours          = 8;
+        string coinType                    = 9;
+        uint32 coinDivisibility            = 10;
 
         enum ContractType {
-            PHYSICAL_GOOD = 0;
-            DIGITAL_GOOD  = 1;
-            SERVICE       = 2;
-            CROWD_FUND    = 3;
+            PHYSICAL_GOOD  = 0;
+            DIGITAL_GOOD   = 1;
+            SERVICE        = 2;
+            CROWD_FUND     = 3;
+            CRYPTOCURRENCY = 4;
         }
 
         enum Format {
             FIXED_PRICE  = 0;
-            AUCTION      = 1;
+            MARKET_PRICE = 2;
         }
     }
 
@@ -158,11 +162,13 @@ message Order {
 
     message Item {
         string listingHash            = 1;
-        uint32 quantity               = 2;
+        uint32 quantity               = 2; // order version < 2 used with listing version < 3
+        uint64 quantity64             = 8; // order version >= 2 used with listing version >= 3
         repeated Option options       = 3;
         ShippingOption shippingOption = 4;
         string memo                   = 5;
         repeated string couponCodes   = 6;
+        string paymentAddress         = 7;
 
         message Option {
             string name  = 1;
@@ -254,6 +260,9 @@ message OrderFulfillment {
 
     string note                                = 8;
 
+    // Cryptocurrencies only
+    repeated CryptocurrencyDelivery cryptocurrencyDelivery = 9;
+
     message PhysicalDelivery {
         string shipper            = 1;
         string trackingNumber     = 2;
@@ -262,6 +271,10 @@ message OrderFulfillment {
     message DigitalDelivery {
         string url                = 1;
         string password           = 2;
+    }
+
+    message CryptocurrencyDelivery {
+        string transactionID      = 1;
     }
 
     message Payout {

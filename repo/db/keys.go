@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"strconv"
@@ -11,8 +12,11 @@ import (
 )
 
 type KeysDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewKeyStore(db *sql.DB, lock *sync.Mutex) repo.KeyStore {
+	return &KeysDB{modelStore{db, lock}}
 }
 
 func (k *KeysDB) Put(scriptAddress []byte, keyPath wallet.KeyPath) error {

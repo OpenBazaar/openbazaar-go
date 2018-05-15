@@ -19,7 +19,7 @@ P_ANY = Mgoogle/protobuf/any.proto=github.com/golang/protobuf/ptypes/any
 PKGMAP = $(P_TIMESTAMP),$(P_ANY)
 
 protos:
-	cd pb/protos && protoc --go_out=$(PKGMAP):.. *.proto
+	cd pb/protos && PATH=$(PATH):$(GOPATH)/bin protoc --go_out=$(PKGMAP):.. *.proto
 
 ##
 ## Docker

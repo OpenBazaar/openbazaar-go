@@ -34,6 +34,8 @@ message Profile {
 
     google.protobuf.Timestamp lastModified = 17;
 
+    repeated string currencies             = 18;
+
     message Contact {
         string website                = 1;
         string email                  = 2;

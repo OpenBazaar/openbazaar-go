@@ -128,7 +128,7 @@ class RejectDirectOfflineTest(OpenBazaarTestFramework):
 
         # startup alice again
         self.start_node(alice)
-        time.sleep(45)
+        time.sleep(60)
 
         # alice reject order
         api_url = alice["gateway_url"] + "ob/orderconfirmation"

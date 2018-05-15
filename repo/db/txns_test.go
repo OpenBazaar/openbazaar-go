@@ -4,21 +4,19 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 	"testing"
 	"time"
 )
 
-var txdb TxnsDB
+var txdb repo.TransactionStore
 
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	txdb = TxnsDB{
-		db:   conn,
-		lock: new(sync.Mutex),
-	}
+	txdb = NewTransactionStore(conn, new(sync.Mutex))
 }
 
 func TestTxnsPut(t *testing.T) {
@@ -28,11 +26,11 @@ func TestTxnsPut(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 5, 1, time.Now(), false)
+	err := txdb.Put(raw, tx.TxHash().String(), 5, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := txdb.db.Prepare("select tx, value, height, watchOnly from txns where txid=?")
+	stmt, err := txdb.PrepareQuery("select tx, value, height, watchOnly from txns where txid=?")
 	defer stmt.Close()
 	var ret []byte
 	var val int
@@ -64,14 +62,16 @@ func TestTxnsGet(t *testing.T) {
 	tx.Deserialize(r)
 
 	now := time.Now()
-	err := txdb.Put(tx, 0, 1, now, false)
+	err := txdb.Put(raw, tx.TxHash().String(), 0, 1, now, false)
 	if err != nil {
 		t.Error(err)
 	}
-	tx2, txn, err := txdb.Get(tx.TxHash())
+	txn, err := txdb.Get(tx.TxHash())
 	if err != nil {
 		t.Error(err)
 	}
+	tx2 := wire.NewMsgTx(wire.TxVersion)
+	tx2.Deserialize(bytes.NewReader(txn.Bytes))
 	if tx.TxHash().String() != tx2.TxHash().String() {
 		t.Error("Txn db get failed")
 	}
@@ -93,7 +93,7 @@ func TestTxnsGetAll(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 1, 5, time.Now(), true)
+	err := txdb.Put(raw, tx.TxHash().String(), 1, 5, time.Now(), true)
 	if err != nil {
 		t.Error(err)
 	}
@@ -113,7 +113,7 @@ func TestDeleteTxns(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 0, 1, time.Now(), false)
+	err := txdb.Put(raw, tx.TxHash().String(), 0, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,7 @@ func TestTxnsDB_UpdateHeight(t *testing.T) {
 	r := bytes.NewReader(raw)
 	tx.Deserialize(r)
 
-	err := txdb.Put(tx, 0, 1, time.Now(), false)
+	err := txdb.Put(raw, tx.TxHash().String(), 0, 1, time.Now(), false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -148,7 +148,7 @@ func TestTxnsDB_UpdateHeight(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, txn, err := txdb.Get(tx.TxHash())
+	txn, err := txdb.Get(tx.TxHash())
 	if txn.Height != -1 {
 		t.Error("Txn db failed to update height")
 	}

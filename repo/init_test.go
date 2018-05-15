@@ -3,7 +3,6 @@ package repo
 import (
 	"errors"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -56,23 +55,6 @@ func TestDoInit(t *testing.T) {
 		t.Errorf("DoInit threw an unexpected error: %s", err.Error())
 	}
 
-	TearDown()
-}
-
-func TestMaybeCreateOBDirectories(t *testing.T) {
-	maybeCreateOBDirectories(repoRootFolder)
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "listings"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "feed"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "channel"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "files"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "tiny"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "small"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "medium"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "large"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "root", "images", "original"))
-	checkDirectoryCreation(t, path.Join(repoRootFolder, "outbox"))
 	TearDown()
 }
 

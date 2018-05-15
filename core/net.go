@@ -260,6 +260,10 @@ func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract
 	return resp, nil
 }
 
+func (n *OpenBazaarNode) SendError(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error {
+	return n.sendMessage(peerId, k, errorMessage)
+}
+
 func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(contract)
 	if err != nil {

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -12,8 +13,11 @@ import (
 )
 
 type StxoDB struct {
-	db   *sql.DB
-	lock *sync.Mutex
+	modelStore
+}
+
+func NewSpentTransactionStore(db *sql.DB, lock *sync.Mutex) repo.SpentTransactionOutputStore {
+	return &StxoDB{modelStore{db, lock}}
 }
 
 func (s *StxoDB) Put(stxo wallet.Stxo) error {

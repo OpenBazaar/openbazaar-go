@@ -12,6 +12,7 @@ var sanitizer *bluemonday.Policy
 
 func init() {
 	sanitizer = bluemonday.UGCPolicy()
+	sanitizer.AllowURLSchemes("ob")
 }
 
 func SanitizeJSON(s []byte) ([]byte, error) {

@@ -76,3 +76,9 @@ message Block {
     bytes rawData = 1;
     string cid    = 2;
 }
+
+message Error {
+    uint32 code         = 1;
+    string errorMessage = 2;
+    string orderID      = 3;
+}

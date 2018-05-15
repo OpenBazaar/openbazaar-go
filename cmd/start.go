@@ -648,6 +648,7 @@ func (x *Start) Execute(args []string) error {
 		if !x.DisableExchangeRates {
 			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
 		}
+		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	default:
 		log.Fatal("Unknown wallet type")
 	}
@@ -751,19 +752,22 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		Context:             ctx,
-		IpfsNode:            nd,
-		RootHash:            ipath.Path(e.Value).String(),
-		RepoPath:            repoPath,
-		Datastore:           sqliteDB,
-		Wallet:              cryptoWallet,
-		NameSystem:          ns,
-		ExchangeRates:       exchangeRates,
-		PushNodes:           pushNodes,
-		AcceptStoreRequests: dataSharing.AcceptStoreRequests,
-		TorDialer:           torDialer,
-		UserAgent:           core.USERAGENT,
-		BanManager:          bm,
+		Context:              ctx,
+		IpfsNode:             nd,
+		RootHash:             ipath.Path(e.Value).String(),
+		RepoPath:             repoPath,
+		Datastore:            sqliteDB,
+		Wallet:               cryptoWallet,
+		NameSystem:           ns,
+		ExchangeRates:        exchangeRates,
+		PushNodes:            pushNodes,
+		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
+		TorDialer:            torDialer,
+		UserAgent:            core.USERAGENT,
+		BanManager:           bm,
+		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
+		TestnetEnable:        x.Testnet,
+		RegressionTestEnable: x.Regtest,
 	}
 	core.PublishLock.Lock()
 
@@ -807,10 +811,29 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	if cfg.Addresses.API != "" {
+		if _, err := serveHTTPApi(&core.Node.Context); err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		MR := ret.NewMessageRetriever(sqliteDB, ctx, nd, bm, core.Node.Service, 14, core.Node.PushNodes, torDialer, core.Node.SendOfflineAck)
+		mrCfg := ret.MRConfig{
+			Db:        sqliteDB,
+			Ctx:       ctx,
+			IPFSNode:  nd,
+			BanManger: bm,
+			Service:   core.Node.Service,
+			PrefixLen: 14,
+			PushNodes: core.Node.PushNodes,
+			Dialer:    torDialer,
+			SendAck:   core.Node.SendOfflineAck,
+			SendError: core.Node.SendError,
+		}
+		MR := ret.NewMessageRetriever(mrCfg)
 		go MR.Run()
 		core.Node.MessageRetriever = MR
 		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
@@ -967,6 +990,68 @@ func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ipfsrepo
 	dhtRouting.Validator[ipfscore.IpnsValidatorTag] = namesys.IpnsRecordValidator
 	dhtRouting.Selector[ipfscore.IpnsValidatorTag] = namesys.IpnsSelectorFunc
 	return dhtRouting, nil
+}
+
+// serveHTTPApi collects options, creates listener, prints status message and starts serving requests
+func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
+	cfg, err := cctx.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: GetConfig() failed: %s", err)
+	}
+
+	apiAddr := cfg.Addresses.API
+	apiMaddr, err := ma.NewMultiaddr(apiAddr)
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr, err)
+	}
+
+	apiLis, err := manet.Listen(apiMaddr)
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
+	}
+	// we might have listened to /tcp/0 - lets see what we are listing on
+	apiMaddr = apiLis.Multiaddr()
+	fmt.Printf("API server listening on %s\n", apiMaddr)
+
+	// by default, we don't let you load arbitrary ipfs objects through the api,
+	// because this would open up the api to scripting vulnerabilities.
+	// only the webui objects are allowed.
+	// if you know what you're doing, go ahead and pass --unrestricted-api.
+	unrestricted := false
+	gatewayOpt := corehttp.GatewayOption(false, corehttp.WebUIPaths...)
+	if unrestricted {
+		gatewayOpt = corehttp.GatewayOption(true, "/ipfs", "/ipns")
+	}
+
+	var opts = []corehttp.ServeOption{
+		corehttp.MetricsCollectionOption("api"),
+		corehttp.CommandsOption(*cctx),
+		corehttp.WebUIOption,
+		gatewayOpt,
+		corehttp.VersionOption(),
+		corehttp.MetricsScrapingOption("/debug/metrics/prometheus"),
+		corehttp.LogOption(),
+	}
+
+	if len(cfg.Gateway.RootRedirect) > 0 {
+		opts = append(opts, corehttp.RedirectOption("", cfg.Gateway.RootRedirect))
+	}
+
+	node, err := cctx.ConstructNode()
+	if err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: ConstructNode() failed: %s", err)
+	}
+
+	if err := node.Repo.SetAPIAddr(apiMaddr); err != nil {
+		return nil, fmt.Errorf("serveHTTPApi: SetAPIAddr() failed: %s", err)
+	}
+
+	errc := make(chan error)
+	go func() {
+		errc <- corehttp.Serve(node, apiLis.NetListener(), opts...)
+		close(errc)
+	}()
+	return errc, nil
 }
 
 func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {

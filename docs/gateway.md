@@ -29,7 +29,7 @@ Next turn off OpenBazaar API as you don't want to give public access to this:
 
 Finally when you run the server use the `--disablewallet` option as you wont be needing it.
 
-###Writable Gateway
+### Writable Gateway
 
 In addition to allowing others to view OpenBazaar data on your gateway, you may allow them to post data to the network through your node.
 When enabled, your node will seed any content that is posted to it. This is useful for allowing users to cross-post content to gateway nodes to ensure data persistence when they go offline.
