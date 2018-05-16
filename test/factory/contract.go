@@ -5,6 +5,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 )
 
 func NewContract() *pb.RicardianContract {
@@ -41,6 +42,14 @@ func NewDisputeableContract() *pb.RicardianContract {
 	c := NewContract()
 	c.BuyerOrder.Payment.Moderator = "somemoderatorid"       // Moderator PeerID must be set
 	c.BuyerOrder.Payment.Method = pb.Order_Payment_MODERATED // Method must be Moderated
+	_, key, _ := crypto.GenerateKeyPair(crypto.Ed25519, 0)
+	keyBytes, _ := crypto.MarshalPublicKey(key)
+	c.BuyerOrder.BuyerID.Pubkeys = &pb.ID_Pubkeys{Identity: keyBytes}
+	c.VendorListings[0].VendorID = &pb.ID{
+		PeerID:  "buyerID",
+		Handle:  "@buyerID",
+		Pubkeys: &pb.ID_Pubkeys{Identity: keyBytes},
+	}
 	return c
 }
 

@@ -1953,11 +1953,15 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 	}
 
 	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
-	if err != nil && err == core.ErrCaseNotFound {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
-	} else if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+	if err != nil {
+		switch err {
+		case core.ErrCaseNotFound:
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+		case core.ErrCloseFailureCaseExpired:
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+		default:
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	SanitizedResponse(w, `{}`)

@@ -26,6 +26,7 @@ import (
 var DisputeWg = new(sync.WaitGroup)
 
 var ErrCaseNotFound = errors.New("Case not found")
+var ErrCloseFailureCaseExpired = errors.New("Unable to close case. Case has expired")
 
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
 	var isPurchase bool
@@ -375,6 +376,9 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	}
 	if dispute.OrderState != pb.OrderState_DISPUTED {
 		return errors.New("A dispute for this order is not open")
+	}
+	if dispute.IsExpiredNow() {
+		return ErrCloseFailureCaseExpired
 	}
 
 	if dispute.VendorContract == nil && vendorPercentage > 0 {
