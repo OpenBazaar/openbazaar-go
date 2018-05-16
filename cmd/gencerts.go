@@ -68,8 +68,22 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		log.Fatalf("failed to generate serial number: %s", err)
 	}
 
+	//Check if host ip or dns name and count their quantity
+	ipAddresses := []net.IP{}
+	dnsNames := []string{}
+	hosts := strings.Split(x.Host, ",")
+	for _, h := range hosts {
+		if ip := net.ParseIP(h); ip != nil {
+			ipAddresses = append(ipAddresses, ip)
+		} else {
+			dnsNames = append(dnsNames, h)
+		}
+	}
+
 	template := x509.Certificate{
 		SerialNumber: serialNumber,
+		IPAddresses:  ipAddresses,
+		DNSNames:     dnsNames,
 		Subject: pkix.Name{
 			Organization: []string{"OpenBazaar"},
 		},
@@ -79,16 +93,6 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA: true,
-	}
-
-	//Check if host ip or dns name and count their quantity
-	hosts := strings.Split(x.Host, ",")
-	for _, h := range hosts {
-		if ip := net.ParseIP(h); ip != nil {
-			template.IPAddresses = append(template.IPAddresses, ip)
-		} else {
-			template.DNSNames = append(template.DNSNames, h)
-		}
 	}
 
 	//Create sertificate
