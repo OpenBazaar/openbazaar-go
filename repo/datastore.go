@@ -266,6 +266,9 @@ type CaseStore interface {
 	// Save a new case
 	Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error
 
+	// Save a new case
+	PutRecord(*DisputeCaseRecord) error
+
 	// Update a case with the buyer info
 	UpdateBuyerInfo(caseID string, buyerContract *pb.RicardianContract, buyerValidationErrors []string, buyerPayoutAddress string, buyerOutpoints []*pb.Outpoint) error
 

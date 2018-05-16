@@ -17,6 +17,7 @@ var (
 // SQL datastore
 type DisputeCaseRecord struct {
 	CaseID              string
+	Claim               string
 	OrderState          pb.OrderState
 	Timestamp           time.Time
 	LastNotifiedAt      time.Time
