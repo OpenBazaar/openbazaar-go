@@ -17,7 +17,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-//GenerateCertificates struct
+// GenerateCertificates struct
 type GenerateCertificates struct {
 	DataDir  string        `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet  bool          `short:"t" long:"testnet" description:"config file is for testnet node"`
@@ -25,7 +25,7 @@ type GenerateCertificates struct {
 	ValidFor time.Duration `long:"duration" description:"duration that certificate is valid for"`
 }
 
-//Execute gencerts command
+// Execute gencerts command
 func (x *GenerateCertificates) Execute(args []string) error {
 
 	flag.Parse()
@@ -39,7 +39,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		repoPath = x.DataDir
 	}
 
-	//Check if host entered
+	// Check if host was entered
 	if len(x.Host) == 0 {
 		log.Fatalf("Missing required --host parameter")
 	}
@@ -51,24 +51,24 @@ func (x *GenerateCertificates) Execute(args []string) error {
 
 	var priv interface{}
 
-	//Generate key
+	// Generate key
 	priv, err = rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		log.Fatalf("failed to generate private key: %s", err)
 	}
 
-	//Set creation date
+	// Set creation date
 	var notBefore = time.Now()
 	notAfter := notBefore.Add(x.ValidFor)
 
-	//Crate serial nmuber
+	// Create serial nmuber
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
 		log.Fatalf("failed to generate serial number: %s", err)
 	}
 
-	//Check if host ip or dns name and count their quantity
+	// Check if host ip or dns name and count their quantity
 	ipAddresses := []net.IP{}
 	dnsNames := []string{}
 	hosts := strings.Split(x.Host, ",")
@@ -95,7 +95,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		IsCA: true,
 	}
 
-	//Create sertificate
+	// Create certificate
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.(*rsa.PrivateKey).PublicKey, priv)
 	if err != nil {
 		log.Fatalf("Failed to create certificate: %s", err)
@@ -107,7 +107,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 		log.Fatalf("Failed to create ssl directory: %s", err)
 	}
 
-	//Create and write cert.pem
+	// Create and write cert.pem
 	certOut, err := os.Create(path.Join(repoPath, "ssl", "cert.pem"))
 	if err != nil {
 		log.Fatalf("failed to open cert.pem for writing: %s", err)
@@ -116,7 +116,7 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	certOut.Close()
 	log.Noticef("wrote cert.pem\n")
 
-	//Create and write key.pem
+	// Create and write key.pem
 	keyOut, err := os.OpenFile(path.Join(repoPath, "ssl", "key.pem"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Noticef("failed to open key.pem for writing:", err)
