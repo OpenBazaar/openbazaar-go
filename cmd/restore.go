@@ -57,7 +57,6 @@ type Restore struct {
 	WalletCreationDate string `short:"w" long:"walletcreationdate" description:"specify the date the seed was created. if omitted the wallet will sync from the oldest checkpoint."`
 }
 
-//Execute restore command
 func (x *Restore) Execute(args []string) error {
 	reader := bufio.NewReader(os.Stdin)
 	if x.Mnemonic == "" {
@@ -333,7 +332,6 @@ func (x *Restore) Execute(args []string) error {
 	return nil
 }
 
-//RestoreFile restore the file
 func RestoreFile(repoPath, peerID, filename string, ctx commands.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	b, err := ipfs.ResolveThenCat(ctx, ipfspath.FromString(path.Join(peerID, filename)), time.Minute)
@@ -348,7 +346,6 @@ func RestoreFile(repoPath, peerID, filename string, ctx commands.Context, wg *sy
 	}
 }
 
-//RestoreDirectory restore the directory
 func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid.Cid, wg *sync.WaitGroup) {
 	defer wg.Done()
 	links, err := nd.DAG.GetLinks(context.Background(), id)
@@ -378,7 +375,6 @@ func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid
 
 }
 
-//PrintError print error
 func PrintError(e string) {
 	os.Stderr.Write([]byte(e))
 }

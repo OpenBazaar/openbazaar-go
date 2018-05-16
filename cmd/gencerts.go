@@ -17,7 +17,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-// GenerateCertificates struct
 type GenerateCertificates struct {
 	DataDir  string        `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet  bool          `short:"t" long:"testnet" description:"config file is for testnet node"`
@@ -25,7 +24,6 @@ type GenerateCertificates struct {
 	ValidFor time.Duration `long:"duration" description:"duration that certificate is valid for"`
 }
 
-// Execute gencerts command
 func (x *GenerateCertificates) Execute(args []string) error {
 
 	flag.Parse()

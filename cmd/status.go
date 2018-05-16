@@ -9,13 +9,11 @@ import (
 	"os"
 )
 
-//Status strcut
 type Status struct {
 	DataDir string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet bool   `short:"t" long:"testnet" description:"use the test network"`
 }
 
-//Execute status command
 func (x *Status) Execute(args []string) error {
 	// Set repo path
 	repoPath, err := repo.GetRepoPath(x.Testnet)

@@ -32,14 +32,12 @@ import (
 	"time"
 )
 
-//Convert struct
 type Convert struct {
 	Password string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	DataDir  string `short:"d" long:"datadir" description:"specify the data directory to be used"`
 	Testnet  bool   `short:"t" long:"testnet" description:"use the test network"`
 }
 
-//Execute convert command
 func (x *Convert) Execute(args []string) error {
 	if len(args) == 0 {
 		fmt.Fprintf(os.Stderr, "Please specify the cryptocurrency you wish to convert to. Examples:\nopenbazaar-go convert bitcoin\nopenbazaar-go convert bitcoincash\nopenbazaar-go convert zcash /path/to/zcashd\n")
