@@ -47,7 +47,6 @@ import (
 	"time"
 )
 
-//Restore struct
 type Restore struct {
 	Password           string `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	DataDir            string `short:"d" long:"datadir" description:"specify the data directory to be used"`
