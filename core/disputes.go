@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
@@ -26,8 +27,12 @@ import (
 var DisputeWg = new(sync.WaitGroup)
 
 var ErrCaseNotFound = errors.New("Case not found")
+var ErrOpenFailureOrderExpired = errors.New("Unable to open case. Order is too old to dispute.")
 
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
+	if ok := n.verifyEscrowFundsAreDisputeable(contract, records); !ok {
+		return ErrOpenFailureOrderExpired
+	}
 	var isPurchase bool
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		isPurchase = true
@@ -110,6 +115,26 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 		n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DISPUTED, true)
 	}
 	return nil
+}
+
+func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
+	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
+	for _, r := range records {
+		hash, err := chainhash.NewHashFromStr(r.Txid)
+		if err != nil {
+			log.Errorf("Failed NewHashFromStr(%s): %s", r.Txid, err.Error())
+			return false
+		}
+		actualConfirmations, _, err := n.Wallet.GetConfirmations(*hash)
+		if err != nil {
+			log.Errorf("Failed GetConfirmations(%s): %s", hash.String(), err.Error())
+			return false
+		}
+		if actualConfirmations >= confirmationsForTimeout {
+			return false
+		}
+	}
+	return true
 }
 
 func (n *OpenBazaarNode) SignDispute(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
