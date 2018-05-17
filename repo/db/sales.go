@@ -328,9 +328,8 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	fourtyFiveDays := time.Duration(45*24) * time.Hour
 	stmt := fmt.Sprintf("select orderID, contract, state, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < %d and state in (%d, %d)",
-		int(fourtyFiveDays.Seconds()),
+		int(repo.VendorDisputeTimeout_lastInterval.Seconds()),
 		pb.OrderState_PARTIALLY_FULFILLED,
 		pb.OrderState_FULFILLED,
 	)

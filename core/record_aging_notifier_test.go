@@ -24,10 +24,10 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		broadcastChannel = make(chan repo.Notifier, 0)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
-		fifteenDays      = time.Duration(15*24) * time.Hour
-		fourtyDays       = time.Duration(40*24) * time.Hour
-		fourtyFourDays   = time.Duration(44*24) * time.Hour
-		fourtyFiveDays   = time.Duration(45*24) * time.Hour
+		firstInterval    = repo.ModeratorDisputeExpiry_firstInterval
+		secondInterval   = repo.ModeratorDisputeExpiry_secondInterval
+		thirdInterval    = repo.ModeratorDisputeExpiry_thirdInterval
+		lastInterval     = repo.ModeratorDisputeExpiry_lastInterval
 
 		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.DisputeCaseRecord{
@@ -50,7 +50,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		notifiedUpToFifteenDay = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFifteenDay",
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -67,7 +67,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		notifiedUpToFourtyDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyDay",
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourty-buyer-tinyimagehash", Small: "fourty-buyer-smallimagehash"}}}},
@@ -84,7 +84,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		notifiedUpToFourtyFourDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyFourDays",
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -101,7 +101,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		notifiedUpToFourtyFiveDays = &repo.DisputeCaseRecord{
 			CaseID:         "notifiedUpToFourtyFiveDays",
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -378,10 +378,10 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		broadcastChannel = make(chan repo.Notifier, 0)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
-		fifteenDays      = time.Duration(15*24) * time.Hour
-		fourtyDays       = time.Duration(40*24) * time.Hour
-		fourtyFourDays   = time.Duration(44*24) * time.Hour
-		fourtyFiveDays   = time.Duration(45*24) * time.Hour
+		firstInterval    = repo.BuyerDisputeTimeout_firstInterval
+		secondInterval   = repo.BuyerDisputeTimeout_secondInterval
+		thirdInterval    = repo.BuyerDisputeTimeout_thirdInterval
+		lastInterval     = repo.BuyerDisputeTimeout_lastInterval
 
 		// Produces no notifications as contract is undisputeable
 		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
@@ -405,7 +405,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "notifiedUpToFifteenDay",
 			OrderState:     pb.OrderState(pb.OrderState_PENDING),
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fifteenDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
@@ -413,7 +413,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "notifiedUpToFourtyDay",
 			OrderState:     pb.OrderState(pb.OrderState_PENDING),
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
@@ -421,7 +421,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "notifiedUpToFourtyFourDays",
 			OrderState:     pb.OrderState(pb.OrderState_PENDING),
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyFourDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
@@ -429,7 +429,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "notifiedUpToFourtyFiveDays",
 			OrderState:     pb.OrderState(pb.OrderState_PENDING),
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
 		existingRecords = []*repo.PurchaseRecord{
 			neverNotifiedButUndisputeable,
@@ -689,7 +689,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		broadcastChannel = make(chan repo.Notifier, 0)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
-		fourtyFiveDays   = time.Duration(45*24) * time.Hour
+		lastInterval     = repo.VendorDisputeTimeout_lastInterval
 
 		// Produces notification for 45 days
 		neverNotified = &repo.SaleRecord{
@@ -705,7 +705,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 			OrderID:        "notifiedUpToFourtyFiveDays",
 			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
 			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(fourtyFiveDays + twelveHours),
+			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
 		// Produces no notifications as contract is undisputeable
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
