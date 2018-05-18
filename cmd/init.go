@@ -55,9 +55,8 @@ func (x *Init) Execute(args []string) error {
 			}
 			fmt.Printf("OpenBazaar repo initialized at %s\n", repoPath)
 			return nil
-		} else {
-			return nil
 		}
+		return nil
 	} else if err != nil {
 		return err
 	}

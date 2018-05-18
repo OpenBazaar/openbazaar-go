@@ -17,7 +17,9 @@ var log = logging.MustGetLogger("main")
 type Opts struct {
 	Version bool `short:"v" long:"version" description:"Print the version number and exit"`
 }
+
 type Stop struct{}
+
 type Restart struct{}
 
 var stopServer Stop
@@ -50,6 +52,11 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
+	parser.AddCommand("gencerts",
+		"Generate certificates",
+		"Generate self-singned certificates",
+		&cmd.GenerateCertificates{})
 	parser.AddCommand("init",
 		"initialize a new repo and exit",
 		"Initializes a new repo without starting the server",

@@ -553,7 +553,7 @@ func (x *Start) Execute(args []string) error {
 				return err
 			}
 		}
-		feeApi, err := url.Parse(walletCfg.FeeAPI)
+		feeAPI, err := url.Parse(walletCfg.FeeAPI)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -565,7 +565,7 @@ func (x *Start) Execute(args []string) error {
 			LowFee:       uint64(walletCfg.LowFeeDefault),
 			MediumFee:    uint64(walletCfg.MediumFeeDefault),
 			HighFee:      uint64(walletCfg.HighFeeDefault),
-			FeeAPI:       *feeApi,
+			FeeAPI:       *feeAPI,
 			RepoPath:     repoPath,
 			CreationDate: creationDate,
 			DB:           sqliteDB,
@@ -590,7 +590,7 @@ func (x *Start) Execute(args []string) error {
 				return err
 			}
 		}
-		feeApi, err := url.Parse(walletCfg.FeeAPI)
+		feeAPI, err := url.Parse(walletCfg.FeeAPI)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -603,7 +603,7 @@ func (x *Start) Execute(args []string) error {
 			LowFee:               uint64(walletCfg.LowFeeDefault),
 			MediumFee:            uint64(walletCfg.MediumFeeDefault),
 			HighFee:              uint64(walletCfg.HighFeeDefault),
-			FeeAPI:               *feeApi,
+			FeeAPI:               *feeAPI,
 			RepoPath:             repoPath,
 			CreationDate:         creationDate,
 			DB:                   sqliteDB,
@@ -712,7 +712,7 @@ func (x *Start) Execute(args []string) error {
 			f.Close()
 		} else {
 			if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-				return errors.New("Invalid authentication cookie. Delete it to generate a new one.")
+				return errors.New("Invalid authentication cookie. Delete it to generate a new one")
 			}
 			split := strings.SplitAfter(string(cookie), cookiePrefix)
 			authCookie.Value = split[1]
