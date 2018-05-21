@@ -8,7 +8,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
 )
@@ -51,19 +51,19 @@ func TestSettings(t *testing.T) {
 		{"GET", "/ob/settings", "", 200, settingsUpdateJSON},
 		{"PATCH", "/ob/settings", settingsPatchJSON, 200, "{}"},
 		{"GET", "/ob/settings", "", 200, settingsPatchedJSON},
-	}, nil, nil)
+	})
 
 	// Invalid JSON
 	runAPITests(t, apiTests{
 		{"POST", "/ob/settings", settingsMalformedJSON, 400, settingsMalformedJSONResponse},
-	}, nil, nil)
+	})
 
 	// Invalid JSON
 	runAPITests(t, apiTests{
 		{"POST", "/ob/settings", settingsJSON, 200, settingsJSON},
 		{"GET", "/ob/settings", "", 200, settingsJSON},
 		{"PUT", "/ob/settings", settingsMalformedJSON, 400, settingsMalformedJSONResponse},
-	}, nil, nil)
+	})
 }
 
 func TestProfile(t *testing.T) {
@@ -73,58 +73,58 @@ func TestProfile(t *testing.T) {
 		{"POST", "/ob/profile", profileJSON, 409, AlreadyExistsUsePUTJSON("Profile")},
 		{"PUT", "/ob/profile", profileUpdateJSON, 200, anyResponseJSON},
 		{"PUT", "/ob/profile", profileUpdatedJSON, 200, anyResponseJSON},
-	}, nil, nil)
+	})
 }
 
 func TestAvatar(t *testing.T) {
 	// Setting an avatar fails if we don't have a profile
 	runAPITests(t, apiTests{
 		{"POST", "/ob/avatar", avatarValidJSON, 500, anyResponseJSON},
-	}, nil, nil)
+	})
 
 	// It succeeds if we have a profile and the image data is valid
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", profileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/avatar", avatarValidJSON, 200, avatarValidJSONResponse},
-	}, nil, nil)
+	})
 
 	// Test invalid image data
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", profileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/avatar", avatarUnexpectedEOFJSON, 500, avatarUnexpectedEOFJSONResponse},
-	}, nil, nil)
+	})
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", profileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/avatar", avatarInvalidTQJSON, 500, avatarInvalidTQJSONResponse},
-	}, nil, nil)
+	})
 }
 
 func TestImages(t *testing.T) {
 	// Valid image
 	runAPITests(t, apiTests{
 		{"POST", "/ob/images", imageValidJSON, 200, imageValidJSONResponse},
-	}, nil, nil)
+	})
 }
 
 func TestHeader(t *testing.T) {
 	// Setting an header fails if we don't have a profile
 	runAPITests(t, apiTests{
 		{"POST", "/ob/header", headerValidJSON, 500, anyResponseJSON},
-	}, nil, nil)
+	})
 
 	// It succeeds if we have a profile and the image data is valid
 	runAPITests(t, apiTests{
 		{"POST", "/ob/profile", profileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/header", headerValidJSON, 200, headerValidJSONResponse},
-	}, nil, nil)
+	})
 }
 
 func TestModerator(t *testing.T) {
 	// Fails without profile
 	runAPITests(t, apiTests{
 		{"PUT", "/ob/moderator", moderatorValidJSON, http.StatusConflict, anyResponseJSON},
-	}, nil, nil)
+	})
 
 	// Works with profile
 	runAPITests(t, apiTests{
@@ -136,7 +136,7 @@ func TestModerator(t *testing.T) {
 		// // Update
 		// {"PUT", "/ob/moderator", moderatorUpdatedValidJSON, 200, `{}`},
 		{"DELETE", "/ob/moderator", "", 200, `{}`},
-	}, nil, nil)
+	})
 }
 
 func TestListings(t *testing.T) {
@@ -194,7 +194,7 @@ func TestListings(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", updatedListingJSON, 404, NotFoundJSON("Listing")},
 		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
-	}, nil, nil)
+	})
 }
 
 func TestCryptoListings(t *testing.T) {
@@ -212,7 +212,7 @@ func TestCryptoListings(t *testing.T) {
 		{"DELETE", "/ob/listing/crypto", "", 200, `{}`},
 		{"DELETE", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
 		{"GET", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
-	}, nil, nil)
+	})
 }
 
 func TestCryptoListingsNoCoinType(t *testing.T) {
@@ -221,14 +221,14 @@ func TestCryptoListingsNoCoinType(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false, "reason": "Cryptocurrency listings require a coinType"}`},
-	}, nil, nil)
+	})
 }
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
 	runTest := func(listing *pb.Listing) {
 		runAPITests(t, apiTests{
 			{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal cryptocurrency listing field"}`},
-		}, nil, nil)
+		})
 	}
 
 	physicalListing := factory.NewListing("physical")
@@ -261,14 +261,14 @@ func TestMarketRatePrice(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal market price listing field"}`},
-	}, nil, nil)
+	})
 }
 
 func TestStatus(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"GET", "/ob/status", "", 400, anyResponseJSON},
 		{"GET", "/ob/status/QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "", 200, anyResponseJSON},
-	}, nil, nil)
+	})
 }
 
 func TestWallet(t *testing.T) {
@@ -278,14 +278,14 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
 		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
-	}, nil, nil)
+	})
 }
 
 func TestConfig(t *testing.T) {
 	runAPITests(t, apiTests{
 		// TODO: Need better JSON matching
 		{"GET", "/ob/config", "", 200, anyResponseJSON},
-	}, nil, nil)
+	})
 }
 
 func TestPeers(t *testing.T) {
@@ -293,7 +293,7 @@ func TestPeers(t *testing.T) {
 	runAPITests(t, apiTests{
 		{"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 500, peerNotFoundInTableJSON},
 		// {"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 200, `{}`},
-	}, nil, nil)
+	})
 }
 
 func Test404(t *testing.T) {
@@ -304,7 +304,7 @@ func Test404(t *testing.T) {
 		{"POST", "/ob/a", "{}", 404, notFoundJSON},
 		{"PATCH", "/ob/a", "{}", 404, notFoundJSON},
 		{"DELETE", "/ob/a", "{}", 404, notFoundJSON},
-	}, nil, nil)
+	})
 }
 
 func TestPosts(t *testing.T) {
@@ -336,21 +336,21 @@ func TestPosts(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/post", postUpdateJSON, 404, NotFoundJSON("Post")},
 		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
-	}, nil, nil)
+	})
 }
 
 func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
-	dbSetup := func(store *db.SQLiteDatastore) error {
+	dbSetup := func(testRepo *test.Repository) error {
 		// TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work
 		//nonexpired := factory.NewDisputeCaseRecord()
 		//nonexpired.CaseID = "nonexpiredCase"
 		expired := factory.NewExpiredDisputeCaseRecord()
 		expired.CaseID = "expiredCase"
 		for _, r := range []*repo.DisputeCaseRecord{expired} {
-			if err := store.Cases().PutRecord(r); err != nil {
+			if err := testRepo.DB.Cases().PutRecord(r); err != nil {
 				return err
 			}
-			if err := store.Cases().UpdateBuyerInfo(r.CaseID, r.BuyerContract, []string{}, r.BuyerPayoutAddress, r.BuyerOutpoints); err != nil {
+			if err := testRepo.DB.Cases().UpdateBuyerInfo(r.CaseID, r.BuyerContract, []string{}, r.BuyerPayoutAddress, r.BuyerOutpoints); err != nil {
 				return err
 			}
 		}
@@ -358,11 +358,11 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	}
 	expiredPostJSON := `{"orderId":"expiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
 	//nonexpiredPostJSON := `{"orderId":"nonexpiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
-	runAPITests(t, apiTests{
+	runAPITestsWithSetup(t, apiTests{
 		//{"POST", "/ob/profile", moderatorProfileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/closedispute", expiredPostJSON, 400, anyResponseJSON},
 		//{"POST", "/ob/closedispute", nonexpiredPostJSON, 200, anyResponseJSON},
-	}, &dbSetup, nil)
+	}, dbSetup, nil)
 }
 
 func jsonFor(t *testing.T, fixture proto.Message) string {

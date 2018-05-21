@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/test"
 
 	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
@@ -68,8 +67,8 @@ type apiTest struct {
 	expectedResponseBody string
 }
 
-// dbSetupAction is used to change datastore state before and after a set of []apiTest
-type dbSetupAction *func(*db.SQLiteDatastore) error
+// setupAction is used to change state before and after a set of []apiTest
+type setupAction func(*test.Repository) error
 
 // apiTests is a slice of apiTest
 type apiTests []apiTest
@@ -100,32 +99,35 @@ func buildRequest(method string, path string, body string) (*http.Request, error
 	return req, nil
 }
 
-func runAPITests(t *testing.T, tests apiTests, runBefore, runAfter dbSetupAction) {
-	// Create test repo
-	repository, err := test.NewRepository()
+func runAPITests(t *testing.T, tests apiTests) {
+	_, err := test.ResetRepository()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Reset repo state
-	err = repository.Reset()
+	for _, jsonAPITest := range tests {
+		runAPITest(t, jsonAPITest)
+	}
+}
+
+func runAPITestsWithSetup(t *testing.T, tests apiTests, runBefore, runAfter setupAction) {
+	repository, err := test.ResetRepository()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if runBefore != nil {
-		if err := (*runBefore)(repository.DB); err != nil {
+		if err := runBefore(repository); err != nil {
 			t.Fatal("runBefore:", err)
 		}
 	}
 
-	// Run each test in serial
 	for _, jsonAPITest := range tests {
 		runAPITest(t, jsonAPITest)
 	}
 
 	if runAfter != nil {
-		if err := (*runAfter)(repository.DB); err != nil {
+		if err := runAfter(repository); err != nil {
 			t.Fatal("runAfter:", err)
 		}
 	}
