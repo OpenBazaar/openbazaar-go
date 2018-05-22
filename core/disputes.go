@@ -24,13 +24,16 @@ import (
 	dht "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
 )
 
+// ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
+const ConfirmationsPerHour = 6
+
 var DisputeWg = new(sync.WaitGroup)
 
 var ErrCaseNotFound = errors.New("Case not found")
 var ErrOpenFailureOrderExpired = errors.New("Unable to open case. Order is too old to dispute.")
 
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
-	if ok := n.verifyEscrowFundsAreDisputeable(contract, records); !ok {
+	if !n.verifyEscrowFundsAreDisputeable(contract, records) {
 		return ErrOpenFailureOrderExpired
 	}
 	var isPurchase bool
@@ -118,7 +121,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 }
 
 func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
-	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
+	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	for _, r := range records {
 		hash, err := chainhash.NewHashFromStr(r.Txid)
 		if err != nil {
