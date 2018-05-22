@@ -341,9 +341,6 @@ func TestPosts(t *testing.T) {
 
 func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	dbSetup := func(testRepo *test.Repository) error {
-		// TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work
-		//nonexpired := factory.NewDisputeCaseRecord()
-		//nonexpired.CaseID = "nonexpiredCase"
 		expired := factory.NewExpiredDisputeCaseRecord()
 		expired.CaseID = "expiredCase"
 		for _, r := range []*repo.DisputeCaseRecord{expired} {
@@ -357,13 +354,32 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 		return nil
 	}
 	expiredPostJSON := `{"orderId":"expiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
-	//nonexpiredPostJSON := `{"orderId":"nonexpiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
 	runAPITestsWithSetup(t, apiTests{
-		//{"POST", "/ob/profile", moderatorProfileJSON, 200, anyResponseJSON},
 		{"POST", "/ob/closedispute", expiredPostJSON, 400, anyResponseJSON},
-		//{"POST", "/ob/closedispute", nonexpiredPostJSON, 200, anyResponseJSON},
 	}, dbSetup, nil)
 }
+
+// TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work
+//func TestCloseDisputeReturnsOK(t *testing.T) {
+//dbSetup := func(testRepo *test.Repository) error {
+//nonexpired := factory.NewDisputeCaseRecord()
+//nonexpired.CaseID = "nonexpiredCase"
+//for _, r := range []*repo.DisputeCaseRecord{nonexpired} {
+//if err := testRepo.DB.Cases().PutRecord(r); err != nil {
+//return err
+//}
+//if err := testRepo.DB.Cases().UpdateBuyerInfo(r.CaseID, r.BuyerContract, []string{}, r.BuyerPayoutAddress, r.BuyerOutpoints); err != nil {
+//return err
+//}
+//}
+//return nil
+//}
+//nonexpiredPostJSON := `{"orderId":"nonexpiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
+//runAPITestsWithSetup(t, apiTests{
+//{"POST", "/ob/profile", moderatorProfileJSON, 200, anyResponseJSON},
+//{"POST", "/ob/closedispute", nonexpiredPostJSON, 200, anyResponseJSON},
+//}, dbSetup, nil)
+//}
 
 func jsonFor(t *testing.T, fixture proto.Message) string {
 	m := jsonpb.Marshaler{}
