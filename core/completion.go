@@ -270,7 +270,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 var EscrowTimeLockedError error
 
 func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
+	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	var utxos []wallet.Utxo
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
