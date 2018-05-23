@@ -286,7 +286,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	}
 
 	err = service.node.ValidateOrder(contract, !offline)
-	if err != nil && (err != core.UnknownListingError || !offline) {
+	if err != nil && (err != core.ErrPurchaseUnknownListing || !offline) {
 		return errorResponse(err.Error()), err
 	}
 	currentTime := time.Now()

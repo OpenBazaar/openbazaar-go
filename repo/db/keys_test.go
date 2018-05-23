@@ -62,7 +62,7 @@ func TestPutKey(t *testing.T) {
 		t.Errorf(`Expected 0 got %d`, index)
 	}
 	if used != 0 {
-		t.Errorf(`Expected 0 got %s`, used)
+		t.Errorf(`Expected 0 got %v`, used)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestImportKey(t *testing.T) {
 		t.Errorf(`Expected -1 got %d`, purpose)
 	}
 	if used != 0 {
-		t.Errorf(`Expected 0 got %s`, used)
+		t.Errorf(`Expected 0 got %v`, used)
 	}
 	keyBytes, err := hex.DecodeString(keyHex)
 	if err != nil {
@@ -161,7 +161,7 @@ func TestMarkKeyAsUsed(t *testing.T) {
 		t.Error(err)
 	}
 	if used != 1 {
-		t.Errorf(`Expected 1 got %s`, used)
+		t.Errorf(`Expected 1 got %v`, used)
 	}
 }
 

@@ -5,12 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestMain(m *testing.M) {
@@ -154,13 +153,13 @@ func TestListings(t *testing.T) {
 
 	runAPITests(t, apiTests{
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// Invalid creates
 		{"POST", "/ob/listing", `{`, 400, jsonUnexpectedEOF},
 
 		{"GET", "/ob/listings", "", 200, `[]`},
-		{"GET", "/ob/inventory", "", 200, `[]`},
+		{"GET", "/ob/inventory", "", 200, `{}`},
 
 		// TODO: Add support for improved JSON matching to since contracts
 		// change each test run due to signatures
@@ -215,19 +214,70 @@ func TestCryptoListings(t *testing.T) {
 	})
 }
 
+func TestListingsQuantity(t *testing.T) {
+	listing := factory.NewListing("crypto")
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Item.Skus[0].Quantity = 0
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
+	})
+
+	listing.Item.Skus[0].Quantity = -1
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON,
+	})
+}
+
+func TestCryptoListingsQuantity(t *testing.T) {
+	listing := factory.NewCryptoListing("crypto")
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Item.Skus[0].Quantity = 0
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+	})
+
+	listing.Item.Skus[0].Quantity = -1
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencySkuQuantityInvalid),
+	})
+}
+
 func TestCryptoListingsNoCoinType(t *testing.T) {
 	listing := factory.NewCryptoListing("crypto")
 	listing.Metadata.CoinType = ""
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false, "reason": "Cryptocurrency listings require a coinType"}`},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrCryptocurrencyListingCoinTypeRequired)},
+	})
+}
+
+func TestCryptoListingsCoinDivisibilityIncorrect(t *testing.T) {
+	listing := factory.NewCryptoListing("crypto")
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 200, anyResponseJSON},
+	})
+
+	listing.Metadata.CoinDivisibility = 1e7
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
+	})
+
+	listing.Metadata.CoinDivisibility = 0
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrListingCoinDivisibilityIncorrect)},
 	})
 }
 
 func TestCryptoListingsIllegalFields(t *testing.T) {
-	runTest := func(listing *pb.Listing) {
+	runTest := func(listing *pb.Listing, err error) {
 		runAPITests(t, apiTests{
-			{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal cryptocurrency listing field"}`},
+			{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(err)},
 		})
 	}
 
@@ -235,23 +285,23 @@ func TestCryptoListingsIllegalFields(t *testing.T) {
 
 	listing := factory.NewCryptoListing("crypto")
 	listing.Metadata.PricingCurrency = "btc"
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("metadata.pricingCurrency"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Condition = "new"
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.condition"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Item.Options = physicalListing.Item.Options
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("item.options"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.ShippingOptions = physicalListing.ShippingOptions
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("shippingOptions"))
 
 	listing = factory.NewCryptoListing("crypto")
 	listing.Coupons = physicalListing.Coupons
-	runTest(listing)
+	runTest(listing, core.ErrCryptocurrencyListingIllegalField("coupons"))
 }
 
 func TestMarketRatePrice(t *testing.T) {
@@ -260,7 +310,7 @@ func TestMarketRatePrice(t *testing.T) {
 	listing.Item.Price = 1
 
 	runAPITests(t, apiTests{
-		{"POST", "/ob/listing", jsonFor(t, listing), 500, `{"success": false,"reason": "Illegal market price listing field"}`},
+		{"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(core.ErrMarketPriceListingIllegalField("item.price"))},
 	})
 }
 
@@ -285,14 +335,6 @@ func TestConfig(t *testing.T) {
 	runAPITests(t, apiTests{
 		// TODO: Need better JSON matching
 		{"GET", "/ob/config", "", 200, anyResponseJSON},
-	})
-}
-
-func TestPeers(t *testing.T) {
-	// Follow, Unfollow
-	runAPITests(t, apiTests{
-		{"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 500, peerNotFoundInTableJSON},
-		// {"POST", "/ob/follow", `{"id":"QmRBhyTivwngraebqBVoPYCh8SBrsagqRtMwj44dMLXhwn"}`, 200, `{}`},
 	})
 }
 
@@ -380,13 +422,3 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 //{"POST", "/ob/closedispute", nonexpiredPostJSON, 200, anyResponseJSON},
 //}, dbSetup, nil)
 //}
-
-func jsonFor(t *testing.T, fixture proto.Message) string {
-	m := jsonpb.Marshaler{}
-
-	json, err := m.MarshalToString(fixture)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return json
-}

@@ -101,7 +101,7 @@ func (fp *FeeProvider) selectFee(fee uint64, feeLevel wallet.FeeLevel) uint64 {
 	}
 }
 
-func(fp *FeeProvider) defaultFee(feeLevel wallet.FeeLevel) uint64 {
+func (fp *FeeProvider) defaultFee(feeLevel wallet.FeeLevel) uint64 {
 	switch feeLevel {
 	case wallet.PRIOIRTY:
 		return fp.priorityFee

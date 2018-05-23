@@ -121,7 +121,7 @@ var BumpFeeTransactionDeadError = errors.New("Cannot bump fee of dead transactio
 var BumpFeeNotFoundError = errors.New("Transaction either doesn't exist or has already been spent")
 
 func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
-	_, txn, err := w.txstore.Txns().Get(txid)
+	txn, err := w.txstore.Txns().Get(txid)
 	if err != nil {
 		return nil, err
 	}

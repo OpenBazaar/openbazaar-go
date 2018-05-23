@@ -160,16 +160,16 @@ type InventoryStore interface {
 
 	/* Put an inventory count for a listing
 	   Override the existing count if it exists */
-	Put(slug string, variantIndex int, count int) error
+	Put(slug string, variantIndex int, count int64) error
 
 	// Return the count for a specific listing including variants
-	GetSpecific(slug string, variantIndex int) (int, error)
+	GetSpecific(slug string, variantIndex int) (int64, error)
 
 	// Get the count for all variants of a given listing
-	Get(slug string) (map[int]int, error)
+	Get(slug string) (map[int]int64, error)
 
 	// Fetch all inventory maps for each slug
-	GetAll() (map[string]map[int]int, error)
+	GetAll() (map[string]map[int]int64, error)
 
 	// Delete a listing and related count
 	Delete(slug string, variant int) error

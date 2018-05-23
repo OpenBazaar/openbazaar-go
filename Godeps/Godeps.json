@@ -13,11 +13,11 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "2f3ffd52a76c0b8c29b390031fbd2e21f3ede600"
+			"Rev": "050dde397f425fa1fba09eb08b6ba181cb37975a"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "599ef28caef087c5732f9d046468a46f3a513aa9"
+			"Rev": "479e8eca15d00e36675bf514bd4ab1a06e074ed1"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -175,13 +175,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-20-gecff31a",
-			"Rev": "ecff31abc83fc9686abb966a74c37d371653a720"
+			"Comment": "v0.3.0-21-gaaa54a7",
+			"Rev": "aaa54a7502e148600eadf3a307b05b56fca824b8"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-20-gecff31a",
-			"Rev": "ecff31abc83fc9686abb966a74c37d371653a720"
+			"Comment": "v0.3.0-21-gaaa54a7",
+			"Rev": "aaa54a7502e148600eadf3a307b05b56fca824b8"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
@@ -227,23 +227,28 @@
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
-			"Rev": "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+			"Comment": "v1.0.0-1-gbbd03ef",
+			"Rev": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/ptypes",
-			"Rev": "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+			"Comment": "v1.0.0-1-gbbd03ef",
+			"Rev": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/ptypes/any",
-			"Rev": "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+			"Comment": "v1.0.0-1-gbbd03ef",
+			"Rev": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/ptypes/duration",
-			"Rev": "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+			"Comment": "v1.0.0-1-gbbd03ef",
+			"Rev": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/ptypes/timestamp",
-			"Rev": "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+			"Comment": "v1.0.0-1-gbbd03ef",
+			"Rev": "bbd03ef6da3a115852eaf24c8a1c46aeb39aa175"
 		},
 		{
 			"ImportPath": "github.com/gorilla/websocket",
@@ -257,443 +262,443 @@
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/briantigerchow/pubsub",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/texttheater/golang-levenshtein/levenshtein",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/whyrusleeping/chunker",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/assets",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/blocks/blockstore",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/blocks/blockstore/util",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/blockservice",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/commands",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/commands/cli",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/commands/files",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/commands/http",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/commands",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/dag",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/files",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/object",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/commands/unixfs",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/coreapi",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/coreapi/interface",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/coredag",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/corehttp",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/corerepo",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/core/coreunix",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/decision",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/message",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/message/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/network",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/notifications",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/testnet",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/wantlist",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/offline",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/reprovide",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/filestore",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/filestore/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/flags",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/fuse/ipns",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/fuse/mount",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/fuse/node",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/fuse/readonly",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/importer",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/importer/balanced",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/importer/chunk",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/importer/helpers",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/importer/trickle",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/keystore",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/merkledag",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/test",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/merkledag/utils",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/mfs",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/namesys",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/namesys/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/namesys/republisher",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/p2p",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/path",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/pin",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/pin/gc",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/pin/internal/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/common",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/config",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/lock",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/migrations",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/repo/fsrepo/serialize",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/routing/mock",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/routing/none",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/routing/offline",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/tar",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/datastore2",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/delay",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/dir",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/ds-help",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/ipfsaddr",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/math2",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/posinfo",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/pq",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/thirdparty/tar",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/archive",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/archive/tar",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/hamt",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/io",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/mod",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/ipfs/go-ipfs/unixfs/pb",
-			"Comment": "v0.4.11-78-g63cb72383",
-			"Rev": "63cb72383645edb258eeaf5fcb543912a4676c20"
+			"Comment": "v0.4.11-79-ga4db14f54",
+			"Rev": "a4db14f540d9aea5b01fa3c520d49d3345992b91"
 		},
 		{
 			"ImportPath": "github.com/jbenet/go-context/io",
@@ -729,7 +734,7 @@
 		},
 		{
 			"ImportPath": "github.com/mutecomm/go-sqlcipher",
-			"Rev": "f799951b4ab269c2ce24913961af2cb5d681cc43"
+			"Rev": "34287a64fbe7fc03ab5a0e6cbc35618f9453b8d2"
 		},
 		{
 			"ImportPath": "github.com/natefinch/lumberjack",
@@ -763,59 +768,59 @@
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/curve25519",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/hkdf",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/box",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/nacl/secretbox",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/pbkdf2",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/poly1305",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ripemd160",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/salsa20/salsa",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/crypto/ssh/terminal",
-			"Rev": "48a5a650cfc529a2517eb6a4d6d6749872520525"
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "fc492d2e106922eb3aa4bca863d55e882c087ae3"
+			"Rev": "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context/ctxhttp",
-			"Rev": "fc492d2e106922eb3aa4bca863d55e882c087ae3"
+			"Rev": "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 		},
 		{
 			"ImportPath": "golang.org/x/net/html",
-			"Rev": "fc492d2e106922eb3aa4bca863d55e882c087ae3"
+			"Rev": "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 		},
 		{
 			"ImportPath": "golang.org/x/net/html/atom",
-			"Rev": "fc492d2e106922eb3aa4bca863d55e882c087ae3"
+			"Rev": "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 		},
 		{
 			"ImportPath": "golang.org/x/net/proxy",
-			"Rev": "fc492d2e106922eb3aa4bca863d55e882c087ae3"
+			"Rev": "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2",
@@ -827,11 +832,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "a204229cd828a74741ee7b5da9bf4794497f85ed"
+			"Rev": "89ac7f292d17a339edab4de8efcba5d8672ff661"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/windows",
-			"Rev": "a204229cd828a74741ee7b5da9bf4794497f85ed"
+			"Rev": "89ac7f292d17a339edab4de8efcba5d8672ff661"
 		},
 		{
 			"ImportPath": "gx/ipfs/QmNMCAuxnQFHLGWcvay3DmVFrKuY6Y2nsc9vzsf4gVouJV/go-libp2p-pnet",
@@ -1748,76 +1753,6 @@
 		{
 			"ImportPath": "gx/ipfs/QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6/base32",
 			"Rev": "b8a4059b144b9889b8b62f6458d1662015eec388"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/bitcoin",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/OpenBazaar/wallet-interface",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/btcec",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/chaincfg",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/chaincfg/chainhash",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/wire",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/hdkeychain",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/base58",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/bech32",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/golang.org/x/crypto/ripemd160",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/bitcoin/exchange",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/op/go-logging",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
-		},
-		{
-			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/golang.org/x/net/proxy",
-			"Comment": "v0.10.0-4-g80b09c0c",
-			"Rev": "80b09c0c211ac622b2e8ca76491ce4c75b553f79"
 		}
 	]
 }

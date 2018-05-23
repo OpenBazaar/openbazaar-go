@@ -118,6 +118,21 @@ func (km *KeyManager) GetKeys() []*hd.ExtendedKey {
 		}
 		keys = append(keys, k)
 	}
+	imported, err := km.datastore.GetImported()
+	if err != nil {
+		return keys
+	}
+	for _, key := range imported {
+		hdKey := hd.NewExtendedKey(
+			km.params.HDPrivateKeyID[:],
+			key.Serialize(),
+			make([]byte, 32),
+			[]byte{0x00, 0x00, 0x00, 0x00},
+			0,
+			0,
+			true)
+		keys = append(keys, hdKey)
+	}
 	return keys
 }
 

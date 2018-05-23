@@ -97,8 +97,9 @@ func NewListing(slug string) *pb.Listing {
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
 	listing.Metadata.CoinType = "teth"
+	listing.Metadata.CoinDivisibility = 1e8
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
-	listing.Item.Skus = []*pb.Listing_Item_Sku{}
+	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
 	listing.Metadata.PricingCurrency = ""
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
