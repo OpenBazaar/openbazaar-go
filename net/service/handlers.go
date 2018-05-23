@@ -1057,7 +1057,7 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	if err != nil {
 		return nil, err
 	}
-	buyerContract, vendorContract, _, _, _, _, _, err := service.node.Datastore.Cases().GetPayoutDetails(update.OrderId)
+	dispute, err := service.node.Datastore.Cases().GetByCaseID(update.OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -1073,42 +1073,42 @@ func (service *OpenBazaarService) handleDisputeUpdate(p peer.ID, pmes *pb.Messag
 	var disputeeID string
 	var disputeeHandle string
 	var buyer string
-	if buyerContract == nil {
+	if dispute.BuyerContract == nil {
 		buyerValidationErrors := service.node.ValidateCaseContract(rc)
 		err = service.node.Datastore.Cases().UpdateBuyerInfo(update.OrderId, rc, buyerValidationErrors, update.PayoutAddress, update.Outpoints)
 		if err != nil {
 			return nil, err
 		}
-		if len(vendorContract.VendorListings) > 0 && vendorContract.VendorListings[0].Item != nil && len(vendorContract.VendorListings[0].Item.Images) > 0 {
-			thumbnailTiny = vendorContract.VendorListings[0].Item.Images[0].Tiny
-			thumbnailSmall = vendorContract.VendorListings[0].Item.Images[0].Small
-			if vendorContract.VendorListings[0].VendorID != nil {
-				disputerID = vendorContract.VendorListings[0].VendorID.PeerID
-				disputerHandle = vendorContract.VendorListings[0].VendorID.Handle
+		if len(dispute.VendorContract.VendorListings) > 0 && dispute.VendorContract.VendorListings[0].Item != nil && len(dispute.VendorContract.VendorListings[0].Item.Images) > 0 {
+			thumbnailTiny = dispute.VendorContract.VendorListings[0].Item.Images[0].Tiny
+			thumbnailSmall = dispute.VendorContract.VendorListings[0].Item.Images[0].Small
+			if dispute.VendorContract.VendorListings[0].VendorID != nil {
+				disputerID = dispute.VendorContract.VendorListings[0].VendorID.PeerID
+				disputerHandle = dispute.VendorContract.VendorListings[0].VendorID.Handle
 			}
-			if vendorContract.BuyerOrder.BuyerID != nil {
-				buyer = vendorContract.BuyerOrder.BuyerID.PeerID
-				disputeeID = vendorContract.BuyerOrder.BuyerID.PeerID
-				disputeeHandle = vendorContract.BuyerOrder.BuyerID.Handle
+			if dispute.VendorContract.BuyerOrder.BuyerID != nil {
+				buyer = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
+				disputeeID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
+				disputeeHandle = dispute.VendorContract.BuyerOrder.BuyerID.Handle
 			}
 		}
-	} else if vendorContract == nil {
+	} else if dispute.VendorContract == nil {
 		vendorValidationErrors := service.node.ValidateCaseContract(rc)
 		err = service.node.Datastore.Cases().UpdateVendorInfo(update.OrderId, rc, vendorValidationErrors, update.PayoutAddress, update.Outpoints)
 		if err != nil {
 			return nil, err
 		}
-		if len(buyerContract.VendorListings) > 0 && buyerContract.VendorListings[0].Item != nil && len(buyerContract.VendorListings[0].Item.Images) > 0 {
-			thumbnailTiny = buyerContract.VendorListings[0].Item.Images[0].Tiny
-			thumbnailSmall = buyerContract.VendorListings[0].Item.Images[0].Small
-			if buyerContract.VendorListings[0].VendorID != nil {
-				disputeeID = buyerContract.VendorListings[0].VendorID.PeerID
-				disputeeHandle = buyerContract.VendorListings[0].VendorID.Handle
+		if len(dispute.BuyerContract.VendorListings) > 0 && dispute.BuyerContract.VendorListings[0].Item != nil && len(dispute.BuyerContract.VendorListings[0].Item.Images) > 0 {
+			thumbnailTiny = dispute.BuyerContract.VendorListings[0].Item.Images[0].Tiny
+			thumbnailSmall = dispute.BuyerContract.VendorListings[0].Item.Images[0].Small
+			if dispute.BuyerContract.VendorListings[0].VendorID != nil {
+				disputeeID = dispute.BuyerContract.VendorListings[0].VendorID.PeerID
+				disputeeHandle = dispute.BuyerContract.VendorListings[0].VendorID.Handle
 			}
-			if buyerContract.BuyerOrder.BuyerID != nil {
-				buyer = buyerContract.BuyerOrder.BuyerID.PeerID
-				disputerID = buyerContract.BuyerOrder.BuyerID.PeerID
-				disputerHandle = buyerContract.BuyerOrder.BuyerID.Handle
+			if dispute.BuyerContract.BuyerOrder.BuyerID != nil {
+				buyer = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
+				disputerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
+				disputerHandle = dispute.BuyerContract.BuyerOrder.BuyerID.Handle
 			}
 		}
 	} else {

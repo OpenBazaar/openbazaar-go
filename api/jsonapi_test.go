@@ -7,6 +7,8 @@ import (
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/proto"
 )
@@ -336,6 +338,48 @@ func TestPosts(t *testing.T) {
 		{"DELETE", "/ob/post/test1", "", 404, NotFoundJSON("Post")},
 	})
 }
+
+func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
+	dbSetup := func(testRepo *test.Repository) error {
+		expired := factory.NewExpiredDisputeCaseRecord()
+		expired.CaseID = "expiredCase"
+		for _, r := range []*repo.DisputeCaseRecord{expired} {
+			if err := testRepo.DB.Cases().PutRecord(r); err != nil {
+				return err
+			}
+			if err := testRepo.DB.Cases().UpdateBuyerInfo(r.CaseID, r.BuyerContract, []string{}, r.BuyerPayoutAddress, r.BuyerOutpoints); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	expiredPostJSON := `{"orderId":"expiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
+	runAPITestsWithSetup(t, apiTests{
+		{"POST", "/ob/closedispute", expiredPostJSON, 400, anyResponseJSON},
+	}, dbSetup, nil)
+}
+
+// TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work
+//func TestCloseDisputeReturnsOK(t *testing.T) {
+//dbSetup := func(testRepo *test.Repository) error {
+//nonexpired := factory.NewDisputeCaseRecord()
+//nonexpired.CaseID = "nonexpiredCase"
+//for _, r := range []*repo.DisputeCaseRecord{nonexpired} {
+//if err := testRepo.DB.Cases().PutRecord(r); err != nil {
+//return err
+//}
+//if err := testRepo.DB.Cases().UpdateBuyerInfo(r.CaseID, r.BuyerContract, []string{}, r.BuyerPayoutAddress, r.BuyerOutpoints); err != nil {
+//return err
+//}
+//}
+//return nil
+//}
+//nonexpiredPostJSON := `{"orderId":"nonexpiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
+//runAPITestsWithSetup(t, apiTests{
+//{"POST", "/ob/profile", moderatorProfileJSON, 200, anyResponseJSON},
+//{"POST", "/ob/closedispute", nonexpiredPostJSON, 200, anyResponseJSON},
+//}, dbSetup, nil)
+//}
 
 func jsonFor(t *testing.T, fixture proto.Message) string {
 	m := jsonpb.Marshaler{}

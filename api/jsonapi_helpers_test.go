@@ -67,6 +67,9 @@ type apiTest struct {
 	expectedResponseBody string
 }
 
+// setupAction is used to change state before and after a set of []apiTest
+type setupAction func(*test.Repository) error
+
 // apiTests is a slice of apiTest
 type apiTests []apiTest
 
@@ -97,21 +100,36 @@ func buildRequest(method string, path string, body string) (*http.Request, error
 }
 
 func runAPITests(t *testing.T, tests apiTests) {
-	// Create test repo
-	repository, err := test.NewRepository()
+	_, err := test.ResetRepository()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Reset repo state
-	err = repository.Reset()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Run each test in serial
 	for _, jsonAPITest := range tests {
 		runAPITest(t, jsonAPITest)
+	}
+}
+
+func runAPITestsWithSetup(t *testing.T, tests apiTests, runBefore, runAfter setupAction) {
+	repository, err := test.ResetRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if runBefore != nil {
+		if err := runBefore(repository); err != nil {
+			t.Fatal("runBefore:", err)
+		}
+	}
+
+	for _, jsonAPITest := range tests {
+		runAPITest(t, jsonAPITest)
+	}
+
+	if runAfter != nil {
+		if err := runAfter(repository); err != nil {
+			t.Fatal("runAfter:", err)
+		}
 	}
 }
 

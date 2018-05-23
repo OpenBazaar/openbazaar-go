@@ -16,12 +16,18 @@ var (
 // DisputeCaseRecord is a one-to-one relationship with records in the
 // SQL datastore
 type DisputeCaseRecord struct {
-	CaseID           string
-	Timestamp        time.Time
-	LastNotifiedAt   time.Time
-	BuyerContract    *pb.RicardianContract
-	VendorContract   *pb.RicardianContract
-	IsBuyerInitiated bool
+	CaseID              string
+	Claim               string
+	OrderState          pb.OrderState
+	Timestamp           time.Time
+	LastNotifiedAt      time.Time
+	BuyerContract       *pb.RicardianContract
+	BuyerOutpoints      []*pb.Outpoint
+	BuyerPayoutAddress  string
+	VendorContract      *pb.RicardianContract
+	VendorOutpoints     []*pb.Outpoint
+	VendorPayoutAddress string
+	IsBuyerInitiated    bool
 }
 
 // BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval
@@ -69,4 +75,15 @@ func (r *DisputeCaseRecord) buildModeratorDisputeExpiry(interval time.Duration, 
 		}
 	}
 	return NewNotification(notification, createdAt, false)
+}
+
+// IsExpired returns a bool indicating whether the case is still open right now
+func (r *DisputeCaseRecord) IsExpiredNow() bool {
+	return r.IsExpired(time.Now())
+}
+
+// IsExpired returns a bool indicating whether the case is still open
+func (r *DisputeCaseRecord) IsExpired(when time.Time) bool {
+	expiresAt := r.Timestamp.Add(ModeratorDisputeExpiry_lastInterval)
+	return when.Equal(expiresAt) || when.After(expiresAt)
 }

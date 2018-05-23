@@ -35,6 +35,20 @@ func NewRepository() (*Repository, error) {
 	return r, nil
 }
 
+func ResetRepository() (*Repository, error) {
+	repository, err := NewRepository()
+	if err != nil {
+		return nil, err
+	}
+
+	err = repository.Reset()
+	if err != nil {
+		return nil, err
+	}
+
+	return repository, nil
+}
+
 // ConfigFile returns the path to the test configuration file
 func (r *Repository) ConfigFile() string {
 	return path.Join(r.Path, "config")
