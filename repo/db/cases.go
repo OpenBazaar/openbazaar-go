@@ -480,8 +480,9 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	fourtyFiveDays := time.Duration(45*24) * time.Hour
-	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?", int(fourtyFiveDays.Seconds()))
+	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?",
+		int(repo.ModeratorDisputeExpiry_lastInterval.Seconds()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("selecting dispute case: %s", err.Error())
 	}
