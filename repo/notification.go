@@ -403,7 +403,7 @@ func (n OrderNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderNotification) GetID() string             { return n.ID }
 func (n OrderNotification) GetType() NotificationType { return NotifierTypeOrderNewNotification }
@@ -429,7 +429,7 @@ func (n PaymentNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n PaymentNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n PaymentNotification) GetID() string             { return n.ID }
 func (n PaymentNotification) GetType() NotificationType { return NotifierTypePaymentNotification }
@@ -451,7 +451,7 @@ func (n OrderConfirmationNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderConfirmationNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderConfirmationNotification) GetID() string { return n.ID }
 func (n OrderConfirmationNotification) GetType() NotificationType {
@@ -475,7 +475,7 @@ func (n OrderDeclinedNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderDeclinedNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderDeclinedNotification) GetID() string { return n.ID }
 func (n OrderDeclinedNotification) GetType() NotificationType {
@@ -496,7 +496,7 @@ func (n OrderCancelNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderCancelNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n OrderCancelNotification) GetID() string { return n.ID }
 func (n OrderCancelNotification) GetType() NotificationType {
@@ -520,7 +520,7 @@ func (n RefundNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n RefundNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n RefundNotification) GetID() string             { return n.ID }
 func (n RefundNotification) GetType() NotificationType { return NotifierTypeRefundNotification }
@@ -542,7 +542,7 @@ func (n FulfillmentNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n FulfillmentNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n FulfillmentNotification) GetID() string { return n.ID }
 func (n FulfillmentNotification) GetType() NotificationType {
@@ -566,7 +566,7 @@ func (n ProcessingErrorNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ProcessingErrorNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ProcessingErrorNotification) GetID() string { return n.ID }
 func (n ProcessingErrorNotification) GetType() NotificationType {
@@ -589,7 +589,7 @@ func (n CompletionNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n CompletionNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n CompletionNotification) GetID() string             { return n.ID }
 func (n CompletionNotification) GetType() NotificationType { return NotifierTypeCompletionNotification }
@@ -614,7 +614,7 @@ func (n DisputeOpenNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeOpenNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeOpenNotification) GetID() string { return n.ID }
 func (n DisputeOpenNotification) GetType() NotificationType {
@@ -641,7 +641,7 @@ func (n DisputeUpdateNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeUpdateNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeUpdateNotification) GetID() string { return n.ID }
 func (n DisputeUpdateNotification) GetType() NotificationType {
@@ -666,7 +666,7 @@ func (n DisputeCloseNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeCloseNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeCloseNotification) GetID() string { return n.ID }
 func (n DisputeCloseNotification) GetType() NotificationType {
@@ -691,7 +691,7 @@ func (n DisputeAcceptedNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeAcceptedNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n DisputeAcceptedNotification) GetID() string { return n.ID }
 func (n DisputeAcceptedNotification) GetType() NotificationType {
@@ -711,7 +711,7 @@ func (n FollowNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n FollowNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n FollowNotification) GetID() string { return n.ID }
 func (n FollowNotification) GetType() NotificationType {
@@ -729,7 +729,7 @@ func (n UnfollowNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n UnfollowNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n UnfollowNotification) GetID() string                               { return n.ID }
 func (n UnfollowNotification) GetType() NotificationType                   { return NotifierTypeUnfollowNotification }
@@ -745,7 +745,7 @@ func (n ModeratorAddNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorAddNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorAddNotification) GetID() string { return n.ID }
 func (n ModeratorAddNotification) GetType() NotificationType {
@@ -763,7 +763,7 @@ func (n ModeratorRemoveNotification) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorRemoveNotification) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorRemoveNotification) GetID() string { return n.ID }
 func (n ModeratorRemoveNotification) GetType() NotificationType {
@@ -862,7 +862,7 @@ func (n VendorDisputeTimeout) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n VendorDisputeTimeout) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n VendorDisputeTimeout) GetID() string             { return n.ID }
 func (n VendorDisputeTimeout) GetType() NotificationType { return NotifierTypeVendorDisputeTimeout }
@@ -884,7 +884,7 @@ func (n BuyerDisputeTimeout) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n BuyerDisputeTimeout) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n BuyerDisputeTimeout) GetID() string             { return n.ID }
 func (n BuyerDisputeTimeout) GetType() NotificationType { return n.Type }
@@ -908,7 +908,7 @@ func (n ModeratorDisputeExpiry) Data() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorDisputeExpiry) WebsocketData() ([]byte, error) {
-	return json.MarshalIndent(n, "", "    ")
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n ModeratorDisputeExpiry) GetID() string                               { return n.ID }
 func (n ModeratorDisputeExpiry) GetType() NotificationType                   { return n.Type }

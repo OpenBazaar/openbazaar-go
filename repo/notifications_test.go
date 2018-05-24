@@ -40,8 +40,8 @@ func TestWebsocketDataIsUnmarshalable(t *testing.T) {
 			t.Errorf("failed unmarshaling '%s': %s\n", n.GetType(), err)
 			continue
 		}
-		if _, ok := actual["notification"]; ok {
-			t.Errorf("Unexpected 'notification' JSON key in marshalled payload of %s", n.GetType())
+		if _, ok := actual["notification"]; !ok {
+			t.Errorf("missing 'notification' JSON key in marshalled payload of %s", n.GetType())
 		}
 	}
 }
