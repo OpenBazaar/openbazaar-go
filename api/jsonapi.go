@@ -710,8 +710,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}*/
+	height, _ := i.node.Wallet.ChainTip()
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
+	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d, "height": %d}`, int(confirmed), int(unconfirmed), height))
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
