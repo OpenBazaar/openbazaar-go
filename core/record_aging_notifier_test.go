@@ -680,6 +680,90 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 }
 
+func TestBuyerDisputeTimeoutsAreReturnedInOrderWhenCreatedAsABatch(t *testing.T) {
+	var (
+		broadcastChannel = make(chan repo.Notifier, 5)
+		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
+
+		// Produces notification for 15, 40, 44 and 45 days
+		subject = &repo.PurchaseRecord{
+			Contract:       factory.NewDisputeableContract(),
+			OrderID:        "neverNotified",
+			OrderState:     pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:      timeStart,
+			LastNotifiedAt: time.Unix(0, 0),
+		}
+
+		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+			DataPath:        schema.GenerateTempPath(),
+			TestModeEnabled: true,
+		})
+	)
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	contractData, err := m.MarshalToString(subject.Contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", subject.OrderID, contractData, int(subject.OrderState), int(subject.Timestamp.Unix()), int(subject.LastNotifiedAt.Unix()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	worker := &recordAgingNotifier{
+		datastore: datastore,
+		broadcast: broadcastChannel,
+		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
+	}
+
+	worker.PerformTask()
+
+	actual, _, err := datastore.Notifications().GetAll("", -1, []string{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		firstInterval_expiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_firstInterval).Seconds())
+		secondInterval_expiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_secondInterval).Seconds())
+		thirdInterval_expiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
+		lastInterval_expiresIn   = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_lastInterval).Seconds())
+	)
+	if actual[0].NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn != lastInterval_expiresIn {
+		t.Errorf("Expected last interval notification first, where ExpiresIn is %d, but was not", lastInterval_expiresIn)
+		t.Logf("Actual Notification: %+v\n", actual[0])
+	}
+	if actual[1].NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn != thirdInterval_expiresIn {
+		t.Errorf("Expected third interval notification second, where ExpiresIn is %d, but was not", thirdInterval_expiresIn)
+		t.Logf("Actual Notification: %+v\n", actual[1])
+	}
+	if actual[2].NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn != secondInterval_expiresIn {
+		t.Errorf("Expected second interval notification third, where ExpiresIn is %d, but was not", secondInterval_expiresIn)
+		t.Logf("Actual Notification: %+v\n", actual[2])
+	}
+	if actual[3].NotifierData.(repo.BuyerDisputeTimeout).ExpiresIn != firstInterval_expiresIn {
+		t.Errorf("Expected first interval notification last, where ExpiresIn is %d, but was not", firstInterval_expiresIn)
+		t.Logf("Actual Notification: %+v\n", actual[3])
+	}
+}
+
 // SALES
 func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
