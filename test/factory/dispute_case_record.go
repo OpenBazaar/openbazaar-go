@@ -9,9 +9,10 @@ import (
 
 func NewDisputeCaseRecord() *repo.DisputeCaseRecord {
 	dispute := &repo.DisputeCaseRecord{
-		BuyerContract: NewDisputeableContract(),
-		Timestamp:     time.Now(),
-		OrderState:    pb.OrderState_DISPUTED,
+		BuyerContract:  NewDisputeableContract(),
+		VendorContract: NewDisputeableContract(),
+		Timestamp:      time.Now(),
+		OrderState:     pb.OrderState_DISPUTED,
 	}
 	return dispute
 }
