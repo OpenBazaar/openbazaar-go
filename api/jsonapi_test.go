@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -398,6 +399,20 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	expiredPostJSON := `{"orderId":"expiredCase","resolution":"","buyerPercentage":100.0,"vendorPercentage":0.0}`
 	runAPITestsWithSetup(t, apiTests{
 		{"POST", "/ob/closedispute", expiredPostJSON, 400, anyResponseJSON},
+	}, dbSetup, nil)
+}
+
+func TestZECSalesCannotReleaseEscrow(t *testing.T) {
+	sale := factory.NewSaleRecord()
+	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
+	dbSetup := func(testRepo *test.Repository) error {
+		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
+			return err
+		}
+		return nil
+	}
+	runAPITestsWithSetup(t, apiTests{
+		{"POST", "/ob/releaseescrow", fmt.Sprintf(`{"orderId":"%s"}`, sale.OrderID), 400, anyResponseJSON},
 	}, dbSetup, nil)
 }
 

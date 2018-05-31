@@ -2155,6 +2155,11 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if !(&repo.SaleRecord{Contract: contract}).SupportsTimedEscrowRelease() {
+		ErrorResponse(w, http.StatusBadRequest, "Escrow does not support automatic release of funds to vendor")
+		return
+	}
+
 	switch state {
 	case pb.OrderState_DISPUTED:
 		disputeStart, err := ptypes.Timestamp(contract.GetDispute().Timestamp)
