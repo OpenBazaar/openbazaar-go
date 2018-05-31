@@ -60,3 +60,26 @@ func TestSaleRecordIsDisputeable(t *testing.T) {
 		}
 	}
 }
+
+func TestSaleRecordKnowsWhetherItSupportsTimedEscrowRelease(t *testing.T) {
+	subject := factory.NewSaleRecord()
+	subject.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
+	if subject.SupportsTimedEscrowRelease() == true {
+		t.Error("Expected Sales with ZEC as the only accepted currency to NOT support Timed Escrow Release")
+	}
+
+	subject.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{""}
+	if subject.SupportsTimedEscrowRelease() == true {
+		t.Error("Expected Sales with an undefined case to NOT support Timed Escrow Release")
+	}
+
+	subject.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	if subject.SupportsTimedEscrowRelease() == false {
+		t.Error("Expected Sales with ZEC as the only accepted currency to support Timed Escrow Release, but did NOT")
+	}
+
+	subject.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BCH"}
+	if subject.SupportsTimedEscrowRelease() == false {
+		t.Error("Expected Sales with ZEC as the only accepted currency to support Timed Escrow Release, but did NOT")
+	}
+}

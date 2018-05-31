@@ -20,6 +20,21 @@ type SaleRecord struct {
 	LastNotifiedAt time.Time
 }
 
+func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
+	if len(r.Contract.VendorListings) > 0 &&
+		len(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
+		switch r.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		case "BTC":
+			return true
+		case "BCH":
+			return true
+		case "ZEC":
+			return false
+		}
+	}
+	return false
+}
+
 // IsDisputeable returns whether the Sale is in a state that it can be disputed with a
 // third-party moderator
 func (r *SaleRecord) IsDisputeable() bool {

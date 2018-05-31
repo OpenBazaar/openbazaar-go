@@ -32,7 +32,12 @@ func NewContract() *pb.RicardianContract {
 	)
 	return &pb.RicardianContract{
 		VendorListings: []*pb.Listing{
-			{Item: &pb.Listing_Item{Images: images}},
+			{
+				Item: &pb.Listing_Item{Images: images},
+				Metadata: &pb.Listing_Metadata{
+					AcceptedCurrencies: []string{"BTC"},
+				},
+			},
 		},
 		BuyerOrder: order,
 	}
