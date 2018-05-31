@@ -82,9 +82,7 @@ class OpenBazaarTestFramework(object):
         config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
         config["Swarm"]["DisableNatPortMap"] = True
-
-        if self.bitcoincash:
-            config["Wallet"]["Type"] = "bitcoincash"
+        config["Wallet"]["Type"] = self.wallet
 
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
@@ -183,12 +181,16 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
-        parser.add_argument('-c', '--bitcoincash', help="test with bitcoin cash", action='store_true', default=False)
+        parser.add_argument('-w', '--wallet', help="test with specified wallet (bitcoincash, or zcash-light)", default="spvwallet")
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
-        self.bitcoincash = args.bitcoincash
+        self.wallet = args.wallet
+        self.currency = {
+            'bitcoincash': 'tbch',
+            'zcash-light': 'tzec'
+        }.get(args.wallet, 'tbtc')
         self.options = options
 
         try:
