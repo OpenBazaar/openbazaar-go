@@ -20,6 +20,9 @@ type SaleRecord struct {
 	LastNotifiedAt time.Time
 }
 
+// SupportsTimedEscrowRelease indicates whether the underlying AcceptedCurrency supports
+// a time-bassed release behavior.
+// TODO: Express this from the wallet-interface instead
 func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 	if len(r.Contract.VendorListings) > 0 &&
 		len(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
