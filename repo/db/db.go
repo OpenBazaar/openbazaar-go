@@ -7,7 +7,6 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/op/go-logging"
 	"time"
 )
@@ -49,10 +48,6 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
-	}
-	if password != "" {
-		p := "pragma key='" + password + "';"
-		conn.Exec(p)
 	}
 	l := new(sync.Mutex)
 	sqliteDB := &SQLiteDatastore{

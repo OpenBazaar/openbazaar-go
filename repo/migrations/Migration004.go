@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"path"
 
-	_ "github.com/mutecomm/go-sqlcipher"
 	"os"
 )
 
@@ -20,10 +19,6 @@ func (Migration004) Up(repoPath string, dbPassword string, testnet bool) error {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return err
-	}
-	if dbPassword != "" {
-		p := "pragma key='" + dbPassword + "';"
-		db.Exec(p)
 	}
 
 	tx, err := db.Begin()
