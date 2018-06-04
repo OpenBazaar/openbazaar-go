@@ -25,27 +25,17 @@ import (
 )
 
 func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
-
 	// Our own tx; don't keep track of false positives
-	_, err := s.txstore.Ingest(tx, 0)
-	if err != nil {
-		return err
-	}
-
-	// make an inv message instead of a tx message to be polite
-	txid := tx.TxHash()
-	iv1 := wire.NewInvVect(wire.InvTypeTx, &txid)
-	invMsg := wire.NewMsgInv()
-	err = invMsg.AddInvVect(iv1)
+	_, err := s.txstore.Ingest(tx, 0, time.Now())
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("Broadcasting tx %s to peers", tx.TxHash().String())
-	for _, peer := range s.peerManager.ReadyPeers() {
-		peer.QueueMessage(invMsg, nil)
-		s.updateFilterAndSend(peer)
+	for _, peer := range s.peerManager.ConnectedPeers() {
+		peer.QueueMessage(tx, nil)
 	}
+	s.wireService.MsgChan() <- updateFiltersMsg{}
 	return nil
 }
 
@@ -584,11 +574,12 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 	for k := range coinMap {
 		coins = append(coins, k)
 	}
-	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
+
+	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, inputValues []btc.Amount, scripts [][]byte, err error) {
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
 		if err != nil {
-			return total, inputs, scripts, wallet.ErrorInsuffientFunds
+			return total, inputs, []btc.Amount{}, scripts, wallet.ErrorInsuffientFunds
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
@@ -611,7 +602,7 @@ func (w *SPVWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.FeeL
 			wif, _ := btc.NewWIF(privKey, w.params, true)
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
 		}
-		return total, inputs, scripts, nil
+		return total, inputs, []btc.Amount{}, scripts, nil
 	}
 
 	// Get the fee per kilobyte
@@ -676,7 +667,7 @@ func NewUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
 
 	for {
-		inputAmount, inputs, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + targetFee)
 		if err != nil {
 			return nil, err
 		}

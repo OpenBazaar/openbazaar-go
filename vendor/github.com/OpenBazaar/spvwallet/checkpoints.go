@@ -69,6 +69,22 @@ func init() {
 	if testnet3Checkpoints[0].Header.BlockHash().String() != "00000000000002c04de174cf25c993b4dd221eb087c0601a599ff1977e230c99" {
 		panic("Invalid checkpoint")
 	}
+	testnet3Prev1, _ := chainhash.NewHashFromStr("000000000003e8e7755d9b8299b28c71d9f0e18909f25bc9f3eeec3464ece1dd")
+	testnet3Merk1, _ := chainhash.NewHashFromStr("7b91fe22059063bcbb1cfac6fd376cf459f4387d1bc1989989252495b06b52be")
+	testnet3Checkpoints = append(testnet3Checkpoints, Checkpoint{
+		Height: 1276128,
+		Header: wire.BlockHeader{
+			Version:    536870912,
+			PrevBlock:  *testnet3Prev1,
+			MerkleRoot: *testnet3Merk1,
+			Timestamp:  time.Unix(1517822323, 0),
+			Bits:       453210804,
+			Nonce:      2456211891,
+		},
+	})
+	if testnet3Checkpoints[1].Header.BlockHash().String() != "0000000000006c7a8a7fae87866c1962460d50bdcaccb53fa59e5456711c4ec8" {
+		panic("Invalid checkpoint")
+	}
 
 	// Regtest
 	regtestCheckpoint = Checkpoint{0, chaincfg.RegressionNetParams.GenesisBlock.Header}

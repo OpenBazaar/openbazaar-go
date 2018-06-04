@@ -54,23 +54,24 @@ func (b *BlockChain) maybeAcceptBlock(block *btcutil.Block, flags BehaviorFlags)
 	// such as making blocks that never become part of the main chain or
 	// blocks that fail to connect available for further analysis.
 	err = b.db.Update(func(dbTx database.Tx) error {
-		return dbMaybeStoreBlock(dbTx, block)
+		return dbStoreBlock(dbTx, block)
 	})
 	if err != nil {
 		return false, err
 	}
 
-	// Create a new block node for the block and add it to the in-memory
-	// block chain (could be either a side chain or the main chain).
+	// Create a new block node for the block and add it to the node index. Even
+	// if the block ultimately gets connected to the main chain, it starts out
+	// on a side chain.
 	blockHeader := &block.MsgBlock().Header
-	newNode := newBlockNode(blockHeader, blockHeight)
+	newNode := newBlockNode(blockHeader, prevNode)
 	newNode.status = statusDataStored
-	if prevNode != nil {
-		newNode.parent = prevNode
-		newNode.height = blockHeight
-		newNode.workSum.Add(prevNode.workSum, newNode.workSum)
-	}
+
 	b.index.AddNode(newNode)
+	err = b.index.flushToDB()
+	if err != nil {
+		return false, err
+	}
 
 	// Connect the passed block to the chain while respecting proper chain
 	// selection according to the chain with the most proof of work.  This
