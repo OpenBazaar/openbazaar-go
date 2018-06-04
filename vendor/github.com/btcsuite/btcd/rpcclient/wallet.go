@@ -46,21 +46,21 @@ func (r FutureGetTransactionResult) Receive() (*btcjson.GetTransactionResult, er
 // the returned instance.
 //
 // See GetTransaction for the blocking version and more details.
-func (c *Client) GetTransactionAsync(txHash *chainhash.Hash) FutureGetTransactionResult {
+func (c *Client) GetTransactionAsync(txHash *chainhash.Hash, watchOnly *bool) FutureGetTransactionResult {
 	hash := ""
 	if txHash != nil {
 		hash = txHash.String()
 	}
 
-	cmd := btcjson.NewGetTransactionCmd(hash, nil)
+	cmd := btcjson.NewGetTransactionCmd(hash, watchOnly)
 	return c.sendCmd(cmd)
 }
 
 // GetTransaction returns detailed information about a wallet transaction.
 //
 // See GetRawTransaction to return the raw transaction instead.
-func (c *Client) GetTransaction(txHash *chainhash.Hash) (*btcjson.GetTransactionResult, error) {
-	return c.GetTransactionAsync(txHash).Receive()
+func (c *Client) GetTransaction(txHash *chainhash.Hash, watchOnly *bool) (*btcjson.GetTransactionResult, error) {
+	return c.GetTransactionAsync(txHash, watchOnly).Receive()
 }
 
 // FutureListTransactionsResult is a future promise to deliver the result of a

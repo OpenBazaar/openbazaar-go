@@ -1,12 +1,12 @@
 package wallet
 
 import (
+	"errors"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"time"
-	"errors"
 )
 
 type Wallet interface {
@@ -132,6 +132,7 @@ type TransactionCallback struct {
 	Timestamp time.Time
 	Value     int64
 	WatchOnly bool
+	BlockTime time.Time
 }
 
 type TransactionOutput struct {
@@ -172,4 +173,3 @@ var (
 	ErrorInsuffientFunds error = errors.New("Insuffient funds")
 	ErrorDustAmount      error = errors.New("Amount is below network dust treshold")
 )
-
