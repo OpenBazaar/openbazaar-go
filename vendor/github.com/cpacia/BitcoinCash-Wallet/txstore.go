@@ -31,17 +31,20 @@ type TxStore struct {
 
 	listeners []func(wallet.TransactionCallback)
 
+	additionalFilters [][]byte
+
 	wallet.Datastore
 }
 
-func NewTxStore(p *chaincfg.Params, db wallet.Datastore, keyManager *KeyManager) (*TxStore, error) {
+func NewTxStore(p *chaincfg.Params, db wallet.Datastore, keyManager *KeyManager, additionalFilters ...[]byte) (*TxStore, error) {
 	txs := &TxStore{
-		params:     p,
-		keyManager: keyManager,
-		addrMutex:  new(sync.Mutex),
-		cbMutex:    new(sync.Mutex),
-		txids:      make(map[string]int32),
-		Datastore:  db,
+		params:            p,
+		keyManager:        keyManager,
+		addrMutex:         new(sync.Mutex),
+		cbMutex:           new(sync.Mutex),
+		txids:             make(map[string]int32),
+		Datastore:         db,
+		additionalFilters: additionalFilters,
 	}
 	err := txs.PopulateAdrs()
 	if err != nil {
@@ -88,7 +91,9 @@ func (ts *TxStore) GimmeFilter() (*bloom.Filter, error) {
 		}
 		f.Add(addrs[0].ScriptAddress())
 	}
-
+	for _, toAdd := range ts.additionalFilters {
+		f.Add(toAdd)
+	}
 	return f, nil
 }
 
@@ -189,7 +194,7 @@ func (ts *TxStore) PopulateAdrs() error {
 
 // Ingest puts a tx into the DB atomically.  This can result in a
 // gain, a loss, or no result.  Gain or loss in satoshis is returned.
-func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
+func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (uint32, error) {
 	var hits uint32
 	var err error
 	// Tx has been OK'd by SPV; check tx sanity
@@ -282,6 +287,12 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 				matchesWatchOnly = true
 			}
 		}
+		for _, f := range ts.additionalFilters {
+			if bytes.Contains(txout.PkScript, f) {
+				matchesWatchOnly = true
+				break
+			}
+		}
 		cb.Outputs = append(cb.Outputs, out)
 	}
 	utxos, err := ts.Utxos().GetAll()
@@ -345,7 +356,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		shouldCallback := false
 		if err != nil {
 			cb.Value = value
-			txn.Timestamp = time.Now()
+			txn.Timestamp = timestamp
 			shouldCallback = true
 			var buf bytes.Buffer
 			tx.BtcEncode(&buf, 1, wire.BaseEncoding)
@@ -355,13 +366,15 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
-			ts.Txns().UpdateHeight(tx.TxHash(), int(height))
+			ts.Txns().UpdateHeight(tx.TxHash(), int(height), timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				cb.Value = txn.Value
 				shouldCallback = true
 			}
 		}
+		cb.BlockTime = timestamp
+
 		if shouldCallback {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
@@ -385,7 +398,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(s.SpendTxid, -1)
+		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Now())
 		if err != nil {
 			return err
 		}
@@ -424,7 +437,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			}
 		}
 	}
-	ts.Txns().UpdateHeight(txid, -1)
+	ts.Txns().UpdateHeight(txid, -1, time.Now())
 	return nil
 }
 
