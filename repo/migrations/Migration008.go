@@ -8,6 +8,9 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -39,10 +42,10 @@ func (Migration008) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		alterPurchasesSQL         = "alter table purchases rename to purchases_old;"
 		alterSalesSQL             = "alter table sales rename to sales_old;"
 		createNewDisputedCasesSQL = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob, lastDisputeExpiryNotifiedAt integer not null default 0);"
-		createNewPurchasesSQL     = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer);"
+		createNewPurchasesSQL     = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer, disputedAt integer not null default 0);"
 		createNewSalesSQL         = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0);"
 		insertCasesSQL            = "insert into cases select caseID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, timestamp, buyerOpened, claim, disputeResolution, lastNotifiedAt from cases_old;"
-		insertPurchasesSQL        = "insert into purchases select orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastNotifiedAt, 0 from purchases_old;"
+		insertPurchasesSQL        = "insert into purchases select orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastNotifiedAt, 0, 0 from purchases_old;"
 		insertSalesSQL            = "insert into sales select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, needsSync, lastNotifiedAt from sales_old;"
 		dropCasesTableSQL         = "drop table cases_old;"
 		dropPurchasesTableSQL     = "drop table purchases_old;"
@@ -103,6 +106,38 @@ func (Migration008) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	_, err = db.Exec("update sales set lastDisputeTimeoutNotifiedAt = ?", executedAt.Unix())
 	if err != nil {
 		return err
+	}
+
+	updateDisputedAtRows, err := db.Query("select orderId, contract from purchases where state = ?", Migration008_OrderState_DISPUTED)
+	if err != nil {
+		return err
+	}
+	var updateDisputedAtTimestamps = make(map[string]int64)
+	for updateDisputedAtRows.Next() {
+		var (
+			orderID      string
+			contractData string
+			contract     = &pb.RicardianContract{}
+		)
+		if err := updateDisputedAtRows.Scan(&orderID, &contractData); err != nil {
+			return err
+		}
+		if err := proto.Unmarshal([]byte(contractData), contract); err != nil {
+			return err
+		}
+		if contract.Dispute != nil && contract.Dispute.Timestamp != nil {
+			updateDisputedAtTimestamps[orderID] = contract.Dispute.Timestamp.Seconds
+		}
+	}
+	if err = updateDisputedAtRows.Close(); err != nil {
+		return err
+	}
+
+	for orderID, unixTimestamp := range updateDisputedAtTimestamps {
+		_, err := db.Exec("update purchases set disputedAt = ? where orderId = ?", unixTimestamp, orderID)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Bump schema version

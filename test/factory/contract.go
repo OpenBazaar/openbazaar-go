@@ -64,3 +64,17 @@ func NewUndisputeableContract() *pb.RicardianContract {
 	c.BuyerOrder.Payment.Method = pb.Order_Payment_DIRECT // Direct payments may not be disputed
 	return c
 }
+
+func NewDisputedContract() *pb.RicardianContract {
+	var (
+		c              = NewDisputeableContract()
+		started        = time.Unix(time.Now().Add(time.Duration(-10)*time.Hour).Unix(), 0)
+		startedData, _ = ptypes.TimestampProto(started)
+	)
+	c.Dispute = &pb.Dispute{
+		Timestamp:     startedData,
+		Claim:         "Mine?",
+		PayoutAddress: "disputepayoutaddress",
+	}
+	return c
+}

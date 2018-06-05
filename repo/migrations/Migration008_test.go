@@ -10,6 +10,8 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
+	"github.com/golang/protobuf/proto"
 )
 
 func TestMigration008(t *testing.T) {
@@ -36,15 +38,21 @@ func TestMigration008(t *testing.T) {
 		insertPurchaseSQL = "insert into purchases (orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, lastNotifiedAt) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
 		insertSaleSQL     = "insert into sales (orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, lastNotifiedAt) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);"
 		selectCaseSQL     = "select caseID, lastDisputeExpiryNotifiedAt from cases where caseID = ?;"
-		selectPurchaseSQL = "select orderID, state, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt from purchases where orderID in (?,?);"
+		selectPurchaseSQL = "select orderID, state, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt, disputedAt from purchases where orderID in (?,?);"
 		selectSaleSQL     = "select orderID, lastDisputeTimeoutNotifiedAt from sales where orderID = ?;"
 
-		caseID             = "caseID"
-		purchaseID         = "purchaseID"
-		disputedPurchaseID = "disputedPurchaseID"
-		saleID             = "saleID"
-		executedAt         = time.Now()
+		caseID                   = "caseID"
+		purchaseID               = "purchaseID"
+		disputedPurchaseID       = "disputedPurchaseID"
+		disputedPurchaseContract = factory.NewDisputedContract()
+		saleID                   = "saleID"
+		executedAt               = time.Now()
 	)
+
+	disputedPurchaseContractData, err := proto.Marshal(disputedPurchaseContract)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Setup datastore
 	dbSetupSql := strings.Join([]string{
@@ -89,8 +97,8 @@ func TestMigration008(t *testing.T) {
 		0,                      // purchase funded bool
 		0,                      // lastNotifiedAt unix timestamp
 
-		disputedPurchaseID, // purchase order id
-		"",                 // purchase contract blob
+		disputedPurchaseID,                          // purchase order id
+		string(disputedPurchaseContractData),        // purchase contract blob
 		migrations.Migration008_OrderState_DISPUTED, // order state int
 		0, // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
@@ -193,6 +201,7 @@ func TestMigration008(t *testing.T) {
 		t.Fatal(err)
 	}
 	var (
+		disputedAtOnPurchaseExists                        bool
 		lastDisputeTimeoutNotifiedColumnOnPurchasesExists bool
 		lastDisputeExpiryNotifiedColumnOnPurchasesExists  bool
 	)
@@ -207,17 +216,24 @@ func TestMigration008(t *testing.T) {
 		if c.Name() == "lastDisputeExpiryNotifiedAt" {
 			lastDisputeExpiryNotifiedColumnOnPurchasesExists = true
 		}
+		if c.Name() == "disputedAt" {
+			disputedAtOnPurchaseExists = true
+		}
 	}
 	if lastDisputeTimeoutNotifiedColumnOnPurchasesExists == false {
-		t.Error("Expected lastDisputeTimeoutNotifiedAt column on purchases to exist on purchases")
+		t.Error("Expected lastDisputeTimeoutNotifiedAt column to exist on purchases")
 	}
 	if lastDisputeExpiryNotifiedColumnOnPurchasesExists == false {
-		t.Error("Expected lastDisputeExpiryNotifiedAt column on purchases to exist on purchases")
+		t.Error("Expected lastDisputeExpiryNotifiedAt column to exist on purchases")
+	}
+	if disputedAtOnPurchaseExists == false {
+		t.Error("Expected disputedAt column to exist on purchases")
 	}
 
 	// Assert lastDisputeTimeoutNotifiedAt column on purchases is set to (approx) the
 	// same time the migration was executed
 	var actualPurchase struct {
+		DisputedAt                   int64
 		OrderId                      string
 		OrderState                   int
 		LastDisputeTimeoutNotifiedAt int64
@@ -225,7 +241,7 @@ func TestMigration008(t *testing.T) {
 	}
 
 	for purchaseRows.Next() {
-		err := purchaseRows.Scan(&actualPurchase.OrderId, &actualPurchase.OrderState, &actualPurchase.LastDisputeTimeoutNotifiedAt, &actualPurchase.LastDisputeExpiryNotifiedAt)
+		err := purchaseRows.Scan(&actualPurchase.OrderId, &actualPurchase.OrderState, &actualPurchase.LastDisputeTimeoutNotifiedAt, &actualPurchase.LastDisputeExpiryNotifiedAt, &actualPurchase.DisputedAt)
 		if err != nil {
 			t.Error(err)
 		}
@@ -238,9 +254,15 @@ func TestMigration008(t *testing.T) {
 			if timeSinceMigration > (time.Duration(2) * time.Second) {
 				t.Errorf("Expected lastDisputeExpiryNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 			}
+			if actualPurchase.DisputedAt != disputedPurchaseContract.Dispute.Timestamp.Seconds {
+				t.Errorf("Expected disputedAt on purchase to be set equivalent to when the dispute was opened")
+			}
 		} else {
 			if actualPurchase.LastDisputeExpiryNotifiedAt != 0 {
 				t.Errorf("Expected lastDisputeExpiryNotifiedAt on purchase to be 0 if not a disputed purchase")
+			}
+			if actualPurchase.DisputedAt != 0 {
+				t.Errorf("Expected disputedAt on purchase to be 0 if not a disputed purchase")
 			}
 		}
 	}
@@ -320,11 +342,22 @@ func TestMigration008(t *testing.T) {
 	if err != nil && !strings.Contains(err.Error(), "no such column: lastDisputeTimeoutNotifiedAt") {
 		t.Error("Expected error to be 'no such column', was:", err.Error())
 	}
+
+	// Assert lastDisputeExpiryNotifiedAt column on purchases migrated down
 	_, err = db.Query("update purchases set lastDisputeExpiryNotifiedAt = ? where orderID = ?;", 0, purchaseID)
 	if err == nil {
 		t.Error("Expected lastDisputeExpiryNotifiedAt update on purchases to fail")
 	}
 	if err != nil && !strings.Contains(err.Error(), "no such column: lastDisputeExpiryNotifiedAt") {
+		t.Error("Expected error to be 'no such column', was:", err.Error())
+	}
+
+	// Assert disputedAt column on purchases migrated down
+	_, err = db.Query("update purchases set disputedAt = ? where orderID = ?;", 0, purchaseID)
+	if err == nil {
+		t.Error("Expected disputedAt update on purchases to fail")
+	}
+	if err != nil && !strings.Contains(err.Error(), "no such column: disputedAt") {
 		t.Error("Expected error to be 'no such column', was:", err.Error())
 	}
 
