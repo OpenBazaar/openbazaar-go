@@ -13,11 +13,11 @@ var (
 // SaleRecord represents a one-to-one relationship with records
 // in the SQL datastore
 type SaleRecord struct {
-	Contract       *pb.RicardianContract
-	OrderID        string
-	OrderState     pb.OrderState
-	Timestamp      time.Time
-	LastNotifiedAt time.Time
+	Contract                     *pb.RicardianContract
+	OrderID                      string
+	OrderState                   pb.OrderState
+	Timestamp                    time.Time
+	LastDisputeTimeoutNotifiedAt time.Time
 }
 
 // SupportsTimedEscrowRelease indicates whether the underlying AcceptedCurrency supports

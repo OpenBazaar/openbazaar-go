@@ -328,7 +328,7 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	stmt := fmt.Sprintf("select orderID, contract, state, timestamp, lastNotifiedAt from sales where (lastNotifiedAt - timestamp) < %d and state in (%d, %d)",
+	stmt := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt from sales where (lastDisputeTimeoutNotifiedAt - timestamp) < %d and state in (%d, %d)",
 		int(repo.VendorDisputeTimeout_lastInterval.Seconds()),
 		pb.OrderState_PARTIALLY_FULFILLED,
 		pb.OrderState_FULFILLED,
@@ -341,16 +341,16 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 	result := make([]*repo.SaleRecord, 0)
 	for rows.Next() {
 		var (
-			lastNotifiedAt int64
-			contract       []byte
-			stateInt       int
+			lastDisputeTimeoutNotifiedAt int64
+			contract                     []byte
+			stateInt                     int
 
 			r = &repo.SaleRecord{
 				Contract: &pb.RicardianContract{},
 			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastDisputeTimeoutNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning sales: %s", err.Error())
 		}
 		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
@@ -362,7 +362,7 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 		} else {
 			r.Timestamp = time.Now()
 		}
-		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
+		r.LastDisputeTimeoutNotifiedAt = time.Unix(lastDisputeTimeoutNotifiedAt, 0)
 
 		if r.IsDisputeable() {
 			result = append(result, r)
@@ -371,11 +371,11 @@ func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, e
 	return result, nil
 }
 
-// UpdateSalesLastNotifiedAt accepts []*repo.SaleRecord and updates
-// each SaleRecord by their OrderID to the set LastNotifiedAt value. The
+// UpdateSalesLastDisputeTimeoutNotifiedAt accepts []*repo.SaleRecord and updates
+// each SaleRecord by their OrderID to the set LastDisputeTimeoutNotifiedAt value. The
 // update will be attempted atomically with a rollback attempted in the event of
 // an error.
-func (s *SalesDB) UpdateSalesLastNotifiedAt(sales []*repo.SaleRecord) error {
+func (s *SalesDB) UpdateSalesLastDisputeTimeoutNotifiedAt(sales []*repo.SaleRecord) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -384,7 +384,7 @@ func (s *SalesDB) UpdateSalesLastNotifiedAt(sales []*repo.SaleRecord) error {
 		return fmt.Errorf("begin update sale transaction: %s", err.Error())
 	}
 	for _, sale := range sales {
-		_, err = tx.Exec("update sales set lastNotifiedAt = ? where orderID = ?", int(sale.LastNotifiedAt.Unix()), sale.OrderID)
+		_, err = tx.Exec("update sales set lastDisputeTimeoutNotifiedAt = ? where orderID = ?", int(sale.LastDisputeTimeoutNotifiedAt.Unix()), sale.OrderID)
 		if err != nil {
 			return fmt.Errorf("update sale: %s", err.Error())
 		}

@@ -18,7 +18,7 @@ import (
 
 // DISPUTE CASES
 func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
-	// Start each case 50 days ago and have the lastNotifiedAt at a day after
+	// Start each case 50 days ago and have the lastDisputeExpiryNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
@@ -32,9 +32,9 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 
 		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.DisputeCaseRecord{
-			CaseID:         "neverNotified",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(twelveHours),
+			CaseID:                      "neverNotified",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "never-buyer-tinyimagehash", Small: "never-buyer-smallimagehash"}}}},
@@ -49,9 +49,9 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.DisputeCaseRecord{
-			CaseID:         "notifiedUpToFifteenDay",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(firstInterval + twelveHours),
+			CaseID:                      "notifiedUpToFifteenDay",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -66,9 +66,9 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDays = &repo.DisputeCaseRecord{
-			CaseID:         "notifiedUpToFourtyDay",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(secondInterval + twelveHours),
+			CaseID:                      "notifiedUpToFourtyDay",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{Tiny: "fourty-buyer-tinyimagehash", Small: "fourty-buyer-smallimagehash"}}}},
@@ -83,9 +83,9 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.DisputeCaseRecord{
-			CaseID:         "notifiedUpToFourtyFourDays",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
+			CaseID:                      "notifiedUpToFourtyFourDays",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -100,9 +100,9 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.DisputeCaseRecord{
-			CaseID:         "notifiedUpToFourtyFiveDays",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
+			CaseID:                      "notifiedUpToFourtyFiveDays",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
 				VendorListings: []*pb.Listing{
 					{Item: &pb.Listing_Item{Images: []*pb.Listing_Item_Image{{}}}},
@@ -141,7 +141,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt) values (?, ?, ?, ?, ?, ?)")
+	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = s.Exec(r.CaseID, buyerContractData, vendorContractData, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastNotifiedAt.Unix()))
+		_, err = s.Exec(r.CaseID, buyerContractData, vendorContractData, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -207,27 +207,27 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	}
 
 	// Verify NotificationRecords in datastore
-	rows, err := database.Query("select caseID, lastNotifiedAt from cases")
+	rows, err := database.Query("select caseID, lastDisputeExpiryNotifiedAt from cases")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for rows.Next() {
 		var (
-			caseID         string
-			lastNotifiedAt int64
+			caseID                      string
+			lastDisputeExpiryNotifiedAt int64
 		)
-		if err := rows.Scan(&caseID, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&caseID, &lastDisputeExpiryNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 		switch caseID {
 		case neverNotified.CaseID, notifiedUpToFifteenDay.CaseID, notifiedUpToFourtyDays.CaseID, notifiedUpToFourtyFourDays.CaseID:
-			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
+			durationFromActual := time.Now().Sub(time.Unix(lastDisputeExpiryNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
-				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", caseID, time.Unix(lastNotifiedAt, 0).String())
+				t.Errorf("Expected %s to have lastDisputeExpiryNotifiedAt set when executed, was %s", caseID, time.Unix(lastDisputeExpiryNotifiedAt, 0).String())
 			}
 		case notifiedUpToFourtyFiveDays.CaseID:
-			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
-				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			if lastDisputeExpiryNotifiedAt != notifiedUpToFourtyFiveDays.LastDisputeExpiryNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeExpiryNotifiedAt")
 			}
 		default:
 			t.Error("Unexpected dispute case")
@@ -394,7 +394,7 @@ func TestDisputeExpiryNotificationsAreReturnedInOrderWhenCreatedAsABatch(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt) values (?, ?, ?, ?, ?, ?)")
+	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +417,7 @@ func TestDisputeExpiryNotificationsAreReturnedInOrderWhenCreatedAsABatch(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Exec(subject.CaseID, buyerContractData, vendorContractData, int(subject.Timestamp.Unix()), isBuyerInitiated, int(subject.LastNotifiedAt.Unix()))
+	_, err = s.Exec(subject.CaseID, buyerContractData, vendorContractData, int(subject.Timestamp.Unix()), isBuyerInitiated, int(subject.LastDisputeExpiryNotifiedAt.Unix()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +462,7 @@ func TestDisputeExpiryNotificationsAreReturnedInOrderWhenCreatedAsABatch(t *test
 
 // PURCHASES
 func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
-	// Start each purchase 50 days ago and have the lastNotifiedAt at a day after
+	// Start each purchase 50 days ago and have the lastDisputeTimeoutNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
@@ -476,51 +476,51 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces no notifications as contract is undisputeable
 		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
-			Contract:       factory.NewUndisputeableContract(),
-			OrderID:        "neverNotifiedButUndisputed",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewUndisputeableContract(),
+			OrderID:                      "neverNotifiedButUndisputed",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.PurchaseRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "neverNotified",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "neverNotified",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.PurchaseRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "notifiedUpToFifteenDay",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(firstInterval + twelveHours),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "notifiedUpToFifteenDay",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 		}
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDay = &repo.PurchaseRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "notifiedUpToFourtyDay",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(secondInterval + twelveHours),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "notifiedUpToFourtyDay",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 		}
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.PurchaseRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "notifiedUpToFourtyFourDays",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "notifiedUpToFourtyFourDays",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "notifiedUpToFourtyFiveDays",
-			OrderState:     pb.OrderState(pb.OrderState_PENDING),
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "notifiedUpToFourtyFiveDays",
+			OrderState:                   pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
 		existingRecords = []*repo.PurchaseRecord{
 			neverNotifiedButUndisputeable,
@@ -565,7 +565,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeTimeoutNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -607,34 +607,34 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	// Verify NotificationRecords in datastore
-	rows, err := database.Query("select orderID, lastNotifiedAt from purchases")
+	rows, err := database.Query("select orderID, lastDisputeTimeoutNotifiedAt from purchases")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for rows.Next() {
 		var (
-			orderID        string
-			lastNotifiedAt int64
+			orderID                      string
+			lastDisputeTimeoutNotifiedAt int64
 		)
-		if err := rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&orderID, &lastDisputeTimeoutNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 		switch orderID {
 		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID, notifiedUpToFourtyFourDays.OrderID:
-			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
+			durationFromActual := time.Now().Sub(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
-				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", orderID, time.Unix(lastNotifiedAt, 0).String())
+				t.Errorf("Expected %s to have lastDisputeTimeoutNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeTimeoutNotifiedAt, 0).String())
 			}
 		case notifiedUpToFourtyFiveDays.OrderID:
-			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
-				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			if lastDisputeTimeoutNotifiedAt != notifiedUpToFourtyFiveDays.LastDisputeTimeoutNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeExpiredNotifiedAt")
 			}
 		case neverNotifiedButUndisputeable.OrderID:
-			if lastNotifiedAt != neverNotifiedButUndisputeable.LastNotifiedAt.Unix() {
-				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			if lastDisputeTimeoutNotifiedAt != neverNotifiedButUndisputeable.LastDisputeTimeoutNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeExpiredNotifiedAt")
 			}
 		default:
-			t.Error("Unexpected dispute case")
+			t.Error("Unexpected purchase")
 		}
 	}
 
@@ -803,7 +803,7 @@ func TestBuyerDisputeTimeoutsAreReturnedInOrderWhenCreatedAsABatch(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", subject.OrderID, contractData, int(subject.OrderState), int(subject.Timestamp.Unix()), int(subject.LastNotifiedAt.Unix()))
+	_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?)", subject.OrderID, contractData, int(subject.OrderState), int(subject.Timestamp.Unix()), int(subject.LastDisputeTimeoutNotifiedAt.Unix()))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -848,7 +848,7 @@ func TestBuyerDisputeTimeoutsAreReturnedInOrderWhenCreatedAsABatch(t *testing.T)
 
 // SALES
 func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
-	// Start each sale 50 days ago and have the lastNotifiedAt at a day after
+	// Start each sale 50 days ago and have the lastDisputeTimeoutNotifiedAt at a day after
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
@@ -859,27 +859,27 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 
 		// Produces notification for 45 days
 		neverNotified = &repo.SaleRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "neverNotified",
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "neverNotified",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.SaleRecord{
-			Contract:       factory.NewDisputeableContract(),
-			OrderID:        "notifiedUpToFourtyFiveDays",
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart.Add(lastInterval + twelveHours),
+			Contract:                     factory.NewDisputeableContract(),
+			OrderID:                      "notifiedUpToFourtyFiveDays",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 		}
 		// Produces no notifications as contract is undisputeable
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
-			Contract:       factory.NewUndisputeableContract(),
-			OrderID:        "neverNotifiedButUndisputeable",
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewUndisputeableContract(),
+			OrderID:                      "neverNotifiedButUndisputeable",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		existingRecords = []*repo.SaleRecord{
 			neverNotified,
@@ -918,7 +918,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into sales (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix()))
+		_, err = database.Exec("insert into sales (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeTimeoutNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -960,34 +960,34 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	// Verify NotificationRecords in datastore
-	rows, err := database.Query("select orderID, lastNotifiedAt from sales")
+	rows, err := database.Query("select orderID, lastDisputeTimeoutNotifiedAt from sales")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for rows.Next() {
 		var (
-			orderID        string
-			lastNotifiedAt int64
+			orderID                      string
+			lastDisputeTimeoutNotifiedAt int64
 		)
-		if err := rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&orderID, &lastDisputeTimeoutNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 		switch orderID {
 		case neverNotified.OrderID:
-			durationFromActual := time.Now().Sub(time.Unix(lastNotifiedAt, 0))
+			durationFromActual := time.Now().Sub(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
-				t.Errorf("Expected %s to have lastNotifiedAt set when executed, was %s", orderID, time.Unix(lastNotifiedAt, 0).String())
+				t.Errorf("Expected %s to have lastDisputeTimeoutNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeTimeoutNotifiedAt, 0).String())
 			}
 		case notifiedUpToFourtyFiveDays.OrderID:
-			if lastNotifiedAt != notifiedUpToFourtyFiveDays.LastNotifiedAt.Unix() {
-				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			if lastDisputeTimeoutNotifiedAt != notifiedUpToFourtyFiveDays.LastDisputeTimeoutNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeTimeoutNotifiedAt")
 			}
 		case neverNotifiedButUndisputeable.OrderID:
-			if lastNotifiedAt != neverNotifiedButUndisputeable.LastNotifiedAt.Unix() {
-				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastNotifiedAt")
+			if lastDisputeTimeoutNotifiedAt != neverNotifiedButUndisputeable.LastDisputeTimeoutNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeTimeoutNotifiedAt")
 			}
 		default:
-			t.Error("Unexpected dispute case")
+			t.Error("Unexpected sale")
 		}
 	}
 

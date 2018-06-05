@@ -212,8 +212,8 @@ type PurchaseStore interface {
 	// each record which needs Notifications to be generated.
 	GetPurchasesForDisputeTimeoutNotification() ([]*PurchaseRecord, error)
 
-	// UpdatePurchasesLastNotifiedAt  accepts []*PurchaseRecord and updates each records lastNotifiedAt by its CaseID
-	UpdatePurchasesLastNotifiedAt([]*PurchaseRecord) error
+	// UpdatePurchasesLastDisputeTimeoutNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeTimeoutNotifiedAt by its CaseID
+	UpdatePurchasesLastDisputeTimeoutNotifiedAt([]*PurchaseRecord) error
 }
 
 type SaleStore interface {
@@ -256,8 +256,8 @@ type SaleStore interface {
 	// each record which needs Notifications to be generated.
 	GetSalesForDisputeTimeoutNotification() ([]*SaleRecord, error)
 
-	// UpdateSalesLastNotifiedAt  accepts []*SaleRecord and updates each records lastNotifiedAt by its CaseID
-	UpdateSalesLastNotifiedAt([]*SaleRecord) error
+	// UpdateSalesLastDisputeTimeoutNotifiedAt  accepts []*SaleRecord and updates each records lastDisputeTimeoutNotifiedAt by its CaseID
+	UpdateSalesLastDisputeTimeoutNotifiedAt([]*SaleRecord) error
 }
 
 type CaseStore interface {
@@ -303,8 +303,8 @@ type CaseStore interface {
 	// each record which needs Notifications to be generated.
 	GetDisputesForDisputeExpiryNotification() ([]*DisputeCaseRecord, error)
 
-	// UpdateDisputesLastNotifiedAt accepts []*DisputeCaseRecord and updates each records lastNotifiedAt by its CaseID
-	UpdateDisputesLastNotifiedAt([]*DisputeCaseRecord) error
+	// UpdateDisputesLastDisputeExpiryNotifiedAt accepts []*DisputeCaseRecord and updates each records lastDisputeExpiryNotifiedAt by its CaseID
+	UpdateDisputesLastDisputeExpiryNotifiedAt([]*DisputeCaseRecord) error
 }
 
 type ChatStore interface {

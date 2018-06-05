@@ -58,7 +58,7 @@ func (notifier *recordAgingNotifier) Stop() {
 
 func (notifier *recordAgingNotifier) PerformTask() {
 	notifier.runCount += 1
-	notifier.logger.Infof("performTask started (count %d)", notifier.runCount)
+	notifier.logger.Debugf("performTask started (count %d)", notifier.runCount)
 
 	if err := notifier.generateSellerDisputeNotifications(); err != nil {
 		notifier.logger.Errorf("generateSellerDisputeNotifications failed: %s", err)
@@ -82,13 +82,13 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 		notificationsToAdd = make([]*repo.Notification, 0)
 	)
 
-	for _, p := range sales {
-		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.VendorDisputeTimeout_lastInterval)) && timeSinceCreation > repo.VendorDisputeTimeout_lastInterval {
-			notificationsToAdd = append(notificationsToAdd, p.BuildVendorDisputeTimeoutLastNotification(executedAt))
+	for _, s := range sales {
+		var timeSinceCreation = executedAt.Sub(s.Timestamp)
+		if s.LastDisputeTimeoutNotifiedAt.Before(s.Timestamp.Add(repo.VendorDisputeTimeout_lastInterval)) && timeSinceCreation > repo.VendorDisputeTimeout_lastInterval {
+			notificationsToAdd = append(notificationsToAdd, s.BuildVendorDisputeTimeoutLastNotification(executedAt))
 		}
 		if len(notificationsToAdd) > 0 {
-			p.LastNotifiedAt = executedAt
+			s.LastDisputeTimeoutNotifiedAt = executedAt
 		}
 	}
 
@@ -102,14 +102,14 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling vendor dispute notification:", err.Error())
-			notifier.logger.Infof("failed marshal: %+v", n)
+			notifier.logger.Debugf("failed marshal: %+v", n)
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
 		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting vendor dispute notification:", err.Error())
-			notifier.logger.Infof("failed insert: %+v", n)
+			notifier.logger.Debugf("failed insert: %+v", n)
 			continue
 		}
 	}
@@ -120,15 +120,15 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 		}
 		return fmt.Errorf("commiting vendor dispute notifications: %s", err.Error())
 	}
-	notifier.logger.Infof("created %d vendor dispute notifications", len(notificationsToAdd))
+	notifier.logger.Debugf("created %d vendor dispute notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	err = notifier.datastore.Sales().UpdateSalesLastNotifiedAt(sales)
-	notifier.logger.Infof("updated lastNotifiedAt on %d sales", len(sales))
+	err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(sales)
+	notifier.logger.Debugf("updated lastDisputeTimeoutNotifiedAt on %d sales", len(sales))
 	return nil
 }
 
@@ -146,20 +146,20 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 	for _, p := range purchases {
 		var timeSinceCreation = executedAt.Sub(p.Timestamp)
 		// Extra seconds added to creation time is a hack to order SQL results
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
+		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFirstNotification(executedAt.Add(time.Duration(0)*time.Second)))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
+		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutSecondNotification(executedAt.Add(time.Duration(1)*time.Second)))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
+		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutThirdNotification(executedAt.Add(time.Duration(2)*time.Second)))
 		}
-		if p.LastNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_lastInterval {
+		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutLastNotification(executedAt.Add(time.Duration(3)*time.Second)))
 		}
 		if len(notificationsToAdd) > 0 {
-			p.LastNotifiedAt = executedAt
+			p.LastDisputeTimeoutNotifiedAt = executedAt
 		}
 	}
 
@@ -173,14 +173,14 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling purchase dispute notification:", err.Error())
-			notifier.logger.Infof("failed marshal: %+v", n)
+			notifier.logger.Debugf("failed marshal: %+v", n)
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
 		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting purchase dispute notification:", err.Error())
-			notifier.logger.Infof("failed insert: %+v", n)
+			notifier.logger.Debugf("failed insert: %+v", n)
 			continue
 		}
 	}
@@ -191,15 +191,15 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 		}
 		return fmt.Errorf("commiting purchase dispute notifications:", err.Error())
 	}
-	notifier.logger.Infof("created %d purchase dispute notifications", len(notificationsToAdd))
+	notifier.logger.Debugf("created %d purchase dispute notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	err = notifier.datastore.Purchases().UpdatePurchasesLastNotifiedAt(purchases)
-	notifier.logger.Infof("updated lastNotifiedAt on %d purchases", len(purchases))
+	err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeTimeoutNotifiedAt(purchases)
+	notifier.logger.Debugf("updated lastDisputeTimeoutNotifiedAt on %d purchases", len(purchases))
 	return nil
 }
 
@@ -217,20 +217,20 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 	for _, d := range disputes {
 		var timeSinceCreation = executedAt.Sub(d.Timestamp)
 		// Extra seconds added to creation time is a hack to order SQL results
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_firstInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_firstInterval {
+		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_firstInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryFirstNotification(executedAt.Add(time.Duration(0)*time.Second)))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_secondInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_secondInterval {
+		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_secondInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpirySecondNotification(executedAt.Add(time.Duration(1)*time.Second)))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_thirdInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_thirdInterval {
+		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_thirdInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_thirdInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryThirdNotification(executedAt.Add(time.Duration(2)*time.Second)))
 		}
-		if d.LastNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_lastInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_lastInterval {
+		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_lastInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryLastNotification(executedAt.Add(time.Duration(3)*time.Second)))
 		}
 		if len(notificationsToAdd) > 0 {
-			d.LastNotifiedAt = executedAt
+			d.LastDisputeExpiryNotifiedAt = executedAt
 		}
 	}
 
@@ -244,14 +244,14 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 		var ser, err = n.MarshalJSON()
 		if err != nil {
 			notifier.logger.Warning("marshaling dispute expiration notification:", err.Error())
-			notifier.logger.Infof("failed marshal: %+v", n)
+			notifier.logger.Debugf("failed marshal: %+v", n)
 			continue
 		}
 		var template = "insert into notifications(notifID, serializedNotification, type, timestamp, read) values(?,?,?,?,?)"
 		_, err = notificationTx.Exec(template, n.GetID(), string(ser), strings.ToLower(n.GetTypeString()), n.GetUnixCreatedAt(), 0)
 		if err != nil {
 			notifier.logger.Warning("inserting dispute expiration notification:", err.Error())
-			notifier.logger.Infof("failed insert: %+v", n)
+			notifier.logger.Debugf("failed insert: %+v", n)
 			continue
 		}
 	}
@@ -262,14 +262,14 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 		}
 		return fmt.Errorf("commiting dispute expiration notifications:", err.Error())
 	}
-	notifier.logger.Infof("created %d dispute expiration notifications", len(notificationsToAdd))
+	notifier.logger.Debugf("created %d dispute expiration notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	err = notifier.datastore.Cases().UpdateDisputesLastNotifiedAt(disputes)
-	notifier.logger.Infof("updated lastNotifiedAt on %d disputes", len(disputes))
+	err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(disputes)
+	notifier.logger.Debugf("updated lastDisputeExpiryNotifiedAt on %d disputes", len(disputes))
 	return nil
 }

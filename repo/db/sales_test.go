@@ -480,25 +480,25 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		expectedImagesOne             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
 		expectedContractOne           = factory.NewDisputeableContract()
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
-			Contract:       factory.NewUndisputeableContract(),
-			OrderID:        "neverNotifiedButUndisputed",
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewUndisputeableContract(),
+			OrderID:                      "neverNotifiedButUndisputed",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.SaleRecord{
-			Contract:       expectedContractOne,
-			OrderID:        "neverNotified",
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     expectedContractOne,
+			OrderID:                      "neverNotified",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
-			Contract:       factory.NewContract(),
-			OrderState:     pb.OrderState(pb.OrderState_FULFILLED),
-			OrderID:        "finalNotificationSent",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Now(),
+			Contract:                     factory.NewContract(),
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderID:                      "finalNotificationSent",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Now(),
 		}
 		existingRecords = []*repo.SaleRecord{
 			neverNotifiedButUndisputeable,
@@ -519,7 +519,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := database.Exec("insert into sales (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		if _, err := database.Exec("insert into sales (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeTimeoutNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -560,7 +560,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 }
 
-func TestUpdateSaleLastNotifiedAt(t *testing.T) {
+func TestUpdateSaleLastDisputeTimeoutNotifiedAt(t *testing.T) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -581,39 +581,39 @@ func TestUpdateSaleLastNotifiedAt(t *testing.T) {
 	var (
 		timeStart = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		saleOne   = &repo.SaleRecord{
-			OrderID:        "sale1",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(123, 0),
+			OrderID:                      "sale1",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(123, 0),
 		}
 		saleTwo = &repo.SaleRecord{
-			OrderID:        "sale2",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(456, 0),
+			OrderID:                      "sale2",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(456, 0),
 		}
 		existingSales = []*repo.SaleRecord{saleOne, saleTwo}
 	)
-	s, err := database.Prepare("insert into sales (orderID, timestamp, lastNotifiedAt) values (?, ?, ?);")
+	s, err := database.Prepare("insert into sales (orderID, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?);")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, p := range existingSales {
-		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastNotifiedAt.Unix())
+		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastDisputeTimeoutNotifiedAt.Unix())
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	// Simulate LastNotifiedAt has been changed
-	saleOne.LastNotifiedAt = time.Unix(987, 0)
-	saleTwo.LastNotifiedAt = time.Unix(765, 0)
+	// Simulate LastDisputeTimeoutNotifiedAt has been changed
+	saleOne.LastDisputeTimeoutNotifiedAt = time.Unix(987, 0)
+	saleTwo.LastDisputeTimeoutNotifiedAt = time.Unix(765, 0)
 	saleDatabase := NewSaleStore(database, new(sync.Mutex))
-	err = saleDatabase.UpdateSalesLastNotifiedAt(existingSales)
+	err = saleDatabase.UpdateSalesLastDisputeTimeoutNotifiedAt(existingSales)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err = database.Prepare("select orderID, lastNotifiedAt from sales")
+	s, err = database.Prepare("select orderID, lastDisputeTimeoutNotifiedAt from sales")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -623,25 +623,25 @@ func TestUpdateSaleLastNotifiedAt(t *testing.T) {
 	}
 	for rows.Next() {
 		var (
-			orderID        string
-			lastNotifiedAt int64
+			orderID                      string
+			lastDisputeTimeoutNotifiedAt int64
 		)
-		if err = rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+		if err = rows.Scan(&orderID, &lastDisputeTimeoutNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 
 		switch orderID {
 		case saleOne.OrderID:
-			if time.Unix(lastNotifiedAt, 0).Equal(saleOne.LastNotifiedAt) != true {
-				t.Error("Expected saleOne.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleOne.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected saleOne.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		case saleTwo.OrderID:
-			if time.Unix(lastNotifiedAt, 0).Equal(saleTwo.LastNotifiedAt) != true {
-				t.Error("Expected saleTwo.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleTwo.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected saleTwo.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		default:
 			t.Error("Unexpected sale encounted")
-			t.Error(orderID, lastNotifiedAt)
+			t.Error(orderID, lastDisputeTimeoutNotifiedAt)
 		}
 
 	}

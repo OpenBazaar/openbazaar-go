@@ -480,7 +480,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt from cases where (lastNotifiedAt - timestamp) < ?",
+	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt from cases where (lastDisputeExpiryNotifiedAt - timestamp) < ?",
 		int(repo.ModeratorDisputeExpiry_lastInterval.Seconds()),
 	)
 	if err != nil {
@@ -489,7 +489,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	result := make([]*repo.DisputeCaseRecord, 0)
 	for rows.Next() {
 		var (
-			lastNotifiedAt                int64
+			lastDisputeExpiryNotifiedAt   int64
 			isBuyerInitiated              int
 			buyerContract, vendorContract []byte
 
@@ -499,7 +499,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastNotifiedAt); err != nil {
+		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
 		}
 		if err := jsonpb.UnmarshalString(string(buyerContract), r.BuyerContract); err != nil {
@@ -516,17 +516,17 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 		} else {
 			r.Timestamp = time.Now()
 		}
-		r.LastNotifiedAt = time.Unix(lastNotifiedAt, 0)
+		r.LastDisputeExpiryNotifiedAt = time.Unix(lastDisputeExpiryNotifiedAt, 0)
 		result = append(result, r)
 	}
 	return result, nil
 }
 
-// UpdateDisputesLastNotifiedAt accepts []*repo.DisputeCaseRecord and updates
-// each DisputeCaseRecord by their CaseID to the set LastNotifiedAt value. The
+// UpdateDisputesLastDisputeExpiryNotifiedAt accepts []*repo.DisputeCaseRecord and updates
+// each DisputeCaseRecord by their CaseID to the set LastDisputeExpiryNotifiedAt value. The
 // update will be attempted atomically with a rollback attempted in the event of
 // an error.
-func (c *CasesDB) UpdateDisputesLastNotifiedAt(disputeCases []*repo.DisputeCaseRecord) error {
+func (c *CasesDB) UpdateDisputesLastDisputeExpiryNotifiedAt(disputeCases []*repo.DisputeCaseRecord) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -535,7 +535,7 @@ func (c *CasesDB) UpdateDisputesLastNotifiedAt(disputeCases []*repo.DisputeCaseR
 		return fmt.Errorf("begin update disputes transaction: %s", err.Error())
 	}
 	for _, d := range disputeCases {
-		_, err = tx.Exec("update cases set lastNotifiedAt = ? where caseID = ?", int(d.LastNotifiedAt.Unix()), d.CaseID)
+		_, err = tx.Exec("update cases set lastDisputeExpiryNotifiedAt = ? where caseID = ?", int(d.LastDisputeExpiryNotifiedAt.Unix()), d.CaseID)
 		if err != nil {
 			return fmt.Errorf("update dispute case: %s", err.Error())
 		}

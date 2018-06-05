@@ -16,11 +16,11 @@ var (
 // PurchaseRecord represents a one-to-one relationship with records
 // in the SQL datastore
 type PurchaseRecord struct {
-	Contract       *pb.RicardianContract
-	OrderID        string
-	OrderState     pb.OrderState
-	Timestamp      time.Time
-	LastNotifiedAt time.Time
+	Contract                     *pb.RicardianContract
+	OrderID                      string
+	OrderState                   pb.OrderState
+	Timestamp                    time.Time
+	LastDisputeTimeoutNotifiedAt time.Time
 }
 
 // IsDisputeable returns whether the Purchase is in a state that it can be disputed with a

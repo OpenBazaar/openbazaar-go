@@ -561,28 +561,28 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			BuyerOrder: order,
 		}
 		neverNotified = &repo.DisputeCaseRecord{
-			CaseID:           "neverNotified",
-			Timestamp:        timeStart,
-			LastNotifiedAt:   time.Unix(0, 0),
-			BuyerContract:    contract,
-			VendorContract:   contract,
-			IsBuyerInitiated: true,
+			CaseID:                      "neverNotified",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
 		}
 		initialNotified = &repo.DisputeCaseRecord{
-			CaseID:           "initialNotificationSent",
-			Timestamp:        timeStart,
-			LastNotifiedAt:   timeStart,
-			BuyerContract:    contract,
-			VendorContract:   contract,
-			IsBuyerInitiated: true,
+			CaseID:                      "initialNotificationSent",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart,
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
 		}
 		finallyNotified = &repo.DisputeCaseRecord{
-			CaseID:           "finalNotificationSent",
-			Timestamp:        timeStart,
-			LastNotifiedAt:   time.Now(),
-			BuyerContract:    contract,
-			VendorContract:   contract,
-			IsBuyerInitiated: true,
+			CaseID:                      "finalNotificationSent",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: time.Now(),
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
 		}
 		existingRecords = []*repo.DisputeCaseRecord{
 			neverNotified,
@@ -610,7 +610,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastNotifiedAt.Unix()))
+		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -657,7 +657,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 	}
 }
 
-func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
+func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	setupSQL := []string{
 		schema.PragmaKey(""),
@@ -670,56 +670,56 @@ func TestUpdateDisputeLastNotifiedAt(t *testing.T) {
 	// Artificially start disputes 50 days ago
 	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
 	disputeOne := &repo.DisputeCaseRecord{
-		CaseID:         "case1",
-		Timestamp:      timeStart,
-		LastNotifiedAt: time.Unix(123, 0),
+		CaseID:                      "case1",
+		Timestamp:                   timeStart,
+		LastDisputeExpiryNotifiedAt: time.Unix(123, 0),
 	}
 	disputeTwo := &repo.DisputeCaseRecord{
-		CaseID:         "case2",
-		Timestamp:      timeStart,
-		LastNotifiedAt: time.Unix(456, 0),
+		CaseID:                      "case2",
+		Timestamp:                   timeStart,
+		LastDisputeExpiryNotifiedAt: time.Unix(456, 0),
 	}
-	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeOne.CaseID, disputeOne.Timestamp, disputeOne.LastNotifiedAt)
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastDisputeExpiryNotifiedAt) values (?, ?, ?);", disputeOne.CaseID, disputeOne.Timestamp, disputeOne.LastDisputeExpiryNotifiedAt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = database.Exec("insert into cases (caseID, timestamp, lastNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, int(disputeTwo.Timestamp.Unix()), int(disputeTwo.LastNotifiedAt.Unix()))
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastDisputeExpiryNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, int(disputeTwo.Timestamp.Unix()), int(disputeTwo.LastDisputeExpiryNotifiedAt.Unix()))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	disputeOne.LastNotifiedAt = time.Unix(987, 0)
-	disputeTwo.LastNotifiedAt = time.Unix(765, 0)
+	disputeOne.LastDisputeExpiryNotifiedAt = time.Unix(987, 0)
+	disputeTwo.LastDisputeExpiryNotifiedAt = time.Unix(765, 0)
 	casesdb := NewCaseStore(database, new(sync.Mutex))
-	err = casesdb.UpdateDisputesLastNotifiedAt([]*repo.DisputeCaseRecord{disputeOne, disputeTwo})
+	err = casesdb.UpdateDisputesLastDisputeExpiryNotifiedAt([]*repo.DisputeCaseRecord{disputeOne, disputeTwo})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	rows, err := database.Query("select caseID, lastNotifiedAt from cases")
+	rows, err := database.Query("select caseID, lastDisputeExpiryNotifiedAt from cases")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for rows.Next() {
 		var (
-			caseID         string
-			lastNotifiedAt int64
+			caseID                      string
+			lastDisputeExpiryNotifiedAt int64
 		)
-		if err = rows.Scan(&caseID, &lastNotifiedAt); err != nil {
+		if err = rows.Scan(&caseID, &lastDisputeExpiryNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 		switch caseID {
 		case disputeOne.CaseID:
-			if time.Unix(lastNotifiedAt, 0).Equal(disputeOne.LastNotifiedAt) != true {
-				t.Error("Expected disputeOne.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeOne.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected disputeOne.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		case disputeTwo.CaseID:
-			if time.Unix(lastNotifiedAt, 0).Equal(disputeTwo.LastNotifiedAt) != true {
-				t.Error("Expected disputeTwo.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeTwo.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected disputeTwo.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		default:
 			t.Error("Unexpected dispute case encounted")
-			t.Error(caseID, lastNotifiedAt)
+			t.Error(caseID, lastDisputeExpiryNotifiedAt)
 		}
 
 	}

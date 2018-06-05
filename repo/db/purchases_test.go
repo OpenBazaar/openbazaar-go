@@ -425,28 +425,28 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		expectedImagesTwo             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashTwo", Small: "smallimagehashTwo"}}
 		expectedContractTwo           = factory.NewDisputeableContract()
 		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
-			Contract:       factory.NewUndisputeableContract(),
-			OrderID:        "neverNotifiedButUndisputed",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     factory.NewUndisputeableContract(),
+			OrderID:                      "neverNotifiedButUndisputed",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.PurchaseRecord{
-			Contract:       expectedContractOne,
-			OrderID:        "neverNotified",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(0, 0),
+			Contract:                     expectedContractOne,
+			OrderID:                      "neverNotified",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		initialNotified = &repo.PurchaseRecord{
-			Contract:       expectedContractTwo,
-			OrderID:        "initialNotificationSent",
-			Timestamp:      timeStart,
-			LastNotifiedAt: timeStart,
+			Contract:                     expectedContractTwo,
+			OrderID:                      "initialNotificationSent",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: timeStart,
 		}
 		finallyNotified = &repo.PurchaseRecord{
-			Contract:       factory.NewContract(),
-			OrderID:        "finalNotificationSent",
-			Timestamp:      timeStart,
-			LastNotifiedAt: now,
+			Contract:                     factory.NewContract(),
+			OrderID:                      "finalNotificationSent",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: now,
 		}
 		existingRecords = []*repo.PurchaseRecord{
 			neverNotifiedButUndisputeable,
@@ -469,7 +469,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := database.Exec("insert into purchases (orderID, contract, state, timestamp, lastNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastNotifiedAt.Unix())); err != nil {
+		if _, err := database.Exec("insert into purchases (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeTimeoutNotifiedAt.Unix())); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -520,7 +520,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 	}
 }
 
-func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
+func TestUpdatePurchaseLastDisputeTimeoutNotifiedAt(t *testing.T) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
@@ -541,39 +541,39 @@ func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
 	var (
 		timeStart   = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		purchaseOne = &repo.PurchaseRecord{
-			OrderID:        "purchase1",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(123, 0),
+			OrderID:                      "purchase1",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(123, 0),
 		}
 		purchaseTwo = &repo.PurchaseRecord{
-			OrderID:        "purchase2",
-			Timestamp:      timeStart,
-			LastNotifiedAt: time.Unix(456, 0),
+			OrderID:                      "purchase2",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(456, 0),
 		}
 		existingPurchases = []*repo.PurchaseRecord{purchaseOne, purchaseTwo}
 	)
-	s, err := database.Prepare("insert into purchases (orderID, contract, timestamp, lastNotifiedAt) values (?, ?, ?, ?);")
+	s, err := database.Prepare("insert into purchases (orderID, contract, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?);")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, p := range existingPurchases {
-		_, err = s.Exec(p.OrderID, p.Contract, p.Timestamp, p.LastNotifiedAt.Unix())
+		_, err = s.Exec(p.OrderID, p.Contract, p.Timestamp, p.LastDisputeTimeoutNotifiedAt.Unix())
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	// Simulate LastNotifiedAt has been changed
-	purchaseOne.LastNotifiedAt = time.Unix(987, 0)
-	purchaseTwo.LastNotifiedAt = time.Unix(765, 0)
+	// Simulate LastDisputeTimeoutNotifiedAt has been changed
+	purchaseOne.LastDisputeTimeoutNotifiedAt = time.Unix(987, 0)
+	purchaseTwo.LastDisputeTimeoutNotifiedAt = time.Unix(765, 0)
 	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
-	err = purchaseDatabase.UpdatePurchasesLastNotifiedAt(existingPurchases)
+	err = purchaseDatabase.UpdatePurchasesLastDisputeTimeoutNotifiedAt(existingPurchases)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err = database.Prepare("select orderID, lastNotifiedAt from purchases")
+	s, err = database.Prepare("select orderID, lastDisputeTimeoutNotifiedAt from purchases")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -583,25 +583,25 @@ func TestUpdatePurchaseLastNotifiedAt(t *testing.T) {
 	}
 	for rows.Next() {
 		var (
-			orderID        string
-			lastNotifiedAt int64
+			orderID                      string
+			lastDisputeTimeoutNotifiedAt int64
 		)
-		if err = rows.Scan(&orderID, &lastNotifiedAt); err != nil {
+		if err = rows.Scan(&orderID, &lastDisputeTimeoutNotifiedAt); err != nil {
 			t.Fatal(err)
 		}
 
 		switch orderID {
 		case purchaseOne.OrderID:
-			if time.Unix(lastNotifiedAt, 0).Equal(purchaseOne.LastNotifiedAt) != true {
-				t.Error("Expected purchaseOne.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseOne.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected purchaseOne.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		case purchaseTwo.OrderID:
-			if time.Unix(lastNotifiedAt, 0).Equal(purchaseTwo.LastNotifiedAt) != true {
-				t.Error("Expected purchaseTwo.LastNotifiedAt to be updated")
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseTwo.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected purchaseTwo.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		default:
 			t.Error("Unexpected purchase encounted")
-			t.Error(orderID, lastNotifiedAt)
+			t.Error(orderID, lastDisputeTimeoutNotifiedAt)
 		}
 
 	}

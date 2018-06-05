@@ -16,18 +16,18 @@ var (
 // DisputeCaseRecord is a one-to-one relationship with records in the
 // SQL datastore
 type DisputeCaseRecord struct {
-	CaseID              string
-	Claim               string
-	OrderState          pb.OrderState
-	Timestamp           time.Time
-	LastNotifiedAt      time.Time
-	BuyerContract       *pb.RicardianContract
-	BuyerOutpoints      []*pb.Outpoint
-	BuyerPayoutAddress  string
-	VendorContract      *pb.RicardianContract
-	VendorOutpoints     []*pb.Outpoint
-	VendorPayoutAddress string
-	IsBuyerInitiated    bool
+	CaseID                      string
+	Claim                       string
+	OrderState                  pb.OrderState
+	Timestamp                   time.Time
+	LastDisputeExpiryNotifiedAt time.Time
+	BuyerContract               *pb.RicardianContract
+	BuyerOutpoints              []*pb.Outpoint
+	BuyerPayoutAddress          string
+	VendorContract              *pb.RicardianContract
+	VendorOutpoints             []*pb.Outpoint
+	VendorPayoutAddress         string
+	IsBuyerInitiated            bool
 }
 
 // BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval
