@@ -108,7 +108,7 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if i.config.Cors != nil {
 		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
-		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,DELETE,GET,OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,PATCH,DELETE,GET,OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
