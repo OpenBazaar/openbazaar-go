@@ -178,7 +178,7 @@ func (ws *WireService) isSyncCandidate(peer *peerpkg.Peer) bool {
 	// Typically a peer is not a candidate for sync if it's not a full node,
 	// however regression test is special in that the regression tool is
 	// not a full node and still needs to be considered a sync candidate.
-	if ws.params == &chaincfg.RegressionNetParams {
+	if ws.params.Name == chaincfg.RegressionNetParams.Name {
 		// The peer is not a candidate if it's not coming from localhost
 		// or the hostname can't be determined for some reason.
 		host, _, err := net.SplitHostPort(peer.Addr())
@@ -351,7 +351,7 @@ func (ws *WireService) handleHeadersMsg(hmsg *headersMsg) {
 	// request merkle blocks from this point forward and exit the function.
 	badHeaders := 0
 	for _, blockHeader := range msg.Headers {
-		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour * 24 * 7)) {
+		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour * 24 * 7)) || ws.params.Name == chaincfg.RegressionNetParams.Name {
 			_, _, height, err := ws.chain.CommitHeader(*blockHeader)
 			if err != nil {
 				badHeaders++
@@ -410,7 +410,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 		// the peer or ignore the block when we're in regression test
 		// mode in this case so the chain code is actually fed the
 		// duplicate blocks.
-		if ws.params != &chaincfg.RegressionNetParams {
+		if ws.params.Name != chaincfg.RegressionNetParams.Name {
 			log.Warningf("Got unrequested block %v from %s -- "+
 				"disconnecting", blockHash, peer.Addr())
 			peer.Disconnect()

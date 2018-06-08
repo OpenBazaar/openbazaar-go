@@ -13,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "c08de2af34eb2030d0830b850db7fd6c950f4071"
+			"Rev": "c68317dcca59c78d9ee75e8fea3e7be41fddf7b2"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
@@ -175,13 +175,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-27-g9200016",
-			"Rev": "9200016d9f15c397ef6c329a0896250209d3259a"
+			"Comment": "v0.3.0-28-gaff5dbf",
+			"Rev": "aff5dbf97f34e47a30912ebe1f52a9fdb2a09b61"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-27-g9200016",
-			"Rev": "9200016d9f15c397ef6c329a0896250209d3259a"
+			"Comment": "v0.3.0-28-gaff5dbf",
+			"Rev": "aff5dbf97f34e47a30912ebe1f52a9fdb2a09b61"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",

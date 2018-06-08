@@ -41,11 +41,11 @@ func (s *SPVWallet) Broadcast(tx *wire.MsgTx) error {
 		return err
 	}
 
+	s.wireService.MsgChan() <- updateFiltersMsg{}
 	log.Debugf("Broadcasting tx %s to peers", tx.TxHash().String())
 	for _, peer := range s.peerManager.ConnectedPeers() {
 		peer.QueueMessage(tx, nil)
 	}
-	s.wireService.MsgChan() <- updateFiltersMsg{}
 	return nil
 }
 
