@@ -2,6 +2,7 @@ package repo
 
 const (
 	NotifierTypeBuyerDisputeTimeout           NotificationType = "buyerDisputeTimeout"
+	NotifierTypeBuyerDisputeExpiry            NotificationType = "buyerDisputeExpiry"
 	NotifierTypeChatMessage                   NotificationType = "chatMessage"
 	NotifierTypeChatRead                      NotificationType = "chatRead"
 	NotifierTypeChatTyping                    NotificationType = "chatTyping"

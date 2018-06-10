@@ -124,8 +124,13 @@ func createNotificationExmaples() []repo.Notifier {
 			CaseID: repo.NewNotificationID(),
 		},
 		repo.BuyerDisputeTimeout{
-			ID:      "buyerDisputeID",
+			ID:      "buyerDisputeTimeoutID",
 			Type:    repo.NotifierTypeBuyerDisputeTimeout,
+			OrderID: repo.NewNotificationID(),
+		},
+		repo.BuyerDisputeExpiry{
+			ID:      "buyerDisputeExpiryID",
+			Type:    repo.NotifierTypeBuyerDisputeExpiry,
 			OrderID: repo.NewNotificationID(),
 		},
 		repo.VendorDisputeTimeout{

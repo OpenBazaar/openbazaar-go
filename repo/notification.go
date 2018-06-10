@@ -227,6 +227,12 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		n.NotifierData = notifier
+	case NotifierTypeBuyerDisputeExpiry:
+		var notifier = BuyerDisputeExpiry{}
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
+			return err
+		}
+		n.NotifierData = notifier
 	case NotifierTypeCompletionNotification:
 		var notifier = CompletionNotification{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
@@ -889,6 +895,28 @@ func (n BuyerDisputeTimeout) WebsocketData() ([]byte, error) {
 func (n BuyerDisputeTimeout) GetID() string             { return n.ID }
 func (n BuyerDisputeTimeout) GetType() NotificationType { return n.Type }
 func (n BuyerDisputeTimeout) GetSMTPTitleAndBody() (string, string, bool) {
+	return "", "", false
+}
+
+// BuyerDisputeExpiry represents a notification about a purchase
+// which has an open dispute that is expiring
+type BuyerDisputeExpiry struct {
+	ID        string           `json:"notificationId"`
+	Type      NotificationType `json:"type"`
+	OrderID   string           `json:"orderId"`
+	ExpiresIn uint             `json:"expiresIn"`
+	Thumbnail Thumbnail        `json:"thumbnail"`
+}
+
+func (n BuyerDisputeExpiry) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n BuyerDisputeExpiry) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n BuyerDisputeExpiry) GetID() string             { return n.ID }
+func (n BuyerDisputeExpiry) GetType() NotificationType { return n.Type }
+func (n BuyerDisputeExpiry) GetSMTPTitleAndBody() (string, string, bool) {
 	return "", "", false
 }
 
