@@ -278,6 +278,52 @@ func (p *PurchasesDB) Count() int {
 	return count
 }
 
+func (p *PurchasesDB) GetPurchasesForDisputeExpiryNotification() ([]*repo.PurchaseRecord, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	s := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeExpiryNotifiedAt, disputedAt from purchases where (lastDisputeExpiryNotifiedAt - disputedAt) < %d and state = %d",
+		int(repo.BuyerDisputeExpiry_lastInterval.Seconds()),
+		pb.OrderState_DISPUTED,
+	)
+	rows, err := p.db.Query(s)
+	if err != nil {
+		return nil, fmt.Errorf("selecting purchases: %s", err.Error())
+	}
+
+	result := make([]*repo.PurchaseRecord, 0)
+	for rows.Next() {
+		var (
+			disputedAt                  int64
+			lastDisputeExpiryNotifiedAt int64
+			contract                    []byte
+			stateInt                    int
+
+			r = &repo.PurchaseRecord{
+				Contract: &pb.RicardianContract{},
+			}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastDisputeExpiryNotifiedAt, &disputedAt); err != nil {
+			return nil, fmt.Errorf("scanning purchases: %s\n", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
+			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
+		}
+		r.OrderState = pb.OrderState(stateInt)
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastDisputeExpiryNotifiedAt = time.Unix(lastDisputeExpiryNotifiedAt, 0)
+		r.DisputedAt = time.Unix(disputedAt, 0)
+
+		result = append(result, r)
+	}
+	return result, nil
+}
+
 // GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
 // each record which needs Notifications to be generated.
 func (p *PurchasesDB) GetPurchasesForDisputeTimeoutNotification() ([]*repo.PurchaseRecord, error) {
