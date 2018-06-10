@@ -721,3 +721,89 @@ func TestGetPurchasesForDisputeExpiryNotificationReturnsRelevantRecords(t *testi
 		t.Error("Expected NOT to see undisputed purchase")
 	}
 }
+
+func TestUpdatePurchaseLastDisputeExpiryNotifiedAt(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start purchases 50 days ago
+	var (
+		timeStart         = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		purchaseOne       = newDisputedPurchaseRecord()
+		purchaseTwo       = newDisputedPurchaseRecord()
+		existingPurchases = []*repo.PurchaseRecord{purchaseOne, purchaseTwo}
+	)
+	purchaseOne.OrderID = "purchase1"
+	purchaseTwo.OrderID = "purchase2"
+	purchaseOne.DisputedAt = timeStart
+	purchaseTwo.DisputedAt = timeStart
+	purchaseOne.LastDisputeExpiryNotifiedAt = time.Unix(123, 0)
+	purchaseTwo.LastDisputeExpiryNotifiedAt = time.Unix(456, 0)
+
+	s, err := database.Prepare("insert into purchases (orderID, lastDisputeExpiryNotifiedAt, disputedAt) values (?, ?, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range existingPurchases {
+		_, err = s.Exec(p.OrderID, p.LastDisputeExpiryNotifiedAt.Unix(), p.DisputedAt.Unix())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Simulate LastDisputeExpiryNotifiedAt has been changed
+	purchaseOne.LastDisputeExpiryNotifiedAt = time.Unix(987, 0)
+	purchaseTwo.LastDisputeExpiryNotifiedAt = time.Unix(765, 0)
+	purchaseDatabase := NewPurchaseStore(database, new(sync.Mutex))
+	err = purchaseDatabase.UpdatePurchasesLastDisputeExpiryNotifiedAt(existingPurchases)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err = database.Prepare("select orderID, lastDisputeExpiryNotifiedAt from purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.Query()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID                     string
+			lastDisputeExpiryNotifiedAt int64
+		)
+		if err = rows.Scan(&orderID, &lastDisputeExpiryNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+
+		switch orderID {
+		case purchaseOne.OrderID:
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseOne.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected purchaseOne.LastDisputeExpiryNotifiedAt to be updated")
+			}
+		case purchaseTwo.OrderID:
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseTwo.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected purchaseTwo.LastDisputeExpiryNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected purchase encounted")
+			t.Error(orderID, lastDisputeExpiryNotifiedAt)
+		}
+
+	}
+}

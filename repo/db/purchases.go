@@ -398,3 +398,28 @@ func (p *PurchasesDB) UpdatePurchasesLastDisputeTimeoutNotifiedAt(purchases []*r
 
 	return nil
 }
+
+// UpdatePurchasesLastDisputeExpiryNotifiedAt accepts []*repo.PurchaseRecord and updates
+// each PurchaseRecord by their OrderID to the set LastDisputeExpiryNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (p *PurchasesDB) UpdatePurchasesLastDisputeExpiryNotifiedAt(purchases []*repo.PurchaseRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
+	}
+	for _, p := range purchases {
+		_, err = tx.Exec("update purchases set lastDisputeExpiryNotifiedAt = ? where orderID = ?", int(p.LastDisputeExpiryNotifiedAt.Unix()), p.OrderID)
+		if err != nil {
+			return fmt.Errorf("update purchase: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
+	}
+
+	return nil
+}
