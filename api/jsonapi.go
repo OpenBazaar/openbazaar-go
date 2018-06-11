@@ -1925,6 +1925,19 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+
+	if state != pb.OrderState_FULFILLED &&
+		state != pb.OrderState_RESOLVED &&
+		state != pb.OrderState_PAYMENT_FINALIZED {
+		errorString := fmt.Sprintf("must be one of the following states to leave a rating and complete the order: %s, %s, %s",
+			pb.OrderState_FULFILLED.String(),
+			pb.OrderState_RESOLVED.String(),
+			pb.OrderState_PAYMENT_FINALIZED.String(),
+		)
+		ErrorResponse(w, http.StatusBadRequest, errorString)
+		return
+	}
+
 	for _, rd := range or.Ratings {
 		if rd.Slug == "" {
 			ErrorResponse(w, http.StatusBadRequest, "rating must contain the slug")
@@ -1951,10 +1964,6 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if state != pb.OrderState_FULFILLED && state != pb.OrderState_RESOLVED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be either fulfilled or in closed dispute state to leave the rating")
-		return
-	}
 	err = i.node.CompleteOrder(&or, contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
