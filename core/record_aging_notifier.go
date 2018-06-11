@@ -130,7 +130,9 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 		notifier.broadcast <- n.NotifierData
 	}
 
-	err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(sales)
+	if err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(sales); err != nil {
+		return fmt.Errorf("update sales disputeTimeoutNotifiedAt: %s", err.Error())
+	}
 	notifier.logger.Debugf("updated lastDisputeTimeoutNotifiedAt on %d sales", len(sales))
 	return nil
 }
@@ -345,7 +347,9 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 		notifier.broadcast <- n.NotifierData
 	}
 
-	err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(disputes)
+	if err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(disputes); err != nil {
+		return fmt.Errorf("updating lastDisputeExpiryNotifiedAt on disputes: %s", err.Error())
+	}
 	notifier.logger.Debugf("updated lastDisputeExpiryNotifiedAt on %d disputes", len(disputes))
 	return nil
 }
