@@ -37,6 +37,7 @@ It has these top-level messages:
 	DisputeAcceptance
 	Outpoint
 	Refund
+	VendorFinalizedPayment
 	ID
 	Signature
 	SignedListing

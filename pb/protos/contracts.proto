@@ -370,6 +370,10 @@ message Refund {
     }
 }
 
+message VendorFinalizedPayment {
+  string orderID = 1; // OrderID which has its funds released to the vendor
+}
+
 message ID {
     string peerID       = 1;
     string handle       = 2;
