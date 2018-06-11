@@ -360,13 +360,19 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 			shouldCallback = true
 			var buf bytes.Buffer
 			tx.BtcEncode(&buf, 1, wire.BaseEncoding)
-			ts.Txns().Put(buf.Bytes(), tx.TxHash().String(), int(value), int(height), txn.Timestamp, hits == 0)
+			err = ts.Txns().Put(buf.Bytes(), tx.TxHash().String(), int(value), int(height), txn.Timestamp, hits == 0)
+			if err != nil {
+				log.Error(err)
+			}
 			ts.txids[tx.TxHash().String()] = height
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
 		if txn.Height <= 0 {
-			ts.Txns().UpdateHeight(tx.TxHash(), int(height), timestamp)
+			err = ts.Txns().UpdateHeight(tx.TxHash(), int(height), timestamp)
+			if err != nil {
+				log.Error(err)
+			}
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				cb.Value = txn.Value

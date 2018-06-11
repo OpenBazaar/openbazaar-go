@@ -107,7 +107,6 @@ func NewWireService(config *WireServiceConfig) *WireService {
 		requestedBlocks:    make(map[chainhash.Hash]struct{}),
 		mempool:            make(map[chainhash.Hash]struct{}),
 		msgChan:            make(chan interface{}),
-		quit:               make(chan struct{}),
 	}
 }
 
@@ -119,6 +118,7 @@ func (ws *WireService) MsgChan() chan interface{} {
 // threaded which means all messages are processed sequentially removing the need for complex
 // locking.
 func (ws *WireService) Start() {
+	ws.quit = make(chan struct{})
 	best, err := ws.chain.BestBlock()
 	if err != nil {
 		log.Error(err)

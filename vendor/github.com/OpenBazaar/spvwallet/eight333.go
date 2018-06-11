@@ -107,7 +107,6 @@ func NewWireService(config *WireServiceConfig) *WireService {
 		requestedBlocks:    make(map[chainhash.Hash]struct{}),
 		mempool:            make(map[chainhash.Hash]struct{}),
 		msgChan:            make(chan interface{}),
-		quit:               make(chan struct{}),
 	}
 }
 
@@ -119,6 +118,7 @@ func (ws *WireService) MsgChan() chan interface{} {
 // threaded which means all messages are processed sequentially removing the need for complex
 // locking.
 func (ws *WireService) Start() {
+	ws.quit = make(chan struct{})
 	best, err := ws.chain.BestBlock()
 	if err != nil {
 		log.Error(err)
@@ -351,7 +351,7 @@ func (ws *WireService) handleHeadersMsg(hmsg *headersMsg) {
 	// request merkle blocks from this point forward and exit the function.
 	badHeaders := 0
 	for _, blockHeader := range msg.Headers {
-		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour * 24 * 7)) || ws.params.Name == chaincfg.RegressionNetParams.Name {
+		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour*24*7)) || ws.params.Name == chaincfg.RegressionNetParams.Name {
 			_, _, height, err := ws.chain.CommitHeader(*blockHeader)
 			if err != nil {
 				badHeaders++
