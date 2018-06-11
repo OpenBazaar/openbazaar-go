@@ -209,11 +209,18 @@ type PurchaseStore interface {
 	Count() int
 
 	// GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
-	// each record which needs Notifications to be generated.
+	// each record which needs buyerDisputeTimeout Notifications to be generated.
 	GetPurchasesForDisputeTimeoutNotification() ([]*PurchaseRecord, error)
 
-	// UpdatePurchasesLastDisputeTimeoutNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeTimeoutNotifiedAt by its CaseID
+	// GetPurchasesForDisputeExpiryNotification returns []*PurchaseRecord including
+	// each record which needs buyerDisputeExpiry Notifications to be generated.
+	GetPurchasesForDisputeExpiryNotification() ([]*PurchaseRecord, error)
+
+	// UpdatePurchasesLastDisputeTimeoutNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeTimeoutNotifiedAt by its OrderID
 	UpdatePurchasesLastDisputeTimeoutNotifiedAt([]*PurchaseRecord) error
+
+	// UpdatePurchasesLastDisputeExpiryNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeExpiryNotifiedAt by its OrderID
+	UpdatePurchasesLastDisputeExpiryNotifiedAt([]*PurchaseRecord) error
 }
 
 type SaleStore interface {

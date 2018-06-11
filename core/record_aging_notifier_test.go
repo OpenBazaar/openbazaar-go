@@ -846,6 +846,281 @@ func TestBuyerDisputeTimeoutsAreReturnedInOrderWhenCreatedAsABatch(t *testing.T)
 	}
 }
 
+func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
+	// Start each purchase 50 days ago and have the LastDisputeExpiryNotifiedAt at a day after
+	// each notification is suppose to be sent. With no notifications already queued,
+	// it should produce all the old notifications up to the most recent one expected
+	var (
+		broadcastChannel = make(chan repo.Notifier, 0)
+		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		twelveHours      = time.Duration(12) * time.Hour
+		firstInterval    = repo.BuyerDisputeExpiry_firstInterval
+		secondInterval   = repo.BuyerDisputeExpiry_secondInterval
+		lastInterval     = repo.BuyerDisputeExpiry_lastInterval
+
+		// Produces no notifications as state is PENDING and not disputed
+		neverNotifiedButUndisputeable = &repo.PurchaseRecord{
+			Contract:                    factory.NewUndisputeableContract(),
+			OrderID:                     "neverNotifiedButUndisputed",
+			OrderState:                  pb.OrderState(pb.OrderState_PENDING),
+			Timestamp:                   timeStart,
+			DisputedAt:                  time.Unix(0, 0),
+			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+		}
+		// Produces notification for 15, 40 and 44 days
+		neverNotified = &repo.PurchaseRecord{
+			Contract:                    factory.NewDisputeableContract(),
+			OrderID:                     "neverNotified",
+			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			Timestamp:                   timeStart,
+			DisputedAt:                  timeStart,
+			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+		}
+		// Produces notification for 40 and 44 days
+		notifiedUpToFifteenDay = &repo.PurchaseRecord{
+			Contract:                    factory.NewDisputeableContract(),
+			OrderID:                     "notifiedUpToFifteenDay",
+			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			Timestamp:                   timeStart,
+			DisputedAt:                  timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(firstInterval + twelveHours),
+		}
+		// Produces notification for 44 days
+		notifiedUpToFourtyDay = &repo.PurchaseRecord{
+			Contract:                    factory.NewDisputeableContract(),
+			OrderID:                     "notifiedUpToFourtyDay",
+			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			Timestamp:                   timeStart,
+			DisputedAt:                  timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(secondInterval + twelveHours),
+		}
+		// Produces no notifications as all have already been created
+		notifiedUpToFourtyFiveDays = &repo.PurchaseRecord{
+			Contract:                    factory.NewDisputeableContract(),
+			OrderID:                     "notifiedUpToFourtyFiveDays",
+			OrderState:                  pb.OrderState(pb.OrderState_DISPUTED),
+			Timestamp:                   timeStart,
+			DisputedAt:                  timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart.Add(lastInterval + twelveHours),
+		}
+		existingRecords = []*repo.PurchaseRecord{
+			neverNotifiedButUndisputeable,
+			neverNotified,
+			notifiedUpToFifteenDay,
+			notifiedUpToFourtyDay,
+			notifiedUpToFourtyFiveDays,
+		}
+
+		appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
+			DataPath:        schema.GenerateTempPath(),
+			TestModeEnabled: true,
+		})
+	)
+	neverNotified.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "never-tinyimagehashOne", Small: "never-smallimagehashOne"}}
+	notifiedUpToFifteenDay.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fifteen-tinyimagehashOne", Small: "fifteen-smallimagehashOne"}}
+	notifiedUpToFourtyDay.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourty-tinyimagehashOne", Small: "fourty-smallimagehashOne"}}
+	notifiedUpToFourtyFiveDays.Contract.VendorListings[0].Item.Images = []*pb.Listing_Item_Image{{Tiny: "fourtyfive-tinyimagehashOne", Small: "fourtyfive-smallimagehashOne"}}
+
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	for _, r := range existingRecords {
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = database.Exec("insert into purchases (orderID, contract, state, timestamp, lastDisputeExpiryNotifiedAt, disputedAt) values (?, ?, ?, ?, ?, ?)", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeExpiryNotifiedAt.Unix()), int(r.DisputedAt.Unix()))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var (
+		closeAsyncChannelVerifier = make(chan bool, 0)
+		broadcastCount            = 0
+	)
+	go func() {
+		for {
+			select {
+			case n := <-broadcastChannel:
+				notifier, ok := n.(repo.Notifier)
+				if !ok {
+					t.Errorf("unable to cast as Notifier: %+v", n)
+				}
+				if notifier.GetType() == repo.NotifierTypeBuyerDisputeExpiry {
+					broadcastCount += 1
+					t.Logf("Notification Recieved: %+v\n", notifier)
+				} else {
+					t.Errorf("Unexpected notification received: %s", notifier.GetType())
+				}
+			case <-closeAsyncChannelVerifier:
+				return
+			}
+		}
+	}()
+
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	worker := &recordAgingNotifier{
+		datastore: datastore,
+		broadcast: broadcastChannel,
+		logger:    logging.MustGetLogger("testRecordAgingNotifier"),
+	}
+
+	worker.PerformTask()
+
+	// Verify Notifications received in channel
+	closeAsyncChannelVerifier <- true
+	if broadcastCount != 6 {
+		t.Error("Expected 6 notifications to be broadcast, found", broadcastCount)
+	}
+
+	// Verify NotificationRecords in datastore
+	rows, err := database.Query("select orderID, lastDisputeExpiryNotifiedAt from purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID                     string
+			lastDisputeExpiryNotifiedAt int64
+		)
+		if err := rows.Scan(&orderID, &lastDisputeExpiryNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+		switch orderID {
+		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID:
+			durationFromActual := time.Now().Sub(time.Unix(lastDisputeExpiryNotifiedAt, 0))
+			if durationFromActual > (time.Duration(5) * time.Second) {
+				t.Errorf("Expected %s to have lastDisputeExpiryNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeExpiryNotifiedAt, 0).String())
+			}
+		case notifiedUpToFourtyFiveDays.OrderID:
+			if lastDisputeExpiryNotifiedAt != notifiedUpToFourtyFiveDays.LastDisputeExpiryNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeExpiredNotifiedAt")
+			}
+		case neverNotifiedButUndisputeable.OrderID:
+			if lastDisputeExpiryNotifiedAt != neverNotifiedButUndisputeable.LastDisputeExpiryNotifiedAt.Unix() {
+				t.Error("Expected notifiedUpToFourtyFiveDays to not update LastDisputeExpiredNotifiedAt")
+			}
+		default:
+			t.Error("Unexpected purchase")
+		}
+	}
+
+	var count int64
+	err = database.QueryRow("select count(*) from notifications").Scan(&count)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 6 {
+		t.Errorf("Expected 6 notifications to be produced, but found %d", count)
+	}
+
+	rows, err = database.Query("select notifID, serializedNotification, timestamp from notifications")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		checkNeverNotifiedPurchase_FirstNotificationSeen  bool
+		checkNeverNotifiedPurchase_SecondNotificationSeen bool
+		checkNeverNotifiedPurchase_LastNotificationSeen   bool
+		checkFifteenDayPurchase_SecondNotificationSeen    bool
+		checkFifteenDayPurchase_LastNotificationSeen      bool
+		checkFourtyDayPurchase_LastNotificationSeen       bool
+
+		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_firstInterval).Seconds())
+		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_secondInterval).Seconds())
+		lastInterval_ExpectedExpiresIn   = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_lastInterval).Seconds())
+	)
+	for rows.Next() {
+		var (
+			nID, nJSON string
+			nTimestamp sql.NullInt64
+			n          *repo.Notification
+		)
+		if err = rows.Scan(&nID, &nJSON, &nTimestamp); err != nil {
+			t.Error(err)
+			continue
+		}
+		if err := json.Unmarshal([]byte(nJSON), &n); err != nil {
+			t.Error("Failed unmarshalling notification:", err.Error())
+			continue
+		}
+		var (
+			refID     = n.NotifierData.(repo.BuyerDisputeExpiry).OrderID
+			expiresIn = n.NotifierData.(repo.BuyerDisputeExpiry).ExpiresIn
+			thumbnail = n.NotifierData.(repo.BuyerDisputeExpiry).Thumbnail
+		)
+		if refID == neverNotified.OrderID {
+			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
+			if expiresIn == firstInterval_ExpectedExpiresIn {
+				checkNeverNotifiedPurchase_FirstNotificationSeen = true
+				continue
+			}
+			if expiresIn == secondInterval_ExpectedExpiresIn {
+				checkNeverNotifiedPurchase_SecondNotificationSeen = true
+				continue
+			}
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkNeverNotifiedPurchase_LastNotificationSeen = true
+				continue
+			}
+		}
+		if refID == notifiedUpToFifteenDay.OrderID {
+			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFifteenDay.Contract)
+			if expiresIn == secondInterval_ExpectedExpiresIn {
+				checkFifteenDayPurchase_SecondNotificationSeen = true
+				continue
+			}
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkFifteenDayPurchase_LastNotificationSeen = true
+				continue
+			}
+		}
+		if refID == notifiedUpToFourtyDay.OrderID {
+			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyDay.Contract)
+			if expiresIn == lastInterval_ExpectedExpiresIn {
+				checkFourtyDayPurchase_LastNotificationSeen = true
+				continue
+			}
+		}
+	}
+
+	if checkNeverNotifiedPurchase_FirstNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FirstNotificationSeen")
+	}
+	if checkNeverNotifiedPurchase_SecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_SecondNotificationSeen")
+	}
+	if checkNeverNotifiedPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_LastNotificationSeen")
+	}
+	if checkFifteenDayPurchase_SecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchase_SecondNotificationSeen")
+	}
+	if checkFifteenDayPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchase_LastNotificationSeen")
+	}
+	if checkFourtyDayPurchase_LastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchase_LastNotificationSeen")
+	}
+}
+
 // SALES
 func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	// Start each sale 50 days ago and have the lastDisputeTimeoutNotifiedAt at a day after
