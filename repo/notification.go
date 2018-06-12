@@ -341,6 +341,12 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		n.NotifierData = notifier
+	case NotifierTypeVendorFinalizedPayment:
+		var notifier = VendorFinalizedPayment{}
+		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
+			return err
+		}
+		n.NotifierData = notifier
 	case NotifierTypeVendorDisputeTimeout:
 		var notifier = VendorDisputeTimeout{}
 		if err := json.Unmarshal(payload.NotifierData, &notifier); err != nil {
@@ -893,7 +899,7 @@ func (n BuyerDisputeTimeout) WebsocketData() ([]byte, error) {
 	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
 }
 func (n BuyerDisputeTimeout) GetID() string             { return n.ID }
-func (n BuyerDisputeTimeout) GetType() NotificationType { return n.Type }
+func (n BuyerDisputeTimeout) GetType() NotificationType { return NotifierTypeBuyerDisputeTimeout }
 func (n BuyerDisputeTimeout) GetSMTPTitleAndBody() (string, string, bool) {
 	return "", "", false
 }
@@ -917,6 +923,26 @@ func (n BuyerDisputeExpiry) WebsocketData() ([]byte, error) {
 func (n BuyerDisputeExpiry) GetID() string             { return n.ID }
 func (n BuyerDisputeExpiry) GetType() NotificationType { return n.Type }
 func (n BuyerDisputeExpiry) GetSMTPTitleAndBody() (string, string, bool) {
+	return "", "", false
+}
+
+// VendorFinalizedPayment represents a notification about a purchase
+// which will soon be unable to dispute.
+type VendorFinalizedPayment struct {
+	ID      string           `json:"notificationId"`
+	Type    NotificationType `json:"type"`
+	OrderID string           `json:"orderId"`
+}
+
+func (n VendorFinalizedPayment) Data() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n VendorFinalizedPayment) WebsocketData() ([]byte, error) {
+	return json.MarshalIndent(notificationWrapper{n}, "", "    ")
+}
+func (n VendorFinalizedPayment) GetID() string             { return n.ID }
+func (n VendorFinalizedPayment) GetType() NotificationType { return NotifierTypeVendorFinalizedPayment }
+func (n VendorFinalizedPayment) GetSMTPTitleAndBody() (string, string, bool) {
 	return "", "", false
 }
 

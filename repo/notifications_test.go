@@ -10,7 +10,7 @@ import (
 )
 
 func TestDataIsUnmarshalable(t *testing.T) {
-	for _, n := range createNotificationExmaples() {
+	for _, n := range createNotificationExamples() {
 		var (
 			actual  = make(map[string]interface{})
 			err     error
@@ -27,7 +27,7 @@ func TestDataIsUnmarshalable(t *testing.T) {
 }
 
 func TestWebsocketDataIsUnmarshalable(t *testing.T) {
-	for _, n := range createNotificationExmaples() {
+	for _, n := range createNotificationExamples() {
 		var (
 			actual  = make(map[string]interface{})
 			err     error
@@ -52,7 +52,7 @@ func TestWebsocketDataIsUnmarshalable(t *testing.T) {
 // marshalled in the datastore with json.Marshal(Notification{}.NotifierData), and
 // TestLegacyNotificationMarshalling covers those cases.
 func TestNotificationMarshalling(t *testing.T) {
-	for _, n := range createNotificationExmaples() {
+	for _, n := range createNotificationExamples() {
 		var (
 			expected = repo.NewNotification(n, time.Now(), false)
 			actual   = &repo.Notification{}
@@ -116,7 +116,7 @@ func TestLegacyNotificationMarshalling(t *testing.T) {
 	}
 }
 
-func createNotificationExmaples() []repo.Notifier {
+func createNotificationExamples() []repo.Notifier {
 	return append([]repo.Notifier{
 		repo.ModeratorDisputeExpiry{
 			ID:     "disputeNotificationID",
@@ -136,6 +136,11 @@ func createNotificationExmaples() []repo.Notifier {
 		repo.VendorDisputeTimeout{
 			ID:      "saleAgingID",
 			Type:    repo.NotifierTypeVendorDisputeTimeout,
+			OrderID: repo.NewNotificationID(),
+		},
+		repo.VendorFinalizedPayment{
+			ID:      "vendorFinalizedPayment",
+			Type:    repo.NotifierTypeVendorFinalizedPayment,
 			OrderID: repo.NewNotificationID(),
 		},
 	},

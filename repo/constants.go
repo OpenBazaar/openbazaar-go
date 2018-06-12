@@ -30,6 +30,7 @@ const (
 	NotifierTypeTestNotification              NotificationType = "testNotification"
 	NotifierTypeUnfollowNotification          NotificationType = "unfollow"
 	NotifierTypeVendorDisputeTimeout          NotificationType = "vendorDisputeTimeout"
+	NotifierTypeVendorFinalizedPayment        NotificationType = "vendorFinalizedPayment"
 )
 
 type NotificationType string
