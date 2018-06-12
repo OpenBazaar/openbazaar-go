@@ -2212,6 +2212,12 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	err = i.node.SendFundsReleasedByVendor(contract.BuyerOrder.BuyerID.PeerID, contract.BuyerOrder.BuyerID.Pubkeys.Identity, rel.OrderID)
+	if err != nil {
+		log.Errorf("SendFundsReleasedByVendor error: %s", err.Error())
+		log.Errorf("SendFundsReleasedByVendor: peerID: %s orderID: %s", contract.BuyerOrder.BuyerID.PeerID, rel.OrderID)
+	}
+
 	SanitizedResponse(w, `{}`)
 	return
 }
