@@ -65,6 +65,8 @@ func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) fu
 		return service.handleModeratorRemove
 	case pb.Message_BLOCK:
 		return service.handleBlock
+	case pb.Message_VENDOR_FINALIZED_PAYMENT:
+		return service.handleVendorFinalizedPayment
 	case pb.Message_STORE:
 		return service.handleStore
 	case pb.Message_ERROR:
@@ -1410,6 +1412,24 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 		return nil, err
 	}
 	log.Debugf("Received BLOCK message from %s", pid.Pretty())
+	return nil, nil
+}
+
+func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
+	if pmes.Payload == nil {
+		return nil, errors.New("Payload is nil")
+	}
+	paymentFinalizedMessage := new(pb.VendorFinalizedPayment)
+	if err := ptypes.UnmarshalAny(pmes.Payload, paymentFinalizedMessage); err != nil {
+		return nil, err
+	}
+
+	n := repo.VendorFinalizedPayment{
+		ID:      repo.NewNotificationID(),
+		Type:    repo.NotifierTypeVendorFinalizedPayment,
+		OrderID: paymentFinalizedMessage.OrderID,
+	}
+	service.broadcast <- n
 	return nil, nil
 }
 
