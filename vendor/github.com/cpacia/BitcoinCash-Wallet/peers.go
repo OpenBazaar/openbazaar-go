@@ -14,8 +14,8 @@ import (
 	"github.com/btcsuite/btcd/connmgr"
 	"github.com/btcsuite/btcd/peer"
 	"github.com/btcsuite/btcd/wire"
-	"golang.org/x/net/proxy"
 	"github.com/cpacia/bchutil"
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -286,7 +286,7 @@ func (pm *PeerManager) getNewAddress() (net.Addr, error) {
 // Query the DNS seeds and pass the addresses into the address manager.
 func (pm *PeerManager) queryDNSSeeds() {
 	wg := new(sync.WaitGroup)
-	for _, seed := range  bchutil.GetDNSSeed(pm.peerConfig.ChainParams) {
+	for _, seed := range bchutil.GetDNSSeed(pm.peerConfig.ChainParams) {
 		wg.Add(1)
 		go func(host string) {
 			returnedAddresses := 0

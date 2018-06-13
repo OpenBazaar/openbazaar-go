@@ -371,15 +371,7 @@ func (w *SPVWallet) Close() {
 }
 
 func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
-	w.peerManager.Stop()
-	w.wireService.Stop()
 	w.blockchain.Rollback(fromDate)
 	w.txstore.PopulateAdrs()
-	var err error
-	w.peerManager, err = NewPeerManager(w.config)
-	if err != nil {
-		return
-	}
-	go w.wireService.Start()
-	go w.peerManager.Start()
+	w.wireService.Resync()
 }

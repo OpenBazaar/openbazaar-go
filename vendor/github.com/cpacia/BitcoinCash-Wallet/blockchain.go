@@ -4,6 +4,7 @@
 package bitcoincash
 
 import (
+	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -13,7 +14,6 @@ import (
 	"sort"
 	"sync"
 	"time"
-	"errors"
 )
 
 // Blockchain settings.  These are kindof Bitcoin specific, but not contained in
@@ -423,7 +423,6 @@ func (b *Blockchain) GetHeader(hash *chainhash.Hash) (StoredHeader, error) {
 	}
 	return sh, nil
 }
-
 
 func (b *Blockchain) Close() {
 	b.lock.Lock()

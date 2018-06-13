@@ -153,7 +153,12 @@ out:
 }
 
 func (ws *WireService) Stop() {
+	ws.syncPeer = nil
 	close(ws.quit)
+}
+
+func (ws *WireService) Resync() {
+	ws.startSync(ws.syncPeer)
 }
 
 func (ws *WireService) handleNewPeerMsg(peer *peerpkg.Peer) {
@@ -351,7 +356,7 @@ func (ws *WireService) handleHeadersMsg(hmsg *headersMsg) {
 	// request merkle blocks from this point forward and exit the function.
 	badHeaders := 0
 	for _, blockHeader := range msg.Headers {
-		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour*24*7)) || ws.params.Name == chaincfg.RegressionNetParams.Name {
+		if blockHeader.Timestamp.Before(ws.walletCreationDate.Add(-time.Hour * 24 * 7)) {
 			_, _, height, err := ws.chain.CommitHeader(*blockHeader)
 			if err != nil {
 				badHeaders++
@@ -462,7 +467,9 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 	}
 	state.blockScore++
 
-	peer.UpdateLastBlockHeight(int32(newHeight))
+	if ws.Current() {
+		peer.UpdateLastBlockHeight(int32(newHeight))
+	}
 
 	// Request the transactions in this block
 	for _, txid := range txids {

@@ -13,7 +13,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "55e004be9b4a55fff10345947f1bed3c20e29986"
+			"Rev": "05884fe215ec68e5ed1638d0a796aee525b2867f"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
@@ -175,13 +175,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-29-ge4eb8f9",
-			"Rev": "e4eb8f9faa3929470efb15ab41c1b8829b71a452"
+			"Comment": "v0.3.0-30-g7962338",
+			"Rev": "7962338266efd65ef54b9f1f03200c2f0c2bc5ab"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-29-ge4eb8f9",
-			"Rev": "e4eb8f9faa3929470efb15ab41c1b8829b71a452"
+			"Comment": "v0.3.0-30-g7962338",
+			"Rev": "7962338266efd65ef54b9f1f03200c2f0c2bc5ab"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
@@ -1753,6 +1753,61 @@
 		{
 			"ImportPath": "gx/ipfs/QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6/base32",
 			"Rev": "b8a4059b144b9889b8b62f6458d1662015eec388"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/bitcoin",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/OpenBazaar/wallet-interface",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/btcec",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/chaincfg",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/chaincfg/chainhash",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcd/wire",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/hdkeychain",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/base58",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/github.com/btcsuite/btcutil/bech32",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/openbazaar-go/vendor/golang.org/x/crypto/ripemd160",
+			"Comment": "v0.12.0-27-g52c17d6e",
+			"Rev": "52c17d6ee5c5c71cfd46b73d2bb2112a0efe622d"
 		}
 	]
 }
