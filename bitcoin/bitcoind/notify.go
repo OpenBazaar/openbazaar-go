@@ -82,7 +82,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		height = r.Height
 	}
 	cb := wallet.TransactionCallback{
-		Txid:      tx.Hash().CloneBytes(),
+		Txid:      tx.Hash().String(),
 		Inputs:    inputs,
 		Outputs:   outputs,
 		WatchOnly: watchOnly,

@@ -50,10 +50,6 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 	}
 	for _, input := range cb.Inputs {
-		chainHash, err := chainhash.NewHash(cb.Txid)
-		if err != nil {
-			continue
-		}
 		addr, err := l.wallet.ScriptToAddress(input.LinkedScriptPubKey)
 		if err != nil {
 			continue
@@ -93,7 +89,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 
 		record := &wallet.TransactionRecord{
 			Timestamp:    time.Now(),
-			Txid:         chainHash.String(),
+			Txid:         cb.Txid,
 			Index:        input.OutpointIndex,
 			Value:        -input.Value,
 			ScriptPubKey: hex.EncodeToString(input.LinkedScriptPubKey),
@@ -161,16 +157,12 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 
 }
 
-func (l *TransactionListener) processSalePayment(txid []byte, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	chainHash, err := chainhash.NewHash(txid)
-	if err != nil {
-		return
-	}
+func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
-		if r.Txid == chainHash.String() {
+		if r.Txid == txid {
 			return
 		}
 	}
@@ -209,7 +201,7 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 
 	record := &wallet.TransactionRecord{
 		Timestamp:    time.Now(),
-		Txid:         chainHash.String(),
+		Txid:         txid,
 		Index:        output.Index,
 		Value:        output.Value,
 		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
@@ -228,19 +220,15 @@ func (l *TransactionListener) processSalePayment(txid []byte, output wallet.Tran
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		bumpable = true
 	}
-	l.db.TxMetadata().Put(repo.Metadata{chainHash.String(), "", title, orderId, thumbnail, bumpable})
+	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
 }
 
-func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	chainHash, err := chainhash.NewHash(txid)
-	if err != nil {
-		return
-	}
+func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
 	funding := output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
-		if r.Txid == chainHash.String() {
+		if r.Txid == txid {
 			return
 		}
 	}
@@ -270,7 +258,7 @@ func (l *TransactionListener) processPurchasePayment(txid []byte, output wallet.
 	}
 
 	record := &wallet.TransactionRecord{
-		Txid:         chainHash.String(),
+		Txid:         txid,
 		Index:        output.Index,
 		Value:        output.Value,
 		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),

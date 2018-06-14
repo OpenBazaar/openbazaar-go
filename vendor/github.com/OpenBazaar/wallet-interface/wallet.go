@@ -125,7 +125,7 @@ const (
 // This callback is passed to any registered transaction listeners when a transaction is detected
 // for the wallet.
 type TransactionCallback struct {
-	Txid      []byte
+	Txid      string
 	Outputs   []TransactionOutput
 	Inputs    []TransactionInput
 	Height    int32

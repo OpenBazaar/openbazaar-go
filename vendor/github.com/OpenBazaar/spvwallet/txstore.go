@@ -238,7 +238,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 
 	// Iterate through all outputs of this tx, see if we gain
 	cachedSha := tx.TxHash()
-	cb := wallet.TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
+	cb := wallet.TransactionCallback{Txid: cachedSha.String(), Height: height}
 	value := int64(0)
 	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
