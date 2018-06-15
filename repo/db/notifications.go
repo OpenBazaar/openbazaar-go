@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -69,8 +70,8 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 				args = append(args, a)
 			}
 		}
-		stm = "select serializedNotification, timestamp, read from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
-		cstm = "select Count(*) from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc;"
+		stm = "select serializedNotification, timestamp, read from notifications where rowid<(select rowid from notifications where notifID=?)" + filter + " order by timestamp desc, rowid desc limit " + strconv.Itoa(limit) + ";"
+		cstm = "select Count(*) from notifications where timestamp<(select timestamp from notifications where notifID=?)" + filter + " order by timestamp desc, rowid desc;"
 	} else {
 		if len(types) > 0 {
 			filter = " where " + typeFilterClause
@@ -78,8 +79,8 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 				args = append(args, a)
 			}
 		}
-		stm = "select serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc limit " + strconv.Itoa(limit) + ";"
-		cstm = "select Count(*) from notifications" + filter + " order by timestamp desc;"
+		stm = "select serializedNotification, timestamp, read from notifications" + filter + " order by timestamp desc, rowid desc limit " + strconv.Itoa(limit) + ";"
+		cstm = "select Count(*) from notifications" + filter + " order by timestamp desc, rowid desc;"
 	}
 
 	// Gather records

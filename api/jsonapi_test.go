@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -414,6 +415,125 @@ func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	runAPITestsWithSetup(t, apiTests{
 		{"POST", "/ob/releaseescrow", fmt.Sprintf(`{"orderId":"%s"}`, sale.OrderID), 400, anyResponseJSON},
 	}, dbSetup, nil)
+}
+
+func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
+	const sameTimestampsAreReturnedInReverse = `{
+    "notifications": [
+        {
+            "notification": {
+                "notificationId": "notif3",
+                "peerId": "somepeerid",
+                "type": "follow"
+            },
+            "read": false,
+						"timestamp": "1996-07-17T23:15:45Z",
+            "type": "follow"
+        },
+        {
+            "notification": {
+                "notificationId": "notif2",
+                "peerId": "somepeerid",
+                "type": "follow"
+            },
+            "read": false,
+						"timestamp": "1996-07-17T23:15:45Z",
+            "type": "follow"
+        },
+        {
+            "notification": {
+                "notificationId": "notif1",
+                "peerId": "somepeerid",
+                "type": "follow"
+            },
+            "read": false,
+						"timestamp": "1996-07-17T23:15:45Z",
+            "type": "follow"
+        }
+    ],
+    "total": 3,
+    "unread": 3
+}`
+
+	const sameTimestampsAreReturnedInReverseAndRespectOffsetID = `{
+    "notifications": [
+        {
+            "notification": {
+                "notificationId": "notif2",
+                "peerId": "somepeerid",
+                "type": "follow"
+            },
+            "read": false,
+            "timestamp": "1996-07-17T23:15:45Z",
+            "type": "follow"
+        },
+        {
+            "notification": {
+                "notificationId": "notif1",
+                "peerId": "somepeerid",
+                "type": "follow"
+            },
+            "read": false,
+            "timestamp": "1996-07-17T23:15:45Z",
+            "type": "follow"
+        }
+    ],
+    "total": 0,
+    "unread": 3
+}`
+	var (
+		createdAt = time.Unix(837645345, 0)
+		notif1    = &repo.Notification{
+			ID:           "notif1",
+			CreatedAt:    createdAt,
+			NotifierType: repo.NotifierTypeFollowNotification,
+			NotifierData: &repo.FollowNotification{
+				ID:     "notif1",
+				Type:   repo.NotifierTypeFollowNotification,
+				PeerId: "somepeerid",
+			},
+		}
+		notif2 = &repo.Notification{
+			ID:           "notif2",
+			CreatedAt:    createdAt,
+			NotifierType: repo.NotifierTypeFollowNotification,
+			NotifierData: &repo.FollowNotification{
+				ID:     "notif2",
+				Type:   repo.NotifierTypeFollowNotification,
+				PeerId: "somepeerid",
+			},
+		}
+		notif3 = &repo.Notification{
+			ID:           "notif3",
+			CreatedAt:    createdAt,
+			NotifierType: repo.NotifierTypeFollowNotification,
+			NotifierData: &repo.FollowNotification{
+				ID:     "notif3",
+				Type:   repo.NotifierTypeFollowNotification,
+				PeerId: "somepeerid",
+			},
+		}
+	)
+	dbSetup := func(testRepo *test.Repository) error {
+		for _, n := range []*repo.Notification{notif1, notif2, notif3} {
+			if err := testRepo.DB.Notifications().PutRecord(n); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	dbTeardown := func(testRepo *test.Repository) error {
+		for _, n := range []*repo.Notification{notif1, notif2, notif3} {
+			if err := testRepo.DB.Notifications().Delete(n.GetID()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/notifications?limit=-1", "", 200, sameTimestampsAreReturnedInReverse},
+		{"GET", "/ob/notifications?limit=-1&offsetId=notif3", "", 200, sameTimestampsAreReturnedInReverseAndRespectOffsetID},
+	}, dbSetup, dbTeardown)
 }
 
 // TODO: Make NewDisputeCaseRecord return a valid fixture for this valid case to work
