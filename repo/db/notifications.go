@@ -159,7 +159,10 @@ func (n *NotficationsDB) MarkAllAsRead() error {
 func (n *NotficationsDB) Delete(notifID string) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	n.ExecuteQuery("delete from notifications where notifID=?", notifID)
+	_, err := n.ExecuteQuery("delete from notifications where notifID=?", notifID)
+	if err != nil {
+		return fmt.Errorf("notifications: delete: %s", err.Error())
+	}
 	return nil
 }
 

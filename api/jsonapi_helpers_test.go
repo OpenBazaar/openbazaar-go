@@ -171,7 +171,7 @@ func executeAPITest(t *testing.T, test apiTest) {
 		if !reflect.DeepEqual(responseJSON, expectedJSON) {
 			fmt.Println("expected:", test.expectedResponseBody)
 			fmt.Println("actual:", string(respBody))
-			t.Fatal("Incorrect response")
+			t.Error("Incorrect response")
 		}
 	}
 }
