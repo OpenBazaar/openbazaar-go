@@ -188,23 +188,23 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         api_url = bob["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Bob")
+            raise TestFailure("OutOfInventoryTest - FAIL: Couldn't load order from Bob")
         resp = json.loads(r.text)
         if resp["state"] != "AWAITING_FULFILLMENT":
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob failed to set state correctly")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob failed to set state correctly")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Bob incorrectly saved as unfunded")
+            raise TestFailure("OutOfInventoryTest - FAIL: Bob incorrectly saved as unfunded")
 
         # check alice set state correctly
         api_url = alice["gateway_url"] + "ob/order/" + orderId
         r = requests.get(api_url)
         if r.status_code != 200:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Couldn't load order from Alice")
+            raise TestFailure("OutOfInventoryTest - FAIL: Couldn't load order from Alice")
         resp = json.loads(r.text)
         if resp["state"] != "AWAITING_FULFILLMENT":
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice failed to detect payment")
+            raise TestFailure("OutOfInventoryTest - FAIL: Alice failed to detect payment")
         if resp["funded"] == False:
-            raise TestFailure("PurchaseDirectOnlineTest - FAIL: Alice incorrectly saved as unfunded")
+            raise TestFailure("OutOfInventoryTest - FAIL: Alice incorrectly saved as unfunded")
 
         print("OutOfInventoryTest - PASS")
 
