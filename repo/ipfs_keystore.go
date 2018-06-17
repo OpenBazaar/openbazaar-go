@@ -4,28 +4,36 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"io/ioutil"
 	"os"
 	"path"
-	"sync"
+	"strings"
 	"time"
 
+	u "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
+	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
+	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/gogo/protobuf/proto"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
+	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipfsPath "github.com/ipfs/go-ipfs/path"
 )
 
 var (
-	getObjectFromIPFSCache   = map[string]getObjectFromIPFSCacheEntry{}
-	getObjectFromIPFSCacheMu = sync.Mutex{}
+	ErrInvalidCacheEntryType = errors.New("cache entry is not expected type")
+
+	CachedKeystoreEntryTime = time.Hour * 24 * 7
 )
 
-type getObjectFromIPFSCacheEntry struct {
-	bytes   []byte
-	created time.Time
+type CacheStore interface {
+	Get(ds.Key) (interface{}, error)
+	Put(ds.Key, interface{}) error
 }
 
 // PublishObjectToIPFS writes the given data to IPFS labeled as the given name
@@ -54,52 +62,94 @@ func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir 
 }
 
 // GetObjectFromIPFS gets the requested name from ipfs or the local cache
-func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen time.Duration) ([]byte, error) {
-	getObjectFromIPFSCacheMu.Lock()
-	defer getObjectFromIPFSCacheMu.Unlock()
-
-	fetchAndUpdateCache := func() ([]byte, error) {
-		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
+func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, name string) ([]byte, error) {
+	// loadFromIPNS retrieves the object by resolving the ipns name to the data
+	loadFromIPNS := func() ([]byte, error) {
+		root, err := ipfs.ResolveAltRoot(ctx, p, name, time.Minute)
 		if err != nil {
 			return nil, err
 		}
 
-		getObjectFromIPFSCache[getIPFSCacheKey(p, name)] = getObjectFromIPFSCacheEntry{
-			bytes:   objBytes,
-			created: time.Now(),
+		bytes, err := ipfs.Cat(ctx, root, time.Minute)
+		if err != nil {
+			return nil, err
 		}
 
-		return objBytes, nil
+		return bytes, nil
 	}
 
-	entry, ok := getObjectFromIPFSCache[getIPFSCacheKey(p, name)]
-	if !ok || entry.created.Add(maxCacheLen).Before(time.Now()) {
-		return fetchAndUpdateCache()
+	if cacheStore == nil {
+		return loadFromIPNS()
 	}
 
-	// Update cache in background after a successful read
+	// Check IPNS cache
+	hash, err := mh.FromB58String(p.Pretty())
+	if err != nil {
+		return nil, err
+	}
+
+	ipnsKey := ds.NewKey("/ipns/" + string(hash) + ":" + name)
+
+	val, err := cacheStore.Get(ipnsKey)
+	if err != nil {
+		return loadFromIPNS()
+	}
+
+	// Validate entry data and EOL
+	valBytes, ok := val.([]byte)
+	if !ok {
+		return nil, ErrInvalidCacheEntryType
+	}
+
+	entry := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(valBytes, entry)
+	if err != nil {
+		return nil, err
+	}
+
+	eol, ok := GetIPNSEntryEOL(entry)
+	if !ok || eol.Before(time.Now()) {
+		return loadFromIPNS()
+	}
+
+	// Load IPFS hash directly
+	ipfsHash, err := ipfsPath.ParsePath(string(entry.GetValue()))
+	if err != nil {
+		return nil, err
+	}
+	ipfsHashString := strings.TrimPrefix(ipfsHash.String(), "/ipfs/")
+
+	objectBytes, err := ipfs.Cat(ctx, ipfsHashString, time.Minute)
+	if err != nil {
+		return nil, err
+	}
+
+	// Pre-fetch latest data for next time
+	go loadFromIPNS()
+
+	// Update the entry EOL
 	go func() {
-		getObjectFromIPFSCacheMu.Lock()
-		defer getObjectFromIPFSCacheMu.Unlock()
-		fetchAndUpdateCache()
+		entry.Validity = []byte(u.FormatRFC3339(time.Now().Add(CachedKeystoreEntryTime)))
+		v, err := proto.Marshal(entry)
+		if err != nil {
+			return
+		}
+		cacheStore.Put(ipnsKey, v)
 	}()
 
-	return entry.bytes, nil
+	return objectBytes, nil
 }
 
-// fetchObjectFromIPFS gets the requested object from ipfs
-func fetchObjectFromIPFS(ctx commands.Context, p peer.ID, name string) ([]byte, error) {
-	root, err := ipfs.ResolveAltRoot(ctx, p, name, time.Minute)
-	if err != nil {
-		return nil, err
+// GetIPNSEntryEOL extracts the EOL from the entry
+func GetIPNSEntryEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
+	if e.GetValidityType() == ipnspb.IpnsEntry_EOL {
+		eol, err := u.ParseRFC3339(string(e.GetValidity()))
+		if err != nil {
+			return time.Time{}, false
+		}
+		return eol, true
 	}
-
-	bytes, err := ipfs.Cat(ctx, root, time.Minute)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+	return time.Time{}, false
 }
 
 func getIPFSCacheKey(p peer.ID, name string) string {

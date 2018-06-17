@@ -101,11 +101,11 @@ func (n *OpenBazaarNode) PublishInventory() error {
 // GetPublishedInventoryBytes gets a byte slice representing the given peer's
 // inventory that it published to IPFS
 func (n *OpenBazaarNode) GetPublishedInventoryBytes(p peer.ID, useCache bool) ([]byte, error) {
-	var cacheLength time.Duration
+	var cacheStore repo.CacheStore
 	if useCache {
-		cacheLength = ipfsInventoryCacheMaxDuration
+		cacheStore = n.IpfsNode.Repo.Datastore()
 	}
-	return repo.GetObjectFromIPFS(n.Context, p, "inventory", cacheLength)
+	return repo.GetObjectFromIPFS(n.Context, cacheStore, p, "inventory")
 }
 
 // GetPublishedInventoryBytesForSlug gets a byte slice representing the given
