@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"time"
 
@@ -105,6 +106,9 @@ func (n *OpenBazaarNode) GetPublishedInventoryBytes(p peer.ID, useCache bool) ([
 	if useCache {
 		cacheStore = n.IpfsNode.Repo.Datastore()
 	}
+
+	fmt.Println("usecache:", useCache)
+	fmt.Println("cacheStore:", cacheStore)
 	return repo.GetObjectFromIPFS(n.Context, cacheStore, p, "inventory")
 }
 

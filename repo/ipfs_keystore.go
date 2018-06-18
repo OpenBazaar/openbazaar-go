@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"io/ioutil"
 	"os"
@@ -65,6 +66,7 @@ func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir 
 func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, name string) ([]byte, error) {
 	// loadFromIPNS retrieves the object by resolving the ipns name to the data
 	loadFromIPNS := func() ([]byte, error) {
+		fmt.Println("staring loadFromIPNS")
 		root, err := ipfs.ResolveAltRoot(ctx, p, name, time.Minute)
 		if err != nil {
 			return nil, err
@@ -82,6 +84,8 @@ func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, n
 		return loadFromIPNS()
 	}
 
+	fmt.Println("fetching from cache...")
+
 	// Check IPNS cache
 	hash, err := mh.FromB58String(p.Pretty())
 	if err != nil {
@@ -89,11 +93,13 @@ func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, n
 	}
 
 	ipnsKey := ds.NewKey("/ipns/" + string(hash) + ":" + name)
-
 	val, err := cacheStore.Get(ipnsKey)
 	if err != nil {
+		fmt.Println("no ipns entry found")
 		return loadFromIPNS()
 	}
+
+	fmt.Println("ipns cache found")
 
 	// Validate entry data and EOL
 	valBytes, ok := val.([]byte)
@@ -107,10 +113,14 @@ func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, n
 		return nil, err
 	}
 
+	fmt.Println("checking EOL...")
 	eol, ok := GetIPNSEntryEOL(entry)
 	if !ok || eol.Before(time.Now()) {
+		fmt.Println("EOL invalid/expired")
 		return loadFromIPNS()
 	}
+
+	fmt.Println("ipns entry not expired")
 
 	// Load IPFS hash directly
 	ipfsHash, err := ipfsPath.ParsePath(string(entry.GetValue()))
@@ -123,6 +133,8 @@ func GetObjectFromIPFS(ctx commands.Context, cacheStore CacheStore, p peer.ID, n
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("loaded bytes:", string(objectBytes))
 
 	// Pre-fetch latest data for next time
 	go loadFromIPNS()
