@@ -9,6 +9,11 @@ import (
 	"github.com/op/go-logging"
 )
 
+const (
+	notifierTestingInterval = time.Duration(1) * time.Minute
+	notifierRegularInterval = time.Duration(10) * time.Minute
+)
+
 type recordAgingNotifier struct {
 	// PerformTask dependancies
 	datastore repo.Datastore
@@ -26,10 +31,17 @@ func (n *OpenBazaarNode) StartRecordAgingNotifier() {
 	n.RecordAgingNotifier = &recordAgingNotifier{
 		datastore:     n.Datastore,
 		broadcast:     n.Broadcast,
-		intervalDelay: time.Duration(10) * time.Minute,
+		intervalDelay: n.intervalDelay(),
 		logger:        logging.MustGetLogger("recordAgingNotifier"),
 	}
 	go n.RecordAgingNotifier.Run()
+}
+
+func (n *OpenBazaarNode) intervalDelay() time.Duration {
+	if n.TestnetEnable {
+		return notifierTestingInterval
+	}
+	return notifierRegularInterval
 }
 
 func (notifier *recordAgingNotifier) RunCount() int { return notifier.runCount }
