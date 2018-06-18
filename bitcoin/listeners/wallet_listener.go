@@ -2,9 +2,9 @@ package bitcoin
 
 import (
 	"encoding/hex"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
 type WalletListener struct {
@@ -19,8 +19,7 @@ func NewWalletListener(db repo.Datastore, broadcast chan repo.Notifier) *WalletL
 
 func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	if !cb.WatchOnly {
-		txid := hex.EncodeToString(cb.Txid)
-		metadata, _ := l.db.TxMetadata().Get(txid)
+		metadata, _ := l.db.TxMetadata().Get(cb.Txid)
 		status := "UNCONFIRMED"
 		confirmations := 0
 		if cb.Height > 0 {
@@ -32,7 +31,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 			return
 		}
 		n := repo.IncomingTransaction{
-			Txid:          ch.String(),
+			Txid:          cb.Txid,
 			Value:         cb.Value,
 			Address:       metadata.Address,
 			Status:        status,

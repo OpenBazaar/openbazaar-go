@@ -189,7 +189,7 @@ func (ts *TxStore) PopulateAdrs() error {
 
 // Ingest puts a tx into the DB atomically.  This can result in a
 // gain, a loss, or no result.  Gain or loss in satoshis is returned.
-func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
+func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (uint32, error) {
 	var hits uint32
 	var err error
 	// Tx has been OK'd by SPV; check tx sanity
@@ -238,7 +238,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 
 	// Iterate through all outputs of this tx, see if we gain
 	cachedSha := tx.TxHash()
-	cb := wallet.TransactionCallback{Txid: cachedSha.CloneBytes(), Height: height}
+	cb := wallet.TransactionCallback{Txid: cachedSha.String(), Height: height}
 	value := int64(0)
 	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
@@ -345,7 +345,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		shouldCallback := false
 		if err != nil {
 			cb.Value = value
-			txn.Timestamp = time.Now()
+			txn.Timestamp = timestamp
 			shouldCallback = true
 			var buf bytes.Buffer
 			tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
@@ -354,14 +354,15 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32) (uint32, error) {
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
-		if txn.Height <= 0 {
-			ts.Txns().UpdateHeight(tx.TxHash(), int(height))
+		if err == nil && txn.Height <= 0 {
+			ts.Txns().UpdateHeight(tx.TxHash(), int(height), txn.Timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
 				cb.Value = txn.Value
 				shouldCallback = true
 			}
 		}
+		cb.BlockTime = timestamp
 		if shouldCallback {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
@@ -385,7 +386,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(s.SpendTxid, -1)
+		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Now())
 		if err != nil {
 			return err
 		}
@@ -424,7 +425,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			}
 		}
 	}
-	ts.Txns().UpdateHeight(txid, -1)
+	ts.Txns().UpdateHeight(txid, -1, time.Now())
 	return nil
 }
 

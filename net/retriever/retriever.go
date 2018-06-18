@@ -388,7 +388,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 					log.Errorf("Error saving offline message %s to database: %s", addr, err.Error())
 				}
 			} else {
-				log.Errorf("Error serializing offline message %s for storage")
+				log.Errorf("Error serializing offline message %s for storage", addr)
 			}
 		} else if env.Message.MessageType == pb.Message_ORDER && resp != nil {
 			log.Errorf("Error processing ORDER message: %s, sending ERROR response", err.Error())

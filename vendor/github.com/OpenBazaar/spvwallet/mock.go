@@ -260,12 +260,13 @@ func (m *mockTxnStore) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	return txns, nil
 }
 
-func (m *mockTxnStore) UpdateHeight(txid chainhash.Hash, height int) error {
+func (m *mockTxnStore) UpdateHeight(txid chainhash.Hash, height int, timestamp time.Time) error {
 	txn, ok := m.txns[txid.String()]
 	if !ok {
 		return errors.New("Not found")
 	}
 	txn.Height = int32(height)
+	txn.Timestamp = timestamp
 	return nil
 }
 

@@ -45,7 +45,7 @@ func (s blockSorter) Swap(i, j int) {
 // Less returns whether the timstamp with index i should sort before the
 // timestamp with index j.  It is part of the sort.Interface implementation.
 func (s blockSorter) Less(i, j int) bool {
-	if s[i].header.Timestamp.Before(s[j].header.Timestamp) || s[i].header.Timestamp.Equal(s[j].header.Timestamp){
+	if s[i].header.Timestamp.Before(s[j].header.Timestamp) || s[i].header.Timestamp.Equal(s[j].header.Timestamp) {
 		return true
 	}
 	return false

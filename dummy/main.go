@@ -249,7 +249,7 @@ func newNode(repoPath string, db *db.SQLiteDatastore) (*core.OpenBazaarNode, err
 	val, ok := ival.([]byte)
 	if !ok {
 		log.Fatal("Key value is not a []byte.")
-		return nil, errors.New("Key value is not a []byte.")
+		return nil, errors.New("Key value is not a []byte")
 	}
 	dhtrec := new(recpb.Record)
 	proto.Unmarshal(val, dhtrec)
