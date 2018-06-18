@@ -144,7 +144,7 @@ func TestTxnsDB_UpdateHeight(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	err = txdb.UpdateHeight(tx.TxHash(), -1)
+	err = txdb.UpdateHeight(tx.TxHash(), -1, time.Now())
 	if err != nil {
 		t.Error(err)
 	}

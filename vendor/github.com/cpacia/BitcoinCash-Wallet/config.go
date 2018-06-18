@@ -1,6 +1,7 @@
 package bitcoincash
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/mitchellh/go-homedir"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type Config struct {
@@ -60,6 +60,9 @@ type Config struct {
 
 	// An exchange rate provider implementation for Bitcoin Cash
 	ExchangeRateProvider bitcoin.ExchangeRates
+
+	// A slice of additional items to add to the bloom filter
+	AdditionalFilters [][]byte
 }
 
 func NewDefaultConfig() *Config {

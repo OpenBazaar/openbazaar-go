@@ -15,20 +15,6 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         alice = self.nodes[0]
         bob = self.nodes[1]
 
-        # generate some coins and send them to bob
-        time.sleep(4)
-        api_url = bob["gateway_url"] + "wallet/address"
-        r = requests.get(api_url)
-        if r.status_code == 200:
-            resp = json.loads(r.text)
-            address = resp["address"]
-        elif r.status_code == 404:
-            raise TestFailure("OutOfInventoryTest - FAIL: Address endpoint not found")
-        else:
-            raise TestFailure("OutOfInventoryTest - FAIL: Unknown response")
-        self.send_bitcoin_cmd("sendtoaddress", address, 10)
-        time.sleep(20)
-
         # post profile for alice
         with open('testdata/profile.json') as profile_file:
             profile_json = json.load(profile_file, object_pairs_hook=OrderedDict)
@@ -49,7 +35,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         elif r.status_code != 200:
             resp = json.loads(r.text)
             raise TestFailure("OutOfInventoryTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
-        time.sleep(4)
+        time.sleep(20)
 
         # get listing hash
         api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings.json"
@@ -59,16 +45,22 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
-        # bob send order
-        with open('testdata/order_direct.json') as order_file:
-            order_json = json.load(order_file, object_pairs_hook=OrderedDict)
-        order_json["items"][0]["listingHash"] = listingId
-        api_url = bob["gateway_url"] + "ob/purchase"
-        r = requests.post(api_url, data=json.dumps(order_json, indent=4))
-        if r.status_code == 404:
-            raise TestFailure("OutOfInventoryTest - FAIL: Purchase post endpoint not found")
-        elif r.status_code == 200:
-            raise TestFailure("OutOfInventoryTest - FAIL: Purchase POST should have returned an error")
+        # bob fetch listing to cache
+        api_url = bob["gateway_url"] + "ipfs/" + listingId
+        requests.get(api_url)
+
+        # generate some coins and send them to bob
+        api_url = bob["gateway_url"] + "wallet/address"
+        r = requests.get(api_url)
+        if r.status_code == 200:
+            resp = json.loads(r.text)
+            address = resp["address"]
+        elif r.status_code == 404:
+            raise TestFailure("OutOfInventoryTest - FAIL: Address endpoint not found")
+        else:
+            raise TestFailure("OutOfInventoryTest - FAIL: Unknown response")
+        self.send_bitcoin_cmd("sendtoaddress", address, 10)
+        time.sleep(3)
 
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
@@ -186,7 +178,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         if r.status_code == 200:
             resp = json.loads(r.text)
             confirmed = int(resp["confirmed"])
-            # unconfirmed = int(resp["unconfirmed"])
+            #unconfirmed = int(resp["unconfirmed"])
             if confirmed <= 0:
                 raise TestFailure("OutOfInventoryTest - FAIL: Alice failed to receive the multisig payout")
         else:
@@ -215,6 +207,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
             raise TestFailure("OutOfInventoryTest - FAIL: Alice incorrectly saved as unfunded")
 
         print("OutOfInventoryTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running OutOfInventoryTest")

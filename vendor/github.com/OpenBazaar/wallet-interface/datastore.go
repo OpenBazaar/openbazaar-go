@@ -76,7 +76,7 @@ type Txns interface {
 	GetAll(includeWatchOnly bool) ([]Txn, error)
 
 	// Update the height of a transaction
-	UpdateHeight(txid chainhash.Hash, height int) error
+	UpdateHeight(txid chainhash.Hash, height int, timestamp time.Time) error
 
 	// Delete a transactions from the db
 	Delete(txid *chainhash.Hash) error

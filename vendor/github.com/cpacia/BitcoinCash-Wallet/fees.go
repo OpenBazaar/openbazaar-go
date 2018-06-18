@@ -1,10 +1,10 @@
 package bitcoincash
 
 import (
+	"github.com/OpenBazaar/openbazaar-go/bitcoin"
+	"github.com/OpenBazaar/wallet-interface"
 	"net/http"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 )
 
 type httpClient interface {
@@ -40,18 +40,18 @@ type FeeTarget int
 
 const (
 	EconomicTarget FeeTarget = 1
-	NormalTarget FeeTarget = 5
+	NormalTarget   FeeTarget = 5
 	PriorityTarget FeeTarget = 10
 )
 
 func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, exchangeRates bitcoin.ExchangeRates) *FeeProvider {
 	return &FeeProvider{
-		maxFee:      maxFee,
-		priorityFee: priorityFee,
-		normalFee:   normalFee,
-		economicFee: economicFee,
+		maxFee:        maxFee,
+		priorityFee:   priorityFee,
+		normalFee:     normalFee,
+		economicFee:   economicFee,
 		exchangeRates: exchangeRates,
-		cache:       new(feeCache),
+		cache:         new(feeCache),
 	}
 }
 
@@ -94,12 +94,11 @@ func (fp *FeeProvider) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 		target = NormalTarget
 	}
 
-	feePerByte := (((float64(target)/100) / rate) * 100000000) / 226
+	feePerByte := (((float64(target) / 100) / rate) * 100000000) / 226
 
 	if uint64(feePerByte) > fp.maxFee {
 		return fp.maxFee
 	}
-
 
 	return uint64(feePerByte)
 }

@@ -519,11 +519,11 @@ func (w *ZcashdWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.F
 	for k := range coinMap {
 		coins = append(coins, k)
 	}
-	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, scripts [][]byte, err error) {
+	inputSource := func(target btc.Amount) (total btc.Amount, inputs []*wire.TxIn, amounts []btc.Amount, scripts [][]byte, err error) {
 		coinSelector := coinset.MaxValueAgeCoinSelector{MaxInputs: 10000, MinChangeAmount: btc.Amount(0)}
 		coins, err := coinSelector.CoinSelect(target, coins)
 		if err != nil {
-			return total, inputs, scripts, wallet.ErrorInsuffientFunds
+			return total, inputs, []btc.Amount{}, scripts, wallet.ErrorInsuffientFunds
 		}
 		additionalPrevScripts = make(map[wire.OutPoint][]byte)
 		additionalKeysByAddress = make(map[string]*btc.WIF)
@@ -546,7 +546,7 @@ func (w *ZcashdWallet) buildTx(amount int64, addr btc.Address, feeLevel wallet.F
 			wif, _ := btc.NewWIF(privKey, w.params, true)
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
 		}
-		return total, inputs, scripts, nil
+		return total, inputs, []btc.Amount{}, scripts, nil
 	}
 
 	// Get the fee per kilobyte
