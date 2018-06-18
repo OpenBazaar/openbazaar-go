@@ -1,8 +1,6 @@
 package bitcoin
 
 import (
-	"encoding/hex"
-
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 )
@@ -25,10 +23,6 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 		if cb.Height > 0 {
 			status = "PENDING"
 			confirmations = 1
-		}
-		ch, err := chainhash.NewHash(cb.Txid)
-		if err != nil {
-			return
 		}
 		n := repo.IncomingTransaction{
 			Txid:          cb.Txid,
