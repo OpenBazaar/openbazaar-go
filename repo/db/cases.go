@@ -502,11 +502,15 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
 		}
-		if err := jsonpb.UnmarshalString(string(buyerContract), r.BuyerContract); err != nil {
-			return nil, fmt.Errorf("unmarshaling buyer contract: %s\n", err.Error())
+		if r.BuyerContract != nil {
+			if err := jsonpb.UnmarshalString(string(buyerContract), r.BuyerContract); err != nil {
+				return nil, fmt.Errorf("unmarshaling buyer contract: %s\n", err.Error())
+			}
 		}
-		if err := jsonpb.UnmarshalString(string(vendorContract), r.VendorContract); err != nil {
-			return nil, fmt.Errorf("unmarshaling vendor contract: %s\n", err.Error())
+		if r.VendorContract != nil {
+			if err := jsonpb.UnmarshalString(string(vendorContract), r.VendorContract); err != nil {
+				return nil, fmt.Errorf("unmarshaling vendor contract: %s\n", err.Error())
+			}
 		}
 		if isBuyerInitiated != 0 {
 			r.IsBuyerInitiated = true
