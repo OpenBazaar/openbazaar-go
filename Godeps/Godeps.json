@@ -4,6 +4,47 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/paulbellamy/zcash-light",
+			"Rev": "b39552270ce43790418820e7a23b0514cddb2ba0"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/golang-socketio",
+			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/golang-socketio/protocol",
+			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/golang-socketio/transport",
+			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/client",
+			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/client/transport",
+			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/keys",
+			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+		},
+		{
+			"ImportPath": "github.com/cevaris/ordered_map",
+			"Rev": "01ce2b16ad4f7522692d9af8337722216a1038bb"
+		},
+		{
+			"ImportPath": "github.com/d4l3k/messagediff",
+			"Comment": "v1.2.1-2-g3256e0b",
+			"Rev": "3256e0b48551fe33f3cbf93c47eca9e0a690f516"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/blake2b",
+			"Rev": "374053ea96cb300f8671b8d3b07edeeb06e203b4"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
 			"Rev": "28fae9038857d4a311f2b5e5c45c05b15ff78582"
 		},
