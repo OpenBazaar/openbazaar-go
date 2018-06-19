@@ -11,12 +11,12 @@ var (
 	BuyerDisputeTimeout_secondInterval = time.Duration(40*24) * time.Hour
 	BuyerDisputeTimeout_thirdInterval  = time.Duration(44*24) * time.Hour
 	BuyerDisputeTimeout_lastInterval   = time.Duration(45*24) * time.Hour
+	BuyerDisputeTimeout_totalDuration  = time.Duration(DisputeOptionTimeoutHours) * time.Hour
 
 	BuyerDisputeExpiry_firstInterval  = time.Duration(15*24) * time.Hour
 	BuyerDisputeExpiry_secondInterval = time.Duration(40*24) * time.Hour
 	BuyerDisputeExpiry_lastInterval   = time.Duration(44*24) * time.Hour
-
-	BuyerDisputeExpiry_totalDuration = time.Duration(DisputeTotalDurationHours) * time.Hour
+	BuyerDisputeExpiry_totalDuration  = time.Duration(DisputeTotalDurationHours) * time.Hour
 )
 
 // PurchaseRecord represents a one-to-one relationship with records
@@ -69,7 +69,7 @@ func (r *PurchaseRecord) BuildBuyerDisputeTimeoutLastNotification(createdAt time
 }
 
 func (r *PurchaseRecord) buildBuyerDisputeTimeout(interval time.Duration, createdAt time.Time) *Notification {
-	timeRemaining := BuyerDisputeTimeout_lastInterval - interval
+	timeRemaining := BuyerDisputeTimeout_totalDuration - interval
 	notification := &BuyerDisputeTimeout{
 		ID:        NewNotificationID(),
 		ExpiresIn: uint(timeRemaining.Seconds()),

@@ -1,6 +1,9 @@
 package repo
 
 const (
+	// Number of hours after purchase before a dispute may no longer be opened
+	DisputeOptionTimeoutHours int = 45 * 24
+	// Number of hours after dispute begins before it is resolved automatically
 	DisputeTotalDurationHours int = 45 * 24
 
 	NotifierTypeBuyerDisputeTimeout           NotificationType = "buyerDisputeTimeout"
