@@ -16,7 +16,7 @@ var (
 	BuyerDisputeExpiry_secondInterval = time.Duration(40*24) * time.Hour
 	BuyerDisputeExpiry_lastInterval   = time.Duration(44*24) * time.Hour
 
-	BuyerDisputeExpiry_totalDuration = time.Duration(45*24) * time.Hour
+	BuyerDisputeExpiry_totalDuration = time.Duration(DisputeTotalDurationHours) * time.Hour
 )
 
 // PurchaseRecord represents a one-to-one relationship with records
