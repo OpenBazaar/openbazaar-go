@@ -747,6 +747,10 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	if x.Testnet {
+		setTestmodeRecordAgingIntervals()
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:              ctx,
@@ -859,6 +863,26 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func setTestmodeRecordAgingIntervals() {
+	repo.VendorDisputeTimeout_lastInterval = time.Duration(5) * time.Minute
+
+	repo.ModeratorDisputeExpiry_firstInterval = time.Duration(1) * time.Minute
+	repo.ModeratorDisputeExpiry_secondInterval = time.Duration(3) * time.Minute
+	repo.ModeratorDisputeExpiry_thirdInterval = time.Duration(4) * time.Minute
+	repo.ModeratorDisputeExpiry_lastInterval = time.Duration(5) * time.Minute
+
+	repo.BuyerDisputeTimeout_firstInterval = time.Duration(1) * time.Minute
+	repo.BuyerDisputeTimeout_secondInterval = time.Duration(3) * time.Minute
+	repo.BuyerDisputeTimeout_thirdInterval = time.Duration(4) * time.Minute
+	repo.BuyerDisputeTimeout_lastInterval = time.Duration(5) * time.Minute
+	repo.BuyerDisputeTimeout_totalDuration = time.Duration(5) * time.Minute
+
+	repo.BuyerDisputeExpiry_firstInterval = time.Duration(1) * time.Minute
+	repo.BuyerDisputeExpiry_secondInterval = time.Duration(3) * time.Minute
+	repo.BuyerDisputeExpiry_lastInterval = time.Duration(4) * time.Minute
+	repo.BuyerDisputeExpiry_totalDuration = time.Duration(5) * time.Minute
 }
 
 // Prints the addresses of the host
