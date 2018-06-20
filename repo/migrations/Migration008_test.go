@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestMigration008(t *testing.T) {
@@ -49,7 +49,13 @@ func TestMigration008(t *testing.T) {
 		executedAt               = time.Now()
 	)
 
-	disputedPurchaseContractData, err := proto.Marshal(disputedPurchaseContract)
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	disputedPurchaseContractData, err := m.MarshalToString(disputedPurchaseContract)
 	if err != nil {
 		t.Fatal(err)
 	}
