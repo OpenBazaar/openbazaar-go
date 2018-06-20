@@ -819,6 +819,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
 			satoshis, err = n.getMarketPriceInSatoshis(l.Metadata.CoinType, itemQuantity)
+			satoshis += uint64(float32(satoshis) * l.Metadata.PriceModifier / 100.0)
 			itemQuantity = 1
 		} else {
 			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
