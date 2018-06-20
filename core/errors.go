@@ -59,6 +59,15 @@ func (err ErrOutOfInventory) Error() string {
 	return string(jsonBytes)
 }
 
+type ErrPriceModifierOutOfRange struct {
+	Min float64
+	Max float64
+}
+
+func (e ErrPriceModifierOutOfRange) Error() string {
+	return fmt.Sprintf("priceModifier out of range: [%.2f, %.2f]", e.Min, e.Max)
+}
+
 type ErrCryptocurrencyListingIllegalField string
 
 func (e ErrCryptocurrencyListingIllegalField) Error() string {
