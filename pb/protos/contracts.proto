@@ -42,6 +42,7 @@ message Listing {
         uint32 escrowTimeoutHours          = 8;
         string coinType                    = 9;
         uint32 coinDivisibility            = 10;
+        float priceModifier                = 11;
 
         enum ContractType {
             PHYSICAL_GOOD  = 0;
