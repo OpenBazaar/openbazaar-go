@@ -58,10 +58,8 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		}
 		return err
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return nil
+
+	return tx.Commit()
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {

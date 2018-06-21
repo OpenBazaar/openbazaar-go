@@ -86,8 +86,8 @@ func (s *SalesDB) Put(orderID string, contract pb.RicardianContract, state pb.Or
 		tx.Rollback()
 		return err
 	}
-	tx.Commit()
-	return nil
+
+	return tx.Commit()
 }
 
 func (s *SalesDB) MarkAsRead(orderID string) error {
