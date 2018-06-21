@@ -575,10 +575,10 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		checkFourtyDayPurchase_LastNotificationSeen       bool
 		checkFourtyFourDayPurchase_LastNotificationSeen   bool
 
-		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_firstInterval).Seconds())
-		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_secondInterval).Seconds())
-		thirdInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_lastInterval - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
-		lastInterval_ExpectedExpiresIn   = uint(0)
+		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_firstInterval).Seconds())
+		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_secondInterval).Seconds())
+		thirdInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
+		lastInterval_ExpectedExpiresIn   = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_lastInterval).Seconds())
 	)
 	for rows.Next() {
 		var (

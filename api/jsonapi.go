@@ -2177,17 +2177,16 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		fourtyFiveDaysInHours := 45 * 24
-		disputeDuration := time.Duration(fourtyFiveDaysInHours) * time.Hour
+		disputeDuration := time.Duration(repo.DisputeTotalDurationHours) * time.Hour
 
 		// Time hack until we can stub this more nicely in test env
 		if i.node.TestNetworkEnabled() || i.node.RegressionNetworkEnabled() {
 			disputeDuration = time.Duration(10) * time.Second
 		}
 
-		disputeTimeout := disputeStart.Add(disputeDuration)
-		if time.Now().Before(disputeTimeout) {
-			expiresIn := disputeTimeout.Sub(time.Now())
+		disputeExpiration := disputeStart.Add(disputeDuration)
+		if time.Now().Before(disputeExpiration) {
+			expiresIn := disputeExpiration.Sub(time.Now())
 			ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow can only be called when in dispute for %s or longer, expires in %s", disputeDuration.String(), expiresIn.String()))
 			return
 		}
