@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/paulbellamy/zcash-light",
-			"Rev": "b39552270ce43790418820e7a23b0514cddb2ba0"
+			"Rev": "3480b9611d7d93d532d71431da88314e1d67c7d6"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/golang-socketio",

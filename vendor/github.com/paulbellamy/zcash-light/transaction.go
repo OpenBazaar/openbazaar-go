@@ -656,11 +656,7 @@ func (o *Output) WriteTo(w io.Writer) (int64, error) {
 // SerializeSize returns the number of bytes it would take to serialize the
 // the transaction output.
 func (o *Output) SerializeSize() int {
-	return 8 + serializeScriptSize(o.ScriptPubKey)
-}
-
-func serializeScriptSize(script []byte) int {
-	return wire.VarIntSerializeSize(uint64(len(script) + len(script)))
+	return 8 + wire.VarIntSerializeSize(uint64(len(o.ScriptPubKey))) + len(o.ScriptPubKey)
 }
 
 func (o *Output) IsFoundersReward(params *chaincfg.Params) bool {

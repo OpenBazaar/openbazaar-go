@@ -4,11 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
@@ -150,7 +148,7 @@ func NewUnsignedTransaction(outputs []Output, feePerKb btc.Amount, fetchInputs I
 		targetAmount += btc.Amount(output.Value)
 	}
 
-	estimatedSize := EstimateSerializeSize(1, outputs, true, spvwallet.P2PKH)
+	estimatedSize := EstimateSerializeSize(1, outputs, true, P2PKH)
 	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
 
 	for {
@@ -162,7 +160,7 @@ func NewUnsignedTransaction(outputs []Output, feePerKb btc.Amount, fetchInputs I
 			return nil, errors.New("insufficient funds available to construct transaction")
 		}
 
-		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, spvwallet.P2PKH)
+		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, P2PKH)
 		maxRequiredFee := txrules.FeeForSerializeSize(feePerKb, maxSignedSize)
 		remainingAmount := inputAmount - targetAmount
 		if remainingAmount < maxRequiredFee {
@@ -182,12 +180,12 @@ func NewUnsignedTransaction(outputs []Output, feePerKb btc.Amount, fetchInputs I
 		}
 		changeAmount := inputAmount - targetAmount - maxRequiredFee
 		if changeAmount != 0 && !txrules.IsDustAmount(changeAmount,
-			spvwallet.P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
+			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
 			changeScript, err := fetchChange()
 			if err != nil {
 				return nil, err
 			}
-			if len(changeScript) > spvwallet.P2PKHPkScriptSize {
+			if len(changeScript) > P2PKHPkScriptSize {
 				return nil, errors.New("fee estimation requires change " +
 					"scripts no larger than P2PKH output scripts")
 			}
@@ -198,52 +196,4 @@ func NewUnsignedTransaction(outputs []Output, feePerKb btc.Amount, fetchInputs I
 
 		return unsignedTransaction, nil
 	}
-}
-
-// EstimateSerializeSize is reused from spvwallet and modified to be less btc-specific
-//
-// EstimateSerializeSize returns a worst case serialize size estimate for a
-// signed transaction that spends inputCount number of compressed P2PKH outputs
-// and contains each transaction output from txOuts.  The estimated size is
-// incremented for an additional P2PKH change output if addChangeOutput is true.
-//
-// TODO: Include joinsplits in the size estimate
-func EstimateSerializeSize(inputCount int, txOuts []Output, addChangeOutput bool, inputType spvwallet.InputType) int {
-	changeSize := 0
-	outputCount := len(txOuts)
-	if addChangeOutput {
-		changeSize = spvwallet.P2PKHOutputSize
-		outputCount++
-	}
-
-	var redeemScriptSize int
-	switch inputType {
-	case spvwallet.P2PKH:
-		redeemScriptSize = spvwallet.RedeemP2PKHInputSize
-	case spvwallet.P2SH_1of2_Multisig:
-		redeemScriptSize = spvwallet.RedeemP2SH1of2MultisigInputSize
-	case spvwallet.P2SH_2of3_Multisig:
-		redeemScriptSize = spvwallet.RedeemP2SH2of3MultisigInputSize
-	case spvwallet.P2SH_Multisig_Timelock_1Sig:
-		redeemScriptSize = spvwallet.RedeemP2SHMultisigTimelock1InputSize
-	case spvwallet.P2SH_Multisig_Timelock_2Sigs:
-		redeemScriptSize = spvwallet.RedeemP2SHMultisigTimelock2InputSize
-	}
-
-	// 10 additional bytes are for version, locktime, and segwit flags
-	return 10 + wire.VarIntSerializeSize(uint64(inputCount)) +
-		wire.VarIntSerializeSize(uint64(outputCount)) +
-		inputCount*redeemScriptSize +
-		SumOutputSerializeSizes(txOuts) +
-		changeSize
-}
-
-// SumOutputSerializeSizes is reused from spvwallet and modified to be less btc-specific
-//
-// SumOutputSerializeSizes sums up the serialized size of the supplied outputs.
-func SumOutputSerializeSizes(outputs []Output) (serializeSize int) {
-	for _, output := range outputs {
-		serializeSize += output.SerializeSize()
-	}
-	return serializeSize
 }

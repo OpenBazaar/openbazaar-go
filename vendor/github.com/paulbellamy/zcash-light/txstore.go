@@ -102,7 +102,7 @@ func (ts *TxStore) PopulateAdrs() error {
 
 // Ingest puts a tx into the DB atomically.  This can result in a
 // gain, a loss, or no result.  Gain or loss in satoshis is returned.
-func (ts *TxStore) Ingest(tx *Transaction, raw []byte, height int32) (uint32, error) {
+func (ts *TxStore) Ingest(tx *Transaction, raw []byte, height int32, timestamp time.Time) (uint32, error) {
 	var hits uint32
 	var err error
 	if err := tx.Validate(ts.params); err != nil {
@@ -254,14 +254,14 @@ func (ts *TxStore) Ingest(tx *Transaction, raw []byte, height int32) (uint32, er
 		shouldCallback := false
 		if err != nil {
 			cb.Value = value
-			txn.Timestamp = time.Now()
+			txn.Timestamp = timestamp
 			shouldCallback = true
 			ts.Txns().Put(raw, tx.TxHash().String(), int(value), int(height), txn.Timestamp, hits == 0)
 			ts.txids[tx.TxHash().String()] = height
 		}
 		// Let's check the height before committing so we don't allow rogue peers to send us a lose
 		// tx that resets our height to zero.
-		if txn.Height <= 0 {
+		if err == nil && txn.Height <= 0 {
 			ts.Txns().UpdateHeight(tx.TxHash(), int(height), txn.Timestamp)
 			ts.txids[tx.TxHash().String()] = height
 			if height > 0 {
@@ -269,6 +269,7 @@ func (ts *TxStore) Ingest(tx *Transaction, raw []byte, height int32) (uint32, er
 				shouldCallback = true
 			}
 		}
+		cb.BlockTime = timestamp
 		if shouldCallback {
 			// Callback on listeners
 			for _, listener := range ts.listeners {
@@ -292,7 +293,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 		if err != nil {
 			return err
 		}
-		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Time{})
+		err = ts.Txns().UpdateHeight(s.SpendTxid, -1, time.Now())
 		if err != nil {
 			return err
 		}
@@ -331,7 +332,7 @@ func (ts *TxStore) markAsDead(txid chainhash.Hash) error {
 			}
 		}
 	}
-	ts.Txns().UpdateHeight(txid, -1, time.Time{})
+	ts.Txns().UpdateHeight(txid, -1, time.Now())
 	return nil
 }
 

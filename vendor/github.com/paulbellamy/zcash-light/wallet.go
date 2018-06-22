@@ -4,12 +4,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/client"
 	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -51,6 +51,15 @@ type Config struct {
 	Proxy    proxy.Dialer
 }
 
+// MasterKeys generates the master private and public keys for this mnemonic
+// and network params
+func (c Config) MasterKeys() (priv, pub *hd.ExtendedKey) {
+	seed := b39.NewSeed(c.Mnemonic, "")
+	priv, _ = hd.NewMaster(seed, c.Params)
+	pub, _ = priv.Neuter()
+	return priv, pub
+}
+
 // Stubbable for testing
 var (
 	newInsightClient = func(url string, proxyDialer proxy.Dialer) (InsightClient, error) {
@@ -81,9 +90,7 @@ type InsightClient interface {
 }
 
 func NewWallet(config Config) (*Wallet, error) {
-	seed := b39.NewSeed(config.Mnemonic, "")
-	mPrivKey, _ := hd.NewMaster(seed, config.Params)
-	mPubKey, _ := mPrivKey.Neuter()
+	mPrivKey, mPubKey := config.MasterKeys()
 	keyManager, err := keys.NewKeyManager(config.DB.Keys(), config.Params, mPrivKey, wallet.Zcash, KeyToAddress)
 	if err != nil {
 		return nil, fmt.Errorf("error initializing key manager: %v", err)
@@ -138,8 +145,8 @@ func (w *Wallet) MainNetworkEnabled() bool {
 
 func (w *Wallet) Start() {
 	go func() {
-		w.subscribeToAllAddresses()
 		w.loadInitialTransactions()
+		w.subscribeToAllAddresses()
 		go w.watchTransactions()
 		close(w.initChan)
 	}()
@@ -154,8 +161,97 @@ func (w *Wallet) onTxn(txn client.Transaction) error {
 	if err := tx.UnmarshalBinary(raw); err != nil {
 		return err
 	}
-	_, err = w.txStore.Ingest(&tx, raw, int32(txn.BlockHeight))
+	_, err = w.txStore.Ingest(&tx, raw, int32(txn.BlockHeight), time.Unix(txn.BlockTime, 0))
 	return err
+}
+
+type byBlockTime []client.Transaction
+
+func (a byBlockTime) Len() int           { return len(a) }
+func (a byBlockTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byBlockTime) Less(i, j int) bool { return a[i].BlockTime < a[j].BlockTime }
+
+// loadInitialTransactions crawls through the keypaths loading transactions
+// until it stops finding transactions within the lookahead window.
+func (w *Wallet) loadInitialTransactions() {
+	// load transactions for watched scripts. Easy.
+	scripts, _ := w.DB.WatchedScripts().GetAll()
+	var scriptAddrs []btc.Address
+	for _, script := range scripts {
+		if addr, err := w.ScriptToAddress(script); err == nil {
+			scriptAddrs = append(scriptAddrs, addr)
+		}
+	}
+	if _, err := w.loadTransactionsForAddrs(scriptAddrs); err != nil {
+		log.Errorf("error loading watched script transactions: %v", err)
+		return
+	}
+
+	// crawl through the lookahead window looking for new transactions
+	known := map[string]bool{}
+	loadNewKeys := func() ([]btc.Address, error) {
+		var newAddrs []btc.Address
+		for _, k := range w.keyManager.GetKeys() {
+			addr, err := KeyToAddress(k, w.Params())
+			if err != nil {
+				return nil, err
+			}
+			// If it has not already been queried
+			strAddr := addr.String()
+			if _, queried := known[strAddr]; !queried {
+				newAddrs = append(newAddrs, addr)
+			}
+			known[strAddr] = true
+		}
+		return newAddrs, nil
+	}
+	for {
+		addrs, err := loadNewKeys()
+		if err != nil {
+			log.Errorf("error loading keys: %v", err)
+			return
+		}
+		// we didn't find new keys, we're done
+		if len(addrs) <= 0 {
+			break
+		}
+
+		// loading txns will push the lookahead window
+		// Note: Here we assume that keys are only used in the order returned by
+		// `loadNewKeys`. This is because of the bug where txns must be loaded in
+		// order.
+		n, err := w.loadTransactionsForAddrs(addrs)
+		if err != nil {
+			log.Errorf("error loading transactions: %v", err)
+			return
+		}
+		// No new transactions. We must be at the end of used keys.
+		if n <= 0 {
+			break
+		}
+	}
+
+}
+
+func (w *Wallet) loadTransactionsForAddrs(addrs []btc.Address) (int, error) {
+	if len(addrs) <= 0 {
+		return 0, nil
+	}
+	// load transactions for new addrs
+	txns, err := w.insight.GetTransactions(addrs)
+	if err != nil {
+		return 0, err
+	}
+
+	// sort and load transactions
+	// TODO: Bug. If txns are loaded out of order stxos are never calculated.
+	sort.Sort(byBlockTime(txns))
+	for _, txn := range txns {
+		if err := w.onTxn(txn); err != nil {
+			return 0, err
+		}
+	}
+	return len(txns), nil
 }
 
 func (w *Wallet) subscribeToAllAddresses() {
@@ -169,20 +265,6 @@ func (w *Wallet) subscribeToAllAddresses() {
 	for _, script := range scripts {
 		if addr, err := w.ScriptToAddress(script); err == nil {
 			w.addWatchedAddr(addr)
-		}
-	}
-}
-
-func (w *Wallet) loadInitialTransactions() {
-	txns, err := w.insight.GetTransactions(w.allWatchedAddrs())
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	for _, txn := range txns {
-		if err := w.onTxn(txn); err != nil {
-			log.Error(err)
-			return
 		}
 	}
 }
@@ -373,7 +455,7 @@ func (w *Wallet) broadcastTx(tx *Transaction) (*chainhash.Hash, error) {
 	}
 
 	// Our own tx; don't keep track of false positives
-	if _, err := w.txStore.Ingest(tx, b, 0); err != nil {
+	if _, err := w.txStore.Ingest(tx, b, 0, time.Now()); err != nil {
 		return nil, err
 	}
 
@@ -490,7 +572,7 @@ func (w *Wallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
 			continue
 		}
 
-		c := spvwallet.NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(u.Value), int64(tipHeight)-int64(u.AtHeight), u.ScriptPubkey)
+		c := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btc.Amount(u.Value), int64(tipHeight)-int64(u.AtHeight), u.ScriptPubkey)
 
 		addr, err := w.ScriptToAddress(u.ScriptPubkey)
 		if err != nil {
@@ -505,6 +587,10 @@ func (w *Wallet) gatherCoins() (map[coinset.Coin]*hd.ExtendedKey, error) {
 	return m, nil
 }
 
+var BumpFeeAlreadyConfirmedError = errors.New("Transaction is confirmed, cannot bump fee")
+var BumpFeeTransactionDeadError = errors.New("Cannot bump fee of dead transaction")
+var BumpFeeNotFoundError = errors.New("Transaction either doesn't exist or has already been spent")
+
 func (w *Wallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	<-w.initChan
 	tipHeight, _ := w.ChainTip()
@@ -516,7 +602,7 @@ func (w *Wallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 		return nil, fmt.Errorf("not found")
 	}
 	if tx.Height <= 0 || tx.Height > int32(tipHeight) {
-		return nil, spvwallet.BumpFeeAlreadyConfirmedError
+		return nil, BumpFeeAlreadyConfirmedError
 	}
 	unspent, err := w.DB.Utxos().GetAll()
 	if err != nil {
@@ -525,7 +611,7 @@ func (w *Wallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 	for _, u := range unspent {
 		if u.Op.Hash.String() == txid.String() {
 			if u.AtHeight > 0 && u.AtHeight < int32(tipHeight) {
-				return nil, spvwallet.BumpFeeAlreadyConfirmedError
+				return nil, BumpFeeAlreadyConfirmedError
 			}
 			addr, err := w.ScriptToAddress(u.ScriptPubkey)
 			if err != nil {
@@ -543,7 +629,7 @@ func (w *Wallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 
 		}
 	}
-	return nil, spvwallet.BumpFeeNotFoundError
+	return nil, BumpFeeNotFoundError
 }
 
 // Get the current fee per byte
@@ -574,12 +660,11 @@ func (w *Wallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 
 // Calculates the estimated size of the transaction and returns the total fee for the given feePerByte
 func (w *Wallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
-	tx := wire.NewMsgTx(wire.TxVersion)
+	var outputs []Output
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
-		tx.TxOut = append(tx.TxOut, output)
+		outputs = append(outputs, Output{Value: out.Value, ScriptPubKey: out.ScriptPubKey})
 	}
-	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
+	estimatedSize := EstimateSerializeSize(len(ins), outputs, false, P2PKH)
 	fee := estimatedSize * int(feePerByte)
 	return uint64(fee)
 }
@@ -646,9 +731,9 @@ func (w *Wallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd
 	}
 	out := Output{Value: val, ScriptPubKey: script}
 
-	txType := spvwallet.P2PKH
+	txType := P2PKH
 	if redeemScript != nil {
-		txType = spvwallet.P2SH_1of2_Multisig
+		txType = P2SH_1of2_Multisig
 	}
 
 	estimatedSize := EstimateSerializeSize(len(utxos), []Output{out}, false, txType)
@@ -734,7 +819,7 @@ func (w *Wallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs []w
 	}
 
 	// Subtract fee
-	estimatedSize := EstimateSerializeSize(len(ins), tx.Outputs, false, spvwallet.P2SH_2of3_Multisig)
+	estimatedSize := EstimateSerializeSize(len(ins), tx.Outputs, false, P2SH_2of3_Multisig)
 	fee := estimatedSize * int(feePerByte)
 	feePerOutput := fee / len(tx.Outputs)
 	for _, output := range tx.Outputs {
@@ -791,7 +876,7 @@ func (w *Wallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Transact
 	}
 
 	// Subtract fee
-	estimatedSize := EstimateSerializeSize(len(ins), tx.Outputs, false, spvwallet.P2SH_2of3_Multisig)
+	estimatedSize := EstimateSerializeSize(len(ins), tx.Outputs, false, P2SH_2of3_Multisig)
 	fee := estimatedSize * int(feePerByte)
 	feePerOutput := fee / len(tx.Outputs)
 	for _, output := range tx.Outputs {
