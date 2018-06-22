@@ -40,15 +40,15 @@ type Convert struct {
 
 func (x *Convert) Execute(args []string) error {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Please specify the cryptocurrency you wish to convert to. Examples:\nopenbazaar-go convert bitcoin\nopenbazaar-go convert bitcoincash\nopenbazaar-go convert zcash /path/to/zcashd\n")
+		fmt.Fprintf(os.Stderr, "Please specify the cryptocurrency you wish to convert to. Examples:\nopenbazaar-go convert bitcoin\nopenbazaar-go convert bitcoincash\nopenbazaar-go convert zcash /path/to/zcashd\nopenbazaar-go convert zcash-light\n")
 		return nil
 	}
 	if strings.ToLower(args[0]) == "zcash" && len(args) == 1 {
 		fmt.Fprintf(os.Stderr, "When converting to zcash please specify the path to the zcash binary. Example:\nopenbazaar-go convert zcash /path/to/zcashd\n")
 		return nil
 	}
-	if !(strings.ToLower(args[0]) == "bitcoin" || strings.ToLower(args[0]) == "bitcoincash" || strings.ToLower(args[0]) == "zcash") {
-		fmt.Fprintf(os.Stderr, "Unknown currency type: please enter either bitcoin, bitcoincash, or zcash.\n")
+	if !(strings.ToLower(args[0]) == "bitcoin" || strings.ToLower(args[0]) == "bitcoincash" || strings.ToLower(args[0]) == "zcash" || strings.ToLower(args[0]) == "zcash-light") {
+		fmt.Fprintf(os.Stderr, "Unknown currency type: please enter either bitcoin, bitcoincash, zcash, or zcash-light.\n")
 		return nil
 	}
 
@@ -67,6 +67,10 @@ func (x *Convert) Execute(args []string) error {
 	case "zcash":
 		str = "ZCash"
 		cfgtype = "zcashd"
+		currencyCode = "ZEC"
+	case "zcash-light":
+		str = "ZCash"
+		cfgtype = "zcash-light"
 		currencyCode = "ZEC"
 	}
 

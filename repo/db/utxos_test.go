@@ -88,6 +88,21 @@ func TestUtxoGetAll(t *testing.T) {
 	}
 }
 
+func TestUtxoGetAllEmpty(t *testing.T) {
+	conn, _ := sql.Open("sqlite3", ":memory:")
+	initDatabaseTables(conn, "")
+	emptyDB := NewUnspentTransactionStore(conn, new(sync.Mutex))
+	defer conn.Close()
+
+	utxos, err := emptyDB.GetAll()
+	if err != nil {
+		t.Error(err)
+	}
+	if len(utxos) != 0 {
+		t.Errorf("Utxo db returned unexpected utxos: %v", utxos)
+	}
+}
+
 func TestSetWatchOnlyUtxo(t *testing.T) {
 	err := uxdb.Put(utxo)
 	if err != nil {
