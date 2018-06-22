@@ -21,15 +21,15 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client",
-			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+			"Rev": "394e24ee3cb9284fafd964a33c0c38297c43d2cb"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client/transport",
-			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+			"Rev": "394e24ee3cb9284fafd964a33c0c38297c43d2cb"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/keys",
-			"Rev": "1e02fb44af238c17247fa61f1811db27a6104f5d"
+			"Rev": "394e24ee3cb9284fafd964a33c0c38297c43d2cb"
 		},
 		{
 			"ImportPath": "github.com/cevaris/ordered_map",

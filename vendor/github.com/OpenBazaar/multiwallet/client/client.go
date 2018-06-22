@@ -6,14 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/golang-socketio"
-	"github.com/OpenBazaar/golang-socketio/protocol"
-	"github.com/OpenBazaar/multiwallet/client/transport"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil"
-	"github.com/op/go-logging"
-	"golang.org/x/net/proxy"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -21,6 +13,14 @@ import (
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/OpenBazaar/golang-socketio"
+	"github.com/OpenBazaar/golang-socketio/protocol"
+	"github.com/OpenBazaar/multiwallet/client/transport"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcutil"
+	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("client")
@@ -89,15 +89,15 @@ func (i *InsightClient) Close() {
 	i.socketClient.Close()
 }
 
-func (i *InsightClient) doRequest(endpoint, method string, body io.Reader, query url.Values) (*http.Response, error) {
+func (i *InsightClient) doRequest(endpoint, method string, body []byte, query url.Values) (*http.Response, error) {
 	requestUrl := i.apiUrl
 	requestUrl.Path = path.Join(i.apiUrl.Path, endpoint)
-	req, err := http.NewRequest(method, requestUrl.String(), body)
+	req, err := http.NewRequest(method, requestUrl.String(), bytes.NewReader(body))
 	if query != nil {
 		req.URL.RawQuery = query.Encode()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("creating request: %s\n", err)
+		return nil, fmt.Errorf("creating request: %s", err)
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -107,13 +107,16 @@ func (i *InsightClient) doRequest(endpoint, method string, body io.Reader, query
 	}
 	// Try again if for some reason it returned a bad request
 	if resp.StatusCode == http.StatusBadRequest {
+		// Reset the body so we can read it again.
+		req.Body = ioutil.NopCloser(bytes.NewReader(body))
 		resp, err = i.httpClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status not ok: %s\n", resp.Status)
+		respBody, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("status not ok: %s, body: %s", resp.Status, string(respBody))
 	}
 	return resp, nil
 }
@@ -131,7 +134,7 @@ func (i *InsightClient) GetInfo() (*Info, error) {
 	stat := new(Status)
 	defer resp.Body.Close()
 	if err = decoder.Decode(stat); err != nil {
-		return nil, fmt.Errorf("error decoding status: %s\n", err)
+		return nil, fmt.Errorf("error decoding status: %s", err)
 	}
 	info := stat.Info
 	f, err := toFloat(stat.Info.RelayFeeIface)
@@ -156,7 +159,7 @@ func (i *InsightClient) GetTransaction(txid string) (*Transaction, error) {
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	if err = decoder.Decode(tx); err != nil {
-		return nil, fmt.Errorf("error decoding transactions: %s\n", err)
+		return nil, fmt.Errorf("error decoding transactions: %s", err)
 	}
 	for n, in := range tx.Inputs {
 		f, err := toFloat(in.ValueIface)
@@ -183,7 +186,7 @@ func (i *InsightClient) GetRawTransaction(txid string) ([]byte, error) {
 	defer resp.Body.Close()
 	tx := new(RawTxResponse)
 	if err = json.NewDecoder(resp.Body).Decode(tx); err != nil {
-		return nil, fmt.Errorf("error decoding transactions: %s\n", err)
+		return nil, fmt.Errorf("error decoding transactions: %s", err)
 	}
 	return hex.DecodeString(tx.RawTx)
 }
@@ -227,7 +230,7 @@ func (i *InsightClient) getTransactions(addrs []btcutil.Address, from, to int) (
 	if err != nil {
 		return nil, err
 	}
-	resp, err := i.doRequest("addrs/txs", http.MethodPost, bytes.NewReader(b), nil)
+	resp, err := i.doRequest("addrs/txs", http.MethodPost, b, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +238,7 @@ func (i *InsightClient) getTransactions(addrs []btcutil.Address, from, to int) (
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	if err = decoder.Decode(tl); err != nil {
-		return nil, fmt.Errorf("error decoding transaction list: %s\n", err)
+		return nil, fmt.Errorf("error decoding transaction list: %s", err)
 	}
 	for z, tx := range tl.Items {
 		for n, in := range tx.Inputs {
@@ -274,7 +277,7 @@ func (i *InsightClient) GetUtxos(addrs []btcutil.Address) ([]Utxo, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := i.doRequest("addrs/utxo", http.MethodPost, bytes.NewReader(b), nil)
+	resp, err := i.doRequest("addrs/utxo", http.MethodPost, b, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +285,7 @@ func (i *InsightClient) GetUtxos(addrs []btcutil.Address) ([]Utxo, error) {
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	if err = decoder.Decode(&utxos); err != nil {
-		return nil, fmt.Errorf("error decoding utxo list: %s\n", err)
+		return nil, fmt.Errorf("error decoding utxo list: %s", err)
 	}
 	for z, u := range utxos {
 		f, err := toFloat(u.AmountIface)
@@ -353,13 +356,13 @@ func (i *InsightClient) Broadcast(tx []byte) (string, error) {
 	t := RawTx{txHex}
 	txJson, err := json.Marshal(&t)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error encoding tx: %s", err)
 	}
-	resp, err := i.doRequest("tx/send", http.MethodPost, bytes.NewBuffer(txJson), nil)
-	decoder := json.NewDecoder(resp.Body)
-
-	b, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(b))
+	resp, err := i.doRequest("tx/send", http.MethodPost, txJson, nil)
+	if err != nil {
+		return "", fmt.Errorf("error broadcasting tx: %s", err)
+	}
+	defer resp.Body.Close()
 
 	type Txid struct {
 		Result string `json:"result"`
@@ -367,10 +370,9 @@ func (i *InsightClient) Broadcast(tx []byte) (string, error) {
 	type Response struct {
 		Txid Txid `json:"txid"`
 	}
-	defer resp.Body.Close()
 	rs := new(Response)
-	if err = decoder.Decode(rs); err != nil {
-		return "", fmt.Errorf("error decoding txid: %s\n", err)
+	if err = json.NewDecoder(resp.Body).Decode(rs); err != nil {
+		return "", fmt.Errorf("error decoding txid: %s", err)
 	}
 	return rs.Txid.Result, nil
 }
@@ -388,7 +390,7 @@ func (i *InsightClient) GetBestBlock() (*Block, error) {
 	sl := new(BlockList)
 	defer resp.Body.Close()
 	if err = decoder.Decode(sl); err != nil {
-		return nil, fmt.Errorf("error decoding block list: %s\n", err)
+		return nil, fmt.Errorf("error decoding block list: %s", err)
 	}
 	if len(sl.Blocks) != 2 {
 		return nil, fmt.Errorf("API returned incorrect number of block summaries")
@@ -411,7 +413,7 @@ func (i *InsightClient) GetBlocksBefore(to time.Time, limit int) (*BlockList, er
 	decoder := json.NewDecoder(resp.Body)
 	defer resp.Body.Close()
 	if err = decoder.Decode(list); err != nil {
-		return nil, fmt.Errorf("error decoding block list: %s\n", err)
+		return nil, fmt.Errorf("error decoding block list: %s", err)
 	}
 	return list, nil
 }
@@ -426,7 +428,7 @@ func toFloat(i interface{}) (float64, error) {
 		s := i.(string)
 		f, err := strconv.ParseFloat(s, 64)
 		if err != nil {
-			return 0, fmt.Errorf("error parsing value float: %s\n", err)
+			return 0, fmt.Errorf("error parsing value float: %s", err)
 		}
 		return f, nil
 	} else {
@@ -442,7 +444,7 @@ func (i *InsightClient) EstimateFee(nbBlocks int) (int, error) {
 	data := map[int]float64{}
 	defer resp.Body.Close()
 	if err = json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return 0, fmt.Errorf("error decoding fee estimate: %s\n", err)
+		return 0, fmt.Errorf("error decoding fee estimate: %s", err)
 	}
 	return int(data[nbBlocks] * 1e8), nil
 }
