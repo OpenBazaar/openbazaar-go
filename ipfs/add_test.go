@@ -1,6 +1,7 @@
 package ipfs
 
 import (
+	"github.com/OpenBazaar/go-ipfs/core/mock"
 	"io/ioutil"
 	"os"
 	"path"
@@ -25,11 +26,11 @@ func teardown() {
 }
 
 func TestAddFile(t *testing.T) {
-	ctx, err := MockCmdsCtx()
+	n, err := coremock.NewMockNode()
 	if err != nil {
 		t.Error(err)
 	}
-	hash, err := AddFile(ctx, path.Join("./", "root", "test"))
+	hash, err := AddFile(n, path.Join("./", "root", "test"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,11 +40,11 @@ func TestAddFile(t *testing.T) {
 }
 
 func TestAddDirectory(t *testing.T) {
-	ctx, err := MockCmdsCtx()
+	n, err := coremock.NewMockNode()
 	if err != nil {
 		t.Error(err)
 	}
-	root, err := AddDirectory(ctx, path.Join("./", "root"))
+	root, err := AddDirectory(n, path.Join("./", "root"))
 	if err != nil {
 		t.Error(err)
 	}
