@@ -7,42 +7,33 @@ import (
 	"fmt"
 	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
-	coreCmds "github.com/ipfs/go-ipfs/core/commands"
 	"github.com/ipfs/go-ipfs/namesys"
 	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
-	dshelp "github.com/ipfs/go-ipfs/thirdparty/ds-help"
-	"gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
-	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+	"github.com/op/go-logging"
+	dhtpb "gx/ipfs/QmPWjVzxHeJdrjp4Jr2R2sPxBrMbBgGPWQtKwCKHHCBF7x/go-libp2p-record/pb"
+	"gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	dhtpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
 	"time"
 )
+
+var log = logging.MustGetLogger("ipfs")
 
 var pubErr = errors.New(`Name publish failed`)
 
 // Publish a signed IPNS record to our Peer ID
-func Publish(ctx commands.Context, hash string) (string, error) {
-	args := []string{"name", "publish", "/ipfs/" + hash}
-	req, cmd, err := NewRequest(ctx, args)
-	if err != nil {
-		return "", err
+func Publish(n *core.IpfsNode, hash string) error {
+	err := n.Namesys.Publish(context.Background(), n.PrivateKey, path.FromString("/ipfs/"+hash))
+	if err == nil {
+		log.Infof("Published %s to IPNS", hash)
+		return nil
+	} else {
+		return pubErr
 	}
-	res := commands.NewResponse(req)
-	cmd.Run(req, res)
-	resp := res.Output()
-	if res.Error() != nil {
-		log.Error(res.Error())
-		return "", res.Error()
-	}
-	returnedVal := resp.(*coreCmds.IpnsEntry).Value
-	if returnedVal != "/ipfs/"+hash {
-		return "", pubErr
-	}
-	log.Infof("Published %s to IPNS", hash)
-	return returnedVal, nil
 }
 
 // Publish another IPFS record at /ipns/<peerID>:<altRoot>

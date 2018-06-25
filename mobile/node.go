@@ -9,8 +9,9 @@ import (
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	manet "gx/ipfs/QmX3U3YXCQ6UYBxq2LVWF8dARS1hPUTEYLrSx654Qyxyw6/go-multiaddr-net"
-	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
+	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
@@ -37,19 +38,17 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
-	"github.com/ipfs/go-ipfs/thirdparty/ds-help"
+	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
-	routing "gx/ipfs/QmPR2JzfKd9poHx9XBhzoFeBBC31ZM3W5iUPKJZWyaoZZm/go-libp2p-routing"
-	dht "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht/util"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
+	recpb "gx/ipfs/QmPWjVzxHeJdrjp4Jr2R2sPxBrMbBgGPWQtKwCKHHCBF7x/go-libp2p-record/pb"
+	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
+	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
+	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
-	recpb "gx/ipfs/QmbxkgUceEcuSZ4ZdBA3x74VUDSSYjHYmmeEqkjxbtZ6Jg/go-libp2p-record/pb"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -68,7 +67,7 @@ type Node struct {
 
 func NewNode(config NodeConfig) (*Node, error) {
 
-	repoLockFile := filepath.Join(config.RepoPath, lockfile.LockFile)
+	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 
 	// Logging
@@ -380,7 +379,7 @@ func (n *Node) Start() error {
 func (n *Node) Stop() error {
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
-	repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
+	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 	core.Node.Wallet.Close()
 	core.Node.IpfsNode.Close()
@@ -446,9 +445,11 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config sc
 
 var DHTClientOption ipfscore.RoutingOption = constructClientDHTRouting
 
-func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ipfsrepo.Datastore) (routing.IpfsRouting, error) {
+const IpnsValidatorTag = "ipns"
+
+func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
 	dhtRouting := dht.NewDHTClient(ctx, host, dstore)
-	dhtRouting.Validator[ipfscore.IpnsValidatorTag] = namesys.IpnsRecordValidator
-	dhtRouting.Selector[ipfscore.IpnsValidatorTag] = namesys.IpnsSelectorFunc
+	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
+	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
 	return dhtRouting, nil
 }

@@ -2,15 +2,17 @@ package ipfs
 
 import (
 	"context"
-	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/merkledag"
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"sync"
 	"time"
 )
 
 // This function takes a Cid directory object and walks it returning each linked cid in the graph
-func FetchGraph(dag merkledag.DAGService, id *cid.Cid) ([]cid.Cid, error) {
+func FetchGraph(n *core.IpfsNode, id *cid.Cid) ([]cid.Cid, error) {
+	dag := merkledag.NewDAGService(n.Blocks)
 	var ret []cid.Cid
 	l := new(sync.Mutex)
 	m := make(map[string]bool)
@@ -41,8 +43,12 @@ func FetchGraph(dag merkledag.DAGService, id *cid.Cid) ([]cid.Cid, error) {
 	return ret, nil
 }
 
-func RemoveAll(ctx commands.Context, peerID string) error {
-	hash, err := Resolve(ctx, peerID, time.Minute*5)
+func RemoveAll(nd *core.IpfsNode, peerID string) error {
+	pid, err := peer.IDB58Decode(peerID)
+	if err != nil {
+		return nil
+	}
+	hash, err := Resolve(nd, pid, time.Minute*5)
 	if err != nil {
 		return err
 	}
@@ -50,21 +56,12 @@ func RemoveAll(ctx commands.Context, peerID string) error {
 	if err != nil {
 		return err
 	}
-	nd, err := ctx.GetNode()
-	if err != nil {
-		return err
-	}
-	graph, err := FetchGraph(nd.DAG, c)
+	graph, err := FetchGraph(nd, c)
 	if err != nil {
 		return err
 	}
 	for _, id := range graph {
-		ctx := context.Background()
-		n, err := nd.DAG.Get(ctx, &id)
-		if err != nil {
-			continue
-		}
-		nd.DAG.Remove(n)
+		nd.DAG.Remove(context.Background(), &id)
 	}
 	return nil
 }

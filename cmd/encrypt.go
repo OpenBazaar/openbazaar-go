@@ -11,7 +11,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
-	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -41,7 +41,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 		if strings.Contains(strings.ToLower(resp), "mainnet") {
 			filename = "mainnet.db"
 			dbPath = path.Join(repoPath, "datastore", filename)
-			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
 				fmt.Println("Cannot encrypt while the daemon is running.")
 				return nil
@@ -55,7 +55,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 			testnet = true
 			filename = "testnet.db"
 			dbPath = path.Join(repoPath, "datastore", filename)
-			repoLockFile := filepath.Join(repoPath, lockfile.LockFile)
+			repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
 			if _, err := os.Stat(repoLockFile); !os.IsNotExist(err) {
 				fmt.Println("Cannot encrypt while the daemon is running.")
 				return nil
