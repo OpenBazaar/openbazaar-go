@@ -2164,34 +2164,29 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED {
+		ErrorResponse(w, http.StatusBadRequest, "Release escrow can only be called when sale is pending or fulfilled")
+		return
+	}
+
 	if !(&repo.SaleRecord{Contract: contract}).SupportsTimedEscrowRelease() {
 		ErrorResponse(w, http.StatusBadRequest, "Escrowed currency does not support automatic release of funds to vendor")
 		return
 	}
 
-	switch state {
-	case pb.OrderState_DISPUTED:
-		if err = i.node.ReleaseFundsAfterTimeout(contract, records); err != nil {
-			if err == core.ErrPrematureReleaseOfTimedoutEscrowFunds {
-				ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow error:", err.Error()))
-			} else {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
+	err = i.node.ReleaseFundsAfterTimeout(contract, records)
+	if err != nil {
+		switch err {
+		case core.ErrPrematureReleaseOfTimedoutEscrowFunds:
+			ErrorResponse(w, http.StatusUnauthorized, err.Error())
+			return
+		case core.EscrowTimeLockedError:
+			ErrorResponse(w, http.StatusUnauthorized, err.Error())
+			return
+		default:
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
 		}
-	case pb.OrderState_FULFILLED:
-		if err = i.node.ReleaseFundsAfterTimeout(contract, records); err != nil {
-			if err == core.EscrowTimeLockedError {
-				ErrorResponse(w, http.StatusUnauthorized, err.Error())
-				return
-			} else {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
-	default:
-		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called when in dispute for 45 days or fulfilled for longer than escrow timeout")
-		return
 	}
 
 	err = i.node.SendFundsReleasedByVendor(contract.BuyerOrder.BuyerID.PeerID, contract.BuyerOrder.BuyerID.Pubkeys.Identity, rel.OrderID)
