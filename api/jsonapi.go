@@ -2171,33 +2171,16 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 
 	switch state {
 	case pb.OrderState_DISPUTED:
-		disputeStart, err := ptypes.Timestamp(contract.GetDispute().Timestamp)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		disputeDuration := time.Duration(repo.DisputeTotalDurationHours) * time.Hour
-
-		// Time hack until we can stub this more nicely in test env
-		if i.node.TestNetworkEnabled() || i.node.RegressionNetworkEnabled() {
-			disputeDuration = time.Duration(10) * time.Second
-		}
-
-		disputeExpiration := disputeStart.Add(disputeDuration)
-		if time.Now().Before(disputeExpiration) {
-			expiresIn := disputeExpiration.Sub(time.Now())
-			ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow can only be called when in dispute for %s or longer, expires in %s", disputeDuration.String(), expiresIn.String()))
-			return
-		}
-		err = i.node.ReleaseFundsAfterTimeout(contract, records)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
+		if err = i.node.ReleaseFundsAfterTimeout(contract, records); err != nil {
+			if err == core.ErrPrematureReleaseOfTimedoutEscrowFunds {
+				ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow error:", err.Error()))
+			} else {
+				ErrorResponse(w, http.StatusInternalServerError, err.Error())
+				return
+			}
 		}
 	case pb.OrderState_FULFILLED:
-		err = i.node.ReleaseFundsAfterTimeout(contract, records)
-		if err != nil {
+		if err = i.node.ReleaseFundsAfterTimeout(contract, records); err != nil {
 			if err == core.EscrowTimeLockedError {
 				ErrorResponse(w, http.StatusUnauthorized, err.Error())
 				return
