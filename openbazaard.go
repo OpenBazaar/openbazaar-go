@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/cmd"
 	"github.com/OpenBazaar/openbazaar-go/core"
-	lockfile "github.com/ipfs/go-ipfs/repo/fsrepo/lock"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/jessevdk/go-flags"
 	"github.com/op/go-logging"
 	"os"
@@ -45,7 +45,7 @@ func main() {
 				core.OfflineMessageWaitGroup.Wait()
 				core.PublishLock.Lock()
 				core.Node.Datastore.Close()
-				repoLockFile := filepath.Join(core.Node.RepoPath, lockfile.LockFile)
+				repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 				os.Remove(repoLockFile)
 				core.Node.Wallet.Close()
 				core.Node.IpfsNode.Close()

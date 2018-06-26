@@ -9,21 +9,21 @@ import (
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/commands"
+	"github.com/ipfs/go-ipfs/core"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 )
 
 type SelfHostedStorage struct {
 	repoPath  string
-	context   commands.Context
+	ipfsNode  *core.IpfsNode
 	pushNodes []peer.ID
 	store     func(peerId string, ids []cid.Cid) error
 }
 
-func NewSelfHostedStorage(repoPath string, context commands.Context, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
+func NewSelfHostedStorage(repoPath string, n *core.IpfsNode, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
 	return &SelfHostedStorage{
 		repoPath:  repoPath,
-		context:   context,
+		ipfsNode:  n,
 		pushNodes: pushNodes,
 		store:     store,
 	}
@@ -42,7 +42,7 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if ferr != nil {
 		return nil, ferr
 	}
-	addr, err := ipfs.AddFile(s.context, filePath)
+	addr, err := ipfs.AddFile(s.ipfsNode, filePath)
 	if err != nil {
 		return nil, err
 	}

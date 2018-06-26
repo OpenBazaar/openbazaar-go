@@ -451,7 +451,7 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 		}
 		defer f.Close()
 
-		go ipfs.AddFile(n.Context, ratingPath)
+		go ipfs.AddFile(n.IpfsNode, ratingPath)
 
 		_, werr := f.Write([]byte(ratingJson))
 		if werr != nil {
@@ -482,7 +482,7 @@ func (n *OpenBazaarNode) updateRatingIndex(rating *pb.Rating, ratingPath string)
 
 	var index []SavedRating
 
-	ratingHash, err := ipfs.GetHashOfFile(n.Context, ratingPath)
+	ratingHash, err := ipfs.GetHashOfFile(n.IpfsNode, ratingPath)
 	if err != nil {
 		return err
 	}

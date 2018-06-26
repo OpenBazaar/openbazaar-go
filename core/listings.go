@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -406,7 +406,7 @@ func coinDivisibilityForType(coinType string) uint32 {
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
 	listingPath := path.Join(n.RepoPath, "root", "listings", listing.Listing.Slug+".json")
 
-	listingHash, err := ipfs.GetHashOfFile(n.Context, listingPath)
+	listingHash, err := ipfs.GetHashOfFile(n.IpfsNode, listingPath)
 	if err != nil {
 		return ListingData{}, err
 	}
@@ -635,7 +635,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 		return false
 	}
 	for _, l := range index {
-		b, err := ipfs.Cat(n.Context, l.Hash, time.Minute)
+		b, err := ipfs.Cat(n.IpfsNode, l.Hash, time.Minute)
 		if err != nil {
 			log.Error(err)
 			return false

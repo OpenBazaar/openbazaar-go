@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	ipfsPath "github.com/ipfs/go-ipfs/path"
@@ -29,7 +28,7 @@ type getObjectFromIPFSCacheEntry struct {
 }
 
 // PublishObjectToIPFS writes the given data to IPFS labeled as the given name
-func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir string, name string, data interface{}) (string, error) {
+func PublishObjectToIPFS(ipfsNode *core.IpfsNode, tempDir string, name string, data interface{}) (string, error) {
 	serializedData, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
 		return "", err
@@ -41,7 +40,7 @@ func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir 
 	if err != nil {
 		return "", err
 	}
-	hash, err := ipfs.AddFile(ctx, tmpPath)
+	hash, err := ipfs.AddFile(ipfsNode, tmpPath)
 	if err != nil {
 		return "", err
 	}
@@ -50,16 +49,16 @@ func PublishObjectToIPFS(ctx commands.Context, ipfsNode *core.IpfsNode, tempDir 
 		return "", err
 	}
 
-	return hash, ipfs.PublishAltRoot(ctx, ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultPublishLifetime))
+	return hash, ipfs.PublishAltRoot(ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultPublishLifetime))
 }
 
 // GetObjectFromIPFS gets the requested name from ipfs or the local cache
-func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen time.Duration) ([]byte, error) {
+func GetObjectFromIPFS(n *core.IpfsNode, p peer.ID, name string, maxCacheLen time.Duration) ([]byte, error) {
 	getObjectFromIPFSCacheMu.Lock()
 	defer getObjectFromIPFSCacheMu.Unlock()
 
 	fetchAndUpdateCache := func() ([]byte, error) {
-		objBytes, err := fetchObjectFromIPFS(ctx, p, name)
+		objBytes, err := fetchObjectFromIPFS(n, p, name)
 		if err != nil {
 			return nil, err
 		}
@@ -88,13 +87,13 @@ func GetObjectFromIPFS(ctx commands.Context, p peer.ID, name string, maxCacheLen
 }
 
 // fetchObjectFromIPFS gets the requested object from ipfs
-func fetchObjectFromIPFS(ctx commands.Context, p peer.ID, name string) ([]byte, error) {
-	root, err := ipfs.ResolveAltRoot(ctx, p, name, time.Minute)
+func fetchObjectFromIPFS(n *core.IpfsNode, p peer.ID, name string) ([]byte, error) {
+	root, err := ipfs.ResolveAltRoot(n, p, name, time.Minute)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := ipfs.Cat(ctx, root, time.Minute)
+	bytes, err := ipfs.Cat(n, root, time.Minute)
 	if err != nil {
 		return nil, err
 	}

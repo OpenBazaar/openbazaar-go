@@ -5,7 +5,6 @@ import (
 
 	"context"
 	"fmt"
-	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	pb "github.com/ipfs/go-ipfs/namesys/pb"
@@ -37,7 +36,7 @@ func Publish(n *core.IpfsNode, hash string) error {
 }
 
 // Publish another IPFS record at /ipns/<peerID>:<altRoot>
-func PublishAltRoot(ctx commands.Context, nd *core.IpfsNode, altRoot string, value path.Path, eol time.Time) error {
+func PublishAltRoot(nd *core.IpfsNode, altRoot string, value path.Path, eol time.Time) error {
 	hash, err := mh.FromB58String(nd.Identity.Pretty())
 	if err != nil {
 		return err

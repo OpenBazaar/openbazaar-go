@@ -12,8 +12,8 @@ import (
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"io/ioutil"
 	"net"
@@ -39,7 +39,7 @@ func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time
 	for i := 0; i < len(ipnsPath.Segments())-1; i++ {
 		p[i+1] = ipnsPath.Segments()[i+1]
 	}
-	b, err := ipfs.Cat(n.Context, ipfspath.Join(p), timeout)
+	b, err := ipfs.Cat(n.IpfsNode, ipfspath.Join(p), timeout)
 	if err != nil {
 		return ret, err
 	}
@@ -47,7 +47,11 @@ func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time
 }
 
 func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (string, error) {
-	val, err := ipfs.Resolve(n.Context, peerId, timeout)
+	pid, err := peer.IDB58Decode(peerId)
+	if err != nil {
+		return "", err
+	}
+	val, err := ipfs.Resolve(n.IpfsNode, pid, timeout)
 	if err != nil && n.IPNSBackupAPI != "" {
 		dial := net.Dial
 		if n.TorDialer != nil {

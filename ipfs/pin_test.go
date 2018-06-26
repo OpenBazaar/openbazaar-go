@@ -1,9 +1,9 @@
 package ipfs
 
 import (
+	"github.com/ipfs/go-ipfs/core/mock"
 	"path"
 	"testing"
-	"github.com/ipfs/go-ipfs/core/mock"
 )
 
 func TestUnPinDir(t *testing.T) {

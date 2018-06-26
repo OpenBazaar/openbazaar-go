@@ -3,8 +3,8 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -212,7 +212,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			if _, err := fi.WriteString(out); err != nil {
 				return err
 			}
-			hash, err := ipfs.GetHashOfFile(n.Context, p)
+			hash, err := ipfs.GetHashOfFile(n.IpfsNode, p)
 			if err != nil {
 				return err
 			}
