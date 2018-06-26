@@ -34,7 +34,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
 	}
-	v, err := strconv.Atoi(string(version[0]))
+	v, err := strconv.Atoi(string(version))
 	if err != nil {
 		return err
 	}
