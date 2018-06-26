@@ -11,11 +11,9 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/namesys"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"io/ioutil"
 	"strings"
 
@@ -24,25 +22,26 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
-	"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
+	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
+	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
-	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
+	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
 	oniontp "gx/ipfs/QmVYZ6jGE4uogWAZK2w8PrKWDEKMvYaQWTSXWCbYJLEuKs/go-onion-transport"
-	swarm "gx/ipfs/QmWpJ4y2vxJ6GZpPfQbpVpQxAYS3UeR6AKNbAHxw7wN3qw/go-libp2p-swarm"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
-	p2phost "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
+	"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
+	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
 	"sync"
 	"syscall"
 	"time"
@@ -270,16 +269,6 @@ func (x *Restore) Execute(args []string) error {
 		return err
 	}
 
-	ctx := commands.Context{}
-	ctx.Online = true
-	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
-		return fsrepo.ConfigAt(repoPath)
-	}
-	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
-		return nd, nil
-	}
-
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
@@ -292,7 +281,12 @@ func (x *Restore) Execute(args []string) error {
 	<-dht.DefaultBootstrapConfig.DoneChan
 	wg := new(sync.WaitGroup)
 	wg.Add(10)
-	k, err := ipfs.Resolve(ctx, identity.PeerID, time.Minute)
+	pid, err := peer.IDB58Decode(identity.PeerID)
+	if err != nil {
+		PrintError(err.Error())
+		return err
+	}
+	k, err := ipfs.Resolve(nd, pid, time.Minute)
 	if err != nil || k == "" {
 		PrintError(fmt.Sprintf("IPNS record for %s not found on network\n", identity.PeerID))
 		return err
@@ -302,20 +296,22 @@ func (x *Restore) Execute(args []string) error {
 		PrintError(err.Error())
 		return err
 	}
-	links, err := nd.DAG.GetLinks(context.Background(), c)
+	node, err := nd.DAG.Get(context.Background(), c)
 	if err != nil {
 		PrintError(err.Error())
 		return err
 	}
+	links := node.Links()
 	for _, l := range links {
 		if l.Name == "listings" || l.Name == "ratings" || l.Name == "feed" || l.Name == "channel" || l.Name == "files" {
 			go RestoreDirectory(repoPath, l.Name, nd, l.Cid, wg)
 		} else if l.Name == "images" {
-			ilinks, err := nd.DAG.GetLinks(context.Background(), l.Cid)
+			node, err := nd.DAG.Get(context.Background(), l.Cid)
 			if err != nil {
 				PrintError(err.Error())
 				return err
 			}
+			ilinks := node.Links()
 			for _, link := range ilinks {
 				wg.Add(1)
 				go RestoreDirectory(repoPath, path.Join("images", link.Name), nd, link.Cid, wg)
@@ -323,19 +319,19 @@ func (x *Restore) Execute(args []string) error {
 		}
 	}
 
-	go RestoreFile(repoPath, identity.PeerID, "profile.json", ctx, wg)
-	go RestoreFile(repoPath, identity.PeerID, "ratings.json", ctx, wg)
-	go RestoreFile(repoPath, identity.PeerID, "listings.json", ctx, wg)
-	go RestoreFile(repoPath, identity.PeerID, "following.json", ctx, wg)
-	go RestoreFile(repoPath, identity.PeerID, "followers.json", ctx, wg)
+	go RestoreFile(repoPath, identity.PeerID, "profile.json", nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "ratings.json", nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "listings.json", nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "following.json", nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "followers.json", nd, wg)
 	wg.Wait()
 	fmt.Println("Finished")
 	return nil
 }
 
-func RestoreFile(repoPath, peerID, filename string, ctx commands.Context, wg *sync.WaitGroup) {
+func RestoreFile(repoPath, peerID, filename string, n *core.IpfsNode, wg *sync.WaitGroup) {
 	defer wg.Done()
-	b, err := ipfs.ResolveThenCat(ctx, ipfspath.FromString(path.Join(peerID, filename)), time.Minute)
+	b, err := ipfs.ResolveThenCat(n, ipfspath.FromString(path.Join(peerID, filename)), time.Minute)
 	if err != nil {
 		PrintError(fmt.Sprintf("Failed to find %s\n", filename))
 	} else {
@@ -349,12 +345,12 @@ func RestoreFile(repoPath, peerID, filename string, ctx commands.Context, wg *sy
 
 func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid.Cid, wg *sync.WaitGroup) {
 	defer wg.Done()
-	links, err := nd.DAG.GetLinks(context.Background(), id)
+	node, err := nd.DAG.Get(context.Background(), id)
 	if err != nil {
 		PrintError(err.Error())
 		return
 	}
-	for _, l := range links {
+	for _, l := range node.Links() {
 		wg.Add(1)
 		go func(link *ipld.Link) {
 			defer wg.Done()

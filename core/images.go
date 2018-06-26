@@ -109,7 +109,7 @@ func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, erro
 	}
 	jpeg.Encode(out, img, nil)
 	out.Close()
-	return ipfs.AddFile(n.Context, imgPath)
+	return ipfs.AddFile(n.IpfsNode, imgPath)
 }
 
 func (n *OpenBazaarNode) addResizedImage(img image.Image, imgCfg *image.Config, w, h uint, imgPath string) (string, error) {

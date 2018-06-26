@@ -150,7 +150,7 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 		return err
 	}
 
-	return namesys.InitializeKeyspace(ctx, nd.DAG, nd.Namesys, nd.Pinning, nd.PrivateKey)
+	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
 func addConfigExtensions(repoRoot string, testnet bool) error {

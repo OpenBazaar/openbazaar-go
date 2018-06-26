@@ -8,9 +8,9 @@ import (
 	"path"
 	"time"
 
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
@@ -22,7 +22,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/ipfs/go-ipfs/commands"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
@@ -41,9 +40,6 @@ var Node *OpenBazaarNode
 var inflightPublishRequests int
 
 type OpenBazaarNode struct {
-	// Context for issuing IPFS commands
-	Context commands.Context
-
 	// IPFS node object
 	IpfsNode *core.IpfsNode
 
@@ -121,13 +117,13 @@ func (n *OpenBazaarNode) RegressionNetworkEnabled() bool { return n.RegressionTe
 
 func (n *OpenBazaarNode) SeedNode() error {
 	seedLock.Lock()
-	ipfs.UnPinDir(n.Context, n.RootHash)
+	ipfs.UnPinDir(n.IpfsNode, n.RootHash)
 	var aerr error
 	var rootHash string
 	// There's an IPFS bug on Windows that might be related to the Windows indexer that could cause this to fail
 	// If we fail the first time, let's retry a couple times before giving up.
 	for i := 0; i < 3; i++ {
-		rootHash, aerr = ipfs.AddDirectory(n.Context, path.Join(n.RepoPath, "root"))
+		rootHash, aerr = ipfs.AddDirectory(n.IpfsNode, path.Join(n.RepoPath, "root"))
 		if aerr == nil {
 			break
 		}
@@ -164,7 +160,7 @@ func (n *OpenBazaarNode) publish(hash string) {
 	}
 
 	inflightPublishRequests++
-	_, err = ipfs.Publish(n.Context, hash)
+	err = ipfs.Publish(n.IpfsNode, hash)
 
 	inflightPublishRequests--
 	if inflightPublishRequests == 0 {
@@ -185,7 +181,7 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 
 	var graph []cid.Cid
 	if len(n.PushNodes) > 0 {
-		graph, err = ipfs.FetchGraph(n.IpfsNode.DAG, id)
+		graph, err = ipfs.FetchGraph(n.IpfsNode, id)
 		if err != nil {
 			return err
 		}

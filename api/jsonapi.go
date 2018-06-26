@@ -622,12 +622,7 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
-	peers, err := ipfs.ConnectedPeers(i.node.Context)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
+	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1011,7 +1006,7 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	var peerIds []string
-	peers, err := ipfs.Query(i.node.Context, peerId)
+	peers, err := ipfs.Query(i.node.IpfsNode, peerId)
 	if err == nil {
 		for _, p := range peers {
 			peerIds = append(peerIds, p.Pretty())
@@ -1389,7 +1384,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, "Listing not found.")
 				return
 			}
-			hash, err := ipfs.GetHashOfFile(i.node.Context, path.Join(i.node.RepoPath, "root", "listings", listingId+".json"))
+			hash, err := ipfs.GetHashOfFile(i.node.IpfsNode, path.Join(i.node.RepoPath, "root", "listings", listingId+".json"))
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
@@ -1429,7 +1424,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		var hash string
 		_, err := cid.Decode(listingId)
 		if err == nil {
-			listingBytes, err = ipfs.Cat(i.node.Context, listingId, time.Minute)
+			listingBytes, err = ipfs.Cat(i.node.IpfsNode, listingId, time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -1448,7 +1443,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
-			hash, err = ipfs.GetHash(i.node.Context, bytes.NewReader(listingBytes))
+			hash, err = ipfs.GetHash(i.node.IpfsNode, bytes.NewReader(listingBytes))
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
@@ -3046,7 +3041,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
-	go ipfs.RemoveAll(i.node.Context, peerId)
+	go ipfs.RemoveAll(i.node.IpfsNode, peerId)
 	nodes = append(nodes, peerId)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
@@ -3304,7 +3299,7 @@ func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETRating(w http.ResponseWriter, r *http.Request) {
 	_, ratingID := path.Split(r.URL.Path)
 
-	ratingBytes, err := ipfs.Cat(i.node.Context, ratingID, time.Minute)
+	ratingBytes, err := ipfs.Cat(i.node.IpfsNode, ratingID, time.Minute)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -3347,7 +3342,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		for _, id := range rp {
 			wg.Add(1)
 			go func(rid string) {
-				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
+				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
 					return
 				}
@@ -3421,7 +3416,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
 					return
 				}
-				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
+				ratingBytes, err := ipfs.Cat(i.node.IpfsNode, rid, time.Minute)
 				if err != nil {
 					respondWithError("Not Found")
 					return
@@ -3501,11 +3496,11 @@ func (i *jsonAPIHandler) GETHealthCheck(w http.ResponseWriter, r *http.Request) 
 	if ferr != nil {
 		re.IPFSRoot = false
 	}
-	peers, perr := ipfs.ConnectedPeers(i.node.Context)
-	if perr != nil || len(peers) == 0 {
+	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
+	if len(peers) == 0 {
 		re.Peers = false
 	}
-	if pingErr != nil || ferr != nil || perr != nil {
+	if pingErr != nil || ferr != nil {
 		ret, _ := json.MarshalIndent(re, "", "    ")
 		ErrorResponse(w, http.StatusNotFound, string(ret))
 		return
@@ -3621,8 +3616,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	go ipfs.Resolve(i.node.Context, peerId, time.Minute)
+	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute)
 	fmt.Fprint(w, string(retBytes))
 }
 
@@ -3895,7 +3889,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, "Post not found.")
 				return
 			}
-			hash, err := ipfs.GetHashOfFile(i.node.Context, path.Join(i.node.RepoPath, "root", "posts", postId+".json"))
+			hash, err := ipfs.GetHashOfFile(i.node.IpfsNode, path.Join(i.node.RepoPath, "root", "posts", postId+".json"))
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
@@ -3915,7 +3909,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		var hash string
 		_, err := cid.Decode(postId)
 		if err == nil {
-			postBytes, err = ipfs.Cat(i.node.Context, postId, time.Minute)
+			postBytes, err = ipfs.Cat(i.node.IpfsNode, postId, time.Minute)
 			if err != nil {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
@@ -3934,7 +3928,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 				ErrorResponse(w, http.StatusNotFound, err.Error())
 				return
 			}
-			hash, err = ipfs.GetHash(i.node.Context, bytes.NewReader(postBytes))
+			hash, err = ipfs.GetHash(i.node.IpfsNode, bytes.NewReader(postBytes))
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return

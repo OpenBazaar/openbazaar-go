@@ -13,9 +13,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 
-	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"io/ioutil"
 	"strings"
 
@@ -240,16 +238,6 @@ func (x *Convert) Execute(args []string) error {
 		return err
 	}
 
-	ctx := commands.Context{}
-	ctx.Online = false
-	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
-		return fsrepo.ConfigAt(repoPath)
-	}
-	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
-		return nd, nil
-	}
-
 	files, err := ioutil.ReadDir(path.Join(repoPath, "root", "listings"))
 	if err != nil {
 		return err
@@ -294,7 +282,7 @@ func (x *Convert) Execute(args []string) error {
 		if err := ioutil.WriteFile(path.Join(repoPath, "root", "listings", f.Name()), []byte(out), os.ModePerm); err != nil {
 			return err
 		}
-		h, err := ipfs.GetHashOfFile(ctx, path.Join(repoPath, "root", "listings", f.Name()))
+		h, err := ipfs.GetHashOfFile(nd, path.Join(repoPath, "root", "listings", f.Name()))
 		if err != nil {
 			return err
 		}

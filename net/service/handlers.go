@@ -1407,7 +1407,7 @@ func (service *OpenBazaarService) handleBlock(pid peer.ID, pmes *pb.Message, opt
 	if err != nil {
 		return nil, err
 	}
-	_, err = service.node.IpfsNode.Blocks.AddBlock(block)
+	err = service.node.IpfsNode.Blocks.AddBlock(block)
 	if err != nil {
 		return nil, err
 	}

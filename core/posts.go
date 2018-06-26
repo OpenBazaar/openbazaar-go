@@ -139,7 +139,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	postPath := path.Join(n.RepoPath, "root", "posts", post.Post.Slug+".json")
 
 	// Get the hash of the post's file and add to postHash variable
-	postHash, err := ipfs.GetHashOfFile(n.Context, postPath)
+	postHash, err := ipfs.GetHashOfFile(n.IpfsNode, postPath)
 	if err != nil {
 		return postData{}, err
 	}

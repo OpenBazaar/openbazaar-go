@@ -1,11 +1,11 @@
 package ipfs
 
 import (
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"context"
+	"errors"
 	"github.com/ipfs/go-ipfs/core"
 	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	"errors"
-	"context"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 )
 
 func Query(n *core.IpfsNode, peerID string) ([]peer.ID, error) {
@@ -30,6 +30,6 @@ func Query(n *core.IpfsNode, peerID string) ([]peer.ID, error) {
 			closestPeers = append(closestPeers, p)
 		}
 	}()
-	<- events
-	return  closestPeers, nil
+	<-events
+	return closestPeers, nil
 }
