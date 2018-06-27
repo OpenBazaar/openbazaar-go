@@ -3,9 +3,10 @@ package repo
 import (
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
-	"time"
 )
 
 var DefaultBootstrapAddresses = []string{
