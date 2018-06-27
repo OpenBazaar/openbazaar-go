@@ -545,7 +545,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		case neverNotifiedButUndisputeable.OrderID:
 			sawNeverNotifiedButUndisputeable = true
 		default:
-			t.Error("Found unexpected sale: %+v", s)
+			t.Errorf("Found unexpected sale: %+v", s)
 		}
 	}
 

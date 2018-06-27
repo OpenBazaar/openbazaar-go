@@ -502,7 +502,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		case neverNotifiedButUndisputeable.OrderID:
 			sawNeverNotifiedButUndisputeable = true
 		default:
-			t.Error("Found unexpected purchase: %+v", p)
+			t.Errorf("Found unexpected purchase: %+v", p)
 		}
 	}
 
@@ -704,7 +704,7 @@ func TestGetPurchasesForDisputeExpiryNotificationReturnsRelevantRecords(t *testi
 		case neverNotifiedButUndisputed.OrderID:
 			sawNeverNotifiedButUndisputed = true
 		default:
-			t.Error("Found unexpected purchase: %+v", p)
+			t.Errorf("Found unexpected purchase: %+v", p)
 		}
 	}
 

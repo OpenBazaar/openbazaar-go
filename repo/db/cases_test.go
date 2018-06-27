@@ -642,7 +642,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		case finallyNotified.CaseID:
 			sawFinallyNotifiedCase = true
 		default:
-			t.Error("Found unexpected dispute case: %+v", c)
+			t.Errorf("Found unexpected dispute case: %+v", c)
 		}
 	}
 
