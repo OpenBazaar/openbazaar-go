@@ -1761,7 +1761,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						wg.Done()
 						return
 					}
-					resp := &pb.PeerAndProfile{m, &profile}
+					resp := &pb.PeerAndProfile{PeerId: m, Profile: &profile}
 					mar := jsonpb.Marshaler{
 						EnumsAsInts:  false,
 						EmitDefaults: true,
@@ -1848,7 +1848,11 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						resp := pb.PeerAndProfileWithID{id, pid, &profile}
+						resp := pb.PeerAndProfileWithID{
+							Id:      id,
+							PeerId:  pid,
+							Profile: &profile,
+						}
 						m := jsonpb.Marshaler{
 							EnumsAsInts:  false,
 							EmitDefaults: true,
@@ -2583,7 +2587,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 					wg.Done()
 					return
 				}
-				obj := pb.PeerAndProfile{pid, &pro}
+				obj := pb.PeerAndProfile{PeerId: pid, Profile: &pro}
 				m := jsonpb.Marshaler{
 					EnumsAsInts:  false,
 					EmitDefaults: true,
@@ -2652,7 +2656,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("Not found")
 						return
 					}
-					obj := pb.PeerAndProfileWithID{id, pid, &pro}
+					obj := pb.PeerAndProfileWithID{Id: id, PeerId: pid, Profile: &pro}
 					m := jsonpb.Marshaler{
 						EnumsAsInts:  false,
 						EmitDefaults: true,
