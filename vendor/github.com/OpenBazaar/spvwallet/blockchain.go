@@ -4,7 +4,7 @@
 package spvwallet
 
 import (
-	"fmt"
+	"errors"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -28,19 +28,13 @@ const (
 	medianTimeBlocks    = 11
 )
 
-type ChainState int
-
-const (
-	SYNCING = 0
-	WAITING = 1
-)
+var OrphanHeaderError = errors.New("header does not extend any known headers")
 
 // Wrapper around Headers implementation that handles all blockchain operations
 type Blockchain struct {
 	lock        *sync.Mutex
 	params      *chaincfg.Params
 	db          Headers
-	state       ChainState
 	crationDate time.Time
 }
 
@@ -94,7 +88,7 @@ func (b *Blockchain) CommitHeader(header wire.BlockHeader) (bool, *StoredHeader,
 	} else {
 		parentHeader, err = b.db.GetPreviousHeader(header)
 		if err != nil {
-			return false, nil, 0, fmt.Errorf("Header %s does not extend any known headers", header.BlockHash().String())
+			return false, nil, 0, OrphanHeaderError
 		}
 	}
 	valid := b.CheckHeader(header, parentHeader)
@@ -264,7 +258,7 @@ func (b *Blockchain) GetNPrevBlockHashes(n int) []*chainhash.Hash {
 	return ret
 }
 
-func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
+func (b *Blockchain) GetBlockLocator() blockchain.BlockLocator {
 	var ret []*chainhash.Hash
 	parent, err := b.db.GetBestHeader()
 	if err != nil {
@@ -299,7 +293,7 @@ func (b *Blockchain) GetBlockLocatorHashes() []*chainhash.Hash {
 		}
 		start += 1
 	}
-	return ret
+	return blockchain.BlockLocator(ret)
 }
 
 // Returns last header before reorg point
@@ -391,12 +385,20 @@ func (b *Blockchain) Rollback(t time.Time) error {
 	return b.db.Put(sh, true)
 }
 
-func (b *Blockchain) ChainState() ChainState {
-	return b.state
+func (b *Blockchain) BestBlock() (StoredHeader, error) {
+	sh, err := b.db.GetBestHeader()
+	if err != nil {
+		return StoredHeader{}, err
+	}
+	return sh, nil
 }
 
-func (b *Blockchain) SetChainState(state ChainState) {
-	b.state = state
+func (b *Blockchain) GetHeader(hash *chainhash.Hash) (StoredHeader, error) {
+	sh, err := b.db.GetHeader(*hash)
+	if err != nil {
+		return sh, err
+	}
+	return sh, nil
 }
 
 func (b *Blockchain) Close() {
