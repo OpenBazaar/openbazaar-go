@@ -1,7 +1,7 @@
 package ipfs
 
 import (
-	"github.com/OpenBazaar/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/core/mock"
 	"io/ioutil"
 	"os"
 	"path"
