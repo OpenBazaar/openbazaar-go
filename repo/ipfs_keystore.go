@@ -92,7 +92,6 @@ func fetchObjectFromIPFS(n *core.IpfsNode, p peer.ID, name string) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-
 	bytes, err := ipfs.Cat(n, root, time.Minute)
 	if err != nil {
 		return nil, err

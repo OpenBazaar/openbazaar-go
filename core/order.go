@@ -88,15 +88,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
 
-		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
-		profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute)
+		profile, err := n.FetchProfile(data.Moderator, true)
 		if err != nil {
 			return "", "", 0, false, errors.New("Moderator could not be found")
-		}
-		profile := new(pb.Profile)
-		err = jsonpb.UnmarshalString(string(profileBytes), profile)
-		if err != nil {
-			return "", "", 0, false, err
 		}
 		moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 		if err != nil {

@@ -53,7 +53,6 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		var profile []byte
 		var err error
 		if rootHash == "" {
-
 			profile, err = n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
 			if err != nil || len(profile) == 0 {
 				return pro, err

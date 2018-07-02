@@ -210,6 +210,7 @@ class RejectModeratedOffline(OpenBazaarTestFramework):
 
         print("RejectModeratedOffline - PASS")
 
+
 if __name__ == '__main__':
     print("Running RejectModeratedOffline")
     RejectModeratedOffline().main(["--regtest", "--disableexchangerates"])

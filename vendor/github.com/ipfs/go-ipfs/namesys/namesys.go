@@ -108,7 +108,10 @@ func (ns *mpns) resolveOnce(ctx context.Context, name string, options *opts.Reso
 	// 2. if it is a domain name, resolve through "dns"
 	// 3. otherwise resolve through the "proquint" resolver
 	key := segments[2]
-
+	if strings.Contains(key, ":") {
+		s := strings.Split(key, ":")
+		key = s[0]
+	}
 	_, err := mh.FromB58String(key)
 	if err == nil {
 		res, ok := ns.resolvers["pubsub"]
@@ -126,10 +129,8 @@ func (ns *mpns) resolveOnce(ctx context.Context, name string, options *opts.Reso
 				return makePath(p)
 			}
 		}
-
 		return "", ErrResolveFailed
 	}
-
 	if isd.IsDomain(key) {
 		res, ok := ns.resolvers["dns"]
 		if ok {

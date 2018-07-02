@@ -8,11 +8,16 @@ import (
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"io/ioutil"
 	"time"
+	"strings"
 )
 
 // Fetch data from IPFS given the hash
 func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	if !strings.HasPrefix(path, "/ipfs/") {
+		path = "/ipfs/"+path
+	}
+
 	r, err := coreunix.Cat(ctx, n, path)
 	if err != nil {
 		return nil, err
