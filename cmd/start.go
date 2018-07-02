@@ -27,11 +27,10 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
-	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
-	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
@@ -84,11 +83,11 @@ import (
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
-	`%{color:reset}%{color}%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+	`%{color:reset}%{color}%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
 var fileLogFormat = logging.MustStringFormatter(
-	`%{time:15:04:05.000} [%{shortfunc}] [%{level}] %{message}`,
+	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
 )
 
 var (
@@ -241,49 +240,50 @@ func (x *Start) Execute(args []string) error {
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
+		log.Error("read config:", err)
 		return err
 	}
 
-	apiConfig, err := repo.GetAPIConfig(configFile)
+	apiConfig, err := schema.GetAPIConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan api config:", err)
 		return err
 	}
-	torConfig, err := repo.GetTorConfig(configFile)
+	torConfig, err := schema.GetTorConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan tor config:", err)
 		return err
 	}
-	walletCfg, err := repo.GetWalletConfig(configFile)
+	walletCfg, err := schema.GetWalletConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan wallet config:", err)
 		return err
 	}
-	dataSharing, err := repo.GetDataSharing(configFile)
+	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan data sharing config:", err)
 		return err
 	}
-	dropboxToken, err := repo.GetDropboxApiToken(configFile)
+	dropboxToken, err := schema.GetDropboxApiToken(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan dropbox api token:", err)
 		return err
 	}
-	resolverConfig, err := repo.GetResolverConfig(configFile)
+	resolverConfig, err := schema.GetResolverConfig(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan resolver config:", err)
 		return err
 	}
-	republishInterval, err := repo.GetRepublishInterval(configFile)
+	republishInterval, err := schema.GetRepublishInterval(configFile)
 	if err != nil {
-		log.Error(err)
+		log.Error("scan republish interval config:", err)
 		return err
 	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
 	if err != nil {
-		log.Error(err)
+		log.Error("open repo:", err)
 		return err
 	}
 	cctx, cancel := context.WithCancel(context.Background())
@@ -291,24 +291,25 @@ func (x *Start) Execute(args []string) error {
 
 	cfg, err := r.Config()
 	if err != nil {
-		log.Error(err)
+		log.Error("get repo config:", err)
 		return err
 	}
 
 	identityKey, err := sqliteDB.Config().GetIdentityKey()
 	if err != nil {
-		log.Error(err)
+		log.Error("get identity key:", err)
 		return err
 	}
 	identity, err := ipfs.IdentityFromKey(identityKey)
 	if err != nil {
+		log.Error("get identity from key:", err)
 		return err
 	}
 	cfg.Identity = identity
 
 	// Setup testnet
 	if x.Testnet || x.Regtest {
-		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -323,7 +324,7 @@ func (x *Start) Execute(args []string) error {
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
 	if err != nil {
-		log.Error(err)
+		log.Error("create onion key:", err)
 		return err
 	}
 	onionAddrString := "/onion/" + onionAddr + ":4003"
@@ -346,7 +347,7 @@ func (x *Start) Execute(args []string) error {
 	for i, addr := range cfg.Addresses.Swarm {
 		m, err := ma.NewMultiaddr(addr)
 		if err != nil {
-			log.Error(err)
+			log.Error("creating swarm multihash:", err)
 			return err
 		}
 		p := m.Protocols()
@@ -355,7 +356,7 @@ func (x *Start) Execute(args []string) error {
 			usingClearnet = true
 			port, serr := obnet.Stun()
 			if serr != nil {
-				log.Error(serr)
+				log.Error("stun setup:", serr)
 				return err
 			}
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
@@ -366,14 +367,10 @@ func (x *Start) Execute(args []string) error {
 			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
 			t, err := ma.ProtocolsWithString("/onion")
 			if err != nil {
-				log.Error(err)
+				log.Error("wrapping onion protocol:", err)
 				return err
 			}
 			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
 		} else {
 			usingClearnet = true
 		}
@@ -384,7 +381,7 @@ func (x *Start) Execute(args []string) error {
 		if torControl == "" {
 			controlPort, err = obnet.GetTorControlPort()
 			if err != nil {
-				log.Error(err)
+				log.Error("get tor control port:", err)
 				return err
 			}
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
@@ -396,7 +393,7 @@ func (x *Start) Execute(args []string) error {
 		auth := &proxy.Auth{Password: torPw}
 		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, auth, repoPath, (usingTor && usingClearnet))
 		if err != nil {
-			log.Error(err)
+			log.Error("setup tor transport:", err)
 			return err
 		}
 	}
@@ -406,7 +403,7 @@ func (x *Start) Execute(args []string) error {
 		log.Notice("Using Tor exclusively")
 		torDialer, err = onionTransport.TorDialer()
 		if err != nil {
-			log.Error(err)
+			log.Error("dailing tor network:", err)
 			return err
 		}
 		// TODO: maybe create a tor resolver impl later
@@ -456,7 +453,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
-		log.Error(err)
+		log.Error("create new ipfs node:", err)
 		return err
 	}
 
@@ -486,7 +483,7 @@ func (x *Start) Execute(args []string) error {
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if hasherr != nil {
-		log.Error(hasherr)
+		log.Error("get ipns key:", hasherr)
 		return hasherr
 	}
 	val := ival.([]byte)
@@ -498,7 +495,7 @@ func (x *Start) Execute(args []string) error {
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
-		log.Error(err)
+		log.Error("get config mnemonic:", err)
 		return err
 	}
 	var params chaincfg.Params
@@ -750,6 +747,10 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	if x.Testnet {
+		setTestmodeRecordAgingIntervals()
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		Context:              ctx,
@@ -821,28 +822,15 @@ func (x *Start) Execute(args []string) error {
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
-		mrCfg := ret.MRConfig{
-			Db:        sqliteDB,
-			Ctx:       ctx,
-			IPFSNode:  nd,
-			BanManger: bm,
-			Service:   core.Node.Service,
-			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
-			Dialer:    torDialer,
-			SendAck:   core.Node.SendOfflineAck,
-			SendError: core.Node.SendError,
-		}
-		MR := ret.NewMessageRetriever(mrCfg)
-		go MR.Run()
-		core.Node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(nd, sqliteDB, core.Node.PushNodes, core.Node.IsModerator)
-		go PR.Run()
-		core.Node.PointerRepublisher = PR
+
+		core.Node.StartMessageRetriever()
+		core.Node.StartPointerRepublisher()
+		core.Node.StartRecordAgingNotifier()
+
 		if !x.DisableWallet {
 			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
 			if resyncManager == nil {
-				MR.Wait()
+				core.Node.WaitForMessageRetrieverCompletion()
 			}
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
 			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
@@ -855,7 +843,7 @@ func (x *Start) Execute(args []string) error {
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {
-					MR.Wait()
+					core.Node.WaitForMessageRetrieverCompletion()
 					resyncManager.CheckUnfunded()
 				}()
 			}
@@ -875,6 +863,26 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func setTestmodeRecordAgingIntervals() {
+	repo.VendorDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
+
+	repo.ModeratorDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
+	repo.ModeratorDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
+	repo.ModeratorDisputeExpiry_thirdInterval = time.Duration(59) * time.Minute
+	repo.ModeratorDisputeExpiry_lastInterval = time.Duration(60) * time.Minute
+
+	repo.BuyerDisputeTimeout_firstInterval = time.Duration(20) * time.Minute
+	repo.BuyerDisputeTimeout_secondInterval = time.Duration(40) * time.Minute
+	repo.BuyerDisputeTimeout_thirdInterval = time.Duration(59) * time.Minute
+	repo.BuyerDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
+	repo.BuyerDisputeTimeout_totalDuration = time.Duration(60) * time.Minute
+
+	repo.BuyerDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
+	repo.BuyerDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
+	repo.BuyerDisputeExpiry_lastInterval = time.Duration(59) * time.Minute
+	repo.BuyerDisputeExpiry_totalDuration = time.Duration(60) * time.Minute
 }
 
 // Prints the addresses of the host
@@ -914,7 +922,7 @@ func (d *DummyListener) Close() error {
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig, noLogFiles bool) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig, noLogFiles bool) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := node.Context.GetConfig()
 	if err != nil {

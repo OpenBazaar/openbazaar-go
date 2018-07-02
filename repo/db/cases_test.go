@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"database/sql"
 	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/golang/protobuf/ptypes"
 	"sync"
 )
@@ -112,7 +115,7 @@ func TestUpdateWithNil(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, buyerOutpoints, _, _, err := casesdb.GetPayoutDetails("caseID")
+	dispute, err := casesdb.GetByCaseID("caseID")
 	if err != nil {
 		t.Error(err)
 	}
@@ -120,7 +123,7 @@ func TestUpdateWithNil(t *testing.T) {
 	if buyerContract != nil {
 		t.Error("Vendor contract was not nil")
 	}
-	if buyerOutpoints != nil {
+	if dispute.BuyerOutpoints != nil {
 		t.Error("Vendor outpoints was not nil")
 	}
 }
@@ -322,67 +325,71 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	}
 }
 
-func TestGetPayoutDetails(t *testing.T) {
+func TestGetByCaseID(t *testing.T) {
+	var (
+		expectedBuyerOutpoints  []*pb.Outpoint = []*pb.Outpoint{{"hash1", 0, 5}}
+		expectedVendorOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
+	)
 	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.UpdateBuyerInfo("caseID", contract, []string{"someError", "anotherError"}, "addr1", buyerTestOutpoints)
+	err = casesdb.UpdateBuyerInfo("caseID", contract, []string{"someError", "anotherError"}, "addr1", expectedBuyerOutpoints)
 	if err != nil {
 		t.Error(err)
 	}
-	err = casesdb.UpdateVendorInfo("caseID", contract, []string{"someError", "anotherError"}, "addr2", vendorTestOutpoints)
+	err = casesdb.UpdateVendorInfo("caseID", contract, []string{"someError", "anotherError"}, "addr2", expectedVendorOutpoints)
 	if err != nil {
 		t.Error(err)
 	}
 
-	buyerContract, vendorContract, buyerAddr, vendorAddr, buyerOutpoints, vendorOutpoints, state, err := casesdb.GetPayoutDetails("caseID")
+	dispute, err := casesdb.GetByCaseID("caseID")
 	if err != nil {
 		t.Error(err)
 	}
 	ser, _ := proto.Marshal(contract)
-	buyerSer, _ := proto.Marshal(buyerContract)
-	vendorSer, _ := proto.Marshal(vendorContract)
+	buyerSer, _ := proto.Marshal(dispute.BuyerContract)
+	vendorSer, _ := proto.Marshal(dispute.VendorContract)
 
 	if !bytes.Equal(ser, buyerSer) || !bytes.Equal(ser, vendorSer) {
 		t.Error("Failed to fetch case contract from db")
 	}
-	if buyerAddr != "addr1" {
-		t.Errorf("Expected address %s got %s", "addr1", buyerAddr)
+	if dispute.BuyerPayoutAddress != "addr1" {
+		t.Errorf("Expected address %s got %s", "addr1", dispute.BuyerPayoutAddress)
 	}
-	if vendorAddr != "addr2" {
-		t.Errorf("Expected address %s got %s", "addr2", vendorAddr)
+	if dispute.VendorPayoutAddress != "addr2" {
+		t.Errorf("Expected address %s got %s", "addr2", dispute.VendorPayoutAddress)
 	}
-	if len(buyerOutpoints) != len(buyerTestOutpoints) {
+	if len(dispute.BuyerOutpoints) != len(expectedBuyerOutpoints) {
 		t.Error("Incorrect number of buyer outpoints returned")
 	}
-	for i, o := range buyerTestOutpoints {
-		if o.Hash != buyerTestOutpoints[i].Hash {
-			t.Errorf("Expected outpoint hash %s got %s", o.Hash, buyerTestOutpoints[i].Hash)
+	for i, o := range dispute.BuyerOutpoints {
+		if o.Hash != expectedBuyerOutpoints[i].Hash {
+			t.Errorf("Expected outpoint hash %s got %s", o.Hash, expectedBuyerOutpoints[i].Hash)
 		}
-		if o.Index != buyerTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %v got %v", o.Index, buyerTestOutpoints[i].Index)
+		if o.Index != expectedBuyerOutpoints[i].Index {
+			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedBuyerOutpoints[i].Index)
 		}
-		if o.Value != buyerTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, buyerTestOutpoints[i].Value)
+		if o.Value != expectedBuyerOutpoints[i].Value {
+			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedBuyerOutpoints[i].Value)
 		}
 	}
-	if len(vendorOutpoints) != len(vendorTestOutpoints) {
+	if len(dispute.VendorOutpoints) != len(expectedVendorOutpoints) {
 		t.Error("Incorrect number of buyer outpoints returned")
 	}
-	for i, o := range vendorTestOutpoints {
-		if o.Hash != vendorTestOutpoints[i].Hash {
-			t.Errorf("Expected outpoint hash %s got %s", o.Hash, vendorTestOutpoints[i].Hash)
+	for i, o := range expectedVendorOutpoints {
+		if o.Hash != expectedVendorOutpoints[i].Hash {
+			t.Errorf("Expected outpoint hash %s got %s", o.Hash, expectedVendorOutpoints[i].Hash)
 		}
-		if o.Index != vendorTestOutpoints[i].Index {
-			t.Errorf("Expected outpoint index %v got %v", o.Index, vendorTestOutpoints[i].Index)
+		if o.Index != expectedVendorOutpoints[i].Index {
+			t.Errorf("Expected outpoint index %v got %v", o.Index, expectedVendorOutpoints[i].Index)
 		}
-		if o.Value != vendorTestOutpoints[i].Value {
-			t.Errorf("Expected outpoint value %v got %v", o.Value, vendorTestOutpoints[i].Value)
+		if o.Value != expectedVendorOutpoints[i].Value {
+			t.Errorf("Expected outpoint value %v got %v", o.Value, expectedVendorOutpoints[i].Value)
 		}
 	}
-	if state != pb.OrderState_DISPUTED {
-		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, state)
+	if dispute.OrderState != pb.OrderState_DISPUTED {
+		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, dispute.OrderState)
 	}
 }
 
@@ -512,5 +519,208 @@ func TestCasesDB_GetAll(t *testing.T) {
 	}
 	if ct != 1 {
 		t.Error("Returned incorrect number of query cases")
+	}
+}
+
+func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	setupSQL := []string{
+		schema.PragmaKey(""),
+		schema.CreateTableDisputedCasesSQL,
+	}
+	_, err := database.Exec(strings.Join(setupSQL, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Artificially start disputes 50 days ago
+	var (
+		now        = time.Unix(time.Now().Unix(), 0)
+		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
+		nowData, _ = ptypes.TimestampProto(now)
+		order      = &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: "buyerID",
+				Handle: "@buyerID",
+			},
+			Shipping: &pb.Order_Shipping{
+				Address: "1234 Test Ave",
+				ShipTo:  "Buyer Name",
+			},
+			Payment: &pb.Order_Payment{
+				Amount:  10,
+				Method:  pb.Order_Payment_DIRECT,
+				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+			},
+			Timestamp: nowData,
+		}
+		expectedImagesOne = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		contract          = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
+			},
+			BuyerOrder: order,
+		}
+		neverNotified = &repo.DisputeCaseRecord{
+			CaseID:                      "neverNotified",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
+		}
+		initialNotified = &repo.DisputeCaseRecord{
+			CaseID:                      "initialNotificationSent",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart,
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
+		}
+		finallyNotified = &repo.DisputeCaseRecord{
+			CaseID:                      "finalNotificationSent",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: time.Now(),
+			BuyerContract:               contract,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
+		}
+		existingRecords = []*repo.DisputeCaseRecord{
+			neverNotified,
+			initialNotified,
+			finallyNotified,
+		}
+	)
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	for _, r := range existingRecords {
+		var isBuyerInitiated int = 0
+		if r.IsBuyerInitiated {
+			isBuyerInitiated = 1
+		}
+		buyerContract, err := m.MarshalToString(r.BuyerContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		vendorContract, err := m.MarshalToString(r.VendorContract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	casesdb := NewCaseStore(database, new(sync.Mutex))
+	cases, err := casesdb.GetDisputesForDisputeExpiryNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawNeverNotifiedCase, sawInitialNotifiedCase, sawFinallyNotifiedCase bool
+	for _, c := range cases {
+		switch c.CaseID {
+		case neverNotified.CaseID:
+			sawNeverNotifiedCase = true
+			if reflect.DeepEqual(c, neverNotified) != true {
+				t.Error("Expected neverNotified to match, but did not")
+				t.Error("Expected:", neverNotified)
+				t.Error("Actual:", c)
+			}
+		case initialNotified.CaseID:
+			sawInitialNotifiedCase = true
+			if reflect.DeepEqual(c, initialNotified) != true {
+				t.Error("Expected initialNotified to match, but did not")
+				t.Error("Expected:", initialNotified)
+				t.Error("Actual:", c)
+			}
+		case finallyNotified.CaseID:
+			sawFinallyNotifiedCase = true
+		default:
+			t.Errorf("Found unexpected dispute case: %+v", c)
+		}
+	}
+
+	if sawNeverNotifiedCase == false {
+		t.Error("Expected to see case which was never notified")
+	}
+	if sawInitialNotifiedCase == false {
+		t.Error("Expected to see case which was initially notified")
+	}
+	if sawFinallyNotifiedCase == true {
+		t.Error("Expected NOT to see case which recieved it's final notification")
+	}
+}
+
+func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	setupSQL := []string{
+		schema.PragmaKey(""),
+		schema.CreateTableDisputedCasesSQL,
+	}
+	_, err := database.Exec(strings.Join(setupSQL, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Artificially start disputes 50 days ago
+	timeStart := time.Now().Add(time.Duration(-50*24) * time.Hour)
+	disputeOne := &repo.DisputeCaseRecord{
+		CaseID:                      "case1",
+		Timestamp:                   timeStart,
+		LastDisputeExpiryNotifiedAt: time.Unix(123, 0),
+	}
+	disputeTwo := &repo.DisputeCaseRecord{
+		CaseID:                      "case2",
+		Timestamp:                   timeStart,
+		LastDisputeExpiryNotifiedAt: time.Unix(456, 0),
+	}
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastDisputeExpiryNotifiedAt) values (?, ?, ?);", disputeOne.CaseID, disputeOne.Timestamp, disputeOne.LastDisputeExpiryNotifiedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec("insert into cases (caseID, timestamp, lastDisputeExpiryNotifiedAt) values (?, ?, ?);", disputeTwo.CaseID, int(disputeTwo.Timestamp.Unix()), int(disputeTwo.LastDisputeExpiryNotifiedAt.Unix()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	disputeOne.LastDisputeExpiryNotifiedAt = time.Unix(987, 0)
+	disputeTwo.LastDisputeExpiryNotifiedAt = time.Unix(765, 0)
+	casesdb := NewCaseStore(database, new(sync.Mutex))
+	err = casesdb.UpdateDisputesLastDisputeExpiryNotifiedAt([]*repo.DisputeCaseRecord{disputeOne, disputeTwo})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := database.Query("select caseID, lastDisputeExpiryNotifiedAt from cases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			caseID                      string
+			lastDisputeExpiryNotifiedAt int64
+		)
+		if err = rows.Scan(&caseID, &lastDisputeExpiryNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+		switch caseID {
+		case disputeOne.CaseID:
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeOne.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected disputeOne.LastDisputeExpiryNotifiedAt to be updated")
+			}
+		case disputeTwo.CaseID:
+			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeTwo.LastDisputeExpiryNotifiedAt) != true {
+				t.Error("Expected disputeTwo.LastDisputeExpiryNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected dispute case encounted")
+			t.Error(caseID, lastDisputeExpiryNotifiedAt)
+		}
+
 	}
 }

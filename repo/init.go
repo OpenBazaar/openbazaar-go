@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -17,17 +17,21 @@ import (
 	"time"
 )
 
-const RepoVersion = "7"
+const RepoVersion = "9"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
 
 func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string, mnemonic string, creationDate time.Time, dbInit func(string, []byte, string, time.Time) error) error {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	nodeSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        repoRoot,
 		TestModeEnabled: testnet,
+		Mnemonic:        mnemonic,
 	})
-	if err := paths.BuildSchemaDirectories(); err != nil {
+	if err != nil {
+		return err
+	}
+	if nodeSchema.BuildSchemaDirectories(); err != nil {
 		return err
 	}
 
@@ -43,10 +47,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 		return err
 	}
 
-	conf, err := InitConfig(repoRoot)
-	if err != nil {
-		return err
-	}
+	conf := schema.MustDefaultConfig()
 
 	if mnemonic == "" {
 		mnemonic, err = createMnemonic(bip39.NewEntropy, bip39.NewMnemonic)
@@ -89,8 +90,6 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if werr != nil {
 		return werr
 	}
-	f.Close()
-
 	return initializeIpnsKeyspace(repoRoot, identityKey)
 }
 
@@ -123,9 +122,6 @@ func checkWriteable(dir string) error {
 }
 
 func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
@@ -141,6 +137,8 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	}
 
 	cfg.Identity = identity
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	nd, err := core.NewNode(ctx, &core.BuildCfg{Repo: r})
 	if err != nil {
 		return err
@@ -160,53 +158,56 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 	if err != nil { // NB: repo is owned by the node
 		return err
 	}
-	var w WalletConfig = WalletConfig{
-		Type:             "spvwallet",
-		MaxFee:           2000,
-		FeeAPI:           "https://btc.fees.openbazaar.org",
-		HighFeeDefault:   160,
-		MediumFeeDefault: 60,
-		LowFeeDefault:    20,
-		TrustedPeer:      "",
-	}
+	var (
+		w = schema.WalletConfig{
+			Type:             "spvwallet",
+			MaxFee:           2000,
+			FeeAPI:           "https://btc.fees.openbazaar.org",
+			HighFeeDefault:   160,
+			MediumFeeDefault: 60,
+			LowFeeDefault:    20,
+			TrustedPeer:      "",
+		}
 
-	var a APIConfig = APIConfig{
-		Enabled:     true,
-		AllowedIPs:  []string{},
-		HTTPHeaders: nil,
-	}
+		a = schema.APIConfig{
+			Enabled:     true,
+			AllowedIPs:  []string{},
+			HTTPHeaders: nil,
+		}
 
-	var ds DataSharing = DataSharing{
-		AcceptStoreRequests: false,
-		PushTo:              DataPushNodes,
-	}
+		ds = schema.DataSharing{
+			AcceptStoreRequests: false,
+			PushTo:              schema.DataPushNodes,
+		}
 
-	var t TorConfig = TorConfig{}
-	if err := extendConfigFile(r, "Wallet", w); err != nil {
+		t = schema.TorConfig{}
+
+		resolvers = schema.ResolverConfig{
+			Id: "https://resolver.onename.com/",
+		}
+	)
+	if err := r.SetConfigKey("Wallet", w); err != nil {
 		return err
 	}
-	var resolvers ResolverConfig = ResolverConfig{
-		Id: "https://resolver.onename.com/",
-	}
-	if err := extendConfigFile(r, "DataSharing", ds); err != nil {
+	if err := r.SetConfigKey("DataSharing", ds); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Resolvers", resolvers); err != nil {
+	if err := r.SetConfigKey("Resolvers", resolvers); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Bootstrap-testnet", TestnetBootstrapAddresses); err != nil {
+	if err := r.SetConfigKey("Bootstrap-testnet", schema.BootstrapAddressesTestnet); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Dropbox-api-token", ""); err != nil {
+	if err := r.SetConfigKey("Dropbox-api-token", ""); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "RepublishInterval", "24h"); err != nil {
+	if err := r.SetConfigKey("RepublishInterval", "24h"); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "JSON-API", a); err != nil {
+	if err := r.SetConfigKey("JSON-API", a); err != nil {
 		return err
 	}
-	if err := extendConfigFile(r, "Tor-config", t); err != nil {
+	if err := r.SetConfigKey("Tor-config", t); err != nil {
 		return err
 	}
 	if err := r.Close(); err != nil {
@@ -230,7 +231,7 @@ func createMnemonic(newEntropy func(int) ([]byte, error), newMnemonic func([]byt
 /* Returns the directory to store repo data in.
    It depends on the OS and whether or not we are on testnet. */
 func GetRepoPath(isTestnet bool) (string, error) {
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{
+	paths, err := schema.NewCustomSchemaManager(schema.SchemaContext{
 		TestModeEnabled: isTestnet,
 	})
 	if err != nil {

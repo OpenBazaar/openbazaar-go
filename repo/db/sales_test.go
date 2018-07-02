@@ -2,12 +2,16 @@ package db
 
 import (
 	"database/sql"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
@@ -449,5 +453,196 @@ func TestSalesDB_GetNeedsResync(t *testing.T) {
 	}
 	if !a || !b {
 		t.Error("Failed to return correct unfunded orders")
+	}
+}
+
+func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start sales 50 days ago
+	var (
+		now                           = time.Unix(time.Now().Unix(), 0)
+		timeStart                     = now.Add(time.Duration(-50*24) * time.Hour)
+		expectedImagesOne             = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		expectedContractOne           = factory.NewDisputeableContract()
+		neverNotifiedButUndisputeable = &repo.SaleRecord{
+			Contract:                     factory.NewUndisputeableContract(),
+			OrderID:                      "neverNotifiedButUndisputed",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
+		}
+		neverNotified = &repo.SaleRecord{
+			Contract:                     expectedContractOne,
+			OrderID:                      "neverNotified",
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
+		}
+		finallyNotified = &repo.SaleRecord{
+			Contract:                     factory.NewContract(),
+			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderID:                      "finalNotificationSent",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Now(),
+		}
+		existingRecords = []*repo.SaleRecord{
+			neverNotifiedButUndisputeable,
+			neverNotified,
+			finallyNotified,
+		}
+	)
+	expectedContractOne.VendorListings[0].Item.Images = expectedImagesOne
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	for _, r := range existingRecords {
+		contractData, err := m.MarshalToString(r.Contract)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := database.Exec("insert into sales (orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?, ?, ?);", r.OrderID, contractData, int(r.OrderState), int(r.Timestamp.Unix()), int(r.LastDisputeTimeoutNotifiedAt.Unix())); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	saleDatabase := NewSaleStore(database, new(sync.Mutex))
+	sales, err := saleDatabase.GetSalesForDisputeTimeoutNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var sawNeverNotifiedButUndisputeable, sawNeverNotifiedSale, sawFinallyNotifiedSale bool
+	for _, s := range sales {
+		switch s.OrderID {
+		case neverNotified.OrderID:
+			sawNeverNotifiedSale = true
+			if reflect.DeepEqual(s, neverNotified) != true {
+				t.Error("Expected neverNotified to match, but did not")
+				t.Error("Expected:", neverNotified)
+				t.Error("Actual:", s)
+			}
+		case finallyNotified.OrderID:
+			sawFinallyNotifiedSale = true
+		case neverNotifiedButUndisputeable.OrderID:
+			sawNeverNotifiedButUndisputeable = true
+		default:
+			t.Errorf("Found unexpected sale: %+v", s)
+		}
+	}
+
+	if sawNeverNotifiedSale == false {
+		t.Error("Expected to see sale which was never notified")
+	}
+	if sawFinallyNotifiedSale == true {
+		t.Error("Expected NOT to see sale which recieved it's final notification")
+	}
+	if sawNeverNotifiedButUndisputeable == true {
+		t.Error("Expected NOT to see sale which is undisputeable")
+	}
+}
+
+func TestUpdateSaleLastDisputeTimeoutNotifiedAt(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Artificially start sales 50 days ago
+	var (
+		timeStart = time.Now().Add(time.Duration(-50*24) * time.Hour)
+		saleOne   = &repo.SaleRecord{
+			OrderID:                      "sale1",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(123, 0),
+		}
+		saleTwo = &repo.SaleRecord{
+			OrderID:                      "sale2",
+			Timestamp:                    timeStart,
+			LastDisputeTimeoutNotifiedAt: time.Unix(456, 0),
+		}
+		existingSales = []*repo.SaleRecord{saleOne, saleTwo}
+	)
+	s, err := database.Prepare("insert into sales (orderID, timestamp, lastDisputeTimeoutNotifiedAt) values (?, ?, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range existingSales {
+		_, err = s.Exec(p.OrderID, p.Timestamp, p.LastDisputeTimeoutNotifiedAt.Unix())
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Simulate LastDisputeTimeoutNotifiedAt has been changed
+	saleOne.LastDisputeTimeoutNotifiedAt = time.Unix(987, 0)
+	saleTwo.LastDisputeTimeoutNotifiedAt = time.Unix(765, 0)
+	saleDatabase := NewSaleStore(database, new(sync.Mutex))
+	err = saleDatabase.UpdateSalesLastDisputeTimeoutNotifiedAt(existingSales)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s, err = database.Prepare("select orderID, lastDisputeTimeoutNotifiedAt from sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, err := s.Query()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var (
+			orderID                      string
+			lastDisputeTimeoutNotifiedAt int64
+		)
+		if err = rows.Scan(&orderID, &lastDisputeTimeoutNotifiedAt); err != nil {
+			t.Fatal(err)
+		}
+
+		switch orderID {
+		case saleOne.OrderID:
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleOne.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected saleOne.LastDisputeTimeoutNotifiedAt to be updated")
+			}
+		case saleTwo.OrderID:
+			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleTwo.LastDisputeTimeoutNotifiedAt) != true {
+				t.Error("Expected saleTwo.LastDisputeTimeoutNotifiedAt to be updated")
+			}
+		default:
+			t.Error("Unexpected sale encounted")
+			t.Error(orderID, lastDisputeTimeoutNotifiedAt)
+		}
+
 	}
 }

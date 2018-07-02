@@ -23,6 +23,7 @@ import (
 	"errors"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -144,7 +145,7 @@ func (x *Restore) Execute(args []string) error {
 		return err
 	}
 	if x.Testnet {
-		testnetBootstrapAddrs, err := repo.GetTestnetBootstrapAddrs(configFile)
+		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
 		if err != nil {
 			PrintError(err.Error())
 			return err
@@ -167,7 +168,7 @@ func (x *Restore) Execute(args []string) error {
 		cfg.Addresses.Swarm = []string{}
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
 	}
-	torConfig, err := repo.GetTorConfig(configFile)
+	torConfig, err := schema.GetTorConfig(configFile)
 	if err != nil {
 		PrintError(err.Error())
 		return err

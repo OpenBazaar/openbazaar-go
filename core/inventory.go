@@ -6,7 +6,6 @@ import (
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
@@ -78,16 +77,16 @@ func (n *OpenBazaarNode) PublishInventory() error {
 		return err
 	}
 
-	n.Broadcast <- notifications.StatusNotification{"publishing"}
+	n.Broadcast <- repo.StatusNotification{"publishing"}
 	go func() {
 		hash, err := repo.PublishObjectToIPFS(n.Context, n.IpfsNode, n.RepoPath, "inventory", inventory)
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- notifications.StatusNotification{"error publishing"}
+			n.Broadcast <- repo.StatusNotification{"error publishing"}
 			return
 		}
 
-		n.Broadcast <- notifications.StatusNotification{"publish complete"}
+		n.Broadcast <- repo.StatusNotification{"publish complete"}
 
 		err = n.sendToPushNodes(hash)
 		if err != nil {

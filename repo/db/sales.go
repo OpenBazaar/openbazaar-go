@@ -4,13 +4,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
-	"sync"
-	"time"
 )
 
 type SalesDB struct {
@@ -317,5 +319,79 @@ func (s *SalesDB) SetNeedsResync(orderId string, needsResync bool) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// GetSalesForDisputeTimeoutNotification returns []*SaleRecord including
+// each record which needs Notifications to be generated.
+func (s *SalesDB) GetSalesForDisputeTimeoutNotification() ([]*repo.SaleRecord, error) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	stmt := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt from sales where (lastDisputeTimeoutNotifiedAt - timestamp) < %d and state in (%d, %d)",
+		int(repo.VendorDisputeTimeout_lastInterval.Seconds()),
+		pb.OrderState_PARTIALLY_FULFILLED,
+		pb.OrderState_FULFILLED,
+	)
+	rows, err := s.db.Query(stmt)
+	if err != nil {
+		return nil, fmt.Errorf("selecting sales: %s", err.Error())
+	}
+
+	result := make([]*repo.SaleRecord, 0)
+	for rows.Next() {
+		var (
+			lastDisputeTimeoutNotifiedAt int64
+			contract                     []byte
+			stateInt                     int
+
+			r = &repo.SaleRecord{
+				Contract: &pb.RicardianContract{},
+			}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastDisputeTimeoutNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning sales: %s", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
+			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
+		}
+		r.OrderState = pb.OrderState(stateInt)
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastDisputeTimeoutNotifiedAt = time.Unix(lastDisputeTimeoutNotifiedAt, 0)
+
+		if r.IsDisputeable() {
+			result = append(result, r)
+		}
+	}
+	return result, nil
+}
+
+// UpdateSalesLastDisputeTimeoutNotifiedAt accepts []*repo.SaleRecord and updates
+// each SaleRecord by their OrderID to the set LastDisputeTimeoutNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (s *SalesDB) UpdateSalesLastDisputeTimeoutNotifiedAt(sales []*repo.SaleRecord) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update sale transaction: %s", err.Error())
+	}
+	for _, sale := range sales {
+		_, err = tx.Exec("update sales set lastDisputeTimeoutNotifiedAt = ? where orderID = ?", int(sale.LastDisputeTimeoutNotifiedAt.Unix()), sale.OrderID)
+		if err != nil {
+			return fmt.Errorf("update sale: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update sale transaction: %s", err.Error())
+	}
+
 	return nil
 }

@@ -404,6 +404,22 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, k *libp2p.PubKey, resol
 	return n.sendMessage(peerId, k, m)
 }
 
+func (n *OpenBazaarNode) SendFundsReleasedByVendor(peerID string, marshalledPeerPublicKey []byte, orderID string) error {
+	peerKey, err := libp2p.UnmarshalPublicKey(marshalledPeerPublicKey)
+	if err != nil {
+		return err
+	}
+	payload, err := ptypes.MarshalAny(&pb.VendorFinalizedPayment{OrderID: orderID})
+	if err != nil {
+		return err
+	}
+	message := pb.Message{
+		MessageType: pb.Message_VENDOR_FINALIZED_PAYMENT,
+		Payload:     payload,
+	}
+	return n.sendMessage(peerID, &peerKey, message)
+}
+
 func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 	a, err := ptypes.MarshalAny(chatMessage)
 	if err != nil {

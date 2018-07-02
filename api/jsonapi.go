@@ -32,11 +32,11 @@ import (
 	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -65,7 +65,7 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config repo.APIConfig) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*jsonAPIHandler, error) {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
@@ -710,8 +710,9 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}*/
+	height, _ := i.node.Wallet.ChainTip()
 	confirmed, unconfirmed := i.node.Wallet.Balance()
-	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d}`, int(confirmed), int(unconfirmed)))
+	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d, "height": %d}`, int(confirmed), int(unconfirmed), height))
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
@@ -1819,10 +1820,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusAccepted)
 		SanitizedResponse(w, string(respJson))
 		go func() {
-			type wsResp struct {
-				Id     string `json:"id"`
-				PeerId string `json:"peerId"`
-			}
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
 			found := make(map[string]bool)
@@ -1863,14 +1860,18 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- b
+						i.node.Broadcast <- repo.PremarshalledNotifier{b}
 					} else {
+						type wsResp struct {
+							Id     string `json:"id"`
+							PeerId string `json:"peerId"`
+						}
 						resp := wsResp{id, pid}
-						respJson, err := json.MarshalIndent(resp, "", "    ")
+						data, err := json.MarshalIndent(resp, "", "    ")
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- []byte(respJson)
+						i.node.Broadcast <- repo.PremarshalledNotifier{data}
 					}
 				}(p)
 			}
@@ -1924,6 +1925,19 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+
+	if state != pb.OrderState_FULFILLED &&
+		state != pb.OrderState_RESOLVED &&
+		state != pb.OrderState_PAYMENT_FINALIZED {
+		errorString := fmt.Sprintf("must be one of the following states to leave a rating and complete the order: %s, %s, %s",
+			pb.OrderState_FULFILLED.String(),
+			pb.OrderState_RESOLVED.String(),
+			pb.OrderState_PAYMENT_FINALIZED.String(),
+		)
+		ErrorResponse(w, http.StatusBadRequest, errorString)
+		return
+	}
+
 	for _, rd := range or.Ratings {
 		if rd.Slug == "" {
 			ErrorResponse(w, http.StatusBadRequest, "rating must contain the slug")
@@ -1950,10 +1964,6 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	if state != pb.OrderState_FULFILLED && state != pb.OrderState_RESOLVED {
-		ErrorResponse(w, http.StatusBadRequest, "order must be either fulfilled or in closed dispute state to leave the rating")
-		return
-	}
 	err = i.node.CompleteOrder(&or, contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -2032,11 +2042,15 @@ func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request
 	}
 
 	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
-	if err != nil && err == core.ErrCaseNotFound {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
-	} else if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+	if err != nil {
+		switch err {
+		case core.ErrCaseNotFound:
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+		case core.ErrCloseFailureCaseExpired:
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+		default:
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	SanitizedResponse(w, `{}`)
@@ -2150,47 +2164,35 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	switch state {
-	case pb.OrderState_DISPUTED:
-		disputeStart, err := ptypes.Timestamp(contract.GetDispute().Timestamp)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		fourtyFiveDaysInHours := 45 * 24
-		disputeDuration := time.Duration(fourtyFiveDaysInHours) * time.Hour
-
-		// Time hack until we can stub this more nicely in test env
-		if i.node.TestNetworkEnabled() || i.node.RegressionNetworkEnabled() {
-			disputeDuration = time.Duration(10) * time.Second
-		}
-
-		disputeTimeout := disputeStart.Add(disputeDuration)
-		if time.Now().Before(disputeTimeout) {
-			expiresIn := disputeTimeout.Sub(time.Now())
-			ErrorResponse(w, http.StatusUnauthorized, fmt.Sprintf("releaseescrow can only be called when in dispute for %s or longer, expires in %s", disputeDuration.String(), expiresIn.String()))
-			return
-		}
-		err = i.node.ReleaseFundsAfterTimeout(contract, records)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-	case pb.OrderState_FULFILLED:
-		err = i.node.ReleaseFundsAfterTimeout(contract, records)
-		if err != nil {
-			if err == core.EscrowTimeLockedError {
-				ErrorResponse(w, http.StatusUnauthorized, err.Error())
-				return
-			} else {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-		}
-	default:
-		ErrorResponse(w, http.StatusBadRequest, "releaseescrow can only be called when in dispute for 45 days or fulfilled for longer than escrow timeout")
+	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED {
+		ErrorResponse(w, http.StatusBadRequest, "Release escrow can only be called when sale is pending or fulfilled")
 		return
+	}
+
+	if !(&repo.SaleRecord{Contract: contract}).SupportsTimedEscrowRelease() {
+		ErrorResponse(w, http.StatusBadRequest, "Escrowed currency does not support automatic release of funds to vendor")
+		return
+	}
+
+	err = i.node.ReleaseFundsAfterTimeout(contract, records)
+	if err != nil {
+		switch err {
+		case core.ErrPrematureReleaseOfTimedoutEscrowFunds:
+			ErrorResponse(w, http.StatusUnauthorized, err.Error())
+			return
+		case core.EscrowTimeLockedError:
+			ErrorResponse(w, http.StatusUnauthorized, err.Error())
+			return
+		default:
+			ErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	err = i.node.SendFundsReleasedByVendor(contract.BuyerOrder.BuyerID.PeerID, contract.BuyerOrder.BuyerID.Pubkeys.Identity, rel.OrderID)
+	if err != nil {
+		log.Errorf("SendFundsReleasedByVendor error: %s", err.Error())
+		log.Errorf("SendFundsReleasedByVendor: peerID: %s orderID: %s", contract.BuyerOrder.BuyerID.PeerID, rel.OrderID)
 	}
 
 	SanitizedResponse(w, `{}`)
@@ -2451,9 +2453,9 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 	}
 
 	type notifData struct {
-		Unread        int                          `json:"unread"`
-		Total         int                          `json:"total"`
-		Notifications []notifications.Notification `json:"notifications"`
+		Unread        int               `json:"unread"`
+		Total         int               `json:"total"`
+		Notifications []json.RawMessage `json:"notifications"`
 	}
 	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
 	if err != nil {
@@ -2466,7 +2468,15 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	ret, err := json.MarshalIndent(notifData{unread, total, notifs}, "", "    ")
+	payload := notifData{unread, total, []json.RawMessage{}}
+	for _, n := range notifs {
+		data, err := n.Data()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+		payload.Notifications = append(payload.Notifications, data)
+	}
+	ret, err := json.MarshalIndent(payload, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -2643,7 +2653,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						if err != nil {
 							return
 						}
-						i.node.Broadcast <- ret
+						i.node.Broadcast <- repo.PremarshalledNotifier{ret}
 						return
 					}
 
@@ -2669,7 +2679,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 						respondWithError("Error Marshalling to JSON")
 						return
 					}
-					i.node.Broadcast <- b
+					i.node.Broadcast <- repo.PremarshalledNotifier{b}
 				}(p)
 			}
 		}()
@@ -3385,7 +3395,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					if err != nil {
 						return
 					}
-					i.node.Broadcast <- ret
+					i.node.Broadcast <- repo.PremarshalledNotifier{ret}
 					return
 				}
 				ratingBytes, err := ipfs.Cat(i.node.Context, rid, time.Minute)
@@ -3425,7 +3435,7 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 					respondWithError("Error marshalling rating")
 					return
 				}
-				i.node.Broadcast <- b
+				i.node.Broadcast <- repo.PremarshalledNotifier{b}
 			}(r)
 		}
 	}
@@ -3602,7 +3612,7 @@ func (i *jsonAPIHandler) POSTTestEmailNotifications(w http.ResponseWriter, r *ht
 		return
 	}
 	notifier := smtpNotifier{&settings}
-	err = notifier.notify(notifications.TestNotification{})
+	err = notifier.notify(repo.TestNotification{})
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return

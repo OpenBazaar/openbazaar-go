@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
@@ -38,7 +39,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	apiCfg, err := repo.GetAPIConfig(configFile)
+	apiCfg, err := schema.GetAPIConfig(configFile)
 	if err != nil {
 		log.Error(err)
 		return err

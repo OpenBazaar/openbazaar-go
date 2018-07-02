@@ -15,6 +15,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
@@ -267,10 +268,33 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 	return nil
 }
 
-var EscrowTimeLockedError error
+var (
+	EscrowTimeLockedError                    error
+	ErrPrematureReleaseOfTimedoutEscrowFunds = errors.New(fmt.Sprintf("Escrow can only be released when in dispute for %s days", (time.Duration(repo.DisputeTotalDurationHours) * time.Hour).String()))
+)
 
 func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * 6
+	var (
+		dispute         = contract.GetDispute()
+		disputeDuration = time.Duration(repo.DisputeTotalDurationHours) * time.Hour
+	)
+	if dispute == nil {
+		return fmt.Errorf("contract missing dispute")
+	}
+	disputeStart, err := ptypes.Timestamp(dispute.Timestamp)
+	if err != nil {
+		return fmt.Errorf("sale dispute timestamp: %s", err.Error())
+	}
+	if n.TestnetEnable {
+		// Time hack until we can stub this more nicely in test env
+		disputeDuration = time.Duration(10) * time.Second
+	}
+	disputeExpiration := disputeStart.Add(disputeDuration)
+	if time.Now().Before(disputeExpiration) {
+		return ErrPrematureReleaseOfTimedoutEscrowFunds
+	}
+
+	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	var utxos []wallet.Utxo
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
@@ -336,7 +360,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		return err
 	}
 
-	err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_PAYMENT_FINALIZED, true)
+	err = n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_PAYMENT_FINALIZED, true)
 	if err != nil {
 		return err
 	}

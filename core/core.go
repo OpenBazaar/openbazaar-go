@@ -13,7 +13,6 @@ import (
 	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
 	"sync"
 
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/namesys"
@@ -63,7 +62,7 @@ type OpenBazaarNode struct {
 	Datastore repo.Datastore
 
 	// Websocket channel used for pushing data to the UI
-	Broadcast chan interface{}
+	Broadcast chan repo.Notifier
 
 	// Bitcoin wallet implementation
 	Wallet wallet.Wallet
@@ -100,6 +99,10 @@ type OpenBazaarNode struct {
 
 	// Last ditch API to find records that dropped out of the DHT
 	IPNSBackupAPI string
+
+	// RecordAgingNotifier is a worker that walks the cases datastore to
+	// notify the user as disputes age past certain thresholds
+	RecordAgingNotifier *recordAgingNotifier
 
 	TestnetEnable        bool
 	RegressionTestEnable bool
@@ -151,7 +154,7 @@ func (n *OpenBazaarNode) publish(hash string) {
 	}
 
 	if inflightPublishRequests == 0 {
-		n.Broadcast <- notifications.StatusNotification{"publishing"}
+		n.Broadcast <- repo.StatusNotification{"publishing"}
 	}
 
 	err := n.sendToPushNodes(hash)
@@ -167,9 +170,9 @@ func (n *OpenBazaarNode) publish(hash string) {
 	if inflightPublishRequests == 0 {
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- notifications.StatusNotification{"error publishing"}
+			n.Broadcast <- repo.StatusNotification{"error publishing"}
 		} else {
-			n.Broadcast <- notifications.StatusNotification{"publish complete"}
+			n.Broadcast <- repo.StatusNotification{"publish complete"}
 		}
 	}
 }

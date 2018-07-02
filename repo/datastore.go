@@ -4,7 +4,6 @@ import (
 	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
 
 	"database/sql"
-	notif "github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
@@ -33,6 +32,8 @@ type Datastore interface {
 }
 
 type Queryable interface {
+	Lock()
+	Unlock()
 	BeginTransaction() (*sql.Tx, error)
 	PrepareQuery(string) (*sql.Stmt, error)
 	PrepareAndExecuteQuery(string, ...interface{}) (*sql.Rows, error)
@@ -206,6 +207,20 @@ type PurchaseStore interface {
 
 	// Return the number of purchases in the database
 	Count() int
+
+	// GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
+	// each record which needs buyerDisputeTimeout Notifications to be generated.
+	GetPurchasesForDisputeTimeoutNotification() ([]*PurchaseRecord, error)
+
+	// GetPurchasesForDisputeExpiryNotification returns []*PurchaseRecord including
+	// each record which needs buyerDisputeExpiry Notifications to be generated.
+	GetPurchasesForDisputeExpiryNotification() ([]*PurchaseRecord, error)
+
+	// UpdatePurchasesLastDisputeTimeoutNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeTimeoutNotifiedAt by its OrderID
+	UpdatePurchasesLastDisputeTimeoutNotifiedAt([]*PurchaseRecord) error
+
+	// UpdatePurchasesLastDisputeExpiryNotifiedAt  accepts []*PurchaseRecord and updates each records lastDisputeExpiryNotifiedAt by its OrderID
+	UpdatePurchasesLastDisputeExpiryNotifiedAt([]*PurchaseRecord) error
 }
 
 type SaleStore interface {
@@ -243,6 +258,13 @@ type SaleStore interface {
 
 	// Return the number of sales in the database
 	Count() int
+
+	// GetSalesForDisputeTimeoutNotification returns []*SaleRecord including
+	// each record which needs Notifications to be generated.
+	GetSalesForDisputeTimeoutNotification() ([]*SaleRecord, error)
+
+	// UpdateSalesLastDisputeTimeoutNotifiedAt  accepts []*SaleRecord and updates each records lastDisputeTimeoutNotifiedAt by its CaseID
+	UpdateSalesLastDisputeTimeoutNotifiedAt([]*SaleRecord) error
 }
 
 type CaseStore interface {
@@ -250,6 +272,9 @@ type CaseStore interface {
 
 	// Save a new case
 	Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error
+
+	// Save a new case
+	PutRecord(*DisputeCaseRecord) error
 
 	// Update a case with the buyer info
 	UpdateBuyerInfo(caseID string, buyerContract *pb.RicardianContract, buyerValidationErrors []string, buyerPayoutAddress string, buyerOutpoints []*pb.Outpoint) error
@@ -272,14 +297,21 @@ type CaseStore interface {
 	// Return the case metadata given a case ID
 	GetCaseMetadata(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerValidationErrors, vendorValidationErrors []string, state pb.OrderState, read bool, timestamp time.Time, buyerOpened bool, claim string, resolution *pb.DisputeResolution, err error)
 
-	// Return the dispute payout data for a case
-	GetPayoutDetails(caseID string) (buyerContract, vendorContract *pb.RicardianContract, buyerPayoutAddress, vendorPayoutAddress string, buyerOutpoints, vendorOutpoints []*pb.Outpoint, state pb.OrderState, err error)
+	// GetByCaseID returns the dispute payout data for a case
+	GetByCaseID(caseID string) (*DisputeCaseRecord, error)
 
 	// Return the metadata for all cases given the search terms. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Case, int, error)
 
 	// Return the number of cases in the database
 	Count() int
+
+	// GetDisputesForDisputeExpiryNotification returns []*DisputeCaseRecord including
+	// each record which needs Notifications to be generated.
+	GetDisputesForDisputeExpiryNotification() ([]*DisputeCaseRecord, error)
+
+	// UpdateDisputesLastDisputeExpiryNotifiedAt accepts []*DisputeCaseRecord and updates each records lastDisputeExpiryNotifiedAt by its CaseID
+	UpdateDisputesLastDisputeExpiryNotifiedAt([]*DisputeCaseRecord) error
 }
 
 type ChatStore interface {
@@ -312,8 +344,8 @@ type ChatStore interface {
 type NotificationStore interface {
 	Queryable
 
-	// Put a new notification to the database
-	Put(notifID string, notification notif.Data, notifType string, timestamp time.Time) error
+	// PutRecord persists a Notification to the database
+	PutRecord(*Notification) error
 
 	// Mark notification as read
 	MarkAsRead(notifID string) error
@@ -322,7 +354,7 @@ type NotificationStore interface {
 	MarkAllAsRead() error
 
 	// Fetch notifications from database
-	GetAll(offsetID string, limit int, typeFilter []string) ([]notif.Notification, int, error)
+	GetAll(offsetID string, limit int, typeFilter []string) ([]*Notification, int, error)
 
 	// Returns the unread count for all notifications
 	GetUnreadCount() (int, error)

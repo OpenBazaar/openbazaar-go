@@ -301,7 +301,7 @@ func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	if len(listing.Moderators) == 0 {
 		sd, err := n.Datastore.Settings().Get()
-		if err == nil {
+		if err == nil && sd.StoreModerators != nil {
 			listing.Moderators = *sd.StoreModerators
 		}
 	}

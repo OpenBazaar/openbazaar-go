@@ -69,6 +69,9 @@ type apiTest struct {
 	expectedResponseBody string
 }
 
+// setupAction is used to change state before and after a set of []apiTest
+type setupAction func(*test.Repository) error
+
 // apiTests is a slice of apiTest
 type apiTests []apiTest
 
@@ -82,30 +85,46 @@ func request(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-func resetTestRepo(t *testing.T) {
-	repository, err := test.NewRepository()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	repository.Reset()
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func runAPITests(t *testing.T, tests apiTests) {
-	resetTestRepo(t)
+	_, err := test.ResetRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	// Run each test in serial
 	for _, jsonAPITest := range tests {
 		executeAPITest(t, jsonAPITest)
 	}
 }
 
-func runAPITest(t *testing.T, test apiTest) {
-	resetTestRepo(t)
-	executeAPITest(t, test)
+func runAPITestsWithSetup(t *testing.T, tests apiTests, runBefore, runAfter setupAction) {
+	repository, err := test.ResetRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if runBefore != nil {
+		if err := runBefore(repository); err != nil {
+			t.Fatal("runBefore:", err)
+		}
+	}
+
+	for _, jsonAPITest := range tests {
+		executeAPITest(t, jsonAPITest)
+	}
+
+	if runAfter != nil {
+		if err := runAfter(repository); err != nil {
+			t.Fatal("runAfter:", err)
+		}
+	}
+}
+
+func runAPITest(t *testing.T, subject apiTest) {
+	_, err := test.ResetRepository()
+	if err != nil {
+		t.Fatal(err)
+	}
+	executeAPITest(t, subject)
 }
 
 // executeAPITest executes the given test against the blackbox
@@ -152,7 +171,7 @@ func executeAPITest(t *testing.T, test apiTest) {
 		if !reflect.DeepEqual(responseJSON, expectedJSON) {
 			fmt.Println("expected:", test.expectedResponseBody)
 			fmt.Println("actual:", string(respBody))
-			t.Fatal("Incorrect response")
+			t.Error("Incorrect response")
 		}
 	}
 }

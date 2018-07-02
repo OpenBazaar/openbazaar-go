@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -38,10 +39,14 @@ func (s *SettingsDB) Put(settings repo.SettingsData) error {
 
 	_, err = stmt.Exec("settings", string(b))
 	if err != nil {
-		tx.Rollback()
+		if errRollback := tx.Rollback(); errRollback != nil {
+			return fmt.Errorf("rollback: %s\n also: %s", errRollback.Error(), err.Error())
+		}
 		return err
 	}
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 

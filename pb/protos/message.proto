@@ -12,27 +12,28 @@ message Message {
     bool isResponse             = 4; // optional
 
     enum MessageType {
-        PING                    = 0;
-        CHAT                    = 1;
-        FOLLOW                  = 2;
-        UNFOLLOW                = 3;
-        ORDER                   = 4;
-        ORDER_REJECT            = 5;
-        ORDER_CANCEL            = 6;
-        ORDER_CONFIRMATION      = 7;
-        ORDER_FULFILLMENT       = 8;
-        ORDER_COMPLETION        = 9;
-        DISPUTE_OPEN            = 10;
-        DISPUTE_UPDATE          = 11;
-        DISPUTE_CLOSE           = 12;
-        REFUND                  = 13;
-        OFFLINE_ACK             = 14;
-        OFFLINE_RELAY           = 15;
-        MODERATOR_ADD           = 16;
-        MODERATOR_REMOVE        = 17;
-        STORE                   = 18;
-        BLOCK                   = 19;
-        ERROR                   = 500;
+        PING                     = 0;
+        CHAT                     = 1;
+        FOLLOW                   = 2;
+        UNFOLLOW                 = 3;
+        ORDER                    = 4;
+        ORDER_REJECT             = 5;
+        ORDER_CANCEL             = 6;
+        ORDER_CONFIRMATION       = 7;
+        ORDER_FULFILLMENT        = 8;
+        ORDER_COMPLETION         = 9;
+        DISPUTE_OPEN             = 10;
+        DISPUTE_UPDATE           = 11;
+        DISPUTE_CLOSE            = 12;
+        REFUND                   = 13;
+        OFFLINE_ACK              = 14;
+        OFFLINE_RELAY            = 15;
+        MODERATOR_ADD            = 16;
+        MODERATOR_REMOVE         = 17;
+        STORE                    = 18;
+        BLOCK                    = 19;
+        VENDOR_FINALIZED_PAYMENT = 20;
+        ERROR                    = 500;
     }
 }
 

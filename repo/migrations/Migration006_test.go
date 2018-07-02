@@ -1,4 +1,4 @@
-package migrations
+package migrations_test
 
 import (
 	"database/sql"
@@ -10,29 +10,29 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/util"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func TestMigration006(t *testing.T) {
-
 	// Setup
-	basePath := util.GenerateTempPath()
-	testRepoPath, err := util.OpenbazaarPathTransform(basePath, true)
+	basePath := schema.GenerateTempPath()
+	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
+	appSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = paths.BuildSchemaDirectories(); err != nil {
+	if err = appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
-	defer paths.DestroySchemaDirectories()
+	defer appSchema.DestroySchemaDirectories()
 	var (
-		databasePath = paths.DatastorePath()
-		listingPath  = paths.DataPathJoin("root", "listings.json")
-		schemaPath   = paths.DataPathJoin("repover")
+		databasePath = appSchema.DatabasePath()
+		listingPath  = appSchema.DataPathJoin("root", "listings.json")
+		schemaPath   = appSchema.DataPathJoin("repover")
 
 		schemaSql               = "PRAGMA key = 'foobarbaz';"
 		configCreateSql         = "CREATE TABLE `config` (`key` text NOT NULL, `value` blob, PRIMARY KEY(`key`));"
@@ -40,11 +40,11 @@ func TestMigration006(t *testing.T) {
 			"storemoderator_peerid_1",
 			"storemoderator_peerid_2",
 		}
-		listingFixtures = []migration006_listingDataBeforeMigration{
+		listingFixtures = []migrations.Migration006_listingDataBeforeMigration{
 			{Hash: "Listing1"},
 			{Hash: "Listing2"},
 		}
-		configRecord         = migration006_configRecord{StoreModerators: expectedStoreModerators}
+		configRecord         = migrations.Migration006_configRecord{StoreModerators: expectedStoreModerators}
 		insertConfigTemplate = "INSERT INTO config (key,value) VALUES ('settings','%s');"
 	)
 
@@ -83,13 +83,13 @@ func TestMigration006(t *testing.T) {
 	}
 
 	// Execute Migration Up
-	migration := Migration006{}
+	migration := migrations.Migration006{}
 	if err := migration.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Migration Up Assertions
-	if err = paths.VerifySchemaVersion("7"); err != nil {
+	if err = appSchema.VerifySchemaVersion("7"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -98,7 +98,7 @@ func TestMigration006(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var migratedListings = make([]migration006_listingDataAfterMigration, 2)
+	var migratedListings = make([]migrations.Migration006_listingDataAfterMigration, 2)
 	err = json.Unmarshal(listingJSON, &migratedListings)
 	if err != nil {
 		t.Fatal(err)
@@ -128,7 +128,7 @@ func TestMigration006(t *testing.T) {
 	}
 
 	// Migration Down Assertions
-	if err = paths.VerifySchemaVersion("6"); err != nil {
+	if err = appSchema.VerifySchemaVersion("6"); err != nil {
 		t.Error(err)
 	}
 
@@ -137,7 +137,7 @@ func TestMigration006(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	migratedListings = make([]migration006_listingDataAfterMigration, 2)
+	migratedListings = make([]migrations.Migration006_listingDataAfterMigration, 2)
 	err = json.Unmarshal(listingJSON, &migratedListings)
 	if err != nil {
 		t.Fatal(err)
@@ -157,27 +157,27 @@ func TestMigration006(t *testing.T) {
 func TestMigration006HandlesMissingSettings(t *testing.T) {
 
 	// Setup
-	basePath := util.GenerateTempPath()
-	testRepoPath, err := util.OpenbazaarPathTransform(basePath, true)
+	basePath := schema.GenerateTempPath()
+	testRepoPath, err := schema.OpenbazaarPathTransform(basePath, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	paths, err := util.NewCustomSchemaManager(util.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
+	appSchema, err := schema.NewCustomSchemaManager(schema.SchemaContext{DataPath: testRepoPath, TestModeEnabled: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = paths.BuildSchemaDirectories(); err != nil {
+	if err = appSchema.BuildSchemaDirectories(); err != nil {
 		t.Fatal(err)
 	}
-	defer paths.DestroySchemaDirectories()
+	defer appSchema.DestroySchemaDirectories()
 	var (
-		databasePath = paths.DatastorePath()
-		listingPath  = paths.DataPathJoin("root", "listings.json")
-		schemaPath   = paths.DataPathJoin("repover")
+		databasePath = appSchema.DatabasePath()
+		listingPath  = appSchema.DataPathJoin("root", "listings.json")
+		schemaPath   = appSchema.DataPathJoin("repover")
 
 		schemaSql       = "PRAGMA key = 'foobarbaz';"
 		configCreateSql = "CREATE TABLE `config` (`key` text NOT NULL, `value` blob, PRIMARY KEY(`key`));"
-		listingFixtures = []migration006_listingDataBeforeMigration{
+		listingFixtures = []migrations.Migration006_listingDataBeforeMigration{
 			{Hash: "Listing1"},
 			{Hash: "Listing2"},
 		}
@@ -213,13 +213,13 @@ func TestMigration006HandlesMissingSettings(t *testing.T) {
 	}
 
 	// Execute Migration Up
-	migration := Migration006{}
+	migration := migrations.Migration006{}
 	if err := migration.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
 
 	// Migration Up Assertions
-	if err = paths.VerifySchemaVersion("7"); err != nil {
+	if err = appSchema.VerifySchemaVersion("7"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -228,7 +228,7 @@ func TestMigration006HandlesMissingSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var migratedListings = make([]migration006_listingDataAfterMigration, 2)
+	var migratedListings = make([]migrations.Migration006_listingDataAfterMigration, 2)
 	err = json.Unmarshal(listingJSON, &migratedListings)
 	if err != nil {
 		t.Fatal(err)

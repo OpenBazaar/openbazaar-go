@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/api/notifications"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
@@ -19,9 +18,9 @@ type notificationManager struct {
 	node *core.OpenBazaarNode
 }
 
-func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interface{} {
+func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan repo.Notifier {
 	manager := &notificationManager{node: node}
-	nodeBroadcast := make(chan interface{})
+	nodeBroadcast := make(chan repo.Notifier)
 	go func() {
 		for {
 			n := <-nodeBroadcast
@@ -29,9 +28,14 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 			// enough to let us send any data to the websocket. You can technically do that by
 			// sending over a []byte as the serialize function ignores []bytes but it's kind of hacky.
 			manager.sendNotification(n)
-			sanitized, err := SanitizeJSON(notifications.Serialize(n))
+			data, err := n.WebsocketData()
 			if err != nil {
-				log.Error(err)
+				log.Error("marshal notification:", err)
+				continue
+			}
+			sanitized, err := SanitizeJSON(data)
+			if err != nil {
+				log.Error("sanitize notification:", err)
 				continue
 			}
 			out <- sanitized
@@ -41,11 +45,11 @@ func manageNotifications(node *core.OpenBazaarNode, out chan []byte) chan interf
 }
 
 type notifier interface {
-	notify(n interface{}) error
+	notify(n repo.Notifier) error
 }
 
 // Send notification via all supported notifier mechanisms
-func (m *notificationManager) sendNotification(n interface{}) {
+func (m *notificationManager) sendNotification(n repo.Notifier) {
 	for _, notifier := range m.getNotifiers() {
 		if err := notifier.notify(n); err != nil {
 			log.Errorf("Notification failed: %s", err.Error())
@@ -75,7 +79,7 @@ type smtpNotifier struct {
 	settings *repo.SMTPSettings
 }
 
-func (notifier *smtpNotifier) notify(n interface{}) error {
+func (notifier *smtpNotifier) notify(n repo.Notifier) error {
 	template := strings.Join([]string{
 		"From: %s",
 		"To: %s",
@@ -84,8 +88,8 @@ func (notifier *smtpNotifier) notify(n interface{}) error {
 		"Subject: [OpenBazaar] %s\r\n",
 		"%s\r\n",
 	}, "\r\n")
-	head, body := notifications.Describe(n)
-	if head == "" || body == "" {
+	head, body, ok := n.GetSMTPTitleAndBody()
+	if !ok {
 		return nil
 	}
 	conf := notifier.settings

@@ -8,6 +8,12 @@ services:
     volumes:
       - obdata_dev:/var/lib/openbazaar
       - .:/go/src/github.com/OpenBazaar/openbazaar-go
+    ports:
+      - "4001:4001"
+      - "4002:4002"
+      - "9005:9005"
+    security_opt:
+      - seccomp:unconfined #req: delve for golang
   server:
     image: openbazaar/server
     ports:

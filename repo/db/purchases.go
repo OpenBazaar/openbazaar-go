@@ -3,13 +3,15 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
-	"sync"
-	"time"
 )
 
 type PurchasesDB struct {
@@ -274,4 +276,150 @@ func (p *PurchasesDB) Count() int {
 	var count int
 	row.Scan(&count)
 	return count
+}
+
+func (p *PurchasesDB) GetPurchasesForDisputeExpiryNotification() ([]*repo.PurchaseRecord, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	s := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeExpiryNotifiedAt, disputedAt from purchases where (lastDisputeExpiryNotifiedAt - disputedAt) < %d and state = %d",
+		int(repo.BuyerDisputeExpiry_lastInterval.Seconds()),
+		pb.OrderState_DISPUTED,
+	)
+	rows, err := p.db.Query(s)
+	if err != nil {
+		return nil, fmt.Errorf("selecting purchases: %s", err.Error())
+	}
+
+	result := make([]*repo.PurchaseRecord, 0)
+	for rows.Next() {
+		var (
+			disputedAt                  int64
+			lastDisputeExpiryNotifiedAt int64
+			contract                    []byte
+			stateInt                    int
+
+			r = &repo.PurchaseRecord{
+				Contract: &pb.RicardianContract{},
+			}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastDisputeExpiryNotifiedAt, &disputedAt); err != nil {
+			return nil, fmt.Errorf("scanning purchases: %s\n", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
+			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
+		}
+		r.OrderState = pb.OrderState(stateInt)
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastDisputeExpiryNotifiedAt = time.Unix(lastDisputeExpiryNotifiedAt, 0)
+		r.DisputedAt = time.Unix(disputedAt, 0)
+
+		result = append(result, r)
+	}
+	return result, nil
+}
+
+// GetPurchasesForDisputeTimeoutNotification returns []*PurchaseRecord including
+// each record which needs Notifications to be generated.
+func (p *PurchasesDB) GetPurchasesForDisputeTimeoutNotification() ([]*repo.PurchaseRecord, error) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	s := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt from purchases where (lastDisputeTimeoutNotifiedAt - timestamp) < %d and state in (%d, %d, %d)",
+		int(repo.BuyerDisputeTimeout_totalDuration.Seconds()),
+		pb.OrderState_PENDING,
+		pb.OrderState_AWAITING_FULFILLMENT,
+		pb.OrderState_FULFILLED,
+	)
+	rows, err := p.db.Query(s)
+	if err != nil {
+		return nil, fmt.Errorf("selecting purchases: %s", err.Error())
+	}
+
+	result := make([]*repo.PurchaseRecord, 0)
+	for rows.Next() {
+		var (
+			lastDisputeTimeoutNotifiedAt int64
+			contract                     []byte
+			stateInt                     int
+
+			r = &repo.PurchaseRecord{
+				Contract: &pb.RicardianContract{},
+			}
+			timestamp = sql.NullInt64{}
+		)
+		if err := rows.Scan(&r.OrderID, &contract, &stateInt, &timestamp, &lastDisputeTimeoutNotifiedAt); err != nil {
+			return nil, fmt.Errorf("scanning purchases: %s\n", err.Error())
+		}
+		if err := jsonpb.UnmarshalString(string(contract), r.Contract); err != nil {
+			return nil, fmt.Errorf("unmarshaling contract: %s\n", err.Error())
+		}
+		r.OrderState = pb.OrderState(stateInt)
+		if timestamp.Valid {
+			r.Timestamp = time.Unix(timestamp.Int64, 0)
+		} else {
+			r.Timestamp = time.Now()
+		}
+		r.LastDisputeTimeoutNotifiedAt = time.Unix(lastDisputeTimeoutNotifiedAt, 0)
+
+		if r.IsDisputeable() {
+			result = append(result, r)
+		}
+	}
+	return result, nil
+}
+
+// UpdatePurchasesLastDisputeTimeoutNotifiedAt accepts []*repo.PurchaseRecord and updates
+// each PurchaseRecord by their OrderID to the set LastDisputeTimeoutNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (p *PurchasesDB) UpdatePurchasesLastDisputeTimeoutNotifiedAt(purchases []*repo.PurchaseRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
+	}
+	for _, p := range purchases {
+		_, err = tx.Exec("update purchases set lastDisputeTimeoutNotifiedAt = ? where orderID = ?", int(p.LastDisputeTimeoutNotifiedAt.Unix()), p.OrderID)
+		if err != nil {
+			return fmt.Errorf("update purchase: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
+	}
+
+	return nil
+}
+
+// UpdatePurchasesLastDisputeExpiryNotifiedAt accepts []*repo.PurchaseRecord and updates
+// each PurchaseRecord by their OrderID to the set LastDisputeExpiryNotifiedAt value. The
+// update will be attempted atomically with a rollback attempted in the event of
+// an error.
+func (p *PurchasesDB) UpdatePurchasesLastDisputeExpiryNotifiedAt(purchases []*repo.PurchaseRecord) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update purchase transaction: %s", err.Error())
+	}
+	for _, p := range purchases {
+		_, err = tx.Exec("update purchases set lastDisputeExpiryNotifiedAt = ? where orderID = ?", int(p.LastDisputeExpiryNotifiedAt.Unix()), p.OrderID)
+		if err != nil {
+			return fmt.Errorf("update purchase: %s", err.Error())
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit update purchase transaction: %s", err.Error())
+	}
+
+	return nil
 }
