@@ -2,8 +2,8 @@ package ipfs
 
 import (
 	"context"
-	"github.com/OpenBazaar/go-ipfs/core/corerepo"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/corerepo"
 )
 
 /* Recursively un-pin a directory given its hash.

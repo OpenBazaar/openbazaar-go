@@ -13,7 +13,7 @@ import (
 // Fetch data from IPFS given the hash
 func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
-	r, err := coreunix.Cat(ctx, n, "/ipfs/"+path)
+	r, err := coreunix.Cat(ctx, n, path)
 	if err != nil {
 		return nil, err
 	}

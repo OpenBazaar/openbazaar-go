@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/golang/protobuf/proto"
 )
 
 const (
@@ -122,7 +122,7 @@ func (Migration008) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		if err := updateDisputedAtRows.Scan(&orderID, &contractData); err != nil {
 			return err
 		}
-		if err := proto.Unmarshal([]byte(contractData), contract); err != nil {
+		if err := jsonpb.UnmarshalString(contractData, contract); err != nil {
 			return err
 		}
 		if contract.Dispute != nil && contract.Dispute.Timestamp != nil {

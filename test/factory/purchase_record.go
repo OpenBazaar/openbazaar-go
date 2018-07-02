@@ -16,7 +16,7 @@ func NewPurchaseRecord() *repo.PurchaseRecord {
 
 func NewExpiredPurchaseRecord() *repo.PurchaseRecord {
 	purchase := NewPurchaseRecord()
-	purchase.Timestamp = time.Now().Add(-repo.BuyerDisputeTimeout_lastInterval)
+	purchase.Timestamp = time.Now().Add(-repo.BuyerDisputeTimeout_totalDuration)
 	return purchase
 }
 

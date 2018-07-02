@@ -3,6 +3,7 @@ package ipfs
 import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	_ "github.com/ipfs/go-ipfs/core/mock"
 	"io"
 	"io/ioutil"
 	"math/rand"

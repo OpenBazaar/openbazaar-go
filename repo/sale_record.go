@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -26,10 +27,14 @@ type SaleRecord struct {
 func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 	if len(r.Contract.VendorListings) > 0 &&
 		len(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
-		switch r.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		switch strings.ToUpper(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0]) {
 		case "BTC":
 			return true
+		case "TBTC":
+			return true
 		case "BCH":
+			return true
+		case "TBCH":
 			return true
 		case "ZEC":
 			return false

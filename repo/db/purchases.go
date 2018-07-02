@@ -331,7 +331,7 @@ func (p *PurchasesDB) GetPurchasesForDisputeTimeoutNotification() ([]*repo.Purch
 	defer p.lock.Unlock()
 
 	s := fmt.Sprintf("select orderID, contract, state, timestamp, lastDisputeTimeoutNotifiedAt from purchases where (lastDisputeTimeoutNotifiedAt - timestamp) < %d and state in (%d, %d, %d)",
-		int(repo.BuyerDisputeTimeout_lastInterval.Seconds()),
+		int(repo.BuyerDisputeTimeout_totalDuration.Seconds()),
 		pb.OrderState_PENDING,
 		pb.OrderState_AWAITING_FULFILLMENT,
 		pb.OrderState_FULFILLED,

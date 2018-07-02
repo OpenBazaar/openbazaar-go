@@ -64,7 +64,7 @@ import (
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	recpb "gx/ipfs/QmPWjVzxHeJdrjp4Jr2R2sPxBrMbBgGPWQtKwCKHHCBF7x/go-libp2p-record/pb"
+	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
 	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
@@ -746,6 +746,10 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	if x.Testnet {
+		setTestmodeRecordAgingIntervals()
+	}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		IpfsNode:             nd,
@@ -857,6 +861,26 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func setTestmodeRecordAgingIntervals() {
+	repo.VendorDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
+
+	repo.ModeratorDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
+	repo.ModeratorDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
+	repo.ModeratorDisputeExpiry_thirdInterval = time.Duration(59) * time.Minute
+	repo.ModeratorDisputeExpiry_lastInterval = time.Duration(60) * time.Minute
+
+	repo.BuyerDisputeTimeout_firstInterval = time.Duration(20) * time.Minute
+	repo.BuyerDisputeTimeout_secondInterval = time.Duration(40) * time.Minute
+	repo.BuyerDisputeTimeout_thirdInterval = time.Duration(59) * time.Minute
+	repo.BuyerDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
+	repo.BuyerDisputeTimeout_totalDuration = time.Duration(60) * time.Minute
+
+	repo.BuyerDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
+	repo.BuyerDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
+	repo.BuyerDisputeExpiry_lastInterval = time.Duration(59) * time.Minute
+	repo.BuyerDisputeExpiry_totalDuration = time.Duration(60) * time.Minute
 }
 
 // Prints the addresses of the host
