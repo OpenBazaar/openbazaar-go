@@ -1,7 +1,7 @@
 package selfhosted
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/ipfs/go-ipfs/core/mock"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"os"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestSelfHostedStorage_Store(t *testing.T) {
-	ctx, err := ipfs.MockCmdsCtx()
+	ctx, err := coremock.NewMockNode()
 	if err != nil {
 		t.Error(err)
 	}

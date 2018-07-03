@@ -293,7 +293,6 @@ func (n *Node) Start() error {
 		return err
 	}
 
-	n.node.Context = ctx
 	n.node.IpfsNode = nd
 
 	// Get current directory root hash
@@ -319,7 +318,7 @@ func (n *Node) Start() error {
 	}
 
 	// Offline messaging storage
-	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, ctx, n.node.PushNodes, n.node.SendStore)
+	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, n.node.IpfsNode, n.node.PushNodes, n.node.SendStore)
 
 	// Start gateway
 	// Create authentication cookie
@@ -330,7 +329,7 @@ func (n *Node) Start() error {
 		authCookie.Value = n.config.AuthenticationToken
 		n.apiConfig.Authenticated = true
 	}
-	gateway, err := newHTTPGateway(core.Node, authCookie, *n.apiConfig)
+	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *n.apiConfig)
 	if err != nil {
 		return err
 	}
@@ -338,10 +337,9 @@ func (n *Node) Start() error {
 
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
-		n.node.Service = service.New(n.node, n.node.Context, n.node.Datastore)
+		n.node.Service = service.New(n.node, n.node.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
 			Db:        n.node.Datastore,
-			Ctx:       n.node.Context,
 			IPFSNode:  n.node.IpfsNode,
 			BanManger: n.node.BanManager,
 			Service:   core.Node.Service,
@@ -402,9 +400,9 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 }
 
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config schema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
-	cfg, err := node.Context.GetConfig()
+	cfg, err := ctx.GetConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -426,7 +424,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, authCookie http.Cookie, config sc
 	// Setup an options slice
 	var opts = []corehttp.ServeOption{
 		corehttp.MetricsCollectionOption("gateway"),
-		corehttp.CommandsROOption(node.Context),
+		corehttp.CommandsROOption(ctx),
 		corehttp.VersionOption(),
 		corehttp.IPNSHostnameOption(),
 		corehttp.GatewayOption(cfg.Gateway.Writable, "/ipfs", "/ipns"),
