@@ -1,19 +1,18 @@
 package ipfs
 
 import (
+	"context"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	_ "github.com/ipfs/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/merkledag"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strconv"
-	"github.com/ipfs/go-ipfs/merkledag"
 	"strings"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"context"
-	"fmt"
 )
 
 // Resursively add a directory to IPFS and return the root hash
@@ -54,7 +53,7 @@ func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("%s not found in added directory", dirName)
+	return i.String(), nil
 }
 
 func AddFile(n *core.IpfsNode, file string) (string, error) {

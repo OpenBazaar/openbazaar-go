@@ -364,6 +364,8 @@ func AddR(n *core.IpfsNode, root string) (key string, err error) {
 		return "", err
 	}
 
+	fileAdder.PinRoot()
+
 	return nd.String(), nil
 }
 
