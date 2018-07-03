@@ -657,6 +657,106 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 	}
 }
 
+func TestGetDisputesForDisputeExpiryAllowsMissingContracts(t *testing.T) {
+	database, _ := sql.Open("sqlite3", ":memory:")
+	setupSQL := []string{
+		schema.PragmaKey(""),
+		schema.CreateTableDisputedCasesSQL,
+	}
+	_, err := database.Exec(strings.Join(setupSQL, " "))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var (
+		now        = time.Unix(time.Now().Unix(), 0)
+		timeStart  = now.Add(time.Duration(-50*24) * time.Hour)
+		nowData, _ = ptypes.TimestampProto(now)
+		order      = &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: "buyerID",
+				Handle: "@buyerID",
+			},
+			Shipping: &pb.Order_Shipping{
+				Address: "1234 Test Ave",
+				ShipTo:  "Buyer Name",
+			},
+			Payment: &pb.Order_Payment{
+				Amount:  10,
+				Method:  pb.Order_Payment_DIRECT,
+				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+			},
+			Timestamp: nowData,
+		}
+		expectedImagesOne = []*pb.Listing_Item_Image{{Tiny: "tinyimagehashOne", Small: "smallimagehashOne"}}
+		contract          = &pb.RicardianContract{
+			VendorListings: []*pb.Listing{
+				{Item: &pb.Listing_Item{Images: expectedImagesOne}},
+			},
+			BuyerOrder: order,
+		}
+		missingVendorContract = &repo.DisputeCaseRecord{
+			CaseID:                      "neverNotified",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+			BuyerContract:               contract,
+			IsBuyerInitiated:            true,
+		}
+		missingBuyerContract = &repo.DisputeCaseRecord{
+			CaseID:                      "initialNotificationSent",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart,
+			VendorContract:              contract,
+			IsBuyerInitiated:            true,
+		}
+		existingRecords = []*repo.DisputeCaseRecord{
+			missingVendorContract,
+			missingBuyerContract,
+		}
+	)
+
+	m := jsonpb.Marshaler{
+		EnumsAsInts:  false,
+		EmitDefaults: true,
+		Indent:       "    ",
+		OrigName:     false,
+	}
+	for _, r := range existingRecords {
+		var (
+			isBuyerInitiated int
+			buyerContract    = sql.NullString{}
+			vendorContract   = sql.NullString{}
+		)
+
+		if r.IsBuyerInitiated {
+			isBuyerInitiated = 1
+		}
+		if r.BuyerContract != nil {
+			buyerContract.String, err = m.MarshalToString(r.BuyerContract)
+			if err != nil {
+				t.Fatal(err)
+			}
+			buyerContract.Valid = true
+		}
+		if r.VendorContract != nil {
+			vendorContract.String, err = m.MarshalToString(r.VendorContract)
+			if err != nil {
+				t.Fatal(err)
+			}
+			vendorContract.Valid = true
+		}
+		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	casesdb := NewCaseStore(database, new(sync.Mutex))
+	_, err = casesdb.GetDisputesForDisputeExpiryNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	setupSQL := []string{
