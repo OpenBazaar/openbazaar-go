@@ -1,3 +1,27 @@
+// OpenBazaar 2.0 JSON API (Remote).
+//
+// The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In this documentation you'll find a full list of API calls and example usages.<br># Authentication<br>When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: <br><code><br>{<br>    \"JSON-API\": {<br>      \"Authenticated\": true<br>      }<br>}<br></code><br>Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.<br><br>There are two ways for a client to authenticate. The default (and preferred) is via an authentication cookie. On start up the server generates a random cookie and saves it in the data directory as a .cookie file. You need to add this cookie to the header of all requests. For example:<br><code><br>cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI<br></code><br>Alternatively, you can use basic authentication by setting a username and password in the config file:<br><code><br>    {<br>        \"JSON-API\": {<br>          \"Username\": \"Aladdin\",<br>          \"Password\": \"1c8bfe8f801d79745c4631d09fff36c82aa37fc4cce4fc946683d7b336b63032\"<br>          }<br>    }<br></code><br>The password should be saved as the hex - encoded SHA - 256 hash of your password. You can run <em>openbazaar-go setapicreds` to have it hash and save the password in the config file for you.<br><br>The username and password need to be included in the request header following [RFC 2617](https://www.ietf.org/rfc/rfc2617.txt):<br><code><br>Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==<br></code><br>Where the username and password are encoded as <em>base64encode(username + \":\" + password)</em><br>or included in the Url:<br><code><br>http://username:password@localhost\:8080/ob/<br></code><br># SSL<br><strong>NEVER</strong> open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled your authentication information be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).<br># Cross-Origin Resource Sharing<br>CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on for a specific domain by setting an origin in the config file as follows:<br><code><br>{<br>    \"JSON-API\": {<br>      \"CORS\": \"https://openbazaar.org\"<br>      }<br>}<br></code><br>Use \"*\" to allow all domains. Keep in mind that running the server with CORS enabled for all domains is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
+//
+//     Schemes: http
+//     Version: 1.0
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - bearer
+//
+//     SecurityDefinitions:
+//     bearer:
+//          type: apiKey
+//          name: Authorization
+//          in: header
+//	   
+//     
+// swagger:meta
 package api
 
 import (
@@ -229,6 +253,31 @@ func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message)
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/profile profile postProfile
+	//
+	// Create new profile for node.
+	//
+	// Any new profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "#/definitions/SetTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Creates a new profile for the node"
+	//    schema:
+	//      type: object
+
 
 	// If the profile is already set tell them to use PUT
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
@@ -291,7 +340,31 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
-
+	// swagger:operation PUT /ob/profile profile putProfile
+	//
+	// Update the profile for this node.
+	//
+	// Update the profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "#/definitions/UpdateTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Updates an existing profile"
+	//    schema:
+	//      $ref: "#/definitions/Drwasho"
+	
 	// If profile is not set tell them to use POST
 	currentProfile, err := i.node.GetProfile()
 	if err != nil {
@@ -356,7 +429,33 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+
 func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation PATCH /ob/profile profile patchProfile
+	//
+	// Update the profile for this node.
+	//
+	// Update the profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "#/definitions/UpdateTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Updates an existing profile"
+	//    schema:
+	//      $ref: "#/definitions/Drwasho"
+	
 	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
@@ -401,6 +500,30 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/avatar profile postAvatar
+	//
+	// Set the avatar image. This will also update the avatar hash in the profile.
+	//
+	// Set the avatar
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/SetTheAvatarrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      "$ref": "definitions.json#/Bananas"
+
+
 	type ImgData struct {
 		Avatar string `json:"avatar"`
 	}
