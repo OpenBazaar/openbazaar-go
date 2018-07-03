@@ -11,6 +11,7 @@ import (
 	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	record "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"strings"
 )
 
 // ErrExpiredRecord should be returned when an ipns record is
@@ -63,7 +64,8 @@ func NewIpnsRecordValidator(kbook pstore.KeyBook) *record.ValidChecker {
 		}
 
 		// Get the public key defined by the ipns path
-		pid, err := peer.IDFromString(r.Key)
+		s := strings.Split(r.Key, ":")
+		pid, err := peer.IDFromString(s[0])
 		if err != nil {
 			log.Debugf("failed to parse ipns record key %s into peer ID", r.Key)
 			return ErrKeyFormat

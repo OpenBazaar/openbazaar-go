@@ -96,7 +96,6 @@ func fetchObjectFromIPFS(n *core.IpfsNode, p peer.ID, name string) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-
 	return bytes, nil
 }
 
