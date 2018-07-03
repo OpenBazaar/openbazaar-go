@@ -819,7 +819,7 @@ func (x *Start) Execute(args []string) error {
 
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
-		core.Node.Service = service.New(core.Node, ctx, sqliteDB)
+		core.Node.Service = service.New(core.Node, sqliteDB)
 
 		core.Node.StartMessageRetriever()
 		core.Node.StartPointerRepublisher()

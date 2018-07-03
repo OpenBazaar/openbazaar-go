@@ -8,6 +8,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/ipfs/go-ipfs/core/mock"
 	"github.com/tyler-smith/go-bip39"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
@@ -27,7 +28,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	}
 
 	// Create test ipfs node
-	ipfsNode, err := ipfs.NewMockNode()
+	ipfsNode, err := coremock.NewMockNode()
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +50,6 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	}
 
 	ipfsNode.Identity = id
-
-	// Create test context
-	ctx, err := ipfs.MockCmdsCtx()
-	if err != nil {
-		return nil, err
-	}
 
 	// Create test wallet
 	mnemonic, err := repository.DB.Config().GetMnemonic()
@@ -83,7 +78,6 @@ func NewNode() (*core.OpenBazaarNode, error) {
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
-		Context:    ctx,
 		RepoPath:   GetRepoPath(),
 		IpfsNode:   ipfsNode,
 		Datastore:  repository.DB,
@@ -91,7 +85,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		BanManager: net.NewBanManager([]peer.ID{}),
 	}
 
-	node.Service = service.New(node, ctx, repository.DB)
+	node.Service = service.New(node, repository.DB)
 
 	return node, nil
 }

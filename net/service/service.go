@@ -15,7 +15,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
 	"io"
@@ -29,7 +28,6 @@ type OpenBazaarService struct {
 	host      host.Host
 	self      peer.ID
 	peerstore ps.Peerstore
-	cmdCtx    commands.Context
 	ctx       context.Context
 	broadcast chan repo.Notifier
 	datastore repo.Datastore
@@ -38,12 +36,11 @@ type OpenBazaarService struct {
 	senderlk  sync.Mutex
 }
 
-func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
+func New(node *core.OpenBazaarNode, datastore repo.Datastore) *OpenBazaarService {
 	service := &OpenBazaarService{
 		host:      node.IpfsNode.PeerHost.(host.Host),
 		self:      node.IpfsNode.Identity,
 		peerstore: node.IpfsNode.PeerHost.Peerstore(),
-		cmdCtx:    ctx,
 		ctx:       node.IpfsNode.Context(),
 		broadcast: node.Broadcast,
 		datastore: datastore,
