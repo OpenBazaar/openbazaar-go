@@ -206,7 +206,6 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
             resp = json.loads(r.text)
             raise TestFailure("EscrowTimeoutRelease - FAIL: Release escrow internal server error %s", resp["reason"])
         elif r.status_code != 401:
-            resp = json.loads(r.text)
             raise TestFailure("EscrowTimeoutRelease - FAIL: Failed to raise error when releasing escrow before timeout")
 
         for i in range(6):
@@ -241,6 +240,7 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
 
         print("EscrowTimeoutRelease - PASS")
+
 
 if __name__ == '__main__':
     print("Running EscrowTimeoutRelease")

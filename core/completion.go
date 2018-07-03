@@ -278,20 +278,19 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		dispute         = contract.GetDispute()
 		disputeDuration = time.Duration(repo.DisputeTotalDurationHours) * time.Hour
 	)
-	if dispute == nil {
-		return fmt.Errorf("contract missing dispute")
-	}
-	disputeStart, err := ptypes.Timestamp(dispute.Timestamp)
-	if err != nil {
-		return fmt.Errorf("sale dispute timestamp: %s", err.Error())
-	}
-	if n.TestnetEnable {
-		// Time hack until we can stub this more nicely in test env
-		disputeDuration = time.Duration(10) * time.Second
-	}
-	disputeExpiration := disputeStart.Add(disputeDuration)
-	if time.Now().Before(disputeExpiration) {
-		return ErrPrematureReleaseOfTimedoutEscrowFunds
+	if dispute != nil {
+		disputeStart, err := ptypes.Timestamp(dispute.Timestamp)
+		if err != nil {
+			return fmt.Errorf("sale dispute timestamp: %s", err.Error())
+		}
+		if n.TestnetEnable {
+			// Time hack until we can stub this more nicely in test env
+			disputeDuration = time.Duration(10) * time.Second
+		}
+		disputeExpiration := disputeStart.Add(disputeDuration)
+		if time.Now().Before(disputeExpiration) {
+			return ErrPrematureReleaseOfTimedoutEscrowFunds
+		}
 	}
 
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
