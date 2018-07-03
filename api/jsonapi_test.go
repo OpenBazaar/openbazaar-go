@@ -427,7 +427,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-	    "timestamp": "1996-07-17T19:15:45-04:00",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         },
         {
@@ -437,7 +437,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-	    "timestamp": "1996-07-17T19:15:45-04:00",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         },
         {
@@ -447,7 +447,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-	    "timestamp": "1996-07-17T19:15:45-04:00",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         }
     ],
@@ -464,7 +464,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-            "timestamp": "1996-07-17T19:15:45-04:00",
+            "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         },
         {
@@ -474,7 +474,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-            "timestamp": "1996-07-17T19:15:45-04:00",
+            "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         }
     ],
