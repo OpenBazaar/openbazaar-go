@@ -19,8 +19,8 @@
 //          type: apiKey
 //          name: Authorization
 //          in: header
-//	   
-//     
+//
+//
 // swagger:meta
 package api
 
@@ -278,7 +278,6 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	//    schema:
 	//      type: object
 
-
 	// If the profile is already set tell them to use PUT
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
@@ -364,7 +363,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	//    description: "Updates an existing profile"
 	//    schema:
 	//      $ref: "#/definitions/Drwasho"
-	
+
 	// If profile is not set tell them to use POST
 	currentProfile, err := i.node.GetProfile()
 	if err != nil {
@@ -429,7 +428,6 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-
 func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	// swagger:operation PATCH /ob/profile profile patchProfile
 	//
@@ -455,7 +453,7 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	//    description: "Updates an existing profile"
 	//    schema:
 	//      $ref: "#/definitions/Drwasho"
-	
+
 	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
@@ -522,7 +520,6 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 	//  '200':
 	//    schema:
 	//      "$ref": "definitions.json#/Bananas"
-
 
 	type ImgData struct {
 		Avatar string `json:"avatar"`
