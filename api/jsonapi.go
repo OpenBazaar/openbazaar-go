@@ -919,6 +919,7 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
+
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -928,6 +929,30 @@ func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/follow followers postFollow
+	//
+	// RPC call to follow another peer on the network.
+	//
+	// Follow a peer
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/FollowAPeerrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      type: object
+	//  '400':
+	//  '500':
 	type PeerId struct {
 		ID string `json:"id"`
 	}
@@ -948,6 +973,30 @@ func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/unfollow followers postUnfollow
+	//
+	// RPC call to unfollow another peer on the network.
+	//
+	// Unfollow a peer
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/UnfollowAPeerrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      type: object
+	//  '400':
+	//  '500':
 	type PeerId struct {
 		ID string `json:"id"`
 	}
@@ -967,6 +1016,22 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /wallet/address wallet getWalletAddress
+	//
+	// Returns an unused bitcoin address. Note the same address is returned until the address is used.
+	//
+	// Get a bitcoin address
+	//
+	// ---
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/GetBitcoinAddress"
+	//    examples:
+	//      "application/json":
+	//        "address": "17oicUtbT93VFfaWyQArUFDsj1H1E8Xrya"
+	//  '400':
+	//  '500':
 	addr := i.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
 }
