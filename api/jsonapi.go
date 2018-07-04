@@ -14,6 +14,8 @@
 //     Security:
 //     - bearer
 //
+//     Host: localhost:4002
+//
 //     SecurityDefinitions:
 //     bearer:
 //          type: apiKey
@@ -266,7 +268,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 	//   required: true
 	//   description: Profile to create
 	//   schema:
-	//     $ref: "#/definitions/SetTheProfilerequest"
+	//     $ref: "definitions.json#/SetTheProfilerequest"
 	// - name: Content-Type
 	//   in: header
 	//   required: true
@@ -352,7 +354,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	//   required: true
 	//   description: Profile to create
 	//   schema:
-	//     $ref: "#/definitions/UpdateTheProfilerequest"
+	//     $ref: "definitions.json#/UpdateTheProfilerequest"
 	// - name: Content-Type
 	//   in: header
 	//   required: true
@@ -362,7 +364,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 	//  '200':
 	//    description: "Updates an existing profile"
 	//    schema:
-	//      $ref: "#/definitions/Drwasho"
+	//      $ref: "definitions.json#/Drwasho"
 
 	// If profile is not set tell them to use POST
 	currentProfile, err := i.node.GetProfile()
@@ -442,7 +444,7 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	//   required: true
 	//   description: Profile to create
 	//   schema:
-	//     $ref: "#/definitions/UpdateTheProfilerequest"
+	//     $ref: "definitions.json#/UpdateTheProfilerequest"
 	// - name: Content-Type
 	//   in: header
 	//   required: true
@@ -452,7 +454,7 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 	//  '200':
 	//    description: "Updates an existing profile"
 	//    schema:
-	//      $ref: "#/definitions/Drwasho"
+	//      $ref: "definitions.json#/Drwasho"
 
 	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
@@ -559,6 +561,30 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/header images postHeader
+	//
+	// Set the header image. This will also update the header hash in the profile.
+	//
+	// Set the header
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/SetTheHeaderrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      "$ref": "definitions.json#/BananaCrop"
+
 	type ImgData struct {
 		Header string `json:"header"`
 	}
@@ -597,6 +623,30 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/images images postImage
+	//
+	// Upload one or more images. Returns the IPFS hash of each image which can be used to fetch the image using the IPFS API call.
+	//
+	// Upload images (e.g. cat image)
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/UploadImages(e.g.CatImage)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/YoDawg"
+
 	type ImgData struct {
 		Filename string `json:"filename"`
 		Image    string `json:"image"`
@@ -632,6 +682,31 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/listing listings postListing
+	//
+	// Create a new listing and set its inventory.
+	//
+	// Create a new listing (physical; no options)
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/CreateANewListing(physical;NoOptions)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/Godfather"
+	//    examples:
+	//      "application/json":
+	//        "slug": "godfather"
 	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
@@ -654,6 +729,28 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation PUT /ob/listing listings putListing
+	//
+	// Update a listing. The currentSlug field is used specify the listing being updated. If the listing contains a new slug, the listing will be renamed using the new slug.
+	//
+	// Update a listing
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/CreateANewListing(physical;NoOptions)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '400':
+	//  '200':
+
 	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
@@ -677,6 +774,29 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation DELETE /ob/listing/{slug_or_listing_hash} listings deleteListing
+	//
+	// Delete a listing and associated inventory.
+	//
+	// Delete a listing
+	//
+	// ---
+	// parameters:
+	// - name: slug_or_listing_hash
+	//   in: path
+	//   required: true
+	//   type: string
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//  '400':
+	//    description: Listing not found.
+	//  '500':
+	//    description: "File Write Error: [error_message]"
 	_, slug := path.Split(r.URL.Path)
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", slug+".json")
 	_, ferr := os.Stat(listingPath)
@@ -703,6 +823,37 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/purchase orders postPurchase
+	//
+	// The purchase call can be made to a reachable or a unreachable vendor (offline or not able to receive incoming messages). \r\n\r\nAn order will be created in the AWAITING_PAYMENT state after this call.\r\n\r\nIf the total of the purchase is not more than 4X the current transaction fee, the purchase will be rejected (ie: if the fee is 0.0001, the total purchase must be more than 0.0004).
+	//
+	// Purchase an item
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/PurchaseAnItemrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema: 
+	//      $ref: "definitions.json#/PurchaseOrder"
+	//    examples:
+	//      "application/json":
+	//        "amount": 81967
+	//        "orderId": "QmXRGXywXHmcr18PYpDNyKuhdQqB8C8iaTbhbasZCoN1QV"
+	//        "paymentAddress": "mhAoRQavWqaF6WPWtVwyhMVQ8sjqoWEESF"
+	//        "vendorOnline": true
+	//  '400':
+	//  '500':
+	//    description: "JSON error or marshalling error"
 	decoder := json.NewDecoder(r.Body)
 	var data core.PurchaseData
 	err := decoder.Decode(&data)
@@ -732,6 +883,31 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /ob/status/{peerId} miscellaneous getStatus
+	//
+	// Pings the peer and returns if it is online or not.
+	//
+	// Get peer online status
+	//
+	// ---
+	// parameters:
+	// - name: peerId
+	//   in: path
+	//   required: true
+	//   type: string
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema: 
+	//      $ref: "definitions.json#/IsSamOnline?"
+	//    examples:
+	//      "application/json":
+	//        "status": "online"
+	//  '400':
 	_, peerId := path.Split(r.URL.Path)
 	status, err := i.node.GetPeerStatus(peerId)
 	if err != nil {
