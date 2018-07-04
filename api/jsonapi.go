@@ -843,7 +843,7 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	//   description: "Usually application/json"
 	// responses:
 	//  '200':
-	//    schema: 
+	//    schema:
 	//      $ref: "definitions.json#/PurchaseOrder"
 	//    examples:
 	//      "application/json":
@@ -902,7 +902,7 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 	//   description: "Usually application/json"
 	// responses:
 	//  '200':
-	//    schema: 
+	//    schema:
 	//      $ref: "definitions.json#/IsSamOnline?"
 	//    examples:
 	//      "application/json":
@@ -918,6 +918,26 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /ob/peers miscellaneous getPeers
+	//
+	// Returns a list of IDs of the peers connected to this node.
+	//
+	// Get connected peers
+	//
+	// ---
+	// parameters:
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema: 
+	//      type: array
+	//      items:
+	//        type: string
+	//  '400':
 	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
 
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
