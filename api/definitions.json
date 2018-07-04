@@ -139,7 +139,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/VendorListing"
+          "$ref": "definitions.json#/VendorListing"
         }
       },
       "signatures": {
@@ -152,7 +152,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Signature"
+          "$ref": "definitions.json#/Signature"
         }
       }
     },
@@ -231,13 +231,13 @@
         "type": "string"
       },
       "vendorID": {
-        "$ref": "#/definitions/VendorID"
+        "$ref": "definitions.json#/VendorID"
       },
       "metadata": {
-        "$ref": "#/definitions/Metadata"
+        "$ref": "definitions.json#/Metadata"
       },
       "item": {
-        "$ref": "#/definitions/Item"
+        "$ref": "definitions.json#/Item"
       },
       "shippingOptions": {
         "description": "",
@@ -258,7 +258,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingOption"
+          "$ref": "definitions.json#/ShippingOption"
         }
       }
     },
@@ -288,7 +288,7 @@
         "type": "string"
       },
       "pubkeys": {
-        "$ref": "#/definitions/Pubkeys"
+        "$ref": "definitions.json#/Pubkeys"
       },
       "bitcoinSig": {
         "description": "",
@@ -455,7 +455,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Image"
+          "$ref": "definitions.json#/Image"
         }
       },
       "categories": {
@@ -581,7 +581,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Service"
+          "$ref": "definitions.json#/Service"
         }
       }
     },
@@ -778,7 +778,7 @@
         }
       },
       "fee": {
-        "$ref": "#/definitions/Fee"
+        "$ref": "definitions.json#/Fee"
       }
     },
     "required": [
@@ -806,7 +806,7 @@
         "type": "string"
       },
       "fixedFee": {
-        "$ref": "#/definitions/FixedFee"
+        "$ref": "definitions.json#/FixedFee"
       },
       "percentage": {
         "description": "",
@@ -888,7 +888,7 @@
         }
       },
       "fee": {
-        "$ref": "#/definitions/Fee"
+        "$ref": "definitions.json#/Fee"
       }
     },
     "required": [
@@ -1216,7 +1216,7 @@
     "type": "object",
     "properties": {
       "contract": {
-        "$ref": "#/definitions/Contract"
+        "$ref": "definitions.json#/Contract"
       },
       "state": {
         "description": "",
@@ -1244,7 +1244,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Transaction"
+          "$ref": "definitions.json#/Transaction"
         }
       }
     },
@@ -1763,14 +1763,14 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/VendorListing32"
+          "$ref": "definitions.json#/VendorListing32"
         }
       },
       "buyerOrder": {
-        "$ref": "#/definitions/BuyerOrder"
+        "$ref": "definitions.json#/BuyerOrder"
       },
       "vendorOrderConfirmation": {
-        "$ref": "#/definitions/VendorOrderConfirmation"
+        "$ref": "definitions.json#/VendorOrderConfirmation"
       },
       "vendorOrderFulfillment": {
         "description": "",
@@ -1795,7 +1795,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/VendorOrderFulfillment"
+          "$ref": "definitions.json#/VendorOrderFulfillment"
         }
       },
       "signatures": {
@@ -1820,7 +1820,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Signature"
+          "$ref": "definitions.json#/Signature"
         }
       }
     },
@@ -2038,13 +2038,13 @@
         "type": "string"
       },
       "vendorID": {
-        "$ref": "#/definitions/VendorID33"
+        "$ref": "definitions.json#/VendorID33"
       },
       "metadata": {
-        "$ref": "#/definitions/Metadata35"
+        "$ref": "definitions.json#/Metadata35"
       },
       "item": {
-        "$ref": "#/definitions/Item36"
+        "$ref": "definitions.json#/Item36"
       },
       "shippingOptions": {
         "description": "",
@@ -2071,7 +2071,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingOption40"
+          "$ref": "definitions.json#/ShippingOption40"
         }
       },
       "termsAndConditions": {
@@ -2118,7 +2118,7 @@
         "type": "string"
       },
       "pubkeys": {
-        "$ref": "#/definitions/Pubkeys"
+        "$ref": "definitions.json#/Pubkeys"
       },
       "bitcoinSig": {
         "description": "",
@@ -2422,7 +2422,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Image"
+          "$ref": "definitions.json#/Image"
         }
       },
       "categories": {
@@ -2470,7 +2470,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Option"
+          "$ref": "definitions.json#/Option"
         }
       },
       "skus": {
@@ -2560,7 +2560,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Sku"
+          "$ref": "definitions.json#/Sku"
         }
       }
     },
@@ -2730,7 +2730,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Service41"
+          "$ref": "definitions.json#/Service41"
         }
       }
     },
@@ -2846,10 +2846,10 @@
         "format": "int32"
       },
       "shipping": {
-        "$ref": "#/definitions/Shipping"
+        "$ref": "definitions.json#/Shipping"
       },
       "buyerID": {
-        "$ref": "#/definitions/BuyerID"
+        "$ref": "definitions.json#/BuyerID"
       },
       "timestamp": {
         "description": "",
@@ -2881,11 +2881,11 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Item46"
+          "$ref": "definitions.json#/Item46"
         }
       },
       "payment": {
-        "$ref": "#/definitions/Payment"
+        "$ref": "definitions.json#/Payment"
       },
       "ratingKeys": {
         "description": "",
@@ -2995,7 +2995,7 @@
         "type": "string"
       },
       "pubkeys": {
-        "$ref": "#/definitions/Pubkeys"
+        "$ref": "definitions.json#/Pubkeys"
       },
       "bitcoinSig": {
         "description": "",
@@ -3058,11 +3058,11 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Option47"
+          "$ref": "definitions.json#/Option47"
         }
       },
       "shippingOption": {
-        "$ref": "#/definitions/ShippingOption48"
+        "$ref": "definitions.json#/ShippingOption48"
       },
       "memo": {
         "description": "",
@@ -3273,11 +3273,11 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/PhysicalDelivery"
+          "$ref": "definitions.json#/PhysicalDelivery"
         }
       },
       "ratingSignature": {
-        "$ref": "#/definitions/RatingSignature"
+        "$ref": "definitions.json#/RatingSignature"
       }
     },
     "required": [
@@ -3323,7 +3323,7 @@
     "type": "object",
     "properties": {
       "metadata": {
-        "$ref": "#/definitions/Metadata54"
+        "$ref": "definitions.json#/Metadata54"
       },
       "signature": {
         "description": "",
@@ -3584,7 +3584,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Item59"
+          "$ref": "definitions.json#/Item59"
         }
       },
       "moderator": {
@@ -3654,11 +3654,11 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Option47"
+          "$ref": "definitions.json#/Option47"
         }
       },
       "shipping": {
-        "$ref": "#/definitions/Shipping61"
+        "$ref": "definitions.json#/Shipping61"
       },
       "memo": {
         "description": "",
@@ -3804,7 +3804,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/PhysicalDelivery"
+          "$ref": "definitions.json#/PhysicalDelivery"
         }
       },
       "digitalDelivery": {
@@ -3817,7 +3817,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/DigitalDelivery"
+          "$ref": "definitions.json#/DigitalDelivery"
         }
       }
     },
@@ -3891,7 +3891,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Rating"
+          "$ref": "definitions.json#/Rating"
         }
       }
     },
@@ -4377,7 +4377,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/VendorListing72"
+          "$ref": "definitions.json#/VendorListing72"
         }
       },
       "signatures": {
@@ -4390,7 +4390,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Signature"
+          "$ref": "definitions.json#/Signature"
         }
       }
     },
@@ -4585,13 +4585,13 @@
         "type": "string"
       },
       "vendorID": {
-        "$ref": "#/definitions/VendorID"
+        "$ref": "definitions.json#/VendorID"
       },
       "metadata": {
-        "$ref": "#/definitions/Metadata"
+        "$ref": "definitions.json#/Metadata"
       },
       "item": {
-        "$ref": "#/definitions/Item76"
+        "$ref": "definitions.json#/Item76"
       },
       "shippingOptions": {
         "description": "",
@@ -4617,7 +4617,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingOption80"
+          "$ref": "definitions.json#/ShippingOption80"
         }
       },
       "taxes": {
@@ -4873,7 +4873,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Image"
+          "$ref": "definitions.json#/Image"
         }
       },
       "categories": {
@@ -4915,7 +4915,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Option"
+          "$ref": "definitions.json#/Option"
         }
       },
       "skus": {
@@ -4987,7 +4987,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Sku79"
+          "$ref": "definitions.json#/Sku79"
         }
       }
     },
@@ -5095,7 +5095,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Service81"
+          "$ref": "definitions.json#/Service81"
         }
       }
     },
@@ -5180,7 +5180,7 @@
         "type": "string"
       },
       "hashes": {
-        "$ref": "#/definitions/Hashes"
+        "$ref": "definitions.json#/Hashes"
       }
     },
     "required": [
@@ -5277,7 +5277,7 @@
         "type": "string"
       },
       "hashes": {
-        "$ref": "#/definitions/Hashes"
+        "$ref": "definitions.json#/Hashes"
       }
     },
     "required": [
@@ -5491,10 +5491,10 @@
         "type": "string"
       },
       "thumbnail": {
-        "$ref": "#/definitions/Thumbnail"
+        "$ref": "definitions.json#/Thumbnail"
       },
       "price": {
-        "$ref": "#/definitions/Price"
+        "$ref": "definitions.json#/Price"
       },
       "shipsTo": {
         "description": "",
@@ -5692,7 +5692,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/VendorListing100"
+          "$ref": "definitions.json#/VendorListing100"
         }
       },
       "signatures": {
@@ -5705,7 +5705,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Signature"
+          "$ref": "definitions.json#/Signature"
         }
       }
     },
@@ -5768,13 +5768,13 @@
         "type": "string"
       },
       "vendorID": {
-        "$ref": "#/definitions/VendorID"
+        "$ref": "definitions.json#/VendorID"
       },
       "metadata": {
-        "$ref": "#/definitions/Metadata"
+        "$ref": "definitions.json#/Metadata"
       },
       "item": {
-        "$ref": "#/definitions/Item"
+        "$ref": "definitions.json#/Item"
       },
       "shippingOptions": {
         "description": "",
@@ -5903,10 +5903,10 @@
         "type": "string"
       },
       "metadata": {
-        "$ref": "#/definitions/Metadata108"
+        "$ref": "definitions.json#/Metadata108"
       },
       "item": {
-        "$ref": "#/definitions/Item109"
+        "$ref": "definitions.json#/Item109"
       },
       "shippingOptions": {
         "description": "",
@@ -5933,7 +5933,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingOption40"
+          "$ref": "definitions.json#/ShippingOption40"
         }
       },
       "taxes": {
@@ -6147,7 +6147,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Image"
+          "$ref": "definitions.json#/Image"
         }
       },
       "categories": {
@@ -6381,10 +6381,10 @@
         "type": "string"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "headerHashes": {
-        "$ref": "#/definitions/HeaderHashes"
+        "$ref": "definitions.json#/HeaderHashes"
       },
       "followerCount": {
         "description": "",
@@ -6648,7 +6648,7 @@
         }
       },
       "smtpSettings": {
-        "$ref": "#/definitions/SmtpSettings"
+        "$ref": "definitions.json#/SmtpSettings"
       }
     },
     "required": [
@@ -6787,7 +6787,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingAddress"
+          "$ref": "definitions.json#/ShippingAddress"
         }
       },
       "localCurrency": {
@@ -6839,7 +6839,7 @@
         }
       },
       "smtpSettings": {
-        "$ref": "#/definitions/SmtpSettings"
+        "$ref": "definitions.json#/SmtpSettings"
       }
     },
     "required": [
@@ -6994,7 +6994,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/ShippingAddress130"
+          "$ref": "definitions.json#/ShippingAddress130"
         }
       },
       "localCurrency": {
@@ -7045,7 +7045,7 @@
         "format": "int32"
       },
       "smtpSettings": {
-        "$ref": "#/definitions/SmtpSettings"
+        "$ref": "definitions.json#/SmtpSettings"
       },
       "version": {
         "description": "",
@@ -8751,16 +8751,16 @@
         "type": "boolean"
       },
       "contactInfo": {
-        "$ref": "#/definitions/ContactInfo"
+        "$ref": "definitions.json#/ContactInfo"
       },
       "colors": {
-        "$ref": "#/definitions/Colors"
+        "$ref": "definitions.json#/Colors"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "stats": {
-        "$ref": "#/definitions/Stats"
+        "$ref": "definitions.json#/Stats"
       },
       "bitcoinPubkey": {
         "description": "",
@@ -9027,7 +9027,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Social"
+          "$ref": "definitions.json#/Social"
         }
       },
       "avgRating": {
@@ -9081,10 +9081,10 @@
         "type": "string"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "headerHashes": {
-        "$ref": "#/definitions/HeaderHashes"
+        "$ref": "definitions.json#/HeaderHashes"
       },
       "followerCount": {
         "description": "",
@@ -9307,10 +9307,10 @@
         "type": "string"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "headerHashes": {
-        "$ref": "#/definitions/HeaderHashes"
+        "$ref": "definitions.json#/HeaderHashes"
       },
       "followerCount": {
         "description": "",
@@ -9416,7 +9416,7 @@
         "type": "string"
       },
       "contactInfo": {
-        "$ref": "#/definitions/ContactInfo"
+        "$ref": "definitions.json#/ContactInfo"
       },
       "nsfw": {
         "description": "",
@@ -9434,7 +9434,7 @@
         "type": "boolean"
       },
       "colors": {
-        "$ref": "#/definitions/Colors"
+        "$ref": "definitions.json#/Colors"
       }
     },
     "required": [
@@ -9544,19 +9544,19 @@
         "type": "boolean"
       },
       "contactInfo": {
-        "$ref": "#/definitions/ContactInfo"
+        "$ref": "definitions.json#/ContactInfo"
       },
       "colors": {
-        "$ref": "#/definitions/Colors"
+        "$ref": "definitions.json#/Colors"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "headerHashes": {
-        "$ref": "#/definitions/HeaderHashes"
+        "$ref": "definitions.json#/HeaderHashes"
       },
       "stats": {
-        "$ref": "#/definitions/Stats"
+        "$ref": "definitions.json#/Stats"
       },
       "bitcoinPubkey": {
         "description": "",
@@ -9689,7 +9689,7 @@
         ],
         "type": "array",
         "items": {
-          "$ref": "#/definitions/Social"
+          "$ref": "definitions.json#/Social"
         }
       },
       "avgRating": {
@@ -9743,10 +9743,10 @@
         "type": "string"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "headerHashes": {
-        "$ref": "#/definitions/HeaderHashes"
+        "$ref": "definitions.json#/HeaderHashes"
       },
       "followerCount": {
         "description": "",
@@ -9895,16 +9895,16 @@
         "type": "boolean"
       },
       "contactInfo": {
-        "$ref": "#/definitions/ContactInfo"
+        "$ref": "definitions.json#/ContactInfo"
       },
       "colors": {
-        "$ref": "#/definitions/Colors"
+        "$ref": "definitions.json#/Colors"
       },
       "avatarHashes": {
-        "$ref": "#/definitions/AvatarHashes"
+        "$ref": "definitions.json#/AvatarHashes"
       },
       "stats": {
-        "$ref": "#/definitions/Stats"
+        "$ref": "definitions.json#/Stats"
       },
       "bitcoinPubkey": {
         "description": "",
