@@ -37,6 +37,8 @@ dist
 .ackrc
 .tags*
 *.sw?
+config*
+openbazaar-go*
 
 # macOS
 .DS_Store
