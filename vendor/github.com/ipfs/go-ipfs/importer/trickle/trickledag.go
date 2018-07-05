@@ -1,3 +1,18 @@
+// Package trickle allows to build trickle DAGs.
+// In this type of DAG, non-leave nodes are first filled
+// with data leaves, and then incorporate "layers" of subtrees
+// as additional links.
+//
+// Each layer is a trickle sub-tree and is limited by an increasing
+// maximum depth. Thus, the nodes first layer
+// can only hold leaves (depth 1) but subsequent layers can grow deeper.
+// By default, this module places 4 nodes per layer (that is, 4 subtrees
+// of the same maximum depth before increasing it).
+//
+// Trickle DAGs are very good for sequentially reading data, as the
+// first data leaves are directly reachable from the root and those
+// coming next are always nearby. They are
+// suited for things like streaming applications.
 package trickle
 
 import (
@@ -9,7 +24,8 @@ import (
 	dag "github.com/ipfs/go-ipfs/merkledag"
 	ft "github.com/ipfs/go-ipfs/unixfs"
 
-	node "gx/ipfs/QmPN7cwmpcc4DWXb4KTB9dNAJgjuPY69h3npsMfhRrQL9c/go-ipld-format"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
 )
 
 // layerRepeat specifies how many times to append a child tree of a
@@ -17,21 +33,13 @@ import (
 // improves seek speeds.
 const layerRepeat = 4
 
-func TrickleLayout(db *h.DagBuilderHelper) (node.Node, error) {
+// Layout builds a new DAG with the trickle format using the provided
+// DagBuilderHelper. See the module's description for a more detailed
+// explanation.
+func Layout(db *h.DagBuilderHelper) (ipld.Node, error) {
 	root := db.NewUnixfsNode()
-	if err := db.FillNodeLayer(root); err != nil {
+	if err := fillTrickleRec(db, root, -1); err != nil {
 		return nil, err
-	}
-	for level := 1; !db.Done(); level++ {
-		for i := 0; i < layerRepeat && !db.Done(); i++ {
-			next := db.NewUnixfsNode()
-			if err := fillTrickleRec(db, next, level); err != nil {
-				return nil, err
-			}
-			if err := root.AddChild(next, db); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	out, err := db.Add(root)
@@ -46,38 +54,48 @@ func TrickleLayout(db *h.DagBuilderHelper) (node.Node, error) {
 	return out, nil
 }
 
-func fillTrickleRec(db *h.DagBuilderHelper, node *h.UnixfsNode, depth int) error {
+// fillTrickleRec creates a trickle (sub-)tree with an optional maximum specified depth
+// in the case maxDepth is greater than zero, or with unlimited depth otherwise
+// (where the DAG builder will signal the end of data to end the function).
+func fillTrickleRec(db *h.DagBuilderHelper, node *h.UnixfsNode, maxDepth int) error {
 	// Always do this, even in the base case
 	if err := db.FillNodeLayer(node); err != nil {
 		return err
 	}
 
-	for i := 1; i < depth && !db.Done(); i++ {
-		for j := 0; j < layerRepeat && !db.Done(); j++ {
-			next := db.NewUnixfsNode()
-			if err := fillTrickleRec(db, next, i); err != nil {
+	for depth := 1; ; depth++ {
+		// Apply depth limit only if the parameter is set (> 0).
+		if maxDepth > 0 && depth == maxDepth {
+			return nil
+		}
+		for layer := 0; layer < layerRepeat; layer++ {
+			if db.Done() {
+				return nil
+			}
+
+			nextChild := db.NewUnixfsNode()
+			if err := fillTrickleRec(db, nextChild, depth); err != nil {
 				return err
 			}
 
-			if err := node.AddChild(next, db); err != nil {
+			if err := node.AddChild(nextChild, db); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
 }
 
-// TrickleAppend appends the data in `db` to the dag, using the Trickledag format
-func TrickleAppend(ctx context.Context, basen node.Node, db *h.DagBuilderHelper) (out node.Node, err_out error) {
+// Append appends the data in `db` to the dag, using the Trickledag format
+func Append(ctx context.Context, basen ipld.Node, db *h.DagBuilderHelper) (out ipld.Node, errOut error) {
 	base, ok := basen.(*dag.ProtoNode)
 	if !ok {
 		return nil, dag.ErrNotProtobuf
 	}
 
 	defer func() {
-		if err_out == nil {
+		if errOut == nil {
 			if err := db.Close(); err != nil {
-				err_out = err
+				errOut = err
 			}
 		}
 	}()
@@ -147,7 +165,7 @@ func appendFillLastChild(ctx context.Context, ufsn *h.UnixfsNode, depth int, lay
 	}
 
 	// Fill out last child (may not be full tree)
-	nchild, err := trickleAppendRec(ctx, lastChild, db, depth-1)
+	nchild, err := appendRec(ctx, lastChild, db, depth-1)
 	if err != nil {
 		return err
 	}
@@ -178,8 +196,8 @@ func appendFillLastChild(ctx context.Context, ufsn *h.UnixfsNode, depth int, lay
 	return nil
 }
 
-// recursive call for TrickleAppend
-func trickleAppendRec(ctx context.Context, ufsn *h.UnixfsNode, db *h.DagBuilderHelper, depth int) (*h.UnixfsNode, error) {
+// recursive call for Append
+func appendRec(ctx context.Context, ufsn *h.UnixfsNode, db *h.DagBuilderHelper, depth int) (*h.UnixfsNode, error) {
 	if depth == 0 || db.Done() {
 		return ufsn, nil
 	}
@@ -234,34 +252,76 @@ func trickleDepthInfo(node *h.UnixfsNode, maxlinks int) (int, int) {
 	return ((n - maxlinks) / layerRepeat) + 1, (n - maxlinks) % layerRepeat
 }
 
+// VerifyParams is used by VerifyTrickleDagStructure
+type VerifyParams struct {
+	Getter      ipld.NodeGetter
+	Direct      int
+	LayerRepeat int
+	Prefix      *cid.Prefix
+	RawLeaves   bool
+}
+
 // VerifyTrickleDagStructure checks that the given dag matches exactly the trickle dag datastructure
 // layout
-func VerifyTrickleDagStructure(nd node.Node, ds dag.DAGService, direct int, layerRepeat int) error {
-	pbnd, ok := nd.(*dag.ProtoNode)
-	if !ok {
-		return dag.ErrNotProtobuf
-	}
-
-	return verifyTDagRec(pbnd, -1, direct, layerRepeat, ds)
+func VerifyTrickleDagStructure(nd ipld.Node, p VerifyParams) error {
+	return verifyTDagRec(nd, -1, p)
 }
 
 // Recursive call for verifying the structure of a trickledag
-func verifyTDagRec(nd *dag.ProtoNode, depth, direct, layerRepeat int, ds dag.DAGService) error {
+func verifyTDagRec(n ipld.Node, depth int, p VerifyParams) error {
+	codec := cid.DagProtobuf
 	if depth == 0 {
-		// zero depth dag is raw data block
-		if len(nd.Links()) > 0 {
+		if len(n.Links()) > 0 {
 			return errors.New("expected direct block")
 		}
+		// zero depth dag is raw data block
+		switch nd := n.(type) {
+		case *dag.ProtoNode:
+			pbn, err := ft.FromBytes(nd.Data())
+			if err != nil {
+				return err
+			}
 
-		pbn, err := ft.FromBytes(nd.Data())
-		if err != nil {
-			return err
-		}
+			if pbn.GetType() != ft.TRaw {
+				return errors.New("expected raw block")
+			}
 
-		if pbn.GetType() != ft.TRaw {
-			return errors.New("Expected raw block")
+			if p.RawLeaves {
+				return errors.New("expected raw leaf, got a protobuf node")
+			}
+		case *dag.RawNode:
+			if !p.RawLeaves {
+				return errors.New("expected protobuf node as leaf")
+			}
+			codec = cid.Raw
+		default:
+			return errors.New("expected ProtoNode or RawNode")
 		}
+	}
+
+	// verify prefix
+	if p.Prefix != nil {
+		prefix := n.Cid().Prefix()
+		expect := *p.Prefix // make a copy
+		expect.Codec = uint64(codec)
+		if codec == cid.Raw && expect.Version == 0 {
+			expect.Version = 1
+		}
+		if expect.MhLength == -1 {
+			expect.MhLength = prefix.MhLength
+		}
+		if prefix != expect {
+			return fmt.Errorf("unexpected cid prefix: expected: %v; got %v", expect, prefix)
+		}
+	}
+
+	if depth == 0 {
 		return nil
+	}
+
+	nd, ok := n.(*dag.ProtoNode)
+	if !ok {
+		return errors.New("expected ProtoNode")
 	}
 
 	// Verify this is a branch node
@@ -279,29 +339,24 @@ func verifyTDagRec(nd *dag.ProtoNode, depth, direct, layerRepeat int, ds dag.DAG
 	}
 
 	for i := 0; i < len(nd.Links()); i++ {
-		childi, err := nd.Links()[i].GetNode(context.TODO(), ds)
+		child, err := nd.Links()[i].GetNode(context.TODO(), p.Getter)
 		if err != nil {
 			return err
 		}
 
-		childpb, ok := childi.(*dag.ProtoNode)
-		if !ok {
-			return fmt.Errorf("cannot operate on non-protobuf nodes")
-		}
-
-		if i < direct {
+		if i < p.Direct {
 			// Direct blocks
-			err := verifyTDagRec(childpb, 0, direct, layerRepeat, ds)
+			err := verifyTDagRec(child, 0, p)
 			if err != nil {
 				return err
 			}
 		} else {
 			// Recursive trickle dags
-			rdepth := ((i - direct) / layerRepeat) + 1
+			rdepth := ((i - p.Direct) / p.LayerRepeat) + 1
 			if rdepth >= depth && depth > 0 {
-				return errors.New("Child dag was too deep!")
+				return errors.New("child dag was too deep")
 			}
-			err := verifyTDagRec(childpb, rdepth, direct, layerRepeat, ds)
+			err := verifyTDagRec(child, rdepth, p)
 			if err != nil {
 				return err
 			}

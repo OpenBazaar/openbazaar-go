@@ -9,7 +9,6 @@ import (
 func (n *OpenBazaarNode) StartMessageRetriever() {
 	config := net.MRConfig{
 		Db:        n.Datastore,
-		Ctx:       n.Context,
 		IPFSNode:  n.IpfsNode,
 		BanManger: n.BanManager,
 		Service:   n.Service,

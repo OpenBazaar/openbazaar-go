@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -139,7 +139,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	postPath := path.Join(n.RepoPath, "root", "posts", post.Post.Slug+".json")
 
 	// Get the hash of the post's file and add to postHash variable
-	postHash, err := ipfs.GetHashOfFile(n.Context, postPath)
+	postHash, err := ipfs.GetHashOfFile(n.IpfsNode, postPath)
 	if err != nil {
 		return postData{}, err
 	}

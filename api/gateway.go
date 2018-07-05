@@ -31,7 +31,7 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	if err != nil {
 		return nil, err
 	}
-	wsAPI, err := newWSAPIHandler(n, n.Context, authCookie, config)
+	wsAPI, err := newWSAPIHandler(n, authCookie, config)
 	if err != nil {
 		return nil, err
 	}

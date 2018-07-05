@@ -1,25 +1,28 @@
 package ipfs
 
 import (
+	"github.com/ipfs/go-ipfs/core/mock"
 	"path"
 	"testing"
 )
 
 func TestUnPinDir(t *testing.T) {
-	ctx, err := MockCmdsCtx()
+	n, err := coremock.NewMockNode()
 	if err != nil {
 		t.Error(err)
 	}
-	root, err := AddDirectory(ctx, path.Join("./", "root"))
+
+	root, err := AddDirectory(n, path.Join("./", "root"))
 	if err != nil {
 		t.Error(err)
 	}
-	err = UnPinDir(ctx, root)
+
+	err = UnPinDir(n, root)
 	if err != nil {
 		t.Error(err)
 	}
-	err = UnPinDir(ctx, "fasdfasdf")
+	err = UnPinDir(n, "fasdfasdf")
 	if err == nil {
-		t.Error("Should have through error unpinning known directory")
+		t.Error("Shouldn't have thrown an error")
 	}
 }

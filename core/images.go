@@ -19,8 +19,8 @@ import (
 	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
 	"golang.org/x/net/context"
-	u "gx/ipfs/QmSU6eubNdhXjFBJBSksTp8kv8YRub8mGAPv8tVJHmL2EU/go-ipfs-util"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
+	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"io/ioutil"
 	"net/http"
@@ -109,7 +109,7 @@ func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, erro
 	}
 	jpeg.Encode(out, img, nil)
 	out.Close()
-	return ipfs.AddFile(n.Context, imgPath)
+	return ipfs.AddFile(n.IpfsNode, imgPath)
 }
 
 func (n *OpenBazaarNode) addResizedImage(img image.Image, imgCfg *image.Config, w, h uint, imgPath string) (string, error) {

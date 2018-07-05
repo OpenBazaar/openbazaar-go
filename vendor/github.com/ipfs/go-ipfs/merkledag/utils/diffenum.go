@@ -6,14 +6,14 @@ import (
 
 	mdag "github.com/ipfs/go-ipfs/merkledag"
 
-	cid "gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	node "gx/ipfs/QmPN7cwmpcc4DWXb4KTB9dNAJgjuPY69h3npsMfhRrQL9c/go-ipld-format"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
 )
 
 // DiffEnumerate fetches every object in the graph pointed to by 'to' that is
 // not in 'from'. This can be used to more efficiently fetch a graph if you can
 // guarantee you already have the entirety of 'from'
-func DiffEnumerate(ctx context.Context, dserv node.NodeGetter, from, to *cid.Cid) error {
+func DiffEnumerate(ctx context.Context, dserv ipld.NodeGetter, from, to *cid.Cid) error {
 	fnd, err := dserv.Get(ctx, from)
 	if err != nil {
 		return fmt.Errorf("get %s: %s", from, err)
@@ -64,28 +64,36 @@ type diffpair struct {
 
 // getLinkDiff returns a changeset between nodes 'a' and 'b'. Currently does
 // not log deletions as our usecase doesnt call for this.
-func getLinkDiff(a, b node.Node) []diffpair {
-	have := make(map[string]*node.Link)
-	names := make(map[string]*node.Link)
+func getLinkDiff(a, b ipld.Node) []diffpair {
+	ina := make(map[string]*ipld.Link)
+	inb := make(map[string]*ipld.Link)
+	var aonly []*cid.Cid
+	for _, l := range b.Links() {
+		inb[l.Cid.KeyString()] = l
+	}
 	for _, l := range a.Links() {
-		have[l.Cid.KeyString()] = l
-		names[l.Name] = l
+		var key = l.Cid.KeyString()
+		ina[key] = l
+		if inb[key] == nil {
+			aonly = append(aonly, l.Cid)
+		}
 	}
 
 	var out []diffpair
+	var aindex int
 
 	for _, l := range b.Links() {
-		if have[l.Cid.KeyString()] != nil {
+		if ina[l.Cid.KeyString()] != nil {
 			continue
 		}
 
-		match, ok := names[l.Name]
-		if !ok {
+		if aindex < len(aonly) {
+			out = append(out, diffpair{bef: aonly[aindex], aft: l.Cid})
+			aindex++
+		} else {
 			out = append(out, diffpair{aft: l.Cid})
 			continue
 		}
-
-		out = append(out, diffpair{bef: match.Cid, aft: l.Cid})
 	}
 	return out
 }

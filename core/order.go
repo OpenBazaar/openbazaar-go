@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	mh "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"strings"
 	"time"
@@ -88,15 +88,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
 
-		ipnsPath := ipfspath.FromString(data.Moderator + "/profile.json")
-		profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute)
+		profile, err := n.FetchProfile(data.Moderator, true)
 		if err != nil {
 			return "", "", 0, false, errors.New("Moderator could not be found")
-		}
-		profile := new(pb.Profile)
-		err = jsonpb.UnmarshalString(string(profileBytes), profile)
-		if err != nil {
-			return "", "", 0, false, err
 		}
 		moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
 		if err != nil {
@@ -540,7 +534,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		listing := new(pb.Listing)
 		if !exists {
 			// Let's fetch the listing, should be cached
-			b, err := ipfs.Cat(n.Context, item.ListingHash, time.Minute)
+			b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
 			if err != nil {
 				return nil, err
 			}

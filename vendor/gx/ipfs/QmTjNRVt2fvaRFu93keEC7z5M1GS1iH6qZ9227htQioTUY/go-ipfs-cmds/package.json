@@ -1,0 +1,58 @@
+{
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipfs-cmds"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipfs-cmds",
+    "goversion": "1.7"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmRb5jh8z2E8hMGN2tkvs1yHynUanqnZ3UeKwgN1i9P1F8",
+      "name": "go-log",
+      "version": "1.4.0"
+    },
+    {
+      "author": "rs",
+      "hash": "QmPG2kW5t27LuHgHnvhUwbHCNHAt2eUcb4gPHqofrESUdB",
+      "name": "cors",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx",
+      "name": "go-ipfs-util",
+      "version": "1.2.7"
+    },
+    {
+      "hash": "QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM",
+      "name": "go-ipfs-cmdkit",
+      "version": "1.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qmf9JgVLz46pxPXwG2eWSJpkqVCcjD4rp7zCRi2KP6GTNB",
+      "name": "go-libp2p-loggables",
+      "version": "1.1.13"
+    },
+    {
+      "author": "texttheater",
+      "hash": "QmTVvctiHWZzSDZdyU5wdnXh7VF3kprHSyQFwVChos5qKu",
+      "name": "golang-levenshtein",
+      "version": "1.0.0"
+    },
+    {
+      "author": "Kubuxu",
+      "hash": "QmXuBJ7DR6k3rmUEKtvVMhwjmXDuJgXXPUt4LQXKBMsU93",
+      "name": "go-os-helper",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-ipfs-cmds",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.13"
+}
+

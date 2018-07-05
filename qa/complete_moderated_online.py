@@ -79,7 +79,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
         time.sleep(4)
 
         # get listing hash
-        api_url = alice["gateway_url"] + "ipns/" + alice["peerId"] + "/listings.json"
+        api_url = alice["gateway_url"] + "ob/listings/" + alice["peerId"]
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Couldn't get listing index")
@@ -243,6 +243,7 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("CompleteModeratedOnlineTest - FAIL: Failed to query Alice's balance")
 
         print("CompleteModeratedOnlineTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running CompleteModeratedOnlineTest")

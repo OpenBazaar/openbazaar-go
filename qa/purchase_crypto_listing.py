@@ -58,7 +58,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
-        api_url = vendor["gateway_url"] + "ipns/" + vendor["peerId"] + "/listings.json"
+        api_url = vendor["gateway_url"] + "ob/listings/" + vendor["peerId"]
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't get listing index")

@@ -39,6 +39,7 @@ class UploadListingTest(OpenBazaarTestFramework):
         else:
             resp = json.loads(r.text)
             raise TestFailure("UploadListingTest - FAIL: Listing POST failed. Reason: %s", resp["reason"])
+        print("UploadListingTest - PASS")
 
 
 if __name__ == '__main__':

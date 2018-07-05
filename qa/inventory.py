@@ -107,11 +107,14 @@ class InventoryTest(OpenBazaarTestFramework):
             raise TestFailure("InventoryTest - FAIL: Inventory GET non-existant peer did not return an error")
         if resp["success"]:
             raise TestFailure("InventoryTest - FAIL: Inventory GET non-existant peer did not return an error")
-        if resp["reason"] != "Could not resolve name.":
+        if resp["reason"] != "could not resolve name":
             raise TestFailure("InventoryTest - FAIL: Inventory GET non-existant peer failed with the wrong error")
+
+        print("InventoryTest - PASS")
 
     def assert_correct_time(self, unixtime):
         return datetime.strptime(unixtime, "%Y-%m-%dT%H:%M:%SZ" ) > datetime(2018, 4, 20)
+
 
 if __name__ == '__main__':
     print("Running InventoryTest")
