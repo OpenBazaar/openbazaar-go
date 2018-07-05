@@ -168,6 +168,45 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 			LowFeeDefault:    20,
 			TrustedPeer:      "",
 		}
+		ws = schema.WalletsConfig{
+			BTC: schema.CoinConfig{
+				Type:             "API",
+				API:              "https://btc.bloqapi.net/insight-api",
+				APITestnet:       "https://test-insight.bitpay.com/api",
+				MaxFee:           200,
+				FeeAPI:           "https://btc.fees.openbazaar.org",
+				HighFeeDefault:   50,
+				MediumFeeDefault: 10,
+				LowFeeDefault:    1,
+			},
+			BCH: schema.CoinConfig{
+				Type:             "API",
+				API:              "https://bch-insight.bitpay.com/api",
+				APITestnet:       "https://test-bch-insight.bitpay.com/api",
+				MaxFee:           200,
+				HighFeeDefault:   10,
+				MediumFeeDefault: 5,
+				LowFeeDefault:    1,
+			},
+			LTC: schema.CoinConfig{
+				Type:             "API",
+				API:              "https://insight.litecore.io/api",
+				APITestnet:       "https://testnet.litecore.io/api",
+				MaxFee:           200,
+				HighFeeDefault:   20,
+				MediumFeeDefault: 10,
+				LowFeeDefault:    5,
+			},
+			ZEC: schema.CoinConfig{
+				Type:             "API",
+				API:              "https://zcashnetwork.info/api",
+				APITestnet:       "https://explorer.testnet.z.cash/api",
+				MaxFee:           200,
+				HighFeeDefault:   20,
+				MediumFeeDefault: 10,
+				LowFeeDefault:    5,
+			},
+		}
 
 		a = schema.APIConfig{
 			Enabled:     true,
@@ -187,6 +226,9 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 		}
 	)
 	if err := r.SetConfigKey("Wallet", w); err != nil {
+		return err
+	}
+	if err := r.SetConfigKey("Wallets", ws); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("DataSharing", ds); err != nil {
