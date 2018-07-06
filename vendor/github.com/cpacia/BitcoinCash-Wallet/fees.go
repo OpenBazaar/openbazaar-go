@@ -1,7 +1,6 @@
 package bitcoincash
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/wallet-interface"
 	"net/http"
 	"time"
@@ -28,7 +27,7 @@ type FeeProvider struct {
 	normalFee   uint64
 	economicFee uint64
 
-	exchangeRates bitcoin.ExchangeRates
+	exchangeRates wallet.ExchangeRates
 
 	cache *feeCache
 }
@@ -44,7 +43,7 @@ const (
 	PriorityTarget FeeTarget = 10
 )
 
-func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, exchangeRates bitcoin.ExchangeRates) *FeeProvider {
+func NewFeeProvider(maxFee, priorityFee, normalFee, economicFee uint64, exchangeRates wallet.ExchangeRates) *FeeProvider {
 	return &FeeProvider{
 		maxFee:        maxFee,
 		priorityFee:   priorityFee,

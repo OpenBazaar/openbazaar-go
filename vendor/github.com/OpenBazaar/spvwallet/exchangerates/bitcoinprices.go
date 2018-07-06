@@ -1,4 +1,4 @@
-package exchange
+package exchangerates
 
 import (
 	"encoding/json"
@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
+	"strings"
 )
 
 const SatoshiPerBTC = 100000000
@@ -64,7 +64,7 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 }
 
 func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
-	currencyCode = core.NormalizeCurrencyCode(currencyCode)
+	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	b.Lock()
 	defer b.Unlock()
@@ -76,7 +76,7 @@ func (b *BitcoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, err
 }
 
 func (b *BitcoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
-	currencyCode = core.NormalizeCurrencyCode(currencyCode)
+	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	b.fetchCurrentRates()
 	b.Lock()
@@ -221,4 +221,9 @@ func (b BitcoinChartsDecoder) decode(dat interface{}, cache map[string]float64) 
 		}
 	}
 	return nil
+}
+
+// NormalizeCurrencyCode standardizes the format for the given currency code
+func NormalizeCurrencyCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }

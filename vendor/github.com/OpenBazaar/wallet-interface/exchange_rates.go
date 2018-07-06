@@ -1,4 +1,4 @@
-package bitcoin
+package wallet
 
 type ExchangeRates interface {
 

@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
-	"github.com/OpenBazaar/openbazaar-go/core"
+	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"golang.org/x/net/proxy"
+	"strings"
 )
 
 type ExchangeRateProvider struct {
@@ -63,7 +63,7 @@ func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 }
 
 func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
-	currencyCode = core.NormalizeCurrencyCode(currencyCode)
+	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	z.Lock()
 	defer z.Unlock()
@@ -75,7 +75,7 @@ func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error
 }
 
 func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
-	currencyCode = core.NormalizeCurrencyCode(currencyCode)
+	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	z.fetchCurrentRates()
 	z.Lock()
@@ -325,4 +325,9 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 		cache[k] = v * rate
 	}
 	return nil
+}
+
+// NormalizeCurrencyCode standardizes the format for the given currency code
+func NormalizeCurrencyCode(currencyCode string) string {
+	return strings.ToUpper(currencyCode)
 }
