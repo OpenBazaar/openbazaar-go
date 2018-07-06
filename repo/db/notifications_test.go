@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func newNotificationStore() repo.NotificationStore {
@@ -78,9 +79,26 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 }
 
 func TestNotficationsDB_Delete(t *testing.T) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer appSchema.DestroySchemaDirectories()
+
+	chdb := NewChatStore(database, new(sync.Mutex))
 	db := newNotificationStore()
 	n := repo.FollowNotification{"1", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(n, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
