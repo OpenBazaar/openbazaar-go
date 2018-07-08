@@ -14,17 +14,18 @@ import (
 
 type StxoDB struct {
 	modelStore
+	coinType wallet.CoinType
 }
 
-func NewSpentTransactionStore(db *sql.DB, lock *sync.Mutex) repo.SpentTransactionOutputStore {
-	return &StxoDB{modelStore{db, lock}}
+func NewSpentTransactionStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinType) repo.SpentTransactionOutputStore {
+	return &StxoDB{modelStore{db, lock}, coinType}
 }
 
 func (s *StxoDB) Put(stxo wallet.Stxo) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	tx, _ := s.db.Begin()
-	stmt, err := tx.Prepare("insert or replace into stxos(outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid) values(?,?,?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into stxos(coin, outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid) values(?,?,?,?,?,?,?,?)")
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -35,7 +36,7 @@ func (s *StxoDB) Put(stxo wallet.Stxo) error {
 		watchOnly = 1
 	}
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
-	_, err = stmt.Exec(outpoint, int(stxo.Utxo.Value), int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), watchOnly, int(stxo.SpendHeight), stxo.SpendTxid.String())
+	_, err = stmt.Exec(s.coinType.CurrencyCode(), outpoint, int(stxo.Utxo.Value), int(stxo.Utxo.AtHeight), hex.EncodeToString(stxo.Utxo.ScriptPubkey), watchOnly, int(stxo.SpendHeight), stxo.SpendTxid.String())
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -48,7 +49,7 @@ func (s *StxoDB) GetAll() ([]wallet.Stxo, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	var ret []wallet.Stxo
-	stm := "select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos"
+	stm := "select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos where coin=" + s.coinType.CurrencyCode()
 	rows, err := s.db.Query(stm)
 	if err != nil {
 		return ret, err
@@ -106,7 +107,7 @@ func (s *StxoDB) Delete(stxo wallet.Stxo) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	outpoint := stxo.Utxo.Op.Hash.String() + ":" + strconv.Itoa(int(stxo.Utxo.Op.Index))
-	_, err := s.db.Exec("delete from stxos where outpoint=?", outpoint)
+	_, err := s.db.Exec("delete from stxos where outpoint=? and coin=?", outpoint, s.coinType.CurrencyCode())
 	if err != nil {
 		return err
 	}

@@ -28,6 +28,7 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Convert struct {
@@ -53,6 +54,7 @@ func (x *Convert) Execute(args []string) error {
 	var str string
 	var cfgtype string
 	var currencyCode string
+	ct := wallet.Bitcoin
 	switch strings.ToLower(args[0]) {
 	case "bitcoin":
 		str = "Bitcoin"
@@ -62,10 +64,12 @@ func (x *Convert) Execute(args []string) error {
 		str = "Bitcoin Cash"
 		cfgtype = "bitcoincash"
 		currencyCode = "BCH"
+		ct = wallet.BitcoinCash
 	case "zcash":
 		str = "ZCash"
 		cfgtype = "zcashd"
 		currencyCode = "ZEC"
+		ct = wallet.Zcash
 	}
 
 	if x.Testnet {
@@ -173,7 +177,7 @@ func (x *Convert) Execute(args []string) error {
 	// Update listings with new coin type
 	creationDate := time.Now()
 	var sqliteDB *db.SQLiteDatastore
-	sqliteDB, err = InitializeRepo(repoPath, x.Password, "", x.Testnet, creationDate)
+	sqliteDB, err = InitializeRepo(repoPath, x.Password, "", x.Testnet, creationDate, ct)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
@@ -185,7 +189,7 @@ func (x *Convert) Execute(args []string) error {
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now())
+		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now(), ct)
 		if err != nil && err != repo.ErrRepoExists {
 			return err
 		}

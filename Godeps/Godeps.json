@@ -17,7 +17,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "cd1b53cbbac33ab725442eb9d0cec3a34ee5e325"
+			"Rev": "4060fdf0e731291229329f0f8a3452145f071647"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",

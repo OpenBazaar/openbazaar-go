@@ -12,10 +12,11 @@ import (
 
 type TxnsDB struct {
 	modelStore
+	coinType wallet.CoinType
 }
 
-func NewTransactionStore(db *sql.DB, lock *sync.Mutex) repo.TransactionStore {
-	return &TxnsDB{modelStore{db, lock}}
+func NewTransactionStore(db *sql.DB, lock *sync.Mutex, coinType wallet.CoinType) repo.TransactionStore {
+	return &TxnsDB{modelStore{db, lock}, coinType}
 }
 
 func (t *TxnsDB) Put(raw []byte, txid string, value, height int, timestamp time.Time, watchOnly bool) error {
@@ -25,7 +26,7 @@ func (t *TxnsDB) Put(raw []byte, txid string, value, height int, timestamp time.
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("insert or replace into txns(txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?)")
+	stmt, err := tx.Prepare("insert or replace into txns(coin, txid, value, height, timestamp, watchOnly, tx) values(?,?,?,?,?,?,?)")
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -35,7 +36,7 @@ func (t *TxnsDB) Put(raw []byte, txid string, value, height int, timestamp time.
 	if watchOnly {
 		watchOnlyInt = 1
 	}
-	_, err = stmt.Exec(txid, value, height, int(timestamp.Unix()), watchOnlyInt, raw)
+	_, err = stmt.Exec(t.coinType.CurrencyCode(), txid, value, height, int(timestamp.Unix()), watchOnlyInt, raw)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -48,7 +49,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var txn wallet.Txn
-	stmt, err := t.db.Prepare("select tx, value, height, timestamp, watchOnly from txns where txid=?")
+	stmt, err := t.db.Prepare("select tx, value, height, timestamp, watchOnly from txns where txid=? and coin=?")
 	if err != nil {
 		return txn, err
 	}
@@ -58,7 +59,7 @@ func (t *TxnsDB) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	var timestamp int
 	var value int
 	var watchOnlyInt int
-	err = stmt.QueryRow(txid.String()).Scan(&raw, &value, &height, &timestamp, &watchOnlyInt)
+	err = stmt.QueryRow(txid.String(), t.coinType.CurrencyCode()).Scan(&raw, &value, &height, &timestamp, &watchOnlyInt)
 	if err != nil {
 		return txn, err
 	}
@@ -81,7 +82,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var ret []wallet.Txn
-	stm := "select tx, txid, value, height, timestamp, watchOnly from txns"
+	stm := "select tx, txid, value, height, timestamp, watchOnly from txns where coin=" + t.coinType.CurrencyCode()
 	rows, err := t.db.Query(stm)
 	if err != nil {
 		return ret, err
@@ -115,7 +116,7 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 func (t *TxnsDB) Delete(txid *chainhash.Hash) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	_, err := t.db.Exec("delete from txns where txid=?", txid.String())
+	_, err := t.db.Exec("delete from txns where txid=? and coin=?", txid.String(), t.coinType.CurrencyCode())
 	if err != nil {
 		return err
 	}
@@ -129,12 +130,12 @@ func (t *TxnsDB) UpdateHeight(txid chainhash.Hash, height int, timestamp time.Ti
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("update txns set height=?, timestamp=? where txid=?")
+	stmt, err := tx.Prepare("update txns set height=?, timestamp=? where txid=? and coin=?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(height, int(timestamp.Unix()), txid.String())
+	_, err = stmt.Exec(height, int(timestamp.Unix()), txid.String(), t.coinType.CurrencyCode())
 	if err != nil {
 		tx.Rollback()
 		return err

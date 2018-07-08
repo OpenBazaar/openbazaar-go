@@ -45,6 +45,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Restore struct {
@@ -90,7 +91,7 @@ func (x *Restore) Execute(args []string) error {
 		}
 		os.RemoveAll(repoPath)
 	}
-	sqliteDB, err = InitializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet, creationDate)
+	sqliteDB, err = InitializeRepo(repoPath, x.Password, x.Mnemonic, x.Testnet, creationDate, wallet.Bitcoin)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
@@ -102,7 +103,7 @@ func (x *Restore) Execute(args []string) error {
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now())
+		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now(), wallet.Bitcoin)
 		if err != nil && err != repo.ErrRepoExists {
 			return err
 		}

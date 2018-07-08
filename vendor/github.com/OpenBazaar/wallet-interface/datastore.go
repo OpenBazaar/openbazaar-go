@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+type Coin interface {
+	String() string
+	CurrencyCode() string
+}
+
 type CoinType uint32
 
 const (
@@ -27,6 +32,21 @@ func (c *CoinType) String() string {
 		return "Zcash"
 	case Litecoin:
 		return "Litecoin"
+	default:
+		return ""
+	}
+}
+
+func (c *CoinType) CurrencyCode() string {
+	switch *c {
+	case Bitcoin:
+		return "BTC"
+	case BitcoinCash:
+		return "BCH"
+	case Zcash:
+		return "ZEC"
+	case Litecoin:
+		return "LTC"
 	default:
 		return ""
 	}

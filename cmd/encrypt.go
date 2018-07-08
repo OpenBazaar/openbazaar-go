@@ -13,6 +13,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 type EncryptDatabase struct {
@@ -97,7 +98,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	}
 	pw = strings.Replace(pw, "'", "''", -1)
 	tmpPath := path.Join(repoPath, "tmp")
-	sqlliteDB, err := db.Create(repoPath, "", testnet)
+	sqlliteDB, err := db.Create(repoPath, "", testnet, wallet.Bitcoin)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -109,7 +110,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {
 		return err
 	}
-	tmpDB, err := db.Create(tmpPath, pw, testnet)
+	tmpDB, err := db.Create(tmpPath, pw, testnet, wallet.Bitcoin)
 	if err != nil {
 		fmt.Println(err)
 		return err
