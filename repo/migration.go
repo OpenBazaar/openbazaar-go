@@ -23,6 +23,7 @@ var Migrations = []Migration{
 	migrations.Migration006{},
 	migrations.Migration007{},
 	migrations.Migration008{},
+	migrations.Migration009{},
 }
 
 // MigrateUp looks at the currently active migration version
@@ -34,7 +35,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
 	}
-	v, err := strconv.Atoi(string(version[0]))
+	v, err := strconv.Atoi(string(version))
 	if err != nil {
 		return err
 	}
