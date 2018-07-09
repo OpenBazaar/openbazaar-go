@@ -27,6 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
@@ -75,14 +76,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now())
-	if err != nil && err != repo.ErrRepoExists {
-		return nil, err
-	}
-
-	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, _ := sqliteDB.Config().GetCreationDate()
-
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(config.RepoPath, "config"))
 	if err != nil {
@@ -107,6 +100,23 @@ func NewNode(config NodeConfig) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ct := wallet.Bitcoin
+	switch walletCfg.Type {
+	case "bitcoincash":
+		ct = wallet.BitcoinCash
+	case "zcashd":
+		ct = wallet.Zcash
+	}
+	migrations.WalletCoinType = ct
+
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return nil, err
+	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -384,9 +394,9 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
+func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wallet.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
-	sqliteDB, err := db.Create(dataDir, password, testnet)
+	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
 	if err != nil {
 		return sqliteDB, err
 	}
