@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"sync"
 	"github.com/OpenBazaar/wallet-interface"
+	"sync"
 )
 
 type WatchedScriptsDB struct {

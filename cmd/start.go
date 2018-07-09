@@ -31,6 +31,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
@@ -262,12 +263,14 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	ct := wallet.Bitcoin
-	switch(walletCfg.Type) {
+	switch walletCfg.Type {
 	case "bitcoincash":
 		ct = wallet.BitcoinCash
 	case "zcashd":
 		ct = wallet.Zcash
 	}
+
+	migrations.WalletCoinType = ct
 	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
 	if err != nil && err != repo.ErrRepoExists {
 		return err

@@ -88,7 +88,7 @@ func (k *KeysDB) GetLastKeyIndex(purpose wallet.KeyPurpose) (int, bool, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " and coin=" + k.coinType.CurrencyCode() +" order by rowid desc limit 1"
+	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " and coin=" + k.coinType.CurrencyCode() + " order by rowid desc limit 1"
 	stmt, err := k.db.Prepare(stm)
 	defer stmt.Close()
 	var index int

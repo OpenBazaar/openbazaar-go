@@ -23,12 +23,12 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Convert struct {

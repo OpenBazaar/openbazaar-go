@@ -22,6 +22,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipfspath "github.com/ipfs/go-ipfs/path"
@@ -45,7 +46,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 type Restore struct {
