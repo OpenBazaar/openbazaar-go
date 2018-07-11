@@ -13,7 +13,6 @@ import (
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"sync"
 
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -76,7 +75,7 @@ type OpenBazaarNode struct {
 	NameSystem *namesys.NameSystem
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
-	ExchangeRates bitcoin.ExchangeRates
+	ExchangeRates wallet.ExchangeRates
 
 	// Optional nodes to push user data to
 	PushNodes []peer.ID

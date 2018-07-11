@@ -2,7 +2,6 @@ package bitcoincash
 
 import (
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -413,7 +412,7 @@ func (w *SPVWallet) DumpHeaders(writer io.Writer) {
 	w.blockchain.db.Print(writer)
 }
 
-func (w *SPVWallet) ExchangeRates() bitcoin.ExchangeRates {
+func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
 	return w.feeProvider.exchangeRates
 }
 

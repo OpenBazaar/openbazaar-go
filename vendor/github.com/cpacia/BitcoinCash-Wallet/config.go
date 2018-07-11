@@ -1,7 +1,6 @@
 package bitcoincash
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/mitchellh/go-homedir"
@@ -59,7 +58,7 @@ type Config struct {
 	Logger logging.Backend
 
 	// An exchange rate provider implementation for Bitcoin Cash
-	ExchangeRateProvider bitcoin.ExchangeRates
+	ExchangeRateProvider wallet.ExchangeRates
 
 	// A slice of additional items to add to the bloom filter
 	AdditionalFilters [][]byte

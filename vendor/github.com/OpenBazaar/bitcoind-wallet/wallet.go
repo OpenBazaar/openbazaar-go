@@ -1062,3 +1062,4 @@ func DefaultSocksPort(controlPort int) int {
 	}
 	return socksPort
 }
+
