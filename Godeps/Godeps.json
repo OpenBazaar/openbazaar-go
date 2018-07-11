@@ -671,7 +671,7 @@
 		},
 		{
 			"ImportPath": "github.com/mutecomm/go-sqlcipher",
-			"Rev": "34287a64fbe7fc03ab5a0e6cbc35618f9453b8d2"
+			"Rev": "f799951b4ab269c2ce24913961af2cb5d681cc43"
 		},
 		{
 			"ImportPath": "github.com/natefinch/lumberjack",
