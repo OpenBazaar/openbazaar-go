@@ -1,3 +1,29 @@
+// OpenBazaar 2.0 JSON API (Remote).
+//
+// The OpenBazaar networking daemon combines a Kademlia DHT, IPFS node, Bitcoin wallet, and a peer-to-peer contracting system. This JSON API is the primary mechanism for controlling the node. It offers a RESTful api for building user interfaces as well as a number of RPC calls. In this documentation you'll find a full list of API calls and example usages.<br># Authentication<br>When running on localhost (the default), the API is unauthenticated. You can enable authentication by setting the config file as follows: <br><code><br>{<br>    \"JSON-API\": {<br>      \"Authenticated\": true<br>      }<br>}<br></code><br>Note that on mainnet the server enables authentication automatically if the gateway url is bound to anything other than localhost (implying open internet access) even if the config file is set to false.<br><br>There are two ways for a client to authenticate. The default (and preferred) is via an authentication cookie. On start up the server generates a random cookie and saves it in the data directory as a .cookie file. You need to add this cookie to the header of all requests. For example:<br><code><br>cookie: OpenBazaar_Auth_Cookie=2Yc7VZtG/pVKrH5Lp0mKRSEPC4xlm1dGpkbUXLehTUI<br></code><br>Alternatively, you can use basic authentication by setting a username and password in the config file:<br><code><br>    {<br>        \"JSON-API\": {<br>          \"Username\": \"Aladdin\",<br>          \"Password\": \"1c8bfe8f801d79745c4631d09fff36c82aa37fc4cce4fc946683d7b336b63032\"<br>          }<br>    }<br></code><br>The password should be saved as the hex - encoded SHA - 256 hash of your password. You can run <em>openbazaar-go setapicreds` to have it hash and save the password in the config file for you.<br><br>The username and password need to be included in the request header following [RFC 2617](https://www.ietf.org/rfc/rfc2617.txt):<br><code><br>Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==<br></code><br>Where the username and password are encoded as <em>base64encode(username + \":\" + password)</em><br>or included in the Url:<br><code><br>http://username:password@localhost\:8080/ob/<br></code><br># SSL<br><strong>NEVER</strong> open the JSON API to the internet without also encrypting the connection with SSL. Without SSL enabled your authentication information be sent to the server in the clear allowing anyone who views your packets to access your server and potentially steal your bitcoins. For instructions on how to enable SSL, see [here](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/ssl.md).<br># Cross-Origin Resource Sharing<br>CORS is turned off by default, meaning that you will not be able to make API calls from a browser to a running server on localhost. You can turn CORS on for a specific domain by setting an origin in the config file as follows:<br><code><br>{<br>    \"JSON-API\": {<br>      \"CORS\": \"https://openbazaar.org\"<br>      }<br>}<br></code><br>Use \"*\" to allow all domains. Keep in mind that running the server with CORS enabled for all domains is a potential secrity risk as it will allow any website you visit to make calls to your server. Authentication should be enabled along side CORS.
+//
+//     Schemes: http
+//     Version: 1.0
+//
+//     Consumes:
+//     - application/json
+//
+//     Produces:
+//     - application/json
+//
+//     Security:
+//     - bearer
+//
+//     Host: localhost:4002
+//
+//     SecurityDefinitions:
+//     bearer:
+//          type: apiKey
+//          name: Authorization
+//          in: header
+//
+//
+// swagger:meta
 package api
 
 import (
@@ -229,6 +255,30 @@ func SanitizedResponseM(w http.ResponseWriter, response string, m proto.Message)
 }
 
 func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/profile profile postProfile
+	//
+	// Create new profile for node.
+	//
+	// Any new profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/SetTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Creates a new profile for the node"
+	//    schema:
+	//      type: object
 
 	// If the profile is already set tell them to use PUT
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
@@ -291,6 +341,30 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation PUT /ob/profile profile putProfile
+	//
+	// Update the profile for this node.
+	//
+	// Update the profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/UpdateTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Updates an existing profile"
+	//    schema:
+	//      $ref: "definitions.json#/Drwasho"
 
 	// If profile is not set tell them to use POST
 	currentProfile, err := i.node.GetProfile()
@@ -357,6 +431,31 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation PATCH /ob/profile profile patchProfile
+	//
+	// Update the profile for this node.
+	//
+	// Update the profile
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/UpdateTheProfilerequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    description: "Updates an existing profile"
+	//    schema:
+	//      $ref: "definitions.json#/Drwasho"
+
 	// If profile is not set tell them to use POST
 	profilePath := path.Join(i.node.RepoPath, "root", "profile.json")
 	_, ferr := os.Stat(profilePath)
@@ -401,6 +500,29 @@ func (i *jsonAPIHandler) PATCHProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/avatar profile postAvatar
+	//
+	// Set the avatar image. This will also update the avatar hash in the profile.
+	//
+	// Set the avatar
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/SetTheAvatarrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      "$ref": "definitions.json#/Bananas"
+
 	type ImgData struct {
 		Avatar string `json:"avatar"`
 	}
@@ -439,6 +561,30 @@ func (i *jsonAPIHandler) POSTAvatar(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/header images postHeader
+	//
+	// Set the header image. This will also update the header hash in the profile.
+	//
+	// Set the header
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/SetTheHeaderrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      "$ref": "definitions.json#/BananaCrop"
+
 	type ImgData struct {
 		Header string `json:"header"`
 	}
@@ -477,6 +623,30 @@ func (i *jsonAPIHandler) POSTHeader(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/images images postImage
+	//
+	// Upload one or more images. Returns the IPFS hash of each image which can be used to fetch the image using the IPFS API call.
+	//
+	// Upload images (e.g. cat image)
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   description: Profile to create
+	//   schema:
+	//     $ref: "definitions.json#/UploadImages(e.g.CatImage)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/YoDawg"
+
 	type ImgData struct {
 		Filename string `json:"filename"`
 		Image    string `json:"image"`
@@ -512,6 +682,31 @@ func (i *jsonAPIHandler) POSTImage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/listing listings postListing
+	//
+	// Create a new listing and set its inventory.
+	//
+	// Create a new listing (physical; no options)
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/CreateANewListing(physical;NoOptions)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/Godfather"
+	//    examples:
+	//      "application/json":
+	//        "slug": "godfather"
 	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
@@ -534,6 +729,28 @@ func (i *jsonAPIHandler) POSTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation PUT /ob/listing listings putListing
+	//
+	// Update a listing. The currentSlug field is used specify the listing being updated. If the listing contains a new slug, the listing will be renamed using the new slug.
+	//
+	// Update a listing
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/CreateANewListing(physical;NoOptions)request"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '400':
+	//  '200':
+
 	ld := new(pb.Listing)
 	err := jsonpb.Unmarshal(r.Body, ld)
 	if err != nil {
@@ -557,6 +774,29 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation DELETE /ob/listing/{slug_or_listing_hash} listings deleteListing
+	//
+	// Delete a listing and associated inventory.
+	//
+	// Delete a listing
+	//
+	// ---
+	// parameters:
+	// - name: slug_or_listing_hash
+	//   in: path
+	//   required: true
+	//   type: string
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//  '400':
+	//    description: Listing not found.
+	//  '500':
+	//    description: "File Write Error: [error_message]"
 	_, slug := path.Split(r.URL.Path)
 	listingPath := path.Join(i.node.RepoPath, "root", "listings", slug+".json")
 	_, ferr := os.Stat(listingPath)
@@ -583,6 +823,37 @@ func (i *jsonAPIHandler) DELETEListing(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/purchase orders postPurchase
+	//
+	// The purchase call can be made to a reachable or a unreachable vendor (offline or not able to receive incoming messages). \r\n\r\nAn order will be created in the AWAITING_PAYMENT state after this call.\r\n\r\nIf the total of the purchase is not more than 4X the current transaction fee, the purchase will be rejected (ie: if the fee is 0.0001, the total purchase must be more than 0.0004).
+	//
+	// Purchase an item
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/PurchaseAnItemrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/PurchaseOrder"
+	//    examples:
+	//      "application/json":
+	//        "amount": 81967
+	//        "orderId": "QmXRGXywXHmcr18PYpDNyKuhdQqB8C8iaTbhbasZCoN1QV"
+	//        "paymentAddress": "mhAoRQavWqaF6WPWtVwyhMVQ8sjqoWEESF"
+	//        "vendorOnline": true
+	//  '400':
+	//  '500':
+	//    description: "JSON error or marshalling error"
 	decoder := json.NewDecoder(r.Body)
 	var data core.PurchaseData
 	err := decoder.Decode(&data)
@@ -612,6 +883,31 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /ob/status/{peerId} miscellaneous getStatus
+	//
+	// Pings the peer and returns if it is online or not.
+	//
+	// Get peer online status
+	//
+	// ---
+	// parameters:
+	// - name: peerId
+	//   in: path
+	//   required: true
+	//   type: string
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/IsSamOnline?"
+	//    examples:
+	//      "application/json":
+	//        "status": "online"
+	//  '400':
 	_, peerId := path.Split(r.URL.Path)
 	status, err := i.node.GetPeerStatus(peerId)
 	if err != nil {
@@ -622,7 +918,28 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /ob/peers miscellaneous getPeers
+	//
+	// Returns a list of IDs of the peers connected to this node.
+	//
+	// Get connected peers
+	//
+	// ---
+	// parameters:
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema: 
+	//      type: array
+	//      items:
+	//        type: string
+	//  '400':
 	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
+
 	peerJson, err := json.MarshalIndent(peers, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -632,6 +949,30 @@ func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/follow followers postFollow
+	//
+	// RPC call to follow another peer on the network.
+	//
+	// Follow a peer
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/FollowAPeerrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      type: object
+	//  '400':
+	//  '500':
 	type PeerId struct {
 		ID string `json:"id"`
 	}
@@ -652,6 +993,30 @@ func (i *jsonAPIHandler) POSTFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation POST /ob/unfollow followers postUnfollow
+	//
+	// RPC call to unfollow another peer on the network.
+	//
+	// Unfollow a peer
+	//
+	// ---
+	// parameters:
+	// - name: Body
+	//   in: body
+	//   required: true
+	//   schema:
+	//     $ref: "definitions.json#/UnfollowAPeerrequest"
+	// - name: Content-Type
+	//   in: header
+	//   required: true
+	//   type: string
+	//   description: "Usually application/json"
+	// responses:
+	//  '200':
+	//    schema:
+	//      type: object
+	//  '400':
+	//  '500':
 	type PeerId struct {
 		ID string `json:"id"`
 	}
@@ -671,6 +1036,22 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
+	// swagger:operation GET /wallet/address wallet getWalletAddress
+	//
+	// Returns an unused bitcoin address. Note the same address is returned until the address is used.
+	//
+	// Get a bitcoin address
+	//
+	// ---
+	// responses:
+	//  '200':
+	//    schema:
+	//      $ref: "definitions.json#/GetBitcoinAddress"
+	//    examples:
+	//      "application/json":
+	//        "address": "17oicUtbT93VFfaWyQArUFDsj1H1E8Xrya"
+	//  '400':
+	//  '500':
 	addr := i.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
 }
