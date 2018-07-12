@@ -190,6 +190,7 @@ message Order {
         string address      = 5; // B58check encoded
         string redeemScript = 6; // Hex encoded
         bytes  moderatorKey = 7;
+        string coin         = 8;
 
         enum Method {
             ADDRESS_REQUEST = 0;
