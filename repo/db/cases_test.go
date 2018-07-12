@@ -9,12 +9,13 @@ import (
 	"testing"
 	"time"
 
+	"sync"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/golang/protobuf/ptypes"
-	"sync"
 )
 
 var casesdb repo.CaseStore
@@ -823,4 +824,95 @@ func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 		}
 
 	}
+}
+
+func TestCasesDB_Put_PaymentCoin(t *testing.T) {
+	tests := []struct {
+		acceptedCurrencies []string
+		paymentCoin        string
+		expected           string
+	}{
+		{[]string{"TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+		{[]string{"TBTC", "TBCH"}, "", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "", "TBCH"},
+		{[]string{}, "", ""},
+	}
+
+	for _, test := range tests {
+		err := deleteAllCases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
+		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+
+		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
+			CaseID:           "paymentCoinTest",
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		cases, count, err := casesdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if cases[0].PaymentCoin != test.expected {
+			t.Errorf(`Expected %s got %s`, test.expected, cases[0].PaymentCoin)
+		}
+	}
+}
+
+func TestCasesDB_Put_CoinType(t *testing.T) {
+	testsCoins := []string{"", "TBTC", "TETH"}
+
+	for _, testCoin := range testsCoins {
+		err := deleteAllCases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.CoinType = testCoin
+
+		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
+			CaseID:           "paymentCoinTest",
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		cases, count, err := casesdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if cases[0].CoinType != testCoin {
+			t.Errorf(`Expected %s got %s`, testCoin, cases[0].CoinType)
+		}
+
+		err = casesdb.Delete("orderID")
+		if err != nil {
+			t.Error("Sale delete failed")
+		}
+	}
+}
+
+func deleteAllCases() error {
+	_, err := casesdb.(*CasesDB).db.Exec("delete from cases;")
+	return err
 }
