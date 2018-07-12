@@ -87,6 +87,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
+		payment.Coin = NormalizeCurrencyCode(n.Wallet.CurrencyCode())
 
 		profile, err := n.FetchProfile(data.Moderator, true)
 		if err != nil {
