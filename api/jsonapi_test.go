@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -140,6 +142,94 @@ func TestModerator(t *testing.T) {
 	})
 }
 
+func TestListingsAcceptedCurrencies(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
+	})
+
+	req, err := buildRequest("GET", "/ob/listings", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := testHTTPClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ensure correct status code
+	if resp.StatusCode != 200 {
+		t.Fatalf("Wanted status 200, got %d", resp.StatusCode)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	respObj := []struct {
+		AcceptedCurrencies []string `json:"acceptedCurrencies"`
+	}{}
+	err = json.Unmarshal(respBody, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(respObj) != 1 {
+		t.Fatal("Listings should contain exactly 1 listing")
+	}
+
+	if respObj[0].AcceptedCurrencies == nil {
+		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
+	}
+
+	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
+		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	}
+}
+
+func TestListingAcceptedCurrencies(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
+	})
+
+	req, err := buildRequest("GET", "/ob/listing/ron-swanson-tshirt", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := testHTTPClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ensure correct status code
+	if resp.StatusCode != 200 {
+		t.Fatalf("Wanted status 200, got %d", resp.StatusCode)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	respObj := struct {
+		Listing struct {
+			Metadata struct {
+				AcceptedCurrencies []string `json:"acceptedCurrencies"`
+			} `json:"metadata"`
+		} `json:"listing"`
+	}{}
+	err = json.Unmarshal(respBody, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(respObj.Listing.Metadata.AcceptedCurrencies) != 1 {
+		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
+	}
+
+	if respObj.Listing.Metadata.AcceptedCurrencies[0] != "TBTC" {
+		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	}
+}
 func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")

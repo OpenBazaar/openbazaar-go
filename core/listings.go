@@ -57,22 +57,23 @@ type thumbnail struct {
 	Medium string `json:"medium"`
 }
 type ListingData struct {
-	Hash          string    `json:"hash"`
-	Slug          string    `json:"slug"`
-	Title         string    `json:"title"`
-	Categories    []string  `json:"categories"`
-	NSFW          bool      `json:"nsfw"`
-	ContractType  string    `json:"contractType"`
-	Description   string    `json:"description"`
-	Thumbnail     thumbnail `json:"thumbnail"`
-	Price         price     `json:"price"`
-	ShipsTo       []string  `json:"shipsTo"`
-	FreeShipping  []string  `json:"freeShipping"`
-	Language      string    `json:"language"`
-	AverageRating float32   `json:"averageRating"`
-	RatingCount   uint32    `json:"ratingCount"`
-	ModeratorIDs  []string  `json:"moderators"`
-	CoinType      string    `json:"coinType"`
+	Hash               string    `json:"hash"`
+	Slug               string    `json:"slug"`
+	Title              string    `json:"title"`
+	Categories         []string  `json:"categories"`
+	NSFW               bool      `json:"nsfw"`
+	ContractType       string    `json:"contractType"`
+	Description        string    `json:"description"`
+	Thumbnail          thumbnail `json:"thumbnail"`
+	Price              price     `json:"price"`
+	ShipsTo            []string  `json:"shipsTo"`
+	FreeShipping       []string  `json:"freeShipping"`
+	Language           string    `json:"language"`
+	AverageRating      float32   `json:"averageRating"`
+	RatingCount        uint32    `json:"ratingCount"`
+	ModeratorIDs       []string  `json:"moderators"`
+	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
+	CoinType           string    `json:"coinType"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -441,20 +442,21 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 	}
 
 	ld := ListingData{
-		Hash:         listingHash,
-		Slug:         listing.Listing.Slug,
-		Title:        listing.Listing.Item.Title,
-		Categories:   listing.Listing.Item.Categories,
-		NSFW:         listing.Listing.Item.Nsfw,
-		CoinType:     listing.Listing.Metadata.CoinType,
-		ContractType: listing.Listing.Metadata.ContractType.String(),
-		Description:  listing.Listing.Item.Description[:descriptionLength],
-		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price:        price{listing.Listing.Metadata.PricingCurrency, listing.Listing.Item.Price},
-		ShipsTo:      shipsTo,
-		FreeShipping: freeShipping,
-		Language:     listing.Listing.Metadata.Language,
-		ModeratorIDs: listing.Listing.Moderators,
+		Hash:               listingHash,
+		Slug:               listing.Listing.Slug,
+		Title:              listing.Listing.Item.Title,
+		Categories:         listing.Listing.Item.Categories,
+		NSFW:               listing.Listing.Item.Nsfw,
+		CoinType:           listing.Listing.Metadata.CoinType,
+		ContractType:       listing.Listing.Metadata.ContractType.String(),
+		Description:        listing.Listing.Item.Description[:descriptionLength],
+		Thumbnail:          thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
+		Price:              price{listing.Listing.Metadata.PricingCurrency, listing.Listing.Item.Price},
+		ShipsTo:            shipsTo,
+		FreeShipping:       freeShipping,
+		Language:           listing.Listing.Metadata.Language,
+		ModeratorIDs:       listing.Listing.Moderators,
+		AcceptedCurrencies: []string{n.Wallet.CurrencyCode()},
 	}
 	return ld, nil
 }
