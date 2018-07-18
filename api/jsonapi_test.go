@@ -306,6 +306,40 @@ func TestCryptoListings(t *testing.T) {
 	})
 }
 
+func TestCryptoListingsPriceModifier(t *testing.T) {
+	outOfRangeErr := core.ErrPriceModifierOutOfRange{
+		Min: core.PriceModifierMin,
+		Max: core.PriceModifierMax,
+	}
+
+	listing := factory.NewCryptoListing("crypto")
+	listing.Metadata.PriceModifier = core.PriceModifierMax
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
+		{"GET", "/ob/listing/crypto", jsonFor(t, listing), 200, anyResponseJSON},
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.001
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.01
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMin - 0.001
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMin - 1
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
+	})
+}
+
 func TestListingsQuantity(t *testing.T) {
 	listing := factory.NewListing("crypto")
 	runAPITest(t, apiTest{
