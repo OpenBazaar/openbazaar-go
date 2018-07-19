@@ -83,7 +83,7 @@ var (
 )
 
 func (Migration009) Up(repoPath string, dbPassword string, testnet bool) (err error) {
-	db, err := NewDB(repoPath, dbPassword, testnet)
+	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (Migration009) Up(repoPath string, dbPassword string, testnet bool) (err er
 }
 
 func (Migration009) Down(repoPath string, dbPassword string, testnet bool) error {
-	db, err := NewDB(repoPath, dbPassword, testnet)
+	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
 		return err
 	}

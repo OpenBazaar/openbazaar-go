@@ -112,7 +112,7 @@ func TestMigration009(t *testing.T) {
 	os.Mkdir("./datastore", os.ModePerm)
 	defer os.RemoveAll("./datastore")
 
-	db, err := migrations.NewDB(".", testMigration009Password, true)
+	db, err := migrations.OpenDB(".", testMigration009Password, true)
 	if err != nil {
 		t.Fatal(err)
 	}

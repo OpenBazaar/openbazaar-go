@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func NewDB(repoPath string, dbPassword string, testnet bool) (*sql.DB, error) {
+func OpenDB(repoPath string, dbPassword string, testnet bool) (*sql.DB, error) {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
