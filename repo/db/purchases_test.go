@@ -807,3 +807,78 @@ func TestUpdatePurchaseLastDisputeExpiryNotifiedAt(t *testing.T) {
 
 	}
 }
+func TestPurchasesDB_Put_PaymentCoin(t *testing.T) {
+	tests := []struct {
+		acceptedCurrencies []string
+		paymentCoin        string
+		expected           string
+	}{
+		{[]string{"TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+		{[]string{"TBTC", "TBCH"}, "", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "", "TBCH"},
+		{[]string{}, "", ""},
+	}
+
+	for _, test := range tests {
+		err := deleteAllPurchases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
+		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+
+		err = purdb.Put("orderID", *contract, 0, false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		purchases, count, err := purdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if purchases[0].PaymentCoin != test.expected {
+			t.Errorf(`Expected %s got %s`, test.expected, purchases[0].PaymentCoin)
+		}
+	}
+}
+
+func TestPurchasesDB_Put_CoinType(t *testing.T) {
+	testsCoins := []string{"", "TBTC", "TETH"}
+
+	for _, testCoin := range testsCoins {
+		err := deleteAllPurchases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.CoinType = testCoin
+
+		err = purdb.Put("orderID", *contract, 0, false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		purchases, count, err := purdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if purchases[0].CoinType != testCoin {
+			t.Errorf(`Expected %s got %s`, testCoin, purchases[0].CoinType)
+		}
+	}
+}
+
+func deleteAllPurchases() error {
+	_, err := purdb.(*PurchasesDB).db.Exec("delete from purchases;")
+	return err
+}

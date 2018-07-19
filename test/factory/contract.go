@@ -3,9 +3,10 @@ package factory
 import (
 	"time"
 
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 )
 
 func NewContract() *pb.RicardianContract {
@@ -33,6 +34,10 @@ func NewContract() *pb.RicardianContract {
 	return &pb.RicardianContract{
 		VendorListings: []*pb.Listing{
 			{
+				VendorID: &pb.ID{
+					PeerID: "vendorID",
+					Handle: "@vendorID",
+				},
 				Item: &pb.Listing_Item{Images: images},
 				Metadata: &pb.Listing_Metadata{
 					AcceptedCurrencies: []string{"BTC"},

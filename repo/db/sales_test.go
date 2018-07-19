@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"sync"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -16,7 +18,6 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/ptypes"
-	"sync"
 )
 
 var saldb repo.SaleStore
@@ -25,39 +26,12 @@ func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
 	saldb = NewSaleStore(conn, new(sync.Mutex))
-	contract = new(pb.RicardianContract)
-	listing := new(pb.Listing)
-	item := new(pb.Listing_Item)
-	item.Title = "Test listing"
-	listing.Item = item
-	vendorID := new(pb.ID)
-	vendorID.PeerID = "vendor id"
-	vendorID.Handle = "@testvendor"
-	listing.VendorID = vendorID
-	image := new(pb.Listing_Item_Image)
-	image.Tiny = "test image hash"
-	listing.Item.Images = []*pb.Listing_Item_Image{image}
-	contract.VendorListings = []*pb.Listing{listing}
-	order := new(pb.Order)
-	buyerID := new(pb.ID)
-	buyerID.PeerID = "buyer id"
-	buyerID.Handle = "@testbuyer"
-	order.BuyerID = buyerID
-	shipping := new(pb.Order_Shipping)
-	shipping.Address = "1234 test ave."
-	shipping.ShipTo = "buyer name"
-	order.Shipping = shipping
-	ts, err := ptypes.TimestampProto(time.Now())
+
+	var err error
+	contract, err = newContract()
 	if err != nil {
 		return
 	}
-	order.Timestamp = ts
-	payment := new(pb.Order_Payment)
-	payment.Amount = 10
-	payment.Method = pb.Order_Payment_DIRECT
-	payment.Address = "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms"
-	order.Payment = payment
-	contract.BuyerOrder = order
 }
 
 func TestSalesDB_Count(t *testing.T) {
@@ -72,11 +46,15 @@ func TestSalesDB_Count(t *testing.T) {
 }
 
 func TestPutSale(t *testing.T) {
-	err := saldb.Put("orderID", *contract, 0, false)
+	contract, err := newContract()
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := saldb.PrepareQuery("select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress from sales where orderID=?")
+	err = saldb.Put("orderID", *contract, 0, false)
+	if err != nil {
+		t.Error(err)
+	}
+	stmt, _ := saldb.PrepareQuery("select orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentCoin, coinType from sales where orderID=?")
 	defer stmt.Close()
 
 	var orderID string
@@ -91,7 +69,9 @@ func TestPutSale(t *testing.T) {
 	var title string
 	var shippingName string
 	var shippingAddress string
-	err = stmt.QueryRow("orderID").Scan(&orderID, &c, &state, &read, &date, &total, &thumbnail, &buyerID, &buyerHandle, &title, &shippingName, &shippingAddress)
+	var paymentCoin string
+	var coinType string
+	err = stmt.QueryRow("orderID").Scan(&orderID, &c, &state, &read, &date, &total, &thumbnail, &buyerID, &buyerHandle, &title, &shippingName, &shippingAddress, &paymentCoin, &coinType)
 	if err != nil {
 		t.Error(err)
 	}
@@ -127,6 +107,12 @@ func TestPutSale(t *testing.T) {
 	}
 	if shippingAddress != contract.BuyerOrder.Shipping.Address {
 		t.Errorf(`Expected %s got %s`, strings.ToLower(contract.BuyerOrder.Shipping.Address), shippingAddress)
+	}
+	if paymentCoin != contract.BuyerOrder.Payment.Coin {
+		t.Errorf(`Expected %s got %s`, contract.BuyerOrder.Payment.Coin, paymentCoin)
+	}
+	if coinType != "" {
+		t.Errorf(`Expected empty string got %s`, coinType)
 	}
 }
 
@@ -645,4 +631,125 @@ func TestUpdateSaleLastDisputeTimeoutNotifiedAt(t *testing.T) {
 		}
 
 	}
+}
+
+func TestSalesDB_Put_PaymentCoin(t *testing.T) {
+	err := deleteAllSales()
+	if err != nil {
+		t.Error(err)
+	}
+
+	tests := []struct {
+		acceptedCurrencies []string
+		paymentCoin        string
+		expected           string
+	}{
+		{[]string{"TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+		{[]string{"TBTC", "TBCH"}, "", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "", "TBCH"},
+		{[]string{}, "", ""},
+	}
+
+	for _, test := range tests {
+		err := deleteAllSales()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
+		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+
+		err = saldb.Put("orderID", *contract, 0, false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		sales, count, err := saldb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if sales[0].PaymentCoin != test.expected {
+			t.Errorf(`Expected %s got %s`, test.expected, sales[0].PaymentCoin)
+		}
+	}
+}
+
+func TestSalesDB_Put_CoinType(t *testing.T) {
+	for _, testCoin := range []string{"", "TBTC", "TETH"} {
+		err := deleteAllSales()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.CoinType = testCoin
+
+		err = saldb.Put("orderID", *contract, 0, false)
+		if err != nil {
+			t.Error(err)
+		}
+
+		sales, count, err := saldb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if sales[0].CoinType != testCoin {
+			t.Errorf(`Expected %s got %s`, testCoin, sales[0].CoinType)
+		}
+	}
+}
+
+func deleteAllSales() error {
+	_, err := saldb.(*SalesDB).db.Exec("delete from sales;")
+	return err
+}
+
+func newContract() (*pb.RicardianContract, error) {
+	contract = new(pb.RicardianContract)
+	listing := new(pb.Listing)
+	item := new(pb.Listing_Item)
+	item.Title = "Test listing"
+	listing.Item = item
+	vendorID := new(pb.ID)
+	vendorID.PeerID = "vendor id"
+	vendorID.Handle = "@testvendor"
+	listing.VendorID = vendorID
+	image := new(pb.Listing_Item_Image)
+	image.Tiny = "test image hash"
+	listing.Metadata = &pb.Listing_Metadata{
+		ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
+		AcceptedCurrencies: []string{"TBTC"},
+	}
+	listing.Item.Images = []*pb.Listing_Item_Image{image}
+	contract.VendorListings = []*pb.Listing{listing}
+	order := new(pb.Order)
+	buyerID := new(pb.ID)
+	buyerID.PeerID = "buyer id"
+	buyerID.Handle = "@testbuyer"
+	order.BuyerID = buyerID
+	shipping := new(pb.Order_Shipping)
+	shipping.Address = "1234 test ave."
+	shipping.ShipTo = "buyer name"
+	order.Shipping = shipping
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		return nil, err
+	}
+	order.Timestamp = ts
+	payment := new(pb.Order_Payment)
+	payment.Amount = 10
+	payment.Coin = "TBTC"
+	payment.Method = pb.Order_Payment_DIRECT
+	payment.Address = "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms"
+	order.Payment = payment
+	contract.BuyerOrder = order
+	return contract, nil
 }

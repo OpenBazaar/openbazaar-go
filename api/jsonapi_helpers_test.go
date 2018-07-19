@@ -17,8 +17,9 @@ import (
 	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 
-	"github.com/op/go-logging"
 	"os"
+
+	"github.com/op/go-logging"
 )
 
 // testURIRoot is the root http URI to hit for testing
@@ -194,6 +195,21 @@ func buildRequest(method string, path string, body string) (*http.Request, error
 
 func errorResponseJSON(err error) string {
 	return `{"success": false, "reason": "` + err.Error() + `"}`
+}
+
+func httpGet(endpoint string) ([]byte, error) {
+	req, err := buildRequest("GET", endpoint, "")
+	if err != nil {
+		return nil, err
+	}
+	resp, err := testHTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, err
+	}
+	return ioutil.ReadAll(resp.Body)
 }
 
 func jsonFor(t *testing.T, fixture proto.Message) string {

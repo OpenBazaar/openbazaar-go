@@ -541,6 +541,149 @@ func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	}, dbSetup, nil)
 }
 
+func TestSalesGet(t *testing.T) {
+	sale := factory.NewSaleRecord()
+	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	sale.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/sales", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Sales []repo.Sale `json:"sales"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualSale := respObj.Sales[0]
+
+	if actualSale.BuyerHandle != sale.Contract.BuyerOrder.BuyerID.Handle {
+		t.Fatal("Incorrect buyerHandle:", actualSale.BuyerHandle, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.Handle)
+	}
+	if actualSale.BuyerId != sale.Contract.BuyerOrder.BuyerID.PeerID {
+		t.Fatal("Incorrect buyerId:", actualSale.BuyerId, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.PeerID)
+	}
+	if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualSale.OrderId != sale.OrderID {
+		t.Fatal("Incorrect orderId:", actualSale.OrderId, "\nwanted:", sale.OrderID)
+	}
+	if actualSale.PaymentCoin != sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualSale.PaymentCoin, "\nwanted:", sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualSale.ShippingAddress != sale.Contract.BuyerOrder.Shipping.Address {
+		t.Fatal("Incorrect shippingAddress:", actualSale.ShippingAddress, "\nwanted:", sale.Contract.BuyerOrder.Shipping.Address)
+	}
+	if actualSale.ShippingName != sale.Contract.BuyerOrder.Shipping.ShipTo {
+		t.Fatal("Incorrect shippingName:", actualSale.ShippingName, "\nwanted:", sale.Contract.BuyerOrder.Shipping.ShipTo)
+	}
+	if actualSale.State != sale.OrderState.String() {
+		t.Fatal("Incorrect state:", actualSale.State, "\nwanted:", sale.OrderState.String())
+	}
+}
+func TestPurchasesGet(t *testing.T) {
+	purchase := factory.NewPurchaseRecord()
+	purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	purchase.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Purchases().Put(purchase.OrderID, *purchase.Contract, purchase.OrderState, false)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/purchases", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Purchases []repo.Purchase `json:"purchases"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualPurchase := respObj.Purchases[0]
+
+	if actualPurchase.VendorHandle != purchase.Contract.VendorListings[0].VendorID.Handle {
+		t.Fatal("Incorrect vendorHandle:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.Handle)
+	}
+	if actualPurchase.VendorId != purchase.Contract.VendorListings[0].VendorID.PeerID {
+		t.Fatal("Incorrect vendorId:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.PeerID)
+	}
+	if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualPurchase.OrderId != purchase.OrderID {
+		t.Fatal("Incorrect orderId:", actualPurchase.OrderId, "\nwanted:", purchase.OrderID)
+	}
+	if actualPurchase.PaymentCoin != purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualPurchase.PaymentCoin, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualPurchase.ShippingAddress != purchase.Contract.BuyerOrder.Shipping.Address {
+		t.Fatal("Incorrect shippingAddress:", actualPurchase.ShippingAddress, "\nwanted:", purchase.Contract.BuyerOrder.Shipping.Address)
+	}
+	if actualPurchase.ShippingName != purchase.Contract.BuyerOrder.Shipping.ShipTo {
+		t.Fatal("Incorrect shippingName:", actualPurchase.ShippingName, "\nwanted:", purchase.Contract.BuyerOrder.Shipping.ShipTo)
+	}
+	if actualPurchase.State != purchase.OrderState.String() {
+		t.Fatal("Incorrect state:", actualPurchase.State, "\nwanted:", purchase.OrderState.String())
+	}
+}
+
+func TestCasesGet(t *testing.T) {
+	disputeCaseRecord := factory.NewDisputeCaseRecord()
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Cases().PutRecord(disputeCaseRecord)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/cases", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/cases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Cases []repo.Case `json:"cases"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualCase := respObj.Cases[0]
+
+	if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualCase.PaymentCoin != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualCase.PaymentCoin, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualCase.State != disputeCaseRecord.OrderState.String() {
+		t.Fatal("Incorrect state:", actualCase.State, "\nwanted:", disputeCaseRecord.OrderState.String())
+	}
+}
+
 func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 	const sameTimestampsAreReturnedInReverse = `{
     "notifications": [
