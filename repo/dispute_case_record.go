@@ -87,3 +87,13 @@ func (r *DisputeCaseRecord) IsExpired(when time.Time) bool {
 	expiresAt := r.Timestamp.Add(ModeratorDisputeExpiry_lastInterval)
 	return when.Equal(expiresAt) || when.After(expiresAt)
 }
+
+// Contract returns the contract from the dispute if one has been supplied by
+// either the buyer or vendor
+func (r *DisputeCaseRecord) Contract() *pb.RicardianContract {
+	contract := r.BuyerContract
+	if contract == nil {
+		contract = r.VendorContract
+	}
+	return contract
+}

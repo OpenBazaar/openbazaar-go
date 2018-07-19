@@ -40,7 +40,7 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		return err
 	}
 
-	contract := contractForDispute(dispute)
+	contract := dispute.Contract()
 	var coinType, paymentCoin string
 	if contract != nil {
 		coinType = coinTypeForContract(contract)

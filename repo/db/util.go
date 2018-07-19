@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 func paymentCoinForContract(contract *pb.RicardianContract) string {
@@ -26,12 +25,4 @@ func coinTypeForContract(contract *pb.RicardianContract) string {
 	}
 
 	return coinType
-}
-
-func contractForDispute(dispute *repo.DisputeCaseRecord) *pb.RicardianContract {
-	contract := dispute.BuyerContract
-	if contract == nil {
-		contract = dispute.VendorContract
-	}
-	return contract
 }
