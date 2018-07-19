@@ -16,6 +16,8 @@ class ListingsTest(OpenBazaarTestFramework):
         vendor = self.nodes[0]
         browser = self.nodes[1]
 
+        currency = "tbtc"
+
         # no listings POSTed
         api_url = vendor["gateway_url"] + "ob/listings"
         r = requests.get(api_url)
@@ -35,6 +37,7 @@ class ListingsTest(OpenBazaarTestFramework):
             ljson = json.load(listing_file, object_pairs_hook=OrderedDict)
         if self.bitcoincash:
             ljson["metadata"]["pricingCurrency"] = "tbch"
+            currency = "tbch"
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(ljson, indent=4))
         if r.status_code == 200:
@@ -59,7 +62,7 @@ class ListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ListingsTest - FAIL: One listing should be returned")
 
         listing = resp[0]
-        if listing["acceptedCurrencies"] != ["tbtc"]:
+        if listing["acceptedCurrencies"] != [currency]:
             raise TestFailure("ListingsTest - FAIL: Listing should have acceptedCurrences")
 
         # listing show endpoint returning correct data
@@ -73,7 +76,7 @@ class ListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ListingsTest - FAIL: Listings GET failed. Reason: %s", resp["reason"])
 
         resp = json.loads(r.text)
-        if resp["listing"]["metadata"]["acceptedCurrencies"] != ["TBTC"]:
+        if resp["listing"]["metadata"]["acceptedCurrencies"] != [currency.upper()]:
             raise TestFailure("ListingsTest - FAIL: Listing should have acceptedCurrences in metadata")
 
         # check vendor's index from another node
@@ -87,7 +90,7 @@ class ListingsTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         if len(resp) != 1:
             raise TestFailure("ListingsTest - FAIL: One listing should be returned")
-        if resp[0]["acceptedCurrencies"] != ["tbtc"]:
+        if resp[0]["acceptedCurrencies"] != [currency]:
             raise TestFailure("ListingsTest - FAIL: Listing should have acceptedCurrences")
 
         # check listing show page from another node
@@ -100,7 +103,7 @@ class ListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ListingsTest - FAIL: Listings GET failed. Reason: %s", resp["reason"])
 
         resp = json.loads(r.text)
-        if resp["listing"]["metadata"]["acceptedCurrencies"] != ["TBTC"]:
+        if resp["listing"]["metadata"]["acceptedCurrencies"] != [currency.upper()]:
             raise TestFailure("ListingsTest - FAIL: Listing should have acceptedCurrences in metadata")
 
         print("ListingsTest - PASS")
