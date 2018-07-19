@@ -904,8 +904,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 		if cases[0].CoinType != testCoin {
 			t.Errorf(`Expected %s got %s`, testCoin, cases[0].CoinType)
 		}
-
-		err = casesdb.Delete("orderID")
+		err = casesdb.Delete(cases[0].CaseId)
 		if err != nil {
 			t.Error("Sale delete failed")
 		}
