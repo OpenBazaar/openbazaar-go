@@ -20,9 +20,9 @@ var (
 		"DROP TABLE IF EXISTS cases;",
 		"DROP TABLE IF EXISTS sales;",
 		"DROP TABLE IF EXISTS purchases;",
-		migrations.Migration009CreateCasesTable,
-		migrations.Migration009CreateSalesTable,
-		migrations.Migration009CreatePurchasesTable,
+		migrations.Migration009CreatePreviousCasesTable,
+		migrations.Migration009CreatePreviousSalesTable,
+		migrations.Migration009CreatePreviousPurchasesTable,
 	}
 
 	testMigration009FixtureStmts = []string{

@@ -76,10 +76,10 @@ type Migration009_listing_listing_metadata struct {
 }
 
 var (
-	Migration009CreateCasesTable     = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob, lastDisputeExpiryNotifiedAt integer not null default 0);"
-	Migration009CreateSalesTable     = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0);"
-	Migration009CreateSalesIndex     = "create index index_sales on sales (paymentAddr, timestamp);"
-	Migration009CreatePurchasesTable = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0);"
+	Migration009CreatePreviousCasesTable     = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob, lastDisputeExpiryNotifiedAt integer not null default 0);"
+	Migration009CreatePreviousSalesTable     = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0);"
+	Migration009CreatePreviousSalesIndex     = "create index index_sales on sales (paymentAddr, timestamp);"
+	Migration009CreatePreviousPurchasesTable = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0);"
 )
 
 func (Migration009) Up(repoPath string, dbPassword string, testnet bool) (err error) {
@@ -149,18 +149,18 @@ func (Migration009) Down(repoPath string, dbPassword string, testnet bool) error
 	err = withTransaction(db, func(tx *sql.Tx) error {
 		for _, stmt := range []string{
 			"ALTER TABLE cases RENAME TO temp_cases;",
-			Migration009CreateCasesTable,
+			Migration009CreatePreviousCasesTable,
 			"INSERT INTO cases SELECT caseID, buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, read, timestamp, buyerOpened, claim, disputeResolution, lastDisputeExpiryNotifiedAt FROM temp_cases;",
 			"DROP TABLE temp_cases;",
 
 			"ALTER TABLE sales RENAME TO temp_sales;",
-			Migration009CreateSalesTable,
-			Migration009CreateSalesIndex,
+			Migration009CreatePreviousSalesTable,
+			Migration009CreatePreviousSalesIndex,
 			"INSERT INTO sales SELECT orderID, contract, state, read, timestamp, total, thumbnail, buyerID, buyerHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, needsSync, lastDisputeTimeoutNotifiedAt FROM temp_sales;",
 			"DROP TABLE temp_sales;",
 
 			"ALTER TABLE purchases RENAME TO temp_purchases;",
-			Migration009CreatePurchasesTable,
+			Migration009CreatePreviousPurchasesTable,
 			"INSERT INTO purchases SELECT orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, funded, transactions, lastDisputeTimeoutNotifiedAt, lastDisputeExpiryNotifiedAt, disputedAt FROM temp_purchases;",
 			"DROP TABLE temp_purchases;",
 		} {
