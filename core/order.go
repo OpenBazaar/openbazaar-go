@@ -588,9 +588,9 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			i.Quantity64 = uint64(item.Quantity)
 		}
 
-		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
-			i.Memo = item.Memo
+		i.Memo = item.Memo
 
+		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			// Remove any duplicate coupons
 			couponMap := make(map[string]bool)
 			var coupons []string
