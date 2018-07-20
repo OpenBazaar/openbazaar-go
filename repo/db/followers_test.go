@@ -29,14 +29,6 @@ func buildNewFollowerStore() (repo.FollowerStore, func(), error) {
 	return db.NewFollowerStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
-//var fdb repo.FollowerStore
-
-//func init() {
-//conn, _ := sql.Open("sqlite3", ":memory:")
-//initDatabaseTables(conn, "")
-//fdb = NewFollowerStore(conn, new(sync.Mutex))
-//}
-
 func TestPutFollower(t *testing.T) {
 	fdb, teardown, err := buildNewFollowerStore()
 	if err != nil {

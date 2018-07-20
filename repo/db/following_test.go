@@ -28,14 +28,6 @@ func buildNewFollowingStore() (repo.FollowingStore, func(), error) {
 	return db.NewFollowingStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
-//var fldb repo.FollowingStore
-
-//func init() {
-//conn, _ := sql.Open("sqlite3", ":memory:")
-//initDatabaseTables(conn, "")
-//fldb = NewFollowingStore(conn, new(sync.Mutex))
-//}
-
 func TestPutFollowing(t *testing.T) {
 	fldb, teardown, err := buildNewFollowingStore()
 	if err != nil {
