@@ -75,7 +75,7 @@ type Migration009_listing_listing_metadata struct {
 	AcceptedCurrencies []string `json:"acceptedCurrencies`
 }
 
-var (
+const (
 	Migration009CreatePreviousCasesTable     = "create table cases (caseID text primary key not null, buyerContract blob, vendorContract blob, buyerValidationErrors blob, vendorValidationErrors blob, buyerPayoutAddress text, vendorPayoutAddress text, buyerOutpoints blob, vendorOutpoints blob, state integer, read integer, timestamp integer, buyerOpened integer, claim text, disputeResolution blob, lastDisputeExpiryNotifiedAt integer not null default 0);"
 	Migration009CreatePreviousSalesTable     = "create table sales (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, buyerID text, buyerHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, needsSync integer, lastDisputeTimeoutNotifiedAt integer not null default 0);"
 	Migration009CreatePreviousSalesIndex     = "create index index_sales on sales (paymentAddr, timestamp);"
