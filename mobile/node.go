@@ -22,7 +22,6 @@ import (
 	"fmt"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
@@ -30,6 +29,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/ipfs/go-ipfs/commands"
@@ -208,7 +208,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	exchangeRates := exchange.NewBitcoinPriceFetcher(nil)
+	exchangeRates := exchangerates.NewBitcoinPriceFetcher(nil)
 
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
