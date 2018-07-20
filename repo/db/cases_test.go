@@ -63,7 +63,7 @@ func init() {
 }
 
 func TestCasesDB_Count(t *testing.T) {
-	err := casesdb.Put("caseID", 5, true, "blah")
+	err := casesdb.Put("caseID", 5, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -74,7 +74,7 @@ func TestCasesDB_Count(t *testing.T) {
 }
 
 func TestPutCase(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +108,7 @@ func TestPutCase(t *testing.T) {
 }
 
 func TestUpdateWithNil(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -130,7 +130,7 @@ func TestUpdateWithNil(t *testing.T) {
 }
 
 func TestDeleteCase(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -150,7 +150,7 @@ func TestDeleteCase(t *testing.T) {
 }
 
 func TestMarkCaseAsRead(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -172,7 +172,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 }
 
 func TestMarkCaseAsUnread(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -198,7 +198,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 }
 
 func TestUpdateBuyerInfo(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +237,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 }
 
 func TestUpdateVendorInfo(t *testing.T) {
-	err := casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -276,7 +276,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 }
 
 func TestCasesGetCaseMetaData(t *testing.T) {
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -331,7 +331,7 @@ func TestGetByCaseID(t *testing.T) {
 		expectedBuyerOutpoints  []*pb.Outpoint = []*pb.Outpoint{{"hash1", 0, 5}}
 		expectedVendorOutpoints []*pb.Outpoint = []*pb.Outpoint{{"hash2", 1, 11}}
 	)
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -395,7 +395,7 @@ func TestGetByCaseID(t *testing.T) {
 }
 
 func TestMarkAsClosed(t *testing.T) {
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -426,7 +426,7 @@ func TestMarkAsClosed(t *testing.T) {
 }
 
 func TestCasesDB_GetAll(t *testing.T) {
-	err := casesdb.Put("caseID", 10, true, "blah")
+	err := casesdb.Put("caseID", 10, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -439,7 +439,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = casesdb.Put("caseID2", 11, true, "asdf")
+	err = casesdb.Put("caseID2", 11, true, "asdf", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -836,8 +836,6 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
 		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
 		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
-		{[]string{"TBTC", "TBCH"}, "", "TBTC"},
-		{[]string{"TBCH", "TBTC"}, "", "TBCH"},
 		{[]string{}, "", ""},
 	}
 
@@ -855,6 +853,7 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
+			PaymentCoin:      test.paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)
@@ -889,6 +888,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
+			CoinType:         testCoin,
 		})
 		if err != nil {
 			t.Error(err)

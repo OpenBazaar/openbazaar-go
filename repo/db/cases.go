@@ -40,13 +40,6 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		return err
 	}
 
-	contract := dispute.Contract()
-	var coinType, paymentCoin string
-	if contract != nil {
-		coinType = coinTypeForContract(contract)
-		paymentCoin = paymentCoinForContract(contract)
-	}
-
 	defer stmt.Close()
 	_, err = stmt.Exec(
 		dispute.CaseID,
@@ -57,8 +50,8 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		dispute.Claim,
 		"",
 		"",
-		paymentCoin,
-		coinType,
+		dispute.PaymentCoin,
+		dispute.CoinType,
 	)
 	if err != nil {
 		rErr := tx.Rollback()
@@ -71,12 +64,14 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 	return tx.Commit()
 }
 
-func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {
+func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error {
 	record := &repo.DisputeCaseRecord{
 		CaseID:           caseID,
 		Claim:            claim,
 		IsBuyerInitiated: buyerOpened,
 		OrderState:       state,
+		PaymentCoin:      paymentCoin,
+		CoinType:         coinType,
 		Timestamp:        time.Now(),
 	}
 	return c.PutRecord(record)

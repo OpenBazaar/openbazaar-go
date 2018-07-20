@@ -271,7 +271,7 @@ type CaseStore interface {
 	Queryable
 
 	// Save a new case
-	Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error
+	Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error
 
 	// Save a new case
 	PutRecord(*DisputeCaseRecord) error
