@@ -114,6 +114,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
+        if resp["contract"]["buyerOrder"]["items"][0]["memo"] != "thanks!":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a memo")
 
         # fund order
         spend = {
