@@ -831,8 +831,12 @@ func (m *Listing_Coupon) String() string            { return proto.CompactTextSt
 func (*Listing_Coupon) ProtoMessage()               {}
 func (*Listing_Coupon) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{1, 4} }
 
-type isListing_Coupon_Code interface{ isListing_Coupon_Code() }
-type isListing_Coupon_Discount interface{ isListing_Coupon_Discount() }
+type isListing_Coupon_Code interface {
+	isListing_Coupon_Code()
+}
+type isListing_Coupon_Discount interface {
+	isListing_Coupon_Discount()
+}
 
 type Listing_Coupon_Hash struct {
 	Hash string `protobuf:"bytes,2,opt,name=hash,oneof"`

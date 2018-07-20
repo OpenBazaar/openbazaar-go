@@ -76,8 +76,8 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		shippingName,
 		shippingAddress,
 		paymentAddr,
-		paymentCoinForContract(&contract),
-		coinTypeForContract(&contract),
+		PaymentCoinForContract(&contract),
+		CoinTypeForContract(&contract),
 	)
 	if err != nil {
 		tx.Rollback()

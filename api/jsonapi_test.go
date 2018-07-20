@@ -651,6 +651,8 @@ func TestCasesGet(t *testing.T) {
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	disputeCaseRecord.CoinType = "ZEC"
+	disputeCaseRecord.PaymentCoin = "BTC"
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Cases().PutRecord(disputeCaseRecord)
 	}

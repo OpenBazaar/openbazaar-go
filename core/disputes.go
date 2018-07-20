@@ -14,6 +14,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -247,7 +248,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			DisputerHandle = contract.VendorListings[0].VendorID.Handle
 			DisputeeID = contract.BuyerOrder.BuyerID.PeerID
 			DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
-			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, false, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, false, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}
@@ -260,7 +261,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			DisputerHandle = contract.BuyerOrder.BuyerID.Handle
 			DisputeeID = contract.VendorListings[0].VendorID.PeerID
 			DisputeeHandle = contract.VendorListings[0].VendorID.Handle
-			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, true, rc.Dispute.Claim)
+			err = n.Datastore.Cases().Put(orderId, pb.OrderState_DISPUTED, true, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
 			if err != nil {
 				return err
 			}
