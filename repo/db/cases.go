@@ -79,7 +79,6 @@ func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, clai
 		OrderState:       state,
 		Timestamp:        time.Now(),
 	}
-	fmt.Printf("Put Record: %+v\n", record)
 	return c.PutRecord(record)
 }
 
