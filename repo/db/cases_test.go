@@ -565,6 +565,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "neverNotified",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
@@ -573,6 +574,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "initialNotificationSent",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart,
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
@@ -581,14 +583,24 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "finalNotificationSent",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: time.Now(),
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
+		}
+		resolved = &repo.DisputeCaseRecord{
+			CaseID:                      "resolved",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart,
+			OrderState:                  pb.OrderState_RESOLVED,
+			BuyerContract:               contract,
+			VendorContract:              contract,
 		}
 		existingRecords = []*repo.DisputeCaseRecord{
 			neverNotified,
 			initialNotified,
 			finallyNotified,
+			resolved,
 		}
 	)
 
@@ -611,7 +623,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
+		_, err = database.Exec("insert into cases (caseID, state, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?, ?);", r.CaseID, int(r.OrderState), buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -623,7 +635,12 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var sawNeverNotifiedCase, sawInitialNotifiedCase, sawFinallyNotifiedCase bool
+	var (
+		sawNeverNotifiedCase   bool
+		sawInitialNotifiedCase bool
+		sawFinallyNotifiedCase bool
+		sawResolvedCase        bool
+	)
 	for _, c := range cases {
 		switch c.CaseID {
 		case neverNotified.CaseID:
@@ -642,6 +659,8 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			}
 		case finallyNotified.CaseID:
 			sawFinallyNotifiedCase = true
+		case resolved.CaseID:
+			sawResolvedCase = true
 		default:
 			t.Errorf("Found unexpected dispute case: %+v", c)
 		}
@@ -655,6 +674,9 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 	}
 	if sawFinallyNotifiedCase == true {
 		t.Error("Expected NOT to see case which recieved it's final notification")
+	}
+	if sawResolvedCase == true {
+		t.Error("Expected NOT to see case which is resolved")
 	}
 }
 

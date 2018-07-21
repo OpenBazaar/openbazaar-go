@@ -483,8 +483,9 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt from cases where (lastDisputeExpiryNotifiedAt - timestamp) < ?",
+	rows, err := c.db.Query("select caseID, state, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt from cases where (lastDisputeExpiryNotifiedAt - timestamp) < ? and state = ?",
 		int(repo.ModeratorDisputeExpiry_lastInterval.Seconds()),
+		int(pb.OrderState_DISPUTED),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("selecting dispute case: %s", err.Error())
@@ -492,6 +493,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	result := make([]*repo.DisputeCaseRecord, 0)
 	for rows.Next() {
 		var (
+			orderState                    int
 			lastDisputeExpiryNotifiedAt   int64
 			isBuyerInitiated              int
 			buyerContract, vendorContract []byte
@@ -502,7 +504,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
+		if err := rows.Scan(&r.CaseID, &orderState, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
 		}
 		if len(buyerContract) > 0 {
@@ -524,6 +526,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 			r.Timestamp = time.Now()
 		}
 		r.LastDisputeExpiryNotifiedAt = time.Unix(lastDisputeExpiryNotifiedAt, 0)
+		r.OrderState = pb.OrderState(orderState)
 		result = append(result, r)
 	}
 	return result, nil
