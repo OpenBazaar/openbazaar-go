@@ -35,6 +35,7 @@ dist
 
 # Development environment files
 .ackrc
+.vscode
 .tags*
 *.sw?
 
