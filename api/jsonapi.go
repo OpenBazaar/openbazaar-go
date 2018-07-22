@@ -1803,9 +1803,12 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, resp)
 	} else {
-		idBytes := make([]byte, 16)
-		rand.Read(idBytes)
-		id := base58.Encode(idBytes)
+		id := r.URL.Query().Get("asyncID")
+		if id == "" {
+			idBytes := make([]byte, 16)
+			rand.Read(idBytes)
+			id = base58.Encode(idBytes)
+		}
 
 		type resp struct {
 			Id string `json:"id"`
@@ -2623,9 +2626,12 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 		resp += "\n]"
 		SanitizedResponse(w, resp)
 	} else {
-		idBytes := make([]byte, 16)
-		rand.Read(idBytes)
-		id := base58.Encode(idBytes)
+		id := r.URL.Query().Get("asyncID")
+		if id == "" {
+			idBytes := make([]byte, 16)
+			rand.Read(idBytes)
+			id = base58.Encode(idBytes)
+		}
 
 		type resp struct {
 			Id string `json:"id"`
@@ -3366,9 +3372,12 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 		resp += "\n]"
 		SanitizedResponse(w, resp)
 	} else {
-		idBytes := make([]byte, 16)
-		rand.Read(idBytes)
-		id := base58.Encode(idBytes)
+		id := r.URL.Query().Get("asyncID")
+		if id == "" {
+			idBytes := make([]byte, 16)
+			rand.Read(idBytes)
+			id = base58.Encode(idBytes)
+		}
 
 		type resp struct {
 			Id string `json:"id"`
