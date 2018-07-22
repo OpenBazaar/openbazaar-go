@@ -7,22 +7,21 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-ipfs/commands"
 	"golang.org/x/net/proxy"
 
 	"github.com/ipfs/go-ipfs/core"
 
-	routing "gx/ipfs/QmUCS9EnqNq1kCnJds2eLDypBiS21aSiCf1MVzSUVB9TGA/go-libp2p-kad-dht"
+	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 
 	"errors"
 	"github.com/op/go-logging"
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
-	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
-	multihash "gx/ipfs/QmU9a9NV9RdPNwZQDYd5uKsm6N6LJLSvLbywDDYFbaaC6P/go-multihash"
-	ds "gx/ipfs/QmVSase1JP7cq9QkPT46oNwdp9pT6kBkG3oqS14y3QcZjG/go-datastore"
-	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
+	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	gonet "net"
 	"net/http"
@@ -39,7 +38,6 @@ var log = logging.MustGetLogger("retriever")
 
 type MRConfig struct {
 	Db        repo.Datastore
-	Ctx       commands.Context
 	IPFSNode  *core.IpfsNode
 	BanManger *net.BanManager
 	Service   net.NetworkService
@@ -54,7 +52,6 @@ type MessageRetriever struct {
 	db         repo.Datastore
 	node       *core.IpfsNode
 	bm         *net.BanManager
-	ctx        commands.Context
 	service    net.NetworkService
 	prefixLen  int
 	sendAck    func(peerId string, pointerID peer.ID) error
@@ -83,7 +80,6 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 		cfg.Db,
 		cfg.IPFSNode,
 		cfg.BanManger,
-		cfg.Ctx,
 		cfg.Service,
 		cfg.PrefixLen,
 		cfg.SendAck,
@@ -158,7 +154,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 			if len(p.Addrs[0].Protocols()) == 1 && p.Addrs[0].Protocols()[0].Code == ma.P_IPFS {
 				wg.Add(1)
 				downloaded++
-				go m.fetchIPFS(p.ID, m.ctx, p.Addrs[0], wg)
+				go m.fetchIPFS(p.ID, m.node, p.Addrs[0], wg)
 			}
 
 			// HTTPS
@@ -223,7 +219,7 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 
 // fetchIPFS will attempt to download an encrypted message using IPFS. If the message downloads successfully, we save the
 // address to the database to prevent us from wasting bandwidth downloading it again.
-func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.Multiaddr, wg *sync.WaitGroup) {
+func (m *MessageRetriever) fetchIPFS(pid peer.ID, n *core.IpfsNode, addr ma.Multiaddr, wg *sync.WaitGroup) {
 	m.inFlight <- struct{}{}
 	defer func() {
 		wg.Done()
@@ -235,7 +231,7 @@ func (m *MessageRetriever) fetchIPFS(pid peer.ID, ctx commands.Context, addr ma.
 	var err error
 
 	go func() {
-		ciphertext, err = ipfs.Cat(ctx, addr.String(), time.Minute*5)
+		ciphertext, err = ipfs.Cat(n, addr.String(), time.Minute*5)
 		c <- struct{}{}
 	}()
 

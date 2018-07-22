@@ -12,8 +12,8 @@ func NewListing(slug string) *pb.Listing {
 		RefundPolicy:       "Sample Refund policy",
 		Metadata: &pb.Listing_Metadata{
 			Version:            1,
-			AcceptedCurrencies: []string{"tbtc"},
-			PricingCurrency:    "tbtc",
+			AcceptedCurrencies: []string{"TBTC"},
+			PricingCurrency:    "TBTC",
 			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
 			Format:             pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
@@ -96,7 +96,7 @@ func NewListing(slug string) *pb.Listing {
 
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
-	listing.Metadata.CoinType = "teth"
+	listing.Metadata.CoinType = "TETH"
 	listing.Metadata.CoinDivisibility = 1e8
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}

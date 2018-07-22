@@ -67,7 +67,7 @@ type wsHandler struct {
 	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config schema.APIConfig) (*wsHandler, error) {
+func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*wsHandler, error) {
 	hub := newHub()
 	go hub.run()
 	allowedIps := make(map[string]bool)
@@ -76,8 +76,7 @@ func newWSAPIHandler(node *core.OpenBazaarNode, ctx commands.Context, authCookie
 	}
 	handler = wsHandler{
 		h:             hub,
-		path:          ctx.ConfigRoot,
-		context:       ctx,
+		path:          node.RepoPath,
 		enabled:       config.Enabled,
 		authenticated: config.Authenticated,
 		allowedIPs:    allowedIps,

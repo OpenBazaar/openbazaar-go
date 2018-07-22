@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -140,6 +142,94 @@ func TestModerator(t *testing.T) {
 	})
 }
 
+func TestListingsAcceptedCurrencies(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
+	})
+
+	req, err := buildRequest("GET", "/ob/listings", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := testHTTPClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ensure correct status code
+	if resp.StatusCode != 200 {
+		t.Fatalf("Wanted status 200, got %d", resp.StatusCode)
+	}
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	respObj := []struct {
+		AcceptedCurrencies []string `json:"acceptedCurrencies"`
+	}{}
+	err = json.Unmarshal(respBody, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(respObj) != 1 {
+		t.Fatal("Listings should contain exactly 1 listing")
+	}
+
+	if respObj[0].AcceptedCurrencies == nil {
+		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
+	}
+
+	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
+		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	}
+}
+
+func TestListingAcceptedCurrencies(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, factory.NewListing("ron-swanson-tshirt")), 200, anyResponseJSON},
+	})
+
+	req, err := buildRequest("GET", "/ob/listing/ron-swanson-tshirt", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := testHTTPClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Ensure correct status code
+	if resp.StatusCode != 200 {
+		t.Fatalf("Wanted status 200, got %d", resp.StatusCode)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	respObj := struct {
+		Listing struct {
+			Metadata struct {
+				AcceptedCurrencies []string `json:"acceptedCurrencies"`
+			} `json:"metadata"`
+		} `json:"listing"`
+	}{}
+	err = json.Unmarshal(respBody, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(respObj.Listing.Metadata.AcceptedCurrencies) != 1 {
+		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
+	}
+
+	if respObj.Listing.Metadata.AcceptedCurrencies[0] != "TBTC" {
+		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	}
+}
 func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")
@@ -213,6 +303,40 @@ func TestCryptoListings(t *testing.T) {
 		{"DELETE", "/ob/listing/crypto", "", 200, `{}`},
 		{"DELETE", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
 		{"GET", "/ob/listing/crypto", "", 404, NotFoundJSON("Listing")},
+	})
+}
+
+func TestCryptoListingsPriceModifier(t *testing.T) {
+	outOfRangeErr := core.ErrPriceModifierOutOfRange{
+		Min: core.PriceModifierMin,
+		Max: core.PriceModifierMax,
+	}
+
+	listing := factory.NewCryptoListing("crypto")
+	listing.Metadata.PriceModifier = core.PriceModifierMax
+	runAPITests(t, apiTests{
+		{"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`},
+		{"GET", "/ob/listing/crypto", jsonFor(t, listing), 200, anyResponseJSON},
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.001
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMax + 0.01
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMin - 0.001
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 200, `{"slug": "crypto"}`,
+	})
+
+	listing.Metadata.PriceModifier = core.PriceModifierMin - 1
+	runAPITest(t, apiTest{
+		"POST", "/ob/listing", jsonFor(t, listing), 500, errorResponseJSON(outOfRangeErr),
 	})
 }
 
@@ -417,6 +541,151 @@ func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	}, dbSetup, nil)
 }
 
+func TestSalesGet(t *testing.T) {
+	sale := factory.NewSaleRecord()
+	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	sale.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	sale.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/sales", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Sales []repo.Sale `json:"sales"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualSale := respObj.Sales[0]
+
+	if actualSale.BuyerHandle != sale.Contract.BuyerOrder.BuyerID.Handle {
+		t.Fatal("Incorrect buyerHandle:", actualSale.BuyerHandle, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.Handle)
+	}
+	if actualSale.BuyerId != sale.Contract.BuyerOrder.BuyerID.PeerID {
+		t.Fatal("Incorrect buyerId:", actualSale.BuyerId, "\nwanted:", sale.Contract.BuyerOrder.BuyerID.PeerID)
+	}
+	if actualSale.CoinType != sale.Contract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualSale.CoinType, "\nwanted:", sale.Contract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualSale.OrderId != sale.OrderID {
+		t.Fatal("Incorrect orderId:", actualSale.OrderId, "\nwanted:", sale.OrderID)
+	}
+	if actualSale.PaymentCoin != sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualSale.PaymentCoin, "\nwanted:", sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualSale.ShippingAddress != sale.Contract.BuyerOrder.Shipping.Address {
+		t.Fatal("Incorrect shippingAddress:", actualSale.ShippingAddress, "\nwanted:", sale.Contract.BuyerOrder.Shipping.Address)
+	}
+	if actualSale.ShippingName != sale.Contract.BuyerOrder.Shipping.ShipTo {
+		t.Fatal("Incorrect shippingName:", actualSale.ShippingName, "\nwanted:", sale.Contract.BuyerOrder.Shipping.ShipTo)
+	}
+	if actualSale.State != sale.OrderState.String() {
+		t.Fatal("Incorrect state:", actualSale.State, "\nwanted:", sale.OrderState.String())
+	}
+}
+func TestPurchasesGet(t *testing.T) {
+	purchase := factory.NewPurchaseRecord()
+	purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	purchase.Contract.VendorListings[0].Metadata.CoinType = "ZEC"
+	purchase.Contract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Purchases().Put(purchase.OrderID, *purchase.Contract, purchase.OrderState, false)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/purchases", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Purchases []repo.Purchase `json:"purchases"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualPurchase := respObj.Purchases[0]
+
+	if actualPurchase.VendorHandle != purchase.Contract.VendorListings[0].VendorID.Handle {
+		t.Fatal("Incorrect vendorHandle:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.Handle)
+	}
+	if actualPurchase.VendorId != purchase.Contract.VendorListings[0].VendorID.PeerID {
+		t.Fatal("Incorrect vendorId:", actualPurchase.VendorId, "\nwanted:", purchase.Contract.VendorListings[0].VendorID.PeerID)
+	}
+	if actualPurchase.CoinType != purchase.Contract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualPurchase.CoinType, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualPurchase.OrderId != purchase.OrderID {
+		t.Fatal("Incorrect orderId:", actualPurchase.OrderId, "\nwanted:", purchase.OrderID)
+	}
+	if actualPurchase.PaymentCoin != purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualPurchase.PaymentCoin, "\nwanted:", purchase.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualPurchase.ShippingAddress != purchase.Contract.BuyerOrder.Shipping.Address {
+		t.Fatal("Incorrect shippingAddress:", actualPurchase.ShippingAddress, "\nwanted:", purchase.Contract.BuyerOrder.Shipping.Address)
+	}
+	if actualPurchase.ShippingName != purchase.Contract.BuyerOrder.Shipping.ShipTo {
+		t.Fatal("Incorrect shippingName:", actualPurchase.ShippingName, "\nwanted:", purchase.Contract.BuyerOrder.Shipping.ShipTo)
+	}
+	if actualPurchase.State != purchase.OrderState.String() {
+		t.Fatal("Incorrect state:", actualPurchase.State, "\nwanted:", purchase.OrderState.String())
+	}
+}
+
+func TestCasesGet(t *testing.T) {
+	disputeCaseRecord := factory.NewDisputeCaseRecord()
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
+	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
+	disputeCaseRecord.CoinType = "ZEC"
+	disputeCaseRecord.PaymentCoin = "BTC"
+	dbSetup := func(testRepo *test.Repository) error {
+		return testRepo.DB.Cases().PutRecord(disputeCaseRecord)
+	}
+
+	runAPITestsWithSetup(t, apiTests{
+		{"GET", "/ob/cases", "", 200, anyResponseJSON},
+	}, dbSetup, nil)
+
+	respBytes, err := httpGet("/ob/cases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	respObj := struct {
+		Cases []repo.Case `json:"cases"`
+	}{}
+	err = json.Unmarshal(respBytes, &respObj)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actualCase := respObj.Cases[0]
+
+	if actualCase.CoinType != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType {
+		t.Fatal("Incorrect coinType:", actualCase.CoinType, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType)
+	}
+	if actualCase.PaymentCoin != disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0] {
+		t.Fatal("Incorrect paymentCoin:", actualCase.PaymentCoin, "\nwanted:", disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies[0])
+	}
+	if actualCase.State != disputeCaseRecord.OrderState.String() {
+		t.Fatal("Incorrect state:", actualCase.State, "\nwanted:", disputeCaseRecord.OrderState.String())
+	}
+}
+
 func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
 	const sameTimestampsAreReturnedInReverse = `{
     "notifications": [
@@ -427,7 +696,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-						"timestamp": "1996-07-17T23:15:45Z",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         },
         {
@@ -437,7 +706,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-						"timestamp": "1996-07-17T23:15:45Z",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         },
         {
@@ -447,7 +716,7 @@ func TestNotificationsAreReturnedInExpectedOrder(t *testing.T) {
                 "type": "follow"
             },
             "read": false,
-						"timestamp": "1996-07-17T23:15:45Z",
+	    "timestamp": "1996-07-17T23:15:45Z",
             "type": "follow"
         }
     ],

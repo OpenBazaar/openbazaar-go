@@ -3,19 +3,18 @@ package service
 import (
 	"context"
 	"errors"
-	inet "gx/ipfs/QmNa31VPzC561NWwRsJLE7nGYZYuuD2QfpK2b1q9BK54J1/go-libp2p-net"
-	ps "gx/ipfs/QmPgDWmTmuzvP7QE5zwo1TmjbJme9pmZHNujB2453jkCTr/go-libp2p-peerstore"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	host "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
+	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	protocol "gx/ipfs/QmZNkThpqfVXs9GNbexPrfBbXSLNYeKrE7jwFM2oqHbyqN/go-libp2p-protocol"
-	host "gx/ipfs/QmaSxYRuMq4pkpBBG2CYaRrPx2z7NmMVEs34b9g61biQA6/go-libp2p-host"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"sync"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/ipfs/go-ipfs/commands"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
 	"io"
@@ -29,7 +28,6 @@ type OpenBazaarService struct {
 	host      host.Host
 	self      peer.ID
 	peerstore ps.Peerstore
-	cmdCtx    commands.Context
 	ctx       context.Context
 	broadcast chan repo.Notifier
 	datastore repo.Datastore
@@ -38,12 +36,11 @@ type OpenBazaarService struct {
 	senderlk  sync.Mutex
 }
 
-func New(node *core.OpenBazaarNode, ctx commands.Context, datastore repo.Datastore) *OpenBazaarService {
+func New(node *core.OpenBazaarNode, datastore repo.Datastore) *OpenBazaarService {
 	service := &OpenBazaarService{
 		host:      node.IpfsNode.PeerHost.(host.Host),
 		self:      node.IpfsNode.Identity,
 		peerstore: node.IpfsNode.PeerHost.Peerstore(),
-		cmdCtx:    ctx,
 		ctx:       node.IpfsNode.Context(),
 		broadcast: node.Broadcast,
 		datastore: datastore,

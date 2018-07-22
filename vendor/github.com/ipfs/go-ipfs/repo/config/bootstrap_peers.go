@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	iaddr "github.com/ipfs/go-ipfs/thirdparty/ipfsaddr"
+	iaddr "gx/ipfs/QmQViVWBHbU6HmYjXcdNq7tVASCNgdg64ZGcauuDkLCivW/go-ipfs-addr"
 )
 
 // DefaultBootstrapAddresses are the hardcoded bootstrap addresses

@@ -1,94 +1,75 @@
 package ipfs
 
 import (
-	"errors"
-	"github.com/ipfs/go-ipfs/commands"
+	"context"
+	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
+	_ "github.com/ipfs/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/merkledag"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
 	"strconv"
+	"strings"
 )
 
-var addErr = errors.New(`Add directory failed`)
-
 // Resursively add a directory to IPFS and return the root hash
-func AddDirectory(ctx commands.Context, fpath string) (rootHash string, err error) {
-	_, root := path.Split(fpath)
-	args := []string{"add", "-r", "--cid-version", strconv.Itoa(1), fpath}
-	req, cmd, err := NewRequest(ctx, args)
+func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
+	s := strings.Split(root, "/")
+	dirName := s[len(s)-1]
+	h, err := coreunix.AddR(n, root)
 	if err != nil {
 		return "", err
 	}
-	res := commands.NewResponse(req)
-	cmd.PreRun(req)
-	cmd.Run(req, res)
-	for r := range res.Output().(<-chan interface{}) {
-		if r.(*coreunix.AddedObject).Name == root {
-			rootHash = r.(*coreunix.AddedObject).Hash
+	i, err := cid.Decode(h)
+	if err != nil {
+		return "", err
+	}
+	dag := merkledag.NewDAGService(n.Blocks)
+	m := make(map[string]bool)
+	ctx := context.Background()
+	m[i.String()] = true
+	for {
+		if len(m) == 0 {
+			break
+		}
+		for k := range m {
+			c, err := cid.Decode(k)
+			if err != nil {
+				return "", err
+			}
+			links, err := dag.GetLinks(ctx, c)
+			if err != nil {
+				return "", err
+			}
+			delete(m, k)
+			for _, link := range links {
+				if link.Name == dirName {
+					return link.Cid.String(), nil
+				}
+				m[link.Cid.String()] = true
+			}
 		}
 	}
-	cmd.PostRun(req, res)
-	if res.Error() != nil {
-		return "", res.Error()
-	}
-	if rootHash == "" {
-		return "", addErr
-	}
-	return rootHash, nil
+	return i.String(), nil
 }
 
-func AddFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", "--cid-version", strconv.Itoa(1), fpath}
-	req, cmd, err := NewRequest(ctx, args)
+func AddFile(n *core.IpfsNode, file string) (string, error) {
+	f, err := os.Open(file)
 	if err != nil {
-		return "", err
+		return "", nil
 	}
-	res := commands.NewResponse(req)
-	cmd.PreRun(req)
-	cmd.Run(req, res)
-	var fileHash string
-	for r := range res.Output().(<-chan interface{}) {
-		fileHash = r.(*coreunix.AddedObject).Hash
-	}
-	cmd.PostRun(req, res)
-	if res.Error() != nil {
-		return "", res.Error()
-	}
-	if fileHash == "" {
-		return "", addErr
-	}
-	return fileHash, nil
+	return coreunix.Add(n, f)
 }
 
-func GetHashOfFile(ctx commands.Context, fpath string) (string, error) {
-	args := []string{"add", "-n", "--cid-version", strconv.Itoa(1), fpath}
-	req, cmd, err := NewRequest(ctx, args)
-	if err != nil {
-		return "", err
-	}
-	res := commands.NewResponse(req)
-	cmd.PreRun(req)
-	cmd.Run(req, res)
-	var fileHash string
-	for r := range res.Output().(<-chan interface{}) {
-		fileHash = r.(*coreunix.AddedObject).Hash
-	}
-	cmd.PostRun(req, res)
-	if res.Error() != nil {
-		return "", res.Error()
-	}
-	if fileHash == "" {
-		return "", addErr
-	}
-	return fileHash, nil
+func GetHashOfFile(n *core.IpfsNode, fpath string) (string, error) {
+	return AddFile(n, fpath)
 }
 
-func GetHash(ctx commands.Context, reader io.Reader) (string, error) {
-	tmpPath := path.Join(ctx.ConfigRoot, strconv.Itoa(rand.Int()))
-	f, err := os.Create(tmpPath)
+func GetHash(n *core.IpfsNode, reader io.Reader) (string, error) {
+	f, err := ioutil.TempFile("", strconv.Itoa(rand.Int()))
 	if err != nil {
 		return "", err
 	}
@@ -98,6 +79,5 @@ func GetHash(ctx commands.Context, reader io.Reader) (string, error) {
 	}
 	f.Write(b)
 	defer f.Close()
-	defer os.Remove(tmpPath)
-	return GetHashOfFile(ctx, tmpPath)
+	return GetHashOfFile(n, f.Name())
 }

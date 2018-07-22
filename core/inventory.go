@@ -3,7 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -79,7 +79,7 @@ func (n *OpenBazaarNode) PublishInventory() error {
 
 	n.Broadcast <- repo.StatusNotification{"publishing"}
 	go func() {
-		hash, err := repo.PublishObjectToIPFS(n.Context, n.IpfsNode, n.RepoPath, "inventory", inventory)
+		hash, err := repo.PublishObjectToIPFS(n.IpfsNode, n.RepoPath, "inventory", inventory)
 		if err != nil {
 			log.Error(err)
 			n.Broadcast <- repo.StatusNotification{"error publishing"}
@@ -104,7 +104,7 @@ func (n *OpenBazaarNode) GetPublishedInventoryBytes(p peer.ID, useCache bool) ([
 	if useCache {
 		cacheLength = ipfsInventoryCacheMaxDuration
 	}
-	return repo.GetObjectFromIPFS(n.Context, p, "inventory", cacheLength)
+	return repo.GetObjectFromIPFS(n.IpfsNode, p, "inventory", cacheLength)
 }
 
 // GetPublishedInventoryBytesForSlug gets a byte slice representing the given

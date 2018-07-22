@@ -34,7 +34,7 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into cases(caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress) values(?,?,?,?,?,?,?,?)`
+	stm := `insert or replace into cases(caseID, state, read, timestamp, buyerOpened, claim, buyerPayoutAddress, vendorPayoutAddress, paymentCoin, coinType) values(?,?,?,?,?,?,?,?,?,?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
@@ -50,6 +50,8 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		dispute.Claim,
 		"",
 		"",
+		dispute.PaymentCoin,
+		dispute.CoinType,
 	)
 	if err != nil {
 		rErr := tx.Rollback()
@@ -58,21 +60,20 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		}
 		return err
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return nil
+
+	return tx.Commit()
 }
 
-func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string) error {
+func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error {
 	record := &repo.DisputeCaseRecord{
 		CaseID:           caseID,
 		Claim:            claim,
 		IsBuyerInitiated: buyerOpened,
 		OrderState:       state,
+		PaymentCoin:      paymentCoin,
+		CoinType:         coinType,
 		Timestamp:        time.Now(),
 	}
-	fmt.Printf("Put Record: %+v\n", record)
 	return c.PutRecord(record)
 }
 
@@ -209,7 +210,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 
 	q := query{
 		table:           "cases",
-		columns:         []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read"},
+		columns:         []string{"caseID", "timestamp", "buyerContract", "vendorContract", "buyerOpened", "state", "read", "coinType", "paymentCoin"},
 		stateFilter:     stateFilter,
 		searchTerm:      searchTerm,
 		searchColumns:   []string{"caseID", "timestamp", "claim"},
@@ -227,10 +228,10 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 	defer rows.Close()
 	var ret []repo.Case
 	for rows.Next() {
-		var caseID string
+		var caseID, coinType, paymentCoin string
 		var buyerContract, vendorContract []byte
 		var timestamp, buyerOpenedInt, stateInt, readInt int
-		if err := rows.Scan(&caseID, &timestamp, &buyerContract, &vendorContract, &buyerOpenedInt, &stateInt, &readInt); err != nil {
+		if err := rows.Scan(&caseID, &timestamp, &buyerContract, &vendorContract, &buyerOpenedInt, &stateInt, &readInt, &coinType, &paymentCoin); err != nil {
 			return ret, 0, err
 		}
 		read := false
@@ -289,6 +290,8 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			BuyerId:      buyerId,
 			BuyerHandle:  buyerHandle,
 			BuyerOpened:  buyerOpened,
+			CoinType:     coinType,
+			PaymentCoin:  paymentCoin,
 			State:        pb.OrderState(stateInt).String(),
 			Read:         read,
 		})
@@ -480,8 +483,9 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	rows, err := c.db.Query("select caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt from cases where (lastDisputeExpiryNotifiedAt - timestamp) < ?",
+	rows, err := c.db.Query("select caseID, state, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt from cases where (lastDisputeExpiryNotifiedAt - timestamp) < ? and state = ?",
 		int(repo.ModeratorDisputeExpiry_lastInterval.Seconds()),
+		int(pb.OrderState_DISPUTED),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("selecting dispute case: %s", err.Error())
@@ -489,6 +493,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 	result := make([]*repo.DisputeCaseRecord, 0)
 	for rows.Next() {
 		var (
+			orderState                    int
 			lastDisputeExpiryNotifiedAt   int64
 			isBuyerInitiated              int
 			buyerContract, vendorContract []byte
@@ -499,7 +504,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 			}
 			timestamp = sql.NullInt64{}
 		)
-		if err := rows.Scan(&r.CaseID, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
+		if err := rows.Scan(&r.CaseID, &orderState, &buyerContract, &vendorContract, &timestamp, &isBuyerInitiated, &lastDisputeExpiryNotifiedAt); err != nil {
 			return nil, fmt.Errorf("scanning dispute case: %s", err.Error())
 		}
 		if len(buyerContract) > 0 {
@@ -521,6 +526,7 @@ func (c *CasesDB) GetDisputesForDisputeExpiryNotification() ([]*repo.DisputeCase
 			r.Timestamp = time.Now()
 		}
 		r.LastDisputeExpiryNotifiedAt = time.Unix(lastDisputeExpiryNotifiedAt, 0)
+		r.OrderState = pb.OrderState(orderState)
 		result = append(result, r)
 	}
 	return result, nil

@@ -28,6 +28,8 @@ type DisputeCaseRecord struct {
 	VendorOutpoints             []*pb.Outpoint
 	VendorPayoutAddress         string
 	IsBuyerInitiated            bool
+	CoinType                    string
+	PaymentCoin                 string
 }
 
 // BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval
@@ -86,4 +88,14 @@ func (r *DisputeCaseRecord) IsExpiredNow() bool {
 func (r *DisputeCaseRecord) IsExpired(when time.Time) bool {
 	expiresAt := r.Timestamp.Add(ModeratorDisputeExpiry_lastInterval)
 	return when.Equal(expiresAt) || when.After(expiresAt)
+}
+
+// Contract returns the contract from the dispute if one has been supplied by
+// either the buyer or vendor
+func (r *DisputeCaseRecord) Contract() *pb.RicardianContract {
+	contract := r.BuyerContract
+	if contract == nil {
+		contract = r.VendorContract
+	}
+	return contract
 }

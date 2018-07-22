@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const RepoVersion = "9"
+const RepoVersion = "10"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -150,7 +150,7 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 		return err
 	}
 
-	return namesys.InitializeKeyspace(ctx, nd.DAG, nd.Namesys, nd.Pinning, nd.PrivateKey)
+	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
 func addConfigExtensions(repoRoot string, testnet bool) error {

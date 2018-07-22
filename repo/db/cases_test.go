@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"sync"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -46,7 +48,7 @@ func TestCasesDB_Count(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 5, true, "blah")
+	err := casesdb.Put("caseID", 5, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +73,7 @@ func TestPutCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +110,7 @@ func TestUpdateWithNil(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -138,7 +140,7 @@ func TestDeleteCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -166,7 +168,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -196,7 +198,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -232,7 +234,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -281,7 +283,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah")
+	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -331,7 +333,7 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -393,7 +395,7 @@ func TestGetByCaseID(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -468,7 +470,7 @@ func TestMarkAsClosed(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah")
+	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -510,7 +512,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 10, true, "blah")
+	err := casesdb.Put("caseID", 10, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -523,7 +525,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = casesdb.Put("caseID2", 11, true, "asdf")
+	err = casesdb.Put("caseID2", 11, true, "asdf", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -649,6 +651,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "neverNotified",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: time.Unix(0, 0),
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
@@ -657,6 +660,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "initialNotificationSent",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart,
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
@@ -665,14 +669,24 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			CaseID:                      "finalNotificationSent",
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: time.Now(),
+			OrderState:                  pb.OrderState_DISPUTED,
 			BuyerContract:               contract,
 			VendorContract:              contract,
 			IsBuyerInitiated:            true,
+		}
+		resolved = &repo.DisputeCaseRecord{
+			CaseID:                      "resolved",
+			Timestamp:                   timeStart,
+			LastDisputeExpiryNotifiedAt: timeStart,
+			OrderState:                  pb.OrderState_RESOLVED,
+			BuyerContract:               contract,
+			VendorContract:              contract,
 		}
 		existingRecords = []*repo.DisputeCaseRecord{
 			neverNotified,
 			initialNotified,
 			finallyNotified,
+			resolved,
 		}
 	)
 
@@ -695,7 +709,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = database.Exec("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?);", r.CaseID, buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
+		_, err = database.Exec("insert into cases (caseID, state, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?, ?);", r.CaseID, int(r.OrderState), buyerContract, vendorContract, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -707,7 +721,12 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var sawNeverNotifiedCase, sawInitialNotifiedCase, sawFinallyNotifiedCase bool
+	var (
+		sawNeverNotifiedCase   bool
+		sawInitialNotifiedCase bool
+		sawFinallyNotifiedCase bool
+		sawResolvedCase        bool
+	)
 	for _, c := range cases {
 		switch c.CaseID {
 		case neverNotified.CaseID:
@@ -726,6 +745,8 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 			}
 		case finallyNotified.CaseID:
 			sawFinallyNotifiedCase = true
+		case resolved.CaseID:
+			sawResolvedCase = true
 		default:
 			t.Errorf("Found unexpected dispute case: %+v", c)
 		}
@@ -739,6 +760,9 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 	}
 	if sawFinallyNotifiedCase == true {
 		t.Error("Expected NOT to see case which recieved it's final notification")
+	}
+	if sawResolvedCase == true {
+		t.Error("Expected NOT to see case which is resolved")
 	}
 }
 
@@ -909,4 +933,94 @@ func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 		}
 
 	}
+}
+
+func TestCasesDB_Put_PaymentCoin(t *testing.T) {
+	tests := []struct {
+		acceptedCurrencies []string
+		paymentCoin        string
+		expected           string
+	}{
+		{[]string{"TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+		{[]string{}, "", ""},
+	}
+
+	for _, test := range tests {
+		err := deleteAllCases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
+		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+
+		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
+			CaseID:           "paymentCoinTest",
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+			PaymentCoin:      test.paymentCoin,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		cases, count, err := casesdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if cases[0].PaymentCoin != test.expected {
+			t.Errorf(`Expected %s got %s`, test.expected, cases[0].PaymentCoin)
+		}
+	}
+}
+
+func TestCasesDB_Put_CoinType(t *testing.T) {
+	testsCoins := []string{"", "TBTC", "TETH"}
+
+	for _, testCoin := range testsCoins {
+		err := deleteAllCases()
+		if err != nil {
+			t.Error(err)
+		}
+
+		contract.VendorListings[0].Metadata.CoinType = testCoin
+
+		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
+			CaseID:           "paymentCoinTest",
+			BuyerContract:    contract,
+			VendorContract:   contract,
+			IsBuyerInitiated: true,
+			CoinType:         testCoin,
+		})
+		if err != nil {
+			t.Error(err)
+		}
+
+		cases, count, err := casesdb.GetAll(nil, "", false, false, 1, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		if count != 1 {
+			t.Errorf(`Expected %d record got %d`, 1, count)
+		}
+		if cases[0].CoinType != testCoin {
+			t.Errorf(`Expected %s got %s`, testCoin, cases[0].CoinType)
+		}
+		err = casesdb.Delete(cases[0].CaseId)
+		if err != nil {
+			t.Error("Sale delete failed")
+		}
+	}
+}
+
+func deleteAllCases() error {
+	_, err := casesdb.(*CasesDB).db.Exec("delete from cases;")
+	return err
 }

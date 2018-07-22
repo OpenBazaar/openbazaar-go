@@ -58,7 +58,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         # get listing hash
-        api_url = vendor["gateway_url"] + "ipns/" + vendor["peerId"] + "/listings.json"
+        api_url = vendor["gateway_url"] + "ob/listings/" + vendor["peerId"]
         r = requests.get(api_url)
         if r.status_code != 200:
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Couldn't get listing index")
@@ -114,6 +114,8 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a coinType")
         if resp["contract"]["buyerOrder"]["items"][0]["paymentAddress"] != "crypto_payment_address":
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a paymentAddress")
+        if resp["contract"]["buyerOrder"]["items"][0]["memo"] != "thanks!":
+            raise TestFailure("PurchaseCryptoListingTest - FAIL: Vendor incorrectly saved without a memo")
 
         # fund order
         spend = {

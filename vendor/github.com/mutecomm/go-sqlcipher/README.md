@@ -36,6 +36,10 @@ you want a different value than the default 1024 bytes).
 API documentation can be found here:
 http://godoc.org/github.com/mutecomm/go-sqlcipher
 
+Use the function
+[sqlite3.IsEncrypted()](https://godoc.org/github.com/mutecomm/go-sqlcipher#IsEncrypted)
+to check whether a database file is encrypted or not.
+
 Examples can be found under the `./_example` directory
 
 

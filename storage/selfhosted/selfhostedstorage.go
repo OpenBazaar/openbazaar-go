@@ -3,27 +3,27 @@ package selfhosted
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	ma "gx/ipfs/QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji/go-multiaddr"
-	peer "gx/ipfs/QmXYjuNuxVzXKJCfWasQk1RqkhVLDM9jtUKhqc2WPQmFSB/go-libp2p-peer"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"os"
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/commands"
-	"gx/ipfs/QmNp85zy9RLrQ5oQD4hPyS39ezrrXpcaa7R4Y9kxdWQLLQ/go-cid"
+	"github.com/ipfs/go-ipfs/core"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 )
 
 type SelfHostedStorage struct {
 	repoPath  string
-	context   commands.Context
+	ipfsNode  *core.IpfsNode
 	pushNodes []peer.ID
 	store     func(peerId string, ids []cid.Cid) error
 }
 
-func NewSelfHostedStorage(repoPath string, context commands.Context, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
+func NewSelfHostedStorage(repoPath string, n *core.IpfsNode, pushNodes []peer.ID, store func(peerId string, ids []cid.Cid) error) *SelfHostedStorage {
 	return &SelfHostedStorage{
 		repoPath:  repoPath,
-		context:   context,
+		ipfsNode:  n,
 		pushNodes: pushNodes,
 		store:     store,
 	}
@@ -42,7 +42,7 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if ferr != nil {
 		return nil, ferr
 	}
-	addr, err := ipfs.AddFile(s.context, filePath)
+	addr, err := ipfs.AddFile(s.ipfsNode, filePath)
 	if err != nil {
 		return nil, err
 	}

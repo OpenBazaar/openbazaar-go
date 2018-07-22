@@ -3,6 +3,7 @@
     "items": [{
         "listingHash": "",
         "quantity": 100000000,
-        "paymentAddress": "crypto_payment_address"
+        "paymentAddress": "crypto_payment_address",
+        "memo": "thanks!"
     }]
 }
