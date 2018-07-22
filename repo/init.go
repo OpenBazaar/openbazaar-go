@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const RepoVersion = "10"
+const RepoVersion = "11"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
