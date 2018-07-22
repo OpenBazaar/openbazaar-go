@@ -273,7 +273,7 @@ var (
 	ErrPrematureReleaseOfTimedoutEscrowFunds = errors.New(fmt.Sprintf("Escrow can only be released when in dispute for %s days", (time.Duration(repo.DisputeTotalDurationHours) * time.Hour).String()))
 )
 
-func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+func (n *OpenBazaarNode) DisputeIsActive(contract *pb.RicardianContract) (bool, error) {
 	var (
 		dispute         = contract.GetDispute()
 		disputeDuration = time.Duration(repo.DisputeTotalDurationHours) * time.Hour
@@ -281,7 +281,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if dispute != nil {
 		disputeStart, err := ptypes.Timestamp(dispute.Timestamp)
 		if err != nil {
-			return fmt.Errorf("sale dispute timestamp: %s", err.Error())
+			return false, fmt.Errorf("sale dispute timestamp: %s", err.Error())
 		}
 		if n.TestnetEnable {
 			// Time hack until we can stub this more nicely in test env
@@ -289,8 +289,18 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		}
 		disputeExpiration := disputeStart.Add(disputeDuration)
 		if time.Now().Before(disputeExpiration) {
-			return ErrPrematureReleaseOfTimedoutEscrowFunds
+			return true, nil
 		}
+	}
+	return false, nil
+}
+
+func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	active, err := n.DisputeIsActive(contract)
+	if err != nil {
+		return err
+	} else if active {
+		return ErrPrematureReleaseOfTimedoutEscrowFunds
 	}
 
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour

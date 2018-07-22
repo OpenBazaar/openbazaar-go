@@ -2162,8 +2162,18 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED {
-		ErrorResponse(w, http.StatusBadRequest, "Release escrow can only be called when sale is pending or fulfilled")
+	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {
+		ErrorResponse(w, http.StatusBadRequest, "Release escrow can only be called when sale is pending, fulfilled, or disputed")
+		return
+	}
+
+	activeDispute, err := i.node.DisputeIsActive(contract)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if activeDispute {
+		ErrorResponse(w, http.StatusBadRequest, "Release escrow can only be called after dispute has expired")
 		return
 	}
 
