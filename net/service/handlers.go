@@ -1424,12 +1424,24 @@ func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes
 		return nil, err
 	}
 
+	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(paymentFinalizedMessage.OrderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {
+		return nil, errors.New("release escrow can only be called when sale is pending, fulfilled, or disputed")
+	}
+	service.datastore.Purchases().Put(paymentFinalizedMessage.OrderID, *contract, pb.OrderState_PAYMENT_FINALIZED, false)
+
 	n := repo.VendorFinalizedPayment{
 		ID:      repo.NewNotificationID(),
 		Type:    repo.NotifierTypeVendorFinalizedPayment,
 		OrderID: paymentFinalizedMessage.OrderID,
 	}
+	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	service.broadcast <- n
+	log.Debugf("Received BLOCK message from %s", pid.Pretty())
 	return nil, nil
 }
 
