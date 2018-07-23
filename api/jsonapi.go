@@ -1940,6 +1940,11 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	if len(contract.VendorOrderFulfillment) == 0 && contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		ErrorResponse(w, http.StatusBadRequest, "moderated orders can only be completed if the vendor has fulfilled the order")
+		return
+	}
+
 	for _, rd := range or.Ratings {
 		if rd.Slug == "" {
 			ErrorResponse(w, http.StatusBadRequest, "rating must contain the slug")
