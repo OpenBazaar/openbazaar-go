@@ -37,9 +37,8 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
 	}
-	if strings.Contains(string(version), "\n") {
-		version = []byte(strings.Replace(string(version), "\n", "", -1))
-	}
+	version = []byte(strings.Trim(string(version), "\n"))
+
 	v, err := strconv.Atoi(string(version))
 	if err != nil {
 		return err
