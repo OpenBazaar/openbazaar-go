@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type Migration interface {
@@ -35,6 +36,9 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 		return err
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
+	}
+	if strings.Contains(string(version), "\n") {
+		version = []byte(strings.Replace(string(version), "\n", "", -1))
 	}
 	v, err := strconv.Atoi(string(version))
 	if err != nil {
