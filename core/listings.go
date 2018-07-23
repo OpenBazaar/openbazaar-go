@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	ListingVersion           = 3
+	ListingVersion           = 4
 	TitleMaxCharacters       = 140
 	ShortDescriptionLength   = 160
 	DescriptionMaxCharacters = 50000
@@ -43,13 +43,18 @@ const (
 	MaxCountryCodes          = 255
 	EscrowTimeout            = 1080
 	SlugBuffer               = 5
+	PriceModifierMin         = -99.99
+	PriceModifierMax         = 1000.00
 
 	DefaultCoinDivisibility uint32 = 1e8
+
+	priceModifierListingVersion = 4
 )
 
 type price struct {
-	CurrencyCode string `json:"currencyCode"`
-	Amount       uint64 `json:"amount"`
+	CurrencyCode string  `json:"currencyCode"`
+	Amount       uint64  `json:"amount"`
+	Modifier     float32 `json:"modifier"`
 }
 type thumbnail struct {
 	Tiny   string `json:"tiny"`
@@ -57,22 +62,23 @@ type thumbnail struct {
 	Medium string `json:"medium"`
 }
 type ListingData struct {
-	Hash          string    `json:"hash"`
-	Slug          string    `json:"slug"`
-	Title         string    `json:"title"`
-	Categories    []string  `json:"categories"`
-	NSFW          bool      `json:"nsfw"`
-	ContractType  string    `json:"contractType"`
-	Description   string    `json:"description"`
-	Thumbnail     thumbnail `json:"thumbnail"`
-	Price         price     `json:"price"`
-	ShipsTo       []string  `json:"shipsTo"`
-	FreeShipping  []string  `json:"freeShipping"`
-	Language      string    `json:"language"`
-	AverageRating float32   `json:"averageRating"`
-	RatingCount   uint32    `json:"ratingCount"`
-	ModeratorIDs  []string  `json:"moderators"`
-	CoinType      string    `json:"coinType"`
+	Hash               string    `json:"hash"`
+	Slug               string    `json:"slug"`
+	Title              string    `json:"title"`
+	Categories         []string  `json:"categories"`
+	NSFW               bool      `json:"nsfw"`
+	ContractType       string    `json:"contractType"`
+	Description        string    `json:"description"`
+	Thumbnail          thumbnail `json:"thumbnail"`
+	Price              price     `json:"price"`
+	ShipsTo            []string  `json:"shipsTo"`
+	FreeShipping       []string  `json:"freeShipping"`
+	Language           string    `json:"language"`
+	AverageRating      float32   `json:"averageRating"`
+	RatingCount        uint32    `json:"ratingCount"`
+	ModeratorIDs       []string  `json:"moderators"`
+	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
+	CoinType           string    `json:"coinType"`
 }
 
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -145,7 +151,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Set listing version
-	listing.Metadata.Version = ListingVersion
+	listing.Metadata.Version = versionForNewListing(listing)
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
@@ -450,11 +456,16 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		ContractType: listing.Listing.Metadata.ContractType.String(),
 		Description:  listing.Listing.Item.Description[:descriptionLength],
 		Thumbnail:    thumbnail{listing.Listing.Item.Images[0].Tiny, listing.Listing.Item.Images[0].Small, listing.Listing.Item.Images[0].Medium},
-		Price:        price{listing.Listing.Metadata.PricingCurrency, listing.Listing.Item.Price},
-		ShipsTo:      shipsTo,
-		FreeShipping: freeShipping,
-		Language:     listing.Listing.Metadata.Language,
-		ModeratorIDs: listing.Listing.Moderators,
+		Price: price{
+			CurrencyCode: listing.Listing.Metadata.PricingCurrency,
+			Amount:       listing.Listing.Item.Price,
+			Modifier:     listing.Listing.Metadata.PriceModifier,
+		},
+		ShipsTo:            shipsTo,
+		FreeShipping:       freeShipping,
+		Language:           listing.Listing.Metadata.Language,
+		ModeratorIDs:       listing.Listing.Moderators,
+		AcceptedCurrencies: []string{n.Wallet.CurrencyCode()},
 	}
 	return ld, nil
 }
@@ -1244,6 +1255,18 @@ func validateMarketPriceListing(listing *pb.Listing) error {
 		return ErrMarketPriceListingIllegalField("item.price")
 	}
 
+	if listing.Metadata.PriceModifier != 0 {
+		listing.Metadata.PriceModifier = float32(int(listing.Metadata.PriceModifier*100.0)) / 100.0
+	}
+
+	if listing.Metadata.PriceModifier < PriceModifierMin ||
+		listing.Metadata.PriceModifier > PriceModifierMax {
+		return ErrPriceModifierOutOfRange{
+			Min: PriceModifierMin,
+			Max: PriceModifierMax,
+		}
+	}
+
 	return nil
 }
 
@@ -1290,4 +1313,15 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		}
 	}
 	return nil
+}
+
+func versionForNewListing(listing *pb.Listing) uint32 {
+	// Don't use newer version number of the listing doesn't have new features
+	if ListingVersion == priceModifierListingVersion &&
+		listing.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE &&
+		listing.Metadata.PriceModifier != 0 {
+		return priceModifierListingVersion - 1
+	}
+
+	return ListingVersion
 }

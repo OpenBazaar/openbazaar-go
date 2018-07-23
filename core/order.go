@@ -87,6 +87,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		payment := new(pb.Order_Payment)
 		payment.Method = pb.Order_Payment_MODERATED
 		payment.Moderator = data.Moderator
+		payment.Coin = NormalizeCurrencyCode(n.Wallet.CurrencyCode())
 
 		profile, err := n.FetchProfile(data.Moderator, true)
 		if err != nil {
@@ -587,9 +588,9 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			i.Quantity64 = uint64(item.Quantity)
 		}
 
-		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
-			i.Memo = item.Memo
+		i.Memo = item.Memo
 
+		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			// Remove any duplicate coupons
 			couponMap := make(map[string]bool)
 			var coupons []string
@@ -819,6 +820,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 
 		if l.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE {
 			satoshis, err = n.getMarketPriceInSatoshis(l.Metadata.CoinType, itemQuantity)
+			satoshis += uint64(float32(satoshis) * l.Metadata.PriceModifier / 100.0)
 			itemQuantity = 1
 		} else {
 			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)

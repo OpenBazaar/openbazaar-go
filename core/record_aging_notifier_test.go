@@ -33,6 +33,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		// Produces notification for 15, 40, 44 and 45 days
 		neverNotified = &repo.DisputeCaseRecord{
 			CaseID:                      "neverNotified",
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(twelveHours),
 			BuyerContract: &pb.RicardianContract{
@@ -50,6 +51,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		// Produces notification for 40, 44 and 45 days
 		notifiedUpToFifteenDay = &repo.DisputeCaseRecord{
 			CaseID:                      "notifiedUpToFifteenDay",
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(firstInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
@@ -67,6 +69,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		// Produces notification for 44 and 45 days
 		notifiedUpToFourtyDays = &repo.DisputeCaseRecord{
 			CaseID:                      "notifiedUpToFourtyDay",
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(secondInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
@@ -84,6 +87,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		// Produces notification for 45 days
 		notifiedUpToFourtyFourDays = &repo.DisputeCaseRecord{
 			CaseID:                      "notifiedUpToFourtyFourDays",
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(thirdInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
@@ -101,6 +105,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		// Produces no notifications as all have already been created
 		notifiedUpToFourtyFiveDays = &repo.DisputeCaseRecord{
 			CaseID:                      "notifiedUpToFourtyFiveDays",
+			OrderState:                  pb.OrderState_DISPUTED,
 			Timestamp:                   timeStart,
 			LastDisputeExpiryNotifiedAt: timeStart.Add(lastInterval + twelveHours),
 			BuyerContract: &pb.RicardianContract{
@@ -141,7 +146,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := database.Prepare("insert into cases (caseID, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?)")
+	s, err := database.Prepare("insert into cases (caseID, state, buyerContract, vendorContract, timestamp, buyerOpened, lastDisputeExpiryNotifiedAt) values (?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +170,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = s.Exec(r.CaseID, buyerContractData, vendorContractData, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
+		_, err = s.Exec(r.CaseID, int(r.OrderState), buyerContractData, vendorContractData, int(r.Timestamp.Unix()), isBuyerInitiated, int(r.LastDisputeExpiryNotifiedAt.Unix()))
 		if err != nil {
 			t.Fatal(err)
 		}

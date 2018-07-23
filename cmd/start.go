@@ -17,11 +17,10 @@ import (
 	"strconv"
 
 	"crypto/rand"
+	"github.com/OpenBazaar/bitcoind-wallet"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/bitcoind"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/exchange"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/resync"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -37,6 +36,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
+	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
@@ -55,7 +55,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/zcashd"
+	"github.com/OpenBazaar/zcashd-wallet"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
@@ -527,7 +527,17 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Wallet setup
+<<<<<<< HEAD
 	var exchangeRates bitcoin.ExchangeRates
+=======
+	if x.BitcoinCash {
+		walletCfg.Type = "bitcoincash"
+	} else if x.ZCash != "" {
+		walletCfg.Type = "zcashd"
+		walletCfg.Binary = x.ZCash
+	}
+	var exchangeRates wallet.ExchangeRates
+>>>>>>> master
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}

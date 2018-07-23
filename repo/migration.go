@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 )
 
 type Migration interface {
@@ -24,6 +25,8 @@ var Migrations = []Migration{
 	migrations.Migration007{},
 	migrations.Migration008{},
 	migrations.Migration009{},
+	migrations.Migration010{},
+	migrations.Migration011{},
 }
 
 // MigrateUp looks at the currently active migration version
@@ -35,7 +38,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	} else if err != nil && os.IsNotExist(err) {
 		version = []byte("0")
 	}
-	v, err := strconv.Atoi(string(version))
+	v, err := strconv.Atoi(strings.Trim(string(version), "\n"))
 	if err != nil {
 		return err
 	}

@@ -87,6 +87,108 @@ func TestGetWalletConfig(t *testing.T) {
 	}
 }
 
+func TestGetWalletsConfig(t *testing.T) {
+	config, err := GetWalletsConfig(configFixture())
+	if err != nil {
+		t.Error("GetWalletsConfig threw an unexpected error")
+	}
+	if config.BTC.FeeAPI != "https://btc.fees.openbazaar.org" {
+		t.Error("FeeApi does not equal expected value")
+	}
+	if config.BTC.Type != "API" {
+		t.Error("Type does not equal expected value")
+	}
+	if config.BTC.API != "https://btc.bloqapi.net/insight-api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.BTC.APITestnet != "https://test-insight.bitpay.com/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.BTC.LowFeeDefault != 1 {
+		t.Error("Expected low to be 1, got ", config.BTC.LowFeeDefault)
+	}
+	if config.BTC.MediumFeeDefault != 10 {
+		t.Error("Expected medium to be 10, got ", config.BTC.MediumFeeDefault)
+	}
+	if config.BTC.HighFeeDefault != 50 {
+		t.Error("Expected high to be 50, got ", config.BTC.HighFeeDefault)
+	}
+	if config.BTC.MaxFee != 200 {
+		t.Error("Expected maxFee to be 200, got ", config.BTC.MaxFee)
+	}
+
+	if config.BCH.Type != "API" {
+		t.Error("Type does not equal expected value")
+	}
+	if config.BCH.API != "https://bch-insight.bitpay.com/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.BCH.APITestnet != "https://test-bch-insight.bitpay.com/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.BCH.LowFeeDefault != 1 {
+		t.Error("Expected low to be 1, got ", config.BCH.LowFeeDefault)
+	}
+	if config.BCH.MediumFeeDefault != 5 {
+		t.Error("Expected medium to be 5, got ", config.BCH.MediumFeeDefault)
+	}
+	if config.BCH.HighFeeDefault != 10 {
+		t.Error("Expected high to be 10, got ", config.BCH.HighFeeDefault)
+	}
+	if config.BTC.MaxFee != 200 {
+		t.Error("Expected maxFee to be 200, got ", config.BTC.MaxFee)
+	}
+
+	if config.LTC.Type != "API" {
+		t.Error("Type does not equal expected value")
+	}
+	if config.LTC.API != "https://insight.litecore.io/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.LTC.APITestnet != "https://testnet.litecore.io/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.LTC.LowFeeDefault != 5 {
+		t.Error("Expected low to be 5, got ", config.LTC.LowFeeDefault)
+	}
+	if config.LTC.MediumFeeDefault != 10 {
+		t.Error("Expected medium to be 10, got ", config.LTC.MediumFeeDefault)
+	}
+	if config.LTC.HighFeeDefault != 20 {
+		t.Error("Expected high to be 20, got ", config.LTC.HighFeeDefault)
+	}
+	if config.LTC.MaxFee != 200 {
+		t.Error("Expected maxFee to be 200, got ", config.LTC.MaxFee)
+	}
+
+	if config.ZEC.Type != "API" {
+		t.Error("Type does not equal expected value")
+	}
+	if config.ZEC.API != "https://zcashnetwork.info/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.ZEC.APITestnet != "https://explorer.testnet.z.cash/api" {
+		t.Error("Binary does not equal expected value")
+	}
+	if config.ZEC.LowFeeDefault != 5 {
+		t.Error("Expected low to be 5, got ", config.ZEC.LowFeeDefault)
+	}
+	if config.ZEC.MediumFeeDefault != 10 {
+		t.Error("Expected medium to be 10, got ", config.ZEC.MediumFeeDefault)
+	}
+	if config.ZEC.HighFeeDefault != 20 {
+		t.Error("Expected high to be 20, got ", config.ZEC.HighFeeDefault)
+	}
+	if config.LTC.MaxFee != 200 {
+		t.Error("Expected maxFee to be 200, got ", config.LTC.MaxFee)
+	}
+
+	_, err = GetWalletsConfig([]byte{})
+	if err == nil {
+		t.Error("GetWalletsConfig didn't throw an error")
+	}
+}
+
 func TestGetDropboxApiToken(t *testing.T) {
 	dropboxApiToken, err := GetDropboxApiToken(configFixture())
 	if dropboxApiToken != "dropbox123" {
@@ -320,6 +422,48 @@ func configFixture() []byte {
     "RPCUser": "username",
     "TrustedPeer": "127.0.0.1:8333",
     "Type": "spvwallet"
+  },
+  "Wallets": {
+    "BCH": {
+      "API": "https://bch-insight.bitpay.com/api",
+      "APITestnet": "https://test-bch-insight.bitpay.com/api",
+      "FeeAPI": "",
+      "HighFeeDefault": 10,
+      "LowFeeDefault": 1,
+      "MaxFee": 200,
+      "MediumFeeDefault": 5,
+      "Type": "API"
+    },
+    "BTC": {
+      "API": "https://btc.bloqapi.net/insight-api",
+      "APITestnet": "https://test-insight.bitpay.com/api",
+      "FeeAPI": "https://btc.fees.openbazaar.org",
+      "HighFeeDefault": 50,
+      "LowFeeDefault": 1,
+      "MaxFee": 200,
+      "MediumFeeDefault": 10,
+      "Type": "API"
+    },
+    "LTC": {
+      "API": "https://insight.litecore.io/api",
+      "APITestnet": "https://testnet.litecore.io/api",
+      "FeeAPI": "",
+      "HighFeeDefault": 20,
+      "LowFeeDefault": 5,
+      "MaxFee": 200,
+      "MediumFeeDefault": 10,
+      "Type": "API"
+    },
+    "ZEC": {
+      "API": "https://zcashnetwork.info/api",
+      "APITestnet": "https://explorer.testnet.z.cash/api",
+      "FeeAPI": "",
+      "HighFeeDefault": 20,
+      "LowFeeDefault": 5,
+      "MaxFee": 200,
+      "MediumFeeDefault": 10,
+      "Type": "API"
+    }
   }
 }`)
 }

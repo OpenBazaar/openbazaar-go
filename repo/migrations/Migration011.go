@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/OpenBazaar/wallet-interface"
-	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 )
@@ -17,7 +15,6 @@ type Migration011 struct{}
 func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
 		databaseFilePath    string
-		repoVersionFilePath = path.Join(repoPath, "repover")
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
@@ -97,7 +94,7 @@ func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Bump schema version
-	err = ioutil.WriteFile(repoVersionFilePath, []byte("10"), os.ModePerm)
+	err = writeRepoVer(repoPath, 12)
 	if err != nil {
 		return err
 	}
@@ -107,7 +104,6 @@ func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) e
 func (Migration011) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
 		databaseFilePath    string
-		repoVersionFilePath = path.Join(repoPath, "repover")
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
@@ -186,7 +182,7 @@ func (Migration011) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Revert schema version
-	err = ioutil.WriteFile(repoVersionFilePath, []byte("9"), os.ModePerm)
+	err = writeRepoVer(repoPath, 11)
 	if err != nil {
 		return err
 	}

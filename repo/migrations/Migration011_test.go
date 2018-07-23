@@ -104,7 +104,7 @@ func TestMigration011(t *testing.T) {
 	}
 
 	// Assert repo version updated
-	if err = appSchema.VerifySchemaVersion("10"); err != nil {
+	if err = appSchema.VerifySchemaVersion("12"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -372,6 +372,11 @@ func TestMigration011(t *testing.T) {
 	}
 	if err != nil && !strings.Contains(err.Error(), "no such column: coin") {
 		t.Error("Expected error to be 'no such column', was:", err.Error())
+	}
+
+	// Assert repo version updated
+	if err = appSchema.VerifySchemaVersion("11"); err != nil {
+		t.Fatal(err)
 	}
 	db.Close()
 }

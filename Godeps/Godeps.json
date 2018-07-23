@@ -4,6 +4,10 @@
 	"GodepVersion": "v79",
 	"Deps": [
 		{
+			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
+			"Rev": "149a175763b24c4f15964bea1fd9c7451f120d02"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
 			"Rev": "d805c545cd74f4ae0cca2b64a739771a14dfbaaf"
 		},
@@ -16,8 +20,16 @@
 			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
 		},
 		{
+			"ImportPath": "github.com/OpenBazaar/spvwallet/exchangerates",
+			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "4060fdf0e731291229329f0f8a3452145f071647"
+			"Rev": "b5d09d063f757ab7a32b863df40cba9ccb8add4c"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
+			"Rev": "68caa95e73db72f2cb426170d0ed03d5d0695490"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -175,13 +187,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-31-gc823178",
-			"Rev": "c8231783a7e859ee3dc065de09b751f9a1d19325"
+			"Comment": "v0.3.0-32-g43423cf",
+			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-31-gc823178",
-			"Rev": "c8231783a7e859ee3dc065de09b751f9a1d19325"
+			"Comment": "v0.3.0-32-g43423cf",
+			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
@@ -659,7 +671,7 @@
 		},
 		{
 			"ImportPath": "github.com/mutecomm/go-sqlcipher",
-			"Rev": "34287a64fbe7fc03ab5a0e6cbc35618f9453b8d2"
+			"Rev": "f799951b4ab269c2ce24913961af2cb5d681cc43"
 		},
 		{
 			"ImportPath": "github.com/natefinch/lumberjack",
