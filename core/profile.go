@@ -94,6 +94,9 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			eol, ok := CheckEOL(entry)
 			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
+				if err != nil { // Not found, let's just return what we have
+					pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
+				}
 			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
 				pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
 				// Let's now try to get the latest record in a new goroutine so it's available next time
