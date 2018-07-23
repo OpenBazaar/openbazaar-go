@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
@@ -91,9 +90,15 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			if err != nil {
 				return pb.Profile{}, err
 			}
-			eol, ok := CheckEOL(entry)
-			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
+			cacheExpiry := time.Time{}
+			if entry.Ttl != nil {
+				cacheExpiry = time.Unix(int64(*entry.Ttl), 0)
+			}
+			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
+				if err != nil { // Not found, let's just return what we have
+					pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
+				}
 			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
 				pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
 				// Let's now try to get the latest record in a new goroutine so it's available next time
@@ -124,12 +129,16 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 				return
 			}
 		}
+
 		entry := new(ipnspb.IpnsEntry)
 		err = proto.Unmarshal(val.([]byte), entry)
 		if err != nil {
 			return
 		}
-		entry.Validity = []byte(u.FormatRFC3339(time.Now().Add(CachedProfileTime)))
+		// Update the ttl field on the record with a new ttl so next time we fetch from cache
+		// the record wont be expired causing us to fetch from the DHT.
+		ttl := uint64(time.Now().Add(CachedProfileTime).Unix())
+		entry.Ttl = &ttl
 		v, err := proto.Marshal(entry)
 		if err != nil {
 			return
@@ -137,17 +146,6 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
 	}()
 	return pro, nil
-}
-
-func CheckEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
-	if e.GetValidityType() == ipnspb.IpnsEntry_EOL {
-		eol, err := u.ParseRFC3339(string(e.GetValidity()))
-		if err != nil {
-			return time.Time{}, false
-		}
-		return eol, true
-	}
-	return time.Time{}, false
 }
 
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
