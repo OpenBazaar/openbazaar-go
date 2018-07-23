@@ -91,8 +91,8 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			if err != nil {
 				return pb.Profile{}, err
 			}
-			eol, ok := CheckEOL(entry)
-			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
+			cacheExpiry := time.Unix(int64(entry.Ttl), 0)
+			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
 				if err != nil { // Not found, let's just return what we have
 					pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
@@ -119,7 +119,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		return pb.Profile{}, err
 	}
 
-	// Update the record with a new EOL
+	// Update the record with a new EOL if not running as gateway
 	go func() {
 		if !recordAvailable {
 			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
@@ -127,12 +127,16 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 				return
 			}
 		}
+
 		entry := new(ipnspb.IpnsEntry)
 		err = proto.Unmarshal(val.([]byte), entry)
 		if err != nil {
 			return
 		}
-		entry.Validity = []byte(u.FormatRFC3339(time.Now().Add(CachedProfileTime)))
+		// Update the ttl field on the record with a new ttl so next time we fetch from cache
+		// the record wont be expired causing us to fetch from the DHT.
+		ttl := uint64(time.Now().Add(CachedProfileTime).Unix())
+		entry.Ttl = &ttl
 		v, err := proto.Marshal(entry)
 		if err != nil {
 			return
