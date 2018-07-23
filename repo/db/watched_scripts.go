@@ -27,7 +27,7 @@ func (w *WatchedScriptsDB) Put(scriptPubKey []byte) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(hex.EncodeToString(scriptPubKey))
+	_, err = stmt.Exec(w.coinType.CurrencyCode(), hex.EncodeToString(scriptPubKey))
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -40,8 +40,8 @@ func (w *WatchedScriptsDB) GetAll() ([][]byte, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 	var ret [][]byte
-	stm := "select scriptPubKey from watchedscripts where coin=" + w.coinType.CurrencyCode()
-	rows, err := w.db.Query(stm)
+	stm := "select scriptPubKey from watchedscripts where coin=?"
+	rows, err := w.db.Query(stm, w.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}

@@ -17,7 +17,7 @@ var kdb repo.KeyStore
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	kdb = NewKeyStore(conn, new(sync.Mutex))
+	kdb = NewKeyStore(conn, new(sync.Mutex), wallet.Bitcoin)
 }
 
 func TestGetAll(t *testing.T) {

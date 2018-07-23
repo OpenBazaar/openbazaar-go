@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"os"
 	"path"
 	"testing"
@@ -18,7 +19,7 @@ func TestMain(m *testing.M) {
 
 func setup() {
 	os.MkdirAll(path.Join("./", "datastore"), os.ModePerm)
-	testDB, _ = Create("", "LetMeIn", false)
+	testDB, _ = Create("", "LetMeIn", false, wallet.Bitcoin)
 	testDB.config.Init("Mnemonic Passphrase", []byte("Private Key"), "LetMeIn", time.Now())
 }
 

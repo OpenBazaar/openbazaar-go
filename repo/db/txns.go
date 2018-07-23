@@ -82,8 +82,8 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	var ret []wallet.Txn
-	stm := "select tx, txid, value, height, timestamp, watchOnly from txns where coin=" + t.coinType.CurrencyCode()
-	rows, err := t.db.Query(stm)
+	stm := "select tx, txid, value, height, timestamp, watchOnly from txns where coin=?"
+	rows, err := t.db.Query(stm, t.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}

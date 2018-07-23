@@ -49,8 +49,8 @@ func (s *StxoDB) GetAll() ([]wallet.Stxo, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	var ret []wallet.Stxo
-	stm := "select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos where coin=" + s.coinType.CurrencyCode()
-	rows, err := s.db.Query(stm)
+	stm := "select outpoint, value, height, scriptPubKey, watchOnly, spendHeight, spendTxid from stxos where coin=?"
+	rows, err := s.db.Query(stm, s.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}

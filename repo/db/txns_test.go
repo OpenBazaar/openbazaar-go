@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/wire"
 	"sync"
 	"testing"
@@ -16,7 +17,7 @@ var txdb repo.TransactionStore
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	txdb = NewTransactionStore(conn, new(sync.Mutex))
+	txdb = NewTransactionStore(conn, new(sync.Mutex), wallet.Bitcoin)
 }
 
 func TestTxnsPut(t *testing.T) {

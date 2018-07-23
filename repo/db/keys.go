@@ -88,12 +88,10 @@ func (k *KeysDB) GetLastKeyIndex(purpose wallet.KeyPurpose) (int, bool, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 
-	stm := "select keyIndex, used from keys where purpose=" + strconv.Itoa(int(purpose)) + " and coin=" + k.coinType.CurrencyCode() + " order by rowid desc limit 1"
-	stmt, err := k.db.Prepare(stm)
-	defer stmt.Close()
+	stm := "select keyIndex, used from keys where purpose=? and coin=? order by rowid desc limit 1"
 	var index int
 	var usedInt int
-	err = stmt.QueryRow().Scan(&index, &usedInt)
+	err := k.db.QueryRow(stm, strconv.Itoa(int(purpose)), k.coinType.CurrencyCode()).Scan(&index, &usedInt)
 	if err != nil {
 		return 0, false, err
 	}
@@ -154,8 +152,8 @@ func (k *KeysDB) GetImported() ([]*btcec.PrivateKey, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ret []*btcec.PrivateKey
-	stm := "select key from keys where purpose=-1 and coin=" + k.coinType.CurrencyCode()
-	rows, err := k.db.Query(stm)
+	stm := "select key from keys where purpose=-1 and coin=?"
+	rows, err := k.db.Query(stm, k.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}
@@ -180,8 +178,8 @@ func (k *KeysDB) GetUnused(purpose wallet.KeyPurpose) ([]int, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ret []int
-	stm := "select keyIndex from keys where purpose=" + strconv.Itoa(int(purpose)) + " and coin=" + k.coinType.CurrencyCode() + " and used=0 order by rowid asc"
-	rows, err := k.db.Query(stm)
+	stm := "select keyIndex from keys where purpose=? and coin=? and used=0 order by rowid asc"
+	rows, err := k.db.Query(stm, strconv.Itoa(int(purpose)), k.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}
@@ -201,8 +199,8 @@ func (k *KeysDB) GetAll() ([]wallet.KeyPath, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	var ret []wallet.KeyPath
-	stm := "select purpose, keyIndex from keys where coin=" + k.coinType.CurrencyCode()
-	rows, err := k.db.Query(stm)
+	stm := "select purpose, keyIndex from keys where coin=?"
+	rows, err := k.db.Query(stm, k.coinType.CurrencyCode())
 	if err != nil {
 		return ret, err
 	}
@@ -227,8 +225,8 @@ func (k *KeysDB) GetLookaheadWindows() map[wallet.KeyPurpose]int {
 	defer k.lock.Unlock()
 	windows := make(map[wallet.KeyPurpose]int)
 	for i := 0; i < 2; i++ {
-		stm := "select used from keys where purpose=" + strconv.Itoa(i) + " and coin=" + k.coinType.CurrencyCode() + " order by rowid desc"
-		rows, err := k.db.Query(stm)
+		stm := "select used from keys where purpose=? and coin=? order by rowid desc"
+		rows, err := k.db.Query(stm, strconv.Itoa(i), k.coinType.CurrencyCode())
 		if err != nil {
 			continue
 		}

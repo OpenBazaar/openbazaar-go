@@ -19,7 +19,7 @@ var stxo wallet.Stxo
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	sxdb = NewSpentTransactionStore(conn, new(sync.Mutex))
+	sxdb = NewSpentTransactionStore(conn, new(sync.Mutex), wallet.Bitcoin)
 	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
 	sh2, _ := chainhash.NewHashFromStr("82998e18760a5f6e5573cd789269e7853e3ebaba07a8df0929badd69dc644c5f")
 	outpoint := wire.NewOutPoint(sh1, 0)
