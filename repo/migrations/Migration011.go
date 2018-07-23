@@ -14,7 +14,7 @@ type Migration011 struct{}
 
 func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
-		databaseFilePath    string
+		databaseFilePath string
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")
@@ -103,7 +103,7 @@ func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 func (Migration011) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
-		databaseFilePath    string
+		databaseFilePath string
 	)
 	if testnetEnabled {
 		databaseFilePath = path.Join(repoPath, "datastore", "testnet.db")

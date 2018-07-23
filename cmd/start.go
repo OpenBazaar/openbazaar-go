@@ -527,9 +527,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Wallet setup
-<<<<<<< HEAD
-	var exchangeRates bitcoin.ExchangeRates
-=======
 	if x.BitcoinCash {
 		walletCfg.Type = "bitcoincash"
 	} else if x.ZCash != "" {
@@ -537,7 +534,6 @@ func (x *Start) Execute(args []string) error {
 		walletCfg.Binary = x.ZCash
 	}
 	var exchangeRates wallet.ExchangeRates
->>>>>>> master
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
