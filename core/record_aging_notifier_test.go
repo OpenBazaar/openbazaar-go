@@ -13,6 +13,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/op/go-logging"
 )
 
@@ -196,7 +197,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -507,7 +508,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -815,7 +816,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -1060,7 +1061,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex))
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
