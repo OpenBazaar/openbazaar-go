@@ -12,9 +12,9 @@ import (
 
 var WalletCoinType wallet.CoinType
 
-type Migration009 struct{}
+type Migration011 struct{}
 
-func (Migration009) Up(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration011) Up(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
 		databaseFilePath    string
 		repoVersionFilePath = path.Join(repoPath, "repover")
@@ -104,7 +104,7 @@ func (Migration009) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	return nil
 }
 
-func (Migration009) Down(repoPath, databasePassword string, testnetEnabled bool) error {
+func (Migration011) Down(repoPath, databasePassword string, testnetEnabled bool) error {
 	var (
 		databaseFilePath    string
 		repoVersionFilePath = path.Join(repoPath, "repover")

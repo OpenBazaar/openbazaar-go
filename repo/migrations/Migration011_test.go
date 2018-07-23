@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestMigration009(t *testing.T) {
+func TestMigration011(t *testing.T) {
 	// Setup
 	migrations.WalletCoinType = wallet.BitcoinCash
 	basePath := schema.GenerateTempPath()
@@ -98,7 +98,7 @@ func TestMigration009(t *testing.T) {
 	}
 
 	// Execute Migration Up
-	migration := migrations.Migration009{}
+	migration := migrations.Migration011{}
 	if err := migration.Up(testRepoPath, "foobarbaz", true); err != nil {
 		t.Fatal(err)
 	}
