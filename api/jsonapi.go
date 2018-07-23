@@ -623,7 +623,11 @@ func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) GETPeers(w http.ResponseWriter, r *http.Request) {
 	peers := ipfs.ConnectedPeers(i.node.IpfsNode)
-	peerJson, err := json.MarshalIndent(peers, "", "    ")
+	var ret []string
+	for _, p := range peers {
+		ret = append(ret, p.Pretty())
+	}
+	peerJson, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
