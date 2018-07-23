@@ -1441,7 +1441,7 @@ func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes
 	}
 	service.datastore.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
 	service.broadcast <- n
-	log.Debugf("Received BLOCK message from %s", pid.Pretty())
+	log.Debugf("Received VENDOR_FINALIZED_PAYMENT message from %s", pid.Pretty())
 	return nil, nil
 }
 
