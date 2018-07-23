@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
@@ -91,7 +90,10 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 			if err != nil {
 				return pb.Profile{}, err
 			}
-			cacheExpiry := time.Unix(int64(entry.Ttl), 0)
+			cacheExpiry := time.Time{}
+			if entry.Ttl != nil {
+				cacheExpiry = time.Unix(int64(*entry.Ttl), 0)
+			}
 			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
 				pro, err = fetch("")
 				if err != nil { // Not found, let's just return what we have
@@ -119,7 +121,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		return pb.Profile{}, err
 	}
 
-	// Update the record with a new EOL if not running as gateway
+	// Update the record with a new EOL
 	go func() {
 		if !recordAvailable {
 			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
@@ -144,17 +146,6 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
 	}()
 	return pro, nil
-}
-
-func CheckEOL(e *ipnspb.IpnsEntry) (time.Time, bool) {
-	if e.GetValidityType() == ipnspb.IpnsEntry_EOL {
-		eol, err := u.ParseRFC3339(string(e.GetValidity()))
-		if err != nil {
-			return time.Time{}, false
-		}
-		return eol, true
-	}
-	return time.Time{}, false
 }
 
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {

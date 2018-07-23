@@ -19,7 +19,6 @@ import (
 	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
 	"golang.org/x/net/context"
-	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"io/ioutil"
@@ -198,9 +197,15 @@ func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string
 			if err != nil {
 				return dr, err
 			}
-			eol, ok := CheckEOL(entry)
-			if ok && eol.Before(time.Now()) { // Too old, fetch new profile
+			cacheExpiry := time.Time{}
+			if entry.Ttl != nil {
+				cacheExpiry = time.Unix(int64(*entry.Ttl), 0)
+			}
+			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
 				dr, err = fetch("")
+				if err != nil { // Not found, let's just return what we have
+					dr, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
+				}
 			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
 				dr, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
 				// Let's now try to get the latest record in a new goroutine so it's available next time
@@ -232,7 +237,10 @@ func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string
 		if err != nil {
 			return
 		}
-		entry.Validity = []byte(u.FormatRFC3339(time.Now().Add(CachedProfileTime)))
+		// Update the ttl field on the record with a new ttl so next time we fetch from cache
+		// the record wont be expired causing us to fetch from the DHT.
+		ttl := uint64(time.Now().Add(CachedProfileTime).Unix())
+		entry.Ttl = &ttl
 		v, err := proto.Marshal(entry)
 		if err != nil {
 			return
