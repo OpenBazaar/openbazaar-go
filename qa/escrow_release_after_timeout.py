@@ -239,8 +239,25 @@ class EscrowTimeoutRelease(OpenBazaarTestFramework):
         else:
             raise TestFailure("RefundDirectTest - FAIL: Failed to query Alice's balance")
 
-        print("EscrowTimeoutRelease - PASS")
+        # check alice's order was set to payment finalized
+        api_url = alice["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text)
+        if resp["state"] != "PAYMENT_FINALIZED":
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Alice failed to set order to payment finalized")
 
+        # check bob's order was set to payment finalized
+        api_url = bob["gateway_url"] + "ob/order/" + orderId
+        r = requests.get(api_url)
+        if r.status_code != 200:
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Couldn't load order from Bob")
+        resp = json.loads(r.text)
+        if resp["state"] != "PAYMENT_FINALIZED":
+            raise TestFailure("EscrowTimeoutRelease - FAIL: Bob failed to set order to payment finalized")
+
+        print("EscrowTimeoutRelease - PASS")
 
 if __name__ == '__main__':
     print("Running EscrowTimeoutRelease")

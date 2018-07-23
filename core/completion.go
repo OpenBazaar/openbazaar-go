@@ -296,8 +296,7 @@ func (n *OpenBazaarNode) DisputeIsActive(contract *pb.RicardianContract) (bool, 
 }
 
 func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	active, err := n.DisputeIsActive(contract)
-	if err != nil {
+	if active, err := n.DisputeIsActive(contract); err != nil {
 		return err
 	} else if active {
 		return ErrPrematureReleaseOfTimedoutEscrowFunds
