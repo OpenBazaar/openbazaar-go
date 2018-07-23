@@ -41,6 +41,24 @@ type WalletConfig struct {
 	TrustedPeer      string
 }
 
+type WalletsConfig struct {
+	BTC CoinConfig `json:"BTC"`
+	BCH CoinConfig `json:"BCH"`
+	LTC CoinConfig `json:"LTC"`
+	ZEC CoinConfig `json:"ZEC"`
+}
+
+type CoinConfig struct {
+	Type             string
+	API              string
+	APITestnet       string
+	MaxFee           int
+	FeeAPI           string
+	HighFeeDefault   int
+	MediumFeeDefault int
+	LowFeeDefault    int
+}
+
 type DataSharing struct {
 	AcceptStoreRequests bool
 	PushTo              []string
@@ -271,6 +289,31 @@ func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
 		MediumFeeDefault: int(mediumFloat),
 		LowFeeDefault:    int(lowFloat),
 		TrustedPeer:      trustedPeerStr,
+	}
+	return wCfg, nil
+}
+
+func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
+	var cfgIface interface{}
+	json.Unmarshal(cfgBytes, &cfgIface)
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	walletIface, ok := cfg["Wallets"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	b, err := json.Marshal(walletIface)
+	if err != nil {
+		return nil, err
+	}
+	wCfg := new(WalletsConfig)
+	err = json.Unmarshal(b, wCfg)
+	if err != nil {
+		return nil, err
 	}
 	return wCfg, nil
 }
