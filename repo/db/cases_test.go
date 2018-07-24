@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"sync"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -48,7 +46,7 @@ func TestCasesDB_Count(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 5, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 5, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -73,7 +71,7 @@ func TestPutCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -110,7 +108,7 @@ func TestUpdateWithNil(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +138,7 @@ func TestDeleteCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -168,7 +166,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -198,7 +196,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -234,7 +232,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -283,7 +281,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -333,7 +331,7 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -395,7 +393,7 @@ func TestGetByCaseID(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -470,7 +468,7 @@ func TestMarkAsClosed(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -512,7 +510,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	}
 	defer teardown()
 
-	err := casesdb.Put("caseID", 10, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 10, true, "blah", "", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -936,22 +934,26 @@ func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 }
 
 func TestCasesDB_Put_PaymentCoin(t *testing.T) {
-	tests := []struct {
-		acceptedCurrencies []string
-		paymentCoin        string
-		expected           string
-	}{
-		{[]string{"TBTC"}, "TBTC", "TBTC"},
-		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
-		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
-		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
-		{[]string{}, "", ""},
-	}
+
+	var (
+		tests = []struct {
+			acceptedCurrencies []string
+			paymentCoin        string
+			expected           string
+		}{
+			{[]string{"TBTC"}, "TBTC", "TBTC"},
+			{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+			{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+			{[]string{}, "", ""},
+		}
+		contract = factory.NewContract()
+	)
 
 	for _, test := range tests {
-		err := deleteAllCases()
+		var casesdb, teardown, err = buildNewCaseStore()
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
@@ -978,16 +980,20 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 		if cases[0].PaymentCoin != test.expected {
 			t.Errorf(`Expected %s got %s`, test.expected, cases[0].PaymentCoin)
 		}
+		teardown()
 	}
 }
 
 func TestCasesDB_Put_CoinType(t *testing.T) {
-	testsCoins := []string{"", "TBTC", "TETH"}
+	var (
+		testsCoins = []string{"", "TBTC", "TETH"}
+		contract   = factory.NewContract()
+	)
 
 	for _, testCoin := range testsCoins {
-		err := deleteAllCases()
+		var casesdb, teardown, err = buildNewCaseStore()
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		contract.VendorListings[0].Metadata.CoinType = testCoin
@@ -1017,10 +1023,6 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 		if err != nil {
 			t.Error("Sale delete failed")
 		}
+		teardown()
 	}
-}
-
-func deleteAllCases() error {
-	_, err := casesdb.(*CasesDB).db.Exec("delete from cases;")
-	return err
 }

@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"sync"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -40,13 +38,13 @@ func buildNewSaleStore() (repo.SaleStore, func(), error) {
 }
 
 func TestSalesDB_Count(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	err = saldb.Put("orderID", *contract, 0, false)
 	if err != nil {
 		t.Error(err)
@@ -58,17 +56,15 @@ func TestSalesDB_Count(t *testing.T) {
 }
 
 func TestPutSale(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
-	err = saldb.Put("orderID", *contract, 0, false)
-	if err != nil {
-		t.Error(err)
-	}
+	contract := factory.NewContract()
+	contract.BuyerOrder.Payment.Coin = "BTC"
+
 	err = saldb.Put("orderID", *contract, 0, false)
 	if err != nil {
 		t.Error(err)
@@ -136,13 +132,13 @@ func TestPutSale(t *testing.T) {
 }
 
 func TestDeleteSale(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	err = saldb.Delete("orderID")
 	if err != nil {
@@ -162,13 +158,13 @@ func TestDeleteSale(t *testing.T) {
 }
 
 func TestMarkSaleAsRead(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	err = saldb.MarkAsRead("orderID")
 	if err != nil {
@@ -188,13 +184,13 @@ func TestMarkSaleAsRead(t *testing.T) {
 }
 
 func TestMarkSaleAsUnread(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	err = saldb.MarkAsRead("orderID")
 	if err != nil {
@@ -218,13 +214,13 @@ func TestMarkSaleAsUnread(t *testing.T) {
 }
 
 func TestUpdateSaleFunding(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	err = saldb.Put("orderID", *contract, 1, false)
 	if err != nil {
 		t.Error(err)
@@ -261,13 +257,13 @@ func TestUpdateSaleFunding(t *testing.T) {
 }
 
 func TestSalePutAfterFundingUpdate(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	err = saldb.Put("orderID", *contract, 1, false)
 	if err != nil {
 		t.Error(err)
@@ -307,13 +303,13 @@ func TestSalePutAfterFundingUpdate(t *testing.T) {
 }
 
 func TestSalesGetByPaymentAddress(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	addr, err := btcutil.DecodeAddress(contract.BuyerOrder.Payment.Address, &chaincfg.MainNetParams)
 	if err != nil {
@@ -334,13 +330,13 @@ func TestSalesGetByPaymentAddress(t *testing.T) {
 }
 
 func TestSalesGetByOrderId(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	_, _, _, _, _, err = saldb.GetByOrderId("orderID")
 	if err != nil {
@@ -353,21 +349,21 @@ func TestSalesGetByOrderId(t *testing.T) {
 }
 
 func TestSalesDB_GetAll(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	c0 := mustNewContract()
+	c0 := factory.NewContract()
 	ts, _ := ptypes.TimestampProto(time.Now())
 	c0.BuyerOrder.Timestamp = ts
 	saldb.Put("orderID", *c0, 0, false)
-	c1 := mustNewContract()
+	c1 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Minute))
 	c1.BuyerOrder.Timestamp = ts
 	saldb.Put("orderID2", *c1, 1, false)
-	c2 := mustNewContract()
+	c2 := factory.NewContract()
 	ts, _ = ptypes.TimestampProto(time.Now().Add(time.Hour))
 	c2.BuyerOrder.Timestamp = ts
 	saldb.Put("orderID3", *c2, 1, false)
@@ -457,13 +453,13 @@ func TestSalesDB_GetAll(t *testing.T) {
 }
 
 func TestSalesDB_SetNeedsResync(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 0, false)
 	err = saldb.SetNeedsResync("orderID", true)
 	if err != nil {
@@ -493,13 +489,13 @@ func TestSalesDB_SetNeedsResync(t *testing.T) {
 }
 
 func TestSalesDB_GetNeedsResync(t *testing.T) {
-	saldb, teardown, err := buildNewSaleStore()
+	var saldb, teardown, err = buildNewSaleStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
-	contract := mustNewContract()
+	contract := factory.NewContract()
 	saldb.Put("orderID", *contract, 1, false)
 	saldb.Put("orderID1", *contract, 1, false)
 	err = saldb.SetNeedsResync("orderID", true)
@@ -531,7 +527,7 @@ func TestSalesDB_GetNeedsResync(t *testing.T) {
 }
 
 func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
-	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+	var appSchema = schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
 		TestModeEnabled: true,
 	})
@@ -722,29 +718,27 @@ func TestUpdateSaleLastDisputeTimeoutNotifiedAt(t *testing.T) {
 }
 
 func TestSalesDB_Put_PaymentCoin(t *testing.T) {
-	err := deleteAllSales()
-	if err != nil {
-		t.Error(err)
-	}
-
-	tests := []struct {
-		acceptedCurrencies []string
-		paymentCoin        string
-		expected           string
-	}{
-		{[]string{"TBTC"}, "TBTC", "TBTC"},
-		{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
-		{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
-		{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
-		{[]string{"TBTC", "TBCH"}, "", "TBTC"},
-		{[]string{"TBCH", "TBTC"}, "", "TBCH"},
-		{[]string{}, "", ""},
-	}
+	var (
+		contract = factory.NewContract()
+		tests    = []struct {
+			acceptedCurrencies []string
+			paymentCoin        string
+			expected           string
+		}{
+			{[]string{"TBTC"}, "TBTC", "TBTC"},
+			{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
+			{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
+			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
+			{[]string{"TBTC", "TBCH"}, "", "TBTC"},
+			{[]string{"TBCH", "TBTC"}, "", "TBCH"},
+			{[]string{}, "", ""},
+		}
+	)
 
 	for _, test := range tests {
-		err := deleteAllSales()
+		saldb, teardown, err := buildNewSaleStore()
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
@@ -765,14 +759,17 @@ func TestSalesDB_Put_PaymentCoin(t *testing.T) {
 		if sales[0].PaymentCoin != test.expected {
 			t.Errorf(`Expected %s got %s`, test.expected, sales[0].PaymentCoin)
 		}
+		teardown()
 	}
 }
 
 func TestSalesDB_Put_CoinType(t *testing.T) {
+	var contract = factory.NewContract()
+
 	for _, testCoin := range []string{"", "TBTC", "TETH"} {
-		err := deleteAllSales()
+		var saldb, teardown, err = buildNewSaleStore()
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		contract.VendorListings[0].Metadata.CoinType = testCoin
@@ -792,52 +789,6 @@ func TestSalesDB_Put_CoinType(t *testing.T) {
 		if sales[0].CoinType != testCoin {
 			t.Errorf(`Expected %s got %s`, testCoin, sales[0].CoinType)
 		}
+		teardown()
 	}
-}
-
-func deleteAllSales() error {
-	_, err := saldb.(*SalesDB).db.Exec("delete from sales;")
-	return err
-}
-
-func newContract() (*pb.RicardianContract, error) {
-	contract = new(pb.RicardianContract)
-	listing := new(pb.Listing)
-	item := new(pb.Listing_Item)
-	item.Title = "Test listing"
-	listing.Item = item
-	vendorID := new(pb.ID)
-	vendorID.PeerID = "vendor id"
-	vendorID.Handle = "@testvendor"
-	listing.VendorID = vendorID
-	image := new(pb.Listing_Item_Image)
-	image.Tiny = "test image hash"
-	listing.Metadata = &pb.Listing_Metadata{
-		ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
-		AcceptedCurrencies: []string{"TBTC"},
-	}
-	listing.Item.Images = []*pb.Listing_Item_Image{image}
-	contract.VendorListings = []*pb.Listing{listing}
-	order := new(pb.Order)
-	buyerID := new(pb.ID)
-	buyerID.PeerID = "buyer id"
-	buyerID.Handle = "@testbuyer"
-	order.BuyerID = buyerID
-	shipping := new(pb.Order_Shipping)
-	shipping.Address = "1234 test ave."
-	shipping.ShipTo = "buyer name"
-	order.Shipping = shipping
-	ts, err := ptypes.TimestampProto(time.Now())
-	if err != nil {
-		return nil, err
-	}
-	order.Timestamp = ts
-	payment := new(pb.Order_Payment)
-	payment.Amount = 10
-	payment.Coin = "TBTC"
-	payment.Method = pb.Order_Payment_DIRECT
-	payment.Address = "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms"
-	order.Payment = payment
-	contract.BuyerOrder = order
-	return contract, nil
 }
