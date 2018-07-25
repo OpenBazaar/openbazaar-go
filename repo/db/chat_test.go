@@ -289,6 +289,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var msgID string
@@ -303,6 +304,20 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		if msgID == "55555" && read == 1 {
 			t.Error("Incorrectly set message as read")
 		}
+	}
+}
+
+// https://github.com/OpenBazaar/openbazaar-go/issues/1041
+func TestChatDB_MarkAsRead_Issue1041(t *testing.T) {
+	var chdb, teardown, err = buildNewChatStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	_, _, err = chdb.MarkAsRead("nonexistantpeerid", "", false, "")
+	if err != nil {
+		t.Error(err)
 	}
 }
 
