@@ -206,12 +206,17 @@ func NewNode(config NodeConfig) (*Node, error) {
 		Logger:       logger,
 	}
 	core.PublishLock.Lock()
-	wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
-	if err != nil {
-		return nil, err
+	if !config.DisableWallet {
+		wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	exchangeRates := exchangerates.NewBitcoinPriceFetcher(nil)
+	var exchangeRates wallet.ExchangeRates
+	if !config.DisableExchangerates {
+		exchangeRates = exchangerates.NewBitcoinPriceFetcher(nil)
+	}
 
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
@@ -358,13 +363,15 @@ func (n *Node) Start() error {
 		go PR.Run()
 		n.node.PointerRepublisher = PR
 		MR.Wait()
-		TL := lis.NewTransactionListener(n.node.Datastore, n.node.Broadcast, n.node.Wallet)
-		WL := lis.NewWalletListener(n.node.Datastore, n.node.Broadcast)
-		n.node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
-		n.node.Wallet.AddTransactionListener(WL.OnTransactionReceived)
-		su := bitcoin.NewStatusUpdater(n.node.Wallet, n.node.Broadcast, n.node.IpfsNode.Context())
-		go su.Start()
-		go n.node.Wallet.Start()
+		if n.node.Wallet != nil {
+			TL := lis.NewTransactionListener(n.node.Datastore, n.node.Broadcast, n.node.Wallet)
+			WL := lis.NewWalletListener(n.node.Datastore, n.node.Broadcast)
+			n.node.Wallet.AddTransactionListener(TL.OnTransactionReceived)
+			n.node.Wallet.AddTransactionListener(WL.OnTransactionReceived)
+			su := bitcoin.NewStatusUpdater(n.node.Wallet, n.node.Broadcast, n.node.IpfsNode.Context())
+			go su.Start()
+			go n.node.Wallet.Start()
+		}
 
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
