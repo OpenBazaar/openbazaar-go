@@ -1,4 +1,4 @@
-FROM golang:1.9
+FROM golang:1.10.3
 VOLUME /var/lib/openbazaar
 
 RUN wget https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tgz && \
@@ -27,9 +27,10 @@ RUN go get -u github.com/gogo/protobuf/proto \
               github.com/icrowley/fake \
               github.com/derekparker/delve/cmd/dlv
 
+COPY . .
+RUN go test -i
+
 RUN useradd -ms /bin/bash ob_user
 USER ob_user
-
-COPY . .
 
 ENTRYPOINT ["/bin/bash"]
