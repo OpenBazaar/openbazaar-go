@@ -6,8 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"os"
@@ -16,19 +15,12 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
-const (
-	CachePrefix       = "IPNSPERSISTENTCACHE_"
-	KeyCachePrefix    = "IPNSPUBKEYCACHE_"
-	CachedProfileTime = time.Hour * 24 * 7
-)
+const KeyCachePrefix = "/pubkey/"
 
 var ErrorProfileNotFound error = errors.New("Profile not found")
 
@@ -47,104 +39,15 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 }
 
 func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile, error) {
-	fetch := func(rootHash string) (pb.Profile, error) {
-		var pro pb.Profile
-		var profile []byte
-		var err error
-		if rootHash == "" {
-			profile, err = n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute)
-			if err != nil || len(profile) == 0 {
-				return pro, err
-			}
-		} else {
-			profile, err = ipfs.Cat(n.IpfsNode, path.Join(rootHash, "profile.json"), time.Minute)
-			if err != nil || len(profile) == 0 {
-				return pro, err
-			}
-		}
-		err = jsonpb.UnmarshalString(string(profile), &pro)
-		if err != nil {
-			return pro, err
-		}
-		return pro, nil
-	}
-
 	var pro pb.Profile
-	var err error
-	var recordAvailable bool
-	var val interface{}
-	if useCache {
-		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
-		if err != nil { // No record in datastore
-			pro, err = fetch("")
-			if err != nil {
-				return pb.Profile{}, err
-			}
-		} else { // Record available, let's see how old it is
-			entry := new(ipnspb.IpnsEntry)
-			err = proto.Unmarshal(val.([]byte), entry)
-			if err != nil {
-				return pb.Profile{}, err
-			}
-			p, err := ipnspath.ParsePath(string(entry.GetValue()))
-			if err != nil {
-				return pb.Profile{}, err
-			}
-			cacheExpiry := time.Time{}
-			if entry.Ttl != nil {
-				cacheExpiry = time.Unix(int64(*entry.Ttl), 0)
-			}
-			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
-				pro, err = fetch("")
-				if err != nil { // Not found, let's just return what we have
-					pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
-				}
-			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
-				pro, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
-				// Let's now try to get the latest record in a new goroutine so it's available next time
-				go fetch("")
-			}
-			if err != nil {
-				return pb.Profile{}, err
-			}
-			recordAvailable = true
-		}
-	} else {
-		pro, err = fetch("")
-		if err != nil {
-			return pb.Profile{}, err
-		}
-		recordAvailable = false
+	b, err := n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute, useCache)
+	if err != nil || len(b) == 0 {
+		return pro, err
 	}
-
-	if err := ValidateProfile(&pro); err != nil {
-		return pb.Profile{}, err
+	err = jsonpb.UnmarshalString(string(b), &pro)
+	if err != nil {
+		return pro, err
 	}
-
-	// Update the record with a new EOL
-	go func() {
-		if !recordAvailable {
-			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
-			if err != nil {
-				return
-			}
-		}
-
-		entry := new(ipnspb.IpnsEntry)
-		err = proto.Unmarshal(val.([]byte), entry)
-		if err != nil {
-			return
-		}
-		// Update the ttl field on the record with a new ttl so next time we fetch from cache
-		// the record wont be expired causing us to fetch from the DHT.
-		ttl := uint64(time.Now().Add(CachedProfileTime).Unix())
-		entry.Ttl = &ttl
-		v, err := proto.Marshal(entry)
-		if err != nil {
-			return
-		}
-		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
-	}()
 	return pro, nil
 }
 

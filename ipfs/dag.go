@@ -48,7 +48,7 @@ func RemoveAll(nd *core.IpfsNode, peerID string) error {
 	if err != nil {
 		return nil
 	}
-	hash, err := Resolve(nd, pid, time.Minute*5)
+	hash, err := Resolve(nd, pid, time.Minute*5, true)
 	if err != nil {
 		return err
 	}
