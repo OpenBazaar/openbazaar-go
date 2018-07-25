@@ -31,7 +31,7 @@ import (
 
 const (
 	DefaultPointerPrefixLength = 14
-	KeyCachePrefix             = "IPNSPUBKEYCACHE_"
+	KeyCachePrefix             = "/pubkey/"
 )
 
 var log = logging.MustGetLogger("retriever")

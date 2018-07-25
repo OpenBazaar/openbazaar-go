@@ -23,7 +23,7 @@ import (
 )
 
 var log = logging.Logger("namesys")
-var keyCachePrefix= "IPNSPUBKEYCACHE_"
+const keyCachePrefix = "/pubkey/"
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
@@ -175,7 +175,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, pname string, options
 	}()
 
 	go func() {
-		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + pname))
+		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + name))
 		if err == nil {
 			b, ok := val.([]byte)
 			if ok {
@@ -278,5 +278,5 @@ func checkEOL(e *pb.IpnsEntry) (time.Time, bool) {
 
 func putToDatabase(datastore ds.Datastore, name string, ipnsRec, pubkey []byte) {
 	datastore.Put(dshelp.NewKeyFromBinary([]byte(name)), ipnsRec)
-	datastore.Put(ds.NewKey(keyCachePrefix+name), pubkey)
+	datastore.Put(ds.NewKey(keyCachePrefix+strings.TrimPrefix(name, "/ipns/")), pubkey)
 }

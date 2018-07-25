@@ -129,7 +129,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration, useca
 
 		go func() {
 			n.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte("/ipns/"+pid.Pretty())), entryBytes)
-			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+"/ipns/"+pid.Pretty()), pubkeyBytes)
+			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+pid.Pretty()), pubkeyBytes)
 		}()
 
 		p, err := ipnspath.ParsePath(string(entry.Value))

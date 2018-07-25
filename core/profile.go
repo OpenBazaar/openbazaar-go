@@ -20,9 +20,7 @@ import (
 	"github.com/imdario/mergo"
 )
 
-const (
-	KeyCachePrefix = "IPNSPUBKEYCACHE_"
-)
+const KeyCachePrefix = "/pubkey/"
 
 var ErrorProfileNotFound error = errors.New("Profile not found")
 
