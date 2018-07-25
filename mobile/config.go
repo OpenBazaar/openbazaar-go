@@ -28,6 +28,6 @@ type NodeConfig struct {
 	WalletTrustedPeer string
 
 	// Processes to disable
-	DisableWallet bool
+	DisableWallet        bool
 	DisableExchangerates bool
 }
