@@ -13,7 +13,6 @@ import (
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
-	"github.com/ipfs/go-ipfs/namesys"
 	"io/ioutil"
 	"strings"
 
@@ -255,7 +254,8 @@ func (x *Restore) Execute(args []string) error {
 		Repo:   r,
 		Online: true,
 		ExtraOpts: map[string]bool{
-			"mplex": true,
+			"mplex":  true,
+			"ipnsps": true,
 		},
 		DNSResolver: nil,
 		Routing:     DHTOption,
@@ -277,7 +277,6 @@ func (x *Restore) Execute(args []string) error {
 	} else {
 		dhtutil.QuerySize = 16
 	}
-	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	<-dht.DefaultBootstrapConfig.DoneChan
 	wg := new(sync.WaitGroup)
@@ -287,7 +286,7 @@ func (x *Restore) Execute(args []string) error {
 		PrintError(err.Error())
 		return err
 	}
-	k, err := ipfs.Resolve(nd, pid, time.Minute)
+	k, err := ipfs.Resolve(nd, pid, time.Minute, false)
 	if err != nil || k == "" {
 		PrintError(fmt.Sprintf("IPNS record for %s not found on network\n", identity.PeerID))
 		return err
@@ -332,7 +331,7 @@ func (x *Restore) Execute(args []string) error {
 
 func RestoreFile(repoPath, peerID, filename string, n *core.IpfsNode, wg *sync.WaitGroup) {
 	defer wg.Done()
-	b, err := ipfs.ResolveThenCat(n, ipfspath.FromString(path.Join(peerID, filename)), time.Minute)
+	b, err := ipfs.ResolveThenCat(n, ipfspath.FromString(path.Join(peerID, filename)), time.Minute, false)
 	if err != nil {
 		PrintError(fmt.Sprintf("Failed to find %s\n", filename))
 	} else {

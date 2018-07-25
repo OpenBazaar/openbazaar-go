@@ -1,23 +1,37 @@
-package db
+package db_test
 
 import (
-	"database/sql"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-func newNotificationStore() repo.NotificationStore {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	return NewNotificationStore(conn, new(sync.Mutex))
+func newNotificationStore() (repo.NotificationStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return db.NewNotificationStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
 func TestNotficationsDB_PutRecord(t *testing.T) {
 	var (
+		db, teardown, err = newNotificationStore()
 		// now as Unix() quantizes time to DB's resolution which makes reflect.DeepEqual pass below
 		now               = time.Unix(time.Now().Unix(), 0)
 		putRecordExamples = []*repo.Notification{
@@ -38,9 +52,12 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 			}, now, true),
 		}
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
 
 	for _, subject := range putRecordExamples {
-		var db = newNotificationStore()
 		if err := db.PutRecord(subject); err != nil {
 			t.Fatal(err)
 		}
@@ -78,9 +95,14 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 }
 
 func TestNotficationsDB_Delete(t *testing.T) {
-	db := newNotificationStore()
+	db, teardown, err := newNotificationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	n := repo.FollowNotification{"1", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(n, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +110,7 @@ func TestNotficationsDB_Delete(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, err := chdb.PrepareQuery("select notifID from notifications where notifID='1'")
+	stmt, err := db.PrepareQuery("select notifID from notifications where notifID='1'")
 	defer stmt.Close()
 	var notifId int
 	err = stmt.QueryRow().Scan(&notifId)
@@ -98,9 +120,14 @@ func TestNotficationsDB_Delete(t *testing.T) {
 }
 
 func TestNotficationsDB_GetAll(t *testing.T) {
-	db := newNotificationStore()
+	db, teardown, err := newNotificationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	f := repo.FollowNotification{"1", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(f, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(f, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
@@ -152,9 +179,14 @@ func TestNotficationsDB_GetAll(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAsRead(t *testing.T) {
-	db := newNotificationStore()
+	db, teardown, err := newNotificationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	n := repo.FollowNotification{"5", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(n, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
@@ -175,9 +207,14 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 }
 
 func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
-	db := newNotificationStore()
+	db, teardown, err := newNotificationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	n := repo.FollowNotification{"6", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(n, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}
@@ -200,9 +237,14 @@ func TestNotficationsDB_MarkAllAsRead(t *testing.T) {
 }
 
 func TestNotificationDB_GetUnreadCount(t *testing.T) {
-	db := newNotificationStore()
+	db, teardown, err := newNotificationStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	n := repo.FollowNotification{"8", repo.NotifierTypeFollowNotification, "abc"}
-	err := db.PutRecord(repo.NewNotification(n, time.Now(), false))
+	err = db.PutRecord(repo.NewNotification(n, time.Now(), false))
 	if err != nil {
 		t.Error(err)
 	}

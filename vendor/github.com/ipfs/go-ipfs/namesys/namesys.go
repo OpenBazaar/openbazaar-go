@@ -63,7 +63,7 @@ func AddPubsubNameSystem(ctx context.Context, ns NameSystem, host p2phost.Host, 
 		return errors.New("unexpected IpfsRouting; not a PubKeyFetcher instance")
 	}
 
-	mpns.resolvers["pubsub"] = NewPubsubResolver(ctx, host, r, pkf, ps)
+	mpns.resolvers["pubsub"] = NewPubsubResolver(ctx, host, ds, r, pkf, ps)
 	mpns.publishers["pubsub"] = NewPubsubPublisher(ctx, host, ds, r, ps)
 	return nil
 }
@@ -125,6 +125,19 @@ func (ns *mpns) resolveOnce(ctx context.Context, name string, options *opts.Reso
 		}
 
 		res, ok = ns.resolvers["dht"]
+		if ok {
+			p, err := res.resolveOnce(ctx, fullKey, options)
+			if err == nil {
+				return makePath(p)
+			}
+		}
+
+		// Try pubsub again. The reason for this is pubsub will return an error if it's not subscribed
+		// even though a record might exist in cache. The reason is to force a DHT query to update the
+		// cache. However, the first pubsub resolve request will subscribe to the name and subsequent
+		// resolves will return from cache. So the pattern is.. if not subscribed, try DHT first, if that
+		// fails return from cache.
+		res, ok = ns.resolvers["pubsub"]
 		if ok {
 			p, err := res.resolveOnce(ctx, fullKey, options)
 			if err == nil {

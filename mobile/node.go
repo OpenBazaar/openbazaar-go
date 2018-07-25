@@ -162,6 +162,10 @@ func NewNode(config NodeConfig) (*Node, error) {
 		Repo:    r,
 		Online:  true,
 		Routing: DHTClientOption,
+		ExtraOpts: map[string]bool{
+			"mplex":  true,
+			"ipnsps": true,
+		},
 	}
 
 	// Set IPNS query size
@@ -171,7 +175,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 	} else {
 		dhtutil.QuerySize = 16
 	}
-	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()

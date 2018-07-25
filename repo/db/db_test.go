@@ -1,51 +1,81 @@
 package db
 
 import (
-	"github.com/OpenBazaar/wallet-interface"
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
-var testDB *SQLiteDatastore
-
-func TestMain(m *testing.M) {
-	setup()
-	retCode := m.Run()
-	teardown()
-	os.Exit(retCode)
-}
-
-func setup() {
-	os.MkdirAll(path.Join("./", "datastore"), os.ModePerm)
-	testDB, _ = Create("", "LetMeIn", false, wallet.Bitcoin)
-	testDB.config.Init("Mnemonic Passphrase", []byte("Private Key"), "LetMeIn", time.Now())
-}
-
-func teardown() {
-	os.RemoveAll(path.Join("./", "datastore"))
+func buildNewDatastore() (*SQLiteDatastore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	datastore := NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
+	return datastore, appSchema.DestroySchemaDirectories, nil
 }
 
 func TestCreate(t *testing.T) {
+	if err := os.MkdirAll(path.Join("./", "datastore"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(path.Join("./", "datastore"))
+	_, err := Create("", "LetMeIn", false, wallet.Bitcoin)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := os.Stat(path.Join("./", "datastore", "mainnet.db")); os.IsNotExist(err) {
 		t.Error("Failed to create database file")
 	}
 }
 
 func TestInit(t *testing.T) {
-	mn, err := testDB.config.GetMnemonic()
+	var (
+		mnemonic  = "Mnemonic Passphrase"
+		key       = "Private Key"
+		createdAt = time.Now()
+	)
+
+	if err := os.MkdirAll(path.Join("./", "datastore"), os.ModePerm); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(path.Join("./", "datastore"))
+	testDB, err := Create("", "LetMeIn", false, wallet.Bitcoin)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := testDB.Config().Init(mnemonic, []byte(key), "", createdAt); err != nil {
+		t.Fatal(err)
+	}
+
+	mn, err := testDB.Config().GetMnemonic()
 	if err != nil {
 		t.Error(err)
 	}
-	if mn != "Mnemonic Passphrase" {
+	if mn != mnemonic {
 		t.Error("Config returned wrong mnemonic")
 	}
-	pk, err := testDB.config.GetIdentityKey()
+	pk, err := testDB.Config().GetIdentityKey()
 	if err != nil {
 		t.Error(err)
 	}
-	testKey := []byte("Private Key")
+	testKey := []byte(key)
 	for i := range pk {
 		if pk[i] != testKey[i] {
 			t.Error("Config returned wrong identity key")
@@ -54,6 +84,12 @@ func TestInit(t *testing.T) {
 }
 
 func TestInterface(t *testing.T) {
+	testDB, teardown, err := buildNewDatastore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	if testDB.Config() != testDB.config {
 		t.Error("Config() return wrong value")
 	}
@@ -90,6 +126,12 @@ func TestInterface(t *testing.T) {
 }
 
 func TestEncryptedDb(t *testing.T) {
+	testDB, teardown, err := buildNewDatastore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	encrypted := testDB.Config().IsEncrypted()
 	if encrypted {
 		t.Error("IsEncrypted returned incorrectly")

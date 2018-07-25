@@ -38,6 +38,8 @@ dist
 .vscode
 .tags*
 *.sw?
+config*
+openbazaar-go*
 
 # macOS
 .DS_Store

@@ -1,23 +1,41 @@
-package db
+package db_test
 
 import (
-	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-var modDB repo.ModeratedStore
-
-func init() {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	modDB = NewModeratedStore(conn, new(sync.Mutex))
+func buildNewModeratedStore() (repo.ModeratedStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return db.NewModeratedStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
 func TestModeratedDB_Put(t *testing.T) {
-	err := modDB.Put("abc")
+	modDB, teardown, err := buildNewModeratedStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	err = modDB.Put("abc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,16 +52,28 @@ func TestModeratedDB_Put(t *testing.T) {
 }
 
 func TestModeratedDB_Put_Duplicate(t *testing.T) {
+	modDB, teardown, err := buildNewModeratedStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	modDB.Put("abc")
-	err := modDB.Put("abc")
+	err = modDB.Put("abc")
 	if err == nil {
 		t.Error("Expected unquire constriant error to be thrown")
 	}
 }
 
 func TestModeratedDB_Delete(t *testing.T) {
+	modDB, teardown, err := buildNewModeratedStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	modDB.Put("abc")
-	err := modDB.Delete("abc")
+	err = modDB.Delete("abc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -57,6 +87,12 @@ func TestModeratedDB_Delete(t *testing.T) {
 }
 
 func TestModeratedDB_Get(t *testing.T) {
+	modDB, teardown, err := buildNewModeratedStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		modDB.Put(strconv.Itoa(i))
 	}

@@ -464,6 +464,10 @@ func (x *Start) Execute(args []string) error {
 		Routing:     DHTOption,
 	}
 
+	if cfg.Ipns.UsePersistentCache {
+		ncfg.ExtraOpts["ipnsps"] = true
+	}
+
 	if onionTransport != nil {
 		ncfg.Host = defaultHostOption
 	}
@@ -490,7 +494,6 @@ func (x *Start) Execute(args []string) error {
 	} else {
 		dhtutil.QuerySize = 16
 	}
-	namesys.UsePersistentCache = cfg.Ipns.UsePersistentCache
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)

@@ -1,22 +1,48 @@
-package db
+package db_test
 
 import (
-	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-var ivdb repo.InventoryStore
+//var ivdb repo.InventoryStore
 
-func init() {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	ivdb = NewInventoryStore(conn, new(sync.Mutex))
+//func init() {
+//conn, _ := sql.Open("sqlite3", ":memory:")
+//initDatabaseTables(conn, "")
+//ivdb = NewInventoryStore(conn, new(sync.Mutex))
+//}
+
+func buildNewInventoryStore() (repo.InventoryStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return db.NewInventoryStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
 func TestPutInventory(t *testing.T) {
-	err := ivdb.Put("slug", 0, 5)
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	err = ivdb.Put("slug", 0, 5)
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,14 +67,26 @@ func TestPutInventory(t *testing.T) {
 }
 
 func TestPutReplaceInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	ivdb.Put("slug", 0, 6)
-	err := ivdb.Put("slug", 0, 5)
+	err = ivdb.Put("slug", 0, 5)
 	if err != nil {
 		t.Error("Error replacing inventory value")
 	}
 }
 
 func TestGetSpecificInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	ivdb.Put("slug", 0, 5)
 	count, err := ivdb.GetSpecific("slug", 0)
 	if err != nil || count != 5 {
@@ -61,8 +99,14 @@ func TestGetSpecificInventory(t *testing.T) {
 }
 
 func TestDeleteInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	ivdb.Put("slug", 0, 5)
-	err := ivdb.Delete("slug", 0)
+	err = ivdb.Delete("slug", 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,9 +120,15 @@ func TestDeleteInventory(t *testing.T) {
 }
 
 func TestDeleteAllInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	ivdb.Put("slug", 0, 5)
 	ivdb.Put("slug", 1, 10)
-	err := ivdb.DeleteAll("slug")
+	err = ivdb.DeleteAll("slug")
 	if err != nil {
 		t.Error(err)
 	}
@@ -92,6 +142,12 @@ func TestDeleteAllInventory(t *testing.T) {
 }
 
 func TestGetAllInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		ivdb.Put("slug1", i, int64(i))
 	}
@@ -114,6 +170,12 @@ func TestGetAllInventory(t *testing.T) {
 }
 
 func TestGetInventory(t *testing.T) {
+	ivdb, teardown, err := buildNewInventoryStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
 	for i := 0; i < 100; i++ {
 		ivdb.Put("slug", i, int64(i))
 	}

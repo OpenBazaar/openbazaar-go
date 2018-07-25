@@ -1,24 +1,41 @@
-package db
+package db_test
 
 import (
-	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-var metDB repo.TransactionMetadataStore
-var m repo.Metadata
-
-func init() {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	metDB = NewTransactionMetadataStore(conn, new(sync.Mutex))
-	m = repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+func buildNewTransactionStore() (repo.TransactionMetadataStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
+	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return db.NewTransactionMetadataStore(database, new(sync.Mutex)), appSchema.DestroySchemaDirectories, nil
 }
 
 func TestTxMetadataDB_Put(t *testing.T) {
-	err := metDB.Put(m)
+	metDB, teardown, err := buildNewTransactionStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -51,7 +68,14 @@ func TestTxMetadataDB_Put(t *testing.T) {
 }
 
 func TestTxMetadataDB_Get(t *testing.T) {
-	err := metDB.Put(m)
+	metDB, teardown, err := buildNewTransactionStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +104,14 @@ func TestTxMetadataDB_Get(t *testing.T) {
 }
 
 func TestTxMetadataDB_GetAll(t *testing.T) {
-	err := metDB.Put(m)
+	metDB, teardown, err := buildNewTransactionStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -116,7 +147,14 @@ func TestTxMetadataDB_GetAll(t *testing.T) {
 }
 
 func TestTxMetadataDB_Delete(t *testing.T) {
-	err := metDB.Put(m)
+	metDB, teardown, err := buildNewTransactionStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	m := repo.Metadata{"16e4a210d8c798f7d7a32584038c1f55074377bdd19f4caa24edb657fff9538f", "1Xtkf3Rdq6eix4tFXpEuHdXfubt3Mt452", "Some memo", "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "QmZY1kx6VrNjgDB4SJDByxvSVuiBfsisRLdUMJRDppTTsS", false}
+	err = metDB.Put(m)
 	if err != nil {
 		t.Error(err)
 	}
