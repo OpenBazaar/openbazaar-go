@@ -19,12 +19,11 @@ import (
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 )
 
 var log = logging.Logger("namesys")
-var cachePrefix = "IPNSPERSISENTCACHE_"
 var keyCachePrefix= "IPNSPUBKEYCACHE_"
-var UsePersistentCache bool
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
@@ -117,9 +116,9 @@ func (r *routingResolver) Resolve(ctx context.Context, name string, options ...o
 
 // resolveOnce implements resolver. Uses the IPFS routing system to
 // resolve SFS-like names.
-func (r *routingResolver) resolveOnce(ctx context.Context, name string, options *opts.ResolveOpts) (path.Path, error) {
-	log.Debugf("RoutingResolver resolving %s", name)
-	cached, ok := r.cacheGet(name)
+func (r *routingResolver) resolveOnce(ctx context.Context, pname string, options *opts.ResolveOpts) (path.Path, error) {
+	log.Debugf("RoutingResolver resolving %s", pname)
+	cached, ok := r.cacheGet(pname)
 	if ok {
 		return cached, nil
 	}
@@ -131,7 +130,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string, options 
 		defer cancel()
 	}
 
-	name = strings.TrimPrefix(name, "/ipns/")
+	name := strings.TrimPrefix(pname, "/ipns/")
 	split := strings.SplitN(name, ":", 2)
 	name = split[0]
 
@@ -176,7 +175,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string, options 
 	}()
 
 	go func() {
-		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + hash.B58String()))
+		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + pname))
 		if err == nil {
 			b, ok := val.([]byte)
 			if ok {
@@ -200,23 +199,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string, options 
 
 	for i := 0; i < 2; i++ {
 		err = <-resp
-		if err != nil && UsePersistentCache {
-			val, err := r.datastore.Get(ds.NewKey(cachePrefix + name))
-			if err != nil {
-				return "", err
-			}
-
-			entry := new(pb.IpnsEntry)
-			err = proto.Unmarshal(val.([]byte), entry)
-			if err != nil {
-				return "", err
-			}
-			p, err := path.ParsePath(string(entry.GetValue()))
-			if err != nil {
-				return "", err
-			}
-			return p, nil
-		} else if err != nil {
+		if err != nil {
 			return "", err
 		}
 	}
@@ -232,20 +215,18 @@ func (r *routingResolver) resolveOnce(ctx context.Context, name string, options 
 			return "", err
 		}
 
-		r.cacheSet(name, p, entry)
+		r.cacheSet(pname, p, entry)
 		go func() {
-			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+hash.B58String()), pubkeyBytes)
+			putToDatabase(r.datastore, pname, val, pubkeyBytes)
 		}()
 		return p, nil
 	} else {
 		// Its an old style multihash record
 		log.Debugf("encountered CIDv0 ipns entry: %s", valh)
 		p := path.FromCid(cid.NewCidV0(valh))
-		r.cacheSet(name, p, entry)
+		r.cacheSet(pname, p, entry)
 		go func() {
-			r.datastore.Put(ds.NewKey(cachePrefix+name), val)
-			r.datastore.Put(ds.NewKey(keyCachePrefix+hash.B58String()), pubkeyBytes)
+			putToDatabase(r.datastore, pname, val, pubkeyBytes)
 		}()
 		return p, nil
 	}
@@ -293,4 +274,9 @@ func checkEOL(e *pb.IpnsEntry) (time.Time, bool) {
 		return eol, true
 	}
 	return time.Time{}, false
+}
+
+func putToDatabase(datastore ds.Datastore, name string, ipnsRec, pubkey []byte) {
+	datastore.Put(dshelp.NewKeyFromBinary([]byte(name)), ipnsRec)
+	datastore.Put(ds.NewKey(keyCachePrefix+name), pubkey)
 }
