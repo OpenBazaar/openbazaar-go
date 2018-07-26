@@ -294,7 +294,10 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, _ := sqliteDB.Config().GetCreationDate()
+	creationDate, err := sqliteDB.Config().GetCreationDate()
+	if err != nil {
+		log.Error("error loading wallet creation date from database - using unix epoch.")
+	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
