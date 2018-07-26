@@ -1,11 +1,12 @@
 package core_test
 
 import (
+	"testing"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/golang/protobuf/proto"
-	"testing"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -159,9 +160,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{couponHash.B58String()},
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
 			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PercentDiscount{10},
+			Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 10},
 		},
 	}
 
@@ -190,9 +191,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 	}
 	contract.VendorListings[0].Coupons = []*pb.Listing_Coupon{
 		{
-			Code:     &pb.Listing_Coupon_Hash{couponHash.B58String()},
+			Code:     &pb.Listing_Coupon_Hash{Hash: couponHash.B58String()},
 			Title:    "coup",
-			Discount: &pb.Listing_Coupon_PriceDiscount{6000},
+			Discount: &pb.Listing_Coupon_PriceDiscount{PriceDiscount: 6000},
 		},
 	}
 

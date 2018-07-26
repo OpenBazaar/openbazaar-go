@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -55,7 +56,7 @@ type SavedRating struct {
 
 func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -363,7 +364,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 		return err
 	}
 
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderId, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
