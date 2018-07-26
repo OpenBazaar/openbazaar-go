@@ -1922,7 +1922,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderId)
+	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return

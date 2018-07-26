@@ -3,10 +3,11 @@ package core_test
 import (
 	"testing"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
-	"github.com/golang/protobuf/proto"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
