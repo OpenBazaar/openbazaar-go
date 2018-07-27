@@ -20,7 +20,6 @@ import (
 	record "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record"
 	dhtpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	dssync "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore/sync"
 	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
@@ -28,6 +27,8 @@ import (
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 )
+
+var ErrorNotSubscribed = errors.New("cache is stale because not subscribed to name")
 
 // PubsubPublisher is a publisher that distributes IPNS records through pubsub
 type PubsubPublisher struct {
@@ -70,10 +71,10 @@ func NewPubsubPublisher(ctx context.Context, host p2phost.Host, ds ds.Datastore,
 
 // NewPubsubResolver constructs a new Resolver that resolves IPNS records through pubsub.
 // same as above for pubsub bootstrap dependencies
-func NewPubsubResolver(ctx context.Context, host p2phost.Host, cr routing.ContentRouting, pkf routing.PubKeyFetcher, ps *floodsub.PubSub) *PubsubResolver {
+func NewPubsubResolver(ctx context.Context, host p2phost.Host, ds ds.Datastore, cr routing.ContentRouting, pkf routing.PubKeyFetcher, ps *floodsub.PubSub) *PubsubResolver {
 	return &PubsubResolver{
 		ctx:  ctx,
-		ds:   dssync.MutexWrap(ds.NewMapDatastore()),
+		ds:   ds,
 		host: host, // needed for pubsub bootstrap
 		cr:   cr,   // needed for pubsub bootstrap
 		pkf:  pkf,
@@ -237,6 +238,8 @@ func (r *PubsubResolver) resolveOnce(ctx context.Context, name string, options *
 		ctx, cancel := context.WithCancel(r.ctx)
 		go r.handleSubscription(sub, name, pubk, cancel)
 		go bootstrapPubsub(ctx, r.cr, r.host, name)
+		r.mx.Unlock()
+		return "", ErrorNotSubscribed
 	}
 	r.mx.Unlock()
 
@@ -255,17 +258,6 @@ func (r *PubsubResolver) resolveOnce(ctx context.Context, name string, options *
 	err = proto.Unmarshal(data, entry)
 	if err != nil {
 		return "", err
-	}
-
-	// check EOL; if the entry has expired, delete from datastore and return ds.ErrNotFound
-	eol, ok := checkEOL(entry)
-	if ok && eol.Before(time.Now()) {
-		err = r.ds.Delete(dshelp.NewKeyFromBinary([]byte(name)))
-		if err != nil {
-			log.Warningf("PubsubResolve: error deleting stale value for %s: %s", name, err.Error())
-		}
-
-		return "", ErrResolveFailed
 	}
 
 	value, err := path.ParsePath(string(entry.GetValue()))

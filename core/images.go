@@ -13,14 +13,9 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
-	"golang.org/x/net/context"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"io/ioutil"
 	"net/http"
 	netUrl "net/url"
@@ -154,100 +149,12 @@ func (n *OpenBazaarNode) FetchHeader(peerId string, size string, useCache bool) 
 }
 
 func (n *OpenBazaarNode) FetchImage(peerId string, imageType string, size string, useCache bool) (io.DagReader, error) {
-	fetch := func(rootHash string) (io.DagReader, error) {
-		var dr io.DagReader
-		var err error
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
-		defer cancel()
-		if rootHash == "" {
-			query := "/ipns/" + peerId + "/images/" + size + "/" + imageType
-			dr, err = coreunix.Cat(ctx, n.IpfsNode, query)
-			if err != nil {
-				return dr, err
-			}
-		} else {
-			query := "/ipfs/" + rootHash + "/images/" + size + "/" + imageType
-			dr, err = coreunix.Cat(ctx, n.IpfsNode, query)
-			if err != nil {
-				return dr, err
-			}
-		}
-		return dr, nil
+	query := "/ipns/" + peerId + "/images/" + size + "/" + imageType
+	b, err := n.IPNSResolveThenCat(ipnspath.FromString(query), time.Minute, useCache)
+	if err != nil {
+		return nil, err
 	}
-
-	var dr io.DagReader
-	var err error
-	var recordAvailable bool
-	var val interface{}
-	if useCache {
-		val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
-		if err != nil { // No record in datastore
-			dr, err = fetch("")
-			if err != nil {
-				return dr, err
-			}
-		} else { // Record available, let's see how old it is
-			entry := new(ipnspb.IpnsEntry)
-			err = proto.Unmarshal(val.([]byte), entry)
-			if err != nil {
-				return dr, err
-			}
-			p, err := ipnspath.ParsePath(string(entry.GetValue()))
-			if err != nil {
-				return dr, err
-			}
-			cacheExpiry := time.Time{}
-			if entry.Ttl != nil {
-				cacheExpiry = time.Unix(int64(*entry.Ttl), 0)
-			}
-			if cacheExpiry.Before(time.Now()) { // Too old, fetch new profile
-				dr, err = fetch("")
-				if err != nil { // Not found, let's just return what we have
-					dr, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
-				}
-			} else { // Relatively new, we can do a standard IPFS query (which should be cached)
-				dr, err = fetch(strings.TrimPrefix(p.String(), "/ipfs/"))
-				// Let's now try to get the latest record in a new goroutine so it's available next time
-				go fetch("")
-			}
-			if err != nil {
-				return dr, err
-			}
-			recordAvailable = true
-		}
-	} else {
-		dr, err = fetch("")
-		if err != nil {
-			return dr, err
-		}
-		recordAvailable = false
-	}
-
-	// Update the record with a new EOL
-	go func() {
-		if !recordAvailable {
-			val, err = n.IpfsNode.Repo.Datastore().Get(ds.NewKey(CachePrefix + peerId))
-			if err != nil {
-				return
-			}
-		}
-		entry := new(ipnspb.IpnsEntry)
-		err = proto.Unmarshal(val.([]byte), entry)
-		if err != nil {
-			return
-		}
-		// Update the ttl field on the record with a new ttl so next time we fetch from cache
-		// the record wont be expired causing us to fetch from the DHT.
-		ttl := uint64(time.Now().Add(CachedProfileTime).Unix())
-		entry.Ttl = &ttl
-		v, err := proto.Marshal(entry)
-		if err != nil {
-			return
-		}
-		n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), v)
-	}()
-	return dr, nil
+	return io.NewBufDagReader(b), nil
 }
 
 func (n *OpenBazaarNode) GetBase64Image(url string) (base64ImageData, filename string, err error) {

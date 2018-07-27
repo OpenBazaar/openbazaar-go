@@ -11,6 +11,7 @@ import (
 	npb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipfspath "github.com/ipfs/go-ipfs/path"
 	ipnspath "github.com/ipfs/go-ipfs/path"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
@@ -28,9 +29,9 @@ as a last ditch effort if it fails to find the record in the DHT. The API endpoi
 We need to take care to observe the Tor preference.
 */
 
-func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time.Duration) ([]byte, error) {
+func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time.Duration, usecache bool) ([]byte, error) {
 	var ret []byte
-	hash, err := n.IPNSResolve(ipnsPath.Segments()[0], timeout)
+	hash, err := n.IPNSResolve(ipnsPath.Segments()[0], timeout, usecache)
 	if err != nil {
 		return ret, err
 	}
@@ -46,12 +47,12 @@ func (n *OpenBazaarNode) IPNSResolveThenCat(ipnsPath ipfspath.Path, timeout time
 	return b, nil
 }
 
-func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (string, error) {
+func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration, usecache bool) (string, error) {
 	pid, err := peer.IDB58Decode(peerId)
 	if err != nil {
 		return "", err
 	}
-	val, err := ipfs.Resolve(n.IpfsNode, pid, timeout)
+	val, err := ipfs.Resolve(n.IpfsNode, pid, timeout, usecache)
 	if err != nil && n.IPNSBackupAPI != "" {
 		dial := net.Dial
 		if n.TorDialer != nil {
@@ -127,8 +128,8 @@ func (n *OpenBazaarNode) IPNSResolve(peerId string, timeout time.Duration) (stri
 		}
 
 		go func() {
-			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(CachePrefix+peerId), entryBytes)
-			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+peerId), pubkeyBytes)
+			n.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte("/ipns/"+pid.Pretty())), entryBytes)
+			n.IpfsNode.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+pid.Pretty()), pubkeyBytes)
 		}()
 
 		p, err := ipnspath.ParsePath(string(entry.Value))

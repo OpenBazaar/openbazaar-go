@@ -1404,7 +1404,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 // ValidateModeratedPaymentAddress - validate moderator address
 func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeout time.Duration) error {
 	ipnsPath := ipfspath.FromString(order.Payment.Moderator + "/profile.json")
-	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute)
+	profileBytes, err := n.IPNSResolveThenCat(ipnsPath, time.Minute, true)
 	if err != nil {
 		return err
 	}
