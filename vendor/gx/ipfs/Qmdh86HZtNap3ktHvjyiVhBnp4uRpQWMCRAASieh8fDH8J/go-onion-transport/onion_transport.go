@@ -1,26 +1,25 @@
 package torOnion
 
 import (
+	"context"
+	"crypto/rsa"
+	"encoding/base32"
+	"encoding/pem"
 	"fmt"
+	"github.com/yawning/bulb"
+	"github.com/yawning/bulb/utils/pkcs1"
+	"golang.org/x/net/proxy"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
 	mafmt "gx/ipfs/QmTy17Jm1foTnvUS9JXRhLbRQ3XuC64jPTjUfpB4mHz2QM/mafmt"
 	tpt "gx/ipfs/QmVxtCwKFMmwcjhQXsGj6m4JAW7nGb9hRoErH9jpgqcLxA/go-libp2p-transport"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-
-	"context"
-	"crypto/rsa"
-	"encoding/base32"
-	"encoding/pem"
-	"github.com/yawning/bulb"
-	"github.com/yawning/bulb/utils/pkcs1"
-	"golang.org/x/net/proxy"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 // IsValidOnionMultiAddr is used to validate that a multiaddr
@@ -81,20 +80,18 @@ type OnionTransport struct {
 // controlNet and controlAddr contain the connecting information
 // for the tor control port; either TCP or UNIX domain socket.
 //
-// auth contains the optional tor control password
+// controlPass contains the optional tor control password
+//
+// auth contains the socks proxy username and password
 // keysDir is the key material for the Tor onion service.
 //
 // if onlyOnion is true the dialer will only be used to dial out on onion addresses
-func NewOnionTransport(controlNet, controlAddr string, auth *proxy.Auth, keysDir string, onlyOnion bool) (*OnionTransport, error) {
+func NewOnionTransport(controlNet, controlAddr, controlPass string, auth *proxy.Auth, keysDir string, onlyOnion bool) (*OnionTransport, error) {
 	conn, err := bulb.Dial(controlNet, controlAddr)
 	if err != nil {
 		return nil, err
 	}
-	var pw string
-	if auth != nil {
-		pw = auth.Password
-	}
-	if err := conn.Authenticate(pw); err != nil {
+	if err := conn.Authenticate(controlPass); err != nil {
 		return nil, fmt.Errorf("Authentication failed: %v", err)
 	}
 	o := OnionTransport{
@@ -125,7 +122,7 @@ func (t *OnionTransport) TorDialer() (proxy.Dialer, error) {
 // loadKeys loads keys into our keys map from files in the keys directory
 func (t *OnionTransport) loadKeys() (map[string]*rsa.PrivateKey, error) {
 	keys := make(map[string]*rsa.PrivateKey)
-	absPath, err := filepath.Abs(t.keysDir)
+	absPath, err := filepath.EvalSymlinks(t.keysDir)
 	if err != nil {
 		return nil, err
 	}
@@ -210,8 +207,7 @@ func (t *OnionTransport) Listen(laddr ma.Multiaddr) (tpt.Listener, error) {
 	return &listener, nil
 }
 
-// Matches returns true if onlyOnion and the given multiaddr represents a Tor onion service otherwise it checks
-// for onion, TCP, and WS.
+// Matches returns true if the address is a valid onion multiaddr
 func (t *OnionTransport) Matches(a ma.Multiaddr) bool {
 	return IsValidOnionMultiAddr(a)
 }
