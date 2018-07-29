@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -16,36 +14,61 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
 	"github.com/kennygrant/sanitize"
 	"github.com/microcosm-cc/bluemonday"
+
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 const (
-	ListingVersion           = 4
-	TitleMaxCharacters       = 140
-	ShortDescriptionLength   = 160
+	// ListingVersion - current listing version
+	ListingVersion = 4
+	// TitleMaxCharacters - max size for title
+	TitleMaxCharacters = 140
+	// ShortDescriptionLength - min length for description
+	ShortDescriptionLength = 160
+	// DescriptionMaxCharacters - max length for description
 	DescriptionMaxCharacters = 50000
-	MaxTags                  = 10
-	MaxCategories            = 10
-	MaxListItems             = 30
-	FilenameMaxCharacters    = 255
-	CodeMaxCharacters        = 20
-	WordMaxCharacters        = 40
-	SentenceMaxCharacters    = 70
+	// MaxTags - max permitted tags
+	MaxTags = 10
+	// MaxCategories - max permitted categories
+	MaxCategories = 10
+	// MaxListItems - max items in a listing
+	MaxListItems = 30
+	// FilenameMaxCharacters - max filename size
+	FilenameMaxCharacters = 255
+	// CodeMaxCharacters - max chars for a code
+	CodeMaxCharacters = 20
+	// WordMaxCharacters - max chars for word
+	WordMaxCharacters = 40
+	// SentenceMaxCharacters - max chars for sentence
+	SentenceMaxCharacters = 70
+	// CouponTitleMaxCharacters - max length of a coupon title
 	CouponTitleMaxCharacters = 70
-	PolicyMaxCharacters      = 10000
-	AboutMaxCharacters       = 10000
-	URLMaxCharacters         = 2000
-	MaxCountryCodes          = 255
-	EscrowTimeout            = 1080
-	SlugBuffer               = 5
-	PriceModifierMin         = -99.99
-	PriceModifierMax         = 1000.00
+	// PolicyMaxCharacters - max length for policy
+	PolicyMaxCharacters = 10000
+	// AboutMaxCharacters - max length for about
+	AboutMaxCharacters = 10000
+	// URLMaxCharacters - max length for URL
+	URLMaxCharacters = 2000
+	// MaxCountryCodes - max country codes
+	MaxCountryCodes = 255
+	// EscrowTimeout - escrow timeout in hours
+	EscrowTimeout = 1080
+	// SlugBuffer - buffer size for slug
+	SlugBuffer = 5
+	// PriceModifierMin - min price modifier
+	PriceModifierMin = -99.99
+	// PriceModifierMax = max price modifier
+	PriceModifierMax = 1000.00
 
+	// DefaultCoinDivisibility - decimals for price
 	DefaultCoinDivisibility uint32 = 1e8
 
 	priceModifierListingVersion = 4
@@ -61,6 +84,8 @@ type thumbnail struct {
 	Small  string `json:"small"`
 	Medium string `json:"medium"`
 }
+
+// ListingData - represent a listing
 type ListingData struct {
 	Hash               string    `json:"hash"`
 	Slug               string    `json:"slug"`
@@ -81,6 +106,7 @@ type ListingData struct {
 	CoinType           string    `json:"coinType"`
 }
 
+// GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
 	slugFromTitle := func(title string) string {
@@ -105,7 +131,7 @@ func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	}
 }
 
-// Add our identity to the listing and sign it
+// SignListing Add our identity to the listing and sign it
 func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, error) {
 	// Set inventory to the default as it's not part of the contract
 	for _, s := range listing.Item.Skus {
@@ -195,10 +221,10 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 				return sl, err
 			}
 
-			listing.Coupons[i].Code = &pb.Listing_Coupon_Hash{couponMH.B58String()}
+			listing.Coupons[i].Code = &pb.Listing_Coupon_Hash{Hash: couponMH.B58String()}
 			hash = couponMH.B58String()
 		}
-		c := repo.Coupon{listing.Slug, code, hash}
+		c := repo.Coupon{Slug: listing.Slug, Code: code, Hash: hash}
 		couponsToStore = append(couponsToStore, c)
 	}
 	err = n.Datastore.Coupons().Put(couponsToStore)
@@ -220,8 +246,8 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	return sl, nil
 }
 
-/* Sets the inventory for the listing in the database. Does some basic validation
-   to make sure the inventory uses the correct variants. */
+/*SetListingInventory Sets the inventory for the listing in the database. Does some basic validation
+  to make sure the inventory uses the correct variants. */
 func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	err := validateListingSkus(listing)
 	if err != nil {
@@ -271,6 +297,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	return nil
 }
 
+// CreateListing - add a listing
 func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
 	exists, err := n.listingExists(listing.Slug)
 	if err != nil {
@@ -291,6 +318,7 @@ func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
 	return n.saveListing(listing)
 }
 
+// UpdateListing - update the listing
 func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 	exists, err := n.listingExists(listing.Slug)
 	if err != nil {
@@ -604,7 +632,7 @@ func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingDat
 	return nil
 }
 
-// Return the current number of listings
+// GetListingCount Return the current number of listings
 func (n *OpenBazaarNode) GetListingCount() int {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 
@@ -622,7 +650,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 	return len(index)
 }
 
-// Check to see we are selling the given listing. Used when validating an order.
+// IsItemForSale Check to see we are selling the given listing. Used when validating an order.
 // FIXME: This wont scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
@@ -669,7 +697,7 @@ func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	return false
 }
 
-// Deletes the listing directory, removes the listing from the index, and deletes the inventory
+// DeleteListing Deletes the listing directory, removes the listing from the index, and deletes the inventory
 func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	toDelete := path.Join(n.RepoPath, "root", "listings", slug+".json")
 	err := os.Remove(toDelete)
@@ -733,6 +761,7 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 	return n.updateProfileCounts()
 }
 
+// GetListings - fetch all listings
 func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
 	file, err := ioutil.ReadFile(indexPath)
@@ -753,6 +782,7 @@ func (n *OpenBazaarNode) GetListings() ([]byte, error) {
 	return file, nil
 }
 
+// GetListingFromHash - fetch listing for the specified hash
 func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, error) {
 	// Read listings.json
 	indexPath := path.Join(n.RepoPath, "root", "listings.json")
@@ -783,6 +813,7 @@ func (n *OpenBazaarNode) GetListingFromHash(hash string) (*pb.SignedListing, err
 	return n.GetListingFromSlug(slug)
 }
 
+// GetListingFromSlug - fetch listing for the specified slug
 func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, error) {
 	// Read listing file
 	listingPath := path.Join(n.RepoPath, "root", "listings", slug+".json")
