@@ -980,17 +980,11 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 				shippingTaxPercentage = tax.Percentage / 100
 			}
 		}
-		var q uint64
-		if listing.Metadata.Version < 3 {
-			q = uint64(item.Quantity)
-		} else {
-			q = uint64(item.Quantity64)
-		}
 
 		is = append(is, itemShipping{
 			primary:               shippingSatoshi,
 			secondary:             secondarySatoshi,
-			quantity:              q,
+			quantity:              quantityForItem(listing.Metadata.Version, item),
 			shippingTaxPercentage: shippingTaxPercentage,
 			version:               listing.Metadata.Version,
 		})
@@ -1027,6 +1021,14 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
 
 	return shippingTotal, nil
+}
+
+func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
+	if version < 3 {
+		return uint64(item.Quantity)
+	} else {
+		return item.Quantity64
+	}
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
