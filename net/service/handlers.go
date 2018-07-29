@@ -1246,10 +1246,10 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	}
 
 	// Validate
-	if len(chat.Subject) > core.CHAT_SUBJECT_MAX_CHARACTERS {
+	if len(chat.Subject) > core.ChatSubjectMaxCharacters {
 		return nil, errors.New("Chat subject over max characters")
 	}
-	if len(chat.Message) > core.CHAT_MESSAGE_MAX_CHARACTERS {
+	if len(chat.Message) > core.ChatMessageMaxCharacters {
 		return nil, errors.New("Chat message over max characters")
 	}
 
