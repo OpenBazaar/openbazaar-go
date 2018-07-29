@@ -905,7 +905,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	type itemShipping struct {
 		primary               uint64
 		secondary             uint64
-		quantity              uint32
+		quantity              uint64
 		shippingTaxPercentage float32
 		version               uint32
 	}
@@ -980,11 +980,17 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 				shippingTaxPercentage = tax.Percentage / 100
 			}
 		}
+		var q uint64
+		if listing.Metadata.Version < 3 {
+			q = uint64(item.Quantity)
+		} else {
+			q = uint64(item.Quantity64)
+		}
 
 		is = append(is, itemShipping{
 			primary:               shippingSatoshi,
 			secondary:             secondarySatoshi,
-			quantity:              item.Quantity,
+			quantity:              q,
 			shippingTaxPercentage: shippingTaxPercentage,
 			version:               listing.Metadata.Version,
 		})
