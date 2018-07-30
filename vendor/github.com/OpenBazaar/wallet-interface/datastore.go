@@ -1,12 +1,17 @@
 package wallet
 
 import (
-	"bytes"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"time"
+	"github.com/btcsuite/btcutil"
 )
+
+type Coin interface {
+	String() string
+	CurrencyCode() string
+}
 
 type CoinType uint32
 
@@ -14,7 +19,8 @@ const (
 	Bitcoin     CoinType = 0
 	Litecoin             = 1
 	Zcash                = 133
-	BitcoinCash CoinType = 145
+	BitcoinCash          = 145
+	Ethereum             = 60
 )
 
 func (c *CoinType) String() string {
@@ -27,6 +33,25 @@ func (c *CoinType) String() string {
 		return "Zcash"
 	case Litecoin:
 		return "Litecoin"
+	case Ethereum:
+		return "Ethereum"
+	default:
+		return ""
+	}
+}
+
+func (c *CoinType) CurrencyCode() string {
+	switch *c {
+	case Bitcoin:
+		return "BTC"
+	case BitcoinCash:
+		return "BCH"
+	case Zcash:
+		return "ZEC"
+	case Litecoin:
+		return "LTC"
+	case Ethereum:
+		return "ETH"
 	default:
 		return ""
 	}
@@ -139,8 +164,8 @@ type Utxo struct {
 	// The higher the better
 	Value int64
 
-	// Output script
-	ScriptPubkey []byte
+	// Output address
+	Address btcutil.Address
 
 	// If true this utxo will not be selected for spending. The primary
 	// purpose is track multisig UTXOs which must have separate handling
@@ -169,7 +194,7 @@ func (utxo *Utxo) IsEqual(alt *Utxo) bool {
 		return false
 	}
 
-	if bytes.Compare(utxo.ScriptPubkey, alt.ScriptPubkey) != 0 {
+	if utxo.Address.String() != alt.Address.String() {
 		return false
 	}
 

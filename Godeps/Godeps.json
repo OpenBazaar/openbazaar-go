@@ -25,7 +25,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "b5d09d063f757ab7a32b863df40cba9ccb8add4c"
+			"Rev": "cac3412ae583e35be44870c5f771bf4932396a40"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
