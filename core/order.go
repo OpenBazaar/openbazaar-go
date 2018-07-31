@@ -21,7 +21,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -703,19 +702,14 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			hash, err := chainhash.NewHashFromStr(r.Txid)
-			if err != nil {
-				return err
-			}
 			addr, err := n.Wallet.DecodeAddress(r.Address)
 			if err != nil {
 				return err
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
 			u := wallet.TransactionInput{
 				LinkedAddress: addr,
-				OutpointIndex: outpoint.Index,
-				OutpointHash:  outpoint.Hash.CloneBytes(),
+				OutpointIndex: r.Index,
+				OutpointHash:  []byte(r.Txid),
 				Value:         r.Value,
 			}
 			txInputs = append(txInputs, u)

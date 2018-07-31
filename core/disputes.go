@@ -1061,7 +1061,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.VendorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(n.Wallet, contract.DisputeResolution.Payout.BuyerOutput)
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(n.Wallet, contract.DisputeResolution.Payout.VendorOutput)
 		if err != nil {
 			return err
 		}
@@ -1072,7 +1072,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
-		addr, err := pb.DisputeResolutionPayoutOutputToAddress(n.Wallet, contract.DisputeResolution.Payout.BuyerOutput)
+		addr, err := pb.DisputeResolutionPayoutOutputToAddress(n.Wallet, contract.DisputeResolution.Payout.ModeratorOutput)
 		if err != nil {
 			return err
 		}

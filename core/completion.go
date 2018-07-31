@@ -18,7 +18,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -163,12 +162,17 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				addr, err := n.Wallet.DecodeAddress(r.Address)
 				if err != nil {
 					return err
 				}
 				outValue += r.Value
-				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{
+					LinkedAddress: addr,
+					OutpointIndex: r.Index,
+					OutpointHash:  []byte(r.Txid),
+					Value:         r.Value,
+				}
 				ins = append(ins, in)
 			}
 		}
@@ -321,12 +325,11 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			if err != nil {
 				return err
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
 			var txInput = wallet.TransactionInput{
 				Value:         r.Value,
 				LinkedAddress: addr,
-				OutpointIndex: outpoint.Index,
-				OutpointHash:  outpoint.Hash.CloneBytes(),
+				OutpointIndex: r.Index,
+				OutpointHash:  []byte(r.Txid),
 			}
 			txInputs = append(txInputs, txInput)
 		}
