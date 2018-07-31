@@ -45,15 +45,10 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			}
 		}
 
-		var output wallet.TransactionOutput
-
-		outputScript, err := n.Wallet.AddressToScript(currentAddress)
-		if err != nil {
-			return err
+		var output = wallet.TransactionOutput{
+			Address: currentAddress,
+			Value:   outValue,
 		}
-		output.ScriptPubKey = outputScript
-		output.Value = outValue
-
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
 			return err
