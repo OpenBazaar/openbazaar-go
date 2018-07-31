@@ -317,9 +317,14 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 				return EscrowTimeLockedError
 			}
 
+			addr, err := n.Wallet.DecodeAddress(r.Address)
+			if err != nil {
+				return err
+			}
 			outpoint := wire.NewOutPoint(hash, r.Index)
 			var txInput = wallet.TransactionInput{
 				Value:         r.Value,
+				LinkedAddress: addr,
 				OutpointIndex: outpoint.Index,
 				OutpointHash:  outpoint.Hash.CloneBytes(),
 			}
