@@ -44,14 +44,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		var output wallet.TransactionOutput
-
-		outputScript, err := n.Wallet.AddressToScript(refundAddress)
-		if err != nil {
-			return err
+		output := wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
 		}
-		output.ScriptPubKey = outputScript
-		output.Value = outValue
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
