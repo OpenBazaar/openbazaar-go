@@ -540,7 +540,6 @@ func (n *OpenBazaarNode) CloseDispute(orderId string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	var modOutputScript []byte
 	if modValue > 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
