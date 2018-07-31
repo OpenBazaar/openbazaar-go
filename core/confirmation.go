@@ -106,6 +106,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 				}
 				outpoint := wire.NewOutPoint(hash, r.Index)
 				txInput := wallet.TransactionInput{
+					LinkedAddress: r.Address,
 					OutpointIndex: outpoint.Index,
 					OutpointHash:  outpoint.Hash.CloneBytes(),
 					Value:         r.Value,
@@ -183,7 +184,12 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 					return err
 				}
 				outValue += r.Value
-				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
+				in := wallet.TransactionInput{
+					LinkedAddress: r.Address,
+					OutpointIndex: r.Index,
+					OutpointHash:  outpointHash,
+					Value:         r.Value,
+				}
 				ins = append(ins, in)
 			}
 		}
