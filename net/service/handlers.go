@@ -329,11 +329,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		script, err := service.node.Wallet.AddressToScript(addr)
-		if err != nil {
-			return errorResponse(err.Error()), err
-		}
-		service.node.Wallet.AddWatchedScript(script)
+		service.node.Wallet.AddWatchedAddress(addr)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
 			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
@@ -360,11 +356,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		script, err := service.node.Wallet.AddressToScript(addr)
-		if err != nil {
-			return errorResponse(err.Error()), err
-		}
-		service.node.Wallet.AddWatchedScript(script)
+		service.node.Wallet.AddWatchedAddress(addr)
 		contract, err = service.node.NewOrderConfirmation(contract, false, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("Error building order confirmation")
@@ -399,12 +391,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		script, err := service.node.Wallet.AddressToScript(addr)
-		if err != nil {
-			log.Error(err)
-			return errorResponse(err.Error()), err
-		}
-		service.node.Wallet.AddWatchedScript(script)
+		service.node.Wallet.AddWatchedAddress(addr)
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
@@ -551,23 +538,26 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the address into our wallet
-		var utxos []wallet.Utxo
+		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := wallet.Utxo{}
-				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-				if err != nil {
-					return nil, err
-				}
-				u.ScriptPubkey = scriptBytes
 				hash, err := chainhash.NewHashFromStr(r.Txid)
 				if err != nil {
 					return nil, err
 				}
+				addr, err := service.node.Wallet.DecodeAddress(r.Address)
+				if err != nil {
+					return nil, err
+				}
 				outpoint := wire.NewOutPoint(hash, r.Index)
-				u.Op = *outpoint
-				u.Value = r.Value
-				utxos = append(utxos, u)
+				u := wallet.TransactionInput{
+					OutpointHash:  outpoint.Hash.CloneBytes(),
+					OutpointIndex: outpoint.Index,
+					LinkedAddress: addr,
+					Value:         r.Value,
+				}
+
+				txInputs = append(txInputs, u)
 			}
 		}
 
@@ -602,7 +592,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		_, err = service.node.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+		_, err = service.node.Wallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}
@@ -625,13 +615,10 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output wallet.TransactionOutput
-		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
-		if err != nil {
-			return nil, err
+		var output = wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
 		}
-		output.ScriptPubKey = outputScript
-		output.Value = outValue
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -749,13 +736,10 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output wallet.TransactionOutput
-		outputScript, err := service.node.Wallet.AddressToScript(refundAddress)
-		if err != nil {
-			return nil, err
+		var output = wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
 		}
-		output.ScriptPubKey = outputScript
-		output.Value = outValue
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -959,13 +943,10 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		} else {
 			payoutAddress = service.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 		}
-		var output wallet.TransactionOutput
-		outputScript, err := service.node.Wallet.AddressToScript(payoutAddress)
-		if err != nil {
-			return nil, err
+		var output = wallet.TransactionOutput{
+			Address: payoutAddress,
+			Value:   outValue,
 		}
-		output.ScriptPubKey = outputScript
-		output.Value = outValue
 
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
 		if err != nil {
