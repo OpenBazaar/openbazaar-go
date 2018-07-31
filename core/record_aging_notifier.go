@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 const (
@@ -27,6 +28,7 @@ type recordAgingNotifier struct {
 	stopWorker    chan bool
 }
 
+// StartRecordAgingNotifier - start the notifier
 func (n *OpenBazaarNode) StartRecordAgingNotifier() {
 	n.RecordAgingNotifier = &recordAgingNotifier{
 		datastore:     n.Datastore,
@@ -69,7 +71,7 @@ func (notifier *recordAgingNotifier) Stop() {
 }
 
 func (notifier *recordAgingNotifier) PerformTask() {
-	notifier.runCount += 1
+	notifier.runCount++ // += 1
 	notifier.logger.Debugf("performTask started (count %d)", notifier.runCount)
 
 	if err := notifier.generateSellerDisputeNotifications(); err != nil {

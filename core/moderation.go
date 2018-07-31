@@ -3,8 +3,6 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -12,14 +10,21 @@ import (
 	"strings"
 
 	"github.com/OpenBazaar/jsonpb"
+	"golang.org/x/net/context"
+
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"golang.org/x/net/context"
 )
 
+// ModeratorPointerID  moderator ipfs multihash
 var ModeratorPointerID multihash.Multihash
 
-var NoListingsError error = errors.New("No listings to set moderators on")
+// ErrNoListings - no listing error
+// FIXME : This is not used anywhere
+var ErrNoListings = errors.New("no listings to set moderators on")
 
 func init() {
 	modHash := sha256.Sum256([]byte("moderators"))
@@ -34,6 +39,7 @@ func init() {
 	ModeratorPointerID = mh
 }
 
+// IsModerator - Am I a moderator?
 func (n *OpenBazaarNode) IsModerator() bool {
 	profile, err := n.GetProfile()
 	if err != nil {
@@ -42,6 +48,7 @@ func (n *OpenBazaarNode) IsModerator() bool {
 	return profile.Moderator
 }
 
+// SetSelfAsModerator - set self as a moderator
 func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	if moderator != nil {
 		if moderator.Fee == nil {
@@ -89,6 +96,7 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	return nil
 }
 
+// RemoveSelfAsModerator - relinquish moderatorship
 func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 	// Update profile
 	profile, err := n.GetProfile()
@@ -109,6 +117,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 	return nil
 }
 
+// GetModeratorFee - fetch moderator fee
 func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error) {
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
@@ -129,15 +138,15 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 			}
 			return profile.ModeratorInfo.Fee.FixedFee.Amount, nil
-		} else {
-			fee, err := n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
-			if err != nil {
-				return 0, err
-			} else if fee >= transactionTotal {
-				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
-			}
-			return fee, err
 		}
+		fee, err := n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
+		if err != nil {
+			return 0, err
+		} else if fee >= transactionTotal {
+			return 0, errors.New("Fixed moderator fee exceeds transaction amount")
+		}
+		return fee, err
+
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed uint64
 		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
@@ -158,6 +167,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 	}
 }
 
+// SetModeratorsOnListings - set moderators for a listing
 func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
 	if err != nil {
@@ -186,7 +196,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			for _, coupon := range sl.Listing.Coupons {
 				code, ok := couponMap[coupon.GetHash()]
 				if ok {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{code}
+					coupon.Code = &pb.Listing_Coupon_DiscountCode{DiscountCode: code}
 				}
 			}
 
@@ -239,6 +249,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	return n.UpdateEachListingOnIndex(updater)
 }
 
+// NotifyModerators - notify moderators(peers)
 func (n *OpenBazaarNode) NotifyModerators(moderators []string) error {
 	settings, err := n.Datastore.Settings().Get()
 	if err != nil {

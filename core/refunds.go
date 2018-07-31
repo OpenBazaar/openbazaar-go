@@ -3,23 +3,24 @@ package core
 import (
 	"encoding/hex"
 	"errors"
-
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
+// RefundOrder - refund buyer
 func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	refundMsg := new(pb.Refund)
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
-	refundMsg.OrderID = orderId
+	refundMsg.OrderID = orderID
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
 		return err
@@ -120,10 +121,11 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	n.SendRefund(contract.BuyerOrder.BuyerID.PeerID, contract)
-	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_REFUNDED, true)
+	n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_REFUNDED, true)
 	return nil
 }
 
+// SignRefund - add signature to refund
 func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	serializedRefund, err := proto.Marshal(contract.Refund)
 	if err != nil {
@@ -143,6 +145,7 @@ func (n *OpenBazaarNode) SignRefund(contract *pb.RicardianContract) (*pb.Ricardi
 	return contract, nil
 }
 
+// VerifySignaturesOnRefund - verify signatures on refund
 func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract) error {
 	if err := verifyMessageSignature(
 		contract.Refund,
