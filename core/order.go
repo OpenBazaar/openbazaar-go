@@ -184,11 +184,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(wallet.NORMAL)
 
-		script, err := n.Wallet.AddressToScript(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -332,11 +328,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			payment.RedeemScript = hex.EncodeToString(redeemScript)
 			payment.Chaincode = hex.EncodeToString(chaincode)
 
-			script, err := n.Wallet.AddressToScript(addr)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			err = n.Wallet.AddWatchedScript(script)
+			err = n.Wallet.AddWatchedAddress(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -408,11 +400,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderId string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			script, err := n.Wallet.AddressToScript(addr)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			err = n.Wallet.AddWatchedScript(script)
+			err = n.Wallet.AddWatchedAddress(addr)
 			if err != nil {
 				return "", "", 0, false, err
 			}
@@ -712,27 +700,29 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	// Sweep the temp address into our wallet
-	var utxos []wallet.Utxo
+	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			u := wallet.Utxo{}
-			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-			if err != nil {
-				return err
-			}
-			u.ScriptPubkey = scriptBytes
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
 				return err
 			}
+			addr, err := n.Wallet.DecodeAddress(r.Address)
+			if err != nil {
+				return err
+			}
 			outpoint := wire.NewOutPoint(hash, r.Index)
-			u.Op = *outpoint
-			u.Value = r.Value
-			utxos = append(utxos, u)
+			u := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointIndex: outpoint.Index,
+				OutpointHash:  outpoint.Hash.CloneBytes(),
+				Value:         r.Value,
+			}
+			txInputs = append(txInputs, u)
 		}
 	}
 
-	if len(utxos) == 0 {
+	if len(txInputs) == 0 {
 		return errors.New("Cannot cancel order because utxo has already been spent")
 	}
 
@@ -767,7 +757,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}
