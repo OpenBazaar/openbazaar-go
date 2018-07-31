@@ -187,13 +187,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-35-g1e6724d",
+			"Rev": "1e6724d0c574bdc984ac2a1428150266b818cfcc"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-35-g1e6724d",
+			"Rev": "1e6724d0c574bdc984ac2a1428150266b818cfcc"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
