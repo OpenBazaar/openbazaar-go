@@ -31,7 +31,7 @@ type Wallet interface {
 
 	// Generate a child key using the given chaincode. The key is used in multisig transactions.
 	// For most implementations this should just be child key 0.
-	ChildKey(chaincode []byte) (*hd.ExtendedKey, error)
+	ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error)
 
 	// Get the current address for the given purpose
 	CurrentAddress(purpose KeyPurpose) btc.Address
