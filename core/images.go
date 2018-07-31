@@ -93,7 +93,7 @@ func (n *OpenBazaarNode) resizeImage(base64ImageData, filename string, baseWidth
 		return nil, err
 	}
 
-	return &pb.Profile_Image{t, s, m, l, o}, nil
+	return &pb.Profile_Image{Tiny: t, Small: s, Medium: m, Large: l, Original: o}, nil
 }
 
 func (n *OpenBazaarNode) addImage(img image.Image, imgPath string) (string, error) {
