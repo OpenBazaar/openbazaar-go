@@ -97,28 +97,25 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	}
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
-		var utxos []wallet.Utxo
+		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := wallet.Utxo{}
-				scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-				if err != nil {
-					return err
-				}
-				u.ScriptPubkey = scriptBytes
 				hash, err := chainhash.NewHashFromStr(r.Txid)
 				if err != nil {
 					return err
 				}
 				outpoint := wire.NewOutPoint(hash, r.Index)
-				u.Op = *outpoint
-				u.Value = r.Value
-				utxos = append(utxos, u)
+				txInput := wallet.TransactionInput{
+					OutpointIndex: outpoint.Index,
+					OutpointHash:  outpoint.Hash.CloneBytes(),
+					Value:         r.Value,
+				}
+				txInputs = append(txInputs, txInput)
 			}
 		}
 
-		if len(utxos) == 0 {
-			return errors.New("Cannot accept order because utxo has already been spent")
+		if len(txInputs) == 0 {
+			return errors.New("No unspent transactions found to fund order")
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -151,7 +148,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		_, err = n.Wallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return err
 		}
@@ -197,11 +194,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		var output wallet.TransactionOutput
 
-		outputScript, err := n.Wallet.AddressToScript(refundAddress)
-		if err != nil {
-			return err
-		}
-		output.ScriptPubKey = outputScript
+		output.Address = refundAddress
 		output.Value = outValue
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
