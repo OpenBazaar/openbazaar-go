@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
-			"Rev": "149a175763b24c4f15964bea1fd9c7451f120d02"
+			"Rev": "82da21e72fa1fc348585d244565634d6a35cd3b9"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
@@ -29,7 +29,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
-			"Rev": "68caa95e73db72f2cb426170d0ed03d5d0695490"
+			"Rev": "7775e894427aedf20c30c70f4729505153ff828a"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
