@@ -564,13 +564,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 	var modOutputScript []byte
 	if modValue > 0 {
-		modOutputScript, err = n.Wallet.AddressToScript(modAddr)
-		if err != nil {
-			return err
-		}
 		out := wallet.TransactionOutput{
-			ScriptPubKey: modOutputScript,
-			Value:        int64(modValue),
+			Address: modAddr,
+			Value:   int64(modValue),
 		}
 		outputs = append(outputs, out)
 		outMap["moderator"] = out
@@ -585,13 +581,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			return err
 		}
 		buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
-		buyerOutputScript, err = n.Wallet.AddressToScript(buyerAddr)
-		if err != nil {
-			return err
-		}
 		out := wallet.TransactionOutput{
-			ScriptPubKey: buyerOutputScript,
-			Value:        int64(buyerValue),
+			Address: buyerAddr,
+			Value:   int64(buyerValue),
 		}
 		outputs = append(outputs, out)
 		outMap["buyer"] = out
@@ -605,13 +597,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			return err
 		}
 		vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
-		vendorOutputScript, err = n.Wallet.AddressToScript(vendorAddr)
-		if err != nil {
-			return err
-		}
 		out := wallet.TransactionOutput{
-			ScriptPubKey: vendorOutputScript,
-			Value:        int64(vendorValue),
+			Address: vendorAddr,
+			Value:   int64(vendorValue),
 		}
 		outputs = append(outputs, out)
 		outMap["vendor"] = out
@@ -651,9 +639,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		val := output.Value - int64(outputShareOfFee)
 		if !n.Wallet.IsDust(val) {
 			o := wallet.TransactionOutput{
-				Value:        val,
-				ScriptPubKey: output.ScriptPubKey,
-				Index:        output.Index,
+				Value:   val,
+				Address: output.Address,
+				Index:   output.Index,
 			}
 			outs = append(outs, o)
 		} else {
@@ -662,7 +650,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create moderator key
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	chaincodeBytes, err := hex.DecodeString(chaincode)
 	if err != nil {
 		return err
@@ -675,16 +662,8 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincodeBytes,
-		parentFP,
-		0,
-		0,
-		true)
 
-	moderatorKey, err := hdKey.Child(0)
+	moderatorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincodeBytes, true)
 	if err != nil {
 		return err
 	}
@@ -934,49 +913,23 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 		mECKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			mECKey.SerializeCompressed(),
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-		moderatorKey, err := hdKey.Child(0)
+		moderatorKey, err := n.Wallet.ChildKey(mECKey.SerializeCompressed(), chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
 
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-
-		buyerKey, err := hdKey.Child(0)
+		buyerKey, err := n.Wallet.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.VendorListings[0].VendorID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-		vendorKey, err := hdKey.Child(0)
+		vendorKey, err := n.Wallet.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
@@ -1008,11 +961,7 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 		return errors.New("DisputeResolution contains invalid payout")
 	}
 	checkWeOwnAddress := func(scriptPubKey string) error {
-		scriptBytes, err := hex.DecodeString(scriptPubKey)
-		if err != nil {
-			return err
-		}
-		addr, err := n.Wallet.ScriptToAddress(scriptBytes)
+		addr, err := n.Wallet.DecodeAddress(scriptPubKey)
 		if err != nil {
 			return err
 		}
@@ -1087,47 +1036,46 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	if len(inputs) == 0 {
-		return errors.New("Transaction has no inputs")
+		return errors.New("transaction has no inputs")
 	}
 
 	// Create outputs
 	var outputs []wallet.TransactionOutput
 	if contract.DisputeResolution.Payout.BuyerOutput != nil {
-		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.BuyerOutput.Script)
+		buyerAddr, err := n.Wallet.DecodeAddress(contract.BuyerOrder.GetRefundAddress())
 		if err != nil {
 			return err
 		}
 		output := wallet.TransactionOutput{
-			ScriptPubKey: decodedScript,
-			Value:        int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
+			Address: buyerAddr,
+			Value:   int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
 		}
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.VendorOutput != nil {
-		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.VendorOutput.Script)
+		addr, err := n.Wallet.DecodeAddress(string(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin))
 		if err != nil {
 			return err
 		}
 		output := wallet.TransactionOutput{
-			ScriptPubKey: decodedScript,
-			Value:        int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
+			Address: addr,
+			Value:   int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
 		}
 		outputs = append(outputs, output)
 	}
 	if contract.DisputeResolution.Payout.ModeratorOutput != nil {
-		decodedScript, err := hex.DecodeString(contract.DisputeResolution.Payout.ModeratorOutput.Script)
+		addr, err := n.Wallet.DecodeAddress(contract.VendorListings[0].Moderators[0])
 		if err != nil {
 			return err
 		}
 		output := wallet.TransactionOutput{
-			ScriptPubKey: decodedScript,
-			Value:        int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
+			Address: addr,
+			Value:   int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
 		}
 		outputs = append(outputs, output)
 	}
 
 	// Create signing key
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	chaincodeBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 	if err != nil {
 		return err
@@ -1140,16 +1088,8 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincodeBytes,
-		parentFP,
-		0,
-		0,
-		true)
 
-	signingKey, err := hdKey.Child(0)
+	signingKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincodeBytes, true)
 	if err != nil {
 		return err
 	}

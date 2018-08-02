@@ -14,8 +14,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
@@ -187,18 +185,13 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 		var output wallet.TransactionOutput
-		outputScript, err := n.Wallet.AddressToScript(payoutAddress)
-		if err != nil {
-			return err
-		}
-		output.ScriptPubKey = outputScript
 		output.Value = outValue
+		output.Address = payoutAddress
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
 			return err
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 		mPrivKey := n.Wallet.MasterPrivateKey()
 		if err != nil {
 			return err
@@ -207,16 +200,8 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		if err != nil {
 			return err
 		}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPrivateKeyID[:],
-			mECKey.Serialize(),
-			chaincode,
-			parentFP,
-			0,
-			0,
-			true)
 
-		buyerKey, err := hdKey.Child(0)
+		buyerKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -316,16 +301,25 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	}
 
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
-	var utxos []wallet.Utxo
+	var ins []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			var utxo wallet.Utxo
-			utxo.Value = r.Value
+			var u wallet.TransactionInput
+			u.Value = r.Value
+
+			addr, err := n.Wallet.DecodeAddress(r.Address)
+			if err != nil {
+				return err
+			}
+			u.LinkedAddress = addr
 
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
 				return err
 			}
+
+			u.OutpointHash = []byte(hash.String())
+			u.OutpointIndex = r.Index
 
 			confirms, _, err := n.Wallet.GetConfirmations(*hash)
 			if err != nil {
@@ -335,9 +329,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 				EscrowTimeLockedError = fmt.Errorf("Tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
 				return EscrowTimeLockedError
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
-			utxo.Op = *outpoint
-			utxos = append(utxos, utxo)
+			ins = append(ins, u)
 		}
 	}
 
@@ -345,7 +337,6 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	mPrivKey := n.Wallet.MasterPrivateKey()
 	if err != nil {
 		return err
@@ -354,16 +345,8 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincode,
-		parentFP,
-		0,
-		0,
-		true)
 
-	vendorKey, err := hdKey.Child(0)
+	vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
 	if err != nil {
 		return err
 	}
@@ -371,7 +354,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(utxos, nil, vendorKey, &redeemScript, wallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(ins, nil, vendorKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}

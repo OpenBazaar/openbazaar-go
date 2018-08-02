@@ -14,7 +14,6 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -132,43 +131,18 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.VendorListings[0].VendorID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
 
-		vendorKey, err := hdKey.Child(0)
+		vendorKey, err := n.Wallet.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false) //hdKey.Child(0)
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
 
-		buyerKey, err := hdKey.Child(0)
+		buyerKey, err := n.Wallet.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			moderatorKeyBytes,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
 
-		moderatorKey, err := hdKey.Child(0)
+		moderatorKey, err := n.Wallet.ChildKey(moderatorKeyBytes, chaincode, false)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -189,11 +163,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(wallet.NORMAL)
 
-		script, err := n.Wallet.AddressToScript(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -307,30 +277,13 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.VendorListings[0].VendorID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
 
-		vendorKey, err := hdKey.Child(0)
+		vendorKey, err := n.Wallet.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
 
-		buyerKey, err := hdKey.Child(0)
+		buyerKey, err := n.Wallet.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -342,11 +295,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 
-		script, err := n.Wallet.AddressToScript(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -419,11 +368,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	script, err := n.Wallet.AddressToScript(addr)
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	err = n.Wallet.AddWatchedScript(script)
+	err = n.Wallet.AddWatchedAddress(addr)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -725,27 +670,27 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	// Sweep the temp address into our wallet
-	var utxos []wallet.Utxo
+	var ins []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			u := wallet.Utxo{}
-			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
-			if err != nil {
-				return err
-			}
-			u.ScriptPubkey = scriptBytes
+			u := wallet.TransactionInput{}
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
 				return err
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
-			u.Op = *outpoint
+			addr, err := n.Wallet.DecodeAddress(r.Address)
+			if err != nil {
+				return err
+			}
+			u.LinkedAddress = addr
+			u.OutpointHash = []byte(hash.String())
+			u.OutpointIndex = r.Index
 			u.Value = r.Value
-			utxos = append(utxos, u)
+			ins = append(ins, u)
 		}
 	}
 
-	if len(utxos) == 0 {
+	if len(ins) == 0 {
 		return errors.New("cannot cancel order because utxo has already been spent")
 	}
 
@@ -753,7 +698,6 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	mPrivKey := n.Wallet.MasterPrivateKey()
 	if err != nil {
 		return err
@@ -762,16 +706,8 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincode,
-		parentFP,
-		0,
-		0,
-		true)
 
-	buyerKey, err := hdKey.Child(0)
+	buyerKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
 	if err != nil {
 		return err
 	}
@@ -780,7 +716,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(utxos, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(ins, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}
@@ -1041,9 +977,8 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 	if version < 3 {
 		return uint64(item.Quantity)
-	} else {
-		return item.Quantity64
 	}
+	return item.Quantity64
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
