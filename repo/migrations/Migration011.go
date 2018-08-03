@@ -67,7 +67,7 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) (err er
 		return nil
 	})
 
-	return nil
+	return writeRepoVer(repoPath, 12)
 }
 
 func (Migration011) Down(repoPath string, dbPassword string, testnet bool) (err error) { return nil }

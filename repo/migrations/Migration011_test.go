@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -71,8 +73,8 @@ func TestMigration011(t *testing.T) {
 	defer appSchema.DestroySchemaDirectories()
 
 	var (
-		dbPassword = "foobarbaz"
-		//repoVerPath = appSchema.DataPathJoin("repover")
+		dbPassword  = "foobarbaz"
+		repoVerPath = appSchema.DataPathJoin("repover")
 
 		encryptDB              = fmt.Sprintf("pragma key = '%s';", dbPassword)
 		buildPurchaseSchemaSQL = "create table purchases (orderID text primary key not null, contract blob, state integer, read integer, timestamp integer, total integer, thumbnail text, vendorID text, vendorHandle text, title text, shippingName text, shippingAddress text, paymentAddr text, funded integer, transactions blob, lastDisputeTimeoutNotifiedAt integer not null default 0, lastDisputeExpiryNotifiedAt integer not null default 0, disputedAt integer not null default 0, coinType not null default '', paymentCoin not null default '');"
@@ -123,11 +125,12 @@ func TestMigration011(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := insertPurchaseStatement.Close(); err != nil {
-		t.Error(err)
-	}
-	if err := insertSalesStatement.Close(); err != nil {
-		t.Error(err)
+	insertPurchaseStatement.Close()
+	insertSalesStatement.Close()
+
+	// Create schema version file
+	if err = ioutil.WriteFile(repoVerPath, []byte("11"), os.ModePerm); err != nil {
+		t.Fatal(err)
 	}
 
 	// Test migration up
@@ -159,9 +162,8 @@ func TestMigration011(t *testing.T) {
 	if err := purchaseRows.Err(); err != nil {
 		t.Error(err)
 	}
-	if err := purchaseRows.Close(); err != nil {
-		t.Error(err)
-	}
+	purchaseRows.Close()
+
 	// Validate sales are converted
 	saleRows, err := db.Query("select orderID, transactions, paymentCoin from sales")
 	if err != nil {
@@ -190,6 +192,8 @@ func TestMigration011(t *testing.T) {
 	if err := saleRows.Close(); err != nil {
 		t.Error(err)
 	}
+
+	assertCorrectRepoVer(t, repoVerPath, "12")
 }
 
 func migration011_assertTransaction(t *testing.T, examples map[string]migrations.Migration011_TransactionRecord_beforeMigration, actual []migrations.Migration011_TransactionRecord_afterMigration) {
