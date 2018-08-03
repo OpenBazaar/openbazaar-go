@@ -35,137 +35,35 @@ type Migration011_TransactionRecord_afterMigration struct {
 	Timestamp time.Time
 }
 
+type migration011_record struct {
+	orderID      string
+	coin         string
+	transactions []Migration011_TransactionRecord_beforeMigration
+}
+
 func (Migration011) Up(repoPath string, dbPassword string, testnet bool) (err error) {
 	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
 		return fmt.Errorf("opening db: %s", err.Error())
 	}
-
-	type migrationRecord struct {
-		orderID      string
-		coin         string
-		transactions []Migration011_TransactionRecord_beforeMigration
-	}
-	saleRows, err := db.Query("select orderID, transactions, paymentCoin from sales;")
+	saleMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from sales;")
 	if err != nil {
-		return fmt.Errorf("selecting sales: %s", err.Error())
+		return fmt.Errorf("get sales rows: %s", err.Error())
 	}
-	var saleMigrationRecords = make([]migrationRecord, 0)
-	for saleRows.Next() {
-		var (
-			serializedTransactions []byte
-			r                      = migrationRecord{
-				transactions: make([]Migration011_TransactionRecord_beforeMigration, 0),
-			}
-		)
-		if err := saleRows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
-			return fmt.Errorf("scanning sale: %s", err.Error())
-		}
-		if err := json.Unmarshal(serializedTransactions, &r.transactions); err != nil {
-			return fmt.Errorf("unmarshal transactions: %s", err.Error())
-		}
-		saleMigrationRecords = append(saleMigrationRecords, r)
-	}
-	if err := saleRows.Err(); err != nil {
-		return fmt.Errorf("iterating over sales: %s", err.Error())
-	}
-	saleRows.Close()
-
-	purchaseRows, err := db.Query("select orderID, transactions, paymentCoin from purchases;")
+	purchaseMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;")
 	if err != nil {
-		return fmt.Errorf("selecting purchases: %s", err.Error())
+		return fmt.Errorf("get purchase rows: %s", err.Error())
 	}
-	var purchaseMigrationRecords = make([]migrationRecord, 0)
-	for purchaseRows.Next() {
-		var (
-			serializedTransactions []byte
-			r                      = migrationRecord{
-				transactions: make([]Migration011_TransactionRecord_beforeMigration, 0),
-			}
-		)
-		if err := purchaseRows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
-			return fmt.Errorf("scanning purchase: %s", err.Error())
-		}
-		if err := json.Unmarshal(serializedTransactions, &r.transactions); err != nil {
-			return fmt.Errorf("unmarshal transactions: %s", err.Error())
-		}
-		purchaseMigrationRecords = append(purchaseMigrationRecords, r)
-	}
-	if err := purchaseRows.Err(); err != nil {
-		return fmt.Errorf("iterating over purchases: %s", err.Error())
-	}
-	purchaseRows.Close()
 
 	withTransaction(db, func(tx *sql.Tx) error {
-		updateSale, err := tx.Prepare("update sales set transactions = ? where orderID = ?")
+		err := migration011_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet)
 		if err != nil {
-			return fmt.Errorf("prepare update sale statement: %s", err.Error())
+			return fmt.Errorf("update sales: %s", err.Error())
 		}
-		for _, beforeRecord := range saleMigrationRecords {
-			var migratedTransactionRecords = make([]Migration011_TransactionRecord_afterMigration, 0)
-			for _, beforeTx := range beforeRecord.transactions {
-				var migratedRecord = Migration011_TransactionRecord_afterMigration{
-					Txid:      beforeTx.Txid,
-					Index:     beforeTx.Index,
-					Value:     beforeTx.Value,
-					Spent:     beforeTx.Spent,
-					Timestamp: beforeTx.Timestamp,
-				}
-				script, err := hex.DecodeString(beforeTx.ScriptPubKey)
-				if err != nil {
-					return fmt.Errorf("decode script: %s", err.Error())
-				}
-				addr, err := Migration011_ScriptToAddress(beforeRecord.coin, script, testnet)
-				if err != nil {
-					return fmt.Errorf("script to address: %s", err.Error())
-				}
-				migratedRecord.Address = addr
-				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
-			}
-			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
-			if err != nil {
-				return fmt.Errorf("marhsal transactions: %s", err.Error())
-			}
-			if _, err := updateSale.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
-				return fmt.Errorf("updating sale: %s", err.Error())
-			}
-		}
-		updateSale.Close()
-
-		updatePurchase, err := tx.Prepare("update purchases set transactions = ? where orderID = ?")
+		err = migration011_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet)
 		if err != nil {
-			return fmt.Errorf("prepare update purchase statement: %s", err.Error())
+			return fmt.Errorf("update purchases: %s", err.Error())
 		}
-		for _, beforeRecord := range purchaseMigrationRecords {
-			var migratedTransactionRecords = make([]Migration011_TransactionRecord_afterMigration, 0)
-			for _, beforeTx := range beforeRecord.transactions {
-				var migratedRecord = Migration011_TransactionRecord_afterMigration{
-					Txid:      beforeTx.Txid,
-					Index:     beforeTx.Index,
-					Value:     beforeTx.Value,
-					Spent:     beforeTx.Spent,
-					Timestamp: beforeTx.Timestamp,
-				}
-				script, err := hex.DecodeString(beforeTx.ScriptPubKey)
-				if err != nil {
-					return fmt.Errorf("decode script: %s", err.Error())
-				}
-				addr, err := Migration011_ScriptToAddress(beforeRecord.coin, script, testnet)
-				if err != nil {
-					return fmt.Errorf("script to address: %s", err.Error())
-				}
-				migratedRecord.Address = addr
-				migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
-			}
-			serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
-			if err != nil {
-				return fmt.Errorf("marhsal transactions: %s", err.Error())
-			}
-			if _, err := updatePurchase.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
-				return fmt.Errorf("updating purchase: %s", err.Error())
-			}
-		}
-		updatePurchase.Close()
 		return nil
 	})
 
@@ -173,6 +71,74 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) (err er
 }
 
 func (Migration011) Down(repoPath string, dbPassword string, testnet bool) (err error) { return nil }
+
+func migration011_extractRecords(db *sql.DB, query string) ([]migration011_record, error) {
+	var (
+		results   = make([]migration011_record, 0)
+		rows, err = db.Query(query)
+	)
+	if err != nil {
+		return nil, fmt.Errorf("selecting rows: %s", err.Error())
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			serializedTransactions []byte
+			r                      = migration011_record{
+				transactions: make([]Migration011_TransactionRecord_beforeMigration, 0),
+			}
+		)
+		if err := rows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
+			return nil, fmt.Errorf("scanning rows: %s", err.Error())
+		}
+		if err := json.Unmarshal(serializedTransactions, &r.transactions); err != nil {
+			return nil, fmt.Errorf("unmarshal transactions: %s", err.Error())
+		}
+		results = append(results, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating rows: %s", err.Error())
+	}
+	return results, nil
+}
+
+func migration011_updateRecords(tx *sql.Tx, records []migration011_record, query string, testMode bool) error {
+	var update, err = tx.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("prepare update statement: %s", err.Error())
+	}
+	defer update.Close()
+	for _, beforeRecord := range records {
+		var migratedTransactionRecords = make([]Migration011_TransactionRecord_afterMigration, 0)
+		for _, beforeTx := range beforeRecord.transactions {
+			var migratedRecord = Migration011_TransactionRecord_afterMigration{
+				Txid:      beforeTx.Txid,
+				Index:     beforeTx.Index,
+				Value:     beforeTx.Value,
+				Spent:     beforeTx.Spent,
+				Timestamp: beforeTx.Timestamp,
+			}
+			script, err := hex.DecodeString(beforeTx.ScriptPubKey)
+			if err != nil {
+				return fmt.Errorf("decode script: %s", err.Error())
+			}
+			addr, err := Migration011_ScriptToAddress(beforeRecord.coin, script, testMode)
+			if err != nil {
+				return fmt.Errorf("script to address: %s", err.Error())
+			}
+			migratedRecord.Address = addr
+			migratedTransactionRecords = append(migratedTransactionRecords, migratedRecord)
+		}
+		serializedTransactionRecords, err := json.Marshal(migratedTransactionRecords)
+		if err != nil {
+			return fmt.Errorf("marhsal transactions: %s", err.Error())
+		}
+		if _, err := update.Exec(string(serializedTransactionRecords), beforeRecord.orderID); err != nil {
+			return fmt.Errorf("updating record: %s", err.Error())
+		}
+	}
+	return nil
+}
 
 func Migration011_ChainConfigParams(testnet bool) *chaincfg.Params {
 	if testnet {

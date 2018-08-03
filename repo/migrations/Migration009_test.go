@@ -127,7 +127,7 @@ func TestMigration009(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./repover")
-	assertCorrectRepoVer(t, "10")
+	assertCorrectRepoVer(t, "./repover", "10")
 	assertCorrectFileContents(t, listingsIndexPath, testMigration009ExpectedListingIndexAfterMigration)
 
 	for _, table := range []string{"cases", "sales", "purchases"} {
@@ -153,7 +153,7 @@ func TestMigration009(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertCorrectRepoVer(t, "9")
+	assertCorrectRepoVer(t, "./repover", "9")
 	assertCorrectFileContents(t, listingsIndexPath, testMigration009ExpectedListingIndexBeforeMigration)
 
 	for _, table := range []string{"cases", "sales", "purchases"} {
