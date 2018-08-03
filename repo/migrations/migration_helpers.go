@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
 	"path"
 	"strconv"
@@ -31,16 +32,22 @@ func OpenDB(repoPath string, dbPassword string, testnet bool) (*sql.DB, error) {
 func withTransaction(db *sql.DB, handler func(tx *sql.Tx) error) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("beginning transaction: %s", err.Error())
 	}
 
-	err = handler(tx)
-	if err != nil {
-		tx.Rollback()
-		return err
+	handleErr := handler(tx)
+	if handleErr != nil {
+		if err := tx.Rollback(); err != nil {
+			return fmt.Errorf("handler AND rollback failed: %s (rollback error: %s)", handleErr.Error(), err.Error())
+		}
+		return fmt.Errorf("handler failed: %s", handleErr.Error())
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit failed: %s", err.Error())
+	}
+
+	return nil
 }
 
 func writeRepoVer(repoPath string, version int) error {
