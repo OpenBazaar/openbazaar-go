@@ -194,6 +194,80 @@ func TestMigration011(t *testing.T) {
 	}
 
 	assertCorrectRepoVer(t, repoVerPath, "12")
+
+	// Test migration down
+	if err := (migrations.Migration011{}).Down(appSchema.DataPath(), dbPassword, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// Validate purchases are reverted
+	purchaseRows, err = db.Query("select orderID, transactions, paymentCoin from purchases")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for purchaseRows.Next() {
+		var (
+			orderID, marshaledTransactions, paymentCoin string
+			actualTransactions                          []migrations.Migration011_TransactionRecord_beforeMigration
+		)
+		if err := purchaseRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
+			t.Error(err)
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		for _, actualTx := range actualTransactions {
+			if examples[actualTx.Txid].ScriptPubKey != actualTx.ScriptPubKey {
+				t.Errorf("Expected address to be converted for example %s, but did not match", actualTx.Txid)
+				t.Errorf("Example: %+v", examples[actualTx.Txid])
+				t.Errorf("Actual: %+v", actualTx)
+			}
+		}
+	}
+	if err := purchaseRows.Err(); err != nil {
+		t.Error(err)
+	}
+	purchaseRows.Close()
+
+	// Validate sales are reverted
+	saleRows, err = db.Query("select orderID, transactions, paymentCoin from sales")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for saleRows.Next() {
+		var (
+			orderID, marshaledTransactions, paymentCoin string
+			actualTransactions                          []migrations.Migration011_TransactionRecord_beforeMigration
+		)
+		if err := saleRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
+			t.Error(err)
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		for _, actualTx := range actualTransactions {
+			if examples[actualTx.Txid].ScriptPubKey != actualTx.ScriptPubKey {
+				t.Errorf("Expected address to be converted for example %s, but did not match", actualTx.Txid)
+				t.Errorf("Example: %+v", examples[actualTx.Txid])
+				t.Errorf("Actual: %+v", actualTx)
+			}
+		}
+
+	}
+	if err := saleRows.Err(); err != nil {
+		t.Error(err)
+	}
+	if err := saleRows.Close(); err != nil {
+		t.Error(err)
+	}
+
+	assertCorrectRepoVer(t, repoVerPath, "11")
 }
 
 func migration011_assertTransaction(t *testing.T, examples map[string]migrations.Migration011_TransactionRecord_beforeMigration, actual []migrations.Migration011_TransactionRecord_afterMigration) {
