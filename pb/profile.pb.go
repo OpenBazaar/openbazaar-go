@@ -6,38 +6,66 @@ package pb
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
+import timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 type Profile struct {
-	PeerID           string                     `protobuf:"bytes,1,opt,name=peerID" json:"peerID,omitempty"`
-	Handle           string                     `protobuf:"bytes,2,opt,name=handle" json:"handle,omitempty"`
-	Name             string                     `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
-	Location         string                     `protobuf:"bytes,4,opt,name=location" json:"location,omitempty"`
-	About            string                     `protobuf:"bytes,5,opt,name=about" json:"about,omitempty"`
-	ShortDescription string                     `protobuf:"bytes,6,opt,name=shortDescription" json:"shortDescription,omitempty"`
-	Nsfw             bool                       `protobuf:"varint,7,opt,name=nsfw" json:"nsfw,omitempty"`
-	Vendor           bool                       `protobuf:"varint,8,opt,name=vendor" json:"vendor,omitempty"`
-	Moderator        bool                       `protobuf:"varint,9,opt,name=moderator" json:"moderator,omitempty"`
-	ModeratorInfo    *Moderator                 `protobuf:"bytes,10,opt,name=moderatorInfo" json:"moderatorInfo,omitempty"`
-	ContactInfo      *Profile_Contact           `protobuf:"bytes,11,opt,name=contactInfo" json:"contactInfo,omitempty"`
-	Colors           *Profile_Colors            `protobuf:"bytes,12,opt,name=colors" json:"colors,omitempty"`
-	AvatarHashes     *Profile_Image             `protobuf:"bytes,13,opt,name=avatarHashes" json:"avatarHashes,omitempty"`
-	HeaderHashes     *Profile_Image             `protobuf:"bytes,14,opt,name=headerHashes" json:"headerHashes,omitempty"`
-	Stats            *Profile_Stats             `protobuf:"bytes,15,opt,name=stats" json:"stats,omitempty"`
-	BitcoinPubkey    string                     `protobuf:"bytes,16,opt,name=bitcoinPubkey" json:"bitcoinPubkey,omitempty"`
-	LastModified     *google_protobuf.Timestamp `protobuf:"bytes,17,opt,name=lastModified" json:"lastModified,omitempty"`
-	Currencies       []string                   `protobuf:"bytes,18,rep,name=currencies" json:"currencies,omitempty"`
+	PeerID               string               `protobuf:"bytes,1,opt,name=peerID,proto3" json:"peerID,omitempty"`
+	Handle               string               `protobuf:"bytes,2,opt,name=handle,proto3" json:"handle,omitempty"`
+	Name                 string               `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Location             string               `protobuf:"bytes,4,opt,name=location,proto3" json:"location,omitempty"`
+	About                string               `protobuf:"bytes,5,opt,name=about,proto3" json:"about,omitempty"`
+	ShortDescription     string               `protobuf:"bytes,6,opt,name=shortDescription,proto3" json:"shortDescription,omitempty"`
+	Nsfw                 bool                 `protobuf:"varint,7,opt,name=nsfw,proto3" json:"nsfw,omitempty"`
+	Vendor               bool                 `protobuf:"varint,8,opt,name=vendor,proto3" json:"vendor,omitempty"`
+	Moderator            bool                 `protobuf:"varint,9,opt,name=moderator,proto3" json:"moderator,omitempty"`
+	ModeratorInfo        *Moderator           `protobuf:"bytes,10,opt,name=moderatorInfo,proto3" json:"moderatorInfo,omitempty"`
+	ContactInfo          *Profile_Contact     `protobuf:"bytes,11,opt,name=contactInfo,proto3" json:"contactInfo,omitempty"`
+	Colors               *Profile_Colors      `protobuf:"bytes,12,opt,name=colors,proto3" json:"colors,omitempty"`
+	AvatarHashes         *Profile_Image       `protobuf:"bytes,13,opt,name=avatarHashes,proto3" json:"avatarHashes,omitempty"`
+	HeaderHashes         *Profile_Image       `protobuf:"bytes,14,opt,name=headerHashes,proto3" json:"headerHashes,omitempty"`
+	Stats                *Profile_Stats       `protobuf:"bytes,15,opt,name=stats,proto3" json:"stats,omitempty"`
+	BitcoinPubkey        string               `protobuf:"bytes,16,opt,name=bitcoinPubkey,proto3" json:"bitcoinPubkey,omitempty"`
+	LastModified         *timestamp.Timestamp `protobuf:"bytes,17,opt,name=lastModified,proto3" json:"lastModified,omitempty"`
+	Currencies           []string             `protobuf:"bytes,18,rep,name=currencies,proto3" json:"currencies,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *Profile) Reset()                    { *m = Profile{} }
-func (m *Profile) String() string            { return proto.CompactTextString(m) }
-func (*Profile) ProtoMessage()               {}
-func (*Profile) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0} }
+func (m *Profile) Reset()         { *m = Profile{} }
+func (m *Profile) String() string { return proto.CompactTextString(m) }
+func (*Profile) ProtoMessage()    {}
+func (*Profile) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0}
+}
+func (m *Profile) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile.Unmarshal(m, b)
+}
+func (m *Profile) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile.Marshal(b, m, deterministic)
+}
+func (dst *Profile) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile.Merge(dst, src)
+}
+func (m *Profile) XXX_Size() int {
+	return xxx_messageInfo_Profile.Size(m)
+}
+func (m *Profile) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile proto.InternalMessageInfo
 
 func (m *Profile) GetPeerID() string {
 	if m != nil {
@@ -151,7 +179,7 @@ func (m *Profile) GetBitcoinPubkey() string {
 	return ""
 }
 
-func (m *Profile) GetLastModified() *google_protobuf.Timestamp {
+func (m *Profile) GetLastModified() *timestamp.Timestamp {
 	if m != nil {
 		return m.LastModified
 	}
@@ -166,16 +194,38 @@ func (m *Profile) GetCurrencies() []string {
 }
 
 type Profile_Contact struct {
-	Website     string                   `protobuf:"bytes,1,opt,name=website" json:"website,omitempty"`
-	Email       string                   `protobuf:"bytes,2,opt,name=email" json:"email,omitempty"`
-	PhoneNumber string                   `protobuf:"bytes,3,opt,name=phoneNumber" json:"phoneNumber,omitempty"`
-	Social      []*Profile_SocialAccount `protobuf:"bytes,4,rep,name=social" json:"social,omitempty"`
+	Website              string                   `protobuf:"bytes,1,opt,name=website,proto3" json:"website,omitempty"`
+	Email                string                   `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	PhoneNumber          string                   `protobuf:"bytes,3,opt,name=phoneNumber,proto3" json:"phoneNumber,omitempty"`
+	Social               []*Profile_SocialAccount `protobuf:"bytes,4,rep,name=social,proto3" json:"social,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
+	XXX_unrecognized     []byte                   `json:"-"`
+	XXX_sizecache        int32                    `json:"-"`
 }
 
-func (m *Profile_Contact) Reset()                    { *m = Profile_Contact{} }
-func (m *Profile_Contact) String() string            { return proto.CompactTextString(m) }
-func (*Profile_Contact) ProtoMessage()               {}
-func (*Profile_Contact) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0, 0} }
+func (m *Profile_Contact) Reset()         { *m = Profile_Contact{} }
+func (m *Profile_Contact) String() string { return proto.CompactTextString(m) }
+func (*Profile_Contact) ProtoMessage()    {}
+func (*Profile_Contact) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0, 0}
+}
+func (m *Profile_Contact) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile_Contact.Unmarshal(m, b)
+}
+func (m *Profile_Contact) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile_Contact.Marshal(b, m, deterministic)
+}
+func (dst *Profile_Contact) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile_Contact.Merge(dst, src)
+}
+func (m *Profile_Contact) XXX_Size() int {
+	return xxx_messageInfo_Profile_Contact.Size(m)
+}
+func (m *Profile_Contact) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile_Contact.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile_Contact proto.InternalMessageInfo
 
 func (m *Profile_Contact) GetWebsite() string {
 	if m != nil {
@@ -206,15 +256,37 @@ func (m *Profile_Contact) GetSocial() []*Profile_SocialAccount {
 }
 
 type Profile_SocialAccount struct {
-	Type     string `protobuf:"bytes,1,opt,name=type" json:"type,omitempty"`
-	Username string `protobuf:"bytes,2,opt,name=username" json:"username,omitempty"`
-	Proof    string `protobuf:"bytes,3,opt,name=proof" json:"proof,omitempty"`
+	Type                 string   `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Username             string   `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
+	Proof                string   `protobuf:"bytes,3,opt,name=proof,proto3" json:"proof,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Profile_SocialAccount) Reset()                    { *m = Profile_SocialAccount{} }
-func (m *Profile_SocialAccount) String() string            { return proto.CompactTextString(m) }
-func (*Profile_SocialAccount) ProtoMessage()               {}
-func (*Profile_SocialAccount) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0, 1} }
+func (m *Profile_SocialAccount) Reset()         { *m = Profile_SocialAccount{} }
+func (m *Profile_SocialAccount) String() string { return proto.CompactTextString(m) }
+func (*Profile_SocialAccount) ProtoMessage()    {}
+func (*Profile_SocialAccount) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0, 1}
+}
+func (m *Profile_SocialAccount) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile_SocialAccount.Unmarshal(m, b)
+}
+func (m *Profile_SocialAccount) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile_SocialAccount.Marshal(b, m, deterministic)
+}
+func (dst *Profile_SocialAccount) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile_SocialAccount.Merge(dst, src)
+}
+func (m *Profile_SocialAccount) XXX_Size() int {
+	return xxx_messageInfo_Profile_SocialAccount.Size(m)
+}
+func (m *Profile_SocialAccount) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile_SocialAccount.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile_SocialAccount proto.InternalMessageInfo
 
 func (m *Profile_SocialAccount) GetType() string {
 	if m != nil {
@@ -238,17 +310,39 @@ func (m *Profile_SocialAccount) GetProof() string {
 }
 
 type Profile_Image struct {
-	Tiny     string `protobuf:"bytes,1,opt,name=tiny" json:"tiny,omitempty"`
-	Small    string `protobuf:"bytes,2,opt,name=small" json:"small,omitempty"`
-	Medium   string `protobuf:"bytes,3,opt,name=medium" json:"medium,omitempty"`
-	Large    string `protobuf:"bytes,4,opt,name=large" json:"large,omitempty"`
-	Original string `protobuf:"bytes,5,opt,name=original" json:"original,omitempty"`
+	Tiny                 string   `protobuf:"bytes,1,opt,name=tiny,proto3" json:"tiny,omitempty"`
+	Small                string   `protobuf:"bytes,2,opt,name=small,proto3" json:"small,omitempty"`
+	Medium               string   `protobuf:"bytes,3,opt,name=medium,proto3" json:"medium,omitempty"`
+	Large                string   `protobuf:"bytes,4,opt,name=large,proto3" json:"large,omitempty"`
+	Original             string   `protobuf:"bytes,5,opt,name=original,proto3" json:"original,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Profile_Image) Reset()                    { *m = Profile_Image{} }
-func (m *Profile_Image) String() string            { return proto.CompactTextString(m) }
-func (*Profile_Image) ProtoMessage()               {}
-func (*Profile_Image) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0, 2} }
+func (m *Profile_Image) Reset()         { *m = Profile_Image{} }
+func (m *Profile_Image) String() string { return proto.CompactTextString(m) }
+func (*Profile_Image) ProtoMessage()    {}
+func (*Profile_Image) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0, 2}
+}
+func (m *Profile_Image) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile_Image.Unmarshal(m, b)
+}
+func (m *Profile_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile_Image.Marshal(b, m, deterministic)
+}
+func (dst *Profile_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile_Image.Merge(dst, src)
+}
+func (m *Profile_Image) XXX_Size() int {
+	return xxx_messageInfo_Profile_Image.Size(m)
+}
+func (m *Profile_Image) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile_Image.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile_Image proto.InternalMessageInfo
 
 func (m *Profile_Image) GetTiny() string {
 	if m != nil {
@@ -286,17 +380,39 @@ func (m *Profile_Image) GetOriginal() string {
 }
 
 type Profile_Colors struct {
-	Primary       string `protobuf:"bytes,1,opt,name=primary" json:"primary,omitempty"`
-	Secondary     string `protobuf:"bytes,2,opt,name=secondary" json:"secondary,omitempty"`
-	Text          string `protobuf:"bytes,3,opt,name=text" json:"text,omitempty"`
-	Highlight     string `protobuf:"bytes,4,opt,name=highlight" json:"highlight,omitempty"`
-	HighlightText string `protobuf:"bytes,5,opt,name=highlightText" json:"highlightText,omitempty"`
+	Primary              string   `protobuf:"bytes,1,opt,name=primary,proto3" json:"primary,omitempty"`
+	Secondary            string   `protobuf:"bytes,2,opt,name=secondary,proto3" json:"secondary,omitempty"`
+	Text                 string   `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	Highlight            string   `protobuf:"bytes,4,opt,name=highlight,proto3" json:"highlight,omitempty"`
+	HighlightText        string   `protobuf:"bytes,5,opt,name=highlightText,proto3" json:"highlightText,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Profile_Colors) Reset()                    { *m = Profile_Colors{} }
-func (m *Profile_Colors) String() string            { return proto.CompactTextString(m) }
-func (*Profile_Colors) ProtoMessage()               {}
-func (*Profile_Colors) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0, 3} }
+func (m *Profile_Colors) Reset()         { *m = Profile_Colors{} }
+func (m *Profile_Colors) String() string { return proto.CompactTextString(m) }
+func (*Profile_Colors) ProtoMessage()    {}
+func (*Profile_Colors) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0, 3}
+}
+func (m *Profile_Colors) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile_Colors.Unmarshal(m, b)
+}
+func (m *Profile_Colors) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile_Colors.Marshal(b, m, deterministic)
+}
+func (dst *Profile_Colors) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile_Colors.Merge(dst, src)
+}
+func (m *Profile_Colors) XXX_Size() int {
+	return xxx_messageInfo_Profile_Colors.Size(m)
+}
+func (m *Profile_Colors) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile_Colors.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile_Colors proto.InternalMessageInfo
 
 func (m *Profile_Colors) GetPrimary() string {
 	if m != nil {
@@ -334,18 +450,40 @@ func (m *Profile_Colors) GetHighlightText() string {
 }
 
 type Profile_Stats struct {
-	FollowerCount  uint32  `protobuf:"varint,1,opt,name=followerCount" json:"followerCount,omitempty"`
-	FollowingCount uint32  `protobuf:"varint,2,opt,name=followingCount" json:"followingCount,omitempty"`
-	ListingCount   uint32  `protobuf:"varint,3,opt,name=listingCount" json:"listingCount,omitempty"`
-	RatingCount    uint32  `protobuf:"varint,4,opt,name=ratingCount" json:"ratingCount,omitempty"`
-	PostCount      uint32  `protobuf:"varint,5,opt,name=postCount" json:"postCount,omitempty"`
-	AverageRating  float32 `protobuf:"fixed32,6,opt,name=averageRating" json:"averageRating,omitempty"`
+	FollowerCount        uint32   `protobuf:"varint,1,opt,name=followerCount,proto3" json:"followerCount,omitempty"`
+	FollowingCount       uint32   `protobuf:"varint,2,opt,name=followingCount,proto3" json:"followingCount,omitempty"`
+	ListingCount         uint32   `protobuf:"varint,3,opt,name=listingCount,proto3" json:"listingCount,omitempty"`
+	RatingCount          uint32   `protobuf:"varint,4,opt,name=ratingCount,proto3" json:"ratingCount,omitempty"`
+	PostCount            uint32   `protobuf:"varint,5,opt,name=postCount,proto3" json:"postCount,omitempty"`
+	AverageRating        float32  `protobuf:"fixed32,6,opt,name=averageRating,proto3" json:"averageRating,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Profile_Stats) Reset()                    { *m = Profile_Stats{} }
-func (m *Profile_Stats) String() string            { return proto.CompactTextString(m) }
-func (*Profile_Stats) ProtoMessage()               {}
-func (*Profile_Stats) Descriptor() ([]byte, []int) { return fileDescriptor7, []int{0, 4} }
+func (m *Profile_Stats) Reset()         { *m = Profile_Stats{} }
+func (m *Profile_Stats) String() string { return proto.CompactTextString(m) }
+func (*Profile_Stats) ProtoMessage()    {}
+func (*Profile_Stats) Descriptor() ([]byte, []int) {
+	return fileDescriptor_profile_919697bf31a273ce, []int{0, 4}
+}
+func (m *Profile_Stats) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Profile_Stats.Unmarshal(m, b)
+}
+func (m *Profile_Stats) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Profile_Stats.Marshal(b, m, deterministic)
+}
+func (dst *Profile_Stats) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Profile_Stats.Merge(dst, src)
+}
+func (m *Profile_Stats) XXX_Size() int {
+	return xxx_messageInfo_Profile_Stats.Size(m)
+}
+func (m *Profile_Stats) XXX_DiscardUnknown() {
+	xxx_messageInfo_Profile_Stats.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Profile_Stats proto.InternalMessageInfo
 
 func (m *Profile_Stats) GetFollowerCount() uint32 {
 	if m != nil {
@@ -398,9 +536,9 @@ func init() {
 	proto.RegisterType((*Profile_Stats)(nil), "Profile.Stats")
 }
 
-func init() { proto.RegisterFile("profile.proto", fileDescriptor7) }
+func init() { proto.RegisterFile("profile.proto", fileDescriptor_profile_919697bf31a273ce) }
 
-var fileDescriptor7 = []byte{
+var fileDescriptor_profile_919697bf31a273ce = []byte{
 	// 705 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x94, 0xdf, 0x6e, 0xdb, 0x36,
 	0x14, 0xc6, 0xe1, 0xff, 0x31, 0x6d, 0x27, 0x19, 0x31, 0x04, 0x84, 0x30, 0x6c, 0x46, 0x10, 0x6c,
