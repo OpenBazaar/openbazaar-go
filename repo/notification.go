@@ -354,7 +354,7 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 		}
 		n.NotifierData = notifier
 	default:
-		return fmt.Errorf("unmarshal notification: unknown type: %t\n", payload.NotifierType)
+		return fmt.Errorf("unmarshal notification: unknown type: %s\n", payload.NotifierType)
 	}
 
 	n.NotifierType = n.NotifierData.GetType()

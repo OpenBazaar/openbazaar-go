@@ -22,6 +22,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer gateway.Close()
 
 	go func() {
 		err = gateway.Serve()
@@ -32,12 +33,6 @@ func TestMain(m *testing.M) {
 
 	// Run tests
 	retCode := m.Run()
-
-	// Shutdown test server
-	err = gateway.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	os.Exit(retCode)
 }

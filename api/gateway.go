@@ -3,7 +3,6 @@ package api
 import (
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -15,10 +14,9 @@ var log = logging.MustGetLogger("api")
 
 // Gateway represents an HTTP API gateway
 type Gateway struct {
-	listener   net.Listener
-	handler    http.Handler
-	config     schema.APIConfig
-	shutdownCh chan struct{}
+	listener net.Listener
+	handler  http.Handler
+	config   schema.APIConfig
 }
 
 // NewGateway instantiates a new `Gateway`
@@ -50,30 +48,15 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	}
 
 	return &Gateway{
-		listener:   l,
-		handler:    topMux,
-		config:     config,
-		shutdownCh: make(chan struct{}),
+		listener: l,
+		handler:  topMux,
+		config:   config,
 	}, nil
 }
 
 // Close shutsdown the Gateway listener
 func (g *Gateway) Close() error {
 	log.Infof("server at %s terminating...", g.listener.Addr())
-
-	// Print shutdown message every few seconds if we're taking too long
-	go func() {
-		select {
-		case <-g.shutdownCh:
-			return
-		case <-time.After(5 * time.Second):
-			log.Infof("waiting for server at %s to terminate...", g.listener.Addr())
-
-		}
-	}()
-
-	// Shutdown the listener
-	close(g.shutdownCh)
 	return g.listener.Close()
 }
 
