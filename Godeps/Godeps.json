@@ -17,11 +17,11 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
+			"Rev": "1e9f328bc83d5a27156390c74a6a10156bd2e22e"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet/exchangerates",
-			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
+			"Rev": "1e9f328bc83d5a27156390c74a6a10156bd2e22e"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
@@ -187,13 +187,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-33-g60984cc",
+			"Rev": "60984cc93f8cd65a11b903970e5ccf103f0ce019"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-33-g60984cc",
+			"Rev": "60984cc93f8cd65a11b903970e5ccf103f0ce019"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
