@@ -22,6 +22,7 @@ type TxStore struct {
 	adrs           []btcutil.Address
 	watchedScripts [][]byte
 	txids          map[string]int32
+	txidsMutex     *sync.Mutex
 	addrMutex      *sync.Mutex
 	cbMutex        *sync.Mutex
 
@@ -40,6 +41,7 @@ func NewTxStore(p *chaincfg.Params, db wallet.Datastore, keyManager *KeyManager)
 		keyManager: keyManager,
 		addrMutex:  new(sync.Mutex),
 		cbMutex:    new(sync.Mutex),
+		txidsMutex: new(sync.Mutex),
 		txids:      make(map[string]int32),
 		Datastore:  db,
 	}
@@ -178,12 +180,16 @@ func (ts *TxStore) PopulateAdrs() error {
 		}
 		ts.adrs = append(ts.adrs, addr)
 	}
+	ts.addrMutex.Unlock()
+
 	ts.watchedScripts, _ = ts.WatchedScripts().GetAll()
 	txns, _ := ts.Txns().GetAll(true)
+	ts.txidsMutex.Lock()
 	for _, t := range txns {
 		ts.txids[t.Txid] = t.Height
 	}
-	ts.addrMutex.Unlock()
+	ts.txidsMutex.Unlock()
+
 	return nil
 }
 
@@ -201,10 +207,13 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 	}
 
 	// Check to see if we've already processed this tx. If so, return.
+	ts.txidsMutex.Lock()
 	sh, ok := ts.txids[tx.TxHash().String()]
 	if ok && (sh > 0 || (sh == 0 && height == 0)) {
+		ts.txidsMutex.Unlock()
 		return 1, nil
 	}
+	ts.txidsMutex.Unlock()
 
 	// Check to see if this is a double spend
 	doubleSpends, err := ts.CheckDoubleSpends(tx)
@@ -341,6 +350,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 	// If hits is nonzero it's a relevant tx and we should store it
 	if hits > 0 || matchesWatchOnly {
 		ts.cbMutex.Lock()
+		ts.txidsMutex.Lock()
 		txn, err := ts.Txns().Get(tx.TxHash())
 		shouldCallback := false
 		if err != nil {
@@ -369,6 +379,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 				listener(cb)
 			}
 		}
+		ts.txidsMutex.Unlock()
 		ts.cbMutex.Unlock()
 		ts.PopulateAdrs()
 		hits++
