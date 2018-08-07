@@ -40,7 +40,7 @@ type Notifier interface {
 func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification {
 	return &Notification{
 		ID:           n.GetID(),
-		CreatedAt:    createdAt,
+		CreatedAt:    createdAt.UTC(),
 		IsRead:       isRead,
 		NotifierData: n,
 		NotifierType: n.GetType(),

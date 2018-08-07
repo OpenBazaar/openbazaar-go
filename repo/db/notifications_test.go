@@ -33,7 +33,7 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 	var (
 		db, teardown, err = newNotificationStore()
 		// now as Unix() quantizes time to DB's resolution which makes reflect.DeepEqual pass below
-		now               = time.Unix(time.Now().Unix(), 0)
+		now               = time.Unix(time.Now().UTC().Unix(), 0)
 		putRecordExamples = []*repo.Notification{
 			repo.NewNotification(repo.OrderCancelNotification{
 				ID:      "orderCancelNotif",
