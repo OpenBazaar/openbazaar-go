@@ -42,6 +42,9 @@ type Wallet interface {
 	// Parse the address string and return an address interface
 	DecodeAddress(addr string) (btc.Address, error)
 
+	// Turn the given output script into an address
+	ScriptToAddress(script []byte) (btc.Address, error)
+
 	// Returns if the wallet has the key for the given address
 	HasKey(addr btc.Address) bool
 
