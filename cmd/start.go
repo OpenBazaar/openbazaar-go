@@ -23,6 +23,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/bitcoin"
 	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
 	"github.com/OpenBazaar/openbazaar-go/bitcoin/resync"
+	"github.com/OpenBazaar/openbazaar-go/bitcoin/zcoind"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
@@ -647,6 +648,23 @@ func (x *Start) Execute(args []string) error {
 			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
 		}
 		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
+	case "zcoind":
+		walletTypeStr = "zcoind"
+		if walletCfg.Binary == "" {
+			return errors.New("The path to the zcoind binary must be specified in the config file when using zcoind")
+		}
+		usetor := false
+		if usingTor && !usingClearnet {
+			usetor = true
+		}
+		cryptoWallet, err = zcoind.NewZcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, usetor, controlPort)
+		if err != nil {
+			return err
+		}
+
+		if !x.DisableExchangeRates {
+			exchangeRates = zcoind.NewzcoinPriceFetcher(torDialer)
+		}
 	default:
 		log.Fatal("Unknown wallet type")
 	}
