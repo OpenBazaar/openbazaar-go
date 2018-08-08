@@ -1,12 +1,13 @@
 package repo
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 )
 
 type Migration interface {
