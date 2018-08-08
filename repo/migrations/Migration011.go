@@ -8,6 +8,9 @@ import (
 	"path"
 )
 
+// moderatorsKey is the key we want to manipulate in the JSON
+const moderatorsKey = "moderators"
+
 type Migration011 struct{}
 
 type Migration011_listing struct {
@@ -43,7 +46,7 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) error {
 	// Iterate over listing. If a listing is missing moderators then load the full
 	// listing file and populate the listing index abstract
 	for _, listing := range listingRecords {
-		if listing["moderators"] != nil {
+		if listing[moderatorsKey] != nil {
 			continue
 		}
 
@@ -63,7 +66,7 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) error {
 		if err = json.Unmarshal(listingJSON, &listingRecord); err != nil {
 			return err
 		}
-		listing["moderators"] = listingRecord.Listing.ModeratorIDs
+		listing[moderatorsKey] = listingRecord.Listing.ModeratorIDs
 	}
 
 	// Write updated index back to disk
