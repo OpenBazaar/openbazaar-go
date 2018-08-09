@@ -30,7 +30,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/spvwallet/exchangerates"
-	"github.com/OpenBazaar/wallet-interface"
+	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -178,7 +178,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		params = chaincfg.MainNetParams
 	}
 
-	var wallet wallet.Wallet
+	var wallet wi.Wallet
 	var tp net.Addr
 	if config.WalletTrustedPeer != "" {
 		tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -213,7 +213,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		}
 	}
 
-	var exchangeRates wallet.ExchangeRates
+	var exchangeRates wi.ExchangeRates
 	if !config.DisableExchangerates {
 		exchangeRates = exchangerates.NewBitcoinPriceFetcher(nil)
 	}

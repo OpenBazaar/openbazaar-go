@@ -525,17 +525,17 @@ func (n *OpenBazaarNode) updateListingOnDisk(index []ListingData, ld ListingData
 	var avgRating float32
 	var ratingCount uint32
 	for i, d := range index {
-		if d.Slug != ld.Slug {
-			continue
-		}
-		avgRating = d.AverageRating
-		ratingCount = d.RatingCount
+		if d.Slug == ld.Slug {
+			avgRating = d.AverageRating
+			ratingCount = d.RatingCount
 
-		if len(index) == 1 {
-			index = []ListingData{}
+			if len(index) == 1 {
+				index = []ListingData{}
+				break
+			}
+			index = append(index[:i], index[i+1:]...)
 			break
 		}
-		index = append(index[:i], index[i+1:]...)
 	}
 
 	// Append our listing with the new hash to the list
@@ -571,11 +571,11 @@ func (n *OpenBazaarNode) updateRatingInListingIndex(rating *pb.Rating) error {
 	var ld ListingData
 	exists := false
 	for _, l := range index {
-		if l.Slug != rating.RatingData.VendorSig.Metadata.ListingSlug {
-			continue
+		if l.Slug == rating.RatingData.VendorSig.Metadata.ListingSlug {
+			ld = l
+			exists = true
+			break
 		}
-		ld = l
-		exists = true
 	}
 	if !exists {
 		return errors.New("Listing for rating does not exist in index")

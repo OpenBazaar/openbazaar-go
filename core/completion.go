@@ -473,15 +473,14 @@ func (n *OpenBazaarNode) ValidateAndSaveRating(contract *pb.RicardianContract) (
 			retErr = err
 			continue
 		}
-		defer f.Close()
-
-		go ipfs.AddFile(n.IpfsNode, ratingPath)
 
 		_, werr := f.Write([]byte(ratingJSON))
 		if werr != nil {
+			f.Close()
 			retErr = err
 			continue
 		}
+		f.Close()
 
 		if err := n.updateRatingIndex(rating, ratingPath); err != nil {
 			retErr = err
