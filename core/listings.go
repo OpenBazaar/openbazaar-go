@@ -70,8 +70,6 @@ const (
 
 	// DefaultCoinDivisibility - decimals for price
 	DefaultCoinDivisibility uint32 = 1e8
-
-	priceModifierListingVersion = 4
 )
 
 type price struct {
@@ -177,7 +175,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 
 	// Set listing version
-	listing.Metadata.Version = versionForNewListing(listing)
+	listing.Metadata.Version = ListingVersion
 
 	// Add the vendor ID to the listing
 	id := new(pb.ID)
@@ -1344,15 +1342,4 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 		}
 	}
 	return nil
-}
-
-func versionForNewListing(listing *pb.Listing) uint32 {
-	// Don't use newer version number of the listing doesn't have new features
-	if ListingVersion == priceModifierListingVersion &&
-		listing.Metadata.Format == pb.Listing_Metadata_MARKET_PRICE &&
-		listing.Metadata.PriceModifier != 0 {
-		return priceModifierListingVersion - 1
-	}
-
-	return ListingVersion
 }
