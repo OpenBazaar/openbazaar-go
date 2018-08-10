@@ -3,12 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
-	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
-	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"math/rand"
 	"sync"
 	"time"
+
+	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
+	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
@@ -26,7 +27,10 @@ type messageSender struct {
 	requestlk sync.Mutex
 }
 
+// ReadMessageTimeout - set the read msg timeout to 5 mins
 var ReadMessageTimeout = time.Minute * 5
+
+// ErrReadTimeout - timed out read err
 var ErrReadTimeout = fmt.Errorf("timed out reading response")
 
 func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSender, error) {
@@ -130,10 +134,10 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) erro
 
 			if retry {
 				return err
-			} else {
-				retry = true
-				continue
 			}
+			retry = true
+			continue
+
 		}
 
 		if ms.singleMes > streamReuseTries {
@@ -168,10 +172,10 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 
 			if retry {
 				return nil, err
-			} else {
-				retry = true
-				continue
 			}
+			retry = true
+			continue
+
 		}
 
 		mes, err := ms.ctxReadMsg(ctx, returnChan)

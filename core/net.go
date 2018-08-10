@@ -6,27 +6,32 @@ import (
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 
 	"errors"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"sync"
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"sync"
-	"time"
 )
 
 const (
-	CHAT_MESSAGE_MAX_CHARACTERS = 20000
-	CHAT_SUBJECT_MAX_CHARACTERS = 500
-	DefaultPointerPrefixLength  = 14
+	// ChatMessageMaxCharacters - limit for chat msg
+	ChatMessageMaxCharacters = 20000
+	// ChatSubjectMaxCharacters - limit for chat subject
+	ChatSubjectMaxCharacters = 500
+	// DefaultPointerPrefixLength - default ipfs pointer prefix
+	DefaultPointerPrefixLength = 14
 )
 
+// OfflineMessageWaitGroup - used for offline msgs
 var OfflineMessageWaitGroup sync.WaitGroup
 
-func (n *OpenBazaarNode) sendMessage(peerId string, k *libp2p.PubKey, message pb.Message) error {
-	p, err := peer.IDB58Decode(peerId)
+func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb.Message) error {
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
@@ -41,7 +46,7 @@ func (n *OpenBazaarNode) sendMessage(peerId string, k *libp2p.PubKey, message pb
 	return nil
 }
 
-// Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
+// SendOfflineMessage Supply of a public key is optional, if nil is instead provided n.EncryptMessage does a lookup
 func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.Message) error {
 	pubKeyBytes, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
 	if err != nil {
@@ -111,16 +116,18 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	return nil
 }
 
-func (n *OpenBazaarNode) SendOfflineAck(peerId string, pointerID peer.ID) error {
+// SendOfflineAck - send ack to offline peer
+func (n *OpenBazaarNode) SendOfflineAck(peerID string, pointerID peer.ID) error {
 	a := &any.Any{Value: []byte(pointerID.Pretty())}
 	m := pb.Message{
 		MessageType: pb.Message_OFFLINE_ACK,
 		Payload:     a}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerID, nil, m)
 }
 
-func (n *OpenBazaarNode) GetPeerStatus(peerId string) (string, error) {
-	p, err := peer.IDB58Decode(peerId)
+// GetPeerStatus - check if a peer is online/offline
+func (n *OpenBazaarNode) GetPeerStatus(peerID string) (string, error) {
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +141,8 @@ func (n *OpenBazaarNode) GetPeerStatus(peerId string) (string, error) {
 	return "online", nil
 }
 
-func (n *OpenBazaarNode) Follow(peerId string) error {
+// Follow - follow a peer
+func (n *OpenBazaarNode) Follow(peerID string) error {
 	m := pb.Message{MessageType: pb.Message_FOLLOW}
 
 	pubkey := n.IpfsNode.PrivateKey.GetPublic()
@@ -147,7 +155,7 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 		return err
 	}
 	data := &pb.SignedData_Command{
-		PeerID:    peerId,
+		PeerID:    peerID,
 		Type:      pb.Message_FOLLOW,
 		Timestamp: ts,
 	}
@@ -170,11 +178,11 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 	}
 	m.Payload = any
 
-	err = n.sendMessage(peerId, nil, m)
+	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
 		return err
 	}
-	err = n.Datastore.Following().Put(peerId)
+	err = n.Datastore.Following().Put(peerID)
 	if err != nil {
 		return err
 	}
@@ -185,7 +193,8 @@ func (n *OpenBazaarNode) Follow(peerId string) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) Unfollow(peerId string) error {
+// Unfollow - unfollow a peer
+func (n *OpenBazaarNode) Unfollow(peerID string) error {
 	m := pb.Message{MessageType: pb.Message_UNFOLLOW}
 
 	pubkey := n.IpfsNode.PrivateKey.GetPublic()
@@ -198,7 +207,7 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 		return err
 	}
 	data := &pb.SignedData_Command{
-		PeerID:    peerId,
+		PeerID:    peerID,
 		Type:      pb.Message_UNFOLLOW,
 		Timestamp: ts,
 	}
@@ -221,11 +230,11 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	}
 	m.Payload = any
 
-	err = n.sendMessage(peerId, nil, m)
+	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
 		return err
 	}
-	err = n.Datastore.Following().Delete(peerId)
+	err = n.Datastore.Following().Delete(peerID)
 	if err != nil {
 		return err
 	}
@@ -236,8 +245,9 @@ func (n *OpenBazaarNode) Unfollow(peerId string) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract) (resp *pb.Message, err error) {
-	p, err := peer.IDB58Decode(peerId)
+// SendOrder - send order created msg to peer
+func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract) (resp *pb.Message, err error) {
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return resp, err
 	}
@@ -260,11 +270,13 @@ func (n *OpenBazaarNode) SendOrder(peerId string, contract *pb.RicardianContract
 	return resp, nil
 }
 
-func (n *OpenBazaarNode) SendError(peerId string, k *libp2p.PubKey, errorMessage pb.Message) error {
-	return n.sendMessage(peerId, k, errorMessage)
+// SendError - send error msg to peer
+func (n *OpenBazaarNode) SendError(peerID string, k *libp2p.PubKey, errorMessage pb.Message) error {
+	return n.sendMessage(peerID, k, errorMessage)
 }
 
-func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.RicardianContract) error {
+// SendOrderConfirmation - send order confirmed msg to peer
+func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(contract)
 	if err != nil {
 		return err
@@ -277,17 +289,18 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerId string, contract *pb.Ricar
 	if err != nil {
 		return err
 	}
-	return n.sendMessage(peerId, &k, m)
+	return n.sendMessage(peerID, &k, m)
 }
 
-func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
-	a := &any.Any{Value: []byte(orderId)}
+// SendCancel - send order cancelled msg to peer
+func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
+	a := &any.Any{Value: []byte(orderID)}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER_CANCEL,
 		Payload:     a,
 	}
 	//try to get public key from order
-	order, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderId)
+	order, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 	var kp *libp2p.PubKey
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
@@ -298,10 +311,11 @@ func (n *OpenBazaarNode) SendCancel(peerId, orderId string) error {
 		}
 		kp = &k
 	}
-	return n.sendMessage(peerId, kp, m)
+	return n.sendMessage(peerID, kp, m)
 }
 
-func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject) error {
+// SendReject - send order rejected msg to peer
+func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject) error {
 	a, err := ptypes.MarshalAny(rejectMessage)
 	if err != nil {
 		return err
@@ -322,10 +336,11 @@ func (n *OpenBazaarNode) SendReject(peerId string, rejectMessage *pb.OrderReject
 		}
 		kp = &k
 	}
-	return n.sendMessage(peerId, kp, m)
+	return n.sendMessage(peerID, kp, m)
 }
 
-func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianContract) error {
+// SendRefund - send refund msg to peer
+func (n *OpenBazaarNode) SendRefund(peerID string, refundMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(refundMessage)
 	if err != nil {
 		return err
@@ -338,10 +353,11 @@ func (n *OpenBazaarNode) SendRefund(peerId string, refundMessage *pb.RicardianCo
 	if err != nil {
 		return err
 	}
-	return n.sendMessage(peerId, &k, m)
+	return n.sendMessage(peerID, &k, m)
 }
 
-func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, k *libp2p.PubKey, fulfillmentMessage *pb.RicardianContract) error {
+// SendOrderFulfillment - send order fulfillment msg to peer
+func (n *OpenBazaarNode) SendOrderFulfillment(peerID string, k *libp2p.PubKey, fulfillmentMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(fulfillmentMessage)
 	if err != nil {
 		return err
@@ -350,10 +366,11 @@ func (n *OpenBazaarNode) SendOrderFulfillment(peerId string, k *libp2p.PubKey, f
 		MessageType: pb.Message_ORDER_FULFILLMENT,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, k, m)
+	return n.sendMessage(peerID, k, m)
 }
 
-func (n *OpenBazaarNode) SendOrderCompletion(peerId string, k *libp2p.PubKey, completionMessage *pb.RicardianContract) error {
+// SendOrderCompletion - send order completion msg to peer
+func (n *OpenBazaarNode) SendOrderCompletion(peerID string, k *libp2p.PubKey, completionMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(completionMessage)
 	if err != nil {
 		return err
@@ -365,10 +382,11 @@ func (n *OpenBazaarNode) SendOrderCompletion(peerId string, k *libp2p.PubKey, co
 	if err != nil {
 		return err
 	}
-	return n.sendMessage(peerId, k, m)
+	return n.sendMessage(peerID, k, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeOpen(peerId string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
+// SendDisputeOpen - send open dispute msg to peer
+func (n *OpenBazaarNode) SendDisputeOpen(peerID string, k *libp2p.PubKey, disputeMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(disputeMessage)
 	if err != nil {
 		return err
@@ -377,10 +395,11 @@ func (n *OpenBazaarNode) SendDisputeOpen(peerId string, k *libp2p.PubKey, disput
 		MessageType: pb.Message_DISPUTE_OPEN,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, k, m)
+	return n.sendMessage(peerID, k, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.DisputeUpdate) error {
+// SendDisputeUpdate - send update dispute msg to peer
+func (n *OpenBazaarNode) SendDisputeUpdate(peerID string, updateMessage *pb.DisputeUpdate) error {
 	a, err := ptypes.MarshalAny(updateMessage)
 	if err != nil {
 		return err
@@ -389,10 +408,11 @@ func (n *OpenBazaarNode) SendDisputeUpdate(peerId string, updateMessage *pb.Disp
 		MessageType: pb.Message_DISPUTE_UPDATE,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, nil, m)
+	return n.sendMessage(peerID, nil, m)
 }
 
-func (n *OpenBazaarNode) SendDisputeClose(peerId string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract) error {
+// SendDisputeClose - send dispute closed msg to peer
+func (n *OpenBazaarNode) SendDisputeClose(peerID string, k *libp2p.PubKey, resolutionMessage *pb.RicardianContract) error {
 	a, err := ptypes.MarshalAny(resolutionMessage)
 	if err != nil {
 		return err
@@ -401,9 +421,10 @@ func (n *OpenBazaarNode) SendDisputeClose(peerId string, k *libp2p.PubKey, resol
 		MessageType: pb.Message_DISPUTE_CLOSE,
 		Payload:     a,
 	}
-	return n.sendMessage(peerId, k, m)
+	return n.sendMessage(peerID, k, m)
 }
 
+// SendFundsReleasedByVendor - send funds released by vendor msg to peer
 func (n *OpenBazaarNode) SendFundsReleasedByVendor(peerID string, marshalledPeerPublicKey []byte, orderID string) error {
 	peerKey, err := libp2p.UnmarshalPublicKey(marshalledPeerPublicKey)
 	if err != nil {
@@ -420,7 +441,8 @@ func (n *OpenBazaarNode) SendFundsReleasedByVendor(peerID string, marshalledPeer
 	return n.sendMessage(peerID, &peerKey, message)
 }
 
-func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
+// SendChat - send chat msg to peer
+func (n *OpenBazaarNode) SendChat(peerID string, chatMessage *pb.Chat) error {
 	a, err := ptypes.MarshalAny(chatMessage)
 	if err != nil {
 		return err
@@ -430,7 +452,7 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 		Payload:     a,
 	}
 
-	p, err := peer.IDB58Decode(peerId)
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
@@ -445,7 +467,8 @@ func (n *OpenBazaarNode) SendChat(peerId string, chatMessage *pb.Chat) error {
 	return nil
 }
 
-func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
+// SendModeratorAdd - send add moderator msg to peer
+func (n *OpenBazaarNode) SendModeratorAdd(peerID string) error {
 	m := pb.Message{MessageType: pb.Message_MODERATOR_ADD}
 
 	pubkey := n.IpfsNode.PrivateKey.GetPublic()
@@ -458,7 +481,7 @@ func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
 		return err
 	}
 	data := &pb.SignedData_Command{
-		PeerID:    peerId,
+		PeerID:    peerID,
 		Type:      pb.Message_MODERATOR_ADD,
 		Timestamp: ts,
 	}
@@ -481,14 +504,15 @@ func (n *OpenBazaarNode) SendModeratorAdd(peerId string) error {
 	}
 	m.Payload = any
 
-	err = n.sendMessage(peerId, nil, m)
+	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
+// SendModeratorRemove - send remove moderator msg to peer
+func (n *OpenBazaarNode) SendModeratorRemove(peerID string) error {
 	m := pb.Message{MessageType: pb.Message_MODERATOR_REMOVE}
 
 	pubkey := n.IpfsNode.PrivateKey.GetPublic()
@@ -501,7 +525,7 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
 		return err
 	}
 	data := &pb.SignedData_Command{
-		PeerID:    peerId,
+		PeerID:    peerID,
 		Type:      pb.Message_MODERATOR_REMOVE,
 		Timestamp: ts,
 	}
@@ -524,14 +548,15 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerId string) error {
 	}
 	m.Payload = any
 
-	err = n.sendMessage(peerId, nil, m)
+	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (n *OpenBazaarNode) SendBlock(peerId string, id cid.Cid) error {
+// SendBlock - send requested ipfs block to peer
+func (n *OpenBazaarNode) SendBlock(peerID string, id cid.Cid) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	block, err := n.IpfsNode.Blocks.GetBlock(ctx, &id)
@@ -552,14 +577,15 @@ func (n *OpenBazaarNode) SendBlock(peerId string, id cid.Cid) error {
 		Payload:     a,
 	}
 
-	p, err := peer.IDB58Decode(peerId)
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
 	return n.Service.SendMessage(context.Background(), p, &m)
 }
 
-func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
+// SendStore - send requested stores to peer
+func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	var s []string
 	for _, d := range ids {
 		s = append(s, d.String())
@@ -577,7 +603,7 @@ func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
 		Payload:     a,
 	}
 
-	p, err := peer.IDB58Decode(peerId)
+	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
@@ -590,7 +616,7 @@ func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
 		return errors.New("Peer responded with nil payload")
 	}
 	if pmes.MessageType == pb.Message_ERROR {
-		log.Errorf("Error response from %s: %s", peerId, string(pmes.Payload.Value))
+		log.Errorf("Error response from %s: %s", peerID, string(pmes.Payload.Value))
 		return errors.New("Peer responded with error message")
 	}
 
@@ -600,16 +626,16 @@ func (n *OpenBazaarNode) SendStore(peerId string, ids []cid.Cid) error {
 		return err
 	}
 	if len(resp.Cids) == 0 {
-		log.Debugf("Peer %s requested no blocks", peerId)
+		log.Debugf("Peer %s requested no blocks", peerID)
 		return nil
 	}
-	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerId)
+	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerID)
 	for _, id := range resp.Cids {
 		decoded, err := cid.Decode(id)
 		if err != nil {
 			continue
 		}
-		n.SendBlock(peerId, *decoded)
+		n.SendBlock(peerID, *decoded)
 	}
 	return nil
 }

@@ -4,21 +4,23 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
+	// MaxTXIDSize - max length for order txnID
 	MaxTXIDSize = 512
 )
 
+// FulfillOrder - fulfill the order
 func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	if fulfillment.Slug == "" && len(contract.VendorListings) == 1 {
 		fulfillment.Slug = contract.VendorListings[0].Slug
@@ -53,7 +55,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+		// parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 		mPrivKey := n.Wallet.MasterPrivateKey()
 		if err != nil {
 			return err
@@ -62,16 +64,17 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPrivateKeyID[:],
-			mECKey.Serialize(),
-			chaincode,
-			parentFP,
-			0,
-			0,
-			true)
-
-		vendorKey, err := hdKey.Child(0)
+		/*
+			hdKey := hd.NewExtendedKey(
+				n.Wallet.Params().HDPrivateKeyID[:],
+				mECKey.Serialize(),
+				chaincode,
+				parentFP,
+				0,
+				0,
+				true)
+		*/
+		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true) // hdKey.Child(0)
 		if err != nil {
 			return err
 		}
@@ -172,6 +175,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	return nil
 }
 
+// SignOrderFulfillment - add signature to order fulfillment
 func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	serializedOrderFulfil, err := proto.Marshal(contract.VendorOrderFulfillment[0])
 	if err != nil {
@@ -191,6 +195,7 @@ func (n *OpenBazaarNode) SignOrderFulfillment(contract *pb.RicardianContract) (*
 	return contract, nil
 }
 
+// ValidateOrderFulfillment - validate order details
 func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillment, contract *pb.RicardianContract) error {
 	if err := verifySignaturesOnOrderFulfilment(contract); err != nil {
 		return err
@@ -315,6 +320,7 @@ func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
 	return nil
 }
 
+// IsFulfilled - check is order is fulfilled
 func (n *OpenBazaarNode) IsFulfilled(contract *pb.RicardianContract) bool {
 	if len(contract.VendorOrderFulfillment) < len(contract.VendorListings) {
 		return false
