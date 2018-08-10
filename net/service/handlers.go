@@ -9,6 +9,7 @@ import (
 
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -339,7 +340,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			return errorResponse(err.Error()), err
 		}
 		service.node.Wallet.AddWatchedAddress(addr)
-		service.node.Datastore.Sales().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
 			service.node.Datastore.Sales().SetNeedsResync(orderID, true)
 		}
@@ -561,10 +562,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the address into our wallet
-		var ins []wallet.TransactionInput
+		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := wallet.TransactionInput{}
 				hash, err := chainhash.NewHashFromStr(r.Txid)
 				if err != nil {
 					return nil, err
@@ -573,12 +573,15 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 				if err != nil {
 					return nil, err
 				}
+				outpoint := wire.NewOutPoint(hash, r.Index)
+				u := wallet.TransactionInput{
+					OutpointHash:  outpoint.Hash.CloneBytes(),
+					OutpointIndex: outpoint.Index,
+					LinkedAddress: addr,
+					Value:         r.Value,
+				}
 
-				u.OutpointHash = []byte(hash.String())
-				u.OutpointIndex = r.Index
-				u.LinkedAddress = addr
-				u.Value = r.Value
-				ins = append(ins, u)
+				txInputs = append(txInputs, u)
 			}
 		}
 
@@ -604,7 +607,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		_, err = service.node.Wallet.SweepAddress(ins, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+		_, err = service.node.Wallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}
@@ -627,9 +630,10 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output wallet.TransactionOutput
-		output.Address = refundAddress
-		output.Value = outValue
+		var output = wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
+		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -745,9 +749,10 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		var output wallet.TransactionOutput
-		output.Address = refundAddress
-		output.Value = outValue
+		var output = wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
+		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -956,9 +961,10 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		} else {
 			payoutAddress = service.node.Wallet.CurrentAddress(wallet.EXTERNAL)
 		}
-		var output wallet.TransactionOutput
-		output.Address = payoutAddress
-		output.Value = outValue
+		var output = wallet.TransactionOutput{
+			Address: payoutAddress,
+			Value:   outValue,
+		}
 
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
 		if err != nil {

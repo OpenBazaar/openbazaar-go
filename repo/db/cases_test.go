@@ -224,7 +224,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 func TestUpdateBuyerInfo(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
-		buyerTestOutpoints     = []*pb.Outpoint{{"hash1", 0, 5}}
+		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
 		contract               = factory.NewContract()
 	)
 	if err != nil {
@@ -274,7 +274,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		vendorTestOutpoints    = []*pb.Outpoint{{"hash2", 1, 11}}
+		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -323,8 +323,8 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{"hash1", 0, 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{"hash2", 1, 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
+		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -385,8 +385,8 @@ func TestGetByCaseID(t *testing.T) {
 	var (
 		casesdb, teardown, err  = buildNewCaseStore()
 		contract                = factory.NewContract()
-		expectedBuyerOutpoints  = []*pb.Outpoint{{"hash1", 0, 5}}
-		expectedVendorOutpoints = []*pb.Outpoint{{"hash2", 1, 11}}
+		expectedBuyerOutpoints  = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
+		expectedVendorOutpoints = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -460,8 +460,8 @@ func TestMarkAsClosed(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{"hash1", 0, 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{"hash2", 1, 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
+		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -502,8 +502,8 @@ func TestCasesDB_GetAll(t *testing.T) {
 	var (
 		casesdb, teardown, err = buildNewCaseStore()
 		contract               = factory.NewContract()
-		buyerTestOutpoints     = []*pb.Outpoint{{"hash1", 0, 5}}
-		vendorTestOutpoints    = []*pb.Outpoint{{"hash2", 1, 11}}
+		buyerTestOutpoints     = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
+		vendorTestOutpoints    = []*pb.Outpoint{{Hash: "hash2", Index: 1, Value: 11}}
 	)
 	if err != nil {
 		t.Fatal(err)

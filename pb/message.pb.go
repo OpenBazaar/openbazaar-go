@@ -6,13 +6,19 @@ package pb
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import google_protobuf1 "github.com/golang/protobuf/ptypes/any"
-import google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
+import any "github.com/golang/protobuf/ptypes/any"
+import timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type Message_MessageType int32
 
@@ -93,7 +99,9 @@ var Message_MessageType_value = map[string]int32{
 func (x Message_MessageType) String() string {
 	return proto.EnumName(Message_MessageType_name, int32(x))
 }
-func (Message_MessageType) EnumDescriptor() ([]byte, []int) { return fileDescriptor3, []int{0, 0} }
+func (Message_MessageType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{0, 0}
+}
 
 type Chat_Flag int32
 
@@ -117,19 +125,43 @@ var Chat_Flag_value = map[string]int32{
 func (x Chat_Flag) String() string {
 	return proto.EnumName(Chat_Flag_name, int32(x))
 }
-func (Chat_Flag) EnumDescriptor() ([]byte, []int) { return fileDescriptor3, []int{2, 0} }
-
-type Message struct {
-	MessageType Message_MessageType   `protobuf:"varint,1,opt,name=messageType,enum=Message_MessageType" json:"messageType,omitempty"`
-	Payload     *google_protobuf1.Any `protobuf:"bytes,2,opt,name=payload" json:"payload,omitempty"`
-	RequestId   int32                 `protobuf:"varint,3,opt,name=requestId" json:"requestId,omitempty"`
-	IsResponse  bool                  `protobuf:"varint,4,opt,name=isResponse" json:"isResponse,omitempty"`
+func (Chat_Flag) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{2, 0}
 }
 
-func (m *Message) Reset()                    { *m = Message{} }
-func (m *Message) String() string            { return proto.CompactTextString(m) }
-func (*Message) ProtoMessage()               {}
-func (*Message) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{0} }
+type Message struct {
+	MessageType          Message_MessageType `protobuf:"varint,1,opt,name=messageType,proto3,enum=Message_MessageType" json:"messageType,omitempty"`
+	Payload              *any.Any            `protobuf:"bytes,2,opt,name=payload,proto3" json:"payload,omitempty"`
+	RequestId            int32               `protobuf:"varint,3,opt,name=requestId,proto3" json:"requestId,omitempty"`
+	IsResponse           bool                `protobuf:"varint,4,opt,name=isResponse,proto3" json:"isResponse,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
+	XXX_unrecognized     []byte              `json:"-"`
+	XXX_sizecache        int32               `json:"-"`
+}
+
+func (m *Message) Reset()         { *m = Message{} }
+func (m *Message) String() string { return proto.CompactTextString(m) }
+func (*Message) ProtoMessage()    {}
+func (*Message) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{0}
+}
+func (m *Message) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Message.Unmarshal(m, b)
+}
+func (m *Message) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Message.Marshal(b, m, deterministic)
+}
+func (dst *Message) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Message.Merge(dst, src)
+}
+func (m *Message) XXX_Size() int {
+	return xxx_messageInfo_Message.Size(m)
+}
+func (m *Message) XXX_DiscardUnknown() {
+	xxx_messageInfo_Message.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Message proto.InternalMessageInfo
 
 func (m *Message) GetMessageType() Message_MessageType {
 	if m != nil {
@@ -138,7 +170,7 @@ func (m *Message) GetMessageType() Message_MessageType {
 	return Message_PING
 }
 
-func (m *Message) GetPayload() *google_protobuf1.Any {
+func (m *Message) GetPayload() *any.Any {
 	if m != nil {
 		return m.Payload
 	}
@@ -160,15 +192,37 @@ func (m *Message) GetIsResponse() bool {
 }
 
 type Envelope struct {
-	Message   *Message `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
-	Pubkey    []byte   `protobuf:"bytes,2,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	Signature []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	Message              *Message `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Pubkey               []byte   `protobuf:"bytes,2,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
+	Signature            []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Envelope) Reset()                    { *m = Envelope{} }
-func (m *Envelope) String() string            { return proto.CompactTextString(m) }
-func (*Envelope) ProtoMessage()               {}
-func (*Envelope) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{1} }
+func (m *Envelope) Reset()         { *m = Envelope{} }
+func (m *Envelope) String() string { return proto.CompactTextString(m) }
+func (*Envelope) ProtoMessage()    {}
+func (*Envelope) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{1}
+}
+func (m *Envelope) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Envelope.Unmarshal(m, b)
+}
+func (m *Envelope) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Envelope.Marshal(b, m, deterministic)
+}
+func (dst *Envelope) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Envelope.Merge(dst, src)
+}
+func (m *Envelope) XXX_Size() int {
+	return xxx_messageInfo_Envelope.Size(m)
+}
+func (m *Envelope) XXX_DiscardUnknown() {
+	xxx_messageInfo_Envelope.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Envelope proto.InternalMessageInfo
 
 func (m *Envelope) GetMessage() *Message {
 	if m != nil {
@@ -192,17 +246,39 @@ func (m *Envelope) GetSignature() []byte {
 }
 
 type Chat struct {
-	MessageId string                     `protobuf:"bytes,1,opt,name=messageId" json:"messageId,omitempty"`
-	Subject   string                     `protobuf:"bytes,2,opt,name=subject" json:"subject,omitempty"`
-	Message   string                     `protobuf:"bytes,3,opt,name=message" json:"message,omitempty"`
-	Timestamp *google_protobuf.Timestamp `protobuf:"bytes,4,opt,name=timestamp" json:"timestamp,omitempty"`
-	Flag      Chat_Flag                  `protobuf:"varint,5,opt,name=flag,enum=Chat_Flag" json:"flag,omitempty"`
+	MessageId            string               `protobuf:"bytes,1,opt,name=messageId,proto3" json:"messageId,omitempty"`
+	Subject              string               `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	Message              string               `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Timestamp            *timestamp.Timestamp `protobuf:"bytes,4,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	Flag                 Chat_Flag            `protobuf:"varint,5,opt,name=flag,proto3,enum=Chat_Flag" json:"flag,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *Chat) Reset()                    { *m = Chat{} }
-func (m *Chat) String() string            { return proto.CompactTextString(m) }
-func (*Chat) ProtoMessage()               {}
-func (*Chat) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{2} }
+func (m *Chat) Reset()         { *m = Chat{} }
+func (m *Chat) String() string { return proto.CompactTextString(m) }
+func (*Chat) ProtoMessage()    {}
+func (*Chat) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{2}
+}
+func (m *Chat) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Chat.Unmarshal(m, b)
+}
+func (m *Chat) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Chat.Marshal(b, m, deterministic)
+}
+func (dst *Chat) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Chat.Merge(dst, src)
+}
+func (m *Chat) XXX_Size() int {
+	return xxx_messageInfo_Chat.Size(m)
+}
+func (m *Chat) XXX_DiscardUnknown() {
+	xxx_messageInfo_Chat.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Chat proto.InternalMessageInfo
 
 func (m *Chat) GetMessageId() string {
 	if m != nil {
@@ -225,7 +301,7 @@ func (m *Chat) GetMessage() string {
 	return ""
 }
 
-func (m *Chat) GetTimestamp() *google_protobuf.Timestamp {
+func (m *Chat) GetTimestamp() *timestamp.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -240,15 +316,37 @@ func (m *Chat) GetFlag() Chat_Flag {
 }
 
 type SignedData struct {
-	SenderPubkey   []byte `protobuf:"bytes,1,opt,name=senderPubkey,proto3" json:"senderPubkey,omitempty"`
-	SerializedData []byte `protobuf:"bytes,2,opt,name=serializedData,proto3" json:"serializedData,omitempty"`
-	Signature      []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	SenderPubkey         []byte   `protobuf:"bytes,1,opt,name=senderPubkey,proto3" json:"senderPubkey,omitempty"`
+	SerializedData       []byte   `protobuf:"bytes,2,opt,name=serializedData,proto3" json:"serializedData,omitempty"`
+	Signature            []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SignedData) Reset()                    { *m = SignedData{} }
-func (m *SignedData) String() string            { return proto.CompactTextString(m) }
-func (*SignedData) ProtoMessage()               {}
-func (*SignedData) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{3} }
+func (m *SignedData) Reset()         { *m = SignedData{} }
+func (m *SignedData) String() string { return proto.CompactTextString(m) }
+func (*SignedData) ProtoMessage()    {}
+func (*SignedData) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{3}
+}
+func (m *SignedData) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignedData.Unmarshal(m, b)
+}
+func (m *SignedData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignedData.Marshal(b, m, deterministic)
+}
+func (dst *SignedData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedData.Merge(dst, src)
+}
+func (m *SignedData) XXX_Size() int {
+	return xxx_messageInfo_SignedData.Size(m)
+}
+func (m *SignedData) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignedData.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignedData proto.InternalMessageInfo
 
 func (m *SignedData) GetSenderPubkey() []byte {
 	if m != nil {
@@ -272,15 +370,37 @@ func (m *SignedData) GetSignature() []byte {
 }
 
 type SignedData_Command struct {
-	PeerID    string                     `protobuf:"bytes,1,opt,name=peerID" json:"peerID,omitempty"`
-	Type      Message_MessageType        `protobuf:"varint,2,opt,name=type,enum=Message_MessageType" json:"type,omitempty"`
-	Timestamp *google_protobuf.Timestamp `protobuf:"bytes,3,opt,name=timestamp" json:"timestamp,omitempty"`
+	PeerID               string               `protobuf:"bytes,1,opt,name=peerID,proto3" json:"peerID,omitempty"`
+	Type                 Message_MessageType  `protobuf:"varint,2,opt,name=type,proto3,enum=Message_MessageType" json:"type,omitempty"`
+	Timestamp            *timestamp.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *SignedData_Command) Reset()                    { *m = SignedData_Command{} }
-func (m *SignedData_Command) String() string            { return proto.CompactTextString(m) }
-func (*SignedData_Command) ProtoMessage()               {}
-func (*SignedData_Command) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{3, 0} }
+func (m *SignedData_Command) Reset()         { *m = SignedData_Command{} }
+func (m *SignedData_Command) String() string { return proto.CompactTextString(m) }
+func (*SignedData_Command) ProtoMessage()    {}
+func (*SignedData_Command) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{3, 0}
+}
+func (m *SignedData_Command) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignedData_Command.Unmarshal(m, b)
+}
+func (m *SignedData_Command) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignedData_Command.Marshal(b, m, deterministic)
+}
+func (dst *SignedData_Command) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedData_Command.Merge(dst, src)
+}
+func (m *SignedData_Command) XXX_Size() int {
+	return xxx_messageInfo_SignedData_Command.Size(m)
+}
+func (m *SignedData_Command) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignedData_Command.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignedData_Command proto.InternalMessageInfo
 
 func (m *SignedData_Command) GetPeerID() string {
 	if m != nil {
@@ -296,7 +416,7 @@ func (m *SignedData_Command) GetType() Message_MessageType {
 	return Message_PING
 }
 
-func (m *SignedData_Command) GetTimestamp() *google_protobuf.Timestamp {
+func (m *SignedData_Command) GetTimestamp() *timestamp.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -304,13 +424,35 @@ func (m *SignedData_Command) GetTimestamp() *google_protobuf.Timestamp {
 }
 
 type CidList struct {
-	Cids []string `protobuf:"bytes,1,rep,name=cids" json:"cids,omitempty"`
+	Cids                 []string `protobuf:"bytes,1,rep,name=cids,proto3" json:"cids,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *CidList) Reset()                    { *m = CidList{} }
-func (m *CidList) String() string            { return proto.CompactTextString(m) }
-func (*CidList) ProtoMessage()               {}
-func (*CidList) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{4} }
+func (m *CidList) Reset()         { *m = CidList{} }
+func (m *CidList) String() string { return proto.CompactTextString(m) }
+func (*CidList) ProtoMessage()    {}
+func (*CidList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{4}
+}
+func (m *CidList) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_CidList.Unmarshal(m, b)
+}
+func (m *CidList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_CidList.Marshal(b, m, deterministic)
+}
+func (dst *CidList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_CidList.Merge(dst, src)
+}
+func (m *CidList) XXX_Size() int {
+	return xxx_messageInfo_CidList.Size(m)
+}
+func (m *CidList) XXX_DiscardUnknown() {
+	xxx_messageInfo_CidList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_CidList proto.InternalMessageInfo
 
 func (m *CidList) GetCids() []string {
 	if m != nil {
@@ -320,14 +462,36 @@ func (m *CidList) GetCids() []string {
 }
 
 type Block struct {
-	RawData []byte `protobuf:"bytes,1,opt,name=rawData,proto3" json:"rawData,omitempty"`
-	Cid     string `protobuf:"bytes,2,opt,name=cid" json:"cid,omitempty"`
+	RawData              []byte   `protobuf:"bytes,1,opt,name=rawData,proto3" json:"rawData,omitempty"`
+	Cid                  string   `protobuf:"bytes,2,opt,name=cid,proto3" json:"cid,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Block) Reset()                    { *m = Block{} }
-func (m *Block) String() string            { return proto.CompactTextString(m) }
-func (*Block) ProtoMessage()               {}
-func (*Block) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{5} }
+func (m *Block) Reset()         { *m = Block{} }
+func (m *Block) String() string { return proto.CompactTextString(m) }
+func (*Block) ProtoMessage()    {}
+func (*Block) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{5}
+}
+func (m *Block) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Block.Unmarshal(m, b)
+}
+func (m *Block) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Block.Marshal(b, m, deterministic)
+}
+func (dst *Block) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Block.Merge(dst, src)
+}
+func (m *Block) XXX_Size() int {
+	return xxx_messageInfo_Block.Size(m)
+}
+func (m *Block) XXX_DiscardUnknown() {
+	xxx_messageInfo_Block.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Block proto.InternalMessageInfo
 
 func (m *Block) GetRawData() []byte {
 	if m != nil {
@@ -344,15 +508,37 @@ func (m *Block) GetCid() string {
 }
 
 type Error struct {
-	Code         uint32 `protobuf:"varint,1,opt,name=code" json:"code,omitempty"`
-	ErrorMessage string `protobuf:"bytes,2,opt,name=errorMessage" json:"errorMessage,omitempty"`
-	OrderID      string `protobuf:"bytes,3,opt,name=orderID" json:"orderID,omitempty"`
+	Code                 uint32   `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	ErrorMessage         string   `protobuf:"bytes,2,opt,name=errorMessage,proto3" json:"errorMessage,omitempty"`
+	OrderID              string   `protobuf:"bytes,3,opt,name=orderID,proto3" json:"orderID,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Error) Reset()                    { *m = Error{} }
-func (m *Error) String() string            { return proto.CompactTextString(m) }
-func (*Error) ProtoMessage()               {}
-func (*Error) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{6} }
+func (m *Error) Reset()         { *m = Error{} }
+func (m *Error) String() string { return proto.CompactTextString(m) }
+func (*Error) ProtoMessage()    {}
+func (*Error) Descriptor() ([]byte, []int) {
+	return fileDescriptor_message_1df6e446e7f943cb, []int{6}
+}
+func (m *Error) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Error.Unmarshal(m, b)
+}
+func (m *Error) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Error.Marshal(b, m, deterministic)
+}
+func (dst *Error) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Error.Merge(dst, src)
+}
+func (m *Error) XXX_Size() int {
+	return xxx_messageInfo_Error.Size(m)
+}
+func (m *Error) XXX_DiscardUnknown() {
+	xxx_messageInfo_Error.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Error proto.InternalMessageInfo
 
 func (m *Error) GetCode() uint32 {
 	if m != nil {
@@ -388,9 +574,9 @@ func init() {
 	proto.RegisterEnum("Chat_Flag", Chat_Flag_name, Chat_Flag_value)
 }
 
-func init() { proto.RegisterFile("message.proto", fileDescriptor3) }
+func init() { proto.RegisterFile("message.proto", fileDescriptor_message_1df6e446e7f943cb) }
 
-var fileDescriptor3 = []byte{
+var fileDescriptor_message_1df6e446e7f943cb = []byte{
 	// 787 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x54, 0x41, 0x8f, 0x9b, 0x46,
 	0x14, 0x0e, 0x36, 0x5e, 0xec, 0x87, 0x77, 0x33, 0x3b, 0xdd, 0x46, 0x74, 0x95, 0xa6, 0x16, 0x87,

@@ -470,9 +470,9 @@ func calcDiffAdjust(start, end StoredHeader, p *chaincfg.Params) uint32 {
 		duration = 72 * int64(targetSpacing)
 	}
 
-	prjectedWork := new(big.Int).Mul(work, big.NewInt(int64(targetSpacing)))
+	projectedWork := new(big.Int).Mul(work, big.NewInt(int64(targetSpacing)))
 
-	pw := new(big.Int).Div(prjectedWork, big.NewInt(duration))
+	pw := new(big.Int).Div(projectedWork, big.NewInt(duration))
 
 	e := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
 

@@ -261,8 +261,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 	if err != nil {
 
-		// Vendor offline
-		// Change payment code to direct
+			err = n.Wallet.AddWatchedAddress(addr)
+			if err != nil {
+				return "", "", 0, false, err
+			}
 
 		fpb := n.Wallet.GetFeePerByte(wallet.NORMAL)
 		if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
@@ -270,41 +272,79 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		}
 		payment.Method = pb.Order_Payment_DIRECT
 
-		/* Generate a payment address using the first child key derived from the buyer's
-		   and vendors's masterPubKeys and a random chaincode. */
-		chaincode := make([]byte, 32)
-		_, err := rand.Read(chaincode)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-
-		vendorKey, err := n.Wallet.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-
-		buyerKey, err := n.Wallet.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		payment.Address = addr.EncodeAddress()
-		payment.RedeemScript = hex.EncodeToString(redeemScript)
-		payment.Chaincode = hex.EncodeToString(chaincode)
-
-		err = n.Wallet.AddWatchedAddress(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-
-		// Remove signature and resign
-		contract.Signatures = []*pb.Signature{contract.Signatures[0]}
-		contract, err = n.SignOrder(contract)
-		if err != nil {
-			return "", "", 0, false, err
+			// Send using offline messaging
+			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
+			peerId, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			any, err := ptypes.MarshalAny(contract)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			m := pb.Message{
+				MessageType: pb.Message_ORDER,
+				Payload:     any,
+			}
+			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.SendOfflineMessage(peerId, &k, &m)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			return orderId, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
+		} else { // Vendor responded
+			if resp.MessageType == pb.Message_ERROR {
+				return "", "", 0, false, extractErrorMessage(resp)
+			}
+			if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
+				return "", "", 0, false, errors.New("Vendor responded to the order with an incorrect message type")
+			}
+			if resp.Payload == nil {
+				return "", "", 0, false, errors.New("Vendor responded with nil payload")
+			}
+			rc := new(pb.RicardianContract)
+			err := proto.Unmarshal(resp.Payload.Value, rc)
+			if err != nil {
+				return "", "", 0, false, errors.New("Error parsing the vendor's response")
+			}
+			contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
+			for _, sig := range rc.Signatures {
+				if sig.Section == pb.Signature_ORDER_CONFIRMATION {
+					contract.Signatures = append(contract.Signatures, sig)
+				}
+			}
+			err = n.ValidateOrderConfirmation(contract, true)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			addr, err := n.Wallet.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.Wallet.AddWatchedAddress(addr)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			orderId, err := n.CalcOrderId(contract.BuyerOrder)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			err = n.Datastore.Purchases().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				return "", "", 0, false, err
+			}
+			return orderId, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 		}
 
 		// Send using offline messaging
@@ -329,7 +369,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		orderID, err := n.CalcOrderID(contract.BuyerOrder)
+		orderID, err = n.CalcOrderID(contract.BuyerOrder)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -670,10 +710,9 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	// Sweep the temp address into our wallet
-	var ins []wallet.TransactionInput
+	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			u := wallet.TransactionInput{}
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
 				return err
@@ -682,16 +721,19 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 			if err != nil {
 				return err
 			}
-			u.LinkedAddress = addr
-			u.OutpointHash = []byte(hash.String())
-			u.OutpointIndex = r.Index
-			u.Value = r.Value
-			ins = append(ins, u)
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			u := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointIndex: outpoint.Index,
+				OutpointHash:  outpoint.Hash.CloneBytes(),
+				Value:         r.Value,
+			}
+			txInputs = append(txInputs, u)
 		}
 	}
 
-	if len(ins) == 0 {
-		return errors.New("cannot cancel order because utxo has already been spent")
+	if len(txInputs) == 0 {
+		return errors.New("Cannot cancel order because utxo has already been spent")
 	}
 
 	chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -716,7 +758,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(ins, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}

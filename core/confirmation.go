@@ -8,6 +8,7 @@ import (
 
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 
@@ -98,28 +99,25 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	}
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
-		var ins []wallet.TransactionInput
+		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				u := wallet.TransactionInput{}
 				hash, err := chainhash.NewHashFromStr(r.Txid)
 				if err != nil {
 					return err
 				}
-				addr, err := n.Wallet.DecodeAddress(r.Address)
-				if err != nil {
-					return err
+				outpoint := wire.NewOutPoint(hash, r.Index)
+				txInput := wallet.TransactionInput{
+					OutpointIndex: outpoint.Index,
+					OutpointHash:  outpoint.Hash.CloneBytes(),
+					Value:         r.Value,
 				}
-				u.LinkedAddress = addr
-				u.OutpointHash = []byte(hash.String())
-				u.OutpointIndex = r.Index
-				u.Value = r.Value
-				ins = append(ins, u)
+				txInputs = append(txInputs, txInput)
 			}
 		}
 
-		if len(ins) == 0 {
-			return errors.New("Cannot accept order because utxo has already been spent")
+		if len(txInputs) == 0 {
+			return errors.New("No unspent transactions found to fund order")
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -143,7 +141,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		_, err = n.Wallet.SweepAddress(ins, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		_, err = n.Wallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return err
 		}
@@ -190,6 +188,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		var output wallet.TransactionOutput
 
+		output.Address = refundAddress
 		output.Value = outValue
 		output.Address = refundAddress
 

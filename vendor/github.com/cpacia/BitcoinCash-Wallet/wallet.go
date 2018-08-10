@@ -204,6 +204,25 @@ func (w *SPVWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
+func (w *SPVWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	var id []byte
+	if isPrivateKey {
+		id = w.params.HDPrivateKeyID[:]
+	} else {
+		id = w.params.HDPublicKeyID[:]
+	}
+	hdKey := hd.NewExtendedKey(
+		id,
+		keyBytes,
+		chaincode,
+		parentFP,
+		0,
+		0,
+		isPrivateKey)
+	return hdKey.Child(0)
+}
+
 func (w *SPVWallet) Mnemonic() string {
 	return w.mnemonic
 }
@@ -249,7 +268,11 @@ func (w *SPVWallet) DecodeAddress(addr string) (btc.Address, error) {
 }
 
 func (w *SPVWallet) ScriptToAddress(script []byte) (btc.Address, error) {
-	addr, err := bchutil.ExtractPkScriptAddrs(script, w.params)
+	return scriptToAddress(script, w.params)
+}
+
+func scriptToAddress(script []byte, params *chaincfg.Params) (btc.Address, error) {
+	addr, err := bchutil.ExtractPkScriptAddrs(script, params)
 	if err != nil {
 		return nil, err
 	}
@@ -400,8 +423,12 @@ func (w *SPVWallet) ChainTip() (uint32, chainhash.Hash) {
 	return sh.height, sh.header.BlockHash()
 }
 
-func (w *SPVWallet) AddWatchedScript(script []byte) error {
-	err := w.txstore.WatchedScripts().Put(script)
+func (w *SPVWallet) AddWatchedAddress(addr btc.Address) error {
+	script, err := w.AddressToScript(addr)
+	if err != nil {
+		return err
+	}
+	err = w.txstore.WatchedScripts().Put(script)
 	w.txstore.PopulateAdrs()
 
 	w.wireService.MsgChan() <- updateFiltersMsg{}

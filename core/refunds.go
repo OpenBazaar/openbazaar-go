@@ -45,10 +45,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		var output wallet.TransactionOutput
-
-		output.Address = refundAddress
-		output.Value = outValue
+		output := wallet.TransactionOutput{
+			Address: refundAddress,
+			Value:   outValue,
+		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {

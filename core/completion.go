@@ -185,6 +185,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 			return err
 		}
 		var output wallet.TransactionOutput
+		output.Address = payoutAddress
 		output.Value = outValue
 		output.Address = payoutAddress
 
@@ -301,18 +302,9 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	}
 
 	minConfirms := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
-	var ins []wallet.TransactionInput
+	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			var u wallet.TransactionInput
-			u.Value = r.Value
-
-			addr, err := n.Wallet.DecodeAddress(r.Address)
-			if err != nil {
-				return err
-			}
-			u.LinkedAddress = addr
-
 			hash, err := chainhash.NewHashFromStr(r.Txid)
 			if err != nil {
 				return err
@@ -325,11 +317,24 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			if err != nil {
 				return err
 			}
+
 			if confirms < minConfirms {
 				EscrowTimeLockedError = fmt.Errorf("Tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
 				return EscrowTimeLockedError
 			}
-			ins = append(ins, u)
+
+			addr, err := n.Wallet.DecodeAddress(r.Address)
+			if err != nil {
+				return err
+			}
+			outpoint := wire.NewOutPoint(hash, r.Index)
+			var txInput = wallet.TransactionInput{
+				Value:         r.Value,
+				LinkedAddress: addr,
+				OutpointIndex: outpoint.Index,
+				OutpointHash:  outpoint.Hash.CloneBytes(),
+			}
+			txInputs = append(txInputs, txInput)
 		}
 	}
 
@@ -354,7 +359,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	if err != nil {
 		return err
 	}
-	_, err = n.Wallet.SweepAddress(ins, nil, vendorKey, &redeemScript, wallet.NORMAL)
+	_, err = n.Wallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 	if err != nil {
 		return err
 	}
