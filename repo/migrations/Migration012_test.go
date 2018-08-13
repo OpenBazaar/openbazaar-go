@@ -23,12 +23,12 @@ import (
 )
 
 const (
-	testMigration012_PeerID            = "QmeGAo1o1CoufuoRtRb2FCqi2UhMV7m83KT3xB6MKrTvqx"
-	testMigration012_IdentityKeyBase64 = "CAESYHwrVuRp5s2u0w5ykibsR77aHWBmvpcaDq+vU9pv8lOqae31NJYJbdDsOlxVRqQZS/eDfssdd7N/rJmoVbQvPytp7fU0lglt0Ow6XFVGpBlL94N+yx13s3+smahVtC8/Kw=="
+	testMigration012_PeerID                   = "QmeGAo1o1CoufuoRtRb2FCqi2UhMV7m83KT3xB6MKrTvqx"
+	testMigration012_IdentityPrivateKeyBase64 = "CAESYHwrVuRp5s2u0w5ykibsR77aHWBmvpcaDq+vU9pv8lOqae31NJYJbdDsOlxVRqQZS/eDfssdd7N/rJmoVbQvPytp7fU0lglt0Ow6XFVGpBlL94N+yx13s3+smahVtC8/Kw=="
 )
 
 var (
-	testMigration012_PubkeyIdentityBytes = []byte{8, 1, 18, 32, 105, 237, 245, 52, 150, 9, 109, 208, 236, 58, 92, 85, 70, 164, 25, 75, 247, 131, 126, 203, 29, 119, 179, 127, 172, 153, 168, 85, 180, 47, 63, 43}
+	testMigration012_IdentityPubkeyBytes = []byte{8, 1, 18, 32, 105, 237, 245, 52, 150, 9, 109, 208, 236, 58, 92, 85, 70, 164, 25, 75, 247, 131, 126, 203, 29, 119, 179, 127, 172, 153, 168, 85, 180, 47, 63, 43}
 
 	testMigration012_datadir          = path.Join("/", "tmp", "openbazaar-test")
 	testMigraion012_listingsIndexPath = testMigration012_filepath("root", "listings.json")
@@ -70,7 +70,7 @@ func TestMigration012_GetIdentityKey(t *testing.T) {
 	}
 
 	identityKeyBase64 := base64.StdEncoding.EncodeToString(identityKey)
-	if identityKeyBase64 != testMigration012_IdentityKeyBase64 {
+	if identityKeyBase64 != testMigration012_IdentityPrivateKeyBase64 {
 		t.Fatal("Incorect key:", identityKeyBase64)
 	}
 }
@@ -130,7 +130,7 @@ func testMigration012_Setup(t *testing.T) func() {
 
 	db, err := migrations.OpenDB(testMigration012_datadir, "letmein", true)
 
-	identityKey, err := base64.StdEncoding.DecodeString(testMigration012_IdentityKeyBase64)
+	identityKey, err := base64.StdEncoding.DecodeString(testMigration012_IdentityPrivateKeyBase64)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,9 +202,11 @@ func testMigration012_assertListingMigratedCorrectly(t *testing.T, listingBefore
 		t.Fatal("Incorrect version.\nWanted:", 4, "\nGot:", sl.Listing.Metadata.Version)
 	}
 
-	if sl.Listing.Slug != "slug-4" && sl.Listing.Slug != "slug-5" {
+	// We're done checking if the listing wasn't migrated
+	if !migrations.Migration012_listingHasNewFeaturesAndOldVersion(&listingBeforeMigration) {
 		return
 	}
+
 	// Check signature
 	err = testMigration012_verifySignature(
 		sl.Listing,
@@ -532,7 +534,7 @@ var testMigration012_listingIndexFixture = `[
 var testMigraion012_vendorIDFixture = &pb.ID{
 	PeerID: testMigration012_PeerID,
 	Pubkeys: &pb.ID_Pubkeys{
-		Identity: testMigration012_PubkeyIdentityBytes,
+		Identity: testMigration012_IdentityPubkeyBytes,
 	},
 }
 
