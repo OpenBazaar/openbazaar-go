@@ -1,12 +1,13 @@
 package repo
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 )
 
 type Migration interface {
@@ -26,6 +27,7 @@ var Migrations = []Migration{
 	migrations.Migration008{},
 	migrations.Migration009{},
 	migrations.Migration010{},
+	migrations.Migration011{},
 }
 
 // MigrateUp looks at the currently active migration version
