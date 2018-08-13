@@ -10,7 +10,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
