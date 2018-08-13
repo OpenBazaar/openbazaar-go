@@ -48,8 +48,12 @@ type Migration012_ListingData struct {
 }
 
 func Migration012_listingHasNewFeaturesAndOldVersion(sl *pb.SignedListing) bool {
-	return sl.Listing.Metadata.Version == 3 &&
-		sl.Listing.Metadata.PriceModifier != 0
+	metadata := sl.Listing.Metadata
+	if metadata == nil {
+		return false
+	}
+	return metadata.Version == 3 &&
+		metadata.PriceModifier != 0
 }
 
 func Migration012_GetIdentityKey(repoPath, databasePassword string, testnetEnabled bool) ([]byte, error) {
