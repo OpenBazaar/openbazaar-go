@@ -103,7 +103,7 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Check each crypto listing for markup
 	markupListings := []*pb.SignedListing{}
 	for _, listingAbstract := range cryptoListings {
-		listingJSONBytes, err := ioutil.ReadFile(path.Join(repoPath, "root", "listings", migration012_filenameForSlug(listingAbstract.Slug)))
+		listingJSONBytes, err := ioutil.ReadFile(migration012_listingFilePath(repoPath, listingAbstract.Slug))
 		if err != nil {
 			return err
 		}
@@ -193,11 +193,11 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 			return err
 		}
 
-		filename := migration012_filenameForSlug(sl.Listing.Slug)
-		if err := ioutil.WriteFile(path.Join(repoPath, "root", "listings", filename), []byte(out), os.ModePerm); err != nil {
+		filename := migration012_listingFilePath(repoPath, sl.Listing.Slug)
+		if err := ioutil.WriteFile(filename, []byte(out), os.ModePerm); err != nil {
 			return err
 		}
-		h, err := ipfs.GetHashOfFile(nd, path.Join(repoPath, "root", "listings", filename))
+		h, err := ipfs.GetHashOfFile(nd, filename)
 		if err != nil {
 			return err
 		}
@@ -252,8 +252,8 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	return writeRepoVer(repoPath, 13)
 }
 
-func migration012_filenameForSlug(slug string) string {
-	return slug + ".json"
+func migration012_listingFilePath(datadir string, slug string) string {
+	return path.Join(datadir, "root", "listings", slug+".json")
 }
 
 func (Migration012) Down(repoPath, databasePassword string, testnetEnabled bool) error {
