@@ -336,7 +336,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	}
 
 	m.node.Peerstore.AddPubKey(id, pubkey)
-	m.node.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+id.String()), env.Pubkey)
+	m.node.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+id.Pretty()), env.Pubkey)
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {
