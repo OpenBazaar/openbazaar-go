@@ -151,7 +151,7 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
-		Online: true,
+		Online: false,
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
