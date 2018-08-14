@@ -327,27 +327,13 @@ func testMigration012_assertListingIndexMigratedCorrectly(t *testing.T) {
 	}
 
 	for _, listingAbstract := range listingsIndex {
-		if listingAbstract.ContractType != "CRYPTOCURRENCY" {
-			if listingAbstract.Hash != "" {
-				t.Fatal("Non-cryptocurrency listing should not have a changed hash")
-			}
-			continue
+		expectedHash := testMigraion012_listingFixtureHashes[listingAbstract.Slug]
+		if listingAbstract.Hash != expectedHash {
+			t.Fatal("Incorrect hash. Wanted: '" + expectedHash + "'\nGot: '" + listingAbstract.Hash + "'")
 		}
 
-		if listingAbstract.Price.Modifier == 0 {
-			if listingAbstract.Hash != "" {
-				t.Fatal("Cryptocurrency listing without a price modifier should not have a changed hash")
-			}
-			continue
-		}
-
-		if listingAbstract.Hash == "" {
+		if listingAbstract.Price.Modifier != 0 && listingAbstract.Hash == "" {
 			t.Fatal("Cryptocurrency listing with price modifier should have a new hash")
-		}
-
-		// Check for a reasonable hash length
-		if len(listingAbstract.Hash) < 32 {
-			t.Fatal("Incorrect hash length. Wanted >= 32\nGot:", len(listingAbstract.Hash))
 		}
 	}
 }
@@ -614,6 +600,11 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 		TermsAndConditions: "T&C",
 		RefundPolicy:       "refund policy",
 	}},
+}
+
+var testMigraion012_listingFixtureHashes = map[string]string{
+	"slug-4": "zb2rhYFPk5iVCTJYFoGR5gEpzKodhDWu5jESE2yzvWrCou54n",
+	"slug-5": "zb2rhbNjVXhbtKkSXbf6hpGUV2CujPTBx9jWsRJpvzKdgpwj9",
 }
 
 var testMigration012_configFixture = `{
