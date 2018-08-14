@@ -442,7 +442,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 	// we should be. To make sure this isn't the case, let's sync from the peer who
 	// sent us this orphan block.
 	if err == OrphanHeaderError && ws.Current() {
-		log.Notice("Received orphan header, checking peer for more blocks")
+		log.Debug("Received orphan header, checking peer for more blocks")
 		state.requestQueue = []*wire.InvVect{}
 		state.requestedBlocks = make(map[chainhash.Hash]struct{})
 		ws.requestedBlocks = make(map[chainhash.Hash]struct{})
@@ -460,7 +460,8 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 			peer.Disconnect()
 			return
 		}
-
+		log.Warningf("Received unrequested block from peer %s", peer)
+		return
 	} else if err != nil {
 		log.Error(err)
 		return
@@ -480,6 +481,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 
 	// We can exit here if the block is already known
 	if !newBlock {
+		log.Debugf("Received duplicate block %s", blockHash.String())
 		return
 	}
 
@@ -513,6 +515,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 	if !ws.Current() && len(state.requestQueue) == 0 {
 		locator := ws.chain.GetBlockLocator()
 		peer.PushGetBlocksMsg(locator, &ws.zeroHash)
+		log.Debug("Request queue at zero. Pushing new locator.")
 	} else if !ws.Current() && len(state.requestQueue) > 0 {
 		iv := state.requestQueue[0]
 		iv.Type = wire.InvTypeFilteredBlock
@@ -521,6 +524,7 @@ func (ws *WireService) handleMerkleBlockMsg(bmsg *merkleBlockMsg) {
 		gdmsg2 := wire.NewMsgGetData()
 		gdmsg2.AddInvVect(iv)
 		peer.QueueMessage(gdmsg2, nil)
+		log.Debugf("Requesting block %s, len request queue: %d", iv.Hash.String(), len(state.requestQueue))
 	}
 }
 
@@ -572,6 +576,10 @@ func (ws *WireService) handleInvMsg(imsg *invMsg) {
 	// Request the advertised inventory if we don't already have it
 	gdmsg := wire.NewMsgGetData()
 	numRequested := 0
+	shouldSendGetData := false
+	if len(state.requestQueue) == 0 {
+		shouldSendGetData = true
+	}
 	for _, iv := range invVects {
 
 		// Add the inventory to the cache of known inventory
@@ -595,7 +603,7 @@ func (ws *WireService) handleInvMsg(imsg *invMsg) {
 			// one at a time. Sadly we can't batch these because the remote
 			// peer  will not update the bloom filter until he's done processing
 			// the batch which means we will have a super high false positive rate.
-			if _, exists := ws.requestedBlocks[iv.Hash]; (!ws.Current() && !exists && !haveInv) || ws.Current() {
+			if _, exists := ws.requestedBlocks[iv.Hash]; (!ws.Current() && !exists && !haveInv && shouldSendGetData) || ws.Current() {
 				iv.Type = wire.InvTypeFilteredBlock
 				state.requestQueue = append(state.requestQueue, iv)
 			}
@@ -615,7 +623,7 @@ func (ws *WireService) handleInvMsg(imsg *invMsg) {
 	}
 
 	// Pop the first block off the queue and request it
-	if len(state.requestQueue) > 0 {
+	if len(state.requestQueue) > 0 && (shouldSendGetData || ws.Current()) {
 		iv := state.requestQueue[0]
 		gdmsg.AddInvVect(iv)
 		if len(state.requestQueue) > 1 {
@@ -623,6 +631,7 @@ func (ws *WireService) handleInvMsg(imsg *invMsg) {
 		} else {
 			state.requestQueue = []*wire.InvVect{}
 		}
+		log.Debugf("Requesting block %s, len request queue: %d", iv.Hash.String(), len(state.requestQueue))
 		state.requestedBlocks[iv.Hash] = struct{}{}
 	}
 	if len(gdmsg.InvList) > 0 {
@@ -664,7 +673,7 @@ func (ws *WireService) handleTxMsg(tmsg *txMsg) {
 		log.Debugf("Tx %s from Peer%d had no hits, filter false positive.", txHash.String(), peer.ID())
 		state.falsePositives++
 	} else {
-		log.Noticef("Ingested new tx %s at height %d", txHash.String(), ht.height)
+		log.Debugf("Ingested new tx %s at height %d", txHash.String(), ht.height)
 	}
 
 	// Check to see if false positives exceeds the maximum allowed. If so, reset and resend the filter.
