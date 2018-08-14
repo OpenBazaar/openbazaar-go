@@ -15,9 +15,9 @@ import (
 	"github.com/cpacia/bchutil"
 )
 
-type Migration011 struct{}
+type Migration013 struct{}
 
-type Migration011_TransactionRecord_beforeMigration struct {
+type Migration013_TransactionRecord_beforeMigration struct {
 	Txid         string
 	Index        uint32
 	Value        int64
@@ -26,7 +26,7 @@ type Migration011_TransactionRecord_beforeMigration struct {
 	Timestamp    time.Time
 }
 
-type Migration011_TransactionRecord_afterMigration struct {
+type Migration013_TransactionRecord_afterMigration struct {
 	Txid      string
 	Index     uint32
 	Value     int64
@@ -35,33 +35,33 @@ type Migration011_TransactionRecord_afterMigration struct {
 	Timestamp time.Time
 }
 
-type migration011_record struct {
+type migration013_record struct {
 	orderID                string
 	coin                   string
-	unmigratedTransactions []Migration011_TransactionRecord_beforeMigration
-	migratedTransactions   []Migration011_TransactionRecord_afterMigration
+	unmigratedTransactions []Migration013_TransactionRecord_beforeMigration
+	migratedTransactions   []Migration013_TransactionRecord_afterMigration
 }
 
-func (Migration011) Up(repoPath string, dbPassword string, testnet bool) (err error) {
+func (Migration013) Up(repoPath string, dbPassword string, testnet bool) (err error) {
 	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
 		return fmt.Errorf("opening db: %s", err.Error())
 	}
-	saleMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", false)
+	saleMigrationRecords, err := migration013_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", false)
 	if err != nil {
 		return fmt.Errorf("get sales rows: %s", err.Error())
 	}
-	purchaseMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", false)
+	purchaseMigrationRecords, err := migration013_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", false)
 	if err != nil {
 		return fmt.Errorf("get purchase rows: %s", err.Error())
 	}
 
 	if err := withTransaction(db, func(tx *sql.Tx) error {
-		err := migration011_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, false)
+		err := migration013_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, false)
 		if err != nil {
 			return fmt.Errorf("update sales: %s", err.Error())
 		}
-		err = migration011_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, false)
+		err = migration013_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, false)
 		if err != nil {
 			return fmt.Errorf("update purchases: %s", err.Error())
 		}
@@ -70,29 +70,29 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) (err er
 		return fmt.Errorf("migrating up: %s", err.Error())
 	}
 
-	return writeRepoVer(repoPath, 12)
+	return writeRepoVer(repoPath, 14)
 }
 
-func (Migration011) Down(repoPath string, dbPassword string, testnet bool) (err error) {
+func (Migration013) Down(repoPath string, dbPassword string, testnet bool) (err error) {
 	db, err := OpenDB(repoPath, dbPassword, testnet)
 	if err != nil {
 		return fmt.Errorf("opening db: %s", err.Error())
 	}
-	saleMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", true)
+	saleMigrationRecords, err := migration013_extractRecords(db, "select orderID, transactions, paymentCoin from sales;", true)
 	if err != nil {
 		return fmt.Errorf("get sales rows: %s", err.Error())
 	}
-	purchaseMigrationRecords, err := migration011_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", true)
+	purchaseMigrationRecords, err := migration013_extractRecords(db, "select orderID, transactions, paymentCoin from purchases;", true)
 	if err != nil {
 		return fmt.Errorf("get purchase rows: %s", err.Error())
 	}
 
 	if err := withTransaction(db, func(tx *sql.Tx) error {
-		err := migration011_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, true)
+		err := migration013_updateRecords(tx, saleMigrationRecords, "update sales set transactions = ? where orderID = ?", testnet, true)
 		if err != nil {
 			return fmt.Errorf("update sales: %s", err.Error())
 		}
-		err = migration011_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, true)
+		err = migration013_updateRecords(tx, purchaseMigrationRecords, "update purchases set transactions = ? where orderID = ?", testnet, true)
 		if err != nil {
 			return fmt.Errorf("update purchases: %s", err.Error())
 		}
@@ -101,12 +101,12 @@ func (Migration011) Down(repoPath string, dbPassword string, testnet bool) (err 
 		return fmt.Errorf("migrating down: %s", err.Error())
 	}
 
-	return writeRepoVer(repoPath, 11)
+	return writeRepoVer(repoPath, 13)
 }
 
-func migration011_extractRecords(db *sql.DB, query string, migrateDown bool) ([]migration011_record, error) {
+func migration013_extractRecords(db *sql.DB, query string, migrateDown bool) ([]migration013_record, error) {
 	var (
-		results   = make([]migration011_record, 0)
+		results   = make([]migration013_record, 0)
 		rows, err = db.Query(query)
 	)
 	if err != nil {
@@ -116,7 +116,7 @@ func migration011_extractRecords(db *sql.DB, query string, migrateDown bool) ([]
 	for rows.Next() {
 		var (
 			serializedTransactions []byte
-			r                      = migration011_record{}
+			r                      = migration013_record{}
 		)
 		if err := rows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
 			return nil, fmt.Errorf("scanning rows: %s", err.Error())
@@ -138,7 +138,7 @@ func migration011_extractRecords(db *sql.DB, query string, migrateDown bool) ([]
 	return results, nil
 }
 
-func migration011_updateRecords(tx *sql.Tx, records []migration011_record, query string, testMode bool, migrateDown bool) error {
+func migration013_updateRecords(tx *sql.Tx, records []migration013_record, query string, testMode bool, migrateDown bool) error {
 	var update, err = tx.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("prepare update statement: %s", err.Error())
@@ -147,13 +147,13 @@ func migration011_updateRecords(tx *sql.Tx, records []migration011_record, query
 	for _, beforeRecord := range records {
 
 		if migrateDown {
-			var migratedTransactionRecords = make([]Migration011_TransactionRecord_beforeMigration, 0)
+			var migratedTransactionRecords = make([]Migration013_TransactionRecord_beforeMigration, 0)
 			for _, beforeTx := range beforeRecord.migratedTransactions {
-				script, err := Migration011_AddressToScript(beforeRecord.coin, beforeTx.Address, testMode)
+				script, err := Migration013_AddressToScript(beforeRecord.coin, beforeTx.Address, testMode)
 				if err != nil {
 					return fmt.Errorf("address to script: %s", err.Error())
 				}
-				var migratedRecord = Migration011_TransactionRecord_beforeMigration{
+				var migratedRecord = Migration013_TransactionRecord_beforeMigration{
 					Txid:         beforeTx.Txid,
 					Index:        beforeTx.Index,
 					Value:        beforeTx.Value,
@@ -171,17 +171,17 @@ func migration011_updateRecords(tx *sql.Tx, records []migration011_record, query
 				return fmt.Errorf("updating record: %s", err.Error())
 			}
 		} else {
-			var migratedTransactionRecords = make([]Migration011_TransactionRecord_afterMigration, 0)
+			var migratedTransactionRecords = make([]Migration013_TransactionRecord_afterMigration, 0)
 			for _, beforeTx := range beforeRecord.unmigratedTransactions {
 				script, err := hex.DecodeString(beforeTx.ScriptPubKey)
 				if err != nil {
 					return fmt.Errorf("decode script: %s", err.Error())
 				}
-				addr, err := Migration011_ScriptToAddress(beforeRecord.coin, script, testMode)
+				addr, err := Migration013_ScriptToAddress(beforeRecord.coin, script, testMode)
 				if err != nil {
 					return fmt.Errorf("script to address: %s", err.Error())
 				}
-				var migratedRecord = Migration011_TransactionRecord_afterMigration{
+				var migratedRecord = Migration013_TransactionRecord_afterMigration{
 					Txid:      beforeTx.Txid,
 					Index:     beforeTx.Index,
 					Value:     beforeTx.Value,
@@ -204,15 +204,15 @@ func migration011_updateRecords(tx *sql.Tx, records []migration011_record, query
 	return nil
 }
 
-func Migration011_ChainConfigParams(testnet bool) *chaincfg.Params {
+func Migration013_ChainConfigParams(testnet bool) *chaincfg.Params {
 	if testnet {
 		return &chaincfg.TestNet3Params
 	}
 	return &chaincfg.MainNetParams
 }
 
-func Migration011_ScriptToAddress(coinType string, script []byte, testmodeEnanabled bool) (string, error) {
-	var params = Migration011_ChainConfigParams(testmodeEnanabled)
+func Migration013_ScriptToAddress(coinType string, script []byte, testmodeEnanabled bool) (string, error) {
+	var params = Migration013_ChainConfigParams(testmodeEnanabled)
 
 	switch strings.ToLower(coinType) {
 	case "btc", "tbtc":
@@ -240,7 +240,7 @@ func Migration011_ScriptToAddress(coinType string, script []byte, testmodeEnanab
 	return "", fmt.Errorf("unable to migrate coinType %s", coinType)
 }
 
-func migration011_DecodeBCHAddress(addr string, params *chaincfg.Params) (*btcutil.Address, error) {
+func migration013_DecodeBCHAddress(addr string, params *chaincfg.Params) (*btcutil.Address, error) {
 	// Legacy
 	decoded, err := btcutil.DecodeAddress(addr, params)
 	if err == nil {
@@ -259,8 +259,8 @@ func migration011_DecodeBCHAddress(addr string, params *chaincfg.Params) (*btcut
 	return nil, fmt.Errorf("unable to decode BCH address")
 }
 
-func Migration011_AddressToScript(coinType string, addr string, testmodeEnanabled bool) ([]byte, error) {
-	var params = Migration011_ChainConfigParams(testmodeEnanabled)
+func Migration013_AddressToScript(coinType string, addr string, testmodeEnanabled bool) ([]byte, error) {
+	var params = Migration013_ChainConfigParams(testmodeEnanabled)
 
 	switch strings.ToLower(coinType) {
 	case "btc", "tbtc":
@@ -274,7 +274,7 @@ func Migration011_AddressToScript(coinType string, addr string, testmodeEnanable
 		}
 		return script, nil
 	case "bch", "tbch":
-		addr, err := migration011_DecodeBCHAddress(addr, params)
+		addr, err := migration013_DecodeBCHAddress(addr, params)
 		if err != nil {
 			return nil, fmt.Errorf("decoding %s address: %s", coinType, err.Error())
 		}

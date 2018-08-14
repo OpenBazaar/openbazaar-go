@@ -15,7 +15,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-func TestMigration011Helpers(t *testing.T) {
+func TestMigration013Helpers(t *testing.T) {
 	examples := map[string]string{
 		"BTC":  "16Wgj9XcffBHc9JsKV7kbxnCBjFp16TMv1",
 		"BCH":  "qrcuqadqrzp2uztjl9wn5sthepkg22majyxw4gmv6p",
@@ -32,13 +32,13 @@ func TestMigration011Helpers(t *testing.T) {
 		}
 
 		// Convert source addr into script
-		expectedScript, err := migrations.Migration011_AddressToScript(coin, addr, testmodeEnabled)
+		expectedScript, err := migrations.Migration013_AddressToScript(coin, addr, testmodeEnabled)
 		if err != nil {
 			t.Error(coin, err)
 		}
 
 		// Convert artifact script back to addr for symmetry verification
-		actualAddr, err := migrations.Migration011_ScriptToAddress(coin, expectedScript, testmodeEnabled)
+		actualAddr, err := migrations.Migration013_ScriptToAddress(coin, expectedScript, testmodeEnabled)
 		if err != nil {
 			t.Error(coin, err)
 		}
@@ -49,7 +49,7 @@ func TestMigration011Helpers(t *testing.T) {
 		}
 
 		// Convert symmetric addr back to script to verify reverse operation
-		actualScript, err := migrations.Migration011_AddressToScript(coin, actualAddr, testmodeEnabled)
+		actualScript, err := migrations.Migration013_AddressToScript(coin, actualAddr, testmodeEnabled)
 		if err != nil {
 			t.Error(coin, err)
 		}
@@ -61,7 +61,7 @@ func TestMigration011Helpers(t *testing.T) {
 	}
 }
 
-func TestMigration011(t *testing.T) {
+func TestMigration013(t *testing.T) {
 	// Setup
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
@@ -95,7 +95,7 @@ func TestMigration011(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	examples := map[string]migrations.Migration011_TransactionRecord_beforeMigration{
+	examples := map[string]migrations.Migration013_TransactionRecord_beforeMigration{
 		"BTC":  {Txid: "BTC", Index: 0, ScriptPubKey: "76a9143c75da9d9a5e8019c966f0d2f527da2256bdfd1a88ac"},
 		"BCH":  {Txid: "BCH", Index: 0, ScriptPubKey: "76a914f1c075a01882ae0972f95d3a4177c86c852b7d9188ac"},
 		"ZEC":  {Txid: "ZEC", Index: 0, ScriptPubKey: "76a9141bdb7bfbf8ce043c4edaebc88d53dacffb56630788ac"},
@@ -112,7 +112,7 @@ func TestMigration011(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tx := range examples {
-		transactions, err := json.Marshal([]migrations.Migration011_TransactionRecord_beforeMigration{tx})
+		transactions, err := json.Marshal([]migrations.Migration013_TransactionRecord_beforeMigration{tx})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -129,12 +129,12 @@ func TestMigration011(t *testing.T) {
 	insertSalesStatement.Close()
 
 	// Create schema version file
-	if err = ioutil.WriteFile(repoVerPath, []byte("11"), os.ModePerm); err != nil {
+	if err = ioutil.WriteFile(repoVerPath, []byte("13"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
 	// Test migration up
-	if err := (migrations.Migration011{}).Up(appSchema.DataPath(), dbPassword, true); err != nil {
+	if err := (migrations.Migration013{}).Up(appSchema.DataPath(), dbPassword, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,7 +146,7 @@ func TestMigration011(t *testing.T) {
 	for purchaseRows.Next() {
 		var (
 			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration011_TransactionRecord_afterMigration
+			actualTransactions                          []migrations.Migration013_TransactionRecord_afterMigration
 		)
 		if err := purchaseRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
@@ -157,7 +157,7 @@ func TestMigration011(t *testing.T) {
 			continue
 		}
 
-		migration011_assertTransaction(t, examples, actualTransactions)
+		migration013_assertTransaction(t, examples, actualTransactions)
 	}
 	if err := purchaseRows.Err(); err != nil {
 		t.Error(err)
@@ -172,7 +172,7 @@ func TestMigration011(t *testing.T) {
 	for saleRows.Next() {
 		var (
 			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration011_TransactionRecord_afterMigration
+			actualTransactions                          []migrations.Migration013_TransactionRecord_afterMigration
 		)
 		if err := saleRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
@@ -183,7 +183,7 @@ func TestMigration011(t *testing.T) {
 			continue
 		}
 
-		migration011_assertTransaction(t, examples, actualTransactions)
+		migration013_assertTransaction(t, examples, actualTransactions)
 
 	}
 	if err := saleRows.Err(); err != nil {
@@ -193,10 +193,10 @@ func TestMigration011(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertCorrectRepoVer(t, repoVerPath, "12")
+	assertCorrectRepoVer(t, repoVerPath, "14")
 
 	// Test migration down
-	if err := (migrations.Migration011{}).Down(appSchema.DataPath(), dbPassword, true); err != nil {
+	if err := (migrations.Migration013{}).Down(appSchema.DataPath(), dbPassword, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,7 +208,7 @@ func TestMigration011(t *testing.T) {
 	for purchaseRows.Next() {
 		var (
 			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration011_TransactionRecord_beforeMigration
+			actualTransactions                          []migrations.Migration013_TransactionRecord_beforeMigration
 		)
 		if err := purchaseRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
@@ -240,7 +240,7 @@ func TestMigration011(t *testing.T) {
 	for saleRows.Next() {
 		var (
 			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration011_TransactionRecord_beforeMigration
+			actualTransactions                          []migrations.Migration013_TransactionRecord_beforeMigration
 		)
 		if err := saleRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
@@ -267,10 +267,10 @@ func TestMigration011(t *testing.T) {
 		t.Error(err)
 	}
 
-	assertCorrectRepoVer(t, repoVerPath, "11")
+	assertCorrectRepoVer(t, repoVerPath, "13")
 }
 
-func migration011_assertTransaction(t *testing.T, examples map[string]migrations.Migration011_TransactionRecord_beforeMigration, actual []migrations.Migration011_TransactionRecord_afterMigration) {
+func migration013_assertTransaction(t *testing.T, examples map[string]migrations.Migration013_TransactionRecord_beforeMigration, actual []migrations.Migration013_TransactionRecord_afterMigration) {
 	for _, actualTx := range actual {
 		var exampleName = actualTx.Txid
 		decodedScript, err := hex.DecodeString(examples[exampleName].ScriptPubKey)
@@ -278,7 +278,7 @@ func migration011_assertTransaction(t *testing.T, examples map[string]migrations
 			t.Errorf("decoding script for example %s failed: %s", exampleName, err.Error())
 			continue
 		}
-		expectedAddress, err := migrations.Migration011_ScriptToAddress(actualTx.Txid, decodedScript, true)
+		expectedAddress, err := migrations.Migration013_ScriptToAddress(actualTx.Txid, decodedScript, true)
 		if err != nil {
 			t.Errorf("getting expected address for example %s failed: %s", exampleName, err.Error())
 			continue
