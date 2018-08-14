@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 
+	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -169,6 +171,11 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	// Save the new hashes for each changed listing so we can update the index.
 	hashes := make(map[string]string)
 
+	privKey, err := crypto.UnmarshalPrivateKey(identityKey)
+	if err != nil {
+		return err
+	}
+
 	for _, sl := range markupListings {
 		sl.Listing.Metadata.Version = migration012_ListingVersionForMarkupListings
 
@@ -176,7 +183,8 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		if err != nil {
 			return err
 		}
-		idSig, err := nd.PrivateKey.Sign(serializedListing)
+
+		idSig, err := privKey.Sign(serializedListing)
 		if err != nil {
 			return err
 		}
