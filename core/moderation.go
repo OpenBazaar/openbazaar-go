@@ -149,7 +149,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed uint64
-		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(n.Wallet.CurrencyCode()) {
 			fixed = profile.ModeratorInfo.Fee.FixedFee.Amount
 		} else {
 			fixed, err = n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
