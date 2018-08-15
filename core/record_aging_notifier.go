@@ -23,7 +23,6 @@ type recordAgingNotifier struct {
 	// Worker-handling dependancies
 	intervalDelay time.Duration
 	logger        *logging.Logger
-	runCount      int
 	watchdogTimer *time.Ticker
 	stopWorker    chan bool
 }
@@ -69,8 +68,6 @@ func (n *OpenBazaarNode) intervalDelay() time.Duration {
 	return notifierRegularInterval
 }
 
-func (notifier *recordAgingNotifier) RunCount() int { return notifier.runCount }
-
 func (notifier *recordAgingNotifier) Run() {
 	notifier.watchdogTimer = time.NewTicker(notifier.intervalDelay)
 	notifier.stopWorker = make(chan bool)
@@ -95,7 +92,6 @@ func (notifier *recordAgingNotifier) Stop() {
 
 func (notifier *recordAgingNotifier) PerformTask() {
 	var summary = NotifierSummary{}
-	notifier.runCount++ // += 1
 
 	if result, err := notifier.generateSellerDisputeNotifications(); err != nil {
 		notifier.logger.Errorf("generateSellerDisputeNotifications failed: %s", err)
