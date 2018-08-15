@@ -171,24 +171,24 @@ func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, 
 
 func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("Payload is nil")
+		return nil, errors.New("decoding OFFLINE_ACK failed: payload is empty")
 	}
 	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding OFFLINE_ACK failed: %s", err.Error())
 	}
 	pointer, err := service.datastore.Pointers().Get(pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("discarding OFFLINE_ACK: no message pending ACK from %s", p.Pretty())
 	}
 	if pointer.CancelID == nil || pointer.CancelID.Pretty() != p.Pretty() {
-		return nil, errors.New("Peer is not authorized to delete pointer")
+		return nil, fmt.Errorf("ignoring OFFLINE_ACK: unauthorized attempt from %s", p.Pretty())
 	}
 	err = service.datastore.Pointers().Delete(pid)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
+	log.Debugf("received OFFLINE_ACK: %s", p.Pretty())
 	return nil, nil
 }
 
