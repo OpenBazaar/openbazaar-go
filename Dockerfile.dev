@@ -1,4 +1,4 @@
-FROM golang:1.9
+FROM golang:1.10
 VOLUME /var/lib/openbazaar
 
 RUN wget https://www.python.org/ftp/python/3.6.0/Python-3.6.0.tgz && \

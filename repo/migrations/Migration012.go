@@ -79,6 +79,10 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	listingsIndexFilePath := path.Join(repoPath, "root", "listings.json")
 
 	// Find all crypto listings
+	if _, err := os.Stat(listingsIndexFilePath); os.IsNotExist(err) {
+		// Finish early if no listings are found
+		return writeRepoVer(repoPath, 13)
+	}
 	listingsIndexJSONBytes, err := ioutil.ReadFile(listingsIndexFilePath)
 	if err != nil {
 		return err

@@ -31,7 +31,7 @@ func (Migration011) Up(repoPath string, dbPassword string, testnet bool) error {
 
 	// Don't do anything if no listing index exists
 	if _, err := os.Stat(listingsFilePath); os.IsNotExist(err) {
-		return nil
+		return writeRepoVer(repoPath, 12)
 	}
 
 	// Load index
