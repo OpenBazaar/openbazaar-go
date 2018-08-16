@@ -5,16 +5,20 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/golang/protobuf/proto"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"io/ioutil"
 	"os"
 	"path"
+
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/golang/protobuf/proto"
+
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
+// ValidateRating - validates rating for API GET and Post/Update
 func ValidateRating(rating *pb.Rating) (bool, error) {
 	if rating.RatingData == nil || rating.RatingData.VendorID == nil || rating.RatingData.VendorID.Pubkeys == nil || rating.RatingData.VendorSig == nil || rating.RatingData.VendorSig.Metadata == nil {
 		return false, errors.New("missing rating data")
@@ -113,6 +117,7 @@ func ValidateRating(rating *pb.Rating) (bool, error) {
 	return true, nil
 }
 
+// GetRatingCounts - fetch rating count
 func (n *OpenBazaarNode) GetRatingCounts() (uint32, float32, error) {
 	indexPath := path.Join(n.RepoPath, "root", "ratings.json")
 

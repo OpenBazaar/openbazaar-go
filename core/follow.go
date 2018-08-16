@@ -6,10 +6,10 @@ import (
 	"path"
 )
 
-/* This function updates the follow and following lists in the node's root directory
-   as well as adds the current follow, following, and listing counts to the profile.
-   We only do this when a user updates his node to avoid needing to make network calls
-   each time a new follower or unfollow request comes in. */
+/*UpdateFollow This function updates the follow and following lists in the node's root directory
+  as well as adds the current follow, following, and listing counts to the profile.
+  We only do this when a user updates his node to avoid needing to make network calls
+  each time a new follower or unfollow request comes in. */
 func (n *OpenBazaarNode) UpdateFollow() error {
 	followPath := path.Join(n.RepoPath, "root", "followers.json")
 	followingPath := path.Join(n.RepoPath, "root", "following.json")

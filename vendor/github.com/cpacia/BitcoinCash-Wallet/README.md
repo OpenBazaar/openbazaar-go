@@ -8,7 +8,7 @@ It uses stock btcd plus a few cash specific modifications found in the [bchutil]
 
 To compile and run:
 ```bash
-go get https://github.com/cpacia/BitcoinCash-Wallet
+go get github.com/cpacia/BitcoinCash-Wallet
 make install
 bitcoincash
 ```

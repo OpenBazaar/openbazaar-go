@@ -117,7 +117,7 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 			read = true
 		}
 		notification.IsRead = read
-		notification.CreatedAt = time.Unix(int64(timestampInt), 0)
+		notification.CreatedAt = time.Unix(int64(timestampInt), 0).UTC()
 		// END
 
 		ret = append(ret, notification)

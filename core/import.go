@@ -15,12 +15,14 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 const bufferSize = 5
 
+// ImportListings - upload/read listings
 func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	reader := csv.NewReader(r)
 	columns, err := reader.Read()
@@ -191,21 +193,21 @@ listingLoop:
 			pos, ok = fields["image_urls"]
 			if ok {
 				listing.Item.Images = []*pb.Listing_Item_Image{}
-				image_urls := stringSlicePool.Get().([]string)
-				image_urls = []string{}
-				image_urls = strings.Split(record[pos], ",")
+				imageUrls := stringSlicePool.Get().([]string)
+				imageUrls = []string{}
+				imageUrls = strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
 				var x int
 				img := stringPool.Get().(string)
-				for x, img = range image_urls {
+				for x, img = range imageUrls {
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
 						b64 := stringPool.Get().(string)
 						var filename string
-						testUrl, err := url.Parse(img)
-						if err == nil && (testUrl.Scheme == "http" || testUrl.Scheme == "https") {
+						testURL, err := url.Parse(img)
+						if err == nil && (testURL.Scheme == "http" || testURL.Scheme == "https") {
 							b64, filename, err = n.GetBase64Image(img)
 							if err != nil {
 								errChan <- fmt.Errorf("Error in record %d: image %d failed to download", i, x)

@@ -197,6 +197,35 @@ func TestChatDB_GetMessages(t *testing.T) {
 	}
 }
 
+func TestChatDB_MarkAsRead_ReturnsHighestReadID(t *testing.T) {
+	var chdb, teardown, err = buildNewChatStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	err = chdb.Put("33333", "xyz", "", "mess", time.Now(), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("44444", "xyz", "", "mess", time.Now().Add(time.Second), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+	err = chdb.Put("55555", "xyz", "", "mess", time.Now().Add(time.Second*2), false, true)
+	if err != nil {
+		t.Error(err)
+	}
+
+	last, _, err := chdb.MarkAsRead("xyz", "", true, "")
+	if err != nil {
+		t.Error(err)
+	}
+	if last != "55555" {
+		t.Fatal("Expected last ID to be 55555, but was not")
+	}
+}
+
 func TestChatDB_MarkAsRead(t *testing.T) {
 	var chdb, teardown, err = buildNewChatStore()
 	if err != nil {
@@ -289,6 +318,7 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
+
 	defer rows.Close()
 	for rows.Next() {
 		var msgID string
@@ -303,6 +333,20 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		if msgID == "55555" && read == 1 {
 			t.Error("Incorrectly set message as read")
 		}
+	}
+}
+
+// https://github.com/OpenBazaar/openbazaar-go/issues/1041
+func TestChatDB_MarkAsRead_Issue1041(t *testing.T) {
+	var chdb, teardown, err = buildNewChatStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+
+	_, _, err = chdb.MarkAsRead("nonexistantpeerid", "", false, "")
+	if err != nil {
+		t.Error(err)
 	}
 }
 

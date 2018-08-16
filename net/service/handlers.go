@@ -8,6 +8,10 @@ import (
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"time"
 
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	blocks "gx/ipfs/Qmej7nf81hi2x2tvjRBF3mcp74sQyuDH4VMYDGd1YtXjb2/go-block-format"
+	"strconv"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -20,9 +24,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	blocks "gx/ipfs/Qmej7nf81hi2x2tvjRBF3mcp74sQyuDH4VMYDGd1YtXjb2/go-block-format"
-	"strconv"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -170,24 +171,24 @@ func (service *OpenBazaarService) handleUnFollow(pid peer.ID, pmes *pb.Message, 
 
 func (service *OpenBazaarService) handleOfflineAck(p peer.ID, pmes *pb.Message, options interface{}) (*pb.Message, error) {
 	if pmes.Payload == nil {
-		return nil, errors.New("Payload is nil")
+		return nil, errors.New("decoding OFFLINE_ACK failed: payload is empty")
 	}
 	pid, err := peer.IDB58Decode(string(pmes.Payload.Value))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding OFFLINE_ACK failed: %s", err.Error())
 	}
 	pointer, err := service.datastore.Pointers().Get(pid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("discarding OFFLINE_ACK: no message pending ACK from %s", p.Pretty())
 	}
 	if pointer.CancelID == nil || pointer.CancelID.Pretty() != p.Pretty() {
-		return nil, errors.New("Peer is not authorized to delete pointer")
+		return nil, fmt.Errorf("ignoring OFFLINE_ACK: unauthorized attempt from %s", p.Pretty())
 	}
 	err = service.datastore.Pointers().Delete(pid)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Received OFFLINE_ACK message from %s", p.Pretty())
+	log.Debugf("received OFFLINE_ACK: %s", p.Pretty())
 	return nil, nil
 }
 
@@ -277,7 +278,7 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		return nil, err
 	}
 
-	orderId, err = service.node.CalcOrderId(contract.BuyerOrder)
+	orderId, err = service.node.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return errorResponse(err.Error()), err
 	}
@@ -1226,10 +1227,10 @@ func (service *OpenBazaarService) handleChat(p peer.ID, pmes *pb.Message, option
 	}
 
 	// Validate
-	if len(chat.Subject) > core.CHAT_SUBJECT_MAX_CHARACTERS {
+	if len(chat.Subject) > core.ChatSubjectMaxCharacters {
 		return nil, errors.New("Chat subject over max characters")
 	}
-	if len(chat.Message) > core.CHAT_MESSAGE_MAX_CHARACTERS {
+	if len(chat.Message) > core.ChatMessageMaxCharacters {
 		return nil, errors.New("Chat message over max characters")
 	}
 

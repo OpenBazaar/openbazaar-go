@@ -1,6 +1,6 @@
 language: go
 go:
- - 1.9.2
+ - "1.10.3"
 sudo: required
 services:
   - docker
@@ -12,7 +12,7 @@ before_install:
   - go get github.com/mattn/goveralls
 script:
   - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*" -not -path "./pb/*"))
-  - cd $TRAVIS_BUILD_DIR && ./test_compile.sh
+  - cd $TRAVIS_BUILD_DIR && go test -i && ./test_compile.sh
   - goveralls -coverprofile=coverage.out -service travis-ci
 after_success:
   # Build the snap.

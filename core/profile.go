@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	ipnspath "github.com/ipfs/go-ipfs/path"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
@@ -15,15 +13,22 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
+	ipnspath "github.com/ipfs/go-ipfs/path"
+
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
+// KeyCachePrefix - cache prefix for public key
 const KeyCachePrefix = "/pubkey/"
 
-var ErrorProfileNotFound error = errors.New("Profile not found")
+// ErrorProfileNotFound - profile not found error
+var ErrorProfileNotFound = errors.New("profile not found")
 
+// GetProfile - fetch user profile
 func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	var profile pb.Profile
 	f, err := os.Open(path.Join(n.RepoPath, "root", "profile.json"))
@@ -38,9 +43,10 @@ func (n *OpenBazaarNode) GetProfile() (pb.Profile, error) {
 	return profile, nil
 }
 
-func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile, error) {
+// FetchProfile - fetch peer's profile
+func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile, error) {
 	var pro pb.Profile
-	b, err := n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerId, "profile.json")), time.Minute, useCache)
+	b, err := n.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "profile.json")), time.Minute, useCache)
 	if err != nil || len(b) == 0 {
 		return pro, err
 	}
@@ -51,6 +57,7 @@ func (n *OpenBazaarNode) FetchProfile(peerId string, useCache bool) (pb.Profile,
 	return pro, nil
 }
 
+// UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	mPubkey, err := n.Wallet.MasterPublicKey().ECPubKey()
 	if err != nil {
@@ -99,6 +106,7 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 	return nil
 }
 
+// PatchProfile - patch user profile
 func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 
@@ -238,7 +246,7 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 	if profile.Stats != nil && newRating.RatingData != nil {
 		total := profile.Stats.AverageRating * float32(profile.Stats.RatingCount)
 		total += float32(newRating.RatingData.Overall)
-		profile.Stats.RatingCount += 1
+		profile.Stats.RatingCount++ // += 1
 		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount)
 	}
 	newPro, _, err := n.appendCountsToProfile(profile)
@@ -249,6 +257,7 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 	return n.UpdateProfile(newPro)
 }
 
+// ValidateProfile - validate fetched profile
 func ValidateProfile(profile *pb.Profile) error {
 	if strings.Contains(profile.Handle, "@") {
 		return errors.New("Handle should not contain @")

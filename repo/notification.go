@@ -40,7 +40,7 @@ type Notifier interface {
 func NewNotification(n Notifier, createdAt time.Time, isRead bool) *Notification {
 	return &Notification{
 		ID:           n.GetID(),
-		CreatedAt:    createdAt,
+		CreatedAt:    createdAt.UTC(),
 		IsRead:       isRead,
 		NotifierData: n,
 		NotifierType: n.GetType(),
@@ -354,7 +354,7 @@ func (n *Notification) UnmarshalJSON(data []byte) error {
 		}
 		n.NotifierData = notifier
 	default:
-		return fmt.Errorf("unmarshal notification: unknown type: %t\n", payload.NotifierType)
+		return fmt.Errorf("unmarshal notification: unknown type: %s\n", payload.NotifierType)
 	}
 
 	n.NotifierType = n.NotifierData.GetType()

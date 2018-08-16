@@ -4,21 +4,23 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
+// NewOrderConfirmation - add order confirmation to the contract
 func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, addressRequest, calculateNewTotal bool) (*pb.RicardianContract, error) {
 	oc := new(pb.OrderConfirmation)
 	// Calculate order ID
-	orderID, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +90,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	return contract, nil
 }
 
+// ConfirmOfflineOrder - confirm offline order
 func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
 	contract, err := n.NewOrderConfirmation(contract, false, false)
 	if err != nil {
@@ -159,13 +162,14 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	return nil
 }
 
+// RejectOfflineOrder - reject offline order
 func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
-	orderId, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
 	rejectMsg := new(pb.OrderReject)
-	rejectMsg.OrderID = orderId
+	rejectMsg.OrderID = orderID
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
 		return err
@@ -245,12 +249,13 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return err
 	}
-	n.Datastore.Sales().Put(orderId, *contract, pb.OrderState_DECLINED, true)
+	n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DECLINED, true)
 	return nil
 }
 
+// ValidateOrderConfirmation - validate address and signatures for order confirmation
 func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContract, validateAddress bool) error {
-	orderID, err := n.CalcOrderId(contract.BuyerOrder)
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
 	}
@@ -303,6 +308,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	return nil
 }
 
+// SignOrderConfirmation - sign the added order confirmation
 func (n *OpenBazaarNode) SignOrderConfirmation(contract *pb.RicardianContract) (*pb.RicardianContract, error) {
 	serializedOrderConf, err := proto.Marshal(contract.VendorOrderConfirmation)
 	if err != nil {

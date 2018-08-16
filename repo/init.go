@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/schema"
@@ -14,7 +15,6 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	"time"
 )
 
 const RepoVersion = "13"
