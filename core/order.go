@@ -13,8 +13,6 @@ import (
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -189,11 +187,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = n.Wallet.GetFeePerByte(wallet.NORMAL)
 
-		script, err := n.Wallet.AddressToScript(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -342,11 +336,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 
-		script, err := n.Wallet.AddressToScript(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Wallet.AddWatchedScript(script)
+		err = n.Wallet.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -419,11 +409,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	script, err := n.Wallet.AddressToScript(addr)
-	if err != nil {
-		return "", "", 0, false, err
-	}
-	err = n.Wallet.AddWatchedScript(script)
+	err = n.Wallet.AddWatchedAddress(addr)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -725,22 +711,19 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	// Sweep the temp address into our wallet
-	var utxos []wallet.Utxo
+	var utxos []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			u := wallet.Utxo{}
-			scriptBytes, err := hex.DecodeString(r.ScriptPubKey)
+			addr, err := n.Wallet.DecodeAddress(r.Address)
 			if err != nil {
 				return err
 			}
-			u.ScriptPubkey = scriptBytes
-			hash, err := chainhash.NewHashFromStr(r.Txid)
-			if err != nil {
-				return err
+			u := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointHash:  []byte(r.Txid),
+				OutpointIndex: r.Index,
+				Value:         r.Value,
 			}
-			outpoint := wire.NewOutPoint(hash, r.Index)
-			u.Op = *outpoint
-			u.Value = r.Value
 			utxos = append(utxos, u)
 		}
 	}
