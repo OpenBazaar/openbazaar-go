@@ -639,3 +639,13 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	}
 	return nil
 }
+
+// SendDisputeUpdate - send and offline relay message to the peer. Used for relaying messages from
+// a client node to another peer.
+func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte) error {
+	m := pb.Message{
+		MessageType: pb.Message_OFFLINE_RELAY,
+		Payload:     &any.Any{Value: encryptedMessage},
+	}
+	return n.sendMessage(peerID, nil, m)
+}
