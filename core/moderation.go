@@ -133,7 +133,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 	case pb.Moderator_Fee_PERCENTAGE:
 		return uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100)), nil
 	case pb.Moderator_Fee_FIXED:
-		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(n.Wallet.CurrencyCode()) {
 			if profile.ModeratorInfo.Fee.FixedFee.Amount >= transactionTotal {
 				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 			}
@@ -184,7 +184,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
-			}
+			}	
 			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
 			if err != nil {
 				return err
