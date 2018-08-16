@@ -3,11 +3,10 @@ package ipfs
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
-	"strconv"
 	"sync"
 
+	"encoding/binary"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
@@ -134,31 +133,21 @@ func putPointer(ctx context.Context, dht *routing.IpfsDHT, p peer.ID, pi ps.Peer
 func CreatePointerKey(mh multihash.Multihash, prefixLen int) multihash.Multihash {
 	// Grab the first 8 bytes from the multihash digest
 	m, _ := multihash.Decode(mh)
-	prefix64 := binary.BigEndian.Uint64(m.Digest[:8])
+	prefix := m.Digest[:8]
 
-	// Convert to binary string
-	bin := strconv.FormatUint(prefix64, 2)
+	truncatedPrefix := make([]byte, 8)
 
-	// Pad with leading zeros
-	leadingZeros := 64 - len(bin)
-	for i := 0; i < leadingZeros; i++ {
-		bin = "0" + bin
-	}
+	// Prefix to uint64 to shift bits to the right
+	prefix64 := binary.BigEndian.Uint64(prefix)
 
-	// Grab the bits corresponding to the prefix length and convert to int
-	intPrefix, _ := strconv.ParseUint(bin[:prefixLen], 2, 64)
-
-	// Convert to 8 byte array
-	bs := make([]byte, 8)
-	binary.BigEndian.PutUint64(bs, intPrefix)
+	// Perform the bit shift
+	binary.BigEndian.PutUint64(truncatedPrefix, prefix64>>uint(64-prefixLen))
 
 	// Hash the array
-	hash := sha256.New()
-	hash.Write(bs)
-	md := hash.Sum(nil)
+	md := sha256.Sum256(truncatedPrefix)
 
 	// Encode as multihash
-	keyHash, _ := multihash.Encode(md, multihash.SHA2_256)
+	keyHash, _ := multihash.Encode(md[:], multihash.SHA2_256)
 	return keyHash
 }
 
