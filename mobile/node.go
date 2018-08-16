@@ -328,6 +328,12 @@ func (n *Node) Start() error {
 	// Offline messaging storage
 	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
 
+	// Build pubsub
+	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
+	n.OpenBazaarNode.Pubsub = ps
+
 	// Start gateway
 	// Create authentication cookie
 	var authCookie http.Cookie
