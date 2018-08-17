@@ -671,9 +671,13 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 			if err != nil {
 				return err
 			}
+			outpointHash, err := hex.DecodeString(r.Txid)
+			if err != nil {
+				return fmt.Errorf("decoding transaction hash: %s", err.Error())
+			}
 			u := wallet.TransactionInput{
 				LinkedAddress: addr,
-				OutpointHash:  []byte(r.Txid),
+				OutpointHash:  outpointHash,
 				OutpointIndex: r.Index,
 				Value:         r.Value,
 			}

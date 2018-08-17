@@ -174,11 +174,15 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 				if err != nil {
 					return err
 				}
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return fmt.Errorf("decoding transaction hash: %s", err.Error())
+				}
 				outValue += r.Value
 				in := wallet.TransactionInput{
 					LinkedAddress: addr,
 					OutpointIndex: r.Index,
-					OutpointHash:  []byte(r.Txid),
+					OutpointHash:  outpointHash,
 					Value:         r.Value,
 				}
 				ins = append(ins, in)
@@ -328,11 +332,15 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			if err != nil {
 				return err
 			}
+			outpointHash, err := hex.DecodeString(r.Txid)
+			if err != nil {
+				return fmt.Errorf("decoding transaction hash: %s", err.Error())
+			}
 			var txInput = wallet.TransactionInput{
 				Value:         r.Value,
 				LinkedAddress: addr,
 				OutpointIndex: r.Index,
-				OutpointHash:  []byte(r.Txid),
+				OutpointHash:  outpointHash,
 			}
 			txInputs = append(txInputs, txInput)
 		}

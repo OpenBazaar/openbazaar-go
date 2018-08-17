@@ -105,10 +105,14 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 				if err != nil {
 					return err
 				}
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return fmt.Errorf("decoding transaction hash: %s", err.Error())
+				}
 				txInput := wallet.TransactionInput{
 					LinkedAddress: addr,
 					OutpointIndex: r.Index,
-					OutpointHash:  []byte(r.Txid),
+					OutpointHash:  outpointHash,
 					Value:         r.Value,
 				}
 				txInputs = append(txInputs, txInput)
@@ -174,14 +178,18 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 				if err != nil {
 					return fmt.Errorf("decode prior transactions address: %s", err.Error())
 				}
-				outValue += r.Value
+				outpointHash, err := hex.DecodeString(r.Txid)
+				if err != nil {
+					return fmt.Errorf("decoding transaction hash: %s", err.Error())
+				}
 				in := wallet.TransactionInput{
 					LinkedAddress: addr,
 					OutpointIndex: r.Index,
-					OutpointHash:  []byte(r.Txid),
+					OutpointHash:  outpointHash,
 					Value:         r.Value,
 				}
 				ins = append(ins, in)
+				outValue += r.Value
 			}
 		}
 
