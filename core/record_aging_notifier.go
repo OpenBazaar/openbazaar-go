@@ -27,22 +27,22 @@ type recordAgingNotifier struct {
 	stopWorker    chan bool
 }
 
-type NotifierResult struct {
+type notifierResult struct {
 	notificationsMade int
 	recordsUpdated    int
 	subject           string
 }
 
-type NotifierSummary map[string]*NotifierResult
+type notifierSummary map[string]*notifierResult
 
-func (result NotifierSummary) Add(operand *NotifierResult) {
+func (result notifierSummary) Add(operand *notifierResult) {
 	if result == nil {
-		result = make(map[string]*NotifierResult, 0)
+		result = make(map[string]*notifierResult, 0)
 	}
 	result[operand.subject] = operand
 }
 
-func (result NotifierSummary) String() string {
+func (result notifierSummary) String() string {
 	var summaries = make([]string, 0)
 	for subject, result := range result {
 		summaries = append(summaries, fmt.Sprintf("%s: %d/%d", subject, result.notificationsMade, result.recordsUpdated))
@@ -91,7 +91,7 @@ func (notifier *recordAgingNotifier) Stop() {
 }
 
 func (notifier *recordAgingNotifier) PerformTask() {
-	var summary = NotifierSummary{}
+	var summary = notifierSummary{}
 
 	if result, err := notifier.generateSellerDisputeNotifications(); err != nil {
 		notifier.logger.Errorf("generateSellerDisputeNotifications failed: %s", err)
@@ -116,7 +116,7 @@ func (notifier *recordAgingNotifier) PerformTask() {
 	notifier.logger.Debugf("notifications created/records updated: %s", summary.String())
 }
 
-func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() (*NotifierResult, error) {
+func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() (*notifierResult, error) {
 	sales, err := notifier.datastore.Sales().GetSalesForDisputeTimeoutNotification()
 	if err != nil {
 		return nil, err
@@ -180,10 +180,10 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() (*Noti
 	if err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(updatedSales); err != nil {
 		return nil, fmt.Errorf("update sales disputeTimeoutNotifiedAt: %s", err.Error())
 	}
-	return &NotifierResult{len(notificationsToAdd), len(updatedSales), "sales"}, nil
+	return &notifierResult{len(notificationsToAdd), len(updatedSales), "sales"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() (*NotifierResult, error) {
+func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() (*notifierResult, error) {
 	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeTimeoutNotification()
 	if err != nil {
 		return nil, err
@@ -259,10 +259,10 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeTimeoutNotifiedAt(updatedPurchases); err != nil {
 		return nil, fmt.Errorf("updating lastDisputeTimeoutNotifiedAt on purchases: %s", err.Error())
 	}
-	return &NotifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseTimeout"}, nil
+	return &notifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseTimeout"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() (*NotifierResult, error) {
+func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() (*notifierResult, error) {
 	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeExpiryNotification()
 	if err != nil {
 		return nil, err
@@ -334,10 +334,10 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() (
 	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeExpiryNotifiedAt(updatedPurchases); err != nil {
 		return nil, fmt.Errorf("updating lastDisputeExpiryNotifiedAt on purchases: %s", err.Error())
 	}
-	return &NotifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseExpire"}, nil
+	return &notifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseExpire"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications() (*NotifierResult, error) {
+func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications() (*notifierResult, error) {
 	disputes, err := notifier.datastore.Cases().GetDisputesForDisputeExpiryNotification()
 	if err != nil {
 		return nil, err
@@ -413,5 +413,5 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 	if err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(updatedDisputes); err != nil {
 		return nil, fmt.Errorf("updating lastDisputeExpiryNotifiedAt on disputes: %s", err.Error())
 	}
-	return &NotifierResult{len(notificationsToAdd), len(updatedDisputes), "dispute"}, nil
+	return &notifierResult{len(notificationsToAdd), len(updatedDisputes), "dispute"}, nil
 }
