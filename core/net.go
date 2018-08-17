@@ -92,7 +92,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		}
 	}
 	log.Debugf("Sending offline message to: %s, Message Type: %s, PointerID: %s, Location: %s", p.Pretty(), m.MessageType.String(), pointer.Cid.String(), pointer.Value.Addrs[0].String())
-	OfflineMessageWaitGroup.Add(1)
+	OfflineMessageWaitGroup.Add(2)
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -111,6 +111,15 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 			}
 		}
 
+		OfflineMessageWaitGroup.Done()
+	}()
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		err := n.Pubsub.Publisher.Publish(ctx, ipfs.MessageTopicPrefix+pointer.Cid.KeyString(), ciphertext)
+		if err != nil {
+			log.Error(err)
+		}
 		OfflineMessageWaitGroup.Done()
 	}()
 	return nil
@@ -640,7 +649,7 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	return nil
 }
 
-// SendDisputeUpdate - send and offline relay message to the peer. Used for relaying messages from
+// SendOfflineRelay - send and offline relay message to the peer. Used for relaying messages from
 // a client node to another peer.
 func (n *OpenBazaarNode) SendOfflineRelay(peerID string, encryptedMessage []byte) error {
 	m := pb.Message{

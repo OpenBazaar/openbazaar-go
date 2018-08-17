@@ -3,7 +3,6 @@ package ipfs
 import (
 	"context"
 	"errors"
-	"fmt"
 	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
 	floodsub "gx/ipfs/QmSFihvoND3eDaAYRCeLgLPt62yCPgMZs1NSZmKFEtJQQw/go-libp2p-floodsub"
@@ -11,16 +10,15 @@ import (
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"strings"
 	"sync"
 	"time"
 )
 
 const (
 	MessageTopicPrefix = "/offlinemessage/"
-	GlobalIPNSTopic = "IPNS"
-	GlobalBlockTopic = "BLOCK"
-	GlobalCIDTopic = "CID"
+	GlobalIPNSTopic    = "IPNS"
+	GlobalBlockTopic   = "BLOCK"
+	GlobalCIDTopic     = "CID"
 )
 
 type Pubsub struct {
@@ -94,14 +92,14 @@ func (p *PubsubPublisher) Publish(ctx context.Context, topic string, data []byte
 	return p.ps.Publish(topic, data)
 }
 
-func (r *PubsubSubscriber) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+func (r *PubsubSubscriber) Subscribe(ctx context.Context, topic string) (chan []byte, error) {
 	log.Debugf("PubsubSubscribe: '%s'", topic)
 
 	r.mx.Lock()
 	// see if we already have a pubsub subscription; if not, subscribe
 	sub, ok := r.subs[topic]
 	var err error
-	resp := make(<-chan []byte)
+	resp := make(chan []byte)
 	if !ok {
 		sub, err = r.ps.Subscribe(topic)
 		if err != nil {
@@ -149,7 +147,7 @@ func (r *PubsubSubscriber) Cancel(name string) bool {
 	return ok
 }
 
-func (r *PubsubSubscriber) handleSubscription(sub *floodsub.Subscription, topic string, resp <-chan []byte, cancel func()) {
+func (r *PubsubSubscriber) handleSubscription(sub *floodsub.Subscription, topic string, resp chan<- []byte, cancel func()) {
 	defer sub.Cancel()
 	defer cancel()
 
@@ -169,7 +167,7 @@ func (r *PubsubSubscriber) handleSubscription(sub *floodsub.Subscription, topic 
 	}
 }
 
-func (r *PubsubSubscriber) receive(msg *floodsub.Message, topic string, resp <-chan []byte) error {
+func (r *PubsubSubscriber) receive(msg *floodsub.Message, topic string, resp chan<- []byte) error {
 	data := msg.GetData()
 	if data == nil {
 		return errors.New("empty message")
