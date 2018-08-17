@@ -17,8 +17,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -541,7 +539,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				hash, err := chainhash.NewHashFromStr(r.Txid)
+				hash, err := hex.DecodeString(r.Txid)
 				if err != nil {
 					return nil, err
 				}
@@ -549,10 +547,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 				if err != nil {
 					return nil, err
 				}
-				outpoint := wire.NewOutPoint(hash, r.Index)
 				u := wallet.TransactionInput{
-					OutpointHash:  outpoint.Hash.CloneBytes(),
-					OutpointIndex: outpoint.Index,
+					OutpointHash:  hash,
+					OutpointIndex: r.Index,
 					LinkedAddress: addr,
 					Value:         r.Value,
 				}
