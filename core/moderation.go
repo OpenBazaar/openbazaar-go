@@ -183,7 +183,7 @@ func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
 				return err
-			}	
+			}
 			coupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
 			if err != nil {
 				return err
