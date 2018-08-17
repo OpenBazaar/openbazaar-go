@@ -647,7 +647,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create moderator key
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	chaincodeBytes, err := hex.DecodeString(chaincode)
 	if err != nil {
 		return err
@@ -660,16 +659,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincodeBytes,
-		parentFP,
-		0,
-		0,
-		true)
-
-	moderatorKey, err := hdKey.Child(0)
+	moderatorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincodeBytes, true)
 	if err != nil {
 		return err
 	}
@@ -919,49 +909,22 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 		mECKey, err := n.Wallet.MasterPublicKey().ECPubKey()
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		hdKey := hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			mECKey.SerializeCompressed(),
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-		moderatorKey, err := hdKey.Child(0)
+		moderatorKey, err := n.Wallet.ChildKey(mECKey.SerializeCompressed(), chaincode, true)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-
-		buyerKey, err := hdKey.Child(0)
+		buyerKey, err := n.Wallet.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		hdKey = hd.NewExtendedKey(
-			n.Wallet.Params().HDPublicKeyID[:],
-			contract.VendorListings[0].VendorID.Pubkeys.Bitcoin,
-			chaincode,
-			parentFP,
-			0,
-			0,
-			false)
-		vendorKey, err := hdKey.Child(0)
+		vendorKey, err := n.Wallet.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
@@ -1110,7 +1073,6 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Create signing key
-	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
 	chaincodeBytes, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 	if err != nil {
 		return err
@@ -1123,16 +1085,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
-	hdKey := hd.NewExtendedKey(
-		n.Wallet.Params().HDPrivateKeyID[:],
-		mECKey.Serialize(),
-		chaincodeBytes,
-		parentFP,
-		0,
-		0,
-		true)
-
-	signingKey, err := hdKey.Child(0)
+	signingKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincodeBytes, true)
 	if err != nil {
 		return err
 	}
