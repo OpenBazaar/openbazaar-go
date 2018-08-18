@@ -210,6 +210,7 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 	}
 
 	// Check to see if we've already processed this tx. If so, return.
+
 	ts.txidsMutex.RLock()
 	sh, ok := ts.txids[tx.TxHash().String()]
 	ts.txidsMutex.RUnlock()
