@@ -251,7 +251,10 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 	value := int64(0)
 	matchesWatchOnly := false
 	for i, txout := range tx.TxOut {
-		out := wallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
+		// Ignore the error here because the sender could have used and exotic script
+		// for his change and we don't want to fail in that case.
+		addr, _ := scriptToAddress(txout.PkScript, ts.params)
+		out := wallet.TransactionOutput{Address: addr, Value: txout.Value, Index: uint32(i)}
 		for _, script := range PKscripts {
 			if bytes.Equal(txout.PkScript, script) { // new utxo found
 				scriptAddress, _ := ts.extractScriptAddress(txout.PkScript)
@@ -315,11 +318,15 @@ func (ts *TxStore) Ingest(tx *wire.MsgTx, height int32, timestamp time.Time) (ui
 					matchesWatchOnly = true
 				}
 
+				// Ignore the error here because the sender could have used and exotic script
+				// for his input and we don't want to fail in that case.
+				addr, _ := scriptToAddress(u.ScriptPubkey, ts.params)
+
 				in := wallet.TransactionInput{
-					OutpointHash:       u.Op.Hash.CloneBytes(),
-					OutpointIndex:      u.Op.Index,
-					LinkedScriptPubKey: u.ScriptPubkey,
-					Value:              u.Value,
+					OutpointHash:  u.Op.Hash.CloneBytes(),
+					OutpointIndex: u.Op.Index,
+					LinkedAddress: addr,
+					Value:         u.Value,
 				}
 				cb.Inputs = append(cb.Inputs, in)
 				break

@@ -208,7 +208,7 @@ func (w *ZcashdWallet) Start() {
 	args := w.BuildArguments(false)
 	client, _ := btcrpcclient.New(connCfg, nil)
 	w.rpcClient = client
-	go bitcoind.StartNotificationListener(client, w.listeners)
+	go StartNotificationListener(client, w.params, w.listeners)
 
 	cmd := exec.Command(w.binary, args...)
 	go cmd.Start()
@@ -266,6 +266,25 @@ func (w *ZcashdWallet) MasterPublicKey() *hd.ExtendedKey {
 	return w.masterPublicKey
 }
 
+func (w *ZcashdWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	var id []byte
+	if isPrivateKey {
+		id = w.params.HDPrivateKeyID[:]
+	} else {
+		id = w.params.HDPublicKeyID[:]
+	}
+	hdKey := hd.NewExtendedKey(
+		id,
+		keyBytes,
+		chaincode,
+		parentFP,
+		0,
+		0,
+		isPrivateKey)
+	return hdKey.Child(0)
+}
+
 func (w *ZcashdWallet) CurrentAddress(purpose wallet.KeyPurpose) btc.Address {
 	<-w.initChan
 	resp, _ := w.rpcClient.RawRequest("getaccountaddress", []json.RawMessage{json.RawMessage([]byte(`""`))})
@@ -290,6 +309,10 @@ func (w *ZcashdWallet) DecodeAddress(addr string) (btc.Address, error) {
 
 func (w *ZcashdWallet) ScriptToAddress(script []byte) (btc.Address, error) {
 	return ExtractPkScriptAddrs(script, w.params)
+}
+
+func scriptToAddress(script []byte, params *chaincfg.Params) (btc.Address, error) {
+	return ExtractPkScriptAddrs(script, params)
 }
 
 func (w *ZcashdWallet) AddressToScript(addr btc.Address) ([]byte, error) {
@@ -620,16 +643,6 @@ func (w *ZcashdWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				continue
 			}
-			op := wire.NewOutPoint(h, u.Vout)
-			script, err := hex.DecodeString(u.ScriptPubKey)
-			if err != nil {
-				continue
-			}
-			utxo := wallet.Utxo{
-				Op:           *op,
-				Value:        int64(u.Amount / 100000000),
-				ScriptPubkey: script,
-			}
 			addr, err := DecodeAddress(u.Address, w.params)
 			if err != nil {
 				continue
@@ -638,8 +651,14 @@ func (w *ZcashdWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				continue
 			}
+			in := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointIndex: u.Vout,
+				OutpointHash:  h.CloneBytes(),
+				Value:         int64(u.Amount),
+			}
 			hdKey := hd.NewExtendedKey(w.params.HDPrivateKeyID[:], key.PrivKey.Serialize(), make([]byte, 32), make([]byte, 4), 0, 0, true)
-			transactionID, err := w.SweepAddress([]wallet.Utxo{utxo}, nil, hdKey, nil, wallet.FEE_BUMP)
+			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, hdKey, nil, wallet.FEE_BUMP)
 			if err != nil {
 				return nil, err
 			}
@@ -682,7 +701,8 @@ func (w *ZcashdWallet) GetFeePerByte(feeLevel wallet.FeeLevel) uint64 {
 func (w *ZcashdWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, _ := txscript.PayToAddrScript(out.Address)
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
@@ -736,7 +756,11 @@ func (w *ZcashdWallet) CreateMultisigSignature(ins []wallet.TransactionInput, ou
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, err := txscript.PayToAddrScript(out.Address)
+		if err != nil {
+			return nil, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -780,7 +804,11 @@ func (w *ZcashdWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Tr
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, err := txscript.PayToAddrScript(out.Address)
+		if err != nil {
+			return nil, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -831,7 +859,7 @@ func (w *ZcashdWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Tr
 	return buf.Bytes(), nil
 }
 
-func (w *ZcashdWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *ZcashdWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	<-w.initChan
 	var internalAddr btc.Address
 	if address != nil {
@@ -847,11 +875,20 @@ func (w *ZcashdWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, k
 	var val int64
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
-	for _, u := range utxos {
-		val += u.Value
-		in := wire.NewTxIn(&u.Op, []byte{}, [][]byte{})
-		inputs = append(inputs, in)
-		additionalPrevScripts[u.Op] = u.ScriptPubkey
+	for _, in := range ins {
+		val += in.Value
+		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
+		if err != nil {
+			return nil, err
+		}
+		script, err := txscript.PayToAddrScript(in.LinkedAddress)
+		if err != nil {
+			return nil, err
+		}
+		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
+		inputs = append(inputs, input)
+		additionalPrevScripts[*outpoint] = script
 	}
 	out := wire.NewTxOut(val, script)
 
@@ -860,7 +897,7 @@ func (w *ZcashdWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, k
 		txType = spvwallet.P2SH_1of2_Multisig
 	}
 
-	estimatedSize := spvwallet.EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
+	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
 	b := json.RawMessage([]byte(`1`))
@@ -964,12 +1001,7 @@ func (w *ZcashdWallet) GenerateMultisigScript(keys []hd.ExtendedKey, threshold i
 	return addr, redeemScript, nil
 }
 
-func (w *ZcashdWallet) AddWatchedScript(script []byte) error {
-	addr, err := ExtractPkScriptAddrs(script, w.params)
-	if err != nil {
-		return err
-	}
-
+func (w *ZcashdWallet) AddWatchedAddress(addr btc.Address) error {
 	select {
 	case <-w.initChan:
 		return w.addWatchedScript(addr)

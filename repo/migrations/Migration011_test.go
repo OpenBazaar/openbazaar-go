@@ -23,7 +23,7 @@ func TestMigration011(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./repover")
-	assertCorrectRepoVer(t, "12")
+	assertCorrectRepoVer(t, "./repover", "12")
 	assertCorrectFileContents(t, path.Join(".", "root", "listings.json"), testMigration011ExpectedListingIndexAfterMigration)
 
 	// Test migration down
@@ -31,7 +31,7 @@ func TestMigration011(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertCorrectRepoVer(t, "11")
+	assertCorrectRepoVer(t, "./repover", "11")
 }
 
 func testMigration011SetupFixtures(t *testing.T) func() {

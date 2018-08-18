@@ -195,7 +195,13 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
-			transactionID, err := w.SweepAddress([]wallet.Utxo{u}, nil, key, nil, wallet.FEE_BUMP)
+			in := wallet.TransactionInput{
+				LinkedAddress: addr,
+				OutpointIndex: u.Op.Index,
+				OutpointHash:  u.Op.Hash.CloneBytes(),
+				Value:         u.Value,
+			}
+			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, key, nil, wallet.FEE_BUMP)
 			if err != nil {
 				return nil, err
 			}
@@ -208,7 +214,8 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 func (w *SPVWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.TransactionOutput, feePerByte uint64) uint64 {
 	tx := wire.NewMsgTx(1)
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubKey, _ := bchutil.PayToAddrScript(out.Address)
+		output := wire.NewTxOut(out.Value, scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := EstimateSerializeSize(len(ins), tx.TxOut, false, P2PKH)
@@ -325,7 +332,11 @@ func (w *SPVWallet) CreateMultisigSignature(ins []wallet.TransactionInput, outs 
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubkey, err := bchutil.PayToAddrScript(out.Address)
+		if err != nil {
+			return sigs, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubkey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -375,7 +386,11 @@ func (w *SPVWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Trans
 		tx.TxIn = append(tx.TxIn, input)
 	}
 	for _, out := range outs {
-		output := wire.NewTxOut(out.Value, out.ScriptPubKey)
+		scriptPubkey, err := bchutil.PayToAddrScript(out.Address)
+		if err != nil {
+			return nil, err
+		}
+		output := wire.NewTxOut(out.Value, scriptPubkey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -441,7 +456,7 @@ func (w *SPVWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Trans
 	return buf.Bytes(), nil
 }
 
-func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
+func (w *SPVWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wallet.FeeLevel) (*chainhash.Hash, error) {
 	var internalAddr btc.Address
 	if address != nil {
 		internalAddr = *address
@@ -456,11 +471,20 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 	var val int64
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
-	for _, u := range utxos {
-		val += u.Value
-		in := wire.NewTxIn(&u.Op, []byte{}, [][]byte{})
-		inputs = append(inputs, in)
-		additionalPrevScripts[u.Op] = u.ScriptPubkey
+	for _, in := range ins {
+		val += in.Value
+		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
+		if err != nil {
+			return nil, err
+		}
+		script, err := bchutil.PayToAddrScript(in.LinkedAddress)
+		if err != nil {
+			return nil, err
+		}
+		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
+		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
+		inputs = append(inputs, input)
+		additionalPrevScripts[*outpoint] = script
 	}
 	out := wire.NewTxOut(val, script)
 
@@ -472,7 +496,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 			txType = P2SH_Multisig_Timelock_1Sig
 		}
 	}
-	estimatedSize := EstimateSerializeSize(len(utxos), []*wire.TxOut{out}, false, txType)
+	estimatedSize := EstimateSerializeSize(len(ins), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
 	feePerByte := int(w.GetFeePerByte(feeLevel))
@@ -541,7 +565,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 			prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
 			script, err := bchutil.SignTxOutput(w.params,
 				tx, i, prevOutScript, txscript.SigHashAll, getKey,
-				getScript, txIn.SignatureScript, utxos[i].Value)
+				getScript, txIn.SignatureScript, ins[i].Value)
 			if err != nil {
 				return nil, errors.New("Failed to sign transaction")
 			}
@@ -551,7 +575,7 @@ func (w *SPVWallet) SweepAddress(utxos []wallet.Utxo, address *btc.Address, key 
 			if err != nil {
 				return nil, err
 			}
-			script, err := bchutil.RawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, priv, utxos[i].Value)
+			script, err := bchutil.RawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, priv, ins[i].Value)
 			if err != nil {
 				return nil, err
 			}

@@ -87,7 +87,7 @@ func TestMigration010(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll("./repover")
-	assertCorrectRepoVer(t, "11")
+	assertCorrectRepoVer(t, "./repover", "11")
 
 	for _, table := range []string{"cases", "sales", "purchases"} {
 		results := db.QueryRow("SELECT coinType, paymentCoin FROM " + table + " LIMIT 1;")
@@ -114,5 +114,5 @@ func TestMigration010(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assertCorrectRepoVer(t, "10")
+	assertCorrectRepoVer(t, "./repover", "10")
 }

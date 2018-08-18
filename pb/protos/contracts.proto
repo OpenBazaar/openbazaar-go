@@ -342,8 +342,11 @@ message DisputeResolution {
             Output moderatorOutput         = 5;
 
             message Output {
+              oneof scriptOrAddress {
                 string script  = 1;
-                uint64 amount  = 2;
+                string address = 3;
+              }
+              uint64 amount  = 2;
             }
     }
 }

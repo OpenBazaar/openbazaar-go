@@ -6,27 +6,55 @@ package pb
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import google_protobuf "github.com/golang/protobuf/ptypes/timestamp"
+import timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 type Post struct {
-	Slug      string                     `protobuf:"bytes,1,opt,name=slug" json:"slug,omitempty"`
-	VendorID  *ID                        `protobuf:"bytes,2,opt,name=vendorID" json:"vendorID,omitempty"`
-	Title     string                     `protobuf:"bytes,3,opt,name=title" json:"title,omitempty"`
-	LongForm  string                     `protobuf:"bytes,4,opt,name=longForm" json:"longForm,omitempty"`
-	Images    []*Post_Image              `protobuf:"bytes,5,rep,name=images" json:"images,omitempty"`
-	Tags      []string                   `protobuf:"bytes,6,rep,name=tags" json:"tags,omitempty"`
-	Timestamp *google_protobuf.Timestamp `protobuf:"bytes,7,opt,name=timestamp" json:"timestamp,omitempty"`
+	Slug                 string               `protobuf:"bytes,1,opt,name=slug,proto3" json:"slug,omitempty"`
+	VendorID             *ID                  `protobuf:"bytes,2,opt,name=vendorID,proto3" json:"vendorID,omitempty"`
+	Title                string               `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	LongForm             string               `protobuf:"bytes,4,opt,name=longForm,proto3" json:"longForm,omitempty"`
+	Images               []*Post_Image        `protobuf:"bytes,5,rep,name=images,proto3" json:"images,omitempty"`
+	Tags                 []string             `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty"`
+	Timestamp            *timestamp.Timestamp `protobuf:"bytes,7,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
+	XXX_unrecognized     []byte               `json:"-"`
+	XXX_sizecache        int32                `json:"-"`
 }
 
-func (m *Post) Reset()                    { *m = Post{} }
-func (m *Post) String() string            { return proto.CompactTextString(m) }
-func (*Post) ProtoMessage()               {}
-func (*Post) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0} }
+func (m *Post) Reset()         { *m = Post{} }
+func (m *Post) String() string { return proto.CompactTextString(m) }
+func (*Post) ProtoMessage()    {}
+func (*Post) Descriptor() ([]byte, []int) {
+	return fileDescriptor_posts_7550a98cd626f791, []int{0}
+}
+func (m *Post) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Post.Unmarshal(m, b)
+}
+func (m *Post) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Post.Marshal(b, m, deterministic)
+}
+func (dst *Post) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post.Merge(dst, src)
+}
+func (m *Post) XXX_Size() int {
+	return xxx_messageInfo_Post.Size(m)
+}
+func (m *Post) XXX_DiscardUnknown() {
+	xxx_messageInfo_Post.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Post proto.InternalMessageInfo
 
 func (m *Post) GetSlug() string {
 	if m != nil {
@@ -70,7 +98,7 @@ func (m *Post) GetTags() []string {
 	return nil
 }
 
-func (m *Post) GetTimestamp() *google_protobuf.Timestamp {
+func (m *Post) GetTimestamp() *timestamp.Timestamp {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -78,18 +106,40 @@ func (m *Post) GetTimestamp() *google_protobuf.Timestamp {
 }
 
 type Post_Image struct {
-	Filename string `protobuf:"bytes,1,opt,name=filename" json:"filename,omitempty"`
-	Original string `protobuf:"bytes,2,opt,name=original" json:"original,omitempty"`
-	Large    string `protobuf:"bytes,3,opt,name=large" json:"large,omitempty"`
-	Medium   string `protobuf:"bytes,4,opt,name=medium" json:"medium,omitempty"`
-	Small    string `protobuf:"bytes,5,opt,name=small" json:"small,omitempty"`
-	Tiny     string `protobuf:"bytes,6,opt,name=tiny" json:"tiny,omitempty"`
+	Filename             string   `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	Original             string   `protobuf:"bytes,2,opt,name=original,proto3" json:"original,omitempty"`
+	Large                string   `protobuf:"bytes,3,opt,name=large,proto3" json:"large,omitempty"`
+	Medium               string   `protobuf:"bytes,4,opt,name=medium,proto3" json:"medium,omitempty"`
+	Small                string   `protobuf:"bytes,5,opt,name=small,proto3" json:"small,omitempty"`
+	Tiny                 string   `protobuf:"bytes,6,opt,name=tiny,proto3" json:"tiny,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Post_Image) Reset()                    { *m = Post_Image{} }
-func (m *Post_Image) String() string            { return proto.CompactTextString(m) }
-func (*Post_Image) ProtoMessage()               {}
-func (*Post_Image) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{0, 0} }
+func (m *Post_Image) Reset()         { *m = Post_Image{} }
+func (m *Post_Image) String() string { return proto.CompactTextString(m) }
+func (*Post_Image) ProtoMessage()    {}
+func (*Post_Image) Descriptor() ([]byte, []int) {
+	return fileDescriptor_posts_7550a98cd626f791, []int{0, 0}
+}
+func (m *Post_Image) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Post_Image.Unmarshal(m, b)
+}
+func (m *Post_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Post_Image.Marshal(b, m, deterministic)
+}
+func (dst *Post_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post_Image.Merge(dst, src)
+}
+func (m *Post_Image) XXX_Size() int {
+	return xxx_messageInfo_Post_Image.Size(m)
+}
+func (m *Post_Image) XXX_DiscardUnknown() {
+	xxx_messageInfo_Post_Image.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Post_Image proto.InternalMessageInfo
 
 func (m *Post_Image) GetFilename() string {
 	if m != nil {
@@ -134,15 +184,37 @@ func (m *Post_Image) GetTiny() string {
 }
 
 type SignedPost struct {
-	Post      *Post  `protobuf:"bytes,1,opt,name=post" json:"post,omitempty"`
-	Hash      string `protobuf:"bytes,2,opt,name=hash" json:"hash,omitempty"`
-	Signature []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	Post                 *Post    `protobuf:"bytes,1,opt,name=post,proto3" json:"post,omitempty"`
+	Hash                 string   `protobuf:"bytes,2,opt,name=hash,proto3" json:"hash,omitempty"`
+	Signature            []byte   `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SignedPost) Reset()                    { *m = SignedPost{} }
-func (m *SignedPost) String() string            { return proto.CompactTextString(m) }
-func (*SignedPost) ProtoMessage()               {}
-func (*SignedPost) Descriptor() ([]byte, []int) { return fileDescriptor6, []int{1} }
+func (m *SignedPost) Reset()         { *m = SignedPost{} }
+func (m *SignedPost) String() string { return proto.CompactTextString(m) }
+func (*SignedPost) ProtoMessage()    {}
+func (*SignedPost) Descriptor() ([]byte, []int) {
+	return fileDescriptor_posts_7550a98cd626f791, []int{1}
+}
+func (m *SignedPost) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_SignedPost.Unmarshal(m, b)
+}
+func (m *SignedPost) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_SignedPost.Marshal(b, m, deterministic)
+}
+func (dst *SignedPost) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedPost.Merge(dst, src)
+}
+func (m *SignedPost) XXX_Size() int {
+	return xxx_messageInfo_SignedPost.Size(m)
+}
+func (m *SignedPost) XXX_DiscardUnknown() {
+	xxx_messageInfo_SignedPost.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SignedPost proto.InternalMessageInfo
 
 func (m *SignedPost) GetPost() *Post {
 	if m != nil {
@@ -171,9 +243,9 @@ func init() {
 	proto.RegisterType((*SignedPost)(nil), "SignedPost")
 }
 
-func init() { proto.RegisterFile("posts.proto", fileDescriptor6) }
+func init() { proto.RegisterFile("posts.proto", fileDescriptor_posts_7550a98cd626f791) }
 
-var fileDescriptor6 = []byte{
+var fileDescriptor_posts_7550a98cd626f791 = []byte{
 	// 342 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x91, 0x4f, 0x4b, 0xc3, 0x40,
 	0x10, 0xc5, 0x49, 0xf3, 0xc7, 0x66, 0x22, 0x08, 0x8b, 0xc8, 0x1a, 0x84, 0x86, 0x7a, 0xe9, 0x29,
