@@ -914,7 +914,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		moderatorKey, err := n.Wallet.ChildKey(mECKey.SerializeCompressed(), chaincode, true)
+		moderatorKey, err := n.Wallet.ChildKey(mECKey.SerializeCompressed(), chaincode, false)
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
