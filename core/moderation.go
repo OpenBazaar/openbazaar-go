@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"github.com/OpenBazaar/jsonpb"
 	"golang.org/x/net/context"
@@ -133,7 +132,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 	case pb.Moderator_Fee_PERCENTAGE:
 		return uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100)), nil
 	case pb.Moderator_Fee_FIXED:
-		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(n.Wallet.CurrencyCode()) {
 			if profile.ModeratorInfo.Fee.FixedFee.Amount >= transactionTotal {
 				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 			}
@@ -149,7 +148,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64) (uint64, error
 
 	case pb.Moderator_Fee_FIXED_PLUS_PERCENTAGE:
 		var fixed uint64
-		if strings.ToLower(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == "btc" {
+		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(n.Wallet.CurrencyCode()) {
 			fixed = profile.ModeratorInfo.Fee.FixedFee.Amount
 		} else {
 			fixed, err = n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
