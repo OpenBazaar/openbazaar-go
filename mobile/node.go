@@ -101,12 +101,12 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 
-	ct := wallet.Bitcoin
+	ct := wi.Bitcoin
 	switch walletCfg.Type {
 	case "bitcoincash":
-		ct = wallet.BitcoinCash
+		ct = wi.BitcoinCash
 	case "zcashd":
-		ct = wallet.Zcash
+		ct = wi.Zcash
 	}
 	migrations.WalletCoinType = ct
 
@@ -278,7 +278,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
-		return nil, errors.New("No gateway addresses configured")
+		return nil, errors.New("no gateway addresses configured")
 	}
 
 	return &Node{OpenBazaarNode: core.Node, config: config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
@@ -404,7 +404,7 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wallet.CoinType) (*db.SQLiteDatastore, error) {
+func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
 	if err != nil {
