@@ -26,6 +26,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/spvwallet"
@@ -75,14 +76,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now())
-	if err != nil && err != repo.ErrRepoExists {
-		return nil, err
-	}
-
-	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, _ := sqliteDB.Config().GetCreationDate()
-
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(config.RepoPath, "config"))
 	if err != nil {
@@ -107,6 +100,23 @@ func NewNode(config NodeConfig) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	ct := wi.Bitcoin
+	switch walletCfg.Type {
+	case "bitcoincash":
+		ct = wi.BitcoinCash
+	case "zcashd":
+		ct = wi.Zcash
+	}
+	migrations.WalletCoinType = ct
+
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return nil, err
+	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -268,7 +278,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
-		return nil, errors.New("No gateway addresses configured")
+		return nil, errors.New("no gateway addresses configured")
 	}
 
 	return &Node{OpenBazaarNode: core.Node, config: config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
@@ -394,9 +404,9 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
+func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
-	sqliteDB, err := db.Create(dataDir, password, testnet)
+	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
 	if err != nil {
 		return sqliteDB, err
 	}

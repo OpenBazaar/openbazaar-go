@@ -30,6 +30,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
@@ -151,11 +152,6 @@ func (x *Start) Execute(args []string) error {
 	repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now())
-	if err != nil && err != repo.ErrRepoExists {
-		return err
-	}
-
 	// Logging
 	w := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "ob.log"),
@@ -212,26 +208,6 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	// If the database cannot be decrypted, exit
-	if sqliteDB.Config().IsEncrypted() {
-		sqliteDB.Close()
-		fmt.Print("Database is encrypted, enter your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println("")
-		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now())
-		if err != nil && err != repo.ErrRepoExists {
-			return err
-		}
-		if sqliteDB.Config().IsEncrypted() {
-			log.Error("Invalid password")
-			os.Exit(3)
-		}
-	}
-
-	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, _ := sqliteDB.Config().GetCreationDate()
-
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
@@ -277,6 +253,50 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error("scan republish interval config:", err)
 		return err
+	}
+
+	if x.BitcoinCash {
+		walletCfg.Type = "bitcoincash"
+	} else if x.ZCash != "" {
+		walletCfg.Type = "zcashd"
+		walletCfg.Binary = x.ZCash
+	}
+
+	ct := wallet.Bitcoin
+	switch walletCfg.Type {
+	case "bitcoincash":
+		ct = wallet.BitcoinCash
+	case "zcashd":
+		ct = wallet.Zcash
+	}
+
+	migrations.WalletCoinType = ct
+	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return err
+	}
+
+	// If the database cannot be decrypted, exit
+	if sqliteDB.Config().IsEncrypted() {
+		sqliteDB.Close()
+		fmt.Print("Database is encrypted, enter your password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		pw := string(bytePassword)
+		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
+		if err != nil && err != repo.ErrRepoExists {
+			return err
+		}
+		if sqliteDB.Config().IsEncrypted() {
+			log.Error("Invalid password")
+			os.Exit(3)
+		}
+	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, err := sqliteDB.Config().GetCreationDate()
+	if err != nil {
+		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
 
 	// IPFS node setup
@@ -1064,9 +1084,9 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 	return errc, nil
 }
 
-func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time) (*db.SQLiteDatastore, error) {
+func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wallet.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
-	sqliteDB, err := db.Create(dataDir, password, testnet)
+	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
 	if err != nil {
 		return sqliteDB, err
 	}

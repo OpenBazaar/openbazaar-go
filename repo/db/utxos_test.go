@@ -19,7 +19,7 @@ var utxo wallet.Utxo
 func init() {
 	conn, _ := sql.Open("sqlite3", ":memory:")
 	initDatabaseTables(conn, "")
-	uxdb = NewUnspentTransactionStore(conn, new(sync.Mutex))
+	uxdb = NewUnspentTransactionStore(conn, new(sync.Mutex), wallet.Bitcoin)
 	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
 	outpoint := wire.NewOutPoint(sh1, 0)
 	utxo = wallet.Utxo{

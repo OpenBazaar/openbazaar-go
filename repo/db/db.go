@@ -40,7 +40,7 @@ type SQLiteDatastore struct {
 	lock            *sync.Mutex
 }
 
-func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
+func Create(repoPath, password string, testnet bool, coinType wallet.CoinType) (*SQLiteDatastore, error) {
 	var dbPath string
 	if testnet {
 		dbPath = path.Join(repoPath, "datastore", "testnet.db")
@@ -56,25 +56,25 @@ func Create(repoPath, password string, testnet bool) (*SQLiteDatastore, error) {
 		conn.Exec(p)
 	}
 	l := new(sync.Mutex)
-	return NewSQLiteDatastore(conn, l), nil
+	return NewSQLiteDatastore(conn, l, coinType), nil
 }
 
-func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex) *SQLiteDatastore {
+func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex, coinType wallet.CoinType) *SQLiteDatastore {
 	return &SQLiteDatastore{
 		config:          &ConfigDB{db: db, lock: l},
 		followers:       NewFollowerStore(db, l),
 		following:       NewFollowingStore(db, l),
 		offlineMessages: NewOfflineMessageStore(db, l),
 		pointers:        NewPointerStore(db, l),
-		keys:            NewKeyStore(db, l),
-		stxos:           NewSpentTransactionStore(db, l),
-		txns:            NewTransactionStore(db, l),
-		utxos:           NewUnspentTransactionStore(db, l),
+		keys:            NewKeyStore(db, l, coinType),
+		stxos:           NewSpentTransactionStore(db, l, coinType),
+		txns:            NewTransactionStore(db, l, coinType),
+		utxos:           NewUnspentTransactionStore(db, l, coinType),
 		settings:        NewConfigurationStore(db, l),
 		inventory:       NewInventoryStore(db, l),
 		purchases:       NewPurchaseStore(db, l),
 		sales:           NewSaleStore(db, l),
-		watchedScripts:  NewWatchedScriptStore(db, l),
+		watchedScripts:  NewWatchedScriptStore(db, l, coinType),
 		cases:           NewCaseStore(db, l),
 		chat:            NewChatStore(db, l),
 		notifications:   NewNotificationStore(db, l),

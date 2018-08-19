@@ -11,6 +11,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -75,7 +76,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 	fmt.Println("")
 	pw := string(bytePassword)
 	pw = strings.Replace(pw, "'", "''", -1)
-	sqlliteDB, err := db.Create(repoPath, pw, testnet)
+	sqlliteDB, err := db.Create(repoPath, pw, testnet, wallet.Bitcoin)
 	if err != nil || sqlliteDB.Config().IsEncrypted() {
 		fmt.Println("Invalid password")
 		return err
@@ -83,7 +84,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {
 		return err
 	}
-	tmpDB, err := db.Create(path.Join(repoPath, "tmp"), "", testnet)
+	tmpDB, err := db.Create(path.Join(repoPath, "tmp"), "", testnet, wallet.Bitcoin)
 	if err != nil {
 		fmt.Println(err)
 		return err

@@ -5,6 +5,7 @@ import (
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"os"
 )
@@ -29,7 +30,7 @@ func (x *Status) Execute(args []string) error {
 		torAvailable = true
 	}
 	if fsrepo.IsInitialized(repoPath) {
-		sqliteDB, err := db.Create(repoPath, "", x.Testnet)
+		sqliteDB, err := db.Create(repoPath, "", x.Testnet, wallet.Bitcoin)
 		if err != nil {
 			os.Exit(1)
 		}
