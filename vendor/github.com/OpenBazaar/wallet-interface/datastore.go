@@ -57,21 +57,6 @@ func (c *CoinType) CurrencyCode() string {
 	}
 }
 
-func (c *CoinType) CurrencyCode() string {
-	switch *c {
-	case Bitcoin:
-		return "BTC"
-	case BitcoinCash:
-		return "BCH"
-	case Zcash:
-		return "ZEC"
-	case Litecoin:
-		return "LTC"
-	default:
-		return ""
-	}
-}
-
 type Datastore interface {
 	Utxos() Utxos
 	Stxos() Stxos
