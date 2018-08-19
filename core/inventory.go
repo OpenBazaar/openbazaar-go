@@ -3,15 +3,16 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"time"
+
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 var (
 	ipfsInventoryCacheMaxDuration = 1 * time.Hour
-
+	// ErrInventoryNotFoundForSlug - inventory not found error
 	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
 )
 
@@ -77,16 +78,16 @@ func (n *OpenBazaarNode) PublishInventory() error {
 		return err
 	}
 
-	n.Broadcast <- repo.StatusNotification{"publishing"}
+	n.Broadcast <- repo.StatusNotification{Status: "publishing"}
 	go func() {
 		hash, err := repo.PublishObjectToIPFS(n.IpfsNode, n.RepoPath, "inventory", inventory)
 		if err != nil {
 			log.Error(err)
-			n.Broadcast <- repo.StatusNotification{"error publishing"}
+			n.Broadcast <- repo.StatusNotification{Status: "error publishing"}
 			return
 		}
 
-		n.Broadcast <- repo.StatusNotification{"publish complete"}
+		n.Broadcast <- repo.StatusNotification{Status: "publish complete"}
 
 		err = n.sendToPushNodes(hash)
 		if err != nil {

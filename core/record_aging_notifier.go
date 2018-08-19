@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 const (
@@ -22,11 +23,34 @@ type recordAgingNotifier struct {
 	// Worker-handling dependancies
 	intervalDelay time.Duration
 	logger        *logging.Logger
-	runCount      int
 	watchdogTimer *time.Ticker
 	stopWorker    chan bool
 }
 
+type notifierResult struct {
+	notificationsMade int
+	recordsUpdated    int
+	subject           string
+}
+
+type notifierSummary map[string]*notifierResult
+
+func (result notifierSummary) Add(operand *notifierResult) {
+	if result == nil {
+		result = make(map[string]*notifierResult, 0)
+	}
+	result[operand.subject] = operand
+}
+
+func (result notifierSummary) String() string {
+	var summaries = make([]string, 0)
+	for subject, result := range result {
+		summaries = append(summaries, fmt.Sprintf("%s: %d/%d", subject, result.notificationsMade, result.recordsUpdated))
+	}
+	return strings.Join(summaries, ", ")
+}
+
+// StartRecordAgingNotifier - start the notifier
 func (n *OpenBazaarNode) StartRecordAgingNotifier() {
 	n.RecordAgingNotifier = &recordAgingNotifier{
 		datastore:     n.Datastore,
@@ -43,8 +67,6 @@ func (n *OpenBazaarNode) intervalDelay() time.Duration {
 	}
 	return notifierRegularInterval
 }
-
-func (notifier *recordAgingNotifier) RunCount() int { return notifier.runCount }
 
 func (notifier *recordAgingNotifier) Run() {
 	notifier.watchdogTimer = time.NewTicker(notifier.intervalDelay)
@@ -69,48 +91,62 @@ func (notifier *recordAgingNotifier) Stop() {
 }
 
 func (notifier *recordAgingNotifier) PerformTask() {
-	notifier.runCount += 1
-	notifier.logger.Debugf("performTask started (count %d)", notifier.runCount)
+	var summary = notifierSummary{}
 
-	if err := notifier.generateSellerDisputeNotifications(); err != nil {
+	if result, err := notifier.generateSellerDisputeNotifications(); err != nil {
 		notifier.logger.Errorf("generateSellerDisputeNotifications failed: %s", err)
+	} else {
+		summary.Add(result)
 	}
-	if err := notifier.generateBuyerDisputeTimeoutNotifications(); err != nil {
+	if result, err := notifier.generateBuyerDisputeTimeoutNotifications(); err != nil {
 		notifier.logger.Errorf("generateBuyerDisputeTimeoutNotifications failed: %s", err)
+	} else {
+		summary.Add(result)
 	}
-	if err := notifier.generateBuyerDisputeExpiryNotifications(); err != nil {
+	if result, err := notifier.generateBuyerDisputeExpiryNotifications(); err != nil {
 		notifier.logger.Errorf("generateBuyerDisputeExpiryNotifications failed: %s", err)
+	} else {
+		summary.Add(result)
 	}
-	if err := notifier.generateModeratorDisputeExpiryNotifications(); err != nil {
+	if result, err := notifier.generateModeratorDisputeExpiryNotifications(); err != nil {
 		notifier.logger.Errorf("generateModeratorDisputeExpiryNotifications failed: %s", err)
+	} else {
+		summary.Add(result)
 	}
+	notifier.logger.Debugf("notifications created/records updated: %s", summary.String())
 }
 
-func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error {
+func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() (*notifierResult, error) {
 	sales, err := notifier.datastore.Sales().GetSalesForDisputeTimeoutNotification()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
+		updatedSales       = make([]*repo.SaleRecord, 0)
 	)
 
 	for _, s := range sales {
-		var timeSinceCreation = executedAt.Sub(s.Timestamp)
+		var (
+			timeSinceCreation = executedAt.Sub(s.Timestamp)
+			updated           = false
+		)
 		if s.LastDisputeTimeoutNotifiedAt.Before(s.Timestamp.Add(repo.VendorDisputeTimeout_lastInterval)) && timeSinceCreation > repo.VendorDisputeTimeout_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, s.BuildVendorDisputeTimeoutLastNotification(executedAt))
+			updated = true
 		}
-		if len(notificationsToAdd) > 0 {
+		if updated {
 			s.LastDisputeTimeoutNotifiedAt = executedAt
+			updatedSales = append(updatedSales, s)
 		}
 	}
 
 	notifier.datastore.Notifications().Lock()
 	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, n := range notificationsToAdd {
@@ -133,57 +169,63 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() error 
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf("%s %s %s", err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return fmt.Errorf("commiting vendor dispute notifications: %s", err.Error())
+		return nil, fmt.Errorf("commiting vendor dispute notifications: %s", err.Error())
 	}
-	notifier.logger.Debugf("created %d vendor dispute notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	if err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(sales); err != nil {
-		return fmt.Errorf("update sales disputeTimeoutNotifiedAt: %s", err.Error())
+	if err = notifier.datastore.Sales().UpdateSalesLastDisputeTimeoutNotifiedAt(updatedSales); err != nil {
+		return nil, fmt.Errorf("update sales disputeTimeoutNotifiedAt: %s", err.Error())
 	}
-	notifier.logger.Debugf("updated lastDisputeTimeoutNotifiedAt on %d sales", len(sales))
-	return nil
+	return &notifierResult{len(notificationsToAdd), len(updatedSales), "sales"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() error {
+func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() (*notifierResult, error) {
 	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeTimeoutNotification()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
+		updatedPurchases   = make([]*repo.PurchaseRecord, 0)
 	)
 
 	for _, p := range purchases {
-		var timeSinceCreation = executedAt.Sub(p.Timestamp)
-		// Extra seconds added to creation time is a hack to order SQL results
+		var (
+			timeSinceCreation = executedAt.Sub(p.Timestamp)
+			updated           = false
+		)
 		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_firstInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutFirstNotification(executedAt))
+			updated = true
 		}
 		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_secondInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutSecondNotification(executedAt))
+			updated = true
 		}
 		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_thirdInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_thirdInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutThirdNotification(executedAt))
+			updated = true
 		}
 		if p.LastDisputeTimeoutNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeTimeout_lastInterval)) && timeSinceCreation > repo.BuyerDisputeTimeout_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeTimeoutLastNotification(executedAt))
+			updated = true
 		}
-		if len(notificationsToAdd) > 0 {
+		if updated {
 			p.LastDisputeTimeoutNotifiedAt = executedAt
+			updatedPurchases = append(updatedPurchases, p)
 		}
 	}
 
 	notifier.datastore.Notifications().Lock()
 	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, n := range notificationsToAdd {
@@ -206,55 +248,59 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return fmt.Errorf("commiting purchase dispute notifications: %s", err.Error())
+		return nil, fmt.Errorf("commiting purchase dispute notifications: %s", err.Error())
 	}
-	notifier.logger.Debugf("created %d purchase dispute notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeTimeoutNotifiedAt(purchases); err != nil {
-		return fmt.Errorf("updating lastDisputeTimeoutNotifiedAt on purchases: %s", err.Error())
+	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeTimeoutNotifiedAt(updatedPurchases); err != nil {
+		return nil, fmt.Errorf("updating lastDisputeTimeoutNotifiedAt on purchases: %s", err.Error())
 	}
-	notifier.logger.Debugf("updated lastDisputeTimeoutNotifiedAt on %d purchases", len(purchases))
-	return nil
+	return &notifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseTimeout"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() error {
+func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() (*notifierResult, error) {
 	purchases, err := notifier.datastore.Purchases().GetPurchasesForDisputeExpiryNotification()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
+		updatedPurchases   = make([]*repo.PurchaseRecord, 0)
 	)
 
 	for _, p := range purchases {
-		var timeSinceDisputedAt = executedAt.Sub(p.DisputedAt)
-		// Extra seconds added to creation time is a hack to order SQL results
+		var (
+			timeSinceDisputedAt = executedAt.Sub(p.DisputedAt)
+			updated             = false
+		)
 		if p.LastDisputeExpiryNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeExpiry_firstInterval)) && timeSinceDisputedAt > repo.BuyerDisputeExpiry_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeExpiryFirstNotification(executedAt))
+			updated = true
 		}
 		if p.LastDisputeExpiryNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeExpiry_secondInterval)) && timeSinceDisputedAt > repo.BuyerDisputeExpiry_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeExpirySecondNotification(executedAt))
+			updated = true
 		}
 		if p.LastDisputeExpiryNotifiedAt.Before(p.Timestamp.Add(repo.BuyerDisputeExpiry_lastInterval)) && timeSinceDisputedAt > repo.BuyerDisputeExpiry_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, p.BuildBuyerDisputeExpiryLastNotification(executedAt))
+			updated = true
 		}
-		// TODO: Check if THIS purchase made a notification before bumping timestamp
-		if len(notificationsToAdd) > 0 {
+		if updated {
 			p.LastDisputeExpiryNotifiedAt = executedAt
+			updatedPurchases = append(updatedPurchases, p)
 		}
 	}
 
 	notifier.datastore.Notifications().Lock()
 	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, n := range notificationsToAdd {
@@ -277,57 +323,63 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() e
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return fmt.Errorf("commiting buyer expiration notifications: %s", err.Error())
+		return nil, fmt.Errorf("commiting buyer expiration notifications: %s", err.Error())
 	}
-	notifier.logger.Debugf("created %d buyer expiration notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeExpiryNotifiedAt(purchases); err != nil {
-		return fmt.Errorf("updating lastDisputeExpiryNotifiedAt on purchases: %s", err.Error())
+	if err = notifier.datastore.Purchases().UpdatePurchasesLastDisputeExpiryNotifiedAt(updatedPurchases); err != nil {
+		return nil, fmt.Errorf("updating lastDisputeExpiryNotifiedAt on purchases: %s", err.Error())
 	}
-	notifier.logger.Debugf("updated lastDisputeExpiryNotifiedAt on %d purchases", len(purchases))
-	return nil
+	return &notifierResult{len(notificationsToAdd), len(updatedPurchases), "purchaseExpire"}, nil
 }
 
-func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications() error {
+func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications() (*notifierResult, error) {
 	disputes, err := notifier.datastore.Cases().GetDisputesForDisputeExpiryNotification()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var (
 		executedAt         = time.Now()
 		notificationsToAdd = make([]*repo.Notification, 0)
+		updatedDisputes    = make([]*repo.DisputeCaseRecord, 0)
 	)
 
 	for _, d := range disputes {
-		var timeSinceCreation = executedAt.Sub(d.Timestamp)
-		// Extra seconds added to creation time is a hack to order SQL results
+		var (
+			timeSinceCreation = executedAt.Sub(d.Timestamp)
+			updated           = false
+		)
 		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_firstInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_firstInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryFirstNotification(executedAt))
+			updated = true
 		}
 		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_secondInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_secondInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpirySecondNotification(executedAt))
+			updated = true
 		}
 		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_thirdInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_thirdInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryThirdNotification(executedAt))
+			updated = true
 		}
 		if d.LastDisputeExpiryNotifiedAt.Before(d.Timestamp.Add(repo.ModeratorDisputeExpiry_lastInterval)) && timeSinceCreation > repo.ModeratorDisputeExpiry_lastInterval {
 			notificationsToAdd = append(notificationsToAdd, d.BuildModeratorDisputeExpiryLastNotification(executedAt))
+			updated = true
 		}
-		if len(notificationsToAdd) > 0 {
+		if updated {
 			d.LastDisputeExpiryNotifiedAt = executedAt
+			updatedDisputes = append(updatedDisputes, d)
 		}
 	}
 
 	notifier.datastore.Notifications().Lock()
 	notificationTx, err := notifier.datastore.Notifications().BeginTransaction()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, n := range notificationsToAdd {
@@ -350,18 +402,16 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return fmt.Errorf("commiting dispute expiration notifications: %s", err.Error())
+		return nil, fmt.Errorf("commiting dispute expiration notifications: %s", err.Error())
 	}
-	notifier.logger.Debugf("created %d dispute expiration notifications", len(notificationsToAdd))
 	notifier.datastore.Notifications().Unlock()
 
 	for _, n := range notificationsToAdd {
 		notifier.broadcast <- n.NotifierData
 	}
 
-	if err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(disputes); err != nil {
-		return fmt.Errorf("updating lastDisputeExpiryNotifiedAt on disputes: %s", err.Error())
+	if err = notifier.datastore.Cases().UpdateDisputesLastDisputeExpiryNotifiedAt(updatedDisputes); err != nil {
+		return nil, fmt.Errorf("updating lastDisputeExpiryNotifiedAt on disputes: %s", err.Error())
 	}
-	notifier.logger.Debugf("updated lastDisputeExpiryNotifiedAt on %d disputes", len(disputes))
-	return nil
+	return &notifierResult{len(notificationsToAdd), len(updatedDisputes), "dispute"}, nil
 }

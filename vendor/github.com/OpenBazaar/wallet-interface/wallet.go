@@ -29,6 +29,10 @@ type Wallet interface {
 	// Get the master public key
 	MasterPublicKey() *hd.ExtendedKey
 
+	// Generate a child key using the given chaincode. The key is used in multisig transactions.
+	// For most implementations this should just be child key 0.
+	ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error)
+
 	// Get the current address for the given purpose
 	CurrentAddress(purpose KeyPurpose) btc.Address
 
@@ -40,9 +44,6 @@ type Wallet interface {
 
 	// Turn the given output script into an address
 	ScriptToAddress(script []byte) (btc.Address, error)
-
-	// Turn the given address into an output script
-	AddressToScript(addr btc.Address) ([]byte, error)
 
 	// Returns if the wallet has the key for the given address
 	HasKey(addr btc.Address) bool
@@ -75,9 +76,9 @@ type Wallet interface {
 	EstimateSpendFee(amount int64, feeLevel FeeLevel) (uint64, error)
 
 	// Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
-	SweepAddress(utxos []Utxo, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error)
+	SweepAddress(ins []TransactionInput, address *btc.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel FeeLevel) (*chainhash.Hash, error)
 
-	// Create a signature for a multisig transaction
+	// Create a signature for a multisig transaction.
 	CreateMultisigSignature(ins []TransactionInput, outs []TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]Signature, error)
 
 	// Combine signatures and optionally broadcast
@@ -86,8 +87,8 @@ type Wallet interface {
 	// Generate a multisig script from public keys. If a timeout is included the returned script should be a timelocked escrow which releases using the timeoutKey.
 	GenerateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error)
 
-	// Add a script to the wallet and get notifications back when coins are received or spent from it
-	AddWatchedScript(script []byte) error
+	// Add an address to the wallet and get notifications back when coins are received or spent from it
+	AddWatchedAddress(addr btc.Address) error
 
 	// Add a callback for incoming transactions
 	AddTransactionListener(func(TransactionCallback))
@@ -136,7 +137,7 @@ type TransactionCallback struct {
 }
 
 type TransactionOutput struct {
-	ScriptPubKey []byte
+	Address      btc.Address
 	Value        int64
 	Index        uint32
 }
@@ -144,7 +145,7 @@ type TransactionOutput struct {
 type TransactionInput struct {
 	OutpointHash       []byte
 	OutpointIndex      uint32
-	LinkedScriptPubKey []byte
+	LinkedAddress      btc.Address
 	Value              int64
 }
 
@@ -156,7 +157,7 @@ type TransactionRecord struct {
 	Txid         string
 	Index        uint32
 	Value        int64
-	ScriptPubKey string
+	Address      string
 	Spent        bool
 	Timestamp    time.Time
 }

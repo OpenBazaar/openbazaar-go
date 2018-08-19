@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-func assertCorrectRepoVer(t *testing.T, expectedRepoVer string) {
-	repoVer, err := ioutil.ReadFile("./repover")
+func assertCorrectRepoVer(t *testing.T, verPath, expectedRepoVer string) {
+	repoVer, err := ioutil.ReadFile(verPath)
 	if err != nil {
 		t.Fatal(err)
 	}

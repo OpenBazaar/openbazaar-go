@@ -12,6 +12,12 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 type Moderator_Fee_FeeType int32
 
 const (
@@ -34,20 +40,44 @@ var Moderator_Fee_FeeType_value = map[string]int32{
 func (x Moderator_Fee_FeeType) String() string {
 	return proto.EnumName(Moderator_Fee_FeeType_name, int32(x))
 }
-func (Moderator_Fee_FeeType) EnumDescriptor() ([]byte, []int) { return fileDescriptor4, []int{0, 0, 0} }
-
-type Moderator struct {
-	Description        string         `protobuf:"bytes,1,opt,name=description" json:"description,omitempty"`
-	TermsAndConditions string         `protobuf:"bytes,2,opt,name=termsAndConditions" json:"termsAndConditions,omitempty"`
-	Languages          []string       `protobuf:"bytes,3,rep,name=languages" json:"languages,omitempty"`
-	AcceptedCurrencies []string       `protobuf:"bytes,4,rep,name=acceptedCurrencies" json:"acceptedCurrencies,omitempty"`
-	Fee                *Moderator_Fee `protobuf:"bytes,5,opt,name=fee" json:"fee,omitempty"`
+func (Moderator_Fee_FeeType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 0, 0}
 }
 
-func (m *Moderator) Reset()                    { *m = Moderator{} }
-func (m *Moderator) String() string            { return proto.CompactTextString(m) }
-func (*Moderator) ProtoMessage()               {}
-func (*Moderator) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0} }
+type Moderator struct {
+	Description          string         `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+	TermsAndConditions   string         `protobuf:"bytes,2,opt,name=termsAndConditions,proto3" json:"termsAndConditions,omitempty"`
+	Languages            []string       `protobuf:"bytes,3,rep,name=languages,proto3" json:"languages,omitempty"`
+	AcceptedCurrencies   []string       `protobuf:"bytes,4,rep,name=acceptedCurrencies,proto3" json:"acceptedCurrencies,omitempty"`
+	Fee                  *Moderator_Fee `protobuf:"bytes,5,opt,name=fee,proto3" json:"fee,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *Moderator) Reset()         { *m = Moderator{} }
+func (m *Moderator) String() string { return proto.CompactTextString(m) }
+func (*Moderator) ProtoMessage()    {}
+func (*Moderator) Descriptor() ([]byte, []int) {
+	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0}
+}
+func (m *Moderator) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Moderator.Unmarshal(m, b)
+}
+func (m *Moderator) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Moderator.Marshal(b, m, deterministic)
+}
+func (dst *Moderator) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator.Merge(dst, src)
+}
+func (m *Moderator) XXX_Size() int {
+	return xxx_messageInfo_Moderator.Size(m)
+}
+func (m *Moderator) XXX_DiscardUnknown() {
+	xxx_messageInfo_Moderator.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Moderator proto.InternalMessageInfo
 
 func (m *Moderator) GetDescription() string {
 	if m != nil {
@@ -85,15 +115,37 @@ func (m *Moderator) GetFee() *Moderator_Fee {
 }
 
 type Moderator_Fee struct {
-	FixedFee   *Moderator_Price      `protobuf:"bytes,1,opt,name=fixedFee" json:"fixedFee,omitempty"`
-	Percentage float32               `protobuf:"fixed32,2,opt,name=percentage" json:"percentage,omitempty"`
-	FeeType    Moderator_Fee_FeeType `protobuf:"varint,3,opt,name=feeType,enum=Moderator_Fee_FeeType" json:"feeType,omitempty"`
+	FixedFee             *Moderator_Price      `protobuf:"bytes,1,opt,name=fixedFee,proto3" json:"fixedFee,omitempty"`
+	Percentage           float32               `protobuf:"fixed32,2,opt,name=percentage,proto3" json:"percentage,omitempty"`
+	FeeType              Moderator_Fee_FeeType `protobuf:"varint,3,opt,name=feeType,proto3,enum=Moderator_Fee_FeeType" json:"feeType,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
+	XXX_unrecognized     []byte                `json:"-"`
+	XXX_sizecache        int32                 `json:"-"`
 }
 
-func (m *Moderator_Fee) Reset()                    { *m = Moderator_Fee{} }
-func (m *Moderator_Fee) String() string            { return proto.CompactTextString(m) }
-func (*Moderator_Fee) ProtoMessage()               {}
-func (*Moderator_Fee) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0, 0} }
+func (m *Moderator_Fee) Reset()         { *m = Moderator_Fee{} }
+func (m *Moderator_Fee) String() string { return proto.CompactTextString(m) }
+func (*Moderator_Fee) ProtoMessage()    {}
+func (*Moderator_Fee) Descriptor() ([]byte, []int) {
+	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 0}
+}
+func (m *Moderator_Fee) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Moderator_Fee.Unmarshal(m, b)
+}
+func (m *Moderator_Fee) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Moderator_Fee.Marshal(b, m, deterministic)
+}
+func (dst *Moderator_Fee) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator_Fee.Merge(dst, src)
+}
+func (m *Moderator_Fee) XXX_Size() int {
+	return xxx_messageInfo_Moderator_Fee.Size(m)
+}
+func (m *Moderator_Fee) XXX_DiscardUnknown() {
+	xxx_messageInfo_Moderator_Fee.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Moderator_Fee proto.InternalMessageInfo
 
 func (m *Moderator_Fee) GetFixedFee() *Moderator_Price {
 	if m != nil {
@@ -117,14 +169,36 @@ func (m *Moderator_Fee) GetFeeType() Moderator_Fee_FeeType {
 }
 
 type Moderator_Price struct {
-	CurrencyCode string `protobuf:"bytes,1,opt,name=currencyCode" json:"currencyCode,omitempty"`
-	Amount       uint64 `protobuf:"varint,2,opt,name=amount" json:"amount,omitempty"`
+	CurrencyCode         string   `protobuf:"bytes,1,opt,name=currencyCode,proto3" json:"currencyCode,omitempty"`
+	Amount               uint64   `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *Moderator_Price) Reset()                    { *m = Moderator_Price{} }
-func (m *Moderator_Price) String() string            { return proto.CompactTextString(m) }
-func (*Moderator_Price) ProtoMessage()               {}
-func (*Moderator_Price) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{0, 1} }
+func (m *Moderator_Price) Reset()         { *m = Moderator_Price{} }
+func (m *Moderator_Price) String() string { return proto.CompactTextString(m) }
+func (*Moderator_Price) ProtoMessage()    {}
+func (*Moderator_Price) Descriptor() ([]byte, []int) {
+	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 1}
+}
+func (m *Moderator_Price) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Moderator_Price.Unmarshal(m, b)
+}
+func (m *Moderator_Price) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Moderator_Price.Marshal(b, m, deterministic)
+}
+func (dst *Moderator_Price) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Moderator_Price.Merge(dst, src)
+}
+func (m *Moderator_Price) XXX_Size() int {
+	return xxx_messageInfo_Moderator_Price.Size(m)
+}
+func (m *Moderator_Price) XXX_DiscardUnknown() {
+	xxx_messageInfo_Moderator_Price.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Moderator_Price proto.InternalMessageInfo
 
 func (m *Moderator_Price) GetCurrencyCode() string {
 	if m != nil {
@@ -141,16 +215,38 @@ func (m *Moderator_Price) GetAmount() uint64 {
 }
 
 type DisputeUpdate struct {
-	OrderId            string      `protobuf:"bytes,1,opt,name=orderId" json:"orderId,omitempty"`
-	PayoutAddress      string      `protobuf:"bytes,2,opt,name=payoutAddress" json:"payoutAddress,omitempty"`
-	Outpoints          []*Outpoint `protobuf:"bytes,3,rep,name=outpoints" json:"outpoints,omitempty"`
-	SerializedContract []byte      `protobuf:"bytes,4,opt,name=serializedContract,proto3" json:"serializedContract,omitempty"`
+	OrderId              string      `protobuf:"bytes,1,opt,name=orderId,proto3" json:"orderId,omitempty"`
+	PayoutAddress        string      `protobuf:"bytes,2,opt,name=payoutAddress,proto3" json:"payoutAddress,omitempty"`
+	Outpoints            []*Outpoint `protobuf:"bytes,3,rep,name=outpoints,proto3" json:"outpoints,omitempty"`
+	SerializedContract   []byte      `protobuf:"bytes,4,opt,name=serializedContract,proto3" json:"serializedContract,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
 }
 
-func (m *DisputeUpdate) Reset()                    { *m = DisputeUpdate{} }
-func (m *DisputeUpdate) String() string            { return proto.CompactTextString(m) }
-func (*DisputeUpdate) ProtoMessage()               {}
-func (*DisputeUpdate) Descriptor() ([]byte, []int) { return fileDescriptor4, []int{1} }
+func (m *DisputeUpdate) Reset()         { *m = DisputeUpdate{} }
+func (m *DisputeUpdate) String() string { return proto.CompactTextString(m) }
+func (*DisputeUpdate) ProtoMessage()    {}
+func (*DisputeUpdate) Descriptor() ([]byte, []int) {
+	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{1}
+}
+func (m *DisputeUpdate) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DisputeUpdate.Unmarshal(m, b)
+}
+func (m *DisputeUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DisputeUpdate.Marshal(b, m, deterministic)
+}
+func (dst *DisputeUpdate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeUpdate.Merge(dst, src)
+}
+func (m *DisputeUpdate) XXX_Size() int {
+	return xxx_messageInfo_DisputeUpdate.Size(m)
+}
+func (m *DisputeUpdate) XXX_DiscardUnknown() {
+	xxx_messageInfo_DisputeUpdate.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DisputeUpdate proto.InternalMessageInfo
 
 func (m *DisputeUpdate) GetOrderId() string {
 	if m != nil {
@@ -188,9 +284,9 @@ func init() {
 	proto.RegisterEnum("Moderator_Fee_FeeType", Moderator_Fee_FeeType_name, Moderator_Fee_FeeType_value)
 }
 
-func init() { proto.RegisterFile("moderator.proto", fileDescriptor4) }
+func init() { proto.RegisterFile("moderator.proto", fileDescriptor_moderator_30fcf04c353ab1b7) }
 
-var fileDescriptor4 = []byte{
+var fileDescriptor_moderator_30fcf04c353ab1b7 = []byte{
 	// 429 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x92, 0xdf, 0x6a, 0xdb, 0x30,
 	0x14, 0x87, 0xe7, 0x38, 0x69, 0xe6, 0x93, 0x36, 0x0d, 0x82, 0x15, 0x2f, 0x8c, 0x61, 0xc2, 0x60,

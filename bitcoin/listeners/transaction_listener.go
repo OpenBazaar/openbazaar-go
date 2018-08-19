@@ -1,7 +1,6 @@
 package bitcoin
 
 import (
-	"encoding/hex"
 	"sync"
 	"time"
 
@@ -33,30 +32,22 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
-		addr, err := l.wallet.ScriptToAddress(output.ScriptPubKey)
-		if err != nil {
-			continue
-		}
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addr)
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
-		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addr)
+		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(output.Address)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
 	}
 	for _, input := range cb.Inputs {
-		addr, err := l.wallet.ScriptToAddress(input.LinkedScriptPubKey)
-		if err != nil {
-			continue
-		}
 		isForSale := true
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(addr)
+		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(input.LinkedAddress)
 		if err != nil {
-			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(addr)
+			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(input.LinkedAddress)
 			if err != nil {
 				continue
 			}
@@ -87,11 +78,11 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 
 		record := &wallet.TransactionRecord{
-			Timestamp:    time.Now(),
-			Txid:         cb.Txid,
-			Index:        input.OutpointIndex,
-			Value:        -input.Value,
-			ScriptPubKey: hex.EncodeToString(input.LinkedScriptPubKey),
+			Timestamp: time.Now(),
+			Txid:      cb.Txid,
+			Index:     input.OutpointIndex,
+			Value:     -input.Value,
+			Address:   input.LinkedAddress.String(),
 		}
 		records = append(records, record)
 		if isForSale {
@@ -199,11 +190,11 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	}
 
 	record := &wallet.TransactionRecord{
-		Timestamp:    time.Now(),
-		Txid:         txid,
-		Index:        output.Index,
-		Value:        output.Value,
-		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
+		Timestamp: time.Now(),
+		Txid:      txid,
+		Index:     output.Index,
+		Value:     output.Value,
+		Address:   output.Address.String(),
 	}
 	records = append(records, record)
 	l.db.Sales().UpdateFunding(orderId, funded, records)
@@ -257,11 +248,11 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 	}
 
 	record := &wallet.TransactionRecord{
-		Txid:         txid,
-		Index:        output.Index,
-		Value:        output.Value,
-		ScriptPubKey: hex.EncodeToString(output.ScriptPubKey),
-		Timestamp:    time.Now(),
+		Txid:      txid,
+		Index:     output.Index,
+		Value:     output.Value,
+		Address:   output.Address.String(),
+		Timestamp: time.Now(),
 	}
 	records = append(records, record)
 	l.db.Purchases().UpdateFunding(orderId, funded, records)

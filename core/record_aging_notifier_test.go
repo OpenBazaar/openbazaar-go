@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/op/go-logging"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/op/go-logging"
+	wi "github.com/OpenBazaar/wallet-interface"
 )
 
 // DISPUTE CASES
@@ -159,7 +160,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		OrigName:     false,
 	}
 	for _, r := range existingRecords {
-		var isBuyerInitiated int = 0
+		var isBuyerInitiated int // = 0
 		if r.IsBuyerInitiated {
 			isBuyerInitiated = 1
 		}
@@ -190,14 +191,14 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
 				t.Logf("notification received: %s", notifier)
-				broadcastCount += 1
+				broadcastCount++ // += 1
 			case <-closeAsyncChannelVerifier:
 				return
 			}
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -250,21 +251,21 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotified_FifteenDay               bool
-		checkNeverNotified_FourtyDay                bool
-		checkNeverNotified_FourtyFourDay            bool
-		checkNeverNotified_FourtyFiveDay            bool
-		checkNotifiedToFifteenDays_FourtyDay        bool
-		checkNotifiedToFifteenDays_FourtyFourDay    bool
-		checkNotifiedToFifteenDays_FourtyFiveDay    bool
-		checkNotifiedToFourtyDays_FourtyFourDay     bool
-		checkNotifiedToFourtyDays_FourtyFiveDay     bool
-		checkNotifiedToFourtyFourDays_FourtyFiveDay bool
+		checkNeverNotifiedFifteenDay               bool
+		checkNeverNotifiedFourtyDay                bool
+		checkNeverNotifiedFourtyFourDay            bool
+		checkNeverNotifiedFourtyFiveDay            bool
+		checkNotifiedToFifteenDaysFourtyDay        bool
+		checkNotifiedToFifteenDaysFourtyFourDay    bool
+		checkNotifiedToFifteenDaysFourtyFiveDay    bool
+		checkNotifiedToFourtyDaysFourtyFourDay     bool
+		checkNotifiedToFourtyDaysFourtyFiveDay     bool
+		checkNotifiedToFourtyFourDaysFourtyFiveDay bool
 
-		firstInterval_ExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_firstInterval).Seconds())
-		secondInterval_ExpectedExpiresIn = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_secondInterval).Seconds())
-		thirdInterval_ExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_thirdInterval).Seconds())
-		lastInterval_ExpectedExpiresIn   = uint(0)
+		firstIntervalExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_firstInterval).Seconds())
+		secondIntervalExpectedExpiresIn = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_secondInterval).Seconds())
+		thirdIntervalExpectedExpiresIn  = uint((repo.ModeratorDisputeExpiry_lastInterval - repo.ModeratorDisputeExpiry_thirdInterval).Seconds())
+		lastIntervalExpectedExpiresIn   = uint(0)
 	)
 
 	for _, n := range actualNotifications {
@@ -281,20 +282,20 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 				contract = neverNotified.VendorContract
 			}
 			assertThumbnailValuesAreSet(t, thumbnail, contract)
-			if expiresIn == firstInterval_ExpectedExpiresIn {
-				checkNeverNotified_FifteenDay = true
+			if expiresIn == firstIntervalExpectedExpiresIn {
+				checkNeverNotifiedFifteenDay = true
 				continue
 			}
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkNeverNotified_FourtyDay = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkNeverNotifiedFourtyDay = true
 				continue
 			}
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkNeverNotified_FourtyFourDay = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkNeverNotifiedFourtyFourDay = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNeverNotified_FourtyFiveDay = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkNeverNotifiedFourtyFiveDay = true
 				continue
 			}
 		}
@@ -305,16 +306,16 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 				contract = notifiedUpToFifteenDay.VendorContract
 			}
 			assertThumbnailValuesAreSet(t, thumbnail, contract)
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkNotifiedToFifteenDays_FourtyDay = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkNotifiedToFifteenDaysFourtyDay = true
 				continue
 			}
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkNotifiedToFifteenDays_FourtyFourDay = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkNotifiedToFifteenDaysFourtyFourDay = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNotifiedToFifteenDays_FourtyFiveDay = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkNotifiedToFifteenDaysFourtyFiveDay = true
 				continue
 			}
 		}
@@ -325,55 +326,55 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 				contract = notifiedUpToFourtyDays.VendorContract
 			}
 			assertThumbnailValuesAreSet(t, thumbnail, contract)
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkNotifiedToFourtyDays_FourtyFourDay = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkNotifiedToFourtyDaysFourtyFourDay = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNotifiedToFourtyDays_FourtyFiveDay = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkNotifiedToFourtyDaysFourtyFiveDay = true
 				continue
 			}
 		}
-		if refID == notifiedUpToFourtyFourDays.CaseID && expiresIn == lastInterval_ExpectedExpiresIn {
+		if refID == notifiedUpToFourtyFourDays.CaseID && expiresIn == lastIntervalExpectedExpiresIn {
 			if notifiedUpToFourtyFourDays.IsBuyerInitiated {
 				contract = notifiedUpToFourtyFourDays.BuyerContract
 			} else {
 				contract = notifiedUpToFourtyFourDays.VendorContract
 			}
 			assertThumbnailValuesAreSet(t, thumbnail, contract)
-			checkNotifiedToFourtyFourDays_FourtyFiveDay = true
+			checkNotifiedToFourtyFourDaysFourtyFiveDay = true
 		}
 	}
 
-	if checkNeverNotified_FifteenDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FifteenDay")
+	if checkNeverNotifiedFifteenDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFifteenDay")
 	}
-	if checkNeverNotified_FourtyDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyDay")
+	if checkNeverNotifiedFourtyDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyDay")
 	}
-	if checkNeverNotified_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyFourDay")
+	if checkNeverNotifiedFourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyFourDay")
 	}
-	if checkNeverNotified_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNeverNotified_FourtyFiveDay")
+	if checkNeverNotifiedFourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyFiveDay")
 	}
-	if checkNotifiedToFifteenDays_FourtyDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyDay")
+	if checkNotifiedToFifteenDaysFourtyDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyDay")
 	}
-	if checkNotifiedToFifteenDays_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyFourDay")
+	if checkNotifiedToFifteenDaysFourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyFourDay")
 	}
-	if checkNotifiedToFifteenDays_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDays_FourtyFiveDay")
+	if checkNotifiedToFifteenDaysFourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyFiveDay")
 	}
-	if checkNotifiedToFourtyDays_FourtyFourDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDays_FourtyFourDay")
+	if checkNotifiedToFourtyDaysFourtyFourDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDaysFourtyFourDay")
 	}
-	if checkNotifiedToFourtyDays_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDays_FourtyFiveDay")
+	if checkNotifiedToFourtyDaysFourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDaysFourtyFiveDay")
 	}
-	if checkNotifiedToFourtyFourDays_FourtyFiveDay != true {
-		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyFourDays_FourtyFiveDay")
+	if checkNotifiedToFourtyFourDaysFourtyFiveDay != true {
+		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyFourDaysFourtyFiveDay")
 	}
 }
 
@@ -501,14 +502,14 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
 				t.Logf("notification received: %s", notifier.GetType())
-				broadcastCount += 1
+				broadcastCount++ // += 1
 			case <-closeAsyncChannelVerifier:
 				return
 			}
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -570,21 +571,21 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotifiedPurchase_FirstNotificationSeen  bool
-		checkNeverNotifiedPurchase_SecondNotificationSeen bool
-		checkNeverNotifiedPurchase_ThirdNotificationSeen  bool
-		checkNeverNotifiedPurchase_LastNotificationSeen   bool
-		checkFifteenDayPurchase_SecondNotificationSeen    bool
-		checkFifteenDayPurchase_ThirdNotificationSeen     bool
-		checkFifteenDayPurchase_LastNotificationSeen      bool
-		checkFourtyDayPurchase_ThirdNotificationSeen      bool
-		checkFourtyDayPurchase_LastNotificationSeen       bool
-		checkFourtyFourDayPurchase_LastNotificationSeen   bool
+		checkNeverNotifiedPurchaseFirstNotificationSeen  bool
+		checkNeverNotifiedPurchaseSecondNotificationSeen bool
+		checkNeverNotifiedPurchaseThirdNotificationSeen  bool
+		checkNeverNotifiedPurchaseLastNotificationSeen   bool
+		checkFifteenDayPurchaseSecondNotificationSeen    bool
+		checkFifteenDayPurchaseThirdNotificationSeen     bool
+		checkFifteenDayPurchaseLastNotificationSeen      bool
+		checkFourtyDayPurchaseThirdNotificationSeen      bool
+		checkFourtyDayPurchaseLastNotificationSeen       bool
+		checkFourtyFourDayPurchaseLastNotificationSeen   bool
 
-		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_firstInterval).Seconds())
-		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_secondInterval).Seconds())
-		thirdInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
-		lastInterval_ExpectedExpiresIn   = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_lastInterval).Seconds())
+		firstIntervalExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_firstInterval).Seconds())
+		secondIntervalExpectedExpiresIn = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_secondInterval).Seconds())
+		thirdIntervalExpectedExpiresIn  = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_thirdInterval).Seconds())
+		lastIntervalExpectedExpiresIn   = uint((repo.BuyerDisputeTimeout_totalDuration - repo.BuyerDisputeTimeout_lastInterval).Seconds())
 	)
 	for rows.Next() {
 		var (
@@ -607,84 +608,84 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		)
 		if refID == neverNotified.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
-			if expiresIn == firstInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FirstNotificationSeen = true
+			if expiresIn == firstIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseFirstNotificationSeen = true
 				continue
 			}
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_SecondNotificationSeen = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseSecondNotificationSeen = true
 				continue
 			}
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_ThirdNotificationSeen = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseThirdNotificationSeen = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFifteenDay.Contract)
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_SecondNotificationSeen = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkFifteenDayPurchaseSecondNotificationSeen = true
 				continue
 			}
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_ThirdNotificationSeen = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkFifteenDayPurchaseThirdNotificationSeen = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkFifteenDayPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyDay.Contract)
-			if expiresIn == thirdInterval_ExpectedExpiresIn {
-				checkFourtyDayPurchase_ThirdNotificationSeen = true
+			if expiresIn == thirdIntervalExpectedExpiresIn {
+				checkFourtyDayPurchaseThirdNotificationSeen = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFourtyDayPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkFourtyDayPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
-		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastInterval_ExpectedExpiresIn {
+		if refID == notifiedUpToFourtyFourDays.OrderID && expiresIn == lastIntervalExpectedExpiresIn {
 			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyFourDays.Contract)
-			checkFourtyFourDayPurchase_LastNotificationSeen = true
+			checkFourtyFourDayPurchaseLastNotificationSeen = true
 		}
 	}
 
-	if checkNeverNotifiedPurchase_FirstNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FirstNotificationSeen")
+	if checkNeverNotifiedPurchaseFirstNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseFirstNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_SecondNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_SecondNotificationSeen")
+	if checkNeverNotifiedPurchaseSecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseSecondNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_ThirdNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_ThirdNotificationSeen")
+	if checkNeverNotifiedPurchaseThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseThirdNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_LastNotificationSeen")
+	if checkNeverNotifiedPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseLastNotificationSeen")
 	}
-	if checkFifteenDayPurchase_SecondNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_SecondNotificationSeen")
+	if checkFifteenDayPurchaseSecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchaseSecondNotificationSeen")
 	}
-	if checkFifteenDayPurchase_ThirdNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_ThirdNotificationSeen")
+	if checkFifteenDayPurchaseThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchaseThirdNotificationSeen")
 	}
-	if checkFifteenDayPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_LastNotificationSeen")
+	if checkFifteenDayPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyDayPurchase_ThirdNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFourtyDayPurchase_ThirdNotificationSeen")
+	if checkFourtyDayPurchaseThirdNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchaseThirdNotificationSeen")
 	}
-	if checkFourtyDayPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFourtyDayPurchase_LastNotificationSeen")
+	if checkFourtyDayPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyFourDayPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFourtyFourDayPurchase_LastNotificationSeen")
+	if checkFourtyFourDayPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyFourDayPurchaseLastNotificationSeen")
 	}
 }
 
@@ -805,7 +806,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
 				if notifier.GetType() == repo.NotifierTypeBuyerDisputeExpiry {
-					broadcastCount += 1
+					broadcastCount++ // += 1
 					t.Logf("Notification Recieved: %+v\n", notifier)
 				} else {
 					t.Errorf("Unexpected notification received: %s", notifier.GetType())
@@ -816,7 +817,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -878,16 +879,16 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotifiedPurchase_FirstNotificationSeen  bool
-		checkNeverNotifiedPurchase_SecondNotificationSeen bool
-		checkNeverNotifiedPurchase_LastNotificationSeen   bool
-		checkFifteenDayPurchase_SecondNotificationSeen    bool
-		checkFifteenDayPurchase_LastNotificationSeen      bool
-		checkFourtyDayPurchase_LastNotificationSeen       bool
+		checkNeverNotifiedPurchaseFirstNotificationSeen  bool
+		checkNeverNotifiedPurchaseSecondNotificationSeen bool
+		checkNeverNotifiedPurchaseLastNotificationSeen   bool
+		checkFifteenDayPurchaseSecondNotificationSeen    bool
+		checkFifteenDayPurchaseLastNotificationSeen      bool
+		checkFourtyDayPurchaseLastNotificationSeen       bool
 
-		firstInterval_ExpectedExpiresIn  = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_firstInterval).Seconds())
-		secondInterval_ExpectedExpiresIn = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_secondInterval).Seconds())
-		lastInterval_ExpectedExpiresIn   = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_lastInterval).Seconds())
+		firstIntervalExpectedExpiresIn  = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_firstInterval).Seconds())
+		secondIntervalExpectedExpiresIn = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_secondInterval).Seconds())
+		lastIntervalExpectedExpiresIn   = uint((repo.BuyerDisputeExpiry_totalDuration - repo.BuyerDisputeExpiry_lastInterval).Seconds())
 	)
 	for rows.Next() {
 		var (
@@ -910,56 +911,56 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		)
 		if refID == neverNotified.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
-			if expiresIn == firstInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_FirstNotificationSeen = true
+			if expiresIn == firstIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseFirstNotificationSeen = true
 				continue
 			}
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_SecondNotificationSeen = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseSecondNotificationSeen = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkNeverNotifiedPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkNeverNotifiedPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFifteenDay.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFifteenDay.Contract)
-			if expiresIn == secondInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_SecondNotificationSeen = true
+			if expiresIn == secondIntervalExpectedExpiresIn {
+				checkFifteenDayPurchaseSecondNotificationSeen = true
 				continue
 			}
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFifteenDayPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkFifteenDayPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
 		if refID == notifiedUpToFourtyDay.OrderID {
 			assertThumbnailValuesAreSet(t, thumbnail, notifiedUpToFourtyDay.Contract)
-			if expiresIn == lastInterval_ExpectedExpiresIn {
-				checkFourtyDayPurchase_LastNotificationSeen = true
+			if expiresIn == lastIntervalExpectedExpiresIn {
+				checkFourtyDayPurchaseLastNotificationSeen = true
 				continue
 			}
 		}
 	}
 
-	if checkNeverNotifiedPurchase_FirstNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_FirstNotificationSeen")
+	if checkNeverNotifiedPurchaseFirstNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseFirstNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_SecondNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_SecondNotificationSeen")
+	if checkNeverNotifiedPurchaseSecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseSecondNotificationSeen")
 	}
-	if checkNeverNotifiedPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkNeverNotifiedPurchase_LastNotificationSeen")
+	if checkNeverNotifiedPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseLastNotificationSeen")
 	}
-	if checkFifteenDayPurchase_SecondNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_SecondNotificationSeen")
+	if checkFifteenDayPurchaseSecondNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchaseSecondNotificationSeen")
 	}
-	if checkFifteenDayPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFifteenDayPurchase_LastNotificationSeen")
+	if checkFifteenDayPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFifteenDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyDayPurchase_LastNotificationSeen != true {
-		t.Errorf("Expected notification missing: checkFourtyDayPurchase_LastNotificationSeen")
+	if checkFourtyDayPurchaseLastNotificationSeen != true {
+		t.Errorf("Expected notification missing: checkFourtyDayPurchaseLastNotificationSeen")
 	}
 }
 
@@ -1054,14 +1055,14 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 					t.Errorf("unable to cast as Notifier: %+v", n)
 				}
 				t.Logf("notification received: %s", notifier)
-				broadcastCount += 1
+				broadcastCount++ // += 1
 			case <-closeAsyncChannelVerifier:
 				return
 			}
 		}
 	}()
 
-	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wallet.Bitcoin)
+	datastore := db.NewSQLiteDatastore(database, new(sync.Mutex), wi.Bitcoin)
 	worker := &recordAgingNotifier{
 		datastore: datastore,
 		broadcast: broadcastChannel,
@@ -1123,9 +1124,9 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	var (
-		checkNeverNotifiedSale_LastNotificationSeen bool
+		checkNeverNotifiedSaleLastNotificationSeen bool
 
-		firstInterval_ExpectedExpiresIn = uint(0)
+		firstIntervalExpectedExpiresIn = uint(0)
 	)
 	for rows.Next() {
 		var (
@@ -1146,14 +1147,14 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 			expiresIn = n.NotifierData.(repo.VendorDisputeTimeout).ExpiresIn
 			thumbnail = n.NotifierData.(repo.VendorDisputeTimeout).Thumbnail
 		)
-		if refID == neverNotified.OrderID && expiresIn == firstInterval_ExpectedExpiresIn {
+		if refID == neverNotified.OrderID && expiresIn == firstIntervalExpectedExpiresIn {
 			assertThumbnailValuesAreSet(t, thumbnail, neverNotified.Contract)
-			checkNeverNotifiedSale_LastNotificationSeen = true
+			checkNeverNotifiedSaleLastNotificationSeen = true
 			continue
 		}
 	}
 
-	if checkNeverNotifiedSale_LastNotificationSeen != true {
+	if checkNeverNotifiedSaleLastNotificationSeen != true {
 		t.Errorf("Expected notification missing: checkNeverNotifiedSale_LastNotificationSeen")
 	}
 }

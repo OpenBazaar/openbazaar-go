@@ -8,11 +8,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
+	"github.com/btcsuite/btcd/chaincfg"
 )
 
 type NotificationListener struct {
 	client    *btcrpcclient.Client
 	listeners []func(wallet.TransactionCallback)
+	params    *chaincfg.Params
 }
 
 func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +40,8 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	}
 	var outputs []wallet.TransactionOutput
 	for i, txout := range tx.MsgTx().TxOut {
-		out := wallet.TransactionOutput{ScriptPubKey: txout.PkScript, Value: txout.Value, Index: uint32(i)}
+		addr, _ := scriptToAddress(txout.PkScript, l.params)
+		out := wallet.TransactionOutput{Address: addr, Value: txout.Value, Index: uint32(i)}
 		outputs = append(outputs, out)
 	}
 	var inputs []wallet.TransactionInput
@@ -49,7 +52,8 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 			inputs = append(inputs, in)
 			continue
 		}
-		in.LinkedScriptPubKey = prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].PkScript
+		addr, _ := scriptToAddress(prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].PkScript, l.params)
+		in.LinkedAddress = addr
 		in.Value = prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].Value
 		inputs = append(inputs, in)
 	}
@@ -95,10 +99,11 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func StartNotificationListener(client *btcrpcclient.Client, listeners []func(wallet.TransactionCallback)) {
+func StartNotificationListener(client *btcrpcclient.Client, params *chaincfg.Params, listeners []func(wallet.TransactionCallback)) {
 	l := NotificationListener{
 		client:    client,
 		listeners: listeners,
+		params:    params,
 	}
 	http.HandleFunc("/", l.notify)
 	http.ListenAndServe(":8330", nil)

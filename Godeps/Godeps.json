@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
-			"Rev": "149a175763b24c4f15964bea1fd9c7451f120d02"
+			"Rev": "82da21e72fa1fc348585d244565634d6a35cd3b9"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
@@ -17,19 +17,19 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
+			"Rev": "cc9f64c4f5ab77fde286913e9aa347dd2c4c5db1"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet/exchangerates",
-			"Rev": "c6b93fb5cb858c90545289961c9f2ef3607be286"
+			"Rev": "cc9f64c4f5ab77fde286913e9aa347dd2c4c5db1"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "b5d09d063f757ab7a32b863df40cba9ccb8add4c"
+			"Rev": "eacae1c9cb1e881f0e93285b9a71499cf2a0d4bc"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
-			"Rev": "68caa95e73db72f2cb426170d0ed03d5d0695490"
+			"Rev": "7775e894427aedf20c30c70f4729505153ff828a"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -187,13 +187,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-45-g016be9c",
+			"Rev": "016be9cb619ac0277e456f6042be57515bc70748"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-32-g43423cf",
-			"Rev": "43423cf44f04be08b5860bcb896c25ae9149125d"
+			"Comment": "v0.3.0-45-g016be9c",
+			"Rev": "016be9cb619ac0277e456f6042be57515bc70748"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
@@ -1216,10 +1216,6 @@
 			"Rev": "440a840c48279b8bc64fbc88e2af5b0140756959"
 		},
 		{
-			"ImportPath": "gx/ipfs/QmVYZ6jGE4uogWAZK2w8PrKWDEKMvYaQWTSXWCbYJLEuKs/go-onion-transport",
-			"Rev": "440a840c48279b8bc64fbc88e2af5b0140756959"
-		},
-		{
 			"ImportPath": "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru",
 			"Rev": "440a840c48279b8bc64fbc88e2af5b0140756959"
 		},
@@ -1733,6 +1729,10 @@
 		},
 		{
 			"ImportPath": "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics/stream",
+			"Rev": "440a840c48279b8bc64fbc88e2af5b0140756959"
+		},
+		{
+			"ImportPath": "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport",
 			"Rev": "440a840c48279b8bc64fbc88e2af5b0140756959"
 		},
 		{

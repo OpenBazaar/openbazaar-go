@@ -458,7 +458,7 @@ func NewMnemonic() (string, error) {
 	}
 	mnemonic, err := bip39.NewMnemonic(entropy)
 	if err != nil {
-		return "", fmt.Errorf("generating mnemonic:", err.Error())
+		return "", fmt.Errorf("generating mnemonic: %s", err.Error())
 	}
 	return mnemonic, nil
 }

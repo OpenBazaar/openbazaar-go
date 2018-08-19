@@ -12,6 +12,12 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
 type CountryCode int32
 
 const (
@@ -793,15 +799,17 @@ var CountryCode_value = map[string]int32{
 func (x CountryCode) String() string {
 	return proto.EnumName(CountryCode_name, int32(x))
 }
-func (CountryCode) EnumDescriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
+func (CountryCode) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_countrycodes_32222d631dab010a, []int{0}
+}
 
 func init() {
 	proto.RegisterEnum("CountryCode", CountryCode_name, CountryCode_value)
 }
 
-func init() { proto.RegisterFile("countrycodes.proto", fileDescriptor2) }
+func init() { proto.RegisterFile("countrycodes.proto", fileDescriptor_countrycodes_32222d631dab010a) }
 
-var fileDescriptor2 = []byte{
+var fileDescriptor_countrycodes_32222d631dab010a = []byte{
 	// 2263 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x5c, 0x57, 0x65, 0xb4, 0x24, 0xc7,
 	0xad, 0x7e, 0xe3, 0xbb, 0x5e, 0xe8, 0x25, 0x6d, 0x7b, 0xbd, 0xcf, 0x7e, 0xa6, 0x17, 0x87, 0x9d,
