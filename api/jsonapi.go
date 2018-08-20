@@ -1361,7 +1361,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		OrigName:     false,
 	}
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IPFSIdentityString() {
-		sl := new(pb.SignedListing)
+		var sl *pb.SignedListing
 		_, err := cid.Decode(listingId)
 		if err == nil {
 			sl, err = i.node.GetListingFromHash(listingId)
@@ -1716,7 +1716,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					j++
 				}
 			}
-			xs = (xs)[:j]
 		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {
