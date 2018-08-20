@@ -4,9 +4,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"io/ioutil"
 	"time"
+
+	"github.com/ipfs/go-ipfs/repo"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
 func TestGetApiConfig(t *testing.T) {
@@ -277,6 +279,10 @@ func TestExtendConfigFile(t *testing.T) {
 	if config.MaxFee != newMaxFee {
 		t.Fatalf("Expected maxFee to be %v, got %v", newMaxFee, config.MaxFee)
 	}
+}
+
+func extendConfigFile(r repo.Repo, key string, value interface{}) error {
+	return r.SetConfigKey(key, value)
 }
 
 func configFixture() []byte {
