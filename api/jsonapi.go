@@ -66,7 +66,7 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
@@ -84,7 +84,7 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config
 		},
 		node: node,
 	}
-	return i, nil
+	return i
 }
 
 func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
