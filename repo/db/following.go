@@ -57,7 +57,10 @@ func (f *FollowingDB) Get(offsetId string, limit int) ([]string, error) {
 func (f *FollowingDB) Delete(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	f.db.Exec("delete from following where peerID=?", follower)
+	_, err := f.db.Exec("delete from following where peerID=?", follower)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -74,6 +77,9 @@ func (f *FollowingDB) IsFollowing(peerId string) bool {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	stmt, err := f.db.Prepare("select peerID from following where peerID=?")
+	if err != nil {
+		return false
+	}
 	defer stmt.Close()
 	var follower string
 	err = stmt.QueryRow(peerId).Scan(&follower)

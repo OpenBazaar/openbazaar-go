@@ -47,6 +47,9 @@ func TestPutInventory(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := ivdb.PrepareQuery("select slug, variantIndex, count from inventory where slug=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var slug string
 	var variant int

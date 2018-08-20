@@ -40,6 +40,9 @@ func TestModeratedDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := modDB.PrepareQuery("select peerID from moderatedstores where peerID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var peerId string
 	err = stmt.QueryRow("abc").Scan(&peerId)

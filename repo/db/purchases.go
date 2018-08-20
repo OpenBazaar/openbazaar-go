@@ -37,6 +37,9 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		OrigName:     false,
 	}
 	out, err := m.MarshalToString(&contract)
+	if err != nil {
+		return err
+	}
 
 	tx, err := p.db.Begin()
 	if err != nil {
@@ -218,6 +221,9 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, err
+	}
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int
@@ -237,7 +243,12 @@ func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContra
 		funded = true
 	}
 	var records []*wallet.TransactionRecord
-	json.Unmarshal(serializedTransactions, &records)
+	if len(serializedTransactions) > 0 {
+		err = json.Unmarshal(serializedTransactions, &records)
+		if err != nil {
+			return nil, pb.OrderState(0), false, nil, err
+		}
+	}
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
@@ -245,6 +256,9 @@ func (p *PurchasesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.Or
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions, read from purchases where orderID=?")
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, false, err
+	}
 	defer stmt.Close()
 	var contract []byte
 	var stateInt int

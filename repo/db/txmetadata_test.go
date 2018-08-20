@@ -40,6 +40,9 @@ func TestTxMetadataDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := metDB.PrepareQuery("select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata where txid=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var txid, addr, memo, orderId, thumbnail string
 	var canBumpFee int
