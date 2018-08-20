@@ -66,7 +66,7 @@ type wsHandler struct {
 	password      string
 }
 
-func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*wsHandler, error) {
+func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *wsHandler {
 	hub := newHub()
 	go hub.run()
 	allowedIps := make(map[string]bool)
@@ -83,7 +83,7 @@ func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config s
 		username:      config.Username,
 		password:      config.Password,
 	}
-	return &handler, nil
+	return &handler
 }
 
 func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
