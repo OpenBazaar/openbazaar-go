@@ -931,6 +931,10 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		}
 		timeout, _ := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error generating multisig script")
+			return validationErrors
+		}
 
 		// TODO: the bitcoin cash check is temporary in case someone files a dispute for an order that was created when the prefix was still being used
 		// on the address. We can remove this 45 days after the release of 2.2.2 as it wont be possible for this condition to exist at this point.

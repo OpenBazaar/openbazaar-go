@@ -84,7 +84,7 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 		return nil, MalformedConfigError
 	}
 
-	headers := make(map[string]interface{})
+	var headers map[string]interface{}
 	h, ok := api["HTTPHeaders"]
 	if h == nil || !ok {
 		headers = nil
@@ -331,6 +331,9 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 		return nil, MalformedConfigError
 	}
 	tc, ok := tcIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
 
 	pw, ok := tc["Password"]
 	if !ok {
