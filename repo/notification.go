@@ -980,7 +980,7 @@ func (TestNotification) GetSMTPTitleAndBody() (string, string, bool) {
 	return "Test Notification Head", "Test Notification Body", true
 }
 
-// PremarshalledNotifier is a hack to allow []byte data to be transfered through
+// PremarshalledNotifier is a hack to allow []byte data to be transferred through
 // the Notifier interface without having to do things the right way. You should not
 // be using this and should prefer to use an existing Notifier struct or create
 // a new one following the pattern of the TestNotification
