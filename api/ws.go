@@ -4,12 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/gorilla/websocket"
-	"github.com/ipfs/go-ipfs/commands"
-	"net/http"
-	"strings"
 )
 
 type connection struct {
@@ -58,7 +58,6 @@ var handler wsHandler
 type wsHandler struct {
 	h             *hub
 	path          string
-	context       commands.Context
 	enabled       bool
 	authenticated bool
 	allowedIPs    map[string]bool
