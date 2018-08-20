@@ -86,6 +86,15 @@ func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex, coinType wallet.CoinType) *SQ
 	}
 }
 
+type DB struct {
+	SqlDB *sql.DB
+	Lock  *sync.Mutex
+}
+
+func (d *SQLiteDatastore) DB() *DB {
+	return &DB{d.db, d.lock}
+}
+
 func (d *SQLiteDatastore) Ping() error {
 	return d.db.Ping()
 }

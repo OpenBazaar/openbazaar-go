@@ -20,9 +20,6 @@ import (
 	"github.com/OpenBazaar/bitcoind-wallet"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin"
-	lis "github.com/OpenBazaar/openbazaar-go/bitcoin/listeners"
-	"github.com/OpenBazaar/openbazaar-go/bitcoin/resync"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	obns "github.com/OpenBazaar/openbazaar-go/namesys"
@@ -35,9 +32,12 @@ import (
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/OpenBazaar/openbazaar-go/storage/dropbox"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+	"github.com/OpenBazaar/openbazaar-go/wallet"
+	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 	"github.com/OpenBazaar/spvwallet"
 	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
-	"github.com/OpenBazaar/wallet-interface"
+	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/cpacia/BitcoinCash-Wallet"
@@ -262,12 +262,12 @@ func (x *Start) Execute(args []string) error {
 		walletCfg.Binary = x.ZCash
 	}
 
-	ct := wallet.Bitcoin
+	ct := wi.Bitcoin
 	switch walletCfg.Type {
 	case "bitcoincash":
-		ct = wallet.BitcoinCash
+		ct = wi.BitcoinCash
 	case "zcashd":
-		ct = wallet.Zcash
+		ct = wi.Zcash
 	}
 
 	migrations.WalletCoinType = ct
@@ -538,7 +538,7 @@ func (x *Start) Execute(args []string) error {
 		walletCfg.Type = "zcashd"
 		walletCfg.Binary = x.ZCash
 	}
-	var exchangeRates wallet.ExchangeRates
+	var exchangeRates wi.ExchangeRates
 	if !x.DisableExchangeRates {
 		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
 	}
@@ -558,7 +558,7 @@ func (x *Start) Execute(args []string) error {
 	ml := logging.MultiLogger(bitcoinFileFormatter)
 
 	var resyncManager *resync.ResyncManager
-	var cryptoWallet wallet.Wallet
+	var cryptoWallet wi.Wallet
 	var walletTypeStr string
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
@@ -857,7 +857,7 @@ func (x *Start) Execute(args []string) error {
 			cryptoWallet.AddTransactionListener(TL.OnTransactionReceived)
 			cryptoWallet.AddTransactionListener(WL.OnTransactionReceived)
 			log.Infof("Starting %s wallet\n", walletTypeStr)
-			su := bitcoin.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
+			su := wallet.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
 			if resyncManager != nil {
@@ -1084,7 +1084,7 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 	return errc, nil
 }
 
-func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wallet.CoinType) (*db.SQLiteDatastore, error) {
+func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
 	if err != nil {

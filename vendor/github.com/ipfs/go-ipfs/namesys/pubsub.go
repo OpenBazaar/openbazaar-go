@@ -28,8 +28,6 @@ import (
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 )
 
-var ErrorNotSubscribed = errors.New("cache is stale because not subscribed to name")
-
 // PubsubPublisher is a publisher that distributes IPNS records through pubsub
 type PubsubPublisher struct {
 	ctx  context.Context
@@ -54,6 +52,8 @@ type PubsubResolver struct {
 	mx   sync.Mutex
 	subs map[string]*floodsub.Subscription
 }
+
+var ErrorNotSubscribed = errors.New("cache is stale because not subscribed to name")
 
 // NewPubsubPublisher constructs a new Publisher that publishes IPNS records through pubsub.
 // The constructor interface is complicated by the need to bootstrap the pubsub topic.

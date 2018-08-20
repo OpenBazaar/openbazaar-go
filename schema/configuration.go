@@ -42,10 +42,10 @@ type WalletConfig struct {
 }
 
 type WalletsConfig struct {
-	BTC CoinConfig `json:"BTC"`
-	BCH CoinConfig `json:"BCH"`
-	LTC CoinConfig `json:"LTC"`
-	ZEC CoinConfig `json:"ZEC"`
+	BTC *CoinConfig `json:"BTC"`
+	BCH *CoinConfig `json:"BCH"`
+	LTC *CoinConfig `json:"LTC"`
+	ZEC *CoinConfig `json:"ZEC"`
 }
 
 type CoinConfig struct {
@@ -57,6 +57,7 @@ type CoinConfig struct {
 	HighFeeDefault   int
 	MediumFeeDefault int
 	LowFeeDefault    int
+	TrustedPeer      string
 }
 
 type DataSharing struct {
@@ -64,7 +65,7 @@ type DataSharing struct {
 	PushTo              []string
 }
 
-var MalformedConfigError error = errors.New("Config file is malformed")
+var MalformedConfigError error = errors.New("config file is malformed")
 
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	var cfgIface interface{}

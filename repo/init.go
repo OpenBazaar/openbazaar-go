@@ -169,7 +169,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 			TrustedPeer:      "",
 		}
 		ws = schema.WalletsConfig{
-			BTC: schema.CoinConfig{
+			BTC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://btc.bloqapi.net/insight-api",
 				APITestnet:       "https://test-insight.bitpay.com/api",
@@ -179,7 +179,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 				MediumFeeDefault: 10,
 				LowFeeDefault:    1,
 			},
-			BCH: schema.CoinConfig{
+			BCH: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://bch-insight.bitpay.com/api",
 				APITestnet:       "https://test-bch-insight.bitpay.com/api",
@@ -188,7 +188,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 				MediumFeeDefault: 5,
 				LowFeeDefault:    1,
 			},
-			LTC: schema.CoinConfig{
+			LTC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://insight.litecore.io/api",
 				APITestnet:       "https://testnet.litecore.io/api",
@@ -197,7 +197,7 @@ func addConfigExtensions(repoRoot string, testnet bool) error {
 				MediumFeeDefault: 10,
 				LowFeeDefault:    5,
 			},
-			ZEC: schema.CoinConfig{
+			ZEC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://zcashnetwork.info/api",
 				APITestnet:       "https://explorer.testnet.z.cash/api",

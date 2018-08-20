@@ -23,7 +23,7 @@ import (
 )
 
 var log = logging.Logger("namesys")
-const keyCachePrefix = "/pubkey/"
+var keyCachePrefix= "/pubkey/"
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
