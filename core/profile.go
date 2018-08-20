@@ -96,10 +96,10 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 
 	profilePath := path.Join(n.RepoPath, "root", "profile.json")
 	f, err := os.Create(profilePath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	if _, err := f.WriteString(out); err != nil {
 		return err
 	}
@@ -205,10 +205,10 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	if !os.IsNotExist(ferr) {
 		// Read existing file
 		file, err := os.Open(profilePath)
-		defer file.Close()
 		if err != nil {
 			return err
 		}
+		defer file.Close()
 		err = jsonpb.Unmarshal(file, profile)
 		if err != nil {
 			return err

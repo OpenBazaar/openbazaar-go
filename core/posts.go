@@ -285,10 +285,10 @@ func (n *OpenBazaarNode) UpdatePostHashes(hashes map[string]string) error {
 
 	// Write it back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
@@ -356,10 +356,10 @@ func (n *OpenBazaarNode) DeletePost(slug string) error {
 
 	// Write the index back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
