@@ -449,7 +449,8 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		}
 		ret := make([]*pb.Outpoint, len(op))
 		for i, o := range op {
-			ret[i] = &o
+			var newOutpoint = o
+			ret[i] = &newOutpoint
 		}
 		return ret
 	}
