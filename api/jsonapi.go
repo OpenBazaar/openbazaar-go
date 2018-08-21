@@ -3240,11 +3240,43 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
-	priority := i.node.Wallet.GetFeePerByte(wallet.PRIOIRTY)
-	normal := i.node.Wallet.GetFeePerByte(wallet.NORMAL)
-	economic := i.node.Wallet.GetFeePerByte(wallet.ECONOMIC)
-	fmt.Fprintf(w, `{"priority": %d, "normal": %d, "economic": %d}`, int(priority), int(normal), int(economic))
-	return
+	_, coinType := path.Split(r.URL.Path)
+	type fees struct {
+		Priority uint64 `json:"priority"`
+		Normal   uint64 `json:"normal"`
+		Economic uint64 `json:"economic"`
+	}
+	if coinType == "fees" {
+		ret := make(map[string]interface{})
+		for ct, wal := range i.node.Multiwallet {
+			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
+			normal := wal.GetFeePerByte(wallet.NORMAL)
+			economic := wal.GetFeePerByte(wallet.ECONOMIC)
+			ret[ct.CurrencyCode()] = fees{Priority: priority, Normal: normal, Economic: economic}
+		}
+		out, err := json.MarshalIndent(ret, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(out))
+		return
+	}
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
+	normal := wal.GetFeePerByte(wallet.NORMAL)
+	economic := wal.GetFeePerByte(wallet.ECONOMIC)
+	f := fees{Priority: priority, Normal: normal, Economic: economic}
+	out, err := json.MarshalIndent(f, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(out))
 }
 
 func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Request) {
