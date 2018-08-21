@@ -676,7 +676,26 @@ func (i *jsonAPIHandler) POSTUnfollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
-	addr := i.node.Wallet.CurrentAddress(wallet.EXTERNAL)
+	_, coinType := path.Split(r.URL.Path)
+	if coinType == "address" {
+		ret := make(map[string]interface{})
+		for ct, wal := range i.node.Multiwallet {
+			ret[ct.CurrencyCode()] = wal.CurrentAddress(wallet.EXTERNAL).String()
+		}
+		out, err := json.MarshalIndent(ret, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(out))
+		return
+	}
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	addr := wal.CurrentAddress(wallet.EXTERNAL)
 	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
 }
 
