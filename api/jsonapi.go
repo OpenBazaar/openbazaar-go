@@ -830,17 +830,15 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 		wallets = append(wallets, coinType.CurrencyCode())
 	}
 	c := struct {
-		PeerId         string   `json:"peerID"`
-		CryptoCurrency string   `json:"cryptoCurrency"`
-		Testnet        bool     `json:"testnet"`
-		Tor            bool     `json:"tor"`
-		Wallets        []string `json:"wallets"`
+		PeerId  string   `json:"peerID"`
+		Testnet bool     `json:"testnet"`
+		Tor     bool     `json:"tor"`
+		Wallets []string `json:"wallets"`
 	}{
-		PeerId:         i.node.IPFSIdentityString(),
-		CryptoCurrency: core.NormalizeCurrencyCode(i.node.Wallet.CurrencyCode()),
-		Testnet:        i.node.TestNetworkEnabled(),
-		Tor:            usingTor,
-		Wallets:        wallets,
+		PeerId:  i.node.IPFSIdentityString(),
+		Testnet: i.node.TestNetworkEnabled(),
+		Tor:     usingTor,
+		Wallets: wallets,
 	}
 	ser, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {

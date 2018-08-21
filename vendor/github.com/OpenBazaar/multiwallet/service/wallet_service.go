@@ -23,7 +23,7 @@ import (
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
 )
 
-var log = logging.MustGetLogger("WalletService")
+var Log = logging.MustGetLogger("WalletService")
 
 type WalletService struct {
 	db       wallet.Datastore
@@ -49,7 +49,7 @@ func NewWalletService(db wallet.Datastore, km *keys.KeyManager, client client.AP
 }
 
 func (ws *WalletService) Start() {
-	log.Noticef("Starting %s WalletService", ws.coinType.String())
+	Log.Noticef("Starting %s WalletService", ws.coinType.String())
 	go ws.UpdateState()
 	go ws.listen()
 }
@@ -89,7 +89,7 @@ func (ws *WalletService) listen() {
 
 // This is a transaction fresh off the wire. Let's save it to the db.
 func (ws *WalletService) processIncomingTransaction(tx client.Transaction) {
-	log.Debugf("New incoming %s transaction: %s", ws.coinType.String(), tx.Txid)
+	Log.Debugf("New incoming %s transaction: %s", ws.coinType.String(), tx.Txid)
 	addrs := ws.getStoredAddresses()
 	ws.lock.RLock()
 	chainHeight := int32(ws.chainHeight)
@@ -97,7 +97,7 @@ func (ws *WalletService) processIncomingTransaction(tx client.Transaction) {
 	ws.saveSingleTxToDB(tx, chainHeight, addrs)
 	utxos, err := ws.db.Utxos().GetAll()
 	if err != nil {
-		log.Errorf("Error loading %s utxos: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error loading %s utxos: %s", ws.coinType.String(), err.Error())
 	}
 
 	for _, sa := range addrs {
@@ -132,7 +132,7 @@ func (ws *WalletService) processIncomingTransaction(tx client.Transaction) {
 
 // A new block was found let's update our chain height and best hash and check for a reorg
 func (ws *WalletService) processIncomingBlock(block client.Block) {
-	log.Infof("Received new %s block at height %d: %s", ws.coinType.String(), block.Height, block.Hash)
+	Log.Infof("Received new %s block at height %d: %s", ws.coinType.String(), block.Height, block.Hash)
 	ws.lock.RLock()
 	currentBest := ws.bestBlock
 	ws.lock.RUnlock()
@@ -144,7 +144,7 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 
 	// REORG! Rescan all transactions and utxos to see if anything changed
 	if currentBest != block.PreviousBlockhash {
-		log.Warningf("Reorg in the %s chain! Re-scanning wallet", ws.coinType.String())
+		Log.Warningf("Reorg in the %s chain! Re-scanning wallet", ws.coinType.String())
 		ws.UpdateState()
 		return
 	}
@@ -152,12 +152,12 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 	// Query db for unconfirmed txs and utxos then query API to get current height
 	txs, err := ws.db.Txns().GetAll(true)
 	if err != nil {
-		log.Errorf("Error loading %s txs from db: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error loading %s txs from db: %s", ws.coinType.String(), err.Error())
 		return
 	}
 	utxos, err := ws.db.Utxos().GetAll()
 	if err != nil {
-		log.Errorf("Error loading %s txs from db: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error loading %s txs from db: %s", ws.coinType.String(), err.Error())
 		return
 	}
 	addrs := ws.getStoredAddresses()
@@ -166,7 +166,7 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 			go func(txn wallet.Txn) {
 				ret, err := ws.client.GetTransaction(txn.Txid)
 				if err != nil {
-					log.Errorf("Error fetching unconfirmed %s tx: %s", ws.coinType.String(), err.Error())
+					Log.Errorf("Error fetching unconfirmed %s tx: %s", ws.coinType.String(), err.Error())
 					return
 				}
 				if ret.Confirmations > 0 {
@@ -188,16 +188,16 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 // the db state to match the API responses.
 func (ws *WalletService) UpdateState() {
 	// Start by fetching the chain height from the API
-	log.Debugf("Querying for %s chain height", ws.coinType.String())
+	Log.Debugf("Querying for %s chain height", ws.coinType.String())
 	best, err := ws.client.GetBestBlock()
 	if err == nil {
-		log.Debugf("%s chain height: %d", ws.coinType.String(), best.Height)
+		Log.Debugf("%s chain height: %d", ws.coinType.String(), best.Height)
 		ws.lock.Lock()
 		ws.chainHeight = uint32(best.Height)
 		ws.bestBlock = best.Hash
 		ws.lock.Unlock()
 	} else {
-		log.Errorf("Error querying API for %s chain height: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error querying API for %s chain height: %s", ws.coinType.String(), err.Error())
 	}
 
 	// Load wallet addresses and watch only addresses from the db
@@ -210,16 +210,16 @@ func (ws *WalletService) UpdateState() {
 
 // Query API for UTXOs and synchronize db state
 func (ws *WalletService) syncUtxos(addrs map[string]storedAddress) {
-	log.Debugf("Querying for %s utxos", ws.coinType.String())
+	Log.Debugf("Querying for %s utxos", ws.coinType.String())
 	var query []btcutil.Address
 	for _, sa := range addrs {
 		query = append(query, sa.Addr)
 	}
 	utxos, err := ws.client.GetUtxos(query)
 	if err != nil {
-		log.Errorf("Error downloading utxos for %s: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error downloading utxos for %s: %s", ws.coinType.String(), err.Error())
 	} else {
-		log.Debugf("Downloaded %d %s utxos", len(utxos), ws.coinType.String())
+		Log.Debugf("Downloaded %d %s utxos", len(utxos), ws.coinType.String())
 		ws.saveUtxosToDB(utxos, addrs)
 	}
 }
@@ -231,7 +231,7 @@ func (ws *WalletService) saveUtxosToDB(utxos []client.Utxo, addrs map[string]sto
 	// Get current utxos
 	currentUtxos, err := ws.db.Utxos().GetAll()
 	if err != nil {
-		log.Error("Error loading utxos for %s: %s", ws.coinType.String(), err.Error())
+		Log.Error("Error loading utxos for %s: %s", ws.coinType.String(), err.Error())
 		return
 	}
 
@@ -244,7 +244,7 @@ func (ws *WalletService) saveUtxosToDB(utxos []client.Utxo, addrs map[string]sto
 	for _, u := range utxos {
 		ch, err := chainhash.NewHashFromStr(u.Txid)
 		if err != nil {
-			log.Error("Error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
+			Log.Error("Error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
 			continue
 		}
 		newU := wallet.Utxo{
@@ -265,12 +265,12 @@ func (ws *WalletService) saveUtxosToDB(utxos []client.Utxo, addrs map[string]sto
 func (ws *WalletService) saveSingleUtxoToDB(u client.Utxo, addrs map[string]storedAddress, chainHeight int32) {
 	ch, err := chainhash.NewHashFromStr(u.Txid)
 	if err != nil {
-		log.Error("Error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
+		Log.Error("Error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
 		return
 	}
 	scriptBytes, err := hex.DecodeString(u.ScriptPubKey)
 	if err != nil {
-		log.Error("Error converting to script bytes for %s: %s", ws.coinType.String(), err.Error())
+		Log.Error("Error converting to script bytes for %s: %s", ws.coinType.String(), err.Error())
 		return
 	}
 
@@ -305,16 +305,16 @@ func serializeUtxo(u wallet.Utxo) string {
 
 // Query API for TXs and synchronize db state
 func (ws *WalletService) syncTxs(addrs map[string]storedAddress) {
-	log.Debugf("Querying for %s transactions", ws.coinType.String())
+	Log.Debugf("Querying for %s transactions", ws.coinType.String())
 	var query []btcutil.Address
 	for _, sa := range addrs {
 		query = append(query, sa.Addr)
 	}
 	txs, err := ws.client.GetTransactions(query)
 	if err != nil {
-		log.Errorf("Error downloading txs for %s: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error downloading txs for %s: %s", ws.coinType.String(), err.Error())
 	} else {
-		log.Debugf("Downloaded %d %s transactions", len(txs), ws.coinType.String())
+		Log.Debugf("Downloaded %d %s transactions", len(txs), ws.coinType.String())
 		ws.saveTxsToDB(txs, addrs)
 	}
 }
@@ -327,7 +327,7 @@ func (ws *WalletService) saveTxsToDB(txns []client.Transaction, addrs map[string
 	// Get current utxos
 	currentTxs, err := ws.db.Txns().GetAll(true)
 	if err != nil {
-		log.Error("Error loading utxos for %s: %s", ws.coinType.String(), err.Error())
+		Log.Error("Error loading utxos for %s: %s", ws.coinType.String(), err.Error())
 		return
 	}
 
@@ -346,7 +346,7 @@ func (ws *WalletService) saveTxsToDB(txns []client.Transaction, addrs map[string
 		if !newTxs[cur.Txid] {
 			ch, err := chainhash.NewHashFromStr(cur.Txid)
 			if err != nil {
-				log.Errorf("error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
+				Log.Errorf("error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
 				continue
 			}
 			ws.db.Txns().Delete(ch)
@@ -367,7 +367,7 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 
 	txHash, err := chainhash.NewHashFromStr(u.Txid)
 	if err != nil {
-		log.Errorf("error converting to txHash for %s: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("error converting to txHash for %s: %s", ws.coinType.String(), err.Error())
 		return
 	}
 	var relevant bool
@@ -375,12 +375,12 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 	for _, in := range u.Inputs {
 		ch, err := chainhash.NewHashFromStr(in.Txid)
 		if err != nil {
-			log.Errorf("error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
+			Log.Errorf("error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
 			continue
 		}
 		script, err := hex.DecodeString(in.ScriptSig.Hex)
 		if err != nil {
-			log.Errorf("error converting to scriptsig for %s: %s", ws.coinType.String(), err.Error())
+			Log.Errorf("error converting to scriptsig for %s: %s", ws.coinType.String(), err.Error())
 			continue
 		}
 		op := wire.NewOutPoint(ch, uint32(in.Vout))
@@ -393,7 +393,7 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 		msgTx.TxIn = append(msgTx.TxIn, txin)
 		h, err := hex.DecodeString(op.Hash.String())
 		if err != nil {
-			log.Errorf("error converting outpoint hash for %s: %s", ws.coinType.String(), err.Error())
+			Log.Errorf("error converting outpoint hash for %s: %s", ws.coinType.String(), err.Error())
 			return
 		}
 		cbin := wallet.TransactionInput{
@@ -417,7 +417,7 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 	for i, out := range u.Outputs {
 		script, err := hex.DecodeString(out.ScriptPubKey.Hex)
 		if err != nil {
-			log.Errorf("error converting to scriptPubkey for %s: %s", ws.coinType.String(), err.Error())
+			Log.Errorf("error converting to scriptPubkey for %s: %s", ws.coinType.String(), err.Error())
 			continue
 		}
 		// Skip the error check here as someone may have sent from an exotic script
@@ -490,25 +490,25 @@ func (ws *WalletService) getStoredAddresses() map[string]storedAddress {
 	for _, key := range keys {
 		addr, err := ws.km.KeyToAddress(key)
 		if err != nil {
-			log.Errorf("Error getting %s address for key: %s", ws.coinType.String(), err.Error())
+			Log.Errorf("Error getting %s address for key: %s", ws.coinType.String(), err.Error())
 			continue
 		}
 		addrs[addr.String()] = storedAddress{addr, false}
 	}
 	watchScripts, err := ws.db.WatchedScripts().GetAll()
 	if err != nil {
-		log.Errorf("Error loading %s watch scripts: %s", ws.coinType.String(), err.Error())
+		Log.Errorf("Error loading %s watch scripts: %s", ws.coinType.String(), err.Error())
 	} else {
 		for _, script := range watchScripts {
 			switch ws.coinType {
 			case wallet.Bitcoin:
 				_, addrSlice, _, err := txscript.ExtractPkScriptAddrs(script, ws.params)
 				if err != nil {
-					log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
+					Log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
 					continue
 				}
 				if len(addrs) == 0 {
-					log.Errorf("Error serializing %s script: %s", ws.coinType.String(), "Unknown script")
+					Log.Errorf("Error serializing %s script: %s", ws.coinType.String(), "Unknown script")
 					continue
 				}
 				addr := addrSlice[0]
@@ -516,21 +516,21 @@ func (ws *WalletService) getStoredAddresses() map[string]storedAddress {
 			case wallet.BitcoinCash:
 				addr, err := bchutil.ExtractPkScriptAddrs(script, ws.params)
 				if err != nil {
-					log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
+					Log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
 					continue
 				}
 				addrs[addr.String()] = storedAddress{addr, true}
 			case wallet.Zcash:
 				addr, err := zaddr.ExtractPkScriptAddrs(script, ws.params)
 				if err != nil {
-					log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
+					Log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
 					continue
 				}
 				addrs[addr.String()] = storedAddress{addr, true}
 			case wallet.Litecoin:
 				addr, err := laddr.ExtractPkScriptAddrs(script, ws.params)
 				if err != nil {
-					log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
+					Log.Errorf("Error serializing %s script: %s", ws.coinType.String(), err.Error())
 					continue
 				}
 				addrs[addr.String()] = storedAddress{addr, true}

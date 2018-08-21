@@ -549,26 +549,26 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Multiwallet setup
-	var w4 io.Writer
+	var walletLogWriter io.Writer
 	if x.NoLogFiles {
-		w4 = &DummyWriter{}
+		walletLogWriter = &DummyWriter{}
 	} else {
-		w4 = &lumberjack.Logger{
+		walletLogWriter = &lumberjack.Logger{
 			Filename:   path.Join(repoPath, "logs", "wallet.log"),
 			MaxSize:    10, // Megabytes
 			MaxBackups: 3,
 			MaxAge:     30, // Days
 		}
 	}
-	walletLogFile := logging.NewLogBackend(w4, "", 0)
+	walletLogFile := logging.NewLogBackend(walletLogWriter, "", 0)
 	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
-	ml := logging.MultiLogger(walletFileFormatter)
+	walletLogger := logging.MultiLogger(walletFileFormatter)
 	multiwalletConfig := &wallet.WalletConfig{
 		ConfigFile:         walletsConfig,
 		DB:                 sqliteDB.DB(),
 		Params:             &params,
 		RepoPath:           repoPath,
-		Logger:             ml,
+		Logger:             walletLogger,
 		Proxy:              torDialer,
 		WalletCreationDate: creationDate,
 		Mnemonic:           mn,

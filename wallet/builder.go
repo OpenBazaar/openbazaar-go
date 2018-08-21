@@ -23,7 +23,7 @@ import (
 type WalletConfig struct {
 	ConfigFile         *schema.WalletsConfig
 	RepoPath           string
-	Logger             logging.LeveledBackend
+	Logger             logging.Backend
 	DB                 *db.DB
 	Mnemonic           string
 	WalletCreationDate time.Time
@@ -169,7 +169,6 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			}
 		}
 	}
-
 	mw, err := multiwallet.NewMultiWallet(defaultConfig)
 	if err != nil {
 		return nil, err

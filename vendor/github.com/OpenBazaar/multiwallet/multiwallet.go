@@ -4,8 +4,10 @@ import (
 	"errors"
 	"github.com/OpenBazaar/multiwallet/bitcoin"
 	"github.com/OpenBazaar/multiwallet/bitcoincash"
+	"github.com/OpenBazaar/multiwallet/client"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/multiwallet/litecoin"
+	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/zcash"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/op/go-logging"
@@ -22,6 +24,8 @@ type MultiWallet map[wallet.CoinType]wallet.Wallet
 
 func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 	log.SetBackend(logging.AddModuleLevel(cfg.Logger))
+	service.Log = log
+	client.Log = log
 
 	if cfg.Mnemonic == "" {
 		ent, err := bip39.NewEntropy(128)
