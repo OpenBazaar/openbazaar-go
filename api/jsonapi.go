@@ -1641,12 +1641,26 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Request) {
+	_, coinType := path.Split(r.URL.Path)
 	creationDate, err := i.node.Datastore.Config().GetCreationDate()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	i.node.Wallet.ReSyncBlockchain(creationDate)
+
+	if coinType == "resyncblockchain" {
+		for _, wal := range i.node.Multiwallet {
+			wal.ReSyncBlockchain(creationDate)
+		}
+		SanitizedResponse(w, `{}`)
+		return
+	}
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	wal.ReSyncBlockchain(creationDate)
 	SanitizedResponse(w, `{}`)
 	return
 }
