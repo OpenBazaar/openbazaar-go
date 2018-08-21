@@ -213,25 +213,23 @@ func (x *Start) Execute(args []string) error {
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
 	ct := wi.Bitcoin
+	cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	if err == nil {
+		wcfg, err := schema.GetWalletConfig(cfgf)
+		if err == nil {
+			switch wcfg.Type {
+			case "bitcoincash":
+				ct = wi.BitcoinCash
+			case "zcashd":
+				ct = wi.Zcash
+			}
+		}
+	}
+
 	if x.BitcoinCash {
 		ct = wi.BitcoinCash
 	} else if x.ZCash != "" {
 		ct = wi.Zcash
-	}
-
-	if !(x.BitcoinCash || x.ZCash != "") {
-		cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
-		if err == nil {
-			wcfg, err := schema.GetWalletConfig(cfgf)
-			if err == nil {
-				switch wcfg.Type {
-				case "bitcoincash":
-					ct = wi.BitcoinCash
-				case "zcashd":
-					ct = wi.Zcash
-				}
-			}
-		}
 	}
 
 	migrations.WalletCoinType = ct
@@ -307,8 +305,15 @@ func (x *Start) Execute(args []string) error {
 	}
 	walletsConfig, err := schema.GetWalletsConfig(configFile)
 	if err != nil {
-		log.Error("scan multiwallet config:", err)
+		log.Error("scan wallets config:", err)
 		return err
+	}
+
+	if x.BitcoinCash {
+		walletCfg.Type = "bitcoincash"
+	} else if x.ZCash != "" {
+		walletCfg.Type = "zcashd"
+		walletCfg.Binary = x.ZCash
 	}
 
 	// IPFS node setup
