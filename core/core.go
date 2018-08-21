@@ -104,6 +104,9 @@ type OpenBazaarNode struct {
 	// notify the user as disputes age past certain thresholds
 	RecordAgingNotifier *recordAgingNotifier
 
+	// Generic pubsub interface
+	Pubsub ipfs.Pubsub
+
 	TestnetEnable        bool
 	RegressionTestEnable bool
 }
