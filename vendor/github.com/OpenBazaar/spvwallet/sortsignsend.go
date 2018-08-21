@@ -185,10 +185,14 @@ func (w *SPVWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
+			h, err := hex.DecodeString(u.Op.Hash.String())
+			if err != nil {
+				return nil, err
+			}
 			in := wallet.TransactionInput{
 				LinkedAddress: addr,
 				OutpointIndex: u.Op.Index,
-				OutpointHash:  u.Op.Hash.CloneBytes(),
+				OutpointHash:  h,
 				Value:         u.Value,
 			}
 			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, key, nil, wallet.FEE_BUMP)

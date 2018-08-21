@@ -94,7 +94,7 @@ func (Migration014) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Bump schema version
-	err = writeRepoVer(repoPath, 12)
+	err = writeRepoVer(repoPath, 15)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (Migration014) Down(repoPath, databasePassword string, testnetEnabled bool)
 	}
 
 	// Revert schema version
-	err = writeRepoVer(repoPath, 11)
+	err = writeRepoVer(repoPath, 14)
 	if err != nil {
 		return err
 	}

@@ -772,6 +772,11 @@ func (x *Start) Execute(args []string) error {
 		setTestmodeRecordAgingIntervals()
 	}
 
+	// Build pubsub
+	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
+
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		IpfsNode:             nd,
@@ -787,6 +792,7 @@ func (x *Start) Execute(args []string) error {
 		UserAgent:            core.USERAGENT,
 		BanManager:           bm,
 		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
+		Pubsub:               ps,
 		TestnetEnable:        x.Testnet,
 		RegressionTestEnable: x.Regtest,
 	}
