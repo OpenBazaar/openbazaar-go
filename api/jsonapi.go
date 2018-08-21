@@ -3214,6 +3214,8 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) {
+	_, coinType := path.Split(r.URL.Path)
+
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
 	amount, err := strconv.Atoi(amt)
@@ -3235,7 +3237,13 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fee, err := i.node.Wallet.EstimateSpendFee(int64(amount), feeLevel)
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+
+	fee, err := wal.EstimateSpendFee(int64(amount), feeLevel)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
