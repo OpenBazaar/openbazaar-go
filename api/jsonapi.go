@@ -709,29 +709,41 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
-	/*_, ok := i.node.Wallet.(*bitcoind.BitcoindWallet)
-	if ok {
-		select {
-		case <-i.node.Wallet.(*bitcoind.BitcoindWallet).InitChan():
-			break
-		default:
-			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
-			return
-		}
+	_, coinType := path.Split(r.URL.Path)
+	type balance struct {
+		Confirmed   int64  `json:"confirmed"`
+		Unconfirmed int64  `json:"unconfirmed"`
+		Height      uint32 `json:"height"`
 	}
-	_, ok = i.node.Wallet.(*zcashd.ZcashdWallet)
-	if ok {
-		select {
-		case <-i.node.Wallet.(*zcashd.ZcashdWallet).InitChan():
-			break
-		default:
-			ErrorResponse(w, http.StatusServiceUnavailable, "ERROR_WALLET_UNINITIALIZED")
+	if coinType == "balance" {
+		ret := make(map[string]interface{})
+		for ct, wal := range i.node.Multiwallet {
+			height, _ := wal.ChainTip()
+			confirmed, unconfirmed := wal.Balance()
+			ret[ct.CurrencyCode()] = balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+		}
+		out, err := json.MarshalIndent(ret, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-	}*/
-	height, _ := i.node.Wallet.ChainTip()
-	confirmed, unconfirmed := i.node.Wallet.Balance()
-	SanitizedResponse(w, fmt.Sprintf(`{"confirmed": %d, "unconfirmed": %d, "height": %d}`, int(confirmed), int(unconfirmed), height))
+		SanitizedResponse(w, string(out))
+		return
+	}
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	height, _ := wal.ChainTip()
+	confirmed, unconfirmed := wal.Balance()
+	bal := balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+	out, err := json.MarshalIndent(bal, "", "    ")
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	SanitizedResponse(w, string(out))
 }
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
