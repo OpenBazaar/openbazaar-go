@@ -76,6 +76,12 @@ func (w *MultiWallet) Start() {
 	}
 }
 
+func (w *MultiWallet) Close() {
+	for _, wallet := range *w {
+		wallet.Close()
+	}
+}
+
 func (w *MultiWallet) WalletForCurrencyCode(currencyCode string) (wallet.Wallet, error) {
 	for _, wl := range *w {
 		if strings.ToUpper(wl.CurrencyCode()) == strings.ToUpper(currencyCode) {

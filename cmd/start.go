@@ -902,6 +902,7 @@ func (x *Start) Execute(args []string) error {
 			su := wallet.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
+			go mw.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {

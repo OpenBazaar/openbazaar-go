@@ -409,6 +409,7 @@ func (n *Node) Start() error {
 			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Wallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
 			go su.Start()
 			go n.OpenBazaarNode.Wallet.Start()
+			go n.OpenBazaarNode.Multiwallet.Start()
 		}
 
 		core.PublishLock.Unlock()
@@ -428,6 +429,7 @@ func (n *Node) Stop() error {
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 	core.Node.Wallet.Close()
+	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
 	return nil
 }
