@@ -3586,18 +3586,39 @@ func (i *jsonAPIHandler) POSTPurgeCache(w http.ResponseWriter, r *http.Request) 
 }
 
 func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request) {
-	height, hash := i.node.Wallet.ChainTip()
+
+	_, coinType := path.Split(r.URL.Path)
 	type status struct {
 		Height   uint32 `json:"height"`
 		BestHash string `json:"bestHash"`
 	}
-	hh := status{height, hash.String()}
-	ret, err := json.MarshalIndent(&hh, "", "    ")
+	if coinType == "status" {
+		ret := make(map[string]interface{})
+		for ct, wal := range i.node.Multiwallet {
+			height, hash := wal.ChainTip()
+			ret[ct.CurrencyCode()] = status{height, hash.String()}
+		}
+		out, err := json.MarshalIndent(ret, "", "    ")
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		SanitizedResponse(w, string(out))
+		return
+	}
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	height, hash := wal.ChainTip()
+	st := status{height, hash.String()}
+	out, err := json.MarshalIndent(st, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	SanitizedResponse(w, string(ret))
+	SanitizedResponse(w, string(out))
 }
 
 func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
