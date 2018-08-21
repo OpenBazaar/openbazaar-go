@@ -56,6 +56,8 @@ import (
 	"net/url"
 	"path"
 	"time"
+	"github.com/natefinch/lumberjack"
+	"io"
 )
 
 type Node struct {
@@ -97,6 +99,10 @@ func NewNode(config NodeConfig) (*Node, error) {
 		return nil, err
 	}
 	resolverConfig, err := schema.GetResolverConfig(configFile)
+	if err != nil {
+		return nil, err
+	}
+	walletsConfig, err := schema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +182,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 		dhtutil.QuerySize = 16
 	}
 
-	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
 		return nil, err
@@ -188,6 +193,22 @@ func NewNode(config NodeConfig) (*Node, error) {
 		params = chaincfg.MainNetParams
 	}
 
+	// Multiwallet setup
+	multiwalletConfig := &wallet.WalletConfig{
+		ConfigFile:         walletsConfig,
+		DB:                 sqliteDB.DB(),
+		Params:             &params,
+		RepoPath:           config.RepoPath,
+		Logger:             logger,
+		WalletCreationDate: creationDate,
+		Mnemonic:           mn,
+	}
+	mw, err := wallet.NewMultiWallet(multiwalletConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wallet
 	var wallet wi.Wallet
 	var tp net.Addr
 	if config.WalletTrustedPeer != "" {
@@ -270,6 +291,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 		RepoPath:      config.RepoPath,
 		Datastore:     sqliteDB,
 		Wallet:        wallet,
+		Multiwallet:   mw,
 		NameSystem:    ns,
 		ExchangeRates: exchangeRates,
 		UserAgent:     core.USERAGENT,

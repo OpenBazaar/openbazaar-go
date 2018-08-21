@@ -254,6 +254,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan republish interval config:", err)
 		return err
 	}
+	walletsConfig, err := schema.GetWalletsConfig(configFile)
+	if err != nil {
+		log.Error("scan multiwallet config:", err)
+		return err
+	}
 
 	if x.BitcoinCash {
 		walletCfg.Type = "bitcoincash"
@@ -531,6 +536,36 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
+	// Multiwallet setup
+	var w4 io.Writer
+	if x.NoLogFiles {
+		w4 = &DummyWriter{}
+	} else {
+		w4 = &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "wallet.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
+	}
+	walletLogFile := logging.NewLogBackend(w4, "", 0)
+	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
+	ml := logging.MultiLogger(walletFileFormatter)
+	multiwalletConfig := &wallet.WalletConfig{
+		ConfigFile:         walletsConfig,
+		DB:                 sqliteDB.DB(),
+		Params:             &params,
+		RepoPath:           repoPath,
+		Logger:             ml,
+		Proxy:              torDialer,
+		WalletCreationDate: creationDate,
+		Mnemonic:           mn,
+	}
+	mw, err := wallet.NewMultiWallet(multiwalletConfig)
+	if err != nil {
+		return err
+	}
+
 	// Wallet setup
 	if x.BitcoinCash {
 		walletCfg.Type = "bitcoincash"
@@ -555,7 +590,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	bitcoinFile := logging.NewLogBackend(w3, "", 0)
 	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
-	ml := logging.MultiLogger(bitcoinFileFormatter)
+	ml2 := logging.MultiLogger(bitcoinFileFormatter)
 
 	var resyncManager *resync.ResyncManager
 	var cryptoWallet wi.Wallet
@@ -590,7 +625,7 @@ func (x *Start) Execute(args []string) error {
 			UserAgent:    "OpenBazaar",
 			TrustedPeer:  tp,
 			Proxy:        torDialer,
-			Logger:       ml,
+			Logger:       ml2,
 		}
 		cryptoWallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
@@ -628,7 +663,7 @@ func (x *Start) Execute(args []string) error {
 			UserAgent:            "OpenBazaar",
 			TrustedPeer:          tp,
 			Proxy:                torDialer,
-			Logger:               ml,
+			Logger:               ml2,
 			ExchangeRateProvider: exchangeRates,
 		}
 		cryptoWallet, err = bitcoincash.NewSPVWallet(spvwalletConfig)
@@ -784,6 +819,7 @@ func (x *Start) Execute(args []string) error {
 		RepoPath:             repoPath,
 		Datastore:            sqliteDB,
 		Wallet:               cryptoWallet,
+		Multiwallet:          mw,
 		NameSystem:           ns,
 		ExchangeRates:        exchangeRates,
 		PushNodes:            pushNodes,

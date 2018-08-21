@@ -19,6 +19,7 @@ import (
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 
+	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -66,6 +67,9 @@ type OpenBazaarNode struct {
 
 	// Bitcoin wallet implementation
 	Wallet wallet.Wallet
+
+	// A map of cryptocurrency wallets
+	Multiwallet multiwallet.MultiWallet
 
 	// Storage for our outgoing messages
 	MessageStorage sto.OfflineMessagingStorage

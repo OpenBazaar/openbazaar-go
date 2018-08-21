@@ -21,7 +21,7 @@ import (
 )
 
 type WalletConfig struct {
-	ConfigFile         schema.WalletsConfig
+	ConfigFile         *schema.WalletsConfig
 	RepoPath           string
 	Logger             logging.LeveledBackend
 	DB                 *db.DB
@@ -34,7 +34,7 @@ type WalletConfig struct {
 // Build a new multiwallet using values from the config file
 // If any of the four standard coins are missing from the config file
 // we will load it with default values.
-func NewMultiWallet(cfg *WalletConfig) (*multiwallet.MultiWallet, error) {
+func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	var testnet bool
 	if cfg.Params.Name != chaincfg.MainNetParams.Name {
 		testnet = true
@@ -251,7 +251,7 @@ func NewMultiWallet(cfg *WalletConfig) (*multiwallet.MultiWallet, error) {
 		mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
 	}
 
-	return &mw, nil
+	return mw, nil
 }
 
 type WalletDatastore struct {
