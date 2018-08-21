@@ -115,18 +115,21 @@ func migration013_extractRecords(db *sql.DB, query string, migrateDown bool) ([]
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			serializedTransactions []byte
+			serializedTransactions sql.NullString
 			r                      = migration013_record{}
 		)
 		if err := rows.Scan(&r.orderID, &serializedTransactions, &r.coin); err != nil {
 			return nil, fmt.Errorf("scanning rows: %s", err.Error())
 		}
+		if !serializedTransactions.Valid {
+			continue
+		}
 		if migrateDown {
-			if err := json.Unmarshal(serializedTransactions, &r.migratedTransactions); err != nil {
+			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.migratedTransactions); err != nil {
 				return nil, fmt.Errorf("unmarshal migrated transactions: %s", err.Error())
 			}
 		} else {
-			if err := json.Unmarshal(serializedTransactions, &r.unmigratedTransactions); err != nil {
+			if err := json.Unmarshal([]byte(serializedTransactions.String), &r.unmigratedTransactions); err != nil {
 				return nil, fmt.Errorf("unmarshal unmigrated transactions: %s", err.Error())
 			}
 		}
