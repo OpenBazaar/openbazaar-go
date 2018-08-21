@@ -41,6 +41,7 @@ import (
 	ipath "github.com/ipfs/go-ipfs/path"
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
@@ -50,14 +51,13 @@ import (
 	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"time"
-	"github.com/natefinch/lumberjack"
-	"io"
 )
 
 type Node struct {

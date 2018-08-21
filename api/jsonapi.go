@@ -825,16 +825,22 @@ func (i *jsonAPIHandler) GETConfig(w http.ResponseWriter, r *http.Request) {
 	if i.node.TorDialer != nil {
 		usingTor = true
 	}
+	var wallets []string
+	for coinType := range i.node.Multiwallet {
+		wallets = append(wallets, coinType.CurrencyCode())
+	}
 	c := struct {
-		PeerId         string `json:"peerID"`
-		CryptoCurrency string `json:"cryptoCurrency"`
-		Testnet        bool   `json:"testnet"`
-		Tor            bool   `json:"tor"`
+		PeerId         string   `json:"peerID"`
+		CryptoCurrency string   `json:"cryptoCurrency"`
+		Testnet        bool     `json:"testnet"`
+		Tor            bool     `json:"tor"`
+		Wallets        []string `json:"wallets"`
 	}{
 		PeerId:         i.node.IPFSIdentityString(),
 		CryptoCurrency: core.NormalizeCurrencyCode(i.node.Wallet.CurrencyCode()),
 		Testnet:        i.node.TestNetworkEnabled(),
 		Tor:            usingTor,
+		Wallets:        wallets,
 	}
 	ser, err := json.MarshalIndent(c, "", "    ")
 	if err != nil {

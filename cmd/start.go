@@ -212,6 +212,57 @@ func (x *Start) Execute(args []string) error {
 	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
 	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 
+	ct := wi.Bitcoin
+	if x.BitcoinCash {
+		ct = wi.BitcoinCash
+	} else if x.ZCash != "" {
+		ct = wi.Zcash
+	}
+
+	if !(x.BitcoinCash || x.ZCash != "") {
+		cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+		if err == nil {
+			wcfg, err := schema.GetWalletConfig(cfgf)
+			if err == nil {
+				switch wcfg.Type {
+				case "bitcoincash":
+					ct = wi.BitcoinCash
+				case "zcashd":
+					ct = wi.Zcash
+				}
+			}
+		}
+	}
+
+	migrations.WalletCoinType = ct
+	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return err
+	}
+
+	// If the database cannot be decrypted, exit
+	if sqliteDB.Config().IsEncrypted() {
+		sqliteDB.Close()
+		fmt.Print("Database is encrypted, enter your password: ")
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		pw := string(bytePassword)
+		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
+		if err != nil && err != repo.ErrRepoExists {
+			return err
+		}
+		if sqliteDB.Config().IsEncrypted() {
+			log.Error("Invalid password")
+			os.Exit(3)
+		}
+	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, err := sqliteDB.Config().GetCreationDate()
+	if err != nil {
+		log.Error("error loading wallet creation date from database - using unix epoch.")
+	}
+
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
@@ -258,50 +309,6 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error("scan multiwallet config:", err)
 		return err
-	}
-
-	if x.BitcoinCash {
-		walletCfg.Type = "bitcoincash"
-	} else if x.ZCash != "" {
-		walletCfg.Type = "zcashd"
-		walletCfg.Binary = x.ZCash
-	}
-
-	ct := wi.Bitcoin
-	switch walletCfg.Type {
-	case "bitcoincash":
-		ct = wi.BitcoinCash
-	case "zcashd":
-		ct = wi.Zcash
-	}
-
-	migrations.WalletCoinType = ct
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
-	if err != nil && err != repo.ErrRepoExists {
-		return err
-	}
-
-	// If the database cannot be decrypted, exit
-	if sqliteDB.Config().IsEncrypted() {
-		sqliteDB.Close()
-		fmt.Print("Database is encrypted, enter your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println("")
-		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
-		if err != nil && err != repo.ErrRepoExists {
-			return err
-		}
-		if sqliteDB.Config().IsEncrypted() {
-			log.Error("Invalid password")
-			os.Exit(3)
-		}
-	}
-
-	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, err := sqliteDB.Config().GetCreationDate()
-	if err != nil {
-		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
 
 	// IPFS node setup
