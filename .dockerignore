@@ -1,4 +1,10 @@
+*.md
+*.sh
+*.yml
 .travis
 dist
+Dockerfile*
 docs
+mobile
 node_modules
+qa
