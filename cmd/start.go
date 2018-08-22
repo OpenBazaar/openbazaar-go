@@ -911,7 +911,7 @@ func (x *Start) Execute(args []string) error {
 			cryptoWallet.AddTransactionListener(TL.OnTransactionReceived)
 			cryptoWallet.AddTransactionListener(WL.OnTransactionReceived)
 			log.Infof("Starting %s wallet\n", walletTypeStr)
-			su := wallet.NewStatusUpdater(cryptoWallet, core.Node.Broadcast, nd.Context())
+			su := wallet.NewStatusUpdater(mw, core.Node.Broadcast, nd.Context())
 			go su.Start()
 			go cryptoWallet.Start()
 			go mw.Start()

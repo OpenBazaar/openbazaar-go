@@ -406,7 +406,7 @@ func (n *Node) Start() error {
 			WL := lis.NewWalletListener(n.OpenBazaarNode.Datastore, n.OpenBazaarNode.Broadcast)
 			n.OpenBazaarNode.Wallet.AddTransactionListener(TL.OnTransactionReceived)
 			n.OpenBazaarNode.Wallet.AddTransactionListener(WL.OnTransactionReceived)
-			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Wallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
+			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
 			go su.Start()
 			go n.OpenBazaarNode.Wallet.Start()
 			go n.OpenBazaarNode.Multiwallet.Start()

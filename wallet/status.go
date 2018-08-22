@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/multiwallet"
 )
 
 type StatusUpdater struct {
-	w   wallet.Wallet
+	mw   multiwallet.MultiWallet
 	c   chan repo.Notifier
 	ctx context.Context
 }
 
 type walletUpdateWrapper struct {
-	WalletUpdate walletUpdate `json:"walletUpdate"`
+	WalletUpdate map[string]walletUpdate `json:"walletUpdate"`
 }
 
 type walletUpdate struct {
@@ -25,8 +25,8 @@ type walletUpdate struct {
 	Confirmed   int64  `json:"confirmed"`
 }
 
-func NewStatusUpdater(w wallet.Wallet, c chan repo.Notifier, ctx context.Context) *StatusUpdater {
-	return &StatusUpdater{w, c, ctx}
+func NewStatusUpdater(mw multiwallet.MultiWallet, c chan repo.Notifier, ctx context.Context) *StatusUpdater {
+	return &StatusUpdater{mw, c, ctx}
 }
 
 func (s *StatusUpdater) Start() {
@@ -34,14 +34,18 @@ func (s *StatusUpdater) Start() {
 	for {
 		select {
 		case <-t.C:
-			confirmed, unconfirmed := s.w.Balance()
-			height, _ := s.w.ChainTip()
-			u := walletUpdate{
-				Height:      height,
-				Unconfirmed: unconfirmed,
-				Confirmed:   confirmed,
+			ret := make(map[string]walletUpdate)
+			for ct, wal := range s.mw {
+				confirmed, unconfirmed := wal.Balance()
+				height, _ := wal.ChainTip()
+				u := walletUpdate{
+					Height:      height,
+					Unconfirmed: unconfirmed,
+					Confirmed:   confirmed,
+				}
+				ret[ct.CurrencyCode()] = u
 			}
-			ser, err := json.MarshalIndent(walletUpdateWrapper{u}, "", "    ")
+			ser, err := json.MarshalIndent(walletUpdateWrapper{ret}, "", "    ")
 			if err != nil {
 				continue
 			}
