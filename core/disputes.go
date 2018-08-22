@@ -418,8 +418,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 // CloseDispute - close a dispute
 func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string) error {
-	if buyerPercentage+vendorPercentage != 100 {
-		return errors.New("Payout percentages must sum to 100")
+	var payDivision = payoutRatio{buyer: buyerPercentage, vendor: vendorPercentage}
+	if err := payDivision.Validate(); err != nil {
+		return err
 	}
 
 	dispute, err := n.Datastore.Cases().GetByCaseID(orderID)
@@ -465,7 +466,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	var outpoints []*pb.Outpoint
 	var redeemScript string
 	var chaincode string
-	var feePerByte uint64
 	var vendorID string
 	var vendorKey libp2p.PubKey
 	var buyerID string
@@ -475,7 +475,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outpoints = dispute.BuyerOutpoints
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
-		feePerByte = dispute.BuyerContract.BuyerOrder.RefundFee
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
@@ -491,11 +490,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outpoints = dispute.VendorOutpoints
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
-		if len(dispute.VendorContract.VendorOrderFulfillment) > 0 && dispute.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			feePerByte = dispute.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
-		} else {
-			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
-		}
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
@@ -512,11 +506,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outpoints = dispute.VendorOutpoints
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
-		if len(dispute.VendorContract.VendorOrderFulfillment) > 0 && dispute.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			feePerByte = dispute.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
-		} else {
-			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
-		}
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
@@ -533,7 +522,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outpoints = dispute.BuyerOutpoints
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
-		feePerByte = dispute.BuyerContract.BuyerOrder.RefundFee
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
 		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.BuyerOrder.BuyerID.Pubkeys.Identity)
 		if err != nil {
@@ -626,7 +614,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Calculate total fee
-	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
+	txFee := n.Wallet.EstimateFee(inputs, outputs, n.extractFeePerByte(payDivision, dispute))
 
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
@@ -749,6 +737,37 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		return err
 	}
 	return nil
+}
+
+type payoutRatio struct{ buyer, vendor float32 }
+
+func (r payoutRatio) Validate() error {
+	if r.buyer+r.vendor != 100 {
+		return errors.New("payout ratio does not sum to 100%")
+	}
+	if r.buyer < 0 {
+		return errors.New("buyer percentage is negative")
+	}
+	if r.vendor < 0 {
+		return errors.New("vendor percentage is negative")
+	}
+	return nil
+}
+
+func (r payoutRatio) BuyerHasMajority() bool  { return r.buyer > r.vendor }
+func (r payoutRatio) VendorHasMajority() bool { return r.vendor > r.buyer }
+func (r payoutRatio) EvenMajority() bool      { return r.vendor == r.buyer }
+
+func (n *OpenBazaarNode) extractFeePerByte(r payoutRatio, dispute *repo.DisputeCaseRecord) uint64 {
+	switch {
+	case r.BuyerHasMajority(), r.EvenMajority():
+		return dispute.BuyerContract.BuyerOrder.RefundFee
+	case r.VendorHasMajority():
+		if len(dispute.VendorContract.VendorOrderFulfillment) > 0 && dispute.VendorContract.VendorOrderFulfillment[0].Payout != nil {
+			return dispute.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
+		}
+	}
+	return n.Wallet.GetFeePerByte(wallet.NORMAL)
 }
 
 // SignDisputeResolution - add signature to DisputeResolution
