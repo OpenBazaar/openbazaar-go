@@ -313,7 +313,37 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
-	return w.txstore.Txns().GetAll(false)
+	height, _ := w.ChainTip()
+	txns, err := w.txstore.Txns().GetAll(false)
+	if err != nil {
+		return txns, err
+	}
+	for i, tx := range txns {
+		var confirmations int32
+		var status string
+		confs := int32(height) - tx.Height + 1
+		if tx.Height <= 0 {
+			confs = tx.Height
+		}
+		switch {
+		case confs < 0:
+			status = "DEAD"
+		case confs == 0 && time.Since(tx.Timestamp) <= time.Hour*6:
+			status = "UNCONFIRMED"
+		case confs == 0 && time.Since(tx.Timestamp) > time.Hour*6:
+			status = "STUCK"
+		case confs > 0 && confs < 6:
+			status = "PENDING"
+			confirmations = confs
+		case confs > 5:
+			status = "CONFIRMED"
+			confirmations = confs
+		}
+		tx.Confirmations = int64(confirmations)
+		tx.Status = status
+		txns[i] = tx
+	}
+	return txns, nil
 }
 
 func (w *SPVWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {

@@ -248,6 +248,15 @@ type Txn struct {
 	// This transaction only involves a watch only address
 	WatchOnly bool
 
+	// The number of confirmations on a transaction. This does not need to be saved in
+	// the database but should be calculated when the Transactions() method is called.
+	Confirmations int64
+
+	// The state of the transaction (confirmed, unconfirmed, dead, etc). Implementations
+	// have some flexibility in describing their transactions. Like confirmations, this
+	// is best calculated when the Transactions() method is called.
+	Status string
+
 	// Raw transaction bytes
 	Bytes []byte
 }

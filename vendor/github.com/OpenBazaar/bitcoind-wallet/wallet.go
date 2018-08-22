@@ -377,11 +377,35 @@ func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
 				return ret, err
 			}
 		}
+
+		var confirmations int32
+		var status string
+		confs := int32(height) - height + 1
+		if height <= 0 {
+			confs = height
+		}
+		switch {
+		case confs < 0:
+			status = "DEAD"
+		case confs == 0 && time.Since(ts) <= time.Hour*6:
+			status = "UNCONFIRMED"
+		case confs == 0 && time.Since(ts) > time.Hour*6:
+			status = "STUCK"
+		case confs > 0 && confs < 6:
+			status = "PENDING"
+			confirmations = confs
+		case confs > 5:
+			status = "CONFIRMED"
+			confirmations = confs
+		}
+
 		t := wallet.Txn{
-			Txid:      r.TxID,
-			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height:    height,
-			Timestamp: ts,
+			Txid:          r.TxID,
+			Value:         int64(amt.ToUnit(btc.AmountSatoshi)),
+			Height:        height,
+			Timestamp:     ts,
+			Confirmations: int64(confirmations),
+			Status:        status,
 		}
 		ret = append(ret, t)
 	}
@@ -851,7 +875,7 @@ func (w *BitcoindWallet) SweepAddress(ins []wallet.TransactionInput, address *bt
 	var val int64
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
-	for _, in:= range ins {
+	for _, in := range ins {
 		val += in.Value
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
@@ -1094,4 +1118,3 @@ func DefaultSocksPort(controlPort int) int {
 	}
 	return socksPort
 }
-
