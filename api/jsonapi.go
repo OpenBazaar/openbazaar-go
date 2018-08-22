@@ -748,7 +748,7 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	type Send struct {
-		Coin     string `json:"coin"`
+		Wallet   string `json:"wallet"`
 		Address  string `json:"address"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
@@ -772,7 +772,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	wal, err := i.node.Multiwallet.WalletForCurrencyCode(snd.Coin)
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(snd.Wallet)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
 		return
@@ -3142,7 +3142,19 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	newTxid, err := i.node.Wallet.BumpFee(*txHash)
+	var wal wallet.Wallet
+	for _, w := range i.node.Multiwallet {
+		_, err := w.GetTransaction(*txHash)
+		if err == nil {
+			wal = w
+			break
+		}
+	}
+	if wal == nil {
+		ErrorResponse(w, http.StatusBadRequest, "transaction not found in any wallet")
+		return
+	}
+	newTxid, err := wal.BumpFee(*txHash)
 	if err != nil {
 		if err == spvwallet.BumpFeeAlreadyConfirmedError {
 			ErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -3184,8 +3196,8 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		Timestamp          time.Time `json:"timestamp"`
 		Memo               string    `json:"memo"`
 	}
-	confirmed, unconfirmed := i.node.Wallet.Balance()
-	txn, err := i.node.Wallet.GetTransaction(*newTxid)
+	confirmed, unconfirmed := wal.Balance()
+	txn, err := wal.GetTransaction(*newTxid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
