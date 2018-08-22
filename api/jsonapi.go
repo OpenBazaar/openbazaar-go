@@ -2727,6 +2727,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Value         int64     `json:"value"`
 		Address       string    `json:"address"`
 		Status        string    `json:"status"`
+		ErrorMessage  string    `json:"errorMessage"`
 		Memo          string    `json:"memo"`
 		Timestamp     time.Time `json:"timestamp"`
 		Confirmations int32     `json:"confirmations"`
@@ -2755,8 +2756,9 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			Timestamp:     t.Timestamp,
 			Confirmations: int32(t.Confirmations),
 			Height:        t.Height,
-			Status:        t.Status,
+			Status:        string(t.Status),
 			CanBumpFee:    true,
+			ErrorMessage:  t.ErrorMessage,
 		}
 		m, ok := metadata[t.Txid]
 		if ok {
