@@ -100,10 +100,24 @@ func (r *DisputeCaseRecord) Contract() *pb.RicardianContract {
 	return contract
 }
 
+// ResolutionPaymentFeePerByte returns the preferred outpoints to be used when resolving
+// a pending DisputeCaseResolution based on the provided PayoutRatio
+func (r *DisputeCaseRecord) ResolutionPaymentFeePerByte(ratio PayoutRatio, defaultFee uint64) uint64 {
+	switch {
+	case ratio.BuyerMajority(), ratio.EvenMajority():
+		return r.BuyerContract.BuyerOrder.RefundFee
+	case ratio.VendorMajority():
+		if len(r.VendorContract.VendorOrderFulfillment) > 0 && r.VendorContract.VendorOrderFulfillment[0].Payout != nil {
+			return r.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
+		}
+	}
+	return defaultFee
+}
+
 // ResolutionPaymentOutpoints returns the preferred outpoints to be used when resolving
 // a pending DisputeCaseResolution based on the provided PayoutRatio
 func (r *DisputeCaseRecord) ResolutionPaymentOutpoints(ratio PayoutRatio) (outpoints []*pb.Outpoint) {
-	if ratio.VendorHasMajority() {
+	if ratio.VendorMajority() {
 		outpoints = r.VendorOutpoints
 		if outpoints == nil {
 			outpoints = r.BuyerOutpoints
@@ -115,4 +129,13 @@ func (r *DisputeCaseRecord) ResolutionPaymentOutpoints(ratio PayoutRatio) (outpo
 		}
 	}
 	return
+}
+
+// ResolutionPaymentContract returns the preferred contract to be used when resolving
+// a pending DisputeCaseRecord based on the provided PayoutRatio
+func (r *DisputeCaseRecord) ResolutionPaymentContract(ratio PayoutRatio) (contract *pb.RicardianContract) {
+	if ratio.VendorAny() {
+		return r.VendorContract
+	}
+	return r.BuyerContract
 }

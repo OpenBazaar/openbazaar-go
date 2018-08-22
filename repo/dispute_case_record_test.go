@@ -51,3 +51,18 @@ func TestResolutionPaymentOutpoints(t *testing.T) {
 		t.Error("expected outpoints to substitude vendor set when buyer set is missing")
 	}
 }
+
+func TestResolutionPaymentContract(t *testing.T) {
+	subject := factory.NewDisputeCaseRecord()
+	buyerContract := factory.NewContract()
+	vendorContract := factory.NewContract()
+	subject.BuyerContract = buyerContract
+	subject.VendorContract = vendorContract
+
+	if subject.ResolutionPaymentContract(repo.PayoutRatio{Buyer: 100, Vendor: 0}) != buyerContract {
+		t.Error("expected outpoints to return buyer contract with buyer having majority payout")
+	}
+	if subject.ResolutionPaymentContract(repo.PayoutRatio{Buyer: 0, Vendor: 100}) != vendorContract {
+		t.Error("expected outpoints to return vendor contract with vendor having majority payout")
+	}
+}
