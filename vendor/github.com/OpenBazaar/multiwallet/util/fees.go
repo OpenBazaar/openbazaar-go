@@ -13,10 +13,10 @@ type FeeProvider struct {
 
 func NewFeeDefaultProvider(maxFee, priorityFee, normalFee, economicFee uint64) *FeeProvider {
 	return &FeeProvider{
-		maxFee:        maxFee,
-		priorityFee:   priorityFee,
-		normalFee:     normalFee,
-		economicFee:   economicFee,
+		maxFee:      maxFee,
+		priorityFee: priorityFee,
+		normalFee:   normalFee,
+		economicFee: economicFee,
 	}
 }
 

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"time"
-	
+
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"

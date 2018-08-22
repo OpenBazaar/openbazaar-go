@@ -54,40 +54,24 @@ func NewInsightClient(apiUrl string, proxyDialer proxy.Dialer) (*InsightClient, 
 	if proxyDialer != nil {
 		dial = proxyDialer.Dial
 	}
-	socketClient, err := gosocketio.Dial(
-		gosocketio.GetUrl(u.Host, port, secure),
-		transport.GetDefaultWebsocketTransport(proxyDialer),
-	)
-	if err != nil {
-		return nil, err
-	}
-	socketReady := make(chan struct{})
-	socketClient.On(gosocketio.OnConnection, func(h *gosocketio.Channel, args interface{}) {
-		close(socketReady)
-	})
-	select {
-	case <-time.After(10 * time.Second):
-		return nil, errors.New("Timed out waiting for websocket connection")
-	case <-socketReady:
-		break
-	}
 
 	bch := make(chan Block)
 	tch := make(chan Transaction)
 	tbTransport := &http.Transport{Dial: dial}
 	ic := &InsightClient{
-		http.Client{Timeout: time.Second * 30, Transport: tbTransport},
-		*u,
-		bch,
-		tch,
-		socketClient,
+		httpClient:      http.Client{Timeout: time.Second * 30, Transport: tbTransport},
+		apiUrl:          *u,
+		blockNotifyChan: bch,
+		txNotifyChan:    tch,
 	}
-	ic.setupListeners()
+	go ic.setupListeners(*u, port, secure, proxyDialer)
 	return ic, nil
 }
 
 func (i *InsightClient) Close() {
-	i.socketClient.Close()
+	if i.socketClient != nil {
+		i.socketClient.Close()
+	}
 }
 
 func (i *InsightClient) doRequest(endpoint, method string, body []byte, query url.Values) (*http.Response, error) {
@@ -310,10 +294,36 @@ func (i *InsightClient) ListenAddress(addr btcutil.Address) {
 	var args []interface{}
 	args = append(args, "bitcoind/addresstxid")
 	args = append(args, []string{addr.String()})
-	i.socketClient.Emit("subscribe", args)
+	if i.socketClient != nil {
+		i.socketClient.Emit("subscribe", args)
+	}
 }
 
-func (i *InsightClient) setupListeners() {
+func (i *InsightClient) setupListeners(u url.URL, port int, secure bool, proxyDialer proxy.Dialer) {
+	for {
+		socketClient, err := gosocketio.Dial(
+			gosocketio.GetUrl(u.Host, port, secure),
+			transport.GetDefaultWebsocketTransport(proxyDialer),
+		)
+		if err == nil {
+			socketReady := make(chan struct{})
+			socketClient.On(gosocketio.OnConnection, func(h *gosocketio.Channel, args interface{}) {
+				close(socketReady)
+			})
+			select {
+			case <-time.After(10 * time.Second):
+				Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
+				continue
+			case <-socketReady:
+				break
+			}
+			i.socketClient = socketClient
+			break
+		}
+		Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
+		time.Sleep(time.Second * 2)
+	}
+
 	i.socketClient.On("bitcoind/hashblock", func(h *gosocketio.Channel, arg interface{}) {
 		best, err := i.GetBestBlock()
 		if err != nil {
