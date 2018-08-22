@@ -267,12 +267,12 @@ type Txn struct {
 type StatusCode string
 
 const (
-	Unconfirmed StatusCode = "UNCONFIRMED"
-	Pending                = "PENDING"
-	Confirmed              = "CONFIRMED"
-	Stuck                  = "STUCK"
-	Dead                   = "DEAD"
-	Error                  = "ERROR"
+	StatusUnconfirmed StatusCode = "UNCONFIRMED"
+	StatusPending                = "PENDING"
+	StatusConfirmed              = "CONFIRMED"
+	StatusStuck                  = "STUCK"
+	StatusDead                   = "DEAD"
+	StatusError                  = "ERROR"
 )
 
 type KeyPath struct {

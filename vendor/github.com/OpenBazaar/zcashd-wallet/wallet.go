@@ -430,16 +430,16 @@ func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
 		}
 		switch {
 		case confs < 0:
-			status = wallet.Dead
+			status = wallet.StatusDead
 		case confs == 0 && time.Since(ts) <= time.Hour*6:
-			status = wallet.Unconfirmed
+			status = wallet.StatusUnconfirmed
 		case confs == 0 && time.Since(ts) > time.Hour*6:
-			status = wallet.Stuck
+			status = wallet.StatusStuck
 		case confs > 0 && confs < 24:
-			status = wallet.Pending
+			status = wallet.StatusPending
 			confirmations = confs
 		case confs > 23:
-			status = wallet.Confirmed
+			status = wallet.StatusConfirmed
 			confirmations = confs
 		}
 
