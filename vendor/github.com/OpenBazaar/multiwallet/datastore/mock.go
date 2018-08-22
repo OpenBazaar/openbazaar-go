@@ -343,7 +343,14 @@ func (m *MockTxnStore) Get(txid chainhash.Hash) (wallet.Txn, error) {
 	if !ok {
 		return wallet.Txn{}, errors.New("Not found")
 	}
-	return wallet.Txn{txid.String(), int64(t.value), int32(t.height), t.timestamp, t.watchOnly, t.txn}, nil
+	return wallet.Txn{
+		Txid:      txid.String(),
+		Value:     int64(t.value),
+		Height:    int32(t.height),
+		Timestamp: t.timestamp,
+		WatchOnly: t.watchOnly,
+		Bytes:     t.txn,
+	}, nil
 }
 
 func (m *MockTxnStore) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
@@ -351,7 +358,14 @@ func (m *MockTxnStore) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 	defer m.Unlock()
 	var txns []wallet.Txn
 	for txid, t := range m.txns {
-		txn := wallet.Txn{txid, int64(t.value), int32(t.height), t.timestamp, t.watchOnly, t.txn}
+		txn := wallet.Txn{
+			Txid:      txid,
+			Value:     int64(t.value),
+			Height:    int32(t.height),
+			Timestamp: t.timestamp,
+			WatchOnly: t.watchOnly,
+			Bytes:     t.txn,
+		}
 		txns = append(txns, txn)
 	}
 	return txns, nil

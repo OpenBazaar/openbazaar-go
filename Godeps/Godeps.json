@@ -29,63 +29,63 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/bitcoin",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/bitcoincash",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client/transport",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/config",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/datastore",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/keys",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin/address",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin/params",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/service",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/util",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/zcash",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/zcash/address",
-			"Rev": "5a30414b2a7d458d58f83c59e6a04385e65ab66f"
+			"Rev": "b8eec646e59beffd3325e09e075c7f18df3839de"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",

@@ -161,7 +161,37 @@ func (w *LitecoinWallet) Balance() (confirmed, unconfirmed int64) {
 }
 
 func (w *LitecoinWallet) Transactions() ([]wi.Txn, error) {
-	return w.db.Txns().GetAll(false)
+	height, _ := w.ChainTip()
+	txns, err := w.db.Txns().GetAll(false)
+	if err != nil {
+		return txns, err
+	}
+	for i, tx := range txns {
+		var confirmations int32
+		var status wi.StatusCode
+		confs := int32(height) - tx.Height + 1
+		if tx.Height <= 0 {
+			confs = tx.Height
+		}
+		switch {
+		case confs < 0:
+			status = wi.StatusDead
+		case confs == 0 && time.Since(tx.Timestamp) <= time.Hour*6:
+			status = wi.StatusUnconfirmed
+		case confs == 0 && time.Since(tx.Timestamp) > time.Hour*6:
+			status = wi.StatusDead
+		case confs > 0 && confs < 24:
+			status = wi.StatusPending
+			confirmations = confs
+		case confs > 23:
+			status = wi.StatusConfirmed
+			confirmations = confs
+		}
+		tx.Confirmations = int64(confirmations)
+		tx.Status = status
+		txns[i] = tx
+	}
+	return txns, nil
 }
 
 func (w *LitecoinWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {

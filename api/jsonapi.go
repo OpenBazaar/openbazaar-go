@@ -2761,6 +2761,7 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 }
 
 func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request) {
+	_, coinType := path.Split(r.URL.Path)
 	l := r.URL.Query().Get("limit")
 	if l == "" {
 		l = "-1"
@@ -2785,7 +2786,12 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Thumbnail     string    `json:"thumbnail"`
 		CanBumpFee    bool      `json:"canBumpFee"`
 	}
-	transactions, err := i.node.Wallet.Transactions()
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(coinType)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	transactions, err := wal.Transactions()
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
