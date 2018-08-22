@@ -1,11 +1,11 @@
 package wallet
 
 import (
+	"bytes"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"time"
-	"bytes"
 )
 
 type Coin interface {
@@ -248,9 +248,32 @@ type Txn struct {
 	// This transaction only involves a watch only address
 	WatchOnly bool
 
+	// The number of confirmations on a transaction. This does not need to be saved in
+	// the database but should be calculated when the Transactions() method is called.
+	Confirmations int64
+
+	// The state of the transaction (confirmed, unconfirmed, dead, etc). Implementations
+	// have some flexibility in describing their transactions. Like confirmations, this
+	// is best calculated when the Transactions() method is called.
+	Status StatusCode
+
+	// If the Status is Error the ErrorMessage should describe the problem
+	ErrorMessage string
+
 	// Raw transaction bytes
 	Bytes []byte
 }
+
+type StatusCode string
+
+const (
+	StatusUnconfirmed StatusCode = "UNCONFIRMED"
+	StatusPending                = "PENDING"
+	StatusConfirmed              = "CONFIRMED"
+	StatusStuck                  = "STUCK"
+	StatusDead                   = "DEAD"
+	StatusError                  = "ERROR"
+)
 
 type KeyPath struct {
 	Purpose KeyPurpose

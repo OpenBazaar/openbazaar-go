@@ -111,6 +111,14 @@ func TestMigration013(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	insertNullTransactionsSaleStatement, err := db.Prepare("insert into sales(orderID, transactions, paymentCoin) values(?, NULL, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
+	insertNullTransactionsPurchaseStatement, err := db.Prepare("insert into purchases(orderID, transactions, paymentCoin) values(?, NULL, ?);")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, tx := range examples {
 		transactions, err := json.Marshal([]migrations.Migration013_TransactionRecord_beforeMigration{tx})
 		if err != nil {
@@ -121,6 +129,14 @@ func TestMigration013(t *testing.T) {
 			t.Fatal(err)
 		}
 		_, err = insertSalesStatement.Exec(tx.Txid, string(transactions), tx.Txid)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = insertNullTransactionsSaleStatement.Exec(fmt.Sprintf("NULLED%s", tx.Txid), tx.Txid)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = insertNullTransactionsPurchaseStatement.Exec(fmt.Sprintf("NULLED%s", tx.Txid), tx.Txid)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -145,14 +161,18 @@ func TestMigration013(t *testing.T) {
 	}
 	for purchaseRows.Next() {
 		var (
-			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration013_TransactionRecord_afterMigration
+			marshaledTransactions sql.NullString
+			orderID, paymentCoin  string
+			actualTransactions    []migrations.Migration013_TransactionRecord_afterMigration
 		)
 		if err := purchaseRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
 			continue
 		}
-		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+		if !marshaledTransactions.Valid {
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions.String), &actualTransactions); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -171,14 +191,18 @@ func TestMigration013(t *testing.T) {
 	}
 	for saleRows.Next() {
 		var (
-			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration013_TransactionRecord_afterMigration
+			orderID, paymentCoin  string
+			marshaledTransactions sql.NullString
+			actualTransactions    []migrations.Migration013_TransactionRecord_afterMigration
 		)
 		if err := saleRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
 			continue
 		}
-		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+		if !marshaledTransactions.Valid {
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions.String), &actualTransactions); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -207,14 +231,18 @@ func TestMigration013(t *testing.T) {
 	}
 	for purchaseRows.Next() {
 		var (
-			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration013_TransactionRecord_beforeMigration
+			marshaledTransactions sql.NullString
+			orderID, paymentCoin  string
+			actualTransactions    []migrations.Migration013_TransactionRecord_beforeMigration
 		)
 		if err := purchaseRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
 			continue
 		}
-		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+		if !marshaledTransactions.Valid {
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions.String), &actualTransactions); err != nil {
 			t.Error(err)
 			continue
 		}
@@ -239,14 +267,18 @@ func TestMigration013(t *testing.T) {
 	}
 	for saleRows.Next() {
 		var (
-			orderID, marshaledTransactions, paymentCoin string
-			actualTransactions                          []migrations.Migration013_TransactionRecord_beforeMigration
+			marshaledTransactions sql.NullString
+			orderID, paymentCoin  string
+			actualTransactions    []migrations.Migration013_TransactionRecord_beforeMigration
 		)
 		if err := saleRows.Scan(&orderID, &marshaledTransactions, &paymentCoin); err != nil {
 			t.Error(err)
 			continue
 		}
-		if err := json.Unmarshal([]byte(marshaledTransactions), &actualTransactions); err != nil {
+		if !marshaledTransactions.Valid {
+			continue
+		}
+		if err := json.Unmarshal([]byte(marshaledTransactions.String), &actualTransactions); err != nil {
 			t.Error(err)
 			continue
 		}

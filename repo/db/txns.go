@@ -107,7 +107,15 @@ func (t *TxnsDB) GetAll(includeWatchOnly bool) ([]wallet.Txn, error) {
 			watchOnly = true
 		}
 
-		txn := wallet.Txn{txid, int64(value), int32(height), time.Unix(int64(timestamp), 0), watchOnly, raw}
+		txn := wallet.Txn{
+			Txid:      txid,
+			Value:     int64(value),
+			Height:    int32(height),
+			Timestamp: time.Unix(int64(timestamp), 0),
+			WatchOnly: watchOnly,
+			Bytes:     raw,
+		}
+
 		ret = append(ret, txn)
 	}
 	return ret, nil

@@ -137,16 +137,16 @@ type TransactionCallback struct {
 }
 
 type TransactionOutput struct {
-	Address      btc.Address
-	Value        int64
-	Index        uint32
+	Address btc.Address
+	Value   int64
+	Index   uint32
 }
 
 type TransactionInput struct {
-	OutpointHash       []byte
-	OutpointIndex      uint32
-	LinkedAddress      btc.Address
-	Value              int64
+	OutpointHash  []byte
+	OutpointIndex uint32
+	LinkedAddress btc.Address
+	Value         int64
 }
 
 // OpenBazaar uses p2sh addresses for escrow. This object can be used to store a record of a
@@ -154,12 +154,12 @@ type TransactionInput struct {
 // value and be market as spent when the UXTO is spent. Outgoing transactions should have a
 // negative value. The spent field isn't relevant for outgoing transactions.
 type TransactionRecord struct {
-	Txid         string
-	Index        uint32
-	Value        int64
-	Address      string
-	Spent        bool
-	Timestamp    time.Time
+	Txid      string
+	Index     uint32
+	Value     int64
+	Address   string
+	Spent     bool
+	Timestamp time.Time
 }
 
 // This object contains a single signature for a multisig transaction. InputIndex specifies

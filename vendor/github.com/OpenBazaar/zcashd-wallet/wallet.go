@@ -422,11 +422,34 @@ func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
 				return ret, err
 			}
 		}
+		var confirmations int32
+		var status wallet.StatusCode
+		confs := int32(height) - height + 1
+		if height <= 0 {
+			confs = height
+		}
+		switch {
+		case confs < 0:
+			status = wallet.StatusDead
+		case confs == 0 && time.Since(ts) <= time.Hour*6:
+			status = wallet.StatusUnconfirmed
+		case confs == 0 && time.Since(ts) > time.Hour*6:
+			status = wallet.StatusStuck
+		case confs > 0 && confs < 24:
+			status = wallet.StatusPending
+			confirmations = confs
+		case confs > 23:
+			status = wallet.StatusConfirmed
+			confirmations = confs
+		}
+
 		t := wallet.Txn{
-			Txid:      r.TxID,
-			Value:     int64(amt.ToUnit(btc.AmountSatoshi)),
-			Height:    height,
-			Timestamp: ts,
+			Txid:          r.TxID,
+			Value:         int64(amt.ToUnit(btc.AmountSatoshi)),
+			Height:        height,
+			Timestamp:     ts,
+			Confirmations: int64(confirmations),
+			Status:        status,
 		}
 		ret = append(ret, t)
 	}

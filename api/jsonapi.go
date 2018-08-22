@@ -2776,6 +2776,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		Value         int64     `json:"value"`
 		Address       string    `json:"address"`
 		Status        string    `json:"status"`
+		ErrorMessage  string    `json:"errorMessage"`
 		Memo          string    `json:"memo"`
 		Timestamp     time.Time `json:"timestamp"`
 		Confirmations int32     `json:"confirmations"`
@@ -2794,39 +2795,19 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	height, _ := i.node.Wallet.ChainTip()
 	var txs []Tx
 	passedOffset := false
 	for i := len(transactions) - 1; i >= 0; i-- {
 		t := transactions[i]
-		var confirmations int32
-		var status string
-		confs := int32(height) - t.Height + 1
-		if t.Height <= 0 {
-			confs = t.Height
-		}
-		switch {
-		case confs < 0:
-			status = "DEAD"
-		case confs == 0 && time.Since(t.Timestamp) <= time.Hour*6:
-			status = "UNCONFIRMED"
-		case confs == 0 && time.Since(t.Timestamp) > time.Hour*6:
-			status = "STUCK"
-		case confs > 0 && confs < 6:
-			status = "PENDING"
-			confirmations = confs
-		case confs > 5:
-			status = "CONFIRMED"
-			confirmations = confs
-		}
 		tx := Tx{
 			Txid:          t.Txid,
 			Value:         t.Value,
 			Timestamp:     t.Timestamp,
-			Confirmations: confirmations,
+			Confirmations: int32(t.Confirmations),
 			Height:        t.Height,
-			Status:        status,
+			Status:        string(t.Status),
 			CanBumpFee:    true,
+			ErrorMessage:  t.ErrorMessage,
 		}
 		m, ok := metadata[t.Txid]
 		if ok {
@@ -2836,7 +2817,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
 		}
-		if status == "DEAD" {
+		if t.Status == wallet.StatusDead {
 			tx.CanBumpFee = false
 		}
 		if offsetID == "" || passedOffset {
