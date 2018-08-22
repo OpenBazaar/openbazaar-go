@@ -1,11 +1,11 @@
 package wallet
 
 import (
+	"bytes"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
 	"time"
-	"bytes"
 )
 
 type Coin interface {
@@ -255,11 +255,25 @@ type Txn struct {
 	// The state of the transaction (confirmed, unconfirmed, dead, etc). Implementations
 	// have some flexibility in describing their transactions. Like confirmations, this
 	// is best calculated when the Transactions() method is called.
-	Status string
+	Status StatusCode
+
+	// If the Status is Error the ErrorMessage should describe the problem
+	ErrorMessage string
 
 	// Raw transaction bytes
 	Bytes []byte
 }
+
+type StatusCode string
+
+const (
+	Unconfirmed StatusCode = "UNCONFIRMED"
+	Pending                = "PENDING"
+	Confirmed              = "CONFIRMED"
+	Stuck                  = "STUCK"
+	Dead                   = "DEAD"
+	Error                  = "ERROR"
+)
 
 type KeyPath struct {
 	Purpose KeyPurpose

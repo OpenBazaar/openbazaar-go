@@ -320,23 +320,23 @@ func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {
 	}
 	for i, tx := range txns {
 		var confirmations int32
-		var status string
+		var status wallet.StatusCode
 		confs := int32(height) - tx.Height + 1
 		if tx.Height <= 0 {
 			confs = tx.Height
 		}
 		switch {
 		case confs < 0:
-			status = "DEAD"
+			status = wallet.Dead
 		case confs == 0 && time.Since(tx.Timestamp) <= time.Hour*6:
-			status = "UNCONFIRMED"
+			status = wallet.Unconfirmed
 		case confs == 0 && time.Since(tx.Timestamp) > time.Hour*6:
-			status = "STUCK"
+			status = wallet.Stuck
 		case confs > 0 && confs < 6:
-			status = "PENDING"
+			status = wallet.Pending
 			confirmations = confs
 		case confs > 5:
-			status = "CONFIRMED"
+			status = wallet.Confirmed
 			confirmations = confs
 		}
 		tx.Confirmations = int64(confirmations)

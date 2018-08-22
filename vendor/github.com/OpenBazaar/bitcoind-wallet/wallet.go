@@ -379,23 +379,23 @@ func (w *BitcoindWallet) Transactions() ([]wallet.Txn, error) {
 		}
 
 		var confirmations int32
-		var status string
+		var status wallet.StatusCode
 		confs := int32(height) - height + 1
 		if height <= 0 {
 			confs = height
 		}
 		switch {
 		case confs < 0:
-			status = "DEAD"
+			status = wallet.Dead
 		case confs == 0 && time.Since(ts) <= time.Hour*6:
-			status = "UNCONFIRMED"
+			status = wallet.Unconfirmed
 		case confs == 0 && time.Since(ts) > time.Hour*6:
-			status = "STUCK"
+			status = wallet.Stuck
 		case confs > 0 && confs < 6:
-			status = "PENDING"
+			status = wallet.Pending
 			confirmations = confs
 		case confs > 5:
-			status = "CONFIRMED"
+			status = wallet.Confirmed
 			confirmations = confs
 		}
 

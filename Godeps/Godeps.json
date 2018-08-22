@@ -5,7 +5,7 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
-			"Rev": "262505f6a36155b46f3f04bdfeccba480f76f57a"
+			"Rev": "816d5b0a7a93eb8719279909ae9f83fd9751359c"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-blockstackclient",
@@ -17,19 +17,19 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "bee5e2de34ea251591ed4cfceb82a871a2876626"
+			"Rev": "e0f8657ec7f0ad6714ff68f40328048e0431b6a8"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet/exchangerates",
-			"Rev": "bee5e2de34ea251591ed4cfceb82a871a2876626"
+			"Rev": "e0f8657ec7f0ad6714ff68f40328048e0431b6a8"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "a13bc440ffdb483fcfec6400e9eec7b0987475ec"
+			"Rev": "4a2926009a0ee073eb75d0ff7360e429b5095632"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
-			"Rev": "ee7afd43463446250affbd8669c7e668c9b559cf"
+			"Rev": "52c6b0d81e5050dfe5838ada9d3aa1e176bf280e"
 		},
 		{
 			"ImportPath": "github.com/boltdb/bolt",
@@ -187,13 +187,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-49-g0611c83",
-			"Rev": "0611c83b0a51f0bc3b887120f8e38ed060af54a1"
+			"Comment": "v0.3.0-50-gb81645d",
+			"Rev": "b81645d7eb583e1b78c0b37ae15c440c1d842ac6"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-49-g0611c83",
-			"Rev": "0611c83b0a51f0bc3b887120f8e38ed060af54a1"
+			"Comment": "v0.3.0-50-gb81645d",
+			"Rev": "b81645d7eb583e1b78c0b37ae15c440c1d842ac6"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
