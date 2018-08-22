@@ -418,7 +418,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 // CloseDispute - close a dispute
 func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string) error {
-	var payDivision = payoutRatio{buyer: buyerPercentage, vendor: vendorPercentage}
+	var payDivision = repo.PayoutRatio{Buyer: buyerPercentage, Vendor: vendorPercentage}
 	if err := payDivision.Validate(); err != nil {
 		return err
 	}
@@ -739,26 +739,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	return nil
 }
 
-type payoutRatio struct{ buyer, vendor float32 }
-
-func (r payoutRatio) Validate() error {
-	if r.buyer+r.vendor != 100 {
-		return errors.New("payout ratio does not sum to 100%")
-	}
-	if r.buyer < 0 {
-		return errors.New("buyer percentage is negative")
-	}
-	if r.vendor < 0 {
-		return errors.New("vendor percentage is negative")
-	}
-	return nil
-}
-
-func (r payoutRatio) BuyerHasMajority() bool  { return r.buyer > r.vendor }
-func (r payoutRatio) VendorHasMajority() bool { return r.vendor > r.buyer }
-func (r payoutRatio) EvenMajority() bool      { return r.vendor == r.buyer }
-
-func (n *OpenBazaarNode) extractFeePerByte(r payoutRatio, dispute *repo.DisputeCaseRecord) uint64 {
+func (n *OpenBazaarNode) extractFeePerByte(r repo.PayoutRatio, dispute *repo.DisputeCaseRecord) uint64 {
 	switch {
 	case r.BuyerHasMajority(), r.EvenMajority():
 		return dispute.BuyerContract.BuyerOrder.RefundFee
