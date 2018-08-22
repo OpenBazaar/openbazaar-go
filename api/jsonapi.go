@@ -2768,7 +2768,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 			tx.Thumbnail = m.Thumbnail
 			tx.CanBumpFee = m.CanBumpFee
 		}
-		if t.Status == "DEAD" {
+		if t.Status == wallet.StatusDead {
 			tx.CanBumpFee = false
 		}
 		if offsetID == "" || passedOffset {
