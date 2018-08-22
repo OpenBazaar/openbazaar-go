@@ -748,6 +748,7 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 
 func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
 	type Send struct {
+		Coin     string `json:"coin"`
 		Address  string `json:"address"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
@@ -771,12 +772,17 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	default:
 		feeLevel = wallet.NORMAL
 	}
-	addr, err := i.node.Wallet.DecodeAddress(snd.Address)
+	wal, err := i.node.Multiwallet.WalletForCurrencyCode(snd.Coin)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+		return
+	}
+	addr, err := wal.DecodeAddress(snd.Address)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
 		return
 	}
-	txid, err := i.node.Wallet.Spend(snd.Amount, addr, feeLevel)
+	txid, err := wal.Spend(snd.Amount, addr, feeLevel)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -828,8 +834,8 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Timestamp          time.Time `json:"timestamp"`
 		Memo               string    `json:"memo"`
 	}
-	confirmed, unconfirmed := i.node.Wallet.Balance()
-	txn, err := i.node.Wallet.GetTransaction(*txid)
+	confirmed, unconfirmed := wal.Balance()
+	txn, err := wal.GetTransaction(*txid)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
