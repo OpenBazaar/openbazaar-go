@@ -39,6 +39,10 @@ var ErrCaseNotFound = errors.New("case not found")
 // ErrCloseFailureCaseExpired - tried closing expired case err
 var ErrCloseFailureCaseExpired = errors.New("unable to close expired case")
 
+// ErrCloseFailureNoOutpoints indicates when a dispute cannot be closed due to neither party
+// including outpoints with their dispute
+var ErrCloseFailureNoOutpoints = errors.New("unable to close case with missing outpoints")
+
 // ErrOpenFailureOrderExpired - tried disputing expired order err
 var ErrOpenFailureOrderExpired = errors.New("unable to open case beacuse order is too old to dispute")
 
@@ -427,11 +431,20 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return ErrCaseNotFound
 	}
+
 	if dispute.OrderState != pb.OrderState_DISPUTED {
+		log.Errorf("unable to resolve expired dispute for order %s", orderID)
 		return errors.New("A dispute for this order is not open")
 	}
 	if dispute.IsExpiredNow() {
+		log.Errorf("unable to resolve expired dispute for order %s", orderID)
 		return ErrCloseFailureCaseExpired
+	}
+
+	var outpoints = dispute.ResolutionPaymentOutpoints(payDivision)
+	if outpoints == nil {
+		log.Errorf("no outpoints to resolve in dispute for order %s", orderID)
+		return ErrCloseFailureNoOutpoints
 	}
 
 	if dispute.VendorContract == nil && vendorPercentage > 0 {
@@ -463,7 +476,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Decide whose contract to use
 	var buyerPayout bool
 	var vendorPayout bool
-	var outpoints []*pb.Outpoint
 	var redeemScript string
 	var chaincode string
 	var vendorID string
@@ -472,7 +484,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	var buyerKey libp2p.PubKey
 	if buyerPercentage > 0 && vendorPercentage == 0 {
 		buyerPayout = true
-		outpoints = dispute.BuyerOutpoints
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
@@ -487,7 +498,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		}
 	} else if vendorPercentage > 0 && buyerPercentage == 0 {
 		vendorPayout = true
-		outpoints = dispute.VendorOutpoints
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
@@ -503,7 +513,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	} else if vendorPercentage > buyerPercentage {
 		buyerPayout = true
 		vendorPayout = true
-		outpoints = dispute.VendorOutpoints
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
@@ -519,7 +528,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	} else if buyerPercentage >= vendorPercentage {
 		buyerPayout = true
 		vendorPayout = true
-		outpoints = dispute.BuyerOutpoints
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID

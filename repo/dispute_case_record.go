@@ -99,3 +99,20 @@ func (r *DisputeCaseRecord) Contract() *pb.RicardianContract {
 	}
 	return contract
 }
+
+// ResolutionPaymentOutpoints returns the preferred outpoints to be used when resolving
+// a pending DisputeCaseResolution based on the provided PayoutRatio
+func (r *DisputeCaseRecord) ResolutionPaymentOutpoints(ratio PayoutRatio) (outpoints []*pb.Outpoint) {
+	if ratio.VendorHasMajority() {
+		outpoints = r.VendorOutpoints
+		if outpoints == nil {
+			outpoints = r.BuyerOutpoints
+		}
+	} else {
+		outpoints = r.BuyerOutpoints
+		if outpoints == nil {
+			outpoints = r.VendorOutpoints
+		}
+	}
+	return
+}
