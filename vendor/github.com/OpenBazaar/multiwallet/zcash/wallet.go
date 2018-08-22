@@ -13,8 +13,6 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcwallet/wallet/txrules"
-	bcw "github.com/cpacia/BitcoinCash-Wallet"
-	er "github.com/cpacia/BitcoinCash-Wallet/exchangerates"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 
@@ -32,7 +30,7 @@ type ZCashWallet struct {
 	params *chaincfg.Params
 	client client.APIClient
 	ws     *service.WalletService
-	fp     *bcw.FeeProvider
+	fp     *util.FeeProvider
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
@@ -61,8 +59,7 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 
 	wm := service.NewWalletService(cfg.DB, km, c, params, wi.Zcash)
 
-	// TODO: create zcash fee provider
-	fp := bcw.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, er.NewBitcoinCashPriceFetcher(proxy))
+	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
 	return &ZCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey}, nil
 }

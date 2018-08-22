@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"io"
 	"time"
-
-	"github.com/OpenBazaar/spvwallet"
+	
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -31,7 +30,7 @@ type LitecoinWallet struct {
 	params *chaincfg.Params
 	client client.APIClient
 	ws     *service.WalletService
-	fp     *spvwallet.FeeProvider
+	fp     *util.FeeProvider
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
@@ -60,8 +59,7 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 
 	wm := service.NewWalletService(cfg.DB, km, c, params, wi.Litecoin)
 
-	// TODO: create litecoin fee provider
-	fp := spvwallet.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.FeeAPI.String(), proxy)
+	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
 	return &LitecoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey}, nil
 }
