@@ -474,8 +474,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	d.Resolution = resolution
 
 	// Decide whose contract to use
-	var buyerPayout bool
-	var vendorPayout bool
 	var redeemScript string
 	var chaincode string
 	var vendorID string
@@ -483,7 +481,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	var buyerID string
 	var buyerKey libp2p.PubKey
 	if buyerPercentage > 0 && vendorPercentage == 0 {
-		buyerPayout = true
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
@@ -497,7 +494,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			return err
 		}
 	} else if vendorPercentage > 0 && buyerPercentage == 0 {
-		vendorPayout = true
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
@@ -511,8 +507,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			return err
 		}
 	} else if vendorPercentage > buyerPercentage {
-		buyerPayout = true
-		vendorPayout = true
 		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
@@ -526,8 +520,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			return err
 		}
 	} else if buyerPercentage >= vendorPercentage {
-		buyerPayout = true
-		vendorPayout = true
 		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
 		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
 		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
@@ -569,7 +561,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	var buyerAddr btcutil.Address
 	var buyerValue uint64
-	if buyerPayout {
+	if payDivision.BuyerAny() {
 		buyerAddr, err = n.Wallet.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
@@ -584,7 +576,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
-	if vendorPayout {
+	if payDivision.VendorAny() {
 		vendorAddr, err = n.Wallet.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err

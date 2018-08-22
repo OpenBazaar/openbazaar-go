@@ -17,6 +17,8 @@ func (r PayoutRatio) Validate() error {
 	return nil
 }
 
-func (r PayoutRatio) BuyerHasMajority() bool  { return r.Buyer > r.Vendor }
-func (r PayoutRatio) VendorHasMajority() bool { return r.Vendor > r.Buyer }
-func (r PayoutRatio) EvenMajority() bool      { return r.Vendor == r.Buyer }
+func (r PayoutRatio) BuyerAny() bool       { return r.Buyer > 0 }
+func (r PayoutRatio) VendorAny() bool      { return r.Vendor > 0 }
+func (r PayoutRatio) BuyerMajority() bool  { return r.Buyer > r.Vendor }
+func (r PayoutRatio) VendorMajority() bool { return r.Vendor > r.Buyer }
+func (r PayoutRatio) EvenMajority() bool   { return r.Vendor == r.Buyer }
