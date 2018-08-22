@@ -606,10 +606,8 @@ func (x *Start) Execute(args []string) error {
 
 	var resyncManager *resync.ResyncManager
 	var cryptoWallet wi.Wallet
-	var walletTypeStr string
 	switch strings.ToLower(walletCfg.Type) {
 	case "spvwallet":
-		walletTypeStr = "bitcoin spv"
 		var tp net.Addr
 		if walletCfg.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -646,7 +644,6 @@ func (x *Start) Execute(args []string) error {
 		}
 		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	case "bitcoincash":
-		walletTypeStr = "bitcoin cash spv"
 		var tp net.Addr
 		if walletCfg.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
@@ -685,7 +682,6 @@ func (x *Start) Execute(args []string) error {
 		}
 		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
 	case "bitcoind":
-		walletTypeStr = "bitcoind"
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
 		}
@@ -698,7 +694,6 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	case "zcashd":
-		walletTypeStr = "zcashd"
 		if walletCfg.Binary == "" {
 			return errors.New("The path to the zcashd binary must be specified in the config file when using zcashd")
 		}
@@ -906,14 +901,15 @@ func (x *Start) Execute(args []string) error {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()
 			}
-			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast, core.Node.Wallet)
-			WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast)
-			cryptoWallet.AddTransactionListener(TL.OnTransactionReceived)
-			cryptoWallet.AddTransactionListener(WL.OnTransactionReceived)
-			log.Infof("Starting %s wallet\n", walletTypeStr)
+			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+			for ct, wal := range mw {
+				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
+				wal.AddTransactionListener(WL.OnTransactionReceived)
+				wal.AddTransactionListener(TL.OnTransactionReceived)
+			}
+			log.Info("Starting multiwallet...")
 			su := wallet.NewStatusUpdater(mw, core.Node.Broadcast, nd.Context())
 			go su.Start()
-			go cryptoWallet.Start()
 			go mw.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()

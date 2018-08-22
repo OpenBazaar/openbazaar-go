@@ -8,10 +8,11 @@ import (
 type WalletListener struct {
 	db        repo.Datastore
 	broadcast chan repo.Notifier
+	coinType  wallet.CoinType
 }
 
-func NewWalletListener(db repo.Datastore, broadcast chan repo.Notifier) *WalletListener {
-	l := &WalletListener{db, broadcast}
+func NewWalletListener(db repo.Datastore, broadcast chan repo.Notifier, coinType wallet.CoinType) *WalletListener {
+	l := &WalletListener{db, broadcast, coinType}
 	return l
 }
 
@@ -25,6 +26,7 @@ func (l *WalletListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 			confirmations = 1
 		}
 		n := repo.IncomingTransaction{
+			Wallet:        l.coinType.CurrencyCode(),
 			Txid:          cb.Txid,
 			Value:         cb.Value,
 			Address:       metadata.Address,

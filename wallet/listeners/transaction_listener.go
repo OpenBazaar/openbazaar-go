@@ -19,12 +19,11 @@ var log = logging.MustGetLogger("transaction-listener")
 type TransactionListener struct {
 	db        repo.Datastore
 	broadcast chan repo.Notifier
-	wallet    wallet.Wallet
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan repo.Notifier, wallet wallet.Wallet) *TransactionListener {
-	l := &TransactionListener{db, broadcast, wallet, new(sync.Mutex)}
+func NewTransactionListener(db repo.Datastore, broadcast chan repo.Notifier) *TransactionListener {
+	l := &TransactionListener{db, broadcast, new(sync.Mutex)}
 	return l
 }
 

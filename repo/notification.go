@@ -838,6 +838,7 @@ func (n ChatTyping) GetType() NotificationType                   { return Notifi
 func (n ChatTyping) GetSMTPTitleAndBody() (string, string, bool) { return "", "", false }
 
 type IncomingTransaction struct {
+	Wallet        string    `json:"wallet"`
 	Txid          string    `json:"txid"`
 	Value         int64     `json:"value"`
 	Address       string    `json:"address"`
