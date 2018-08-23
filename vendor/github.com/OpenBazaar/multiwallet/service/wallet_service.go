@@ -143,7 +143,7 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 	ws.lock.Unlock()
 
 	// REORG! Rescan all transactions and utxos to see if anything changed
-	if currentBest != block.PreviousBlockhash {
+	if currentBest != block.PreviousBlockhash && currentBest != block.Hash {
 		Log.Warningf("Reorg in the %s chain! Re-scanning wallet", ws.coinType.String())
 		ws.UpdateState()
 		return

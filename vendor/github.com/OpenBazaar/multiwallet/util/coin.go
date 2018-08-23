@@ -23,13 +23,9 @@ func (c *Coin) PkScript() []byte      { return c.ScriptPubKey }
 func (c *Coin) NumConfs() int64       { return c.TxNumConfs }
 func (c *Coin) ValueAge() int64       { return int64(c.TxValue) * c.TxNumConfs }
 
-func NewCoin(txid []byte, index uint32, value btcutil.Amount, numConfs int64, scriptPubKey []byte) (coinset.Coin, error) {
-	shaTxid, err := chainhash.NewHash(txid)
-	if err != nil {
-		return nil, err
-	}
+func NewCoin(txid chainhash.Hash, index uint32, value btcutil.Amount, numConfs int64, scriptPubKey []byte) (coinset.Coin, error) {
 	c := &Coin{
-		TxHash:       shaTxid,
+		TxHash:       &txid,
 		TxIndex:      index,
 		TxValue:      value,
 		TxNumConfs:   numConfs,
@@ -48,7 +44,7 @@ func GatherCoins(height uint32, utxos []wallet.Utxo, scriptToAddress func(script
 		if u.AtHeight > 0 {
 			confirmations = int32(height) - u.AtHeight
 		}
-		c, err := NewCoin(u.Op.Hash.CloneBytes(), u.Op.Index, btcutil.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
+		c, err := NewCoin(u.Op.Hash, u.Op.Index, btcutil.Amount(u.Value), int64(confirmations), u.ScriptPubkey)
 		if err != nil {
 			continue
 		}
