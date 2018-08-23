@@ -30,9 +30,7 @@ import (
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"io/ioutil"
-	"net"
 	"net/http"
-	"net/url"
 	"path"
 	"time"
 
@@ -45,7 +43,6 @@ import (
 	apiSchema "github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -233,39 +230,42 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 	}
 
 	// Wallet
-	var wallet wi.Wallet
-	var tp net.Addr
-	if config.WalletTrustedPeer != "" {
-		tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
+	/*
+		var tp net.Addr
+		if config.WalletTrustedPeer != "" {
+			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
+			if err != nil {
+				return nil, err
+			}
+		}
+		feeApi, err := url.Parse(walletCfg.FeeAPI)
 		if err != nil {
 			return nil, err
 		}
-	}
-	feeApi, err := url.Parse(walletCfg.FeeAPI)
-	if err != nil {
-		return nil, err
-	}
-	spvwalletConfig := &spvwallet.Config{
-		Mnemonic:     mn,
-		Params:       &params,
-		MaxFee:       uint64(walletCfg.MaxFee),
-		LowFee:       uint64(walletCfg.LowFeeDefault),
-		MediumFee:    uint64(walletCfg.MediumFeeDefault),
-		HighFee:      uint64(walletCfg.HighFeeDefault),
-		FeeAPI:       *feeApi,
-		RepoPath:     config.RepoPath,
-		CreationDate: creationDate,
-		DB:           sqliteDB,
-		UserAgent:    "OpenBazaar",
-		TrustedPeer:  tp,
-		Logger:       logger,
-	}
+	*/
+	/*
+		spvwalletConfig := &spvwallet.Config{
+			Mnemonic:     mn,
+			Params:       &params,
+			MaxFee:       uint64(walletCfg.MaxFee),
+			LowFee:       uint64(walletCfg.LowFeeDefault),
+			MediumFee:    uint64(walletCfg.MediumFeeDefault),
+			HighFee:      uint64(walletCfg.HighFeeDefault),
+			FeeAPI:       *feeApi,
+			RepoPath:     config.RepoPath,
+			CreationDate: creationDate,
+			DB:           sqliteDB,
+			UserAgent:    "OpenBazaar",
+			TrustedPeer:  tp,
+			Logger:       logger,
+		}
+	*/
 	core.PublishLock.Lock()
 	if !config.DisableWallet {
-		wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
-		if err != nil {
-			return nil, err
-		}
+		//wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
+		//if err != nil {
+		//	return nil, err
+		//}
 	}
 
 	// Exchange rates
@@ -426,9 +426,9 @@ func (n *Node) Start() error {
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
 		if n.OpenBazaarNode.Multiwallet != nil {
-			TL := lis.NewTransactionListener(core.OpenBazaarNode.Datastore, core.OpenBazaarNode.Broadcast)
+			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
 			for ct, wal := range n.OpenBazaarNode.Multiwallet {
-				WL := lis.NewWalletListener(core.OpenBazaarNode.Datastore, core.OpenBazaarNode.Broadcast, ct)
+				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
