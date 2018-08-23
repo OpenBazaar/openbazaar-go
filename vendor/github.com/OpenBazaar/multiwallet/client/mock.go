@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/hex"
 	"errors"
+
 	"github.com/OpenBazaar/golang-socketio"
 	"github.com/btcsuite/btcutil"
 )
@@ -208,7 +209,7 @@ var MockTransactions = []Transaction{
 			{
 				Txid:       "b466d034076ab53f4b019d573b6c68cf68c5b9a8cfbf07c8d46208d0fcf37762",
 				Vout:       0,
-				Sequence:   4294967294,
+				Sequence:   1,
 				ValueIface: "0.01983741",
 				Value:      0.01983741,
 				N:          0,
