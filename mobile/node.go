@@ -401,14 +401,15 @@ func (n *Node) Start() error {
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
-		if n.OpenBazaarNode.Wallet != nil {
-			TL := lis.NewTransactionListener(n.OpenBazaarNode.Datastore, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.Wallet)
-			WL := lis.NewWalletListener(n.OpenBazaarNode.Datastore, n.OpenBazaarNode.Broadcast)
-			n.OpenBazaarNode.Wallet.AddTransactionListener(TL.OnTransactionReceived)
-			n.OpenBazaarNode.Wallet.AddTransactionListener(WL.OnTransactionReceived)
+		if n.OpenBazaarNode.Multiwallet != nil {
+			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+			for ct, wal := range n.OpenBazaarNode.Multiwallet {
+				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
+				wal.AddTransactionListener(WL.OnTransactionReceived)
+				wal.AddTransactionListener(TL.OnTransactionReceived)
+			}
 			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
 			go su.Start()
-			go n.OpenBazaarNode.Wallet.Start()
 			go n.OpenBazaarNode.Multiwallet.Start()
 		}
 
