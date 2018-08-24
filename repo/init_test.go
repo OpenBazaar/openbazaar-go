@@ -71,20 +71,6 @@ func TestDoInit(t *testing.T) {
 	paths.DestroySchemaDirectories()
 }
 
-func checkDirectoryCreation(t *testing.T, directory string) {
-	f, err := os.Open(directory)
-	if err != nil {
-		t.Errorf("created directory %s could not be opened", directory)
-	}
-	fi, _ := f.Stat()
-	if fi.IsDir() == false {
-		t.Errorf("maybeCreateOBDirectories did not create the directory %s", directory)
-	}
-	if fi.Mode().String()[1:3] != "rw" {
-		t.Errorf("the created directory %s is not readable and writable for the owner", directory)
-	}
-}
-
 func TestCreateMnemonic(t *testing.T) {
 	mnemonic, err := createMnemonic(MockNewEntropyFail, MockNewMnemonicFail)
 	checkCreateMnemonicError(t, mnemonic, err)

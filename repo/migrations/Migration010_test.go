@@ -62,7 +62,7 @@ func testmigration010SetupFixtures(t *testing.T, db *sql.DB) {
 		t.Fatal(err)
 	}
 
-	for _, stmt := range testMigration009FixtureStmts {
+	for _, stmt := range testmigration010FixtureStmts {
 		_, err = db.Exec(stmt, marshaledContract)
 		if err != nil {
 			t.Fatal(err)
