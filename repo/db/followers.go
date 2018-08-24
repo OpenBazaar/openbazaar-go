@@ -2,9 +2,10 @@ package db
 
 import (
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type FollowerDB struct {
@@ -59,7 +60,10 @@ func (f *FollowerDB) Get(offsetId string, limit int) ([]repo.Follower, error) {
 func (f *FollowerDB) Delete(follower string) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
-	f.db.Exec("delete from followers where peerID=?", follower)
+	_, err := f.db.Exec("delete from followers where peerID=?", follower)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -76,6 +80,9 @@ func (f *FollowerDB) FollowsMe(peerId string) bool {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 	stmt, err := f.db.Prepare("select peerID from followers where peerID=?")
+	if err != nil {
+		return false
+	}
 	defer stmt.Close()
 	var follower string
 	err = stmt.QueryRow(peerId).Scan(&follower)

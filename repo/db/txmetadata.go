@@ -2,8 +2,9 @@ package db
 
 import (
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type TxMetadataDB struct {
@@ -42,6 +43,9 @@ func (t *TxMetadataDB) Get(txid string) (repo.Metadata, error) {
 	defer t.lock.Unlock()
 	var m repo.Metadata
 	stmt, err := t.db.Prepare("select txid, address, memo, orderID, thumbnail, canBumpFee from txmetadata where txid=?")
+	if err != nil {
+		return m, err
+	}
 	defer stmt.Close()
 	var id, address, memo, orderId, thumbnail string
 	var canBumpFee int

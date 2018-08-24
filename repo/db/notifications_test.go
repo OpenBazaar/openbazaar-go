@@ -111,6 +111,9 @@ func TestNotficationsDB_Delete(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := db.PrepareQuery("select notifID from notifications where notifID='1'")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var notifId int
 	err = stmt.QueryRow().Scan(&notifId)
@@ -195,6 +198,9 @@ func TestNotficationsDB_MarkAsRead(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := db.PrepareQuery("select read from notifications where notifID='5'")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow().Scan(&read)

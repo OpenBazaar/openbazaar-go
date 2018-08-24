@@ -129,6 +129,9 @@ func testMigration012_Setup(t *testing.T) func() {
 	}
 
 	db, err := migrations.OpenDB(testMigration012_datadir, "letmein", true)
+	if err != nil {
+		t.Error(err)
+	}
 
 	identityKey, err := base64.StdEncoding.DecodeString(testMigration012_IdentityPrivateKeyBase64)
 	if err != nil {

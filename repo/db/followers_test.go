@@ -41,6 +41,9 @@ func TestPutFollower(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := fdb.PrepareQuery("select peerID, proof from followers where peerID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var follower string
 	var proof []byte
@@ -63,7 +66,10 @@ func TestPutDuplicateFollower(t *testing.T) {
 	}
 	defer teardown()
 
-	fdb.Put("abc", []byte("proof"))
+	err = fdb.Put("abc", []byte("proof"))
+	if err != nil {
+		t.Error(err)
+	}
 	err = fdb.Put("abc", []byte("asdf"))
 	if err == nil {
 		t.Error("Expected unquire constriant error to be thrown")

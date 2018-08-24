@@ -264,6 +264,9 @@ func (c *ConfigDB) GetMnemonic() (string, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	stmt, err := c.db.Prepare("select value from config where key=?")
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer stmt.Close()
 	var mnemonic string
 	err = stmt.QueryRow("mnemonic").Scan(&mnemonic)

@@ -40,6 +40,9 @@ func TestChatDB_Put(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := chdb.PrepareQuery("select messageID, peerID, subject, message, read, timestamp, outgoing from chat where peerID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var msgId string
 	var peerId string
@@ -266,6 +269,9 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Updated bool returned incorrectly")
 	}
 	stmt, err := chdb.PrepareQuery("select read from chat where messageID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var read int
 	err = stmt.QueryRow("11111").Scan(&read)
@@ -279,6 +285,9 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Returned incorrect last message Id")
 	}
 	stmt2, err := chdb.PrepareQuery("select read from chat where messageID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt2.Close()
 	err = stmt2.QueryRow("22222").Scan(&read)
 	if err != nil {
@@ -295,6 +304,9 @@ func TestChatDB_MarkAsRead(t *testing.T) {
 		t.Error("Updated bool returned incorrectly")
 	}
 	stmt3, err := chdb.PrepareQuery("select read from chat where messageID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt3.Close()
 	err = stmt3.QueryRow("22222").Scan(&read)
 	if err != nil {
@@ -395,6 +407,9 @@ func TestChatDB_DeleteMessage(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := chdb.PrepareQuery("select messageID from chat where messageID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
@@ -428,6 +443,9 @@ func TestChatDB_DeleteConversation(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := chdb.PrepareQuery("select messageID from chat where messageID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	var msgId int
 	err = stmt.QueryRow(messages[0].MessageId).Scan(&msgId)
 	if err == nil {

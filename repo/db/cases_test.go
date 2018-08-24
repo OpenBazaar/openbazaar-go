@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -16,7 +18,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/golang/protobuf/ptypes"
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 )
 
 func buildNewCaseStore() (repo.CaseStore, func(), error) {
@@ -76,6 +77,9 @@ func TestPutCase(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := casesdb.PrepareQuery("select caseID, state, read, buyerOpened, claim from cases where caseID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 
 	err = stmt.QueryRow("caseID").Scan(&caseID, &state, &read, &buyerOpened, &claim)
@@ -121,6 +125,9 @@ func TestUpdateWithNil(t *testing.T) {
 		t.Error(err)
 	}
 	buyerContract, _, _, _, _, _, _, _, _, _, err := casesdb.GetCaseMetadata("caseID")
+	if err != nil {
+		t.Error(err)
+	}
 	if buyerContract != nil {
 		t.Error("Vendor contract was not nil")
 	}
@@ -242,6 +249,9 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	}
 
 	stmt, err := casesdb.PrepareQuery("select caseID, buyerContract, buyerValidationErrors, buyerPayoutAddress, buyerOutpoints from cases where caseID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 
 	var caseID string
@@ -291,6 +301,9 @@ func TestUpdateVendorInfo(t *testing.T) {
 	}
 
 	stmt, err := casesdb.PrepareQuery("select caseID, vendorContract, vendorValidationErrors, vendorPayoutAddress, vendorOutpoints from cases where caseID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 
 	var caseID string
@@ -344,9 +357,21 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 		t.Error(err)
 	}
 	buyerContract, vendorContract, buyerValidationErrors, vendorValidationErrors, state, read, date, buyerOpened, claim, resolution, err := casesdb.GetCaseMetadata("caseID")
-	ser, _ := proto.Marshal(contract)
-	buyerSer, _ := proto.Marshal(buyerContract)
-	vendorSer, _ := proto.Marshal(vendorContract)
+	if err != nil {
+		t.Error(err)
+	}
+	ser, err := proto.Marshal(contract)
+	if err != nil {
+		t.Error(err)
+	}
+	buyerSer, err := proto.Marshal(buyerContract)
+	if err != nil {
+		t.Error(err)
+	}
+	vendorSer, err := proto.Marshal(vendorContract)
+	if err != nil {
+		t.Error(err)
+	}
 
 	if !bytes.Equal(ser, buyerSer) || !bytes.Equal(ser, vendorSer) {
 		t.Error("Failed to fetch case contract from db")
