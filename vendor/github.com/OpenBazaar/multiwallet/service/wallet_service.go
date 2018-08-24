@@ -80,7 +80,7 @@ func (ws *WalletService) listen() {
 		case <-ws.doneChan:
 			break
 		case tx := <-ws.client.TransactionNotify():
-			go ws.processIncomingTransaction(tx)
+			go ws.ProcessIncomingTransaction(tx)
 		case block := <-ws.client.BlockNotify():
 			go ws.processIncomingBlock(block)
 		}
@@ -88,7 +88,7 @@ func (ws *WalletService) listen() {
 }
 
 // This is a transaction fresh off the wire. Let's save it to the db.
-func (ws *WalletService) processIncomingTransaction(tx client.Transaction) {
+func (ws *WalletService) ProcessIncomingTransaction(tx client.Transaction) {
 	Log.Debugf("New incoming %s transaction: %s", ws.coinType.String(), tx.Txid)
 	addrs := ws.getStoredAddresses()
 	ws.lock.RLock()
@@ -176,9 +176,12 @@ func (ws *WalletService) processIncomingBlock(block client.Block) {
 						if u.Op.Hash.String() == txn.Txid {
 							u.AtHeight = h
 							ws.db.Utxos().Put(u)
+							continue
 						}
 					}
 				}
+				// Rebroadcast unconfirmed transactions
+				ws.client.Broadcast(tx.Bytes)
 			}(tx)
 		}
 	}
@@ -324,33 +327,13 @@ func (ws *WalletService) syncTxs(addrs map[string]storedAddress) {
 // for saving to the db and delete any existing txs not returned by the API. Finally, for any output matching a key
 // in our wallet we need to mark that key as used in the db
 func (ws *WalletService) saveTxsToDB(txns []client.Transaction, addrs map[string]storedAddress) {
-	// Get current utxos
-	currentTxs, err := ws.db.Txns().GetAll(true)
-	if err != nil {
-		Log.Error("Error loading utxos for %s: %s", ws.coinType.String(), err.Error())
-		return
-	}
-
 	ws.lock.RLock()
 	chainHeight := int32(ws.chainHeight)
 	ws.lock.RUnlock()
 
-	newTxs := make(map[string]bool)
-	// Iterate over new utxos and put them to the db
+	// Iterate over new txs and put them to the db
 	for _, u := range txns {
 		ws.saveSingleTxToDB(u, chainHeight, addrs)
-		newTxs[u.Txid] = true
-	}
-	// If any old utxos were not returned by the API, delete them.
-	for _, cur := range currentTxs {
-		if !newTxs[cur.Txid] {
-			ch, err := chainhash.NewHashFromStr(cur.Txid)
-			if err != nil {
-				Log.Errorf("error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
-				continue
-			}
-			ws.db.Txns().Delete(ch)
-		}
 	}
 }
 

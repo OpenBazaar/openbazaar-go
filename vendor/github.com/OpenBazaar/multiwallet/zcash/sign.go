@@ -332,10 +332,7 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	}
 
 	// broadcast
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-	_, err = w.client.Broadcast(buf.Bytes())
-	if err != nil {
+	if err := w.Broadcast(tx); err != nil {
 		return nil, err
 	}
 	txid := tx.TxHash()
@@ -454,10 +451,7 @@ func (w *ZCashWallet) multisign(ins []wi.TransactionInput, outs []wi.Transaction
 	}
 	// broadcast
 	if broadcast {
-		var buf bytes.Buffer
-		tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-		_, err := w.client.Broadcast(buf.Bytes())
-		if err != nil {
+		if err := w.Broadcast(tx); err != nil {
 			return nil, err
 		}
 	}

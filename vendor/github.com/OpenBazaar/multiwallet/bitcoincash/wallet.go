@@ -24,6 +24,7 @@ import (
 	"github.com/OpenBazaar/multiwallet/keys"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
+	"encoding/hex"
 )
 
 type BitcoinCashWallet struct {
@@ -214,11 +215,7 @@ func (w *BitcoinCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel w
 		return nil, err
 	}
 	// Broadcast
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
-
-	_, err = w.client.Broadcast(buf.Bytes())
-	if err != nil {
+	if err := w.Broadcast(tx); err != nil {
 		return nil, err
 	}
 
@@ -324,4 +321,66 @@ func (w *BitcoinCashWallet) DumpTables(wr io.Writer) {
 	for _, u := range utxos {
 		fmt.Fprintf(wr, "Hash: %s, Index: %d, Height: %d, Value: %d, WatchOnly: %t\n", u.Op.Hash.String(), int(u.Op.Index), int(u.AtHeight), int(u.Value), u.WatchOnly)
 	}
+}
+
+// Build a client.Transaction so we can ingest it into the wallet service then broadcast
+func (w *BitcoinCashWallet) Broadcast(tx *wire.MsgTx) error {
+	cTxn := client.Transaction{
+		Txid:          tx.TxHash().String(),
+		Locktime:      int(tx.LockTime),
+		Version:       int(tx.Version),
+		Confirmations: 0,
+		Time:          time.Now().Unix(),
+	}
+	utxos, err := w.db.Utxos().GetAll()
+	if err != nil {
+		return err
+	}
+	for n, in := range tx.TxIn {
+		var u wi.Utxo
+		for _, ut := range utxos {
+			if util.OutPointsEqual(ut.Op, in.PreviousOutPoint) {
+				u = ut
+				break
+			}
+		}
+		addr, err := w.ScriptToAddress(u.ScriptPubkey)
+		if err != nil {
+			return err
+		}
+		input := client.Input{
+			Txid: in.PreviousOutPoint.Hash.String(),
+			Vout: int(in.PreviousOutPoint.Index),
+			ScriptSig: client.Script{
+				Hex: hex.EncodeToString(in.SignatureScript),
+			},
+			Sequence: uint32(in.Sequence),
+			N: n,
+			Addr: addr.String(),
+			Satoshis: u.Value,
+		}
+		cTxn.Inputs = append(cTxn.Inputs, input)
+	}
+	for n, out := range tx.TxOut {
+		addr, err := w.ScriptToAddress(out.PkScript)
+		if err != nil {
+			return err
+		}
+		output := client.Output{
+			N: n,
+			ScriptPubKey: client.OutScript{
+				Script: client.Script{
+					Hex: hex.EncodeToString(out.PkScript),
+				},
+				Addresses: []string{addr.String()},
+			},
+			Value: float64(float64(out.Value) / util.SatoshisPerCoin(wi.Bitcoin)),
+		}
+		cTxn.Outputs = append(cTxn.Outputs, output)
+	}
+	w.ws.ProcessIncomingTransaction(cTxn)
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
+	_, err = w.client.Broadcast(buf.Bytes())
+	return err
 }

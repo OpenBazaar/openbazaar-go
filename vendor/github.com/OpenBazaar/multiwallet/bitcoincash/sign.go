@@ -370,10 +370,7 @@ func (w *BitcoinCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc
 	}
 
 	// broadcast
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-	_, err = w.client.Broadcast(buf.Bytes())
-	if err != nil {
+	if err := w.Broadcast(tx); err != nil {
 		return nil, err
 	}
 	txid := tx.TxHash()
@@ -512,8 +509,7 @@ func (w *BitcoinCashWallet) multisign(ins []wi.TransactionInput, outs []wi.Trans
 	var buf bytes.Buffer
 	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
 	if broadcast {
-		_, err = w.client.Broadcast(buf.Bytes())
-		if err != nil {
+		if err := w.Broadcast(tx); err != nil {
 			return nil, err
 		}
 	}

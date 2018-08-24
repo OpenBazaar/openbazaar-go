@@ -133,7 +133,7 @@ type RawTxResponse struct {
 type Input struct {
 	Txid            string      `json:"txid"`
 	Vout            int         `json:"vout"`
-	Sequence        int         `json:"sequence"`
+	Sequence        uint32      `json:"sequence"`
 	N               int         `json:"n"`
 	ScriptSig       Script      `json:"scriptSig"`
 	Addr            string      `json:"addr"`

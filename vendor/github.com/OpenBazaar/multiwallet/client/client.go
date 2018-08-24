@@ -325,12 +325,13 @@ func (i *InsightClient) setupListeners(u url.URL, port int, secure bool, proxyDi
 			})
 			select {
 			case <-time.After(10 * time.Second):
-				Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
+				Log.Warningf("Timeout connecting to websocket endpoint %s", u.Host)
 				continue
 			case <-socketReady:
 				break
 			}
 			i.socketClient = socketClient
+			continue
 		}
 		Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
 		time.Sleep(time.Second * 2)
@@ -377,6 +378,7 @@ func (i *InsightClient) setupListeners(u url.URL, port int, secure bool, proxyDi
 	}
 	i.listenQueue = []string{}
 	i.listenLock.Unlock()
+	Log.Infof("Connected to websocket endpoint %s", u.Host)
 }
 
 func (i *InsightClient) Broadcast(tx []byte) (string, error) {
