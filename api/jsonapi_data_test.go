@@ -186,51 +186,6 @@ const profileJSON = `{
     "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
 }`
 
-const moderatorProfileJSON = `{
-    "peerID": "QmSpuEe2XZy5DNYQHgL5uhe6DiaJWDiDkH2q1yjhoFd9PP",
-    "handle": "satoshi",
-    "name": "Satoshi Nakamoto",
-    "location": "Japan",
-    "about": "Bitcoins Creator",
-    "shortDescription": "I make money",
-    "contactInfo": {
-	    "website": "bitcoin.org",
-	    "email": "satoshi@gmx.com",
-	    "phoneNumber": "5551234567"
-    },
-    "nsfw": true,
-    "vendor": true,
-    "moderator": true,
-		"moderatorInfo": {
-			"description": "a description",
-			"termsAndConditions": "terms and conditions",
-			"fee": {
-				"feeType": 0,
-				"percentage": 0.0,
-				"fixedFee": {
-					"currencyCode": "USD",
-					"amount": 100
-				}
-			}
-
-		},
-    "colors": {
-	    "primary": "#000000",
-	    "secondary": "#FFD700",
-	    "text": "#ffffff",
-	    "highlight": "#123ABC",
-	    "highlightText": "#DEAD00"
-    },
-    "stats": {
-	    "followerCount": 1,
-	    "followingCount": 2,
-	    "listingCount": 3,
-	    "ratingCount": 21000000,
-	    "averageRating": 1
-    },
-    "bitcoinPubkey": "0314e6def3bd71e2806d87ae06ec88ca175701b34ae308f81c16266f69ddc98053"
-}`
-
 const profileUpdateJSON = `{
     "handle": "satoshi",
     "name": "Craig Wright",
@@ -314,35 +269,11 @@ const headerValidJSONResponse = `{
 // Inventory
 //
 
-const inventoryJSONResponse = `[
-    {
-        "slug": "ron_swanson_tshirt/Small/Red",
-        "quantity": 12
-    },
-    {
-        "slug": "ron_swanson_tshirt/Medium/Yellow",
-        "quantity": 10
-    },
-    {
-        "slug": "ron_swanson_tshirt/Large/Red",
-        "quantity": 9
-    },
-    {
-        "slug": "ron_swanson_tshirt/XL/Yellow",
-        "quantity": 16
-    }
-]`
-
 const inventoryUpdateJSON = `[{
 	"slug": "ron_swanson_tshirt",
 	"variant": 0,
 	"quantity": 17
 }]`
-
-const inventoryUpdateInvalidJSON = `{
-	"slug": "/cool_tshirt/red/xl",
-	"quantity": 17
-}`
 
 //
 // Moderation
@@ -361,26 +292,6 @@ const moderatorValidJSON = `{
 		"percentage": 5
 	}
 }`
-
-const moderatorUpdatedValidJSON = `{
-	"description": "Long time OpenBazaar moderator located on Mars",
-	"termsAndConditions": "Will moderate anything and everything",
-	"languages": ["English", "Spanish", "Martian"],
-	"fee": {
-		"feeType": "FIXED_PLUS_PERCENTAGE",
-		"fixedFee": {
-			"currencyCode": "USD",
-			"amount": 300
-		},
-		"percentage": 5
-	}
-}`
-
-//
-// Status
-//
-
-const statusBadPeerIDJSONResponse = `{"status": "error parsing peerId"}`
 
 //
 // Wallet
@@ -405,15 +316,6 @@ const spendJSON = `{
 const insuffientFundsJSON = `{
 	"success": false,
 	"reason": "ERROR_INSUFFICIENT_FUNDS"
-}`
-
-//
-// Peers
-//
-
-const peerNotFoundInTableJSON = `{
-    "success": false,
-    "reason": "failed to find any peer in table"
 }`
 
 //
