@@ -53,16 +53,16 @@ import (
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 )
 
 type Node struct {
-	OpenBazaarNode *core.OpenBazaarNode
-	config         NodeConfig
-	cancel         context.CancelFunc
-	ipfsConfig     *ipfscore.BuildCfg
-	apiConfig      *apiSchema.APIConfig
+	node       *core.OpenBazaarNode
+	config     NodeConfig
+	cancel     context.CancelFunc
+	ipfsConfig *ipfscore.BuildCfg
+	apiConfig  *apiSchema.APIConfig
 }
 
 type Mobile struct{}
@@ -96,6 +96,25 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
+	// Coin type
+	ct := wi.Bitcoin
+	/* 	switch walletCfg.Type {
+	   	case "bitcoincash":
+	   		ct = wi.BitcoinCash
+	   	case "zcashd":
+	   		ct = wi.Zcash
+	   	} */
+	migrations.WalletCoinType = ct
+
+	// Database
+	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return nil, err
+	}
+
+	// Get creation date. Ignore the error and use a default timestamp.
+	creationDate, _ := sqliteDB.Config().GetCreationDate()
+
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(config.RepoPath, "config"))
 	if err != nil {
@@ -112,10 +131,10 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 		return nil, err
 	}
 
-	walletCfg, err := apiSchema.GetWalletConfig(configFile)
+	/* walletCfg, err := apiSchema.GetWalletConfig(configFile)
 	if err != nil {
 		return nil, err
-	}
+	} */
 	resolverConfig, err := apiSchema.GetResolverConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -124,25 +143,6 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 	if err != nil {
 		return nil, err
 	}
-
-	// Coin type
-	ct := wi.Bitcoin
-	switch walletCfg.Type {
-	case "bitcoincash":
-		ct = wi.BitcoinCash
-	case "zcashd":
-		ct = wi.Zcash
-	}
-	migrations.WalletCoinType = ct
-
-	// Database
-	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now(), ct)
-	if err != nil && err != repo.ErrRepoExists {
-		return nil, err
-	}
-
-	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + config.UserAgent)
@@ -327,7 +327,7 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 		return nil, errors.New("No gateway addresses configured")
 	}
 
-	return &Node{config: config, OpenBazaarNode: core.Node, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	return &Node{config: config, node: core.Node, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
 }
 
 func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfscore.IpfsNode, commands.Context, error) {
@@ -357,7 +357,7 @@ func (n *Node) Start() error {
 		return err
 	}
 
-	n.OpenBazaarNode.IpfsNode = nd
+	n.node.IpfsNode = nd
 
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
@@ -370,9 +370,9 @@ func (n *Node) Start() error {
 	proto.Unmarshal(val, dhtrec)
 	e := new(namepb.IpnsEntry)
 	proto.Unmarshal(dhtrec.GetValue(), e)
-	n.OpenBazaarNode.RootHash = ipath.Path(e.Value).String()
+	n.node.RootHash = ipath.Path(e.Value).String()
 
-	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
+	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
 	if err != nil {
 		return err
 	}
@@ -382,13 +382,13 @@ func (n *Node) Start() error {
 	}
 
 	// Offline messaging storage
-	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
+	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, n.node.IpfsNode, n.node.PushNodes, n.node.SendStore)
 
 	// Build pubsub
 	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
-	n.OpenBazaarNode.Pubsub = ps
+	n.node.Pubsub = ps
 
 	// Start gateway
 	// Create authentication cookie
@@ -407,34 +407,34 @@ func (n *Node) Start() error {
 
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
-		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
+		n.node.Service = service.New(n.node, n.node.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.OpenBazaarNode.Datastore,
-			IPFSNode:  n.OpenBazaarNode.IpfsNode,
-			BanManger: n.OpenBazaarNode.BanManager,
+			Db:        n.node.Datastore,
+			IPFSNode:  n.node.IpfsNode,
+			BanManger: n.node.BanManager,
 			Service:   core.Node.Service,
 			PrefixLen: 14,
 			PushNodes: core.Node.PushNodes,
 			Dialer:    nil,
-			SendAck:   n.OpenBazaarNode.SendOfflineAck,
-			SendError: n.OpenBazaarNode.SendError,
+			SendAck:   n.node.SendOfflineAck,
+			SendError: n.node.SendError,
 		})
 		go MR.Run()
-		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		n.node.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
 		go PR.Run()
-		n.OpenBazaarNode.PointerRepublisher = PR
+		n.node.PointerRepublisher = PR
 		MR.Wait()
-		if n.OpenBazaarNode.Multiwallet != nil {
+		if n.node.Multiwallet != nil {
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range n.OpenBazaarNode.Multiwallet {
+			for ct, wal := range n.node.Multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
-			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
+			su := wallet.NewStatusUpdater(n.node.Multiwallet, n.node.Broadcast, n.node.IpfsNode.Context())
 			go su.Start()
-			go n.OpenBazaarNode.Multiwallet.Start()
+			go n.node.Multiwallet.Start()
 		}
 
 		core.PublishLock.Unlock()
