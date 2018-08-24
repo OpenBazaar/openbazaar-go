@@ -5,15 +5,16 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"syscall"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type SetAPICreds struct {
@@ -51,7 +52,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	var pw string
 	for {
 		fmt.Print("Enter a veerrrry strong password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 		fmt.Println("")
 		resp := string(bytePassword)
 		if len(resp) < 8 {
@@ -65,7 +66,7 @@ func (x *SetAPICreds) Execute(args []string) error {
 	}
 	for {
 		fmt.Print("Confirm your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 		fmt.Println("")
 		resp := string(bytePassword)
 		if resp == pw {

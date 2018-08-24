@@ -542,7 +542,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		if listing.Metadata.Version < 3 {
 			i.Quantity = uint32(item.Quantity)
 		} else {
-			i.Quantity64 = uint64(item.Quantity)
+			i.Quantity64 = item.Quantity
 		}
 
 		i.Memo = item.Memo
@@ -845,7 +845,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 			}
 		}
-		itemTotal *= uint64(itemQuantity)
+		itemTotal *= itemQuantity
 		total += itemTotal
 	}
 
@@ -955,9 +955,9 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
-				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
 			} else if is[0].version >= 2 {
-				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
 			} else {
 				return 0, errors.New("unknown listing version")
 			}
@@ -972,7 +972,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			highest = s.primary
 			i = x
 		}
-		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
+		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * s.quantity
 	}
 	shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
 	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)

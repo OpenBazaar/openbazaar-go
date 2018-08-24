@@ -17,6 +17,11 @@ import (
 	"strconv"
 
 	"crypto/rand"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+
 	"github.com/OpenBazaar/bitcoind-wallet"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
@@ -50,18 +55,7 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
 
-	"github.com/OpenBazaar/zcashd-wallet"
-	"github.com/ipfs/go-ipfs/repo/config"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/natefinch/lumberjack"
-	"github.com/op/go-logging"
-	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/net/proxy"
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
@@ -80,6 +74,14 @@ import (
 	"io"
 	"syscall"
 	"time"
+
+	"github.com/OpenBazaar/zcashd-wallet"
+	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/natefinch/lumberjack"
+	"github.com/op/go-logging"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/proxy"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -507,7 +509,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
