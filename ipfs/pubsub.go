@@ -95,11 +95,10 @@ func (p *PubsubPublisher) Publish(ctx context.Context, topic string, data []byte
 func (r *PubsubSubscriber) Subscribe(ctx context.Context, topic string) (chan []byte, error) {
 	r.mx.Lock()
 	// see if we already have a pubsub subscription; if not, subscribe
-	sub, ok := r.subs[topic]
-	var err error
+	_, ok := r.subs[topic]
 	resp := make(chan []byte)
 	if !ok {
-		sub, err = r.ps.Subscribe(topic)
+		sub, err := r.ps.Subscribe(topic)
 		if err != nil {
 			r.mx.Unlock()
 			return nil, err
