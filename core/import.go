@@ -160,7 +160,7 @@ listingLoop:
 				errChan <- fmt.Errorf("Error in record %d: %s", i, "price is a mandatory field")
 				return
 			}
-			if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+			if !listingCurrencyIsBTC(listing) {
 				f, err := strconv.ParseFloat(record[pos], 64)
 				if err != nil {
 					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -292,7 +292,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service1_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -321,7 +321,7 @@ listingLoop:
 						errChan <- errors.New("shipping_option1_service2_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -350,7 +350,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service3_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -400,7 +400,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service1_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -429,7 +429,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service2_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -458,7 +458,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option2_service3_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -508,7 +508,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service1_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -537,7 +537,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option1_service2_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -566,7 +566,7 @@ listingLoop:
 						errChan <- fmt.Errorf("Error in record %d: %s", i, "shipping_option3_service3_estimated_price is a mandatory field")
 						return
 					}
-					if NormalizeCurrencyCode(listing.Metadata.PricingCurrency) != "BTC" {
+					if !listingCurrencyIsBTC(listing) {
 						f, err := strconv.ParseFloat(record[pos], 64)
 						if err != nil {
 							errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
@@ -673,4 +673,8 @@ listingLoop:
 		return werr
 	}
 	return nil
+}
+
+func listingCurrencyIsBTC(l *pb.Listing) bool {
+	return NormalizeCurrencyCode(l.Metadata.PricingCurrency) == "BTC"
 }
