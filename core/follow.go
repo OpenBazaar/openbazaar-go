@@ -43,10 +43,10 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 		return err
 	}
 	f2, err := os.Create(followingPath)
-	defer f2.Close()
 	if err != nil {
 		return err
 	}
+	defer f2.Close()
 
 	j, jerr = json.MarshalIndent(following, "", "    ")
 	if jerr != nil {

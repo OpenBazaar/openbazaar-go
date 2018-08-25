@@ -31,6 +31,8 @@ import (
 
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -47,7 +49,6 @@ import (
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 )
 
 type JsonAPIConfig struct {
@@ -66,7 +67,7 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
@@ -84,7 +85,7 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config
 		},
 		node: node,
 	}
-	return i, nil
+	return i
 }
 
 func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -1361,7 +1362,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		OrigName:     false,
 	}
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IPFSIdentityString() {
-		sl := new(pb.SignedListing)
+		var sl *pb.SignedListing
 		_, err := cid.Decode(listingId)
 		if err == nil {
 			sl, err = i.node.GetListingFromHash(listingId)
@@ -1409,7 +1410,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, string(out), new(pb.SignedListing))
+		SanitizedResponseM(w, out, new(pb.SignedListing))
 		return
 	} else {
 		var listingBytes []byte
@@ -1716,7 +1717,6 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					j++
 				}
 			}
-			xs = (xs)[:j]
 		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {
@@ -2342,7 +2342,7 @@ func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	offsetId := r.URL.Query().Get("offsetId")
-	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, int(l))
+	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, l)
 
 	ret, err := json.MarshalIndent(messages, "", "    ")
 	if err != nil {
@@ -2447,7 +2447,7 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 		Total         int               `json:"total"`
 		Notifications []json.RawMessage `json:"notifications"`
 	}
-	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
+	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, l, filters)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3849,7 +3849,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, string(out), new(pb.SignedPost))
+		SanitizedResponseM(w, out, new(pb.SignedPost))
 		return
 	} else {
 		var postBytes []byte

@@ -68,6 +68,9 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
 
 		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
 		if err != nil {
@@ -311,8 +314,5 @@ func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
 
 // IsFulfilled - check is order is fulfilled
 func (n *OpenBazaarNode) IsFulfilled(contract *pb.RicardianContract) bool {
-	if len(contract.VendorOrderFulfillment) < len(contract.VendorListings) {
-		return false
-	}
-	return true
+	return len(contract.VendorOrderFulfillment) >= len(contract.VendorListings)
 }

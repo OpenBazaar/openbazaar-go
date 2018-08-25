@@ -74,7 +74,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 	conf.Identity = identity
 
-	if err := addConfigExtensions(repoRoot, testnet); err != nil {
+	if err := addConfigExtensions(repoRoot); err != nil {
 		return err
 	}
 
@@ -153,7 +153,7 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
-func addConfigExtensions(repoRoot string, testnet bool) error {
+func addConfigExtensions(repoRoot string) error {
 	r, err := fsrepo.Open(repoRoot)
 	if err != nil { // NB: repo is owned by the node
 		return err
