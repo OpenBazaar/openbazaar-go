@@ -1,16 +1,4 @@
 ##
-## Building
-##
-deploy:
-	./deploy.sh
-
-build:
-	./build.sh
-
-linux_binary:
-	./build.sh linux/amd64
-
-##
 ## Protobuf compilation
 ##
 P_TIMESTAMP = Mgoogle/protobuf/timestamp.proto=github.com/golang/protobuf/ptypes/timestamp
@@ -33,16 +21,3 @@ docker:
 
 push_docker:
 	docker push $(DOCKER_IMAGE_NAME)
-
-deploy_docker: docker push_docker
-
-##
-## Cleanup
-##
-clean_build:
-	rm -f ./dist/*
-
-clean_docker:
-	docker rmi -f $(DOCKER_IMAGE_NAME) || true
-
-clean: clean_build clean_docker
