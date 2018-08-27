@@ -1329,6 +1329,12 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 	maxAge := r.URL.Query().Get("max-age")
 	if maxAge == "" {
 		maxAge = "600"
+	} else {
+		_, err := strconv.ParseUint(maxAge, 10, 32)
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, "max-age must be integer")
+			return
+		}
 	}
 	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IPFSIdentityString() {
 		listingsBytes, err := i.node.GetListings()
