@@ -72,7 +72,7 @@ type Migration009_listing_listing struct {
 	Metadata Migration009_listing_listing_metadata `json:"metadata"`
 }
 type Migration009_listing_listing_metadata struct {
-	AcceptedCurrencies []string `json:"acceptedCurrencies`
+	AcceptedCurrencies []string `json:"acceptedCurrencies"`
 }
 
 const (
