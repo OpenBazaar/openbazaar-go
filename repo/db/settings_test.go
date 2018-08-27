@@ -45,6 +45,9 @@ func TestSettingsPut(t *testing.T) {
 	}
 	set := repo.SettingsData{}
 	stmt, err := sdb.PrepareQuery("select value from config where key=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var settingsBytes []byte
 	err = stmt.QueryRow("settings").Scan(&settingsBytes)

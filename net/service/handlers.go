@@ -575,6 +575,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
 		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
@@ -624,6 +627,9 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return nil, err
+		}
 
 		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {

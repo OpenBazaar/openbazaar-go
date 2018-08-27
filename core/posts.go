@@ -285,10 +285,10 @@ func (n *OpenBazaarNode) UpdatePostHashes(hashes map[string]string) error {
 
 	// Write it back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
@@ -356,10 +356,10 @@ func (n *OpenBazaarNode) DeletePost(slug string) error {
 
 	// Write the index back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
@@ -534,40 +534,5 @@ func validatePost(post *pb.Post) (err error) {
 		}
 	}
 
-	return nil
-}
-
-//verifySignaturesOnPost  [Verify the signatures in the post]
-func verifySignaturesOnPost(sl *pb.SignedPost) error {
-	// Verify identity signature on the post
-	if err := verifySignature(
-		sl.Post,
-		sl.Post.VendorID.Pubkeys.Identity,
-		sl.Signature,
-		sl.Post.VendorID.PeerID,
-	); err != nil {
-		switch err.(type) {
-		case invalidSigError:
-			return errors.New("Vendor's identity signature on post failed to verify")
-		case matchKeyError:
-			return errors.New("Public key in order does not match reported buyer ID")
-		default:
-			return err
-		}
-	}
-
-	// Verify the bitcoin signature in the ID
-	if err := verifyBitcoinSignature(
-		sl.Post.VendorID.Pubkeys.Bitcoin,
-		sl.Post.VendorID.BitcoinSig,
-		sl.Post.VendorID.PeerID,
-	); err != nil {
-		switch err.(type) {
-		case invalidSigError:
-			return errors.New("Vendor's bitcoin signature on GUID failed to verify")
-		default:
-			return err
-		}
-	}
 	return nil
 }

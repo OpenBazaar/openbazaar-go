@@ -6,15 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
-	"github.com/OpenBazaar/openbazaar-go/schema"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
 func mustNewPointer() ipfs.Pointer {
@@ -206,6 +207,9 @@ func TestPointersDB_GetByPurpose(t *testing.T) {
 		nil,
 	}
 	err = pdb.Put(m)
+	if err != nil {
+		t.Error("Put pointer returned error")
+	}
 	pointers, err := pdb.GetByPurpose(ipfs.MODERATOR)
 	if err != nil {
 		t.Error("Get pointers returned error")
@@ -254,6 +258,9 @@ func TestPointersDB_Get(t *testing.T) {
 		nil,
 	}
 	err = pdb.Put(m)
+	if err != nil {
+		t.Error("Put pointer returned error")
+	}
 	p, err := pdb.Get(id)
 	if err != nil {
 		t.Error("Get pointers returned error")

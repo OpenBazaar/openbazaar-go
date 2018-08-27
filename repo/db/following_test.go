@@ -40,6 +40,9 @@ func TestPutFollowing(t *testing.T) {
 		t.Error(err)
 	}
 	stmt, err := fldb.PrepareQuery("select peerID from following where peerID=?")
+	if err != nil {
+		t.Error(err)
+	}
 	defer stmt.Close()
 	var following string
 	err = stmt.QueryRow("abc").Scan(&following)

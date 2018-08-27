@@ -76,16 +76,6 @@ type setupAction func(*test.Repository) error
 // apiTests is a slice of apiTest
 type apiTests []apiTest
 
-// request issues an http request directly to the blackbox handler
-func request(req *http.Request) (*http.Response, error) {
-	resp, err := testHTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
 func runAPITests(t *testing.T, tests apiTests) {
 	_, err := test.ResetRepository()
 	if err != nil {
