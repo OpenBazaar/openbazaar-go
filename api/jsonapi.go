@@ -1343,6 +1343,10 @@ func (i *jsonAPIHandler) DELETEModerator(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 	_, peerId := path.Split(r.URL.Path)
 	useCache, _ := strconv.ParseBool(r.URL.Query().Get("usecache"))
+	maxAge := r.URL.Query().Get("max-age")
+	if maxAge == "" {
+		maxAge = "600"
+	}
 	if peerId == "" || strings.ToLower(peerId) == "listings" || peerId == i.node.IPFSIdentityString() {
 		listingsBytes, err := i.node.GetListings()
 		if err != nil {
@@ -1363,7 +1367,7 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		SanitizedResponse(w, string(listingsBytes))
-		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%s, immutable", maxAge))
 	}
 }
 
