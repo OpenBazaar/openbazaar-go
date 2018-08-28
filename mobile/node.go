@@ -57,18 +57,21 @@ import (
 	"github.com/op/go-logging"
 )
 
+// Node configuration structure
 type Node struct {
-	node       *core.OpenBazaarNode
-	config     NodeConfig
-	cancel     context.CancelFunc
-	ipfsConfig *ipfscore.BuildCfg
-	apiConfig  *apiSchema.APIConfig
+	OpenBazaarNode *core.OpenBazaarNode
+	config         NodeConfig
+	cancel         context.CancelFunc
+	ipfsConfig     *ipfscore.BuildCfg
+	apiConfig      *apiSchema.APIConfig
 }
 
+// Mobile empty structure used to carry config data to route-around gomobile's type restrictions
 type Mobile struct{}
 
-func NewOB(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
-
+// NewNode create the configuration file for a new node
+func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
+	// Node config
 	nodeconfig := NodeConfig{
 		RepoPath:            repoPath,
 		AuthenticationToken: "",
@@ -77,17 +80,18 @@ func NewOB(repoPath string, authenticationToken string, testnet bool, userAgent 
 		WalletTrustedPeer:   walletTrustedPeer,
 	}
 
+	// Use Mobile struct to carry config data
 	var m Mobile
-	node, err := m.NewNode(nodeconfig, password, mnemonic)
-	//n.Start()
+	node, err := m.NewNodeWithConfig(nodeconfig, password, mnemonic)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return node
 }
 
-func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*Node, error) {
-
+// NewNodeWithConfig create a new node using the configuration file from NewNode()
+func (m *Mobile) NewNodeWithConfig(config NodeConfig, password string, mnemonic string) (*Node, error) {
+	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 
@@ -98,12 +102,6 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 
 	// Coin type
 	ct := wi.Bitcoin
-	/* 	switch walletCfg.Type {
-	   	case "bitcoincash":
-	   		ct = wi.BitcoinCash
-	   	case "zcashd":
-	   		ct = wi.Zcash
-	   	} */
 	migrations.WalletCoinType = ct
 
 	// Database
@@ -115,7 +113,7 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 	// Get creation date. Ignore the error and use a default timestamp.
 	creationDate, _ := sqliteDB.Config().GetCreationDate()
 
-	// Load config
+	// Load configs
 	configFile, err := ioutil.ReadFile(path.Join(config.RepoPath, "config"))
 	if err != nil {
 		return nil, err
@@ -131,10 +129,6 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 		return nil, err
 	}
 
-	/* walletCfg, err := apiSchema.GetWalletConfig(configFile)
-	if err != nil {
-		return nil, err
-	} */
 	resolverConfig, err := apiSchema.GetResolverConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -230,42 +224,8 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 	}
 
 	// Wallet
-	/*
-		var tp net.Addr
-		if config.WalletTrustedPeer != "" {
-			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
-			if err != nil {
-				return nil, err
-			}
-		}
-		feeApi, err := url.Parse(walletCfg.FeeAPI)
-		if err != nil {
-			return nil, err
-		}
-	*/
-	/*
-		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:     mn,
-			Params:       &params,
-			MaxFee:       uint64(walletCfg.MaxFee),
-			LowFee:       uint64(walletCfg.LowFeeDefault),
-			MediumFee:    uint64(walletCfg.MediumFeeDefault),
-			HighFee:      uint64(walletCfg.HighFeeDefault),
-			FeeAPI:       *feeApi,
-			RepoPath:     config.RepoPath,
-			CreationDate: creationDate,
-			DB:           sqliteDB,
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Logger:       logger,
-		}
-	*/
 	core.PublishLock.Lock()
 	if !config.DisableWallet {
-		//wallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
-		//if err != nil {
-		//	return nil, err
-		//}
 	}
 
 	// Exchange rates
@@ -327,9 +287,10 @@ func (m *Mobile) NewNode(config NodeConfig, password string, mnemonic string) (*
 		return nil, errors.New("No gateway addresses configured")
 	}
 
-	return &Node{config: config, node: core.Node, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	return &Node{config: config, OpenBazaarNode: core.Node, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
 }
 
+// startIPFSNode start the node
 func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfscore.IpfsNode, commands.Context, error) {
 	cctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
@@ -351,13 +312,14 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 	return nd, ctx, nil
 }
 
+// Start start openbazaard (OpenBazaar daemon)
 func (n *Node) Start() error {
 	nd, ctx, err := n.startIPFSNode(n.config.RepoPath, n.ipfsConfig)
 	if err != nil {
 		return err
 	}
 
-	n.node.IpfsNode = nd
+	n.OpenBazaarNode.IpfsNode = nd
 
 	// Get current directory root hash
 	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
@@ -370,9 +332,9 @@ func (n *Node) Start() error {
 	proto.Unmarshal(val, dhtrec)
 	e := new(namepb.IpnsEntry)
 	proto.Unmarshal(dhtrec.GetValue(), e)
-	n.node.RootHash = ipath.Path(e.Value).String()
+	n.OpenBazaarNode.RootHash = ipath.Path(e.Value).String()
 
-	configFile, err := ioutil.ReadFile(path.Join(n.node.RepoPath, "config"))
+	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
 	if err != nil {
 		return err
 	}
@@ -382,13 +344,13 @@ func (n *Node) Start() error {
 	}
 
 	// Offline messaging storage
-	n.node.MessageStorage = selfhosted.NewSelfHostedStorage(n.node.RepoPath, n.node.IpfsNode, n.node.PushNodes, n.node.SendStore)
+	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
 
 	// Build pubsub
 	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
 	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
-	n.node.Pubsub = ps
+	n.OpenBazaarNode.Pubsub = ps
 
 	// Start gateway
 	// Create authentication cookie
@@ -407,34 +369,34 @@ func (n *Node) Start() error {
 
 	go func() {
 		<-dht.DefaultBootstrapConfig.DoneChan
-		n.node.Service = service.New(n.node, n.node.Datastore)
+		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.node.Datastore,
-			IPFSNode:  n.node.IpfsNode,
-			BanManger: n.node.BanManager,
+			Db:        n.OpenBazaarNode.Datastore,
+			IPFSNode:  n.OpenBazaarNode.IpfsNode,
+			BanManger: n.OpenBazaarNode.BanManager,
 			Service:   core.Node.Service,
 			PrefixLen: 14,
 			PushNodes: core.Node.PushNodes,
 			Dialer:    nil,
-			SendAck:   n.node.SendOfflineAck,
-			SendError: n.node.SendError,
+			SendAck:   n.OpenBazaarNode.SendOfflineAck,
+			SendError: n.OpenBazaarNode.SendError,
 		})
 		go MR.Run()
-		n.node.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.node.IpfsNode, n.node.Datastore, n.node.PushNodes, n.node.IsModerator)
+		n.OpenBazaarNode.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
 		go PR.Run()
-		n.node.PointerRepublisher = PR
+		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
-		if n.node.Multiwallet != nil {
+		if n.OpenBazaarNode.Multiwallet != nil {
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range n.node.Multiwallet {
+			for ct, wal := range n.OpenBazaarNode.Multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
-			su := wallet.NewStatusUpdater(n.node.Multiwallet, n.node.Broadcast, n.node.IpfsNode.Context())
+			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
 			go su.Start()
-			go n.node.Multiwallet.Start()
+			go n.OpenBazaarNode.Multiwallet.Start()
 		}
 
 		core.PublishLock.Unlock()
@@ -448,6 +410,7 @@ func (n *Node) Start() error {
 	return nil
 }
 
+// Stop stop openbazaard
 func (n *Node) Stop() error {
 	core.OfflineMessageWaitGroup.Wait()
 	core.Node.Datastore.Close()
@@ -459,6 +422,7 @@ func (n *Node) Stop() error {
 	return nil
 }
 
+// initializeREpo create the database
 func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
@@ -474,7 +438,7 @@ func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 	return sqliteDB, nil
 }
 
-// Collects options, creates listener, prints status message and starts serving requests
+// newHttpGateway Collects options, creates listener, prints status message and starts serving requests
 func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config apiSchema.APIConfig) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := ctx.GetConfig()
@@ -516,10 +480,13 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, logger, opts...)
 }
 
+// DHTClientOption required for constructClientDHTRouting()
 var DHTClientOption ipfscore.RoutingOption = constructClientDHTRouting
 
+// IpnsValidatorTag required for constructClientDHTRouting()
 const IpnsValidatorTag = "ipns"
 
+// constructClientDHTRouting create DHT routing
 func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
 	dhtRouting := dht.NewDHTClient(ctx, host, dstore)
 	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
