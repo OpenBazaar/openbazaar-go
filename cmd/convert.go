@@ -6,29 +6,33 @@ import (
 
 	"context"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"os"
 	"path"
 
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 
-	ipfscore "github.com/ipfs/go-ipfs/core"
 	"io/ioutil"
 	"strings"
 
+	ipfscore "github.com/ipfs/go-ipfs/core"
+
 	"bufio"
 	"errors"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
+
+	"syscall"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
-	"syscall"
-	"time"
 )
 
 type Convert struct {
@@ -186,7 +190,7 @@ func (x *Convert) Execute(args []string) error {
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 		fmt.Println("")
 		pw := string(bytePassword)
 		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now(), ct)

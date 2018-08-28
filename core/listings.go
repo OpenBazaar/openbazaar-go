@@ -259,7 +259,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
-		err = n.Datastore.Inventory().Put(listing.Slug, i, int64(s.Quantity))
+		err = n.Datastore.Inventory().Put(listing.Slug, i, s.Quantity)
 		if err != nil {
 			return err
 		}
@@ -837,7 +837,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = int64(count)
+				s.Quantity = count
 				break
 			}
 		}
