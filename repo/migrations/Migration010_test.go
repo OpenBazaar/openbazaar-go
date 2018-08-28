@@ -13,14 +13,6 @@ import (
 const testmigration010Password = "letmein"
 
 var (
-	caseIdsToCoinSet = map[string]struct {
-		paymentCoion string
-		coinType     string
-	}{
-		"1": {"TBC", "TETH"},
-		"2": {"TBC", "TETH"},
-	}
-
 	testmigration010SchemaStmts = []string{
 		"DROP TABLE IF EXISTS cases;",
 		"DROP TABLE IF EXISTS sales;",

@@ -1149,9 +1149,7 @@ collectListings:
 		for _, opt := range listingMap[item.ListingHash].Item.Options {
 			listingOptions = append(listingOptions, opt.Name)
 		}
-		for _, uopt := range item.Options {
-			userOptions = append(userOptions, uopt)
-		}
+		userOptions = append(userOptions, item.Options...)
 		inv := inventory{Slug: listingMap[item.ListingHash].Slug}
 		selectedVariant, err := GetSelectedSku(listingMap[item.ListingHash], item.Options)
 		if err != nil {
@@ -1168,7 +1166,7 @@ collectListings:
 							validVariant = true
 						}
 					}
-					if validVariant == false {
+					if !validVariant {
 						return errors.New("selected variant not in listing")
 					}
 				}
@@ -1440,10 +1438,7 @@ func (n *OpenBazaarNode) ValidatePaymentAmount(requestedAmount, paymentAmount ui
 		bufferPercent = *settings.MisPaymentBuffer
 	}
 	buffer := float32(requestedAmount) * (bufferPercent / 100)
-	if float32(paymentAmount)+buffer < float32(requestedAmount) {
-		return false
-	}
-	return true
+	return float32(paymentAmount)+buffer >= float32(requestedAmount)
 }
 
 // ParseContractForListing - return the listing identified by the hash from the contract

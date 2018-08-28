@@ -311,8 +311,5 @@ func validateCryptocurrencyFulfillment(fulfillment *pb.OrderFulfillment) error {
 
 // IsFulfilled - check is order is fulfilled
 func (n *OpenBazaarNode) IsFulfilled(contract *pb.RicardianContract) bool {
-	if len(contract.VendorOrderFulfillment) < len(contract.VendorListings) {
-		return false
-	}
-	return true
+	return len(contract.VendorOrderFulfillment) >= len(contract.VendorListings)
 }

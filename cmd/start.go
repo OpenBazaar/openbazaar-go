@@ -241,7 +241,7 @@ func (x *Start) Execute(args []string) error {
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 		fmt.Println("")
 		pw := string(bytePassword)
 		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
@@ -708,9 +708,7 @@ func (x *Start) Execute(args []string) error {
 	if addr != "127.0.0.1" && cryptoWallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
-	for _, ip := range x.AllowIP {
-		apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, ip)
-	}
+	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, x.AllowIP...)
 
 	// Create authentication cookie
 	var authCookie http.Cookie
@@ -928,7 +926,7 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	for _, addr := range node.PeerHost.Addrs() {
 		addrs = append(addrs, addr.String())
 	}
-	sort.Sort(sort.StringSlice(addrs))
+	sort.Strings(addrs)
 
 	for _, addr := range addrs {
 		log.Infof("Swarm listening on %s\n", addr)
