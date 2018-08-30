@@ -134,7 +134,7 @@ func (r *DisputeCaseRecord) ResolutionPaymentOutpoints(ratio PayoutRatio) (outpo
 // ResolutionPaymentContract returns the preferred contract to be used when resolving
 // a pending DisputeCaseRecord based on the provided PayoutRatio
 func (r *DisputeCaseRecord) ResolutionPaymentContract(ratio PayoutRatio) (contract *pb.RicardianContract) {
-	if ratio.VendorAny() {
+	if ratio.VendorMajority() {
 		return r.VendorContract
 	}
 	return r.BuyerContract
