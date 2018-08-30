@@ -25,21 +25,18 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	log.SetBackend(logging.AddModuleLevel(logger))
 	topMux := http.NewServeMux()
 
-	jsonAPI, err := newJsonAPIHandler(n, authCookie, config)
-	if err != nil {
-		return nil, err
-	}
-	wsAPI, err := newWSAPIHandler(n, authCookie, config)
-	if err != nil {
-		return nil, err
-	}
+	jsonAPI := newJsonAPIHandler(n, authCookie, config)
+	wsAPI := newWSAPIHandler(n, authCookie, config)
 	n.Broadcast = manageNotifications(n, wsAPI.h.Broadcast)
 
 	topMux.Handle("/ob/", jsonAPI)
 	topMux.Handle("/wallet/", jsonAPI)
 	topMux.Handle("/ws", wsAPI)
 
-	mux := topMux
+	var (
+		err error
+		mux = topMux
+	)
 	for _, option := range options {
 		mux, err = option(n.IpfsNode, l, mux)
 		if err != nil {
