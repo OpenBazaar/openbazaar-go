@@ -45,8 +45,6 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 
-	stringSlicePool := sync.Pool{New: func() interface{} { var s []string; return s }}
-
 listingLoop:
 	for {
 		select {
@@ -64,11 +62,6 @@ listingLoop:
 
 			countLock.Lock()
 			i := count
-			_, ok := stringSlicePool.Get().([]string)
-			if !ok {
-				errChan <- fmt.Errorf("Error in record %d: %s", i, "[]string pool contains non []string")
-				return
-			}
 			record, err := reader.Read()
 			count++
 			countLock.Unlock()
@@ -199,9 +192,7 @@ listingLoop:
 				imageUrls := strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
-				var x int
-				var img string
-				for x, img = range imageUrls {
+				for x, img := range imageUrls {
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
