@@ -331,6 +331,9 @@ func (x *Convert) Execute(args []string) error {
 
 	// Update profile
 	pro, err := ioutil.ReadFile(path.Join(repoPath, "root", "profile.json"))
+	if err != nil {
+		return err
+	}
 
 	profile := new(pb.Profile)
 	err = jsonpb.UnmarshalString(string(pro), profile)

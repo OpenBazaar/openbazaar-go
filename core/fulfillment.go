@@ -68,6 +68,9 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			return err
 		}
 		redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+		if err != nil {
+			return err
+		}
 
 		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
 		if err != nil {

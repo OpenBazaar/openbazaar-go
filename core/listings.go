@@ -204,6 +204,9 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		return sl, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return sl, err
+	}
 	id.BitcoinSig = sig.Serialize()
 
 	// Update coupon db
@@ -614,10 +617,10 @@ func (n *OpenBazaarNode) UpdateEachListingOnIndex(updateListing func(*ListingDat
 	}
 
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {
@@ -732,10 +735,10 @@ func (n *OpenBazaarNode) DeleteListing(slug string) error {
 
 	// Write the index back to file
 	f, err := os.Create(indexPath)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	j, jerr := json.MarshalIndent(index, "", "    ")
 	if jerr != nil {

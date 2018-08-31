@@ -149,6 +149,9 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.ModeratorKey = modPub.SerializeCompressed()
 
 		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+		if err != nil {
+			return "", "", 0, false, err
+		}
 		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 		if err != nil {
 			return "", "", 0, false, err
@@ -446,6 +449,9 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		return nil, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return nil, err
+	}
 	id.BitcoinSig = sig.Serialize()
 	order.BuyerID = id
 
@@ -483,7 +489,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		   So let's check to see if that's the case here and handle it. */
 		_, exists := addedListings[item.ListingHash]
 
-		listing := new(pb.Listing)
+		var listing *pb.Listing
 		if !exists {
 			// Let's fetch the listing, should be cached
 			b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
@@ -706,6 +712,9 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 		return err
 	}
 	redeemScript, err := hex.DecodeString(contract.BuyerOrder.Payment.RedeemScript)
+	if err != nil {
+		return err
+	}
 	refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
 	if err != nil {
 		return err
@@ -779,7 +788,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		if err != nil {
 			return 0, err
 		}
-		skuExists := false
+		var skuExists bool
 		for i, sku := range l.Item.Skus {
 			if selectedSku == i {
 				skuExists = true
@@ -1309,6 +1318,9 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 		return err
 	}
 	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
+	if err != nil {
+		return err
+	}
 	if order.Payment.Address != addr.EncodeAddress() {
 		return errors.New("invalid payment address")
 	}
@@ -1363,6 +1375,9 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 		return errors.New("invalid moderator key")
 	}
 	addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+	if err != nil {
+		return err
+	}
 	if order.Payment.Address != addr.EncodeAddress() {
 		return errors.New("invalid payment address")
 	}
