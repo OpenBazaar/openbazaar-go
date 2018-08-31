@@ -270,7 +270,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 
 	for _, n := range actualNotifications {
 		var (
-			contract  = &pb.RicardianContract{}
+			contract  *pb.RicardianContract
 			thumbnail = n.NotifierData.(repo.ModeratorDisputeExpiry).Thumbnail
 			refID     = n.NotifierData.(repo.ModeratorDisputeExpiry).CaseID
 			expiresIn = n.NotifierData.(repo.ModeratorDisputeExpiry).ExpiresIn

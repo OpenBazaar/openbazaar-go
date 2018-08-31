@@ -157,6 +157,9 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 
 	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
 	p := new(pb.Profile)
 	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err

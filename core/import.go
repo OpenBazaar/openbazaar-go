@@ -45,9 +45,6 @@ func (n *OpenBazaarNode) ImportListings(r io.ReadCloser) error {
 	indexLock := new(sync.Mutex)
 	wg := new(sync.WaitGroup)
 
-	stringPool := sync.Pool{New: func() interface{} { var s string; return s }}
-	stringSlicePool := sync.Pool{New: func() interface{} { var s []string; return s }}
-
 listingLoop:
 	for {
 		select {
@@ -65,8 +62,7 @@ listingLoop:
 
 			countLock.Lock()
 			i := count
-			record := stringSlicePool.Get().([]string)
-			record, err = reader.Read()
+			record, err := reader.Read()
 			count++
 			countLock.Unlock()
 			if err == io.EOF {
@@ -193,18 +189,14 @@ listingLoop:
 			pos, ok = fields["image_urls"]
 			if ok {
 				listing.Item.Images = []*pb.Listing_Item_Image{}
-				imageUrls := stringSlicePool.Get().([]string)
-				imageUrls = []string{}
-				imageUrls = strings.Split(record[pos], ",")
+				imageUrls := strings.Split(record[pos], ",")
 				var l sync.Mutex
 				var wg sync.WaitGroup
-				var x int
-				img := stringPool.Get().(string)
-				for x, img = range imageUrls {
+				for x, img := range imageUrls {
 					wg.Add(1)
 					go func(x int, img string) {
 						defer wg.Done()
-						b64 := stringPool.Get().(string)
+						var b64 string
 						var filename string
 						testURL, err := url.Parse(img)
 						if err == nil && (testURL.Scheme == "http" || testURL.Scheme == "https") {
@@ -641,6 +633,11 @@ listingLoop:
 
 			// Add listing data
 			data, err := n.extractListingData(signedListing)
+			if err != nil {
+				errChan <- fmt.Errorf("Error extractinng listings: %s", err.Error())
+				return
+			}
+
 			indexLock.Lock()
 			ld = append(ld, data)
 			indexLock.Unlock()

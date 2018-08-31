@@ -9,6 +9,8 @@ Issues should be used primarily for bug reports and directly actionable features
 ## Go Guidelines
 You must run `gofmt` before each commit. Travis will fail if you do not run it. Most IDEs have the ability to set `gofmt` to run on save or at specified times.
 
+All commits are checked with [golangci-lint](https://github.com/golangci/golangci-lint) using the [.golangci.yml](.golangci.yml) config in the repo.
+
 Additionally, we like to keep the [Go Report Card](https://goreportcard.com/report/github.com/OpenBazaar/openbazaar-go) score at A or better. So keep those other tests in mind when you commit.
 
 ## Tests
