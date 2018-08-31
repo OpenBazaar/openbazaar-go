@@ -128,7 +128,7 @@ func (r *DisputeCaseRecord) ResolutionPaymentOutpoints(ratio PayoutRatio) (outpo
 			outpoints = r.VendorOutpoints
 		}
 	}
-	return
+	return outpoints
 }
 
 // ResolutionPaymentContract returns the preferred contract to be used when resolving
