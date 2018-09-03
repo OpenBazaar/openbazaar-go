@@ -422,7 +422,7 @@ func (n *Node) Stop() error {
 	return nil
 }
 
-// initializeREpo create the database
+// initializeRepo create the database
 func initializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)

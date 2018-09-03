@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/hex"
 	"errors"
-
 	"github.com/OpenBazaar/golang-socketio"
 	"github.com/btcsuite/btcutil"
 )
