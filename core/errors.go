@@ -11,7 +11,7 @@ var (
 	// ErrPurchaseUnknownListing - unavailable listing err
 	ErrPurchaseUnknownListing = errors.New("order contains a hash of a listing that is not currently for sale")
 
-	// ErrListingDoesNotExist - non-existant listing err
+	// ErrListingDoesNotExist - non-existent listing err
 	ErrListingDoesNotExist = errors.New("listing doesn't exist")
 	// ErrListingAlreadyExists - duplicate listing err
 	ErrListingAlreadyExists = errors.New("listing already exists")

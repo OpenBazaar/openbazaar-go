@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -26,7 +25,6 @@ const (
 )
 
 type openbazaarSchemaManager struct {
-	databaseLock    *sync.Mutex
 	database        *sql.DB
 	dataPath        string
 	identityKey     []byte

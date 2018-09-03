@@ -66,7 +66,7 @@ type jsonAPIHandler struct {
 	node   *core.OpenBazaarNode
 }
 
-func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) (*jsonAPIHandler, error) {
+func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *jsonAPIHandler {
 	allowedIPs := make(map[string]bool)
 	for _, ip := range config.AllowedIPs {
 		allowedIPs[ip] = true
@@ -84,7 +84,7 @@ func newJsonAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config
 		},
 		node: node,
 	}
-	return i, nil
+	return i
 }
 
 func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -1396,8 +1396,8 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		SanitizedResponse(w, string(listingsBytes))
 		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%s, immutable", maxAge))
+		SanitizedResponse(w, string(listingsBytes))
 	}
 }
 
@@ -1412,7 +1412,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		OrigName:     false,
 	}
 	if peerId == "" || strings.ToLower(peerId) == "listing" || peerId == i.node.IPFSIdentityString() {
-		sl := new(pb.SignedListing)
+		var sl *pb.SignedListing
 		_, err := cid.Decode(listingId)
 		if err == nil {
 			sl, err = i.node.GetListingFromHash(listingId)
@@ -1771,7 +1771,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	if !async {
-		removeDuplicates := func(xs []string) {
+		removeDuplicates := func(xs []string) []string {
 			found := make(map[string]bool)
 			j := 0
 			for i, x := range xs {
@@ -1781,7 +1781,7 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 					j++
 				}
 			}
-			xs = (xs)[:j]
+			return xs[:j]
 		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {

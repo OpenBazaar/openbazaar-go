@@ -157,6 +157,9 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 
 	// Execute UpdateProfile with new profile
 	newProfile, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
 	p := new(pb.Profile)
 	if err := jsonpb.Unmarshal(bytes.NewReader(newProfile), p); err != nil {
 		return err
@@ -164,7 +167,7 @@ func (n *OpenBazaarNode) PatchProfile(patch map[string]interface{}) error {
 	return n.UpdateProfile(p)
 }
 
-func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool, error) {
+func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile, bool) {
 	if profile.Stats == nil {
 		profile.Stats = new(pb.Profile_Stats)
 	}
@@ -195,7 +198,7 @@ func (n *OpenBazaarNode) appendCountsToProfile(profile *pb.Profile) (*pb.Profile
 		profile.Stats.AverageRating = averageRating
 		changed = true
 	}
-	return profile, changed, nil
+	return profile, changed
 }
 
 func (n *OpenBazaarNode) updateProfileCounts() error {
@@ -216,10 +219,7 @@ func (n *OpenBazaarNode) updateProfileCounts() error {
 	} else {
 		return nil
 	}
-	newPro, changed, err := n.appendCountsToProfile(profile)
-	if err != nil {
-		return err
-	}
+	newPro, changed := n.appendCountsToProfile(profile)
 	if changed {
 		return n.UpdateProfile(newPro)
 	}
@@ -249,10 +249,7 @@ func (n *OpenBazaarNode) updateProfileRatings(newRating *pb.Rating) error {
 		profile.Stats.RatingCount++ // += 1
 		profile.Stats.AverageRating = total / float32(profile.Stats.RatingCount)
 	}
-	newPro, _, err := n.appendCountsToProfile(profile)
-	if err != nil {
-		return err
-	}
+	newPro, _ := n.appendCountsToProfile(profile)
 
 	return n.UpdateProfile(newPro)
 }

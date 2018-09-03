@@ -12,12 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"io"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	ctxio "github.com/jbenet/go-context/io"
 	"github.com/op/go-logging"
-	"io"
 )
 
 var log = logging.MustGetLogger("service")
@@ -68,10 +69,10 @@ func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
-	go service.handleNewMessage(s, true)
+	go service.handleNewMessage(s)
 }
 
-func (service *OpenBazaarService) handleNewMessage(s inet.Stream, incoming bool) {
+func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	defer s.Close()
 	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
 	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)

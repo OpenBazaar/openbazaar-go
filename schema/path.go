@@ -35,7 +35,7 @@ func OpenbazaarPathTransform(basePath string, testModeEnabled bool) (path string
 	if err == nil {
 		path = filepath.Clean(path)
 	}
-	return
+	return path, err
 }
 func directoryName(isTestnet bool) (directoryName string) {
 	if runtime.GOOS == "linux" {
@@ -47,5 +47,5 @@ func directoryName(isTestnet bool) (directoryName string) {
 	if isTestnet {
 		directoryName += "-testnet"
 	}
-	return
+	return directoryName
 }

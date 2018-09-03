@@ -95,7 +95,7 @@ func TestGetSpecificInventory(t *testing.T) {
 	if err != nil || count != 5 {
 		t.Error("Error in inventory get")
 	}
-	count, err = ivdb.GetSpecific("xyz", 0)
+	_, err = ivdb.GetSpecific("xyz", 0)
 	if err == nil {
 		t.Error("Error in inventory get")
 	}

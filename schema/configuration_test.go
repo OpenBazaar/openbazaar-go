@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"io/ioutil"
 	"time"
 )
 
@@ -232,50 +230,6 @@ func TestGetResolverConfig(t *testing.T) {
 	}
 	if resolvers.Id != "https://resolver.onename.com/" {
 		t.Error("resolverUrl does not equal expected value")
-	}
-}
-
-func TestExtendConfigFile(t *testing.T) {
-	appSchema := MustNewCustomSchemaManager(SchemaContext{
-		DataPath:        GenerateTempPath(),
-		TestModeEnabled: true,
-	})
-	if err := appSchema.BuildSchemaDirectories(); err != nil {
-		t.Fatal(err)
-	}
-	defer appSchema.DestroySchemaDirectories()
-	if err := appSchema.InitializeDatabase(); err != nil {
-		t.Fatal(err)
-	}
-	if err := appSchema.InitializeIPFSRepo(); err != nil {
-		t.Fatal(err)
-	}
-	// Overwrite config with fixture
-	err := ioutil.WriteFile(appSchema.DataPathJoin("config"), configFixture(), 0666)
-	if err != nil {
-		t.Fatal("Unexpected error while building config fixture:", err.Error())
-	}
-
-	r, err := fsrepo.Open(appSchema.DataPath())
-	if err != nil {
-		t.Fatal("fsrepo.Open threw an unexpected error", err)
-	}
-	config, err := GetWalletConfig(configFixture())
-	if err != nil {
-		t.Fatal(err)
-	}
-	newMaxFee := config.MaxFee + 1
-	if err := extendConfigFile(r, "Wallet.MaxFee", newMaxFee); err != nil {
-		t.Fatal("extendConfigFile threw an unexpected error:", err)
-	}
-
-	configFile, err := ioutil.ReadFile(appSchema.DataPathJoin("config"))
-	if err != nil {
-		t.Error(err)
-	}
-	config, _ = GetWalletConfig(configFile)
-	if config.MaxFee != newMaxFee {
-		t.Fatalf("Expected maxFee to be %v, got %v", newMaxFee, config.MaxFee)
 	}
 }
 

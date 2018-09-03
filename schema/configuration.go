@@ -3,7 +3,6 @@ package schema
 import (
 	"encoding/json"
 	"errors"
-	"github.com/ipfs/go-ipfs/repo"
 	"time"
 )
 
@@ -86,7 +85,7 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 		return nil, MalformedConfigError
 	}
 
-	headers := make(map[string]interface{})
+	var headers map[string]interface{}
 	h, ok := api["HTTPHeaders"]
 	if h == nil || !ok {
 		headers = nil
@@ -333,6 +332,9 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 		return nil, MalformedConfigError
 	}
 	tc, ok := tcIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
 
 	pw, ok := tc["Password"]
 	if !ok {
@@ -512,11 +514,4 @@ func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
 	}
 
 	return resolvers, nil
-}
-
-func extendConfigFile(r repo.Repo, key string, value interface{}) error {
-	if err := r.SetConfigKey(key, value); err != nil {
-		return err
-	}
-	return nil
 }
