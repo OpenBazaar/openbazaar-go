@@ -178,7 +178,7 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	}
 
 	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
-		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+		t.Fatal("Listing acceptedCurrencies should contain 'TBTC'")
 	}
 }
 

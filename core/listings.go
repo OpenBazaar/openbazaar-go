@@ -147,12 +147,23 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 		listing.Metadata.EscrowTimeoutHours = EscrowTimeout
 	}
 
-	// Set crypto currency
-	listing.Metadata.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	// Validate accepted currencies
+	if len(listing.Metadata.AcceptedCurrencies) == 0 {
+		return sl, errors.New("accepted currencies must be set")
+	}
+	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY && len(listing.Metadata.AcceptedCurrencies) != 1 {
+		return sl, errors.New("a cryptocurrency listing must only have one accepted currency")
+	}
+	for _, acceptedCurrency := range listing.Metadata.AcceptedCurrencies {
+		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
+		if err != nil {
+			return sl, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
+		}
+	}
 
 	// Sanitize a few critical fields
 	if listing.Item == nil {
-		return sl, errors.New("No item in listing")
+		return sl, errors.New("no item in listing")
 	}
 	sanitizer := bluemonday.UGCPolicy()
 	for _, opt := range listing.Item.Options {
