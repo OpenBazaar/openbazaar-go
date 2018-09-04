@@ -302,15 +302,42 @@ const moderatorValidJSON = `{
 
 const walletMneumonicJSONResponse = `{"mnemonic": "correct horse battery staple"}`
 
-const walletAddressJSONResponse = `{"address": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5"}`
+const walletAddressJSONResponse = `{
+    "BCH": "qptj7gckxunjzd0dtjhmllm44we5ry9sv5r05a59v8",
+    "BTC": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5",
+    "LTC": "mtNyfJ4Sc38PFyCWMmGsYjAGrXsqwJ4gCD",
+    "ZEC": "tmUD2Zc2tCDCy2AE7xjMrTtPJd26m6RAP2t"
+}`
 
-const walletBalanceJSONResponse = `{"confirmed": 0, "unconfirmed": 0, "height": 0}`
+const walletBalanceJSONResponse = `{
+    "BCH": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "BTC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "LTC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "ZEC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    }
+}`
 
 //
 // Spending
 //
 
 const spendJSON = `{
+	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
 	"amount": 1700000,
 	"feeLevel": "NORMAL"
