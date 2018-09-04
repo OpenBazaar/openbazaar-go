@@ -58,7 +58,13 @@ const settingsJSON = `{
         "password": "letmein",
         "senderEmail": "notifications@urbanart.com",
         "recipientEmail": "Dave@gmail.com"
-    }
+    },
+    "preferredCurrencies": [
+	"btc",
+	"bch",
+	"ltc",
+	"zec"
+    ]
 }`
 
 const settingsUpdateJSON = `{
@@ -91,7 +97,13 @@ const settingsUpdateJSON = `{
         "password": "letmein",
         "senderEmail": "notifications@urbanart.com",
         "recipientEmail": "Dave@gmail.com"
-    }
+    },
+    "preferredCurrencies": [
+	"btc",
+	"bch",
+	"ltc",
+	"zec"
+    ]
 }`
 
 const settingsPatchJSON = `{

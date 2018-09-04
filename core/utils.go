@@ -17,7 +17,9 @@ import (
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 
+	"fmt"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 // EncodeCID - Hash with SHA-256 and encode as a multihash
@@ -142,4 +144,17 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 // NormalizeCurrencyCode standardizes the format for the given currency code
 func NormalizeCurrencyCode(currencyCode string) string {
 	return strings.ToUpper(currencyCode)
+}
+
+func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {
+	if data.PreferredCurrencies == nil {
+		return nil
+	}
+	for _, cc := range *data.PreferredCurrencies {
+		_, err := n.Multiwallet.WalletForCurrencyCode(cc)
+		if err != nil {
+			return fmt.Errorf("preferred coin %s not found in multiwallet", cc)
+		}
+	}
+	return nil
 }

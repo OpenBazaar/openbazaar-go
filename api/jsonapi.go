@@ -885,6 +885,10 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if err = i.node.ValidateMultiwalletHasPreferredCurrencies(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	_, err = i.node.Datastore.Settings().Get()
 	if err == nil {
 		ErrorResponse(w, http.StatusConflict, "Settings is already set. Use PUT.")
@@ -938,6 +942,10 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = i.node.ValidateMultiwalletHasPreferredCurrencies(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -1004,6 +1012,10 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = validateSMTPSettings(settings); err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err = i.node.ValidateMultiwalletHasPreferredCurrencies(settings); err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
