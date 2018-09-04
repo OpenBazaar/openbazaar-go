@@ -105,6 +105,9 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 		return sp, err
 	}
 	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return sp, err
+	}
 	id.BitcoinSig = sig.Serialize()
 
 	// Sign post

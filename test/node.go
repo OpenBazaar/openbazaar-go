@@ -2,11 +2,14 @@ package test
 
 import (
 	// "github.com/ipfs/go-ipfs/thirdparty/testutil"
+	"github.com/OpenBazaar/multiwallet"
+	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/spvwallet"
+	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/ipfs/go-ipfs/core/mock"
 	"github.com/tyler-smith/go-bip39"
@@ -76,6 +79,19 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		Logger:      NewLogger(),
 	}
 
+	coins := make(map[wi.CoinType]bool)
+	coins[wi.Bitcoin] = true
+	coins[wi.BitcoinCash] = true
+	coins[wi.Zcash] = true
+	coins[wi.Litecoin] = true
+
+	walletConf := config.NewDefaultConfig(coins, &chaincfg.RegressionNetParams)
+	walletConf.Mnemonic = mnemonic
+	mw, err := multiwallet.NewMultiWallet(walletConf)
+	if err != nil {
+		return nil, err
+	}
+
 	wallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
 	if err != nil {
 		return nil, err
@@ -83,11 +99,12 @@ func NewNode() (*core.OpenBazaarNode, error) {
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
-		RepoPath:   GetRepoPath(),
-		IpfsNode:   ipfsNode,
-		Datastore:  repository.DB,
-		Wallet:     wallet,
-		BanManager: net.NewBanManager([]peer.ID{}),
+		RepoPath:    GetRepoPath(),
+		IpfsNode:    ipfsNode,
+		Datastore:   repository.DB,
+		Wallet:      wallet,
+		Multiwallet: mw,
+		BanManager:  net.NewBanManager([]peer.ID{}),
 	}
 
 	node.Service = service.New(node, repository.DB)

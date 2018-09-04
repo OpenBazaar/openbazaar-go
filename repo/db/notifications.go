@@ -110,7 +110,7 @@ func (n *NotficationsDB) GetAll(offsetId string, limit int, typeFilter []string)
 
 		// TODO: These should get removed when (*Notification).MarshalJSON begins to include
 		// these values. Overriding them here allows for the marshalled representation of
-		// the ID field to become out of sync with the DB version of ID, which is overriden
+		// the ID field to become out of sync with the DB version of ID, which is overridden
 		// here. (Making Notification.NotifierData.GetID() != Notification.GetID())
 		var read bool
 		if readInt == 1 {

@@ -1,10 +1,11 @@
 package resync
 
 import (
+	"time"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/op/go-logging"
-	"time"
 )
 
 var log = logging.MustGetLogger("ResyncManager")
@@ -44,7 +45,7 @@ func (r *ResyncManager) CheckUnfunded() {
 		r.sales.SetNeedsResync(uf.OrderId, false)
 	}
 	if r.w != nil {
-		log.Infof("Rolling back blockchain %s looking for payments for %d orders\n", time.Now().Sub(rollbackTime), len(unfunded))
+		log.Infof("Rolling back blockchain %s looking for payments for %d orders\n", time.Since(rollbackTime), len(unfunded))
 		r.w.ReSyncBlockchain(rollbackTime)
 	}
 }

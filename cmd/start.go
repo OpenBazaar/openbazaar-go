@@ -210,7 +210,11 @@ func (x *Start) Execute(args []string) error {
 
 	// Create user-agent file
 	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
-	ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	err = ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	if err != nil {
+		log.Error("write user_agent:", err)
+		return err
+	}
 
 	ct := wi.Bitcoin
 	cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
@@ -526,9 +530,17 @@ func (x *Start) Execute(args []string) error {
 	}
 	val := ival.([]byte)
 	dhtrec := new(recpb.Record)
-	proto.Unmarshal(val, dhtrec)
+	err = proto.Unmarshal(val, dhtrec)
+	if err != nil {
+		log.Error("unmarshal record", err)
+		return err
+	}
 	e := new(namepb.IpnsEntry)
-	proto.Unmarshal(dhtrec.GetValue(), e)
+	err = proto.Unmarshal(dhtrec.GetValue(), e)
+	if err != nil {
+		log.Error("unmarshal record value", err)
+		return err
+	}
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
@@ -739,9 +751,7 @@ func (x *Start) Execute(args []string) error {
 	if addr != "127.0.0.1" && cryptoWallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
-	for _, ip := range x.AllowIP {
-		apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, ip)
-	}
+	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, x.AllowIP...)
 
 	// Create authentication cookie
 	var authCookie http.Cookie
@@ -756,7 +766,11 @@ func (x *Start) Execute(args []string) error {
 		cookie, err := ioutil.ReadFile(cookiePath)
 		if err != nil {
 			authBytes := make([]byte, 32)
-			rand.Read(authBytes)
+			_, err = rand.Read(authBytes)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
 			authCookie.Value = base58.Encode(authBytes)
 			f, err := os.Create(cookiePath)
 			if err != nil {
@@ -920,9 +934,15 @@ func (x *Start) Execute(args []string) error {
 			}
 		}
 		core.PublishLock.Unlock()
-		core.Node.UpdateFollow()
+		err = core.Node.UpdateFollow()
+		if err != nil {
+			log.Error(err)
+		}
 		if !core.InitalPublishComplete {
-			core.Node.SeedNode()
+			err = core.Node.SeedNode()
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
@@ -962,7 +982,7 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	for _, addr := range node.PeerHost.Addrs() {
 		addrs = append(addrs, addr.String())
 	}
-	sort.Sort(sort.StringSlice(addrs))
+	sort.Strings(addrs)
 
 	for _, addr := range addrs {
 		log.Infof("Swarm listening on %s\n", addr)
@@ -1153,18 +1173,34 @@ func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDa
 func printSplashScreen(verbose bool) {
 	blue := color.New(color.FgBlue)
 	white := color.New(color.FgWhite)
-	white.Printf("________             ")
-	blue.Println("         __________")
-	white.Printf(`\_____  \ ______   ____   ____`)
-	blue.Println(`\______   \_____  _____________  _____ _______`)
-	white.Printf(` /   |   \\____ \_/ __ \ /    \`)
-	blue.Println(`|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ `)
-	white.Printf(`/    |    \  |_> >  ___/|   |  \    `)
-	blue.Println(`|   \ / __ \_/    /  / __ \_/ __ \|  | \/`)
-	white.Printf(`\_______  /   __/ \___  >___|  /`)
-	blue.Println(`______  /(____  /_____ \(____  (____  /__|`)
-	white.Printf(`        \/|__|        \/     \/  `)
-	blue.Println(`     \/      \/      \/     \/     \/`)
+
+	for i, l := range []string{
+		"________             ",
+		"         __________",
+		`\_____  \ ______   ____   ____`,
+		`\______   \_____  _____________  _____ _______`,
+		` /   |   \\____ \_/ __ \ /    \`,
+		`|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ `,
+		`/    |    \  |_> >  ___/|   |  \    `,
+		`|   \ / __ \_/    /  / __ \_/ __ \|  | \/`,
+		`\_______  /   __/ \___  >___|  /`,
+		`______  /(____  /_____ \(____  (____  /__|`,
+		`        \/|__|        \/     \/  `,
+		`     \/      \/      \/     \/     \/`,
+	} {
+		if i%2 == 0 {
+			if _, err := white.Printf(l); err != nil {
+				log.Debug(err)
+				return
+			}
+			continue
+		}
+		if _, err := blue.Println(l); err != nil {
+			log.Debug(err)
+			return
+		}
+	}
+
 	blue.DisableColor()
 	white.DisableColor()
 	fmt.Println("")

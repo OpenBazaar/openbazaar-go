@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/multiwallet"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type StatusUpdater struct {
-	mw   multiwallet.MultiWallet
+	mw  multiwallet.MultiWallet
 	c   chan repo.Notifier
 	ctx context.Context
 }

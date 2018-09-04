@@ -124,7 +124,7 @@ func TestOfflineMessagesSetMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	m, ok = messages["abccc"]
+	_, ok = messages["abccc"]
 	if ok {
 		t.Error("Failed to delete")
 	}

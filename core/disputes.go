@@ -39,6 +39,10 @@ var ErrCaseNotFound = errors.New("case not found")
 // ErrCloseFailureCaseExpired - tried closing expired case err
 var ErrCloseFailureCaseExpired = errors.New("unable to close expired case")
 
+// ErrCloseFailureNoOutpoints indicates when a dispute cannot be closed due to neither party
+// including outpoints with their dispute
+var ErrCloseFailureNoOutpoints = errors.New("unable to close case with missing outpoints")
+
 // ErrOpenFailureOrderExpired - tried disputing expired order err
 var ErrOpenFailureOrderExpired = errors.New("unable to open case beacuse order is too old to dispute")
 
@@ -418,19 +422,29 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 // CloseDispute - close a dispute
 func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string) error {
-	if buyerPercentage+vendorPercentage != 100 {
-		return errors.New("Payout percentages must sum to 100")
+	var payDivision = repo.PayoutRatio{Buyer: buyerPercentage, Vendor: vendorPercentage}
+	if err := payDivision.Validate(); err != nil {
+		return err
 	}
 
 	dispute, err := n.Datastore.Cases().GetByCaseID(orderID)
 	if err != nil {
 		return ErrCaseNotFound
 	}
+
 	if dispute.OrderState != pb.OrderState_DISPUTED {
+		log.Errorf("unable to resolve expired dispute for order %s", orderID)
 		return errors.New("A dispute for this order is not open")
 	}
 	if dispute.IsExpiredNow() {
+		log.Errorf("unable to resolve expired dispute for order %s", orderID)
 		return ErrCloseFailureCaseExpired
+	}
+
+	var outpoints = dispute.ResolutionPaymentOutpoints(payDivision)
+	if outpoints == nil {
+		log.Errorf("no outpoints to resolve in dispute for order %s", orderID)
+		return ErrCloseFailureNoOutpoints
 	}
 
 	if dispute.VendorContract == nil && vendorPercentage > 0 {
@@ -440,8 +454,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if dispute.BuyerContract == nil {
 		dispute.BuyerContract = dispute.VendorContract
 	}
+	preferredContract := dispute.ResolutionPaymentContract(payDivision)
 
-	d := new(pb.DisputeResolution)
+	var d = new(pb.DisputeResolution)
 
 	// Add timestamp
 	ts, err := ptypes.TimestampProto(time.Now())
@@ -459,91 +474,17 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Set resolution
 	d.Resolution = resolution
 
-	// Decide whose contract to use
-	var buyerPayout bool
-	var vendorPayout bool
-	var outpoints []*pb.Outpoint
-	var redeemScript string
-	var chaincode string
-	var feePerByte uint64
-	var vendorID string
-	var vendorKey libp2p.PubKey
-	var buyerID string
-	var buyerKey libp2p.PubKey
-	if buyerPercentage > 0 && vendorPercentage == 0 {
-		buyerPayout = true
-		outpoints = dispute.BuyerOutpoints
-		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
-		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
-		feePerByte = dispute.BuyerContract.BuyerOrder.RefundFee
-		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
-		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.BuyerOrder.BuyerID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-		vendorID = dispute.BuyerContract.VendorListings[0].VendorID.PeerID
-		vendorKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.VendorListings[0].VendorID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-	} else if vendorPercentage > 0 && buyerPercentage == 0 {
-		vendorPayout = true
-		outpoints = dispute.VendorOutpoints
-		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
-		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
-		if len(dispute.VendorContract.VendorOrderFulfillment) > 0 && dispute.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			feePerByte = dispute.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
-		} else {
-			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
-		}
-		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
-		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-		vendorID = dispute.VendorContract.VendorListings[0].VendorID.PeerID
-		vendorKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.VendorListings[0].VendorID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-	} else if vendorPercentage > buyerPercentage {
-		buyerPayout = true
-		vendorPayout = true
-		outpoints = dispute.VendorOutpoints
-		redeemScript = dispute.VendorContract.BuyerOrder.Payment.RedeemScript
-		chaincode = dispute.VendorContract.BuyerOrder.Payment.Chaincode
-		if len(dispute.VendorContract.VendorOrderFulfillment) > 0 && dispute.VendorContract.VendorOrderFulfillment[0].Payout != nil {
-			feePerByte = dispute.VendorContract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte
-		} else {
-			feePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
-		}
-		buyerID = dispute.VendorContract.BuyerOrder.BuyerID.PeerID
-		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.BuyerOrder.BuyerID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-		vendorID = dispute.VendorContract.VendorListings[0].VendorID.PeerID
-		vendorKey, err = libp2p.UnmarshalPublicKey(dispute.VendorContract.VendorListings[0].VendorID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-	} else if buyerPercentage >= vendorPercentage {
-		buyerPayout = true
-		vendorPayout = true
-		outpoints = dispute.BuyerOutpoints
-		redeemScript = dispute.BuyerContract.BuyerOrder.Payment.RedeemScript
-		chaincode = dispute.BuyerContract.BuyerOrder.Payment.Chaincode
-		feePerByte = dispute.BuyerContract.BuyerOrder.RefundFee
-		buyerID = dispute.BuyerContract.BuyerOrder.BuyerID.PeerID
-		buyerKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.BuyerOrder.BuyerID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
-		vendorID = dispute.BuyerContract.VendorListings[0].VendorID.PeerID
-		vendorKey, err = libp2p.UnmarshalPublicKey(dispute.BuyerContract.VendorListings[0].VendorID.Pubkeys.Identity)
-		if err != nil {
-			return err
-		}
+	var (
+		vendorID = preferredContract.VendorListings[0].VendorID.PeerID
+		buyerID  = preferredContract.BuyerOrder.BuyerID.PeerID
+	)
+	buyerKey, err := libp2p.UnmarshalPublicKey(preferredContract.BuyerOrder.BuyerID.Pubkeys.Identity)
+	if err != nil {
+		return err
+	}
+	vendorKey, err := libp2p.UnmarshalPublicKey(preferredContract.VendorListings[0].VendorID.Pubkeys.Identity)
+	if err != nil {
+		return err
 	}
 
 	// Calculate total out value
@@ -573,7 +514,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 
 	var buyerAddr btcutil.Address
 	var buyerValue uint64
-	if buyerPayout {
+	if payDivision.BuyerAny() {
 		buyerAddr, err = n.Wallet.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
@@ -588,7 +529,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
-	if vendorPayout {
+	if payDivision.VendorAny() {
 		vendorAddr, err = n.Wallet.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err
@@ -626,7 +567,8 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Calculate total fee
-	txFee := n.Wallet.EstimateFee(inputs, outputs, feePerByte)
+	defaultFee := n.Wallet.GetFeePerByte(wallet.NORMAL)
+	txFee := n.Wallet.EstimateFee(inputs, outputs, dispute.ResolutionPaymentFeePerByte(payDivision, defaultFee))
 
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
@@ -647,6 +589,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create moderator key
+	chaincode := preferredContract.BuyerOrder.Payment.Chaincode
 	chaincodeBytes, err := hex.DecodeString(chaincode)
 	if err != nil {
 		return err
@@ -681,6 +624,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Create signatures
+	redeemScript := preferredContract.BuyerOrder.Payment.RedeemScript
 	redeemScriptBytes, err := hex.DecodeString(redeemScript)
 	if err != nil {
 		return err
@@ -931,6 +875,10 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		}
 		timeout, _ := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
 		addr, redeemScript, err := n.Wallet.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error generating multisig script")
+			return validationErrors
+		}
 
 		// TODO: the bitcoin cash check is temporary in case someone files a dispute for an order that was created when the prefix was still being used
 		// on the address. We can remove this 45 days after the release of 2.2.2 as it wont be possible for this condition to exist at this point.
