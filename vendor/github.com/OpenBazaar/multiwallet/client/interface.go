@@ -5,6 +5,10 @@ import (
 )
 
 type APIClient interface {
+
+	// Start up the API service
+	Start()
+
 	// Get info about the server
 	GetInfo() (*Info, error)
 

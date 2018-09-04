@@ -55,6 +55,9 @@ type CoinConfig struct {
 
 	// An implementation of the Datastore interface for each desired coin
 	DB wallet.Datastore
+
+	// Custom options for wallet to use
+	Options map[string]interface{}
 }
 
 func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Params) *Config {

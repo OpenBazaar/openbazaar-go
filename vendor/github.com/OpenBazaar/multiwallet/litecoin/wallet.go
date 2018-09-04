@@ -16,13 +16,13 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 
+	"encoding/hex"
 	"github.com/OpenBazaar/multiwallet/client"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/multiwallet/keys"
 	laddr "github.com/OpenBazaar/multiwallet/litecoin/address"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
-	"encoding/hex"
 )
 
 type LitecoinWallet struct {
@@ -73,6 +73,7 @@ func litecoinAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Addr
 	return laddr.NewAddressPubKeyHash(addr.ScriptAddress(), params)
 }
 func (w *LitecoinWallet) Start() {
+	w.client.Start()
 	w.ws.Start()
 }
 
@@ -352,8 +353,8 @@ func (w *LitecoinWallet) Broadcast(tx *wire.MsgTx) error {
 				Hex: hex.EncodeToString(in.SignatureScript),
 			},
 			Sequence: uint32(in.Sequence),
-			N: n,
-			Addr: addr.String(),
+			N:        n,
+			Addr:     addr.String(),
 			Satoshis: u.Value,
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)

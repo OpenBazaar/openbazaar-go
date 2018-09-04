@@ -72,6 +72,7 @@ func keyToAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btc.Address, er
 }
 
 func (w *BitcoinWallet) Start() {
+	w.client.Start()
 	w.ws.Start()
 }
 
@@ -343,8 +344,8 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 				Hex: hex.EncodeToString(in.SignatureScript),
 			},
 			Sequence: uint32(in.Sequence),
-			N: n,
-			Addr: addr.String(),
+			N:        n,
+			Addr:     addr.String(),
 			Satoshis: u.Value,
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)
