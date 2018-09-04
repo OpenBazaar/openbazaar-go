@@ -45,6 +45,7 @@ type WalletsConfig struct {
 	BCH *CoinConfig `json:"BCH"`
 	LTC *CoinConfig `json:"LTC"`
 	ZEC *CoinConfig `json:"ZEC"`
+	ETH *CoinConfig `json:"ETH"`
 }
 
 type CoinConfig struct {
@@ -57,6 +58,7 @@ type CoinConfig struct {
 	MediumFeeDefault int
 	LowFeeDefault    int
 	TrustedPeer      string
+	CustomConfig     interface{}
 }
 
 type DataSharing struct {
