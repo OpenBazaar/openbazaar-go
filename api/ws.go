@@ -87,11 +87,6 @@ func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config s
 }
 
 func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ws, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Error("Error upgrading to websockets:", err)
-		return
-	}
 	if !wsh.enabled {
 		w.WriteHeader(http.StatusForbidden)
 		fmt.Fprint(w, "403 - Forbidden")
@@ -128,6 +123,12 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}
+
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Error("Error upgrading to websockets:", err)
+		return
 	}
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}
 	c.h.register <- c
