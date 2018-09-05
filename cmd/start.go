@@ -210,14 +210,6 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	// Create user-agent file
-	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
-	err = ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
-	if err != nil {
-		log.Error("write user_agent:", err)
-		return err
-	}
-
 	ct := wi.Bitcoin
 	cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err == nil {
@@ -241,6 +233,14 @@ func (x *Start) Execute(args []string) error {
 	migrations.WalletCoinType = ct
 	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
 	if err != nil && err != repo.ErrRepoExists {
+		return err
+	}
+
+	// Create user-agent file
+	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
+	err = ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	if err != nil {
+		log.Error("write user_agent:", err)
 		return err
 	}
 
