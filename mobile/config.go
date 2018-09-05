@@ -10,6 +10,7 @@ var stdoutLogFormat = logging.MustStringFormatter(
 
 var logger logging.Backend
 
+// NodeConfig struct of the config parameters to be passed when creating a new node
 type NodeConfig struct {
 
 	// Path for the node's data directory
