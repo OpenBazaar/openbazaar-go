@@ -25,8 +25,14 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 		return nil, err
 	}
 	oc.OrderID = orderID
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return nil, err
+	}
+
 	if addressRequest {
-		addr := n.Wallet.NewAddress(wallet.EXTERNAL)
+		addr := wal.NewAddress(wallet.EXTERNAL)
 		oc.PaymentAddress = addr.EncodeAddress()
 	}
 
@@ -96,12 +102,16 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	if err != nil {
 		return err
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the temp address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				addr, err := n.Wallet.DecodeAddress(r.Address)
+				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return err
 				}
@@ -127,7 +137,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return err
 		}
@@ -135,7 +145,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -143,7 +153,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		if err != nil {
 			return err
 		}
-		_, err = n.Wallet.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
+		_, err = wal.SweepAddress(txInputs, nil, vendorKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return err
 		}
@@ -168,13 +178,17 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				addr, err := n.Wallet.DecodeAddress(r.Address)
+				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return fmt.Errorf("decode prior transactions address: %s", err.Error())
 				}
@@ -193,7 +207,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 			}
 		}
 
-		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return fmt.Errorf("decode refund address: %s", err.Error())
 		}
@@ -206,7 +220,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("decode buyer chaincode: %s", err.Error())
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return fmt.Errorf("acquire wallet private key: %s", err.Error())
 		}
@@ -214,7 +228,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate ec private key: %s", err.Error())
 		}
-		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
@@ -222,7 +236,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
 		}
@@ -255,6 +269,10 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 			exists := false
@@ -286,7 +304,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		}
 	}
 	if validateAddress {
-		_, err = n.Wallet.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
+		_, err = wal.DecodeAddress(contract.VendorOrderConfirmation.PaymentAddress)
 		if err != nil {
 			return err
 		}
