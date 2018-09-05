@@ -996,7 +996,10 @@ func (n PremarshalledNotifier) GetSMTPTitleAndBody() (string, string, bool) { re
 
 func NewNotificationID() string {
 	b := make([]byte, 32)
-	rand.Read(b)
+	_, err := rand.Read(b)
+	if err != nil {
+		log.Error(err)
+	}
 	encoded, _ := mh.Encode(b, mh.SHA2_256)
 	nId, _ := mh.Cast(encoded)
 	return nId.B58String()
