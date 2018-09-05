@@ -315,29 +315,29 @@ const moderatorValidJSON = `{
 const walletMneumonicJSONResponse = `{"mnemonic": "correct horse battery staple"}`
 
 const walletAddressJSONResponse = `{
-    "BCH": "qptj7gckxunjzd0dtjhmllm44we5ry9sv5r05a59v8",
-    "BTC": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5",
-    "LTC": "mtNyfJ4Sc38PFyCWMmGsYjAGrXsqwJ4gCD",
-    "ZEC": "tmUD2Zc2tCDCy2AE7xjMrTtPJd26m6RAP2t"
+    "TBCH": "qptj7gckxunjzd0dtjhmllm44we5ry9sv5r05a59v8",
+    "TBTC": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5",
+    "TLTC": "mtNyfJ4Sc38PFyCWMmGsYjAGrXsqwJ4gCD",
+    "TZEC": "tmUD2Zc2tCDCy2AE7xjMrTtPJd26m6RAP2t"
 }`
 
 const walletBalanceJSONResponse = `{
-    "BCH": {
+    "TBCH": {
         "confirmed": 0,
         "height": 0,
         "unconfirmed": 0
     },
-    "BTC": {
+    "TBTC": {
         "confirmed": 0,
         "height": 0,
         "unconfirmed": 0
     },
-    "LTC": {
+    "TLTC": {
         "confirmed": 0,
         "height": 0,
         "unconfirmed": 0
     },
-    "ZEC": {
+    "TZEC": {
         "confirmed": 0,
         "height": 0,
         "unconfirmed": 0

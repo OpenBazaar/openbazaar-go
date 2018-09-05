@@ -177,7 +177,7 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
 	}
 
-	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
+	if respObj[0].AcceptedCurrencies[0] != "TBTC" {
 		t.Fatal("Listing acceptedCurrencies should contain 'TBTC'")
 	}
 }
@@ -225,6 +225,7 @@ func TestListingAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
 	}
 }
+
 func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")

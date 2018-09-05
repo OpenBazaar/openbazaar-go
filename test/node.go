@@ -11,6 +11,7 @@ import (
 	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/core/mock"
 	"github.com/tyler-smith/go-bip39"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
@@ -60,6 +61,10 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	mPrivKey, err := hdkeychain.NewMaster(seed, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, err
+	}
 	tp, err := inet.ResolveTCPAddr("tcp4", "127.0.0.1:8333")
 	if err != nil {
 		return nil, err
@@ -99,12 +104,13 @@ func NewNode() (*core.OpenBazaarNode, error) {
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
-		RepoPath:    GetRepoPath(),
-		IpfsNode:    ipfsNode,
-		Datastore:   repository.DB,
-		Wallet:      wallet,
-		Multiwallet: mw,
-		BanManager:  net.NewBanManager([]peer.ID{}),
+		RepoPath:         GetRepoPath(),
+		IpfsNode:         ipfsNode,
+		Datastore:        repository.DB,
+		Wallet:           wallet,
+		Multiwallet:      mw,
+		BanManager:       net.NewBanManager([]peer.ID{}),
+		MasterPrivateKey: mPrivKey,
 	}
 
 	node.Service = service.New(node, repository.DB)

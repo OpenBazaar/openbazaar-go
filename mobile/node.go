@@ -12,6 +12,7 @@ import (
 	"time"
 
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -224,10 +225,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 
-	// Wallet
 	core.PublishLock.Lock()
-	if !config.DisableWallet {
-	}
 
 	// Exchange rates
 	var exchangeRates wi.ExchangeRates
@@ -276,7 +274,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	core.Node = &core.OpenBazaarNode{
 		RepoPath:         config.RepoPath,
 		Datastore:        sqliteDB,
-		Wallet:           wallet,
 		Multiwallet:      mw,
 		NameSystem:       ns,
 		ExchangeRates:    exchangeRates,
@@ -390,7 +387,7 @@ func (n *Node) Start() error {
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
-		if n.OpenBazaarNode.Multiwallet != nil {
+		if !n.config.DisableWallet {
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
 			for ct, wal := range n.OpenBazaarNode.Multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
