@@ -201,7 +201,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	}
 	p := new(pb.ID_Pubkeys)
 	p.Identity = pubkey
-	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return sl, err
 	}
@@ -210,7 +210,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	listing.VendorID = id
 
 	// Sign the GUID with the Bitcoin key
-	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return sl, err
 	}
@@ -505,7 +505,7 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		FreeShipping:       freeShipping,
 		Language:           listing.Listing.Metadata.Language,
 		ModeratorIDs:       listing.Listing.Moderators,
-		AcceptedCurrencies: []string{n.Wallet.CurrencyCode()},
+		AcceptedCurrencies: listing.Listing.Metadata.AcceptedCurrencies,
 	}
 	return ld, nil
 }
