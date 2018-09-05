@@ -27,6 +27,7 @@ import (
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
+	"github.com/btcsuite/btcutil/hdkeychain"
 )
 
 var (
@@ -110,6 +111,9 @@ type OpenBazaarNode struct {
 
 	// Generic pubsub interface
 	Pubsub ipfs.Pubsub
+
+	// The master private key derived from the mnemonic
+	MasterPrivateKey *hdkeychain.ExtendedKey
 
 	TestnetEnable        bool
 	RegressionTestEnable bool

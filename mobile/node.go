@@ -33,6 +33,7 @@ import (
 	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
@@ -42,6 +43,7 @@ import (
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
@@ -191,6 +193,13 @@ func NewNode(config NodeConfig) (*Node, error) {
 		params = chaincfg.MainNetParams
 	}
 
+	// Master key setup
+	seed := bip39.NewSeed(mn, "")
+	mPrivKey, err := hdkeychain.NewMaster(seed, &params)
+	if err != nil {
+		return nil, err
+	}
+
 	// Multiwallet setup
 	multiwalletConfig := &wallet.WalletConfig{
 		ConfigFile:         walletsConfig,
@@ -286,15 +295,16 @@ func NewNode(config NodeConfig) (*Node, error) {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:      config.RepoPath,
-		Datastore:     sqliteDB,
-		Wallet:        wallet,
-		Multiwallet:   mw,
-		NameSystem:    ns,
-		ExchangeRates: exchangeRates,
-		UserAgent:     core.USERAGENT,
-		PushNodes:     pushNodes,
-		BanManager:    bm,
+		RepoPath:         config.RepoPath,
+		Datastore:        sqliteDB,
+		Wallet:           wallet,
+		Multiwallet:      mw,
+		NameSystem:       ns,
+		ExchangeRates:    exchangeRates,
+		UserAgent:        core.USERAGENT,
+		PushNodes:        pushNodes,
+		BanManager:       bm,
+		MasterPrivateKey: mPrivKey,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {

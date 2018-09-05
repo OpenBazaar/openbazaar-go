@@ -56,10 +56,12 @@ import (
 	"strings"
 
 	"github.com/OpenBazaar/zcashd-wallet"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
@@ -725,6 +727,14 @@ func (x *Start) Execute(args []string) error {
 		log.Fatal("Unknown wallet type")
 	}
 
+	// Master key setup
+	seed := bip39.NewSeed(mn, "")
+	mPrivKey, err := hdkeychain.NewMaster(seed, &params)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
 	// Push nodes
 	var pushNodes []peer.ID
 	for _, pnd := range dataSharing.PushTo {
@@ -852,6 +862,7 @@ func (x *Start) Execute(args []string) error {
 		Pubsub:               ps,
 		TestnetEnable:        x.Testnet,
 		RegressionTestEnable: x.Regtest,
+		MasterPrivateKey:     mPrivKey,
 	}
 	core.PublishLock.Lock()
 
