@@ -65,7 +65,7 @@ type Node struct {
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
-	nodeconfig := NodeConfig{
+	nodeconfig := &NodeConfig{
 		RepoPath:            repoPath,
 		AuthenticationToken: "",
 		Testnet:             testnet,
@@ -82,7 +82,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 }
 
 // NewNodeWithConfig create a new node using the configuration file from NewNode()
-func NewNodeWithConfig(config NodeConfig, password string, mnemonic string) (*Node, error) {
+func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*Node, error) {
 	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
@@ -279,7 +279,7 @@ func NewNodeWithConfig(config NodeConfig, password string, mnemonic string) (*No
 		return nil, errors.New("No gateway addresses configured")
 	}
 
-	return &Node{OpenBazaarNode: core.Node, config: config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
+	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil
 }
 
 // startIPFSNode start the node
