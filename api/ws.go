@@ -10,6 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/gorilla/websocket"
+	"github.com/op/go-logging"
 )
 
 type connection struct {
@@ -64,6 +65,7 @@ type wsHandler struct {
 	cookie        http.Cookie
 	username      string
 	password      string
+	logger        *logging.Logger
 }
 
 func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config schema.APIConfig) *wsHandler {
@@ -82,6 +84,7 @@ func newWSAPIHandler(node *core.OpenBazaarNode, authCookie http.Cookie, config s
 		cookie:        authCookie,
 		username:      config.Username,
 		password:      config.Password,
+		logger:        logging.MustGetLogger("api"),
 	}
 	return &handler
 }
@@ -95,6 +98,7 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(wsh.allowedIPs) > 0 {
 		remoteAddr := strings.Split(r.RemoteAddr, ":")
 		if !wsh.allowedIPs[remoteAddr[0]] {
+			wsh.logger.Errorf("refused websocket connection from ip: %s", remoteAddr[0])
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, "403 - Forbidden")
 			return
@@ -104,11 +108,13 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if wsh.username == "" || wsh.password == "" {
 			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
 			if err != nil {
+				wsh.logger.Error("refused websocket connection: no cookie present")
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return
 			}
 			if wsh.cookie.Value != cookie.Value {
+				wsh.logger.Error("refused websocket connection: invalid cookie")
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return
@@ -118,6 +124,7 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			h := sha256.Sum256([]byte(password))
 			password = hex.EncodeToString(h[:])
 			if !ok || username != wsh.username || strings.ToLower(password) != strings.ToLower(wsh.password) {
+				wsh.logger.Error("refused websocket connection: invalid username and/or password")
 				w.WriteHeader(http.StatusForbidden)
 				fmt.Fprint(w, "403 - Forbidden")
 				return
@@ -127,9 +134,10 @@ func (wsh wsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error("Error upgrading to websockets:", err)
+		wsh.logger.Error("upgrading websocket:", err)
 		return
 	}
+	wsh.logger.Info("websocket connection established")
 	c := &connection{send: make(chan []byte, 256), ws: ws, h: wsh.h}
 	c.h.register <- c
 	defer func() { c.h.unregister <- c }()
