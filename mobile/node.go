@@ -12,7 +12,6 @@ import (
 	"time"
 
 	bstk "github.com/OpenBazaar/go-blockstackclient"
-	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
