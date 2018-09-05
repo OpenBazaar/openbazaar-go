@@ -62,6 +62,9 @@ type Node struct {
 	apiConfig      *apiSchema.APIConfig
 }
 
+// Mobile empty structure used to carry config data to route-around gomobile's type restrictions
+type Mobile struct{}
+
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
 	// Node config
@@ -74,7 +77,8 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 	}
 
 	// Use Mobile struct to carry config data
-	node, err := NewNodeWithConfig(nodeconfig, password, mnemonic)
+	var m Mobile
+	node, err := m.NewNodeWithConfig(nodeconfig, password, mnemonic)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -82,7 +86,7 @@ func NewNode(repoPath string, authenticationToken string, testnet bool, userAgen
 }
 
 // NewNodeWithConfig create a new node using the configuration file from NewNode()
-func NewNodeWithConfig(config NodeConfig, password string, mnemonic string) (*Node, error) {
+func (m *Mobile) NewNodeWithConfig(config NodeConfig, password string, mnemonic string) (*Node, error) {
 	// Lockfile
 	repoLockFile := filepath.Join(config.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
