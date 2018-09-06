@@ -154,6 +154,8 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	ms.requests[pmes.RequestId] = returnChan
 	ms.requestlk.Unlock()
 
+	defer ms.closeRequest(pmes.RequestId)
+
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	retry := false
