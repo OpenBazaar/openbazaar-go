@@ -109,15 +109,10 @@ func TestMigration006(t *testing.T) {
 	}
 
 	for _, listing := range migratedListings {
-		actualModeratorIDs := make([]string, 0)
-		for _, peerID := range listing.ModeratorIDs {
-			actualModeratorIDs = append(actualModeratorIDs, peerID)
-		}
-
-		if !reflect.DeepEqual(expectedStoreModerators, actualModeratorIDs) {
+		if !reflect.DeepEqual(expectedStoreModerators, listing.ModeratorIDs) {
 			t.Fatalf("Expected moderator IDs were not equal\n\tExpected: %+v\n\tActual: %+v",
 				expectedStoreModerators,
-				actualModeratorIDs,
+				listing.ModeratorIDs,
 			)
 		}
 	}
