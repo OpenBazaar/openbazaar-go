@@ -99,7 +99,7 @@ When ready we will put up a full documentation of the OpenBazaar protocol and th
 
 ## Contributing
 
-Contributions are definitely welcome! Please read the contributing [guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTE.md) before starting.
+Contributions are definitely welcome! Please read the contributing [guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTING.md) before starting.
 
 ## License
 
