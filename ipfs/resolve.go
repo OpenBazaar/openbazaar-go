@@ -36,7 +36,9 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, usecache bool) 
 }
 
 func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration) (string, error) {
-	cctx, _ := context.WithTimeout(context.Background(), timeout)
+	cctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty())
 	if err != nil {
 		return "", err
@@ -45,7 +47,9 @@ func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration) (string, error)
 }
 
 func ResolveAltRoot(n *core.IpfsNode, p peer.ID, altRoot string, timeout time.Duration) (string, error) {
-	cctx, _ := context.WithTimeout(context.Background(), timeout)
+	cctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty()+":"+altRoot)
 	if err != nil {
 		return "", err
