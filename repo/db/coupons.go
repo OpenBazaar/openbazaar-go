@@ -35,8 +35,7 @@ func (c *CouponDB) Put(coupons []repo.Coupon) error {
 func (c *CouponDB) Get(slug string) ([]repo.Coupon, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	var stm string
-	stm = "select slug, code, hash from coupons where slug='" + slug + "';"
+	stm := "select slug, code, hash from coupons where slug='" + slug + "';"
 	rows, err := c.db.Query(stm)
 	if err != nil {
 		log.Error(err)
