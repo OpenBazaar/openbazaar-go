@@ -2,6 +2,7 @@ package mobile
 
 import (
 	"github.com/op/go-logging"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -30,4 +31,7 @@ type NodeConfig struct {
 	// Processes to disable
 	DisableWallet        bool
 	DisableExchangerates bool
+
+	// The coin to use
+	CoinType wallet.CoinType
 }
