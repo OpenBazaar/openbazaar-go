@@ -595,12 +595,11 @@ func (n *OpenBazaarNode) SendBlock(peerID string, id cid.Cid) error {
 
 // SendStore - send requested stores to peer
 func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
-	var s []string
-	for _, d := range ids {
-		s = append(s, d.String())
-	}
 	cList := new(pb.CidList)
-	cList.Cids = s
+	cList.Cids = make([]string, 0, len(ids))
+	for _, id := range ids {
+		cList.Cids = append(cList.Cids, id.String())
+	}
 
 	a, err := ptypes.MarshalAny(cList)
 	if err != nil {

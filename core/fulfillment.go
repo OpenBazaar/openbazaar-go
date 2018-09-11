@@ -210,7 +210,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 		return false
 	}
 
-	var listingSlugs []string
+	listingSlugs := make([]string, 0, len(contract.VendorListings))
 	for _, listing := range contract.VendorListings {
 		listingSlugs = append(listingSlugs, listing.Slug)
 	}

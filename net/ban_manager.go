@@ -46,7 +46,7 @@ func (bm *BanManager) SetBlockedIds(peerIds []peer.ID) {
 func (bm *BanManager) GetBlockedIds() []peer.ID {
 	bm.RLock()
 	defer bm.RUnlock()
-	var ret []peer.ID
+	ret := make([]peer.ID, 0, len(bm.blockedIds))
 	for pid := range bm.blockedIds {
 		id, err := peer.IDB58Decode(pid)
 		if err != nil {

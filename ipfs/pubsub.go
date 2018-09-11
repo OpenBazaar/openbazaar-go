@@ -121,7 +121,7 @@ func (r *PubsubSubscriber) GetSubscriptions() []string {
 	r.mx.Lock()
 	defer r.mx.Unlock()
 
-	var res []string
+	res := make([]string, 0, len(r.subs))
 	for sub := range r.subs {
 		res = append(res, sub)
 	}

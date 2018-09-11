@@ -211,7 +211,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Update coupon db
 	n.Datastore.Coupons().Delete(listing.Slug)
-	var couponsToStore []repo.Coupon
+	couponsToStore := make([]repo.Coupon, 0, len(listing.Coupons))
 	for i, coupon := range listing.Coupons {
 		hash := coupon.GetHash()
 		code := coupon.GetDiscountCode()
@@ -1196,7 +1196,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	if len(listing.ShippingOptions) > MaxListItems {
 		return fmt.Errorf("Number of shipping options is greater than the max of %d", MaxListItems)
 	}
-	var shippingTitles []string
+	shippingTitles := make([]string, 0, len(listing.ShippingOptions))
 	for _, shippingOption := range listing.ShippingOptions {
 		if shippingOption.Name == "" {
 			return errors.New("Shipping option title name must not be empty")

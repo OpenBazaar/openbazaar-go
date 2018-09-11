@@ -695,7 +695,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Push nodes
-	var pushNodes []peer.ID
+	pushNodes := make([]peer.ID, 0, len(dataSharing.PushTo))
 	for _, pnd := range dataSharing.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
@@ -944,7 +944,7 @@ func setTestmodeRecordAgingIntervals() {
 
 // Prints the addresses of the host
 func printSwarmAddrs(node *ipfscore.IpfsNode) {
-	var addrs []string
+	addrs := make([]string, 0, len(node.PeerHost.Addrs()))
 	for _, addr := range node.PeerHost.Addrs() {
 		addrs = append(addrs, addr.String())
 	}

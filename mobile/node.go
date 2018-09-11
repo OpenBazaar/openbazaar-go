@@ -256,7 +256,7 @@ func NewNode(config NodeConfig) (*Node, error) {
 	}
 
 	// Push nodes
-	var pushNodes []peer.ID
+	pushNodes := make([]peer.ID, 0, len(dataSharing.PushTo))
 	for _, pnd := range dataSharing.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {

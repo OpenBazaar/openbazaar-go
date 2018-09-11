@@ -462,7 +462,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	order.Timestamp = ts
 	order.AlternateContactInfo = data.AlternateContactInfo
 
-	var ratingKeys [][]byte
+	ratingKeys := make([][]byte, 0, len(data.Items))
 	for range data.Items {
 		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
 		// Also the fix for this will also need to be included in the rating signing code.
@@ -864,7 +864,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		version               uint32
 	}
 	var (
-		is            []itemShipping
+		is            = make([]itemShipping, 0, len(contract.BuyerOrder.Items))
 		shippingTotal uint64
 	)
 
@@ -1151,7 +1151,7 @@ collectListings:
 		Variant int
 		Count   int64
 	}
-	var inventoryList []inventory
+	inventoryList := make([]inventory, 0, len(contract.BuyerOrder.Items))
 	for _, item := range contract.BuyerOrder.Items {
 		var userOptions []*pb.Order_Item_Option
 		var listingOptions []string
