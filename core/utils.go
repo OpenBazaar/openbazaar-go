@@ -73,6 +73,10 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
 	paymentRecords := []*pb.TransactionRecord{}
 	payments := make(map[string]*pb.TransactionRecord)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return paymentRecords, nil, err
+	}
 
 	// Consolidate any transactions with multiple outputs into a single record
 	for _, r := range records {
@@ -93,7 +97,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, nil, err
 			}
-			confirmations, height, err := n.Wallet.GetConfirmations(*ch)
+			confirmations, height, err := wal.GetConfirmations(*ch)
 			if err != nil {
 				return paymentRecords, nil, err
 			}
@@ -127,7 +131,7 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 			if err != nil {
 				return paymentRecords, refundRecord, err
 			}
-			confirmations, height, err := n.Wallet.GetConfirmations(*ch)
+			confirmations, height, err := wal.GetConfirmations(*ch)
 			if err != nil {
 				return paymentRecords, refundRecord, nil
 			}

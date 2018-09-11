@@ -91,7 +91,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	}
 	p := new(pb.ID_Pubkeys)
 	p.Identity = pubkey
-	ecPubKey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return sp, err
 	}
@@ -100,7 +100,7 @@ func (n *OpenBazaarNode) SignPost(post *pb.Post) (*pb.SignedPost, error) {
 	post.VendorID = id
 
 	// Sign the GUID with the Bitcoin key
-	ecPrivKey, err := n.Wallet.MasterPrivateKey().ECPrivKey()
+	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
 	if err != nil {
 		return sp, err
 	}
