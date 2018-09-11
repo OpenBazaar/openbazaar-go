@@ -1,8 +1,8 @@
 package mobile
 
 import (
-	"github.com/op/go-logging"
 	"github.com/OpenBazaar/wallet-interface"
+	"github.com/op/go-logging"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(

@@ -76,7 +76,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-
 	migrations.WalletCoinType = config.CoinType
 
 	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
