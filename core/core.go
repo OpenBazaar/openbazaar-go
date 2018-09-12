@@ -67,7 +67,7 @@ type OpenBazaarNode struct {
 	Broadcast chan repo.Notifier
 
 	// Bitcoin wallet implementation
-	Wallet wallet.Wallet
+	//Wallet wallet.Wallet
 
 	// A map of cryptocurrency wallets
 	Multiwallet multiwallet.MultiWallet

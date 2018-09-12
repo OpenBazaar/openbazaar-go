@@ -47,7 +47,6 @@ func main() {
 				core.Node.Datastore.Close()
 				repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 				os.Remove(repoLockFile)
-				core.Node.Wallet.Close()
 				core.Node.Multiwallet.Close()
 				core.Node.IpfsNode.Close()
 			}

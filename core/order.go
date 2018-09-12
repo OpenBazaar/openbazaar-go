@@ -109,13 +109,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if !profile.Moderator || profile.ModeratorInfo == nil || len(profile.ModeratorInfo.AcceptedCurrencies) == 0 {
 			return "", "", 0, false, errors.New("moderator is not capable of moderating this transaction")
 		}
-		currencyAccepted := false
-		for _, cc := range profile.ModeratorInfo.AcceptedCurrencies {
-			if NormalizeCurrencyCode(cc) == NormalizeCurrencyCode(data.PaymentCoin) {
-				currencyAccepted = true
-			}
-		}
-		if !currencyAccepted {
+
+		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), profile.ModeratorInfo.AcceptedCurrencies) {
 			return "", "", 0, false, errors.New("moderator does not accept our currency")
 		}
 		total, err := n.CalculateOrderTotal(contract)
@@ -537,13 +532,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			listing = addedListings[item.ListingHash]
 		}
 
-		acceptsCurrency := false
-		for _, cc := range listing.Metadata.AcceptedCurrencies {
-			if NormalizeCurrencyCode(cc) == NormalizeCurrencyCode(wal.CurrencyCode()) {
-				acceptsCurrency = true
-			}
-		}
-		if !acceptsCurrency {
+		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), listing.Metadata.AcceptedCurrencies) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
@@ -631,6 +620,15 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	}
 
 	return contract, nil
+}
+
+func currencyInAcceptedCurrenciesList(currencyCode string, acceptedCurrencies []string) bool {
+	for _, cc := range acceptedCurrencies {
+		if NormalizeCurrencyCode(cc) == NormalizeCurrencyCode(currencyCode) {
+			return true
+		}
+	}
+	return false
 }
 
 func containsPhysicalGood(addedListings map[string]*pb.Listing) bool {
@@ -1102,6 +1100,11 @@ func (n *OpenBazaarNode) ValidateOrder(contract *pb.RicardianContract, checkInve
 			return errors.New("invalid rating key in order")
 		}
 	}
+
+	if !currencyInAcceptedCurrenciesList(contract.BuyerOrder.Payment.Coin, contract.VendorListings[0].Metadata.AcceptedCurrencies) {
+		return errors.New("payment coin not accepted")
+	}
+
 	if contract.BuyerOrder.Timestamp == nil {
 		return errors.New("order is missing a timestamp")
 	}
