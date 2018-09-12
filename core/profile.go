@@ -59,7 +59,7 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 
 // UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
-	mPubkey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	mPubkey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return err
 	}
@@ -76,13 +76,23 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		OrigName:     false,
 	}
 
-	if profile.Currencies == nil {
-		profile.Currencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	var currencies []string
+	settingsData, _ := n.Datastore.Settings().Get()
+	if settingsData.PreferredCurrencies != nil {
+		currencies = append(currencies, *settingsData.PreferredCurrencies...)
+	} else {
+		for ct := range n.Multiwallet {
+			currencies = append(currencies, ct.CurrencyCode())
+		}
 	}
 
-	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	for _, cc := range currencies {
+		profile.Currencies = append(profile.Currencies, NormalizeCurrencyCode(cc))
+		if profile.ModeratorInfo != nil {
+			profile.ModeratorInfo.AcceptedCurrencies = append(profile.ModeratorInfo.AcceptedCurrencies, NormalizeCurrencyCode(cc))
+		}
 	}
+
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
