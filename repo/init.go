@@ -206,6 +206,20 @@ func addConfigExtensions(repoRoot string) error {
 				MediumFeeDefault: 10,
 				LowFeeDefault:    5,
 			},
+			ETH: &schema.CoinConfig{
+				Type:             "API",
+				API:              "https://rinkeby.infura.io",
+				APITestnet:       "https://rinkeby.infura.io",
+				MaxFee:           200,
+				HighFeeDefault:   30,
+				MediumFeeDefault: 15,
+				LowFeeDefault:    7,
+				CustomConfig: map[string]string{
+					"RegistryAddress":        "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+					"RinkebyRegistryAddress": "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+					"RopstenRegistryAddress": "0x029d6a0cd4ce98315690f4ea52945545d9c0f460",
+				},
+			},
 		}
 
 		a = schema.APIConfig{

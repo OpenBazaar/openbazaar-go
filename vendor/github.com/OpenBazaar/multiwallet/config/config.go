@@ -1,14 +1,16 @@
 package config
 
 import (
-	"github.com/OpenBazaar/multiwallet/datastore"
+	"net/url"
+	"os"
+	"time"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
-	"net/url"
-	"os"
-	"time"
+
+	"github.com/OpenBazaar/multiwallet/datastore"
 )
 
 type Config struct {
@@ -154,6 +156,32 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			DB:        db,
 		}
 		cfg.Coins = append(cfg.Coins, ltcCfg)
+	}
+	if coinTypes[wallet.Ethereum] {
+		var apiEndpoint string
+		if !testnet {
+			apiEndpoint = "https://rinkeby.infura.io"
+		} else {
+			apiEndpoint = "https://rinkeby.infura.io"
+		}
+		clientApi, _ := url.Parse(apiEndpoint)
+		db, _ := mockDB.GetDatastoreForWallet(wallet.Ethereum)
+		ethCfg := CoinConfig{
+			CoinType:  wallet.Ethereum,
+			FeeAPI:    url.URL{},
+			LowFee:    140,
+			MediumFee: 160,
+			HighFee:   180,
+			MaxFee:    2000,
+			ClientAPI: *clientApi,
+			DB:        db,
+			Options: map[string]interface{}{
+				"RegistryAddress":        "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+				"RinkebyRegistryAddress": "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+				"RopstenRegistryAddress": "0x029d6a0cd4ce98315690f4ea52945545d9c0f460",
+			},
+		}
+		cfg.Coins = append(cfg.Coins, ethCfg)
 	}
 	return cfg
 }

@@ -1,6 +1,13 @@
 package wallet
 
 import (
+	"net"
+	"net/url"
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -12,12 +19,6 @@ import (
 	"github.com/cpacia/BitcoinCash-Wallet"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
-	"net"
-	"net/url"
-	"os"
-	"path"
-	"strings"
-	"time"
 )
 
 type WalletConfig struct {
@@ -165,6 +166,38 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 						return nil, err
 					}
 					coin.ClientAPI = *api
+				}
+			}
+		case wallet.Ethereum:
+			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
+			coin.DB = walletDB
+			if cfg.ConfigFile.ETH != nil {
+				api, err := url.Parse(cfg.ConfigFile.ETH.API)
+				if err != nil {
+					return nil, err
+				}
+				coin.FeeAPI = *api
+				coin.LowFee = uint64(cfg.ConfigFile.ETH.LowFeeDefault)
+				coin.MediumFee = uint64(cfg.ConfigFile.ETH.MediumFeeDefault)
+				coin.HighFee = uint64(cfg.ConfigFile.ETH.HighFeeDefault)
+				coin.MaxFee = uint64(cfg.ConfigFile.ETH.MaxFee)
+				if !testnet {
+					api, err := url.Parse(cfg.ConfigFile.ETH.API)
+					if err != nil {
+						return nil, err
+					}
+					coin.ClientAPI = *api
+				} else {
+					api, err := url.Parse(cfg.ConfigFile.ETH.APITestnet)
+					if err != nil {
+						return nil, err
+					}
+					coin.ClientAPI = *api
+				}
+				coin.Options = map[string]interface{}{
+					"RegistryAddress":        "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+					"RinkebyRegistryAddress": "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
+					"RopstenRegistryAddress": "0x029d6a0cd4ce98315690f4ea52945545d9c0f460",
 				}
 			}
 		}
