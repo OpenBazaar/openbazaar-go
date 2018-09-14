@@ -528,7 +528,7 @@ var CountryCode_name = map[int32]string{
 	244: "YEMEN",
 	245: "ZAMBIA",
 	246: "ZIMBABWE",
-	247 "UNITED_STATES_MINOR_ISLANDS",
+	247: "UNITED_STATES_MINOR_ISLANDS",
 	500: "ALL",
 	501: "AFRICA",
 	502: "ASIA",
