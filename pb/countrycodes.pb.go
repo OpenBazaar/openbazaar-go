@@ -268,6 +268,7 @@ const (
 	CountryCode_YEMEN                          CountryCode = 244
 	CountryCode_ZAMBIA                         CountryCode = 245
 	CountryCode_ZIMBABWE                       CountryCode = 246
+	CountryCode_UNITED_STATES_MINOR_ISLANDS    CountryCode = 247
 	CountryCode_ALL                            CountryCode = 500
 	CountryCode_AFRICA                         CountryCode = 501
 	CountryCode_ASIA                           CountryCode = 502
@@ -527,6 +528,7 @@ var CountryCode_name = map[int32]string{
 	244: "YEMEN",
 	245: "ZAMBIA",
 	246: "ZIMBABWE",
+	247 "UNITED_STATES_MINOR_ISLANDS",
 	500: "ALL",
 	501: "AFRICA",
 	502: "ASIA",
@@ -785,6 +787,7 @@ var CountryCode_value = map[string]int32{
 	"YEMEN":                    244,
 	"ZAMBIA":                   245,
 	"ZIMBABWE":                 246,
+	"UNITED_STATES_MINOR_ISLANDS": 247,
 	"ALL":                      500,
 	"AFRICA":                   501,
 	"ASIA":                     502,
