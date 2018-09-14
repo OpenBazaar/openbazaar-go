@@ -233,7 +233,7 @@ const (
 	CountryCode_SUDAN                          CountryCode = 209
 	CountryCode_SURINAME                       CountryCode = 210
 	CountryCode_SVALBARD                       CountryCode = 211
-	CountryCode_SWAZILAND                      CountryCode = 212
+	CountryCode_ESWATINI                       CountryCode = 212
 	CountryCode_SWEDEN                         CountryCode = 213
 	CountryCode_SWITZERLAND                    CountryCode = 214
 	CountryCode_SYRIAN_ARAB_REPUBLIC           CountryCode = 215
@@ -493,7 +493,7 @@ var CountryCode_name = map[int32]string{
 	209: "SUDAN",
 	210: "SURINAME",
 	211: "SVALBARD",
-	212: "SWAZILAND",
+	212: "ESWATINI",
 	213: "SWEDEN",
 	214: "SWITZERLAND",
 	215: "SYRIAN_ARAB_REPUBLIC",
@@ -752,7 +752,7 @@ var CountryCode_value = map[string]int32{
 	"SUDAN":                    209,
 	"SURINAME":                 210,
 	"SVALBARD":                 211,
-	"SWAZILAND":                212,
+	"ESWATINI":                 212,
 	"SWEDEN":                   213,
 	"SWITZERLAND":              214,
 	"SYRIAN_ARAB_REPUBLIC":     215,
