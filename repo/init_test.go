@@ -3,14 +3,12 @@ package repo
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/schema"
 )
 
-const repoRootFolder = "testdata/repo-root"
 const mnemonicFixture = "fiscal first first inside toe wedding away element response dry attend oxygen"
 
 // We have to use this and cannot pass the real db.Init because it would create a circular import error
@@ -92,20 +90,4 @@ func checkCreateMnemonicError(t *testing.T, mnemonic string, err error) {
 	if err == nil {
 		t.Error("createMnemonic didn't throw an error")
 	}
-}
-
-// Removes files that are created when tests are executed
-func TearDown() {
-	os.RemoveAll(filepath.Join("testdata", "outbox"))
-	os.RemoveAll(filepath.Join("testdata", "root"))
-	os.RemoveAll(filepath.Join("testdata", "datastore"))
-	os.Remove(filepath.Join("testdata", "repo.lock"))
-
-	os.RemoveAll(filepath.Join(repoRootFolder, "blocks"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "outbox"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "root"))
-	os.RemoveAll(filepath.Join(repoRootFolder, "datastore"))
-	os.Remove(filepath.Join(repoRootFolder, "repo.lock"))
-	os.Remove(filepath.Join(repoRootFolder, "config"))
-	os.Remove(filepath.Join(repoRootFolder, "version"))
 }

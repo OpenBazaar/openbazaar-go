@@ -3831,7 +3831,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		OrigName:     false,
 	}
 	if peerId == "" || strings.ToLower(peerId) == "post" || peerId == i.node.IPFSIdentityString() {
-		sl := new(pb.SignedPost)
+		var sl *pb.SignedPost
 		_, err := cid.Decode(postId)
 		if err == nil {
 			sl, err = i.node.GetPostFromHash(postId)
