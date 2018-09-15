@@ -1,6 +1,7 @@
 package mobile
 
 import (
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/op/go-logging"
 )
 
@@ -30,4 +31,7 @@ type NodeConfig struct {
 	// Processes to disable
 	DisableWallet        bool
 	DisableExchangerates bool
+
+	// The coin to use
+	CoinType wallet.CoinType
 }

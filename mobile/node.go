@@ -76,6 +76,13 @@ func NewNode(config NodeConfig) (*Node, error) {
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
+	migrations.WalletCoinType = config.CoinType
+
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
+	if err != nil && err != repo.ErrRepoExists {
+		return nil, err
+	}
+
 	// Load config
 	configFile, err := ioutil.ReadFile(path.Join(config.RepoPath, "config"))
 	if err != nil {
@@ -98,20 +105,6 @@ func NewNode(config NodeConfig) (*Node, error) {
 	}
 	resolverConfig, err := schema.GetResolverConfig(configFile)
 	if err != nil {
-		return nil, err
-	}
-
-	ct := wi.Bitcoin
-	switch walletCfg.Type {
-	case "bitcoincash":
-		ct = wi.BitcoinCash
-	case "zcashd":
-		ct = wi.Zcash
-	}
-	migrations.WalletCoinType = ct
-
-	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), ct)
-	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
 
