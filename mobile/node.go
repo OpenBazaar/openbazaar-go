@@ -53,6 +53,7 @@ import (
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 )
 
 // Node configuration structure
@@ -367,6 +368,7 @@ func (n *Node) Start() error {
 	go gateway.Serve()
 
 	go func() {
+		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
 		<-dht.DefaultBootstrapConfig.DoneChan
 		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
@@ -387,6 +389,9 @@ func (n *Node) Start() error {
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
 		if !n.config.DisableWallet {
+			if resyncManager == nil {
+				core.Node.WaitForMessageRetrieverCompletion()
+			}
 			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
 			for ct, wal := range n.OpenBazaarNode.Multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
@@ -396,6 +401,13 @@ func (n *Node) Start() error {
 			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
 			go su.Start()
 			go n.OpenBazaarNode.Multiwallet.Start()
+			if resyncManager != nil {
+				go resyncManager.Start()
+				go func() {
+					core.Node.WaitForMessageRetrieverCompletion()
+					resyncManager.CheckUnfunded()
+				}()
+			}
 		}
 
 		core.PublishLock.Unlock()
@@ -415,7 +427,6 @@ func (n *Node) Stop() error {
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
-	core.Node.Wallet.Close()
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
 	return nil

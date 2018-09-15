@@ -17,7 +17,6 @@ import (
 	"strconv"
 
 	"crypto/rand"
-	"github.com/OpenBazaar/bitcoind-wallet"
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -34,14 +33,9 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
 	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
-	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
-	"github.com/OpenBazaar/spvwallet"
-	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/cpacia/BitcoinCash-Wallet"
-	cashrates "github.com/cpacia/BitcoinCash-Wallet/exchangerates"
 	"github.com/fatih/color"
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
@@ -52,10 +46,8 @@ import (
 	ipath "github.com/ipfs/go-ipfs/path"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 
-	"github.com/OpenBazaar/zcashd-wallet"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -82,6 +74,7 @@ import (
 	"io"
 	"syscall"
 	"time"
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -591,141 +584,7 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-
-	// Wallet setup
-	if x.BitcoinCash {
-		walletCfg.Type = "bitcoincash"
-	} else if x.ZCash != "" {
-		walletCfg.Type = "zcashd"
-		walletCfg.Binary = x.ZCash
-	}
-	var exchangeRates wi.ExchangeRates
-	if !x.DisableExchangeRates {
-		exchangeRates = exchange.NewBitcoinPriceFetcher(torDialer)
-	}
-	var w3 io.Writer
-	if x.NoLogFiles {
-		w3 = &DummyWriter{}
-	} else {
-		w3 = &lumberjack.Logger{
-			Filename:   path.Join(repoPath, "logs", "bitcoin.log"),
-			MaxSize:    10, // Megabytes
-			MaxBackups: 3,
-			MaxAge:     30, // Days
-		}
-	}
-	bitcoinFile := logging.NewLogBackend(w3, "", 0)
-	bitcoinFileFormatter := logging.NewBackendFormatter(bitcoinFile, fileLogFormat)
-	ml2 := logging.MultiLogger(bitcoinFileFormatter)
-
-	var resyncManager *resync.ResyncManager
-	var cryptoWallet wi.Wallet
-	switch strings.ToLower(walletCfg.Type) {
-	case "spvwallet":
-		var tp net.Addr
-		if walletCfg.TrustedPeer != "" {
-			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-		}
-		feeAPI, err := url.Parse(walletCfg.FeeAPI)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:     mn,
-			Params:       &params,
-			MaxFee:       uint64(walletCfg.MaxFee),
-			LowFee:       uint64(walletCfg.LowFeeDefault),
-			MediumFee:    uint64(walletCfg.MediumFeeDefault),
-			HighFee:      uint64(walletCfg.HighFeeDefault),
-			FeeAPI:       *feeAPI,
-			RepoPath:     repoPath,
-			CreationDate: creationDate,
-			DB:           sqliteDB,
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Proxy:        torDialer,
-			Logger:       ml2,
-		}
-		cryptoWallet, err = spvwallet.NewSPVWallet(spvwalletConfig)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
-	case "bitcoincash":
-		var tp net.Addr
-		if walletCfg.TrustedPeer != "" {
-			tp, err = net.ResolveTCPAddr("tcp", walletCfg.TrustedPeer)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-		}
-		feeAPI, err := url.Parse(walletCfg.FeeAPI)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		exchangeRates = cashrates.NewBitcoinCashPriceFetcher(torDialer)
-		spvwalletConfig := &bitcoincash.Config{
-			Mnemonic:             mn,
-			Params:               &params,
-			MaxFee:               uint64(walletCfg.MaxFee),
-			LowFee:               uint64(walletCfg.LowFeeDefault),
-			MediumFee:            uint64(walletCfg.MediumFeeDefault),
-			HighFee:              uint64(walletCfg.HighFeeDefault),
-			FeeAPI:               *feeAPI,
-			RepoPath:             repoPath,
-			CreationDate:         creationDate,
-			DB:                   sqliteDB,
-			UserAgent:            "OpenBazaar",
-			TrustedPeer:          tp,
-			Proxy:                torDialer,
-			Logger:               ml2,
-			ExchangeRateProvider: exchangeRates,
-		}
-		cryptoWallet, err = bitcoincash.NewSPVWallet(spvwalletConfig)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
-	case "bitcoind":
-		if walletCfg.Binary == "" {
-			return errors.New("The path to the bitcoind binary must be specified in the config file when using bitcoind")
-		}
-		usetor := false
-		if usingTor && !usingClearnet {
-			usetor = true
-		}
-		cryptoWallet, err = bitcoind.NewBitcoindWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, usetor, controlPort)
-		if err != nil {
-			return err
-		}
-	case "zcashd":
-		if walletCfg.Binary == "" {
-			return errors.New("The path to the zcashd binary must be specified in the config file when using zcashd")
-		}
-		usetor := false
-		if usingTor && !usingClearnet {
-			usetor = true
-		}
-		cryptoWallet, err = zcashd.NewZcashdWallet(mn, &params, repoPath, walletCfg.TrustedPeer, walletCfg.Binary, usetor, controlPort)
-		if err != nil {
-			return err
-		}
-		if !x.DisableExchangeRates {
-			exchangeRates = zcashd.NewZcashPriceFetcher(torDialer)
-		}
-		resyncManager = resync.NewResyncManager(sqliteDB.Sales(), cryptoWallet)
-	default:
-		log.Fatal("Unknown wallet type")
-	}
+	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), mw)
 
 	// Master key setup
 	seed := bip39.NewSeed(mn, "")
@@ -758,7 +617,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 	// Override config file preference if this is Mainnet, open internet and API enabled
-	if addr != "127.0.0.1" && cryptoWallet.Params().Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
+	if addr != "127.0.0.1" && params.Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
 		apiConfig.Authenticated = true
 	}
 	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, x.AllowIP...)
@@ -849,10 +708,8 @@ func (x *Start) Execute(args []string) error {
 		RootHash:             ipath.Path(e.Value).String(),
 		RepoPath:             repoPath,
 		Datastore:            sqliteDB,
-		Wallet:               cryptoWallet,
 		Multiwallet:          mw,
 		NameSystem:           ns,
-		ExchangeRates:        exchangeRates,
 		PushNodes:            pushNodes,
 		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
 		TorDialer:            torDialer,
