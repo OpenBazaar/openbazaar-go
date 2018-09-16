@@ -21,7 +21,7 @@ linters-settings:
   dupl:
     threshold: 600
   goconst:
-    min-occurrences: 5
+    min-occurrences: 10
   gocyclo:
     min-complexity: 180
   lll:
@@ -42,6 +42,7 @@ linters:
     - gocyclo
     - nakedret
     - lll
+    - goconst
   disable:
     - errcheck
     - govet
@@ -50,4 +51,3 @@ linters:
     - goimports
     - unconvert
     - prealloc
-    - goconst
