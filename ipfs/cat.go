@@ -13,7 +13,9 @@ import (
 
 // Fetch data from IPFS given the hash
 func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	if !strings.HasPrefix(path, "/ipfs/") {
 		path = "/ipfs/" + path
 	}
