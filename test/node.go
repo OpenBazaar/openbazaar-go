@@ -23,7 +23,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		return nil, err
 	}
 
-	repository.Reset()
+	err = repository.Reset()
 	if err != nil {
 		return nil, err
 	}
