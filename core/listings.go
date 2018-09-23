@@ -1219,10 +1219,13 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		for _, region := range shippingOption.Regions {
 			if int(region) == 0 {
 				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 247 && int(region) != 500 {
-				return errors.New("Invalid shipping region")
+			} else {
+				if val, ok := proto.EnumValueMap("CountryCode")[region.String()]; ok {
+					log.Debugf("Region %s:%d in pb.CountryCode", region, val)
+				} else {
+					return fmt.Errorf("Invalid shipping region [ %s ]: ", region)
+				}
 			}
-
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
