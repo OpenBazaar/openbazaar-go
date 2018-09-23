@@ -83,7 +83,15 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/ltcsuite/ltcwallet"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/op/go-logging"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/roasbeef/btcutil"
 
 [[constraint]]
   branch = "master"

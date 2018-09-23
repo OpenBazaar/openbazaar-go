@@ -20,7 +20,8 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
-	"github.com/btcsuite/btcwallet/wallet/txrules"
+	"github.com/ltcsuite/ltcwallet/wallet/txrules"
+	rb "github.com/roasbeef/btcutil"
 
 	laddr "github.com/OpenBazaar/multiwallet/litecoin/address"
 	"github.com/OpenBazaar/multiwallet/util"
@@ -29,7 +30,7 @@ import (
 func (w *LitecoinWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
 	// Check for dust
 	script, _ := laddr.PayToAddrScript(addr)
-	if txrules.IsDustAmount(btc.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
+	if txrules.IsDustAmount(rb.Amount(amount), len(script), txrules.DefaultRelayFeePerKb) {
 		return nil, wi.ErrorDustAmount
 	}
 
@@ -140,21 +141,21 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 	}
 
 	estimatedSize := EstimateSerializeSize(1, outputs, true, P2PKH)
-	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
+	targetFee := txrules.FeeForSerializeSize(rb.Amount(feePerKb), estimatedSize)
 
 	for {
-		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + btc.Amount(targetFee))
 		if err != nil {
 			return nil, err
 		}
-		if inputAmount < targetAmount+targetFee {
+		if inputAmount < targetAmount+btc.Amount(targetFee) {
 			return nil, errors.New("insufficient funds available to construct transaction")
 		}
 
 		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, P2PKH)
-		maxRequiredFee := txrules.FeeForSerializeSize(feePerKb, maxSignedSize)
+		maxRequiredFee := txrules.FeeForSerializeSize(rb.Amount(feePerKb), maxSignedSize)
 		remainingAmount := inputAmount - targetAmount
-		if remainingAmount < maxRequiredFee {
+		if remainingAmount < btc.Amount(maxRequiredFee) {
 			targetFee = maxRequiredFee
 			continue
 		}
@@ -166,8 +167,8 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 			LockTime: 0,
 		}
 		changeIndex := -1
-		changeAmount := inputAmount - targetAmount - maxRequiredFee
-		if changeAmount != 0 && !txrules.IsDustAmount(changeAmount,
+		changeAmount := inputAmount - targetAmount - btc.Amount(maxRequiredFee)
+		if changeAmount != 0 && !txrules.IsDustAmount(rb.Amount(changeAmount),
 			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
 			changeScript, err := fetchChange()
 			if err != nil {

@@ -67,6 +67,13 @@ func NewMockMultiwalletDatastore() *MockMultiwalletDatastore {
 		&MockTxnStore{txns: make(map[string]*txnStoreEntry)},
 		&MockWatchedScriptsStore{scripts: make(map[string][]byte)},
 	})
+	db[wallet.Ethereum] = wallet.Datastore(&MockDatastore{
+		&MockKeyStore{Keys: make(map[string]*KeyStoreEntry)},
+		&MockUtxoStore{utxos: make(map[string]*wallet.Utxo)},
+		&MockStxoStore{stxos: make(map[string]*wallet.Stxo)},
+		&MockTxnStore{txns: make(map[string]*txnStoreEntry)},
+		&MockWatchedScriptsStore{scripts: make(map[string][]byte)},
+	})
 	return &MockMultiwalletDatastore{db: db}
 }
 

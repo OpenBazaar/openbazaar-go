@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("zcashd")
@@ -53,6 +54,7 @@ type ZcashdWallet struct {
 	useTor           bool
 	addrsToWatch     []btc.Address
 	initChan         chan struct{}
+	exchangeRates    wallet.ExchangeRates
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -63,7 +65,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int) (*ZcashdWallet, error) {
+func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer) (*ZcashdWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -84,6 +86,8 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
 
+	er := NewZcashPriceFetcher(proxy)
+
 	w := ZcashdWallet{
 		params:           params,
 		repoPath:         dataDir,
@@ -94,6 +98,7 @@ func NewZcashdWallet(mnemonic string, params *chaincfg.Params, repoPath string, 
 		controlPort:      torControlPort,
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
+		exchangeRates:    er,
 	}
 	return &w, nil
 }
@@ -1060,4 +1065,8 @@ func (w *ZcashdWallet) Close() {
 		w.rpcClient.RawRequest("stop", []json.RawMessage{})
 		w.rpcClient.Shutdown()
 	}
+}
+
+func (w *ZcashdWallet) ExchangeRates() wallet.ExchangeRates {
+	return w.exchangeRates
 }

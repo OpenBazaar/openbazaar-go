@@ -767,8 +767,12 @@ func (n *OpenBazaarNode) CalcOrderID(order *pb.Order) (string, error) {
 
 // CalculateOrderTotal - calculate the total in satoshi/wei
 func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (uint64, error) {
-	if n.ExchangeRates != nil {
-		n.ExchangeRates.GetLatestRate("") // Refresh the exchange rates
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return 0, err
+	}
+	if wal.ExchangeRates() != nil {
+		wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
 	}
 
 	var total uint64
@@ -1012,27 +1016,35 @@ func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (
 			return amount, nil
 		}
 	}
+	wal, err := n.Multiwallet.WalletForCurrencyCode(currencyCode)
+	if err != nil {
+		return 0, err
+	}
 
-	if n.ExchangeRates == nil {
+	if wal.ExchangeRates() == nil {
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
-	exchangeRate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
+	exchangeRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
 
 	formatedAmount := float64(amount) / 100
 	btc := formatedAmount / exchangeRate
-	satoshis := btc * float64(n.ExchangeRates.UnitsPerCoin())
+	satoshis := btc * float64(wal.ExchangeRates().UnitsPerCoin())
 	return uint64(satoshis), nil
 }
 
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(currencyCode string, amount uint64) (uint64, error) {
-	if n.ExchangeRates == nil {
+	wal, err := n.Multiwallet.WalletForCurrencyCode(currencyCode)
+	if err != nil {
+		return 0, err
+	}
+	if wal.ExchangeRates() == nil {
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
 
-	rate, err := n.ExchangeRates.GetExchangeRate(currencyCode)
+	rate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}

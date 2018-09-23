@@ -16,6 +16,7 @@ import (
 	"io"
 	"sync"
 	"time"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 )
 
 type SPVWallet struct {
@@ -45,6 +46,8 @@ type SPVWallet struct {
 	running bool
 
 	config *PeerManagerConfig
+
+	exchangeRates wallet.ExchangeRates
 }
 
 var log = logging.MustGetLogger("bitcoin")
@@ -77,6 +80,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 	if err != nil {
 		return nil, err
 	}
+	er := exchangerates.NewBitcoinPriceFetcher(config.Proxy)
 	w := &SPVWallet{
 		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
@@ -95,6 +99,7 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		fPositives:    make(chan *peer.Peer),
 		fpAccumulator: make(map[int32]int32),
 		mutex:         new(sync.RWMutex),
+		exchangeRates: er,
 	}
 
 	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)
@@ -431,4 +436,8 @@ func (w *SPVWallet) ReSyncBlockchain(fromDate time.Time) {
 	w.blockchain.Rollback(fromDate)
 	w.txstore.PopulateAdrs()
 	w.wireService.Resync()
+}
+
+func (w *SPVWallet) ExchangeRates() wallet.ExchangeRates {
+	return w.exchangeRates
 }
