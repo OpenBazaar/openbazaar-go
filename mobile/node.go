@@ -28,7 +28,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/wallet"
 	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
 	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -227,12 +226,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	core.PublishLock.Lock()
 
-	// Exchange rates
-	var exchangeRates wi.ExchangeRates
-	if !config.DisableExchangerates {
-		exchangeRates = exchangerates.NewBitcoinPriceFetcher(nil)
-	}
-
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
 	if err != nil && err != db.SettingsNotSetError {
@@ -276,7 +269,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Datastore:        sqliteDB,
 		Multiwallet:      mw,
 		NameSystem:       ns,
-		ExchangeRates:    exchangeRates,
 		UserAgent:        core.USERAGENT,
 		PushNodes:        pushNodes,
 		BanManager:       bm,

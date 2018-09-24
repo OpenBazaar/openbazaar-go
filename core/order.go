@@ -1012,7 +1012,7 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 
 func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
 	for cc := range n.Multiwallet {
-		if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.String()) || "t"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.String()) {
+		if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) {
 			return amount, nil
 		}
 	}
