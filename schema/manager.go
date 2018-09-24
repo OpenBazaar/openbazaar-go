@@ -409,17 +409,23 @@ func (m *openbazaarSchemaManager) InitializeIPFSRepo() error {
 
 	_, err = insertConfigRow.Exec("mnemonic", m.Mnemonic())
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 	_, err = insertConfigRow.Exec("identityKey", m.IdentityKey())
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 	_, err = insertConfigRow.Exec("creationDate", time.Now().Format(time.RFC3339))
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 

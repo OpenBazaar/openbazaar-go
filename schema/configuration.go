@@ -70,7 +70,10 @@ var MalformedConfigError error = errors.New("config file is malformed")
 
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
@@ -204,7 +207,10 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 
 func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
 		return nil, MalformedConfigError
@@ -297,7 +303,11 @@ func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
 
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
 		return nil, MalformedConfigError
@@ -322,7 +332,10 @@ func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
 
 func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
@@ -360,7 +373,10 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return "", MalformedConfigError
+	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
@@ -381,7 +397,10 @@ func GetDropboxApiToken(cfgBytes []byte) (string, error) {
 
 func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return time.Duration(0), MalformedConfigError
+	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
@@ -408,7 +427,11 @@ func GetRepublishInterval(cfgBytes []byte) (time.Duration, error) {
 
 func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
 	dataSharing := new(DataSharing)
 
 	cfg, ok := cfgIface.(map[string]interface{})
@@ -456,7 +479,11 @@ func GetDataSharing(cfgBytes []byte) (*DataSharing, error) {
 
 func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
 	var addrs []string
 
 	cfg, ok := cfgIface.(map[string]interface{})
@@ -486,7 +513,10 @@ func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
 
 func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
 	var cfgIface interface{}
-	json.Unmarshal(cfgBytes, &cfgIface)
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
 
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {

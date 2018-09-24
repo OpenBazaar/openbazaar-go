@@ -94,12 +94,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	// Coin type
-	ct := wi.Bitcoin
-	migrations.WalletCoinType = ct
+	migrations.WalletCoinType = config.CoinType
 
-	// Database
-	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now(), ct)
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -127,6 +124,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
+
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err

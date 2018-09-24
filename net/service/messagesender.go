@@ -61,14 +61,6 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSende
 	return ms, nil
 }
 
-func (service *OpenBazaarService) newMessageSender(p peer.ID) *messageSender {
-	return &messageSender{
-		p:        p,
-		service:  service,
-		requests: make(map[int32]chan *pb.Message, 2), // low initial capacity
-	}
-}
-
 // invalidate is called before this messageSender is removed from the strmap.
 // It prevents the messageSender from being reused/reinitialized and then
 // forgotten (leaving the stream open).
@@ -153,6 +145,8 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	ms.requestlk.Lock()
 	ms.requests[pmes.RequestId] = returnChan
 	ms.requestlk.Unlock()
+
+	defer ms.closeRequest(pmes.RequestId)
 
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
