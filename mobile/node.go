@@ -27,7 +27,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
 	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -53,7 +53,6 @@ import (
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 )
 
 // Node configuration structure
@@ -95,12 +94,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	// Coin type
-	ct := wi.Bitcoin
-	migrations.WalletCoinType = ct
+	migrations.WalletCoinType = config.CoinType
 
-	// Database
-	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now(), ct)
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -128,6 +124,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
+
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -227,12 +224,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	core.PublishLock.Lock()
 
-	// Exchange rates
-	var exchangeRates wi.ExchangeRates
-	if !config.DisableExchangerates {
-		exchangeRates = exchangerates.NewBitcoinPriceFetcher(nil)
-	}
-
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
 	if err != nil && err != db.SettingsNotSetError {
@@ -276,7 +267,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Datastore:        sqliteDB,
 		Multiwallet:      mw,
 		NameSystem:       ns,
-		ExchangeRates:    exchangeRates,
 		UserAgent:        core.USERAGENT,
 		PushNodes:        pushNodes,
 		BanManager:       bm,

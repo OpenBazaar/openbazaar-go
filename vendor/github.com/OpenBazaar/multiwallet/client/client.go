@@ -111,8 +111,7 @@ func (i *InsightClient) doRequest(endpoint, method string, body []byte, query ur
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("status not ok: %s, body: %s", resp.Status, string(respBody))
+		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
 	return resp, nil
 }
@@ -339,9 +338,12 @@ func (i *InsightClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 			i.socketClient = socketClient
 			continue
 		}
-		Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
+		if time.Now().Unix()%60 == 0 {
+			Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
+		}
 		time.Sleep(time.Second * 2)
 	}
+	Log.Infof("Connected to websocket endpoint %s", u.Host)
 
 	i.socketClient.On("bitcoind/hashblock", func(h *gosocketio.Channel, arg interface{}) {
 		best, err := i.GetBestBlock()
@@ -389,14 +391,9 @@ func (i *InsightClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 
 func defaultPort(u url.URL) int {
 	var port int
-	if parsedPort, err := strconv.ParseInt(u.Port(), 10, 32); err != nil {
-		if err != strconv.ErrSyntax {
-			Log.Errorf("error parsing port (%d): %s", u.Port(), err.Error())
-		}
-	} else {
+	if parsedPort, err := strconv.ParseInt(u.Port(), 10, 32); err == nil {
 		port = int(parsedPort)
 	}
-
 	if port == 0 {
 		if hasImpliedURLSecurity(u) {
 			port = 443
@@ -404,7 +401,6 @@ func defaultPort(u url.URL) int {
 			port = 80
 		}
 	}
-
 	return port
 }
 
@@ -426,17 +422,14 @@ func (i *InsightClient) Broadcast(tx []byte) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	type Txid struct {
-		Result string `json:"result"`
-	}
 	type Response struct {
-		Txid Txid `json:"txid"`
+		Txid string `json:"txid"`
 	}
 	rs := new(Response)
 	if err = json.NewDecoder(resp.Body).Decode(rs); err != nil {
 		return "", fmt.Errorf("error decoding txid: %s", err)
 	}
-	return rs.Txid.Result, nil
+	return rs.Txid, nil
 }
 
 func (i *InsightClient) GetBestBlock() (*Block, error) {

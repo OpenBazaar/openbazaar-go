@@ -33,6 +33,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
+	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -54,6 +56,7 @@ type BitcoindWallet struct {
 	useTor           bool
 	addrsToWatch     []btc.Address
 	initChan         chan struct{}
+	exchangeRates    wallet.ExchangeRates
 }
 
 var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
@@ -64,7 +67,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int) (*BitcoindWallet, error) {
+func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer) (*BitcoindWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -84,6 +87,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
 
+	er := exchangerates.NewBitcoinPriceFetcher(proxy)
 	w := BitcoindWallet{
 		params:           params,
 		repoPath:         dataDir,
@@ -94,6 +98,7 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		controlPort:      torControlPort,
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
+		exchangeRates:    er,
 	}
 	return &w, nil
 }
@@ -1108,6 +1113,10 @@ func (w *BitcoindWallet) Close() {
 		w.rpcClient.RawRequest("stop", []json.RawMessage{})
 		w.rpcClient.Shutdown()
 	}
+}
+
+func (w *BitcoindWallet) ExchangeRates() wallet.ExchangeRates {
+	return w.exchangeRates
 }
 
 func DefaultSocksPort(controlPort int) int {

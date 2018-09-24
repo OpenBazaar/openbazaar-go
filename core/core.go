@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
@@ -66,9 +65,6 @@ type OpenBazaarNode struct {
 	// Websocket channel used for pushing data to the UI
 	Broadcast chan repo.Notifier
 
-	// Bitcoin wallet implementation
-	//Wallet wallet.Wallet
-
 	// A map of cryptocurrency wallets
 	Multiwallet multiwallet.MultiWallet
 
@@ -85,7 +81,7 @@ type OpenBazaarNode struct {
 	NameSystem *namesys.NameSystem
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
-	ExchangeRates wallet.ExchangeRates
+	//ExchangeRates wallet.ExchangeRates
 
 	// Optional nodes to push user data to
 	PushNodes []peer.ID

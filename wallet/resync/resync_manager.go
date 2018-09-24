@@ -3,9 +3,9 @@ package resync
 import (
 	"time"
 
+	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/op/go-logging"
-	"github.com/OpenBazaar/multiwallet"
 	"strings"
 )
 

@@ -48,6 +48,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
@@ -74,7 +75,6 @@ import (
 	"io"
 	"syscall"
 	"time"
-	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
