@@ -21,14 +21,15 @@ import (
 )
 
 type WalletConfig struct {
-	ConfigFile         *schema.WalletsConfig
-	RepoPath           string
-	Logger             logging.Backend
-	DB                 *db.DB
-	Mnemonic           string
-	WalletCreationDate time.Time
-	Params             *chaincfg.Params
-	Proxy              proxy.Dialer
+	ConfigFile           *schema.WalletsConfig
+	RepoPath             string
+	Logger               logging.Backend
+	DB                   *db.DB
+	Mnemonic             string
+	WalletCreationDate   time.Time
+	Params               *chaincfg.Params
+	Proxy                proxy.Dialer
+	DisableExchangeRates bool
 }
 
 // Build a new multiwallet using values from the config file
@@ -54,6 +55,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	defaultConfig.Proxy = cfg.Proxy
 	defaultConfig.Params = cfg.Params
 	defaultConfig.Logger = cfg.Logger
+	defaultConfig.DisableExchangeRates = cfg.DisableExchangeRates
 
 	// For each coin we want to override the default database with our own sqlite db
 	// We'll only override the default settings if the coin exists in the config file
@@ -192,20 +194,21 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		bitcoinPath := path.Join(cfg.RepoPath, "bitcoin")
 		os.Mkdir(bitcoinPath, os.ModePerm)
 		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:     cfg.Mnemonic,
-			Params:       cfg.Params,
-			MaxFee:       uint64(cfg.ConfigFile.BTC.MaxFee),
-			LowFee:       uint64(cfg.ConfigFile.BTC.LowFeeDefault),
-			MediumFee:    uint64(cfg.ConfigFile.BTC.MediumFeeDefault),
-			HighFee:      uint64(cfg.ConfigFile.BTC.HighFeeDefault),
-			FeeAPI:       *feeAPI,
-			RepoPath:     bitcoinPath,
-			CreationDate: cfg.WalletCreationDate,
-			DB:           CreateWalletDB(cfg.DB, wallet.Bitcoin),
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Proxy:        cfg.Proxy,
-			Logger:       cfg.Logger,
+			Mnemonic:             cfg.Mnemonic,
+			Params:               cfg.Params,
+			MaxFee:               uint64(cfg.ConfigFile.BTC.MaxFee),
+			LowFee:               uint64(cfg.ConfigFile.BTC.LowFeeDefault),
+			MediumFee:            uint64(cfg.ConfigFile.BTC.MediumFeeDefault),
+			HighFee:              uint64(cfg.ConfigFile.BTC.HighFeeDefault),
+			FeeAPI:               *feeAPI,
+			RepoPath:             bitcoinPath,
+			CreationDate:         cfg.WalletCreationDate,
+			DB:                   CreateWalletDB(cfg.DB, wallet.Bitcoin),
+			UserAgent:            "OpenBazaar",
+			TrustedPeer:          tp,
+			Proxy:                cfg.Proxy,
+			Logger:               cfg.Logger,
+			DisableExchangeRates: cfg.DisableExchangeRates,
 		}
 		bitcoinSPVWallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
@@ -228,20 +231,21 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		bitcoinCashPath := path.Join(cfg.RepoPath, "bitcoincash")
 		os.Mkdir(bitcoinCashPath, os.ModePerm)
 		bitcoinCashConfig := &bitcoincash.Config{
-			Mnemonic:     cfg.Mnemonic,
-			Params:       cfg.Params,
-			MaxFee:       uint64(cfg.ConfigFile.BCH.MaxFee),
-			LowFee:       uint64(cfg.ConfigFile.BCH.LowFeeDefault),
-			MediumFee:    uint64(cfg.ConfigFile.BCH.MediumFeeDefault),
-			HighFee:      uint64(cfg.ConfigFile.BCH.HighFeeDefault),
-			FeeAPI:       *feeAPI,
-			RepoPath:     bitcoinCashPath,
-			CreationDate: cfg.WalletCreationDate,
-			DB:           CreateWalletDB(cfg.DB, wallet.BitcoinCash),
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Proxy:        cfg.Proxy,
-			Logger:       cfg.Logger,
+			Mnemonic:             cfg.Mnemonic,
+			Params:               cfg.Params,
+			MaxFee:               uint64(cfg.ConfigFile.BCH.MaxFee),
+			LowFee:               uint64(cfg.ConfigFile.BCH.LowFeeDefault),
+			MediumFee:            uint64(cfg.ConfigFile.BCH.MediumFeeDefault),
+			HighFee:              uint64(cfg.ConfigFile.BCH.HighFeeDefault),
+			FeeAPI:               *feeAPI,
+			RepoPath:             bitcoinCashPath,
+			CreationDate:         cfg.WalletCreationDate,
+			DB:                   CreateWalletDB(cfg.DB, wallet.BitcoinCash),
+			UserAgent:            "OpenBazaar",
+			TrustedPeer:          tp,
+			Proxy:                cfg.Proxy,
+			Logger:               cfg.Logger,
+			DisableExchangeRates: cfg.DisableExchangeRates,
 		}
 		bitcoinCashSPVWallet, err := bitcoincash.NewSPVWallet(bitcoinCashConfig)
 		if err != nil {

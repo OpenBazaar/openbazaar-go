@@ -1,4 +1,4 @@
-package litecoin
+package zcash
 
 import (
 	"encoding/json"
@@ -33,15 +33,15 @@ type PoloniexDecoder struct{}
 type BitfinexDecoder struct{}
 type BittrexDecoder struct{}
 
-type LitecoinPriceFetcher struct {
+type ZcashPriceFetcher struct {
 	sync.Mutex
 	cache     map[string]float64
 	providers []*ExchangeRateProvider
 }
 
-func NewLitecoinPriceFetcher(dialer proxy.Dialer) *LitecoinPriceFetcher {
+func NewZcashPriceFetcher(dialer proxy.Dialer) *ZcashPriceFetcher {
 	bp := exchange.NewBitcoinPriceFetcher(dialer)
-	z := LitecoinPriceFetcher{
+	z := ZcashPriceFetcher{
 		cache: make(map[string]float64),
 	}
 	dial := net.Dial
@@ -52,17 +52,17 @@ func NewLitecoinPriceFetcher(dialer proxy.Dialer) *LitecoinPriceFetcher {
 	client := &http.Client{Transport: tbTransport, Timeout: time.Minute}
 
 	z.providers = []*ExchangeRateProvider{
-		//{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
-		//{"https://bittrex.com/api/v1.1/public/getticker?market=btc-ltc", z.cache, client, BittrexDecoder{}, bp},
-		//{"https://api.bitfinex.com/v1/pubticker/ltcbtc", z.cache, client, BitfinexDecoder{}, bp},
-		//{"https://poloniex.com/public?command=returnTicker", z.cache, client, PoloniexDecoder{}, bp},
-		{"https://api.kraken.com/0/public/Ticker?pair=LTCXBT", z.cache, client, KrakenDecoder{}, bp},
+		{"https://ticker.openbazaar.org/api", z.cache, client, OpenBazaarDecoder{}, nil},
+		{"https://bittrex.com/api/v1.1/public/getticker?market=btc-zec", z.cache, client, BittrexDecoder{}, bp},
+		{"https://api.bitfinex.com/v1/pubticker/zecbtc", z.cache, client, BitfinexDecoder{}, bp},
+		{"https://poloniex.com/public?command=returnTicker", z.cache, client, PoloniexDecoder{}, bp},
+		{"https://api.kraken.com/0/public/Ticker?pair=ZECXBT", z.cache, client, KrakenDecoder{}, bp},
 	}
 	go z.run()
 	return &z
 }
 
-func (z *LitecoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
+func (z *ZcashPriceFetcher) GetExchangeRate(currencyCode string) (float64, error) {
 	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	z.Lock()
@@ -74,7 +74,7 @@ func (z *LitecoinPriceFetcher) GetExchangeRate(currencyCode string) (float64, er
 	return price, nil
 }
 
-func (z *LitecoinPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
+func (z *ZcashPriceFetcher) GetLatestRate(currencyCode string) (float64, error) {
 	currencyCode = NormalizeCurrencyCode(currencyCode)
 
 	z.fetchCurrentRates()
@@ -87,7 +87,7 @@ func (z *LitecoinPriceFetcher) GetLatestRate(currencyCode string) (float64, erro
 	return price, nil
 }
 
-func (z *LitecoinPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, error) {
+func (z *ZcashPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, error) {
 	if !cacheOK {
 		err := z.fetchCurrentRates()
 		if err != nil {
@@ -96,18 +96,14 @@ func (z *LitecoinPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, er
 	}
 	z.Lock()
 	defer z.Unlock()
-	copy := make(map[string]float64, len(z.cache))
-	for k, v := range z.cache {
-		copy[k] = v
-	}
-	return copy, nil
+	return z.cache, nil
 }
 
-func (z *LitecoinPriceFetcher) UnitsPerCoin() int {
+func (z *ZcashPriceFetcher) UnitsPerCoin() int {
 	return exchange.SatoshiPerBTC
 }
 
-func (z *LitecoinPriceFetcher) fetchCurrentRates() error {
+func (z *ZcashPriceFetcher) fetchCurrentRates() error {
 	z.Lock()
 	defer z.Unlock()
 	for _, provider := range z.providers {
@@ -116,10 +112,10 @@ func (z *LitecoinPriceFetcher) fetchCurrentRates() error {
 			return nil
 		}
 	}
-	return errors.New("all exchange rate API queries failed")
+	return errors.New("All exchange rate API queries failed")
 }
 
-func (z *LitecoinPriceFetcher) run() {
+func (z *ZcashPriceFetcher) run() {
 	z.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
 	for range ticker.C {
@@ -129,7 +125,7 @@ func (z *LitecoinPriceFetcher) run() {
 
 func (provider *ExchangeRateProvider) fetch() (err error) {
 	if len(provider.fetchUrl) == 0 {
-		err = errors.New("provider has no fetchUrl")
+		err = errors.New("Provider has no fetchUrl")
 		return err
 	}
 	resp, err := provider.client.Get(provider.fetchUrl)
@@ -148,18 +144,18 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 func (b OpenBazaarDecoder) decode(dat interface{}, cache map[string]float64, bp *exchange.BitcoinPriceFetcher) (err error) {
 	data, ok := dat.(map[string]interface{})
 	if !ok {
-		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed invalid json")
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
 	}
 
-	ltc, ok := data["LTC"]
+	zec, ok := data["ZEC"]
 	if !ok {
 		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'ZEC' field")
 	}
-	val, ok := ltc.(map[string]interface{})
+	val, ok := zec.(map[string]interface{})
 	if !ok {
 		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
 	}
-	ltcRate, ok := val["last"].(float64)
+	zecRate, ok := val["last"].(float64)
 	if !ok {
 		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (float) field")
 	}
@@ -173,7 +169,7 @@ func (b OpenBazaarDecoder) decode(dat interface{}, cache map[string]float64, bp 
 			if !ok {
 				return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed, missing 'last' (float) field")
 			}
-			cache[k] = price * (1 / ltcRate)
+			cache[k] = price * (1 / zecRate)
 		}
 	}
 	return nil
@@ -196,7 +192,7 @@ func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exc
 	if !ok {
 		return errors.New("KrackenDecoder type assertion failure")
 	}
-	pair, ok := resultMap["XLTCXXBT"]
+	pair, ok := resultMap["BCHXBT"]
 	if !ok {
 		return errors.New("KrakenDecoder: field `BCHXBT` not found")
 	}
@@ -223,7 +219,7 @@ func (b KrakenDecoder) decode(dat interface{}, cache map[string]float64, bp *exc
 	rate := price
 
 	if rate == 0 {
-		return errors.New("Bitcoin-litecoin price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
@@ -255,7 +251,7 @@ func (b BitfinexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 	rate := price
 
 	if rate == 0 {
-		return errors.New("Bitcoin-litecoin price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
@@ -290,7 +286,7 @@ func (b BittrexDecoder) decode(dat interface{}, cache map[string]float64, bp *ex
 	}
 
 	if rate == 0 {
-		return errors.New("Bitcoin-litecoin price data not available")
+		return errors.New("Bitcoin-ZCash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate
@@ -308,7 +304,10 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
 	}
 	var rate float64
-	v := data["BTC_LTC"]
+	v, ok := data["BTC_ZEC"]
+	if !ok {
+		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
+	}
 	val, ok := v.(map[string]interface{})
 	if !ok {
 		return errors.New(reflect.TypeOf(b).Name() + ".decode: Type assertion failed")
@@ -323,7 +322,7 @@ func (b PoloniexDecoder) decode(dat interface{}, cache map[string]float64, bp *e
 	}
 	rate = price
 	if rate == 0 {
-		return errors.New("Bitcoin-litecoin price data not available")
+		return errors.New("Bitcoin-Zcash price data not available")
 	}
 	for k, v := range rates {
 		cache[k] = v * rate

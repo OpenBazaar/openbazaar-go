@@ -42,7 +42,7 @@ type BitcoinCashWallet struct {
 	exchangeRates wi.ExchangeRates
 }
 
-func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher) (*BitcoinCashWallet, error) {
+func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	mPrivKey, err := hd.NewMaster(seed, params)
@@ -67,7 +67,10 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 	if err != nil {
 		return nil, err
 	}
-	exchangeRates := er.NewBitcoinCashPriceFetcher(proxy)
+	var exchangeRates wi.ExchangeRates
+	if !disableExchangeRates {
+		exchangeRates = er.NewBitcoinCashPriceFetcher(proxy)
+	}
 
 	fp := bcw.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, exchangeRates)
 

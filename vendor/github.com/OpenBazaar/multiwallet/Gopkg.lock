@@ -15,9 +15,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fe66508bec5aa1b6679ed8353da636cabfa534a916612bd7405fb4ac2f179a71"
+  digest = "1:fd195250b5f212ecdfd2327981f5a12e7296aee546200f8325c8b4aee2dcae12"
   name = "github.com/OpenBazaar/spvwallet"
-  packages = ["."]
+  packages = [
+    ".",
+    "exchangerates",
+  ]
   pruneopts = "UT"
   revision = "3a0ea7e2725eeb78ef6c1d0588b9e33ec5a074be"
 
@@ -387,6 +390,7 @@
     "github.com/OpenBazaar/golang-socketio/protocol",
     "github.com/OpenBazaar/golang-socketio/transport",
     "github.com/OpenBazaar/spvwallet",
+    "github.com/OpenBazaar/spvwallet/exchangerates",
     "github.com/OpenBazaar/wallet-interface",
     "github.com/btcsuite/btcd/blockchain",
     "github.com/btcsuite/btcd/btcec",
