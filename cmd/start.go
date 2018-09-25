@@ -204,19 +204,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	ct := wi.Bitcoin
-	cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
-	if err == nil {
-		wcfg, err := schema.GetWalletConfig(cfgf)
-		if err == nil {
-			switch wcfg.Type {
-			case "bitcoincash":
-				ct = wi.BitcoinCash
-			case "zcashd":
-				ct = wi.Zcash
-			}
-		}
-	}
-
 	if x.BitcoinCash {
 		ct = wi.BitcoinCash
 	} else if x.ZCash != "" {
@@ -277,11 +264,6 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan tor config:", err)
 		return err
 	}
-	walletCfg, err := schema.GetWalletConfig(configFile)
-	if err != nil {
-		log.Error("scan wallet config:", err)
-		return err
-	}
 	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		log.Error("scan data sharing config:", err)
@@ -306,13 +288,6 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error("scan wallets config:", err)
 		return err
-	}
-
-	if x.BitcoinCash {
-		walletCfg.Type = "bitcoincash"
-	} else if x.ZCash != "" {
-		walletCfg.Type = "zcashd"
-		walletCfg.Binary = x.ZCash
 	}
 
 	// IPFS node setup
@@ -550,9 +525,6 @@ func (x *Start) Execute(args []string) error {
 		params = chaincfg.RegressionNetParams
 	} else {
 		params = chaincfg.MainNetParams
-	}
-	if x.Regtest && (strings.ToLower(walletCfg.Type) == "spvwallet" || strings.ToLower(walletCfg.Type) == "bitcoincash") && walletCfg.TrustedPeer == "" {
-		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
 	// Multiwallet setup
