@@ -13,12 +13,11 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/btcsuite/btcutil"
-
 	"github.com/OpenBazaar/multiwallet/config"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
@@ -30,6 +29,7 @@ import (
 	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"golang.org/x/net/proxy"
 
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
@@ -78,13 +78,14 @@ func DeserializeEthScript(b []byte) (EthRedeemScript, error) {
 
 // EthereumWallet is the wallet implementation for ethereum
 type EthereumWallet struct {
-	client   *EthClient
-	account  *Account
-	address  *EthAddress
-	service  *Service
-	registry *Registry
-	ppsct    *Escrow
-	db       wi.Datastore
+	client        *EthClient
+	account       *Account
+	address       *EthAddress
+	service       *Service
+	registry      *Registry
+	ppsct         *Escrow
+	db            wi.Datastore
+	exchangeRates wi.ExchangeRates
 }
 
 // NewEthereumWalletWithKeyfile will return a reference to the Eth Wallet
@@ -124,11 +125,11 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil}
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil, nil}
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
-func NewEthereumWallet(cfg config.CoinConfig, mnemonic string) (*EthereumWallet, error) {
+func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
 	client, err := NewEthClient(cfg.ClientAPI.String() + "/" + InfuraAPIKey)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
@@ -197,7 +198,9 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string) (*EthereumWallet,
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB}, nil
+	er := NewEthereumPriceFetcher(proxy)
+
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB, er}, nil
 }
 
 // Params - return nil to comply
