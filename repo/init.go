@@ -159,15 +159,6 @@ func addConfigExtensions(repoRoot string) error {
 		return err
 	}
 	var (
-		w = schema.WalletConfig{
-			Type:             "spvwallet",
-			MaxFee:           2000,
-			FeeAPI:           "https://btc.fees.openbazaar.org",
-			HighFeeDefault:   160,
-			MediumFeeDefault: 60,
-			LowFeeDefault:    20,
-			TrustedPeer:      "",
-		}
 		ws = schema.WalletsConfig{
 			BTC: &schema.CoinConfig{
 				Type:             "API",
@@ -225,9 +216,6 @@ func addConfigExtensions(repoRoot string) error {
 			Id: "https://resolver.onename.com/",
 		}
 	)
-	if err := r.SetConfigKey("Wallet", w); err != nil {
-		return err
-	}
 	if err := r.SetConfigKey("Wallets", ws); err != nil {
 		return err
 	}

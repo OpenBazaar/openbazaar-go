@@ -209,13 +209,14 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// Multiwallet setup
 	multiwalletConfig := &wallet.WalletConfig{
-		ConfigFile:         walletsConfig,
-		DB:                 sqliteDB.DB(),
-		Params:             &params,
-		RepoPath:           config.RepoPath,
-		Logger:             logger,
-		WalletCreationDate: creationDate,
-		Mnemonic:           mn,
+		ConfigFile:           walletsConfig,
+		DB:                   sqliteDB.DB(),
+		Params:               &params,
+		RepoPath:             config.RepoPath,
+		Logger:               logger,
+		WalletCreationDate:   creationDate,
+		Mnemonic:             mn,
+		DisableExchangeRates: config.DisableExchangerates,
 	}
 	mw, err := wallet.NewMultiWallet(multiwalletConfig)
 	if err != nil {

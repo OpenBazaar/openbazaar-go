@@ -36,6 +36,9 @@ type Config struct {
 
 	// A list of coin configs. One config should be included for each coin to be used.
 	Coins []CoinConfig
+
+	// Disable the exchange rate functionality in each wallet
+	DisableExchangeRates bool
 }
 
 type CoinConfig struct {

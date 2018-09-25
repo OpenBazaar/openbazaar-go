@@ -72,6 +72,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 
 	walletConf := config.NewDefaultConfig(coins, &chaincfg.RegressionNetParams)
 	walletConf.Mnemonic = mnemonic
+	walletConf.DisableExchangeRates = true
 	mw, err := multiwallet.NewMultiWallet(walletConf)
 	if err != nil {
 		return nil, err

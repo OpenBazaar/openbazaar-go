@@ -41,7 +41,7 @@ type LitecoinWallet struct {
 	exchangeRates wi.ExchangeRates
 }
 
-func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher) (*LitecoinWallet, error) {
+func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	mPrivKey, err := hd.NewMaster(seed, params)
@@ -66,8 +66,10 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 	if err != nil {
 		return nil, err
 	}
-
-	er := NewLitecoinPriceFetcher(proxy)
+	var er wi.ExchangeRates
+	if !disableExchangeRates {
+		er = NewLitecoinPriceFetcher(proxy)
+	}
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 

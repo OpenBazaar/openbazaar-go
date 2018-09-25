@@ -2,6 +2,7 @@ package spvwallet
 
 import (
 	"errors"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -16,7 +17,6 @@ import (
 	"io"
 	"sync"
 	"time"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
 )
 
 type SPVWallet struct {
@@ -80,7 +80,6 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	er := exchangerates.NewBitcoinPriceFetcher(config.Proxy)
 	w := &SPVWallet{
 		repoPath:         config.RepoPath,
 		masterPrivateKey: mPrivKey,
@@ -99,7 +98,10 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		fPositives:    make(chan *peer.Peer),
 		fpAccumulator: make(map[int32]int32),
 		mutex:         new(sync.RWMutex),
-		exchangeRates: er,
+	}
+
+	if !config.DisableExchangeRates {
+		w.exchangeRates = exchangerates.NewBitcoinPriceFetcher(config.Proxy)
 	}
 
 	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)

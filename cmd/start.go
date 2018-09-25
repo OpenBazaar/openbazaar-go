@@ -571,14 +571,15 @@ func (x *Start) Execute(args []string) error {
 	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
 	walletLogger := logging.MultiLogger(walletFileFormatter)
 	multiwalletConfig := &wallet.WalletConfig{
-		ConfigFile:         walletsConfig,
-		DB:                 sqliteDB.DB(),
-		Params:             &params,
-		RepoPath:           repoPath,
-		Logger:             walletLogger,
-		Proxy:              torDialer,
-		WalletCreationDate: creationDate,
-		Mnemonic:           mn,
+		ConfigFile:           walletsConfig,
+		DB:                   sqliteDB.DB(),
+		Params:               &params,
+		RepoPath:             repoPath,
+		Logger:               walletLogger,
+		Proxy:                torDialer,
+		WalletCreationDate:   creationDate,
+		Mnemonic:             mn,
+		DisableExchangeRates: x.DisableExchangeRates,
 	}
 	mw, err := wallet.NewMultiWallet(multiwalletConfig)
 	if err != nil {
