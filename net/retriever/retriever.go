@@ -15,8 +15,8 @@ import (
 
 	"errors"
 	"github.com/op/go-logging"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
@@ -336,7 +336,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	}
 
 	m.node.Peerstore.AddPubKey(id, pubkey)
-	m.node.Repo.Datastore().Put(ds.NewKey(KeyCachePrefix+id.Pretty()), env.Pubkey)
+	m.node.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix+id.Pretty())), env.Pubkey)
 
 	// Respond with an ACK
 	if env.Message.MessageType != pb.Message_OFFLINE_ACK {

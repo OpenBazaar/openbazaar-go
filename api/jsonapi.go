@@ -29,8 +29,6 @@ import (
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -3542,7 +3540,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	var keyBytes []byte
 	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
 	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
-		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(ds.NewKey(core.KeyCachePrefix + peerId))
+		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix + peerId)))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
