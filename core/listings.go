@@ -1220,7 +1220,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 			if int(region) == 0 {
 				return errors.New("Shipping region cannot be NA")
 			} else {
-				if val, ok := proto.EnumValueMap("CountryCode")[region.String()]; !ok {
+				if _, ok := proto.EnumValueMap("CountryCode")[region.String()]; !ok {
 					return fmt.Errorf("Invalid shipping region [ %s ]: ", region)
 				}
 			}
