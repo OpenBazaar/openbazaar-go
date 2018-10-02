@@ -360,25 +360,6 @@ func (n *Node) Start() error {
 
 	go func() {
 		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
-		<-dht.DefaultBootstrapConfig.DoneChan
-		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
-		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.OpenBazaarNode.Datastore,
-			IPFSNode:  n.OpenBazaarNode.IpfsNode,
-			BanManger: n.OpenBazaarNode.BanManager,
-			Service:   core.Node.Service,
-			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
-			Dialer:    nil,
-			SendAck:   n.OpenBazaarNode.SendOfflineAck,
-			SendError: n.OpenBazaarNode.SendError,
-		})
-		go MR.Run()
-		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
-		go PR.Run()
-		n.OpenBazaarNode.PointerRepublisher = PR
-		MR.Wait()
 		if !n.config.DisableWallet {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()
@@ -400,6 +381,25 @@ func (n *Node) Start() error {
 				}()
 			}
 		}
+		<-dht.DefaultBootstrapConfig.DoneChan
+		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
+		MR := ret.NewMessageRetriever(ret.MRConfig{
+			Db:        n.OpenBazaarNode.Datastore,
+			IPFSNode:  n.OpenBazaarNode.IpfsNode,
+			BanManger: n.OpenBazaarNode.BanManager,
+			Service:   core.Node.Service,
+			PrefixLen: 14,
+			PushNodes: core.Node.PushNodes,
+			Dialer:    nil,
+			SendAck:   n.OpenBazaarNode.SendOfflineAck,
+			SendError: n.OpenBazaarNode.SendError,
+		})
+		go MR.Run()
+		n.OpenBazaarNode.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		go PR.Run()
+		n.OpenBazaarNode.PointerRepublisher = PR
+		MR.Wait()
 
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
