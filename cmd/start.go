@@ -744,13 +744,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
-		<-dht.DefaultBootstrapConfig.DoneChan
-		core.Node.Service = service.New(core.Node, sqliteDB)
-
-		core.Node.StartMessageRetriever()
-		core.Node.StartPointerRepublisher()
-		core.Node.StartRecordAgingNotifier()
-
 		if !x.DisableWallet {
 			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
 			if resyncManager == nil {
@@ -774,6 +767,13 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
+		<-dht.DefaultBootstrapConfig.DoneChan
+		core.Node.Service = service.New(core.Node, sqliteDB)
+
+		core.Node.StartMessageRetriever()
+		core.Node.StartPointerRepublisher()
+		core.Node.StartRecordAgingNotifier()
+
 		core.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
 		if err != nil {
