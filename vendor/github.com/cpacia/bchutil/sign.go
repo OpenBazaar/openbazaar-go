@@ -3,14 +3,14 @@ package bchutil
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"errors"
 )
 
 const (
@@ -241,8 +241,6 @@ func signMultiSig(tx *wire.MsgTx, idx int, subScript []byte, hashType txscript.S
 	script, _ := builder.Script()
 	return script, signed == nRequired
 }
-
-
 
 func SignatureScript(tx *wire.MsgTx, idx int, subscript []byte, hashType txscript.SigHashType, privKey *btcec.PrivateKey, compress bool, amt int64) ([]byte, error) {
 	sig, err := RawTxInSignature(tx, idx, subscript, hashType, privKey, amt)

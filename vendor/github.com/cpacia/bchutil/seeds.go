@@ -2,7 +2,7 @@ package bchutil
 
 import "github.com/btcsuite/btcd/chaincfg"
 
-var MainnetDNSSeeds = []chaincfg.DNSSeed {
+var MainnetDNSSeeds = []chaincfg.DNSSeed{
 	{"seed.bitcoinabc.org", true},
 	{"seed-abc.bitcoinforks.org", true},
 	{"seed.bitcoinunlimited.info", true},
