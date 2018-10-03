@@ -442,7 +442,10 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 		}
 		// Skip the error check here as someone may have sent from an exotic script
 		// that we cannot turn into an address.
-		addr, _ := util.DecodeAddress(out.ScriptPubKey.Addresses[0], ws.params)
+		var addr btcutil.Address
+		if len(out.ScriptPubKey.Addresses) > 0 && out.ScriptPubKey.Addresses[0] != "" {
+			addr, _ = util.DecodeAddress(out.ScriptPubKey.Addresses[0], ws.params)
+		}
 
 		if len(out.ScriptPubKey.Addresses) == 0 {
 			continue
