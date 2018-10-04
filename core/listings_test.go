@@ -1,11 +1,11 @@
 package core_test
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 )
 
@@ -16,7 +16,7 @@ func TestFactoryCryptoListingCoinDivisibilityMatchesConst(t *testing.T) {
 }
 
 func TestValidShippingRegion(t *testing.T) {
-	check := map[int32]bool {
+	check := map[int32]bool{
 		// NA
 		0: true,
 		// continents
@@ -33,7 +33,7 @@ func TestValidShippingRegion(t *testing.T) {
 		510: true,
 		511: true,
 		// some random numbers
-		5678: true,
+		5678:   true,
 		123456: true,
 	}
 	// skip NA, continents, a few random numbers
@@ -62,7 +62,7 @@ func TestValidShippingRegion(t *testing.T) {
 	}
 	count := 0
 	m := make(map[int]bool)
-	for n, _ := range check {
+	for n := range check {
 		cc := pb.CountryCode(n)
 		listing := factory.NewShippingRegionListing("asdfasdf", cc)
 		for _, shippingOption := range listing.ShippingOptions {
