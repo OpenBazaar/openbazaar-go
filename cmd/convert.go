@@ -186,7 +186,7 @@ func (x *Convert) Execute(args []string) error {
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 		fmt.Println("")
 		pw := string(bytePassword)
 		sqliteDB, err = InitializeRepo(repoPath, pw, "", x.Testnet, time.Now(), ct)

@@ -232,7 +232,7 @@ func Migration013_ScriptToAddress(coinType string, script []byte, testmodeEnanab
 		if err != nil {
 			return "", fmt.Errorf("converting %s script to address: %s", coinType, err.Error())
 		}
-		return btcutil.Address(addr).String(), nil
+		return addr.String(), nil
 	case "zec", "tzec":
 		addr, err := zcashd.ExtractPkScriptAddrs(script, params)
 		if err != nil {

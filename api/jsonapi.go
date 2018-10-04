@@ -1423,7 +1423,7 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, string(out), new(pb.SignedListing))
+		SanitizedResponseM(w, out, new(pb.SignedListing))
 		return
 	} else {
 		var listingBytes []byte
@@ -2356,7 +2356,7 @@ func (i *jsonAPIHandler) GETChatMessages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	offsetId := r.URL.Query().Get("offsetId")
-	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, int(l))
+	messages := i.node.Datastore.Chat().GetMessages(peerId, r.URL.Query().Get("subject"), offsetId, l)
 
 	ret, err := json.MarshalIndent(messages, "", "    ")
 	if err != nil {
@@ -2461,7 +2461,7 @@ func (i *jsonAPIHandler) GETNotifications(w http.ResponseWriter, r *http.Request
 		Total         int               `json:"total"`
 		Notifications []json.RawMessage `json:"notifications"`
 	}
-	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, int(l), filters)
+	notifs, total, err := i.node.Datastore.Notifications().GetAll(offsetId, l, filters)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
@@ -3865,7 +3865,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		SanitizedResponseM(w, string(out), new(pb.SignedPost))
+		SanitizedResponseM(w, out, new(pb.SignedPost))
 		return
 	} else {
 		var postBytes []byte

@@ -552,20 +552,20 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
 			Contract:                     factory.NewUndisputeableContract(),
 			OrderID:                      "neverNotifiedButUndisputed",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.SaleRecord{
 			Contract:                     expectedContractOne,
 			OrderID:                      "neverNotified",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
 			Contract:                     factory.NewContract(),
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			OrderID:                      "finalNotificationSent",
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Now(),
