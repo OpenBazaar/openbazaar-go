@@ -154,10 +154,10 @@ func TestChatDB_GetMessages(t *testing.T) {
 		if messages[0].Subject != "" {
 			t.Error("Returned incorrect subject")
 		}
-		if messages[0].Read != false {
+		if messages[0].Read {
 			t.Error("Returned incorrect read bool")
 		}
-		if messages[0].Outgoing != true {
+		if !messages[0].Outgoing {
 			t.Error("Returned incorrect read bool")
 		}
 		if messages[0].Timestamp.Second() <= 0 {
@@ -171,10 +171,10 @@ func TestChatDB_GetMessages(t *testing.T) {
 		if messages[1].Subject != "" {
 			t.Error("Returned incorrect subject")
 		}
-		if messages[1].Read != true {
+		if !messages[1].Read {
 			t.Error("Returned incorrect read bool")
 		}
-		if messages[1].Outgoing != true {
+		if !messages[1].Outgoing {
 			t.Error("Returned incorrect read bool")
 		}
 		if messages[1].Timestamp.Second() <= 0 {

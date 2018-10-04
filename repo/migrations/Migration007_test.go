@@ -61,19 +61,19 @@ func TestMigration007(t *testing.T) {
 	}
 
 	_, err = db.Exec(dbSetupSql,
-		caseID, // dispute case id
-		int(0), // dispute OrderState
-		0,      // dispute read bool
+		caseID,                 // dispute case id
+		int(0),                 // dispute OrderState
+		0,                      // dispute read bool
 		int(executedAt.Unix()), // dispute timestamp
-		0,           // dispute buyerOpened bool
-		"claimtext", // dispute claim text
-		"",          // dispute buyerPayoutAddres
-		"",          // dispute vendorPayoutAddres
+		0,                      // dispute buyerOpened bool
+		"claimtext",            // dispute claim text
+		"",                     // dispute buyerPayoutAddres
+		"",                     // dispute vendorPayoutAddres
 
-		purchaseID, // purchase order id
-		"",         // purchase contract blob
-		1,          // purchase state
-		0,          // purchase read bool
+		purchaseID,             // purchase order id
+		"",                     // purchase contract blob
+		1,                      // purchase state
+		0,                      // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
 		int(0),                 // purchase total int
 		"thumbnailHash",        // purchase thumbnail text
@@ -85,10 +85,10 @@ func TestMigration007(t *testing.T) {
 		"paymentAddress",       // purchase paymentAddr text
 		0,                      // purchase funded bool
 
-		saleID, // sale order id
-		"",     // sale contract blob
-		1,      // sale state
-		0,      // sale read bool
+		saleID,                 // sale order id
+		"",                     // sale contract blob
+		1,                      // sale state
+		0,                      // sale read bool
 		int(executedAt.Unix()), // sale timestamp
 		int(0),                 // sale total int
 		"thumbnailHash",        // sale thumbnail text
@@ -137,7 +137,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifiedAtColumnOnCasesExists = true
 		}
 	}
-	if lastNotifiedAtColumnOnCasesExists == false {
+	if !lastNotifiedAtColumnOnCasesExists {
 		t.Error("Expected lastNotifiedAt column to exist on cases and not be nullable")
 	}
 
@@ -156,7 +156,7 @@ func TestMigration007(t *testing.T) {
 		if actualCase.CaseId != caseID {
 			t.Error("Unexpected case ID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualCase.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualCase.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on case to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
@@ -178,7 +178,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifiedColumnOnPurchasesExists = true
 		}
 	}
-	if lastNotifiedColumnOnPurchasesExists == false {
+	if !lastNotifiedColumnOnPurchasesExists {
 		t.Error("Expected lastNotifiedAt column on purchases to exist on purchases and not be nullable")
 	}
 
@@ -197,7 +197,7 @@ func TestMigration007(t *testing.T) {
 		if actualPurchase.OrderId != purchaseID {
 			t.Error("Unexpected orderID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualPurchase.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualPurchase.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
@@ -219,7 +219,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifierColumnOnSalesExists = true
 		}
 	}
-	if lastNotifierColumnOnSalesExists == false {
+	if !lastNotifierColumnOnSalesExists {
 		t.Error("Expected lastNotifiedAt column on sales to exist on sales and not be nullable")
 	}
 
@@ -238,7 +238,7 @@ func TestMigration007(t *testing.T) {
 		if actualSale.OrderId != saleID {
 			t.Error("Unexpected orderID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualSale.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualSale.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}

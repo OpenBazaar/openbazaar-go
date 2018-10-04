@@ -46,10 +46,7 @@ func (o *OfflineMessagesDB) Has(url string) bool {
 	defer stmt.Close()
 	var ret string
 	err = stmt.QueryRow(url).Scan(&ret)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (o *OfflineMessagesDB) SetMessage(url string, message []byte) error {
