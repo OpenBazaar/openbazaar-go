@@ -72,7 +72,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 		}
 	}
 	fmt.Print("Enter your password: ")
-	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+	bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
 	fmt.Println("")
 	pw := string(bytePassword)
 	pw = strings.Replace(pw, "'", "''", -1)
