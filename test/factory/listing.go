@@ -108,3 +108,22 @@ func NewCryptoListing(slug string) *pb.Listing {
 	listing.Coupons = nil
 	return listing
 }
+
+func NewShippingRegionListing(slug string, countrycode pb.CountryCode) *pb.Listing {
+	listing := NewListing(slug)
+	listing.ShippingOptions = []*pb.Listing_ShippingOption{
+			{
+				Name:    "usps",
+				Type:    pb.Listing_ShippingOption_FIXED_PRICE,
+				Regions: []pb.CountryCode{countrycode},
+				Services: []*pb.Listing_ShippingOption_Service{
+					{
+						Name:              "standard",
+						Price:             20,
+						EstimatedDelivery: "3 days",
+					},
+				},
+			},
+		}
+	return listing
+}
