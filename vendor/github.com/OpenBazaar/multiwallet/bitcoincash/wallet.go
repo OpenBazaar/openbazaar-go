@@ -26,6 +26,7 @@ import (
 	"github.com/OpenBazaar/multiwallet/keys"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
+	"sort"
 )
 
 type BitcoinCashWallet struct {
@@ -204,6 +205,7 @@ func (w *BitcoinCashWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 
