@@ -264,14 +264,15 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:         config.RepoPath,
-		Datastore:        sqliteDB,
-		Multiwallet:      mw,
-		NameSystem:       ns,
-		UserAgent:        core.USERAGENT,
-		PushNodes:        pushNodes,
-		BanManager:       bm,
-		MasterPrivateKey: mPrivKey,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 5 * time.Second,
+		PushNodes:                     pushNodes,
+		RepoPath:                      config.RepoPath,
+		UserAgent:                     core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
