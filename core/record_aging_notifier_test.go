@@ -848,7 +848,6 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		switch orderID {
 		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID:
 			durationFromActual := time.Since(time.Unix(lastDisputeExpiryNotifiedAt, 0))
-			//                    time.Now().Sub(time.Unix(lastDisputeExpiryNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastDisputeExpiryNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeExpiryNotifiedAt, 0).String())
 			}
