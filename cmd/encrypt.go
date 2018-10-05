@@ -73,7 +73,8 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	var pw string
 	for {
 		fmt.Print("Enter a veerrrry strong password: ")
-		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
+		// nolint:unconvert
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)
 		if len(resp) < 8 {
@@ -87,7 +88,8 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	}
 	for {
 		fmt.Print("Confirm your password: ")
-		bytePassword, _ := terminal.ReadPassword(syscall.Stdin)
+		// nolint:unconvert
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)
 		if resp == pw {
