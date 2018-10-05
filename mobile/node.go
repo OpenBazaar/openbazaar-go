@@ -294,7 +294,7 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*ipfsconfig.Config, error) {
+	ctx.LoadConfig = func(_ string) (*ipfsconfig.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {

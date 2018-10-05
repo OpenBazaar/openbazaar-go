@@ -473,7 +473,7 @@ func (x *Start) Execute(args []string) error {
 	ctx := commands.Context{}
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
+	ctx.LoadConfig = func(_ string) (*config.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
