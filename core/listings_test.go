@@ -1,7 +1,7 @@
 package core_test
 
 import (
-	"reflect"
+	// "reflect"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -16,75 +16,73 @@ func TestFactoryCryptoListingCoinDivisibilityMatchesConst(t *testing.T) {
 }
 
 func TestValidShippingRegion(t *testing.T) {
-	check := map[int32]bool{
-		// NA
-		0: true,
-		// continents
-		501: true,
-		502: true,
-		503: true,
-		504: true,
-		505: true,
-		506: true,
-		507: true,
-		508: true,
-		// !exist
-		509: true,
-		510: true,
-		511: true,
-		// some random numbers
-		5678:   true,
-		123456: true,
+	check := map[int32]error{
+		0: core.ErrShippingRegionMustBeSet,
+
+		1:   nil,
+		247: nil,
+		248: core.ErrShippingRegionUndefined,
+		500: nil,
+
+		501: core.ErrShippingRegionMustNotBeContinent,
+		502: core.ErrShippingRegionMustNotBeContinent,
+		503: core.ErrShippingRegionMustNotBeContinent,
+		504: core.ErrShippingRegionMustNotBeContinent,
+		505: core.ErrShippingRegionMustNotBeContinent,
+		506: core.ErrShippingRegionMustNotBeContinent,
+		507: core.ErrShippingRegionMustNotBeContinent,
+		508: core.ErrShippingRegionMustNotBeContinent,
+
+		509: core.ErrShippingRegionUndefined,
+		510: core.ErrShippingRegionUndefined,
+		511: core.ErrShippingRegionUndefined,
+
+		5678:   core.ErrShippingRegionUndefined,
+		123456: core.ErrShippingRegionUndefined,
 	}
-	// skip NA, continents, a few random numbers
-	for _, v := range pb.CountryCode_value {
-		if !check[v] {
-			cc := pb.CountryCode(v)
-			listing := factory.NewShippingRegionListing("asdfasdf", cc)
-			for _, shippingOption := range listing.ShippingOptions {
-				if ok := core.ValidShippingRegion(shippingOption); ok > 0 {
-					t.Fatalf("Something has changed with valid shipping regions: %d %d", ok, v)
-				}
-			}
-		}
-	}
-	// DONT skip NA, continents, a few random numbers
-	for _, v := range pb.CountryCode_value {
-		if check[v] {
-			cc := pb.CountryCode(v)
-			listing := factory.NewShippingRegionListing("asdfasdf", cc)
-			for _, shippingOption := range listing.ShippingOptions {
-				if ok := core.ValidShippingRegion(shippingOption); ok > 0 {
-					t.Logf("Should error: %d %d", ok, v)
-				}
-			}
-		}
-	}
-	count := 0
-	m := make(map[int]bool)
-	for n := range check {
-		cc := pb.CountryCode(n)
+	// check error map
+	m1 := make(map[int32]error)
+	for v := range check {
+		cc := pb.CountryCode(v)
 		listing := factory.NewShippingRegionListing("asdfasdf", cc)
 		for _, shippingOption := range listing.ShippingOptions {
-			if ok := core.ValidShippingRegion(shippingOption); ok > 0 {
-				if ok == 2 {
-					t.Logf("Should error2: %d %d", ok, n)
-				}
-				m[ok] = true
-				count++
+			if err := core.ValidShippingRegion(shippingOption); err != nil {
+				m1[v] = err
+			} else {
+				m1[v] = nil
 			}
 		}
 	}
-	if count != 14 {
-		t.Fatalf("Something has changed with valid shipping regions: counted %d", count)
+
+	// check the countrycodes.proto
+	m2 := make(map[int32]error)
+	for v := range pb.CountryCode_name {
+		cc := pb.CountryCode(v)
+		listing := factory.NewShippingRegionListing("asdfasdf", cc)
+		for _, shippingOption := range listing.ShippingOptions {
+			if err := core.ValidShippingRegion(shippingOption); err != nil {
+				m2[v] = err
+			} else {
+				m2[v] = nil
+			}
+		}
 	}
-	errorCodes := map[int]bool{
-		1: true, // NA
-		2: true, // continent
-		3: true, // !Exist
+
+	for v, errtype := range m2 {
+		if check[v] != errtype {
+			t.Fatalf("( cc: %d, '%v' != '%v' ) : CountryCode does not match tests error checking map.\n", v, errtype, check[v])
+		}
 	}
-	same := reflect.DeepEqual(m, errorCodes)
-	if !same {
-		t.Errorf("New/Unseen Shipping Region Error Code %v", same)
+
+	check[247] = core.ErrShippingRegionUndefined
+	for v, errtype := range m1 {
+		if check[v] != errtype {
+			t.Logf("Should fail: ( cc: %d, '%v' != '%v' ) : CountryCode does not match tests error checking map.\n", v, errtype, check[v])
+		}
+	}
+	for v, errtype := range m2 {
+		if check[v] != errtype {
+			t.Logf("Should fail: ( cc: %d, '%v' != '%v' ) : CountryCode does not match tests error checking map.\n", v, errtype, check[v])
+		}
 	}
 }
