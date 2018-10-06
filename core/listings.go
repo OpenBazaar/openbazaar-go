@@ -104,6 +104,12 @@ type ListingData struct {
 	CoinType           string    `json:"coinType"`
 }
 
+var (
+	ErrShippingRegionMustBeSet          = errors.New("shipping region must be set")
+	ErrShippingRegionUndefined          = errors.New("undefined shipping region")
+	ErrShippingRegionMustNotBeContinent = errors.New("cannot specify continent as shipping region")
+)
+
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
@@ -1175,25 +1181,22 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	return nil
 }
 
-func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) int {
+func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
 	for _, region := range shippingOption.Regions {
 		if int32(region) == 0 {
-			return 1
+			return ErrShippingRegionMustBeSet
 		}
 		_, ok := proto.EnumValueMap("CountryCode")[region.String()]
-		// if region not in country codes return 2
 		if !ok {
-			// not in CountryCodes
-			return 2
+			return ErrShippingRegionUndefined
 		}
 		if ok {
-			// region exists but it is a continent
 			if int32(region) > 500 {
-				return 3
+				return ErrShippingRegionMustNotBeContinent
 			}
 		}
 	}
-	return 0
+	return nil
 }
 
 func validatePhysicalListing(listing *pb.Listing) error {
@@ -1237,8 +1240,8 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
-		if ok := ValidShippingRegion(shippingOption); ok > 0 {
-			return fmt.Errorf("Invalid shipping region configuration: %d", ok)
+		if err := ValidShippingRegion(shippingOption); err != nil {
+			return fmt.Errorf("Invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
