@@ -264,14 +264,15 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:         config.RepoPath,
-		Datastore:        sqliteDB,
-		Multiwallet:      mw,
-		NameSystem:       ns,
-		UserAgent:        core.USERAGENT,
-		PushNodes:        pushNodes,
-		BanManager:       bm,
-		MasterPrivateKey: mPrivKey,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 5 * time.Second,
+		PushNodes:                     pushNodes,
+		RepoPath:                      config.RepoPath,
+		UserAgent:                     core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -294,7 +295,7 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*ipfsconfig.Config, error) {
+	ctx.LoadConfig = func(_ string) (*ipfsconfig.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {

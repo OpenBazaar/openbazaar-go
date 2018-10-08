@@ -473,7 +473,7 @@ func (x *Start) Execute(args []string) error {
 	ctx := commands.Context{}
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
+	ctx.LoadConfig = func(_ string) (*config.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
@@ -677,22 +677,23 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		IpfsNode:             nd,
-		RootHash:             ipath.Path(e.Value).String(),
-		RepoPath:             repoPath,
-		Datastore:            sqliteDB,
-		Multiwallet:          mw,
-		NameSystem:           ns,
+		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
+		IpfsNode:                      nd,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 30 * time.Second,
+		Pubsub:               ps,
 		PushNodes:            pushNodes,
-		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
+		RegressionTestEnable: x.Regtest,
+		RepoPath:             repoPath,
+		RootHash:             ipath.Path(e.Value).String(),
+		TestnetEnable:        x.Testnet,
 		TorDialer:            torDialer,
 		UserAgent:            core.USERAGENT,
-		BanManager:           bm,
-		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
-		Pubsub:               ps,
-		TestnetEnable:        x.Testnet,
-		RegressionTestEnable: x.Regtest,
-		MasterPrivateKey:     mPrivKey,
 	}
 	core.PublishLock.Lock()
 
