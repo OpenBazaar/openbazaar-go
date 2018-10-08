@@ -82,6 +82,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(data.PaymentCoin)
 	if err != nil {
+		log.Error("here")
 		return "", "", 0, false, err
 	}
 
@@ -110,9 +111,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 			return "", "", 0, false, errors.New("moderator is not capable of moderating this transaction")
 		}
 
-		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), profile.ModeratorInfo.AcceptedCurrencies) {
+		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
 			return "", "", 0, false, errors.New("moderator does not accept our currency")
 		}
+		contract.BuyerOrder.Payment = payment
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
 			return "", "", 0, false, err
@@ -159,7 +161,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.Address = addr.EncodeAddress()
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
-		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
 
 		err = wal.AddWatchedAddress(addr)
@@ -244,13 +245,14 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
+	payment.Coin = data.PaymentCoin
+	contract.BuyerOrder.Payment = payment
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 
 	payment.Amount = total
-	contract.BuyerOrder.Payment = payment
 	contract, err = n.SignOrder(contract)
 	if err != nil {
 		return "", "", 0, false, err
@@ -532,7 +534,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			listing = addedListings[item.ListingHash]
 		}
 
-		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), listing.Metadata.AcceptedCurrencies) {
+		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.Metadata.AcceptedCurrencies) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
@@ -677,6 +679,9 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) 
 	if err != nil {
 		return 0, err
 	}
+	payment := new(pb.Order_Payment)
+	payment.Coin = data.PaymentCoin
+	contract.BuyerOrder.Payment = payment
 	return n.CalculateOrderTotal(contract)
 }
 

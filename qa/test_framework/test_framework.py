@@ -78,13 +78,15 @@ class OpenBazaarTestFramework(object):
             if config["Addresses"]["Swarm"][0] not in node:
                 to_boostrap.append(node)
         config["Bootstrap-testnet"] = to_boostrap
-        config["Wallet"]["TrustedPeer"] = "127.0.0.1:18444"
-        config["Wallet"]["FeeAPI"] = ""
         config["Crosspost-gateways"] = []
         config["Swarm"]["DisableNatPortMap"] = True
 
-        if self.bitcoincash:
-            config["Wallet"]["Type"] = "bitcoincash"
+        self.cointype = self.cointype.upper()
+
+        config["Wallets"][self.cointype]["Type"] = "SPV"
+        config["Wallets"][self.cointype]["TrustedPeer"] = "127.0.0.1:18444"
+        config["Wallets"][self.cointype]["FeeAPI"] = ""
+
 
         with open(os.path.join(dir_path, "config"), 'w') as outfile:
             outfile.write(json.dumps(config, indent=4))
@@ -183,12 +185,12 @@ class OpenBazaarTestFramework(object):
         parser.add_argument('-b', '--binary', required=True, help="the openbazaar-go binary")
         parser.add_argument('-d', '--bitcoind', help="the bitcoind binary")
         parser.add_argument('-t', '--tempdir', action='store_true', help="temp directory to store the data folders", default="/tmp/")
-        parser.add_argument('-c', '--bitcoincash', help="test with bitcoin cash", action='store_true', default=False)
+        parser.add_argument('-c', '--cointype', help="cointype to test", action='store_true', default="BTC")
         args = parser.parse_args(sys.argv[1:])
         self.binary = args.binary
         self.temp_dir = args.tempdir
         self.bitcoind = args.bitcoind
-        self.bitcoincash = args.bitcoincash
+        self.cointype = args.cointype
         self.options = options
 
         try:
