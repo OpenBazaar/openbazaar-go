@@ -86,7 +86,7 @@ func TestTxnsGet(t *testing.T) {
 	if now.Equal(txn.Timestamp) {
 		t.Error("Txn db failed to return correct time")
 	}
-	if txn.WatchOnly != false {
+	if txn.WatchOnly {
 		t.Error("Txns db failed to put watchOnly")
 	}
 }
