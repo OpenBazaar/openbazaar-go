@@ -72,6 +72,7 @@ func (x *DecryptDatabase) Execute(args []string) error {
 		}
 	}
 	fmt.Print("Enter your password: ")
+	// nolint:unconvert
 	bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 	fmt.Println("")
 	pw := string(bytePassword)

@@ -228,6 +228,7 @@ func (x *Start) Execute(args []string) error {
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
@@ -483,7 +484,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
