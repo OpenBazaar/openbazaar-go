@@ -104,6 +104,12 @@ type ListingData struct {
 	CoinType           string    `json:"coinType"`
 }
 
+var (
+	ErrShippingRegionMustBeSet          = errors.New("shipping region must be set")
+	ErrShippingRegionUndefined          = errors.New("undefined shipping region")
+	ErrShippingRegionMustNotBeContinent = errors.New("cannot specify continent as shipping region")
+)
+
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
@@ -1175,6 +1181,24 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	return nil
 }
 
+func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
+	for _, region := range shippingOption.Regions {
+		if int32(region) == 0 {
+			return ErrShippingRegionMustBeSet
+		}
+		_, ok := proto.EnumValueMap("CountryCode")[region.String()]
+		if !ok {
+			return ErrShippingRegionUndefined
+		}
+		if ok {
+			if int32(region) > 500 {
+				return ErrShippingRegionMustNotBeContinent
+			}
+		}
+	}
+	return nil
+}
+
 func validatePhysicalListing(listing *pb.Listing) error {
 	if listing.Metadata.PricingCurrency == "" {
 		return errors.New("Listing pricing currency code must not be empty")
@@ -1216,13 +1240,8 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
-		for _, region := range shippingOption.Regions {
-			if int(region) == 0 {
-				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 247 && int(region) != 500 {
-				return errors.New("Invalid shipping region")
-			}
-
+		if err := ValidShippingRegion(shippingOption); err != nil {
+			return fmt.Errorf("Invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
