@@ -56,6 +56,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
+
         # buyer send order
         with open('testdata/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)

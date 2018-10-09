@@ -82,7 +82,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(data.PaymentCoin)
 	if err != nil {
-		log.Error("here")
 		return "", "", 0, false, err
 	}
 
@@ -808,7 +807,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			satoshis += uint64(float32(satoshis) * l.Metadata.PriceModifier / 100.0)
 			itemQuantity = 1
 		} else {
-			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, l.Item.Price)
 		}
 		if err != nil {
 			return 0, err
@@ -827,7 +826,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					if sku.Surcharge < 0 {
 						surcharge = uint64(-sku.Surcharge)
 					}
-					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, surcharge)
+					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, surcharge)
 					if err != nil {
 						return 0, err
 					}
@@ -852,7 +851,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 				if id.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
-						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
+						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, discount)
 						if err != nil {
 							return 0, err
 						}
@@ -939,14 +938,14 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if !ok {
 			return 0, errors.New("shipping service not found in listing")
 		}
-		shippingSatoshi, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
+		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, listing.Metadata.PricingCurrency, service.Price)
 		if err != nil {
 			return 0, err
 		}
 
 		var secondarySatoshi uint64
 		if service.AdditionalItemPrice > 0 {
-			secondarySatoshi, err = n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
+			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
 			if err != nil {
 				return 0, err
 			}
@@ -1015,15 +1014,14 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 	}
 }
 
-func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
-	for cc := range n.Multiwallet {
-		if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) {
-			return amount, nil
-		}
+func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount uint64) (uint64, error) {
+	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) {
+		return amount, nil
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(currencyCode)
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(paymentCoin)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("currency %s not found in multiwallet", paymentCoin)
 	}
 
 	if wal.ExchangeRates() == nil {

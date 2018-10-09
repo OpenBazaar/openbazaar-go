@@ -519,7 +519,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	var modAddr btcutil.Address
 	var modValue uint64
 	modAddr = wal.CurrentAddress(wallet.EXTERNAL)
-	modValue, err = n.GetModeratorFee(totalOut, wal.CurrencyCode())
+	modValue, err = n.GetModeratorFee(totalOut, preferredContract.BuyerOrder.Payment.Coin, wal.CurrencyCode())
 	if err != nil {
 		return err
 	}
