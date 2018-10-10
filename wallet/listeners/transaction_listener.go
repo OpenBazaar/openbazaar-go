@@ -173,14 +173,21 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			l.adjustInventory(contract)
 
 			n := repo.OrderNotification{
-				repo.NewNotificationID(),
-				"order",
-				contract.VendorListings[0].Item.Title,
-				contract.BuyerOrder.BuyerID.PeerID,
-				contract.BuyerOrder.BuyerID.Handle,
-				repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-				orderId,
-				contract.VendorListings[0].Slug,
+				BuyerHandle: contract.BuyerOrder.BuyerID.Handle,
+				BuyerID:     contract.BuyerOrder.BuyerID.PeerID,
+				ID:          repo.NewNotificationID(),
+				ListingType: contract.VendorListings[0].Metadata.ContractType.String(),
+				OrderId:     orderId,
+				Price: repo.ListingPrice{
+					Amount:           contract.BuyerOrder.Payment.Amount,
+					CoinDivisibility: contract.VendorListings[0].Metadata.CoinDivisibility,
+					CurrencyCode:     contract.VendorListings[0].Metadata.AcceptedCurrencies[0],
+					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
+				},
+				Slug:      contract.VendorListings[0].Slug,
+				Thumbnail: repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+				Title:     contract.VendorListings[0].Item.Title,
+				Type:      "order",
 			}
 
 			l.broadcast <- n
