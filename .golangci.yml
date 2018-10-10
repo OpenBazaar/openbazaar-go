@@ -47,9 +47,9 @@ linters:
     - lll
     - goconst
     - govet
+    - megacheck
   disable:
     - errcheck
     - golint
-    - megacheck
     - goimports
     - prealloc

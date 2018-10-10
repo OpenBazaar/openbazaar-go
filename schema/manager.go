@@ -243,7 +243,7 @@ func (m *openbazaarSchemaManager) DestroySchemaDirectories() {
 // ResetForJSONApiTest will reset the internal set of the schema without disturbing the
 // node running on top of it
 func (m *openbazaarSchemaManager) ResetForJSONApiTest() error {
-	if m.testModeEnabled == false {
+	if !m.testModeEnabled {
 		return errors.New("destroy schema directories bypassed: must run while TestModeEnabled is true")
 	}
 
