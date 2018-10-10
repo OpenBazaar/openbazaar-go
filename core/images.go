@@ -159,7 +159,7 @@ func (n *OpenBazaarNode) FetchHeader(peerID string, size string, useCache bool) 
 
 // FetchImage - fetch ipfs image
 func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string, useCache bool) (io.DagReader, error) {
-	query := "/ipns/" + peerID + "/images/" + size + "/" + imageType
+	query := "/" + peerID + "/images/" + size + "/" + imageType
 	b, err := n.IPNSResolveThenCat(ipnspath.FromString(query), time.Minute, useCache)
 	if err != nil {
 		return nil, err
