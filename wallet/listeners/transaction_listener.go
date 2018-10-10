@@ -181,7 +181,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				Price: repo.ListingPrice{
 					Amount:           contract.BuyerOrder.Payment.Amount,
 					CoinDivisibility: contract.VendorListings[0].Metadata.CoinDivisibility,
-					CurrencyCode:     contract.VendorListings[0].Metadata.AcceptedCurrencies[0],
+					CurrencyCode:     contract.BuyerOrder.Payment.Coin,
 					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
 				},
 				Slug:      contract.VendorListings[0].Slug,
