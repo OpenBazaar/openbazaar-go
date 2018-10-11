@@ -1,8 +1,9 @@
 package core_test
 
 import (
-	// "reflect"
 	"testing"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -83,6 +84,56 @@ func TestValidShippingRegion(t *testing.T) {
 	for v, errtype := range m2 {
 		if check[v] != errtype {
 			t.Logf("Should fail: ( cc: %d, '%v' != '%v' ) : CountryCode does not match tests error checking map.\n", v, errtype, check[v])
+		}
+	}
+}
+
+func TestListingProtobufAlias(t *testing.T) {
+	countrycodes := []pb.CountryCode{
+		pb.CountryCode(212),
+		pb.CountryCode(pb.CountryCode_SWAZILAND),
+		pb.CountryCode(pb.CountryCode_ESWATINI),
+	}
+	for _, cc := range countrycodes {
+		listing := factory.NewShippingRegionListing("swaziland_eswatini", cc)
+		marshalled, _ := proto.Marshal(listing)
+		unmarshalledListing := &pb.Listing{}
+		err := proto.Unmarshal(marshalled, unmarshalledListing)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, region := range unmarshalledListing.ShippingOptions[0].Regions {
+			if region != pb.CountryCode_ESWATINI {
+				t.Fatal("Error returning pb.CountryCode_ESWATINI")
+			}
+		}
+	}
+	countrycodes2 := [][]pb.CountryCode{
+		{pb.CountryCode(pb.CountryCode_UNITED_KINGDOM), pb.CountryCode(pb.CountryCode_ESWATINI)},
+		{pb.CountryCode(pb.CountryCode_UNITED_KINGDOM), pb.CountryCode(pb.CountryCode_SWAZILAND)},
+
+		{pb.CountryCode(pb.CountryCode_SWAZILAND), pb.CountryCode(pb.CountryCode_ESWATINI)},
+		{pb.CountryCode(pb.CountryCode_ESWATINI), pb.CountryCode(pb.CountryCode_SWAZILAND)},
+		{pb.CountryCode(pb.CountryCode_SWAZILAND)},
+		{pb.CountryCode(pb.CountryCode_ESWATINI)},
+	}
+	for id, cc := range countrycodes2 {
+		listing2 := factory.NewShippingRegionsProtoBufAlias("swaziland_eswatini", cc)
+		marshalled2, _ := proto.Marshal(listing2)
+		unmarshalled2Listing := &pb.Listing{}
+		err := proto.Unmarshal(marshalled2, unmarshalled2Listing)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, region := range unmarshalled2Listing.ShippingOptions[0].Regions {
+			if region != pb.CountryCode(pb.CountryCode_SWAZILAND) && region != pb.CountryCode(pb.CountryCode_ESWATINI) {
+				if id == 0 || id == 1 {
+					t.Logf("( %v ) : should fail : SWAZILAND/ESWATINI proto allow_alias ", unmarshalled2Listing.ShippingOptions[0].Regions)
+				}
+				if id != 0 && id != 1 {
+					t.Fatalf("( %v ) : failed : SWAZILAND/ESWATINI proto allow_alias", unmarshalled2Listing.ShippingOptions[0].Regions)
+				}
+			}
 		}
 	}
 }
