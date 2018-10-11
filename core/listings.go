@@ -67,9 +67,6 @@ const (
 	PriceModifierMin = -99.99
 	// PriceModifierMax = max price modifier
 	PriceModifierMax = 1000.00
-
-	// DefaultCoinDivisibility - decimals for price
-	DefaultCoinDivisibility uint32 = 1e8
 )
 
 type price struct {
@@ -443,10 +440,6 @@ func setCryptocurrencyListingDefaults(listing *pb.Listing) {
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-}
-
-func coinDivisibilityForType(coinType string) uint32 {
-	return DefaultCoinDivisibility
 }
 
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
@@ -1286,7 +1279,12 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+	currency, err := CurrencyFromString(listing.Metadata.CoinType)
+	if err != nil {
+		return err
+	}
+
+	if listing.Metadata.CoinDivisibility != currency.Divisibility() {
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
