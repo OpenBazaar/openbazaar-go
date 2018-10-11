@@ -53,7 +53,7 @@ func (r *PointerRepublisher) Republish() {
 	for _, p := range pointers {
 		switch p.Purpose {
 		case ipfs.MESSAGE:
-			if time.Now().Sub(p.Timestamp) > kPointerExpiration {
+			if time.Since(p.Timestamp) > kPointerExpiration {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				go ipfs.PublishPointer(r.ipfsNode, ctx, p)
