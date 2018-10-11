@@ -21,19 +21,32 @@ import (
 
 // Constants for validation
 const (
-	PostTitleMaxCharacters    = 280
+	// PostStatusMaxCharacters - Maximum length of the status field of a post
+	PostStatusMaxCharacters = 280
+	// PostLongFormMaxCharacters - Maximum length of the longForm field of a post
 	PostLongFormMaxCharacters = 50000
-	MaxPostTags               = 50
-	PostTagsMaxCharacters     = 80
+	// MaxPostTags - Maximum number of tags a post can have
+	MaxPostTags = 50
+	// MaxPostChannels - Maximum number of channels a post can be addressed to
+	MaxPostChannels = 30
+	// PostTagsMaxCharacters - Maximum character length of a tag
+	PostTagsMaxCharacters = 80
+	// PostChannelsMaxCharacters - Maximum character length of a channel
+	PostChannelsMaxCharacters = 80
+	// PostReferenceMaxCharacters - Maximum character length of a reference
+	PostReferenceMaxCharacters = 256
 )
 
 // JSON structure returned for each post from GETPosts
 type postData struct {
 	Hash      string      `json:"hash"`
 	Slug      string      `json:"slug"`
-	Title     string      `json:"title"`
+	Type      string      `json:"type"`
+	Status    string      `json:"status"`
 	Images    []postImage `json:"images"`
 	Tags      []string    `json:"tags"`
+	Channels  []string    `json:"channels"`
+	Reference string      `json:"reference"`
 	Timestamp string      `json:"timestamp"`
 }
 
@@ -43,18 +56,18 @@ type postImage struct {
 	Medium string `json:"medium"`
 }
 
-//GeneratePostSlug  [Create a slug for the post based on the title, if a slug is missing]
-func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
-	title = strings.Replace(title, "/", "", -1)
-	slugFromTitle := func(title string) string {
+//GeneratePostSlug  [Create a slug for the post based on the status, if a slug is missing]
+func (n *OpenBazaarNode) GeneratePostSlug(status string) (string, error) {
+	status = strings.Replace(status, "/", "", -1)
+	slugFromStatus := func(status string) string {
 		l := SentenceMaxCharacters - SlugBuffer
-		if len(title) < SentenceMaxCharacters-SlugBuffer {
-			l = len(title)
+		if len(status) < SentenceMaxCharacters-SlugBuffer {
+			l = len(status)
 		}
-		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
+		return url.QueryEscape(sanitize.Path(strings.ToLower(status[:l])))
 	}
 	counter := 1
-	slugBase := slugFromTitle(title)
+	slugBase := slugFromStatus(status)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetPostFromSlug(slugToTry)
@@ -170,12 +183,27 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		}
 	}
 
+	/* Add a channel in the post to an array called channels,
+	which will be added to the postData object below */
+	channels := []string{}
+	for _, channel := range post.Post.Channels {
+		if !contains(channels, channel) {
+			tags = append(channels, channel)
+		}
+		if len(channels) > 15 {
+			tags = tags[0:15]
+		}
+	}
+
 	// Create the postData object
 	ld := postData{
-		Hash:  postHash,
-		Slug:  post.Post.Slug,
-		Title: post.Post.Title,
-		Tags:  tags,
+		Hash:      postHash,
+		Slug:      post.Post.Slug,
+		Type:      post.Post.PostType.String(),
+		Status:    post.Post.Status,
+		Tags:      tags,
+		Channels:  channels,
+		Reference: post.Post.Reference,
 	}
 
 	// Add a timestamp to postData if it doesn't exist
@@ -478,12 +506,14 @@ func validatePost(post *pb.Post) (err error) {
 		return errors.New("Slugs cannot contain file separators")
 	}
 
-	// Tile
-	if post.Title == "" {
-		return errors.New("Post must have a title")
+	// Type
+	if _, ok := pb.Post_PostType_value[post.PostType.String()]; ok {
+		return errors.New("Invalid post type")
 	}
-	if len(post.Title) > PostTitleMaxCharacters {
-		return fmt.Errorf("Title is longer than the max of %d", PostTitleMaxCharacters)
+
+	// Status
+	if len(post.Status) > PostStatusMaxCharacters {
+		return fmt.Errorf("Status is longer than the max of %d", PostStatusMaxCharacters)
 	}
 
 	// Long Form
@@ -501,6 +531,29 @@ func validatePost(post *pb.Post) (err error) {
 		}
 		if len(tag) > PostTagsMaxCharacters {
 			return fmt.Errorf("Tags must be less than max of %d", PostTagsMaxCharacters)
+		}
+	}
+
+	// Channels
+	if len(post.Channels) > MaxPostChannels {
+		return fmt.Errorf("Channels in the post is longer than the max of %d characters", MaxPostChannels)
+	}
+	for _, channel := range post.Channels {
+		if len(channel) > PostChannelsMaxCharacters {
+			return fmt.Errorf("Channels must be less than max of %d", PostChannelsMaxCharacters)
+		}
+	}
+
+	// Reference
+	if post.PostType == pb.Post_COMMENT || post.PostType == pb.Post_REPOST {
+		if post.Reference == "" {
+			return errors.New("Reference must not be empty")
+		}
+		if len(post.Reference) > PostReferenceMaxCharacters {
+			return fmt.Errorf("Reference is longer than the max of %d", PostReferenceMaxCharacters)
+		}
+		if strings.Contains(post.Reference, " ") {
+			return errors.New("Reference cannot contain spaces")
 		}
 	}
 
