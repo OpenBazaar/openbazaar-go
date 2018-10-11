@@ -41,7 +41,7 @@ const (
 type postData struct {
 	Hash      string      `json:"hash"`
 	Slug      string      `json:"slug"`
-	Type      string      `json:"type"`
+	PostType  string      `json:"postType"`
 	Status    string      `json:"status"`
 	Images    []postImage `json:"images"`
 	Tags      []string    `json:"tags"`
@@ -188,10 +188,10 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	channels := []string{}
 	for _, channel := range post.Post.Channels {
 		if !contains(channels, channel) {
-			tags = append(channels, channel)
+			channels = append(channels, channel)
 		}
 		if len(channels) > 15 {
-			tags = tags[0:15]
+			channels = channels[0:15]
 		}
 	}
 
@@ -199,7 +199,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	ld := postData{
 		Hash:      postHash,
 		Slug:      post.Post.Slug,
-		Type:      post.Post.PostType.String(),
+		PostType:  post.Post.PostType.String(),
 		Status:    post.Post.Status,
 		Tags:      tags,
 		Channels:  channels,
@@ -507,7 +507,7 @@ func validatePost(post *pb.Post) (err error) {
 	}
 
 	// Type
-	if _, ok := pb.Post_PostType_value[post.PostType.String()]; ok {
+	if _, ok := pb.Post_PostType_value[post.PostType.String()]; !ok {
 		return errors.New("Invalid post type")
 	}
 
@@ -523,24 +523,24 @@ func validatePost(post *pb.Post) (err error) {
 
 	// Tags
 	if len(post.Tags) > MaxPostTags {
-		return fmt.Errorf("Tags in the post is longer than the max of %d characters", MaxPostTags)
+		return fmt.Errorf("Tags in the post is longer than the max of %d", MaxPostTags)
 	}
 	for _, tag := range post.Tags {
 		if tag == "" {
 			return errors.New("Tags must not be empty")
 		}
 		if len(tag) > PostTagsMaxCharacters {
-			return fmt.Errorf("Tags must be less than max of %d", PostTagsMaxCharacters)
+			return fmt.Errorf("Tags must be less than max of %d characters", PostTagsMaxCharacters)
 		}
 	}
 
 	// Channels
 	if len(post.Channels) > MaxPostChannels {
-		return fmt.Errorf("Channels in the post is longer than the max of %d characters", MaxPostChannels)
+		return fmt.Errorf("Channels in the post is longer than the max of %d", MaxPostChannels)
 	}
 	for _, channel := range post.Channels {
 		if len(channel) > PostChannelsMaxCharacters {
-			return fmt.Errorf("Channels must be less than max of %d", PostChannelsMaxCharacters)
+			return fmt.Errorf("Channels must be less than max of %d characters", PostChannelsMaxCharacters)
 		}
 	}
 

@@ -337,7 +337,7 @@ const postJSON = `{
 			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
     "status": "test1",
-    "type": "POST",
+    "postType": "POST",
 	"longForm": "This is a test post dawg.",
 	"images": [
 			{
@@ -372,7 +372,7 @@ const postUpdateJSON = `{
 			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
     "status": "test1",
-    "type": "POST",
+    "postType": "POST",
 	"longForm": "This is a test post dawgs and cats.",
 	"images": [
 			{
