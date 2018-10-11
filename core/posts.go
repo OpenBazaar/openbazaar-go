@@ -30,9 +30,9 @@ const (
 	// MaxPostChannels - Maximum number of channels a post can be addressed to
 	MaxPostChannels = 30
 	// PostTagsMaxCharacters - Maximum character length of a tag
-	PostTagsMaxCharacters = 80
+	PostTagsMaxCharacters = 256
 	// PostChannelsMaxCharacters - Maximum character length of a channel
-	PostChannelsMaxCharacters = 80
+	PostChannelsMaxCharacters = 256
 	// PostReferenceMaxCharacters - Maximum character length of a reference
 	PostReferenceMaxCharacters = 256
 )
