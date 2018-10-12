@@ -30,6 +30,8 @@ import (
 
 var ErrorNotSubscribed = errors.New("cache is stale because not subscribed to name")
 
+const KeyCachePrefix = "/pubkey/"
+
 // PubsubPublisher is a publisher that distributes IPNS records through pubsub
 type PubsubPublisher struct {
 	ctx  context.Context
@@ -207,41 +209,56 @@ func (r *PubsubResolver) resolveOnce(ctx context.Context, name string, options *
 		return "", errors.New("cannot resolve own name through pubsub")
 	}
 
-	pubk := id.ExtractPublicKey()
-	if pubk == nil {
-		pubk, err = r.pkf.GetPublicKey(ctx, id)
-		if err != nil {
-			log.Warningf("PubsubResolve: error fetching public key: %s [%s]", err.Error(), xname)
-			return "", err
-		}
-	}
-
 	// the topic is /ipns/Qmhash
 	if !strings.HasPrefix(name, "/ipns/") {
 		name = "/ipns/" + name
 	}
 
-	r.mx.Lock()
-	// see if we already have a pubsub subscription; if not, subscribe
-	sub, ok := r.subs[name]
-	if !ok {
-		sub, err = r.ps.Subscribe(name)
-		if err != nil {
-			r.mx.Unlock()
-			return "", err
+	if !options.DoNotSubscribe {
+		pubk := id.ExtractPublicKey()
+		if pubk == nil {
+			getKey := func() (ci.PubKey, error) {
+				keyVal, err := r.ds.Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix+name)))
+				if err == nil {
+					keyBytes, ok := keyVal.([]byte)
+					if ok {
+						pubKey, err := ci.UnmarshalPublicKey(keyBytes)
+						if err == nil {
+							return pubKey, nil
+						}
+					}
+				}
+				return r.pkf.GetPublicKey(ctx, id)
+			}
+			pubk, err = getKey()
+			if err != nil {
+				log.Warningf("PubsubResolve: error fetching public key: %s [%s]", err.Error(), xname)
+				return "", err
+			}
 		}
 
-		log.Debugf("PubsubResolve: subscribed to %s", name)
+		r.mx.Lock()
+		// see if we already have a pubsub subscription; if not, subscribe
+		sub, ok := r.subs[name]
+		if !ok {
+			sub, err = r.ps.Subscribe(name)
+			if err != nil {
+				r.mx.Unlock()
+				return "", err
+			}
 
-		r.subs[name] = sub
+			log.Debugf("PubsubResolve: subscribed to %s", name)
 
-		ctx, cancel := context.WithCancel(r.ctx)
-		go r.handleSubscription(sub, name, pubk, cancel)
-		go bootstrapPubsub(ctx, r.cr, r.host, name)
+			r.subs[name] = sub
+
+			ctx, cancel := context.WithCancel(r.ctx)
+			go r.handleSubscription(sub, name, pubk, cancel)
+			go bootstrapPubsub(ctx, r.cr, r.host, name)
+			r.mx.Unlock()
+			return "", ErrorNotSubscribed
+		}
 		r.mx.Unlock()
-		return "", ErrorNotSubscribed
 	}
-	r.mx.Unlock()
 
 	// resolve to what we may already have in the datastore
 	dsval, err := r.ds.Get(dshelp.NewKeyFromBinary([]byte(name)))
