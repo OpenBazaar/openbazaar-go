@@ -143,11 +143,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			}
 		}
 	}
-
 }
 
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	funding := output.Value
+	var funding = output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
@@ -180,7 +179,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				OrderId:     orderId,
 				Price: repo.ListingPrice{
 					Amount:           contract.BuyerOrder.Payment.Amount,
-					CoinDivisibility: contract.VendorListings[0].Metadata.CoinDivisibility,
+					CoinDivisibility: currencyDivisibilityFromContract(contract, orderId),
 					CurrencyCode:     contract.BuyerOrder.Payment.Coin,
 					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
 				},
@@ -217,6 +216,20 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		bumpable = true
 	}
 	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
+}
+
+func currencyDivisibilityFromContract(contract *pb.RicardianContract, orderID string) uint32 {
+	var currencyDivisibility = contract.VendorListings[0].Metadata.CoinDivisibility
+	if currencyDivisibility != 0 {
+		return currencyDivisibility
+	}
+
+	currency, err := core.CurrencyFromString(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		log.Errorf("processing payment: currency divisibility: unsupported currency %s for order %s", contract.BuyerOrder.Payment.Coin, orderID)
+		return core.DefaultCurrencyDivisibility
+	}
+	return currency.Divisibility()
 }
 
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
