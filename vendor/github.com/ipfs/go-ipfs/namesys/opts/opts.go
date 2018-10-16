@@ -27,6 +27,10 @@ type ResolveOpts struct {
 	// timeout (although there is an implicit timeout due to dial
 	// timeouts within the DHT)
 	DhtTimeout time.Duration
+
+	// In pubsub should we attempt to subscribe to the peer or just
+	// return from cache
+	DoNotSubscribe bool
 }
 
 // DefaultResolveOpts returns the default options for resolving

@@ -72,7 +72,7 @@ func TestNotificationMarshalling(t *testing.T) {
 			t.Errorf("Expected: %s\n", expected.GetType())
 			t.Errorf("Actual: %s\n", actual.GetType())
 		}
-		if reflect.DeepEqual(actual.NotifierData, expected.NotifierData) != true {
+		if !reflect.DeepEqual(actual.NotifierData, expected.NotifierData) {
 			t.Error("Expected notifier data to match, but did not")
 			t.Errorf("Expected: %+v\n", expected.NotifierData)
 			t.Errorf("Actual: %+v\n", actual.NotifierData)
@@ -108,7 +108,7 @@ func TestLegacyNotificationMarshalling(t *testing.T) {
 			t.Errorf("Expected: %s\n", n.GetType())
 			t.Errorf("Actual: %s\n", actual.GetType())
 		}
-		if reflect.DeepEqual(actual.NotifierData, n) != true {
+		if !reflect.DeepEqual(actual.NotifierData, n) {
 			t.Error("Expected notifier data to match, but did not")
 			t.Errorf("Expected: %+v\n", n)
 			t.Errorf("Actual: %+v\n", actual.NotifierData)
