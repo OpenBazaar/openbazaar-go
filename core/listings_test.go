@@ -43,7 +43,8 @@ var expectedErrorStatesForValidShippingRegion = map[int32]error{
 
 func TestValidShippingRegionErrorCases(t *testing.T) {
 	for example, expectedResult := range expectedErrorStatesForValidShippingRegion {
-		listing := factory.NewShippingRegionListing("asdfasdf", pb.CountryCode(example))
+		listing := factory.NewListingWithShippingRegions("asdfasdf")
+		listing.ShippingOptions[0].Regions = []pb.CountryCode{pb.CountryCode(example)}
 		for _, shippingOption := range listing.ShippingOptions {
 			if result := core.ValidShippingRegion(shippingOption); result != expectedResult {
 				t.Errorf("unexpected result using CountryCode (%d): %s", example, result)
@@ -54,7 +55,8 @@ func TestValidShippingRegionErrorCases(t *testing.T) {
 
 func TestValidShippingRegionUsingDefinedCountryCodes(t *testing.T) {
 	for countryCode := range pb.CountryCode_name {
-		listing := factory.NewShippingRegionListing("asdfasdf", pb.CountryCode(countryCode))
+		listing := factory.NewListingWithShippingRegions("asdfasdf")
+		listing.ShippingOptions[0].Regions = []pb.CountryCode{pb.CountryCode(countryCode)}
 		for _, shippingOption := range listing.ShippingOptions {
 			result := core.ValidShippingRegion(shippingOption)
 			if result != expectedErrorStatesForValidShippingRegion[countryCode] {
@@ -71,10 +73,17 @@ func TestListingProtobufAlias(t *testing.T) {
 		pb.CountryCode(pb.CountryCode_ESWATINI),
 	}
 	for _, cc := range countrycodes {
-		listing := factory.NewShippingRegionListing("swaziland_eswatini", cc)
-		marshalled, _ := proto.Marshal(listing)
-		unmarshalledListing := &pb.Listing{}
-		err := proto.Unmarshal(marshalled, unmarshalledListing)
+		var (
+			listing             = factory.NewListingWithShippingRegions("asdfasdf")
+			unmarshalledListing = &pb.Listing{}
+		)
+		listing.ShippingOptions[0].Regions = []pb.CountryCode{cc}
+
+		marshalled, err := proto.Marshal(listing)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = proto.Unmarshal(marshalled, unmarshalledListing)
 		if err != nil {
 			t.Fatal(err)
 		}
