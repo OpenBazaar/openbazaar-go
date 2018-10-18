@@ -38,78 +38,79 @@ const (
 )
 
 // Errors
+var (
+	// ErrPostUnknownPanic - post has an unknown panic error
+	ErrPostUnknownPanic = errors.New("Unknown panic")
 
-// ErrPostUnknownPanic - post has an unknown panic error
-var ErrPostUnknownPanic = errors.New("Unknown panic")
+	// ErrPostSlugNotEmpty - post slug is empty error
+	ErrPostSlugNotEmpty = errors.New("Slug must not be empty")
 
-// ErrPostSlugNotEmpty - post slug is empty error
-var ErrPostSlugNotEmpty = errors.New("Slug must not be empty")
+	// ErrPostSlugLongerThanMax - post slug longer than max characters error
+	ErrPostSlugLongerThanMax = fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
 
-// ErrPostSlugLongerThanMax - post slug longer than max characters error
-var ErrPostSlugLongerThanMax = fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+	// ErrPostSlugSpaces - post slug has spaces error
+	ErrPostSlugSpaces = errors.New("Slugs cannot contain spaces")
 
-// ErrPostSlugSpaces - post slug has spaces error
-var ErrPostSlugSpaces = errors.New("Slugs cannot contain spaces")
+	// ErrPostSlugFileSeparators - post slug has file separators
+	ErrPostSlugFileSeparators = errors.New("Slugs cannot contain file separators")
 
-// ErrPostSlugFileSeparators - post slug has file separators
-var ErrPostSlugFileSeparators = errors.New("Slugs cannot contain file separators")
+	// ErrPostInvalidType - post type is invalid error
+	ErrPostInvalidType = errors.New("Invalid post type")
 
-// ErrPostInvalidType - post type is invalid error
-var ErrPostInvalidType = errors.New("Invalid post type")
+	// ErrPostStatusLongerThanMax - post 'status' is longer than max characters error
+	ErrPostStatusLongerThanMax = fmt.Errorf("Status is longer than the max of %d", PostStatusMaxCharacters)
 
-// ErrPostStatusLongerThanMax - post 'status' is longer than max characters error
-var ErrPostStatusLongerThanMax = fmt.Errorf("Status is longer than the max of %d", PostStatusMaxCharacters)
+	// ErrPostLongFormLongerThanMax - post 'longForm' is longer than max characters error
+	ErrPostLongFormLongerThanMax = fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
 
-// ErrPostLongFormLongerThanMax - post 'longForm' is longer than max characters error
-var ErrPostLongFormLongerThanMax = fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
+	// ErrPostTagsLongerThanMax - post tags longer than max length error
+	ErrPostTagsLongerThanMax = fmt.Errorf("Tags in the post is longer than the max of %d", MaxPostTags)
 
-// ErrPostTagsLongerThanMax - post tags longer than max length error
-var ErrPostTagsLongerThanMax = fmt.Errorf("Tags in the post is longer than the max of %d", MaxPostTags)
+	// ErrPostTagsEmpty - post has empty tags error
+	ErrPostTagsEmpty = errors.New("Tags must not be empty")
 
-// ErrPostTagsEmpty - post has empty tags error
-var ErrPostTagsEmpty = errors.New("Tags must not be empty")
+	// ErrPostTagsLengthLongerThanMax - post tag has characters longer than max length error
+	ErrPostTagsLengthLongerThanMax = fmt.Errorf("Tags must be less than max of %d characters", PostTagsMaxCharacters)
 
-// ErrPostTagsLengthLongerThanMax - post tag has characters longer than max length error
-var ErrPostTagsLengthLongerThanMax = fmt.Errorf("Tags must be less than max of %d characters", PostTagsMaxCharacters)
+	// ErrPostChannelsLongerThanMax - post channels longer than max length error
+	ErrPostChannelsLongerThanMax = fmt.Errorf("Channels in the post is longer than the max of %d", MaxPostChannels)
 
-// ErrPostChannelsLongerThanMax - post channels longer than max length error
-var ErrPostChannelsLongerThanMax = fmt.Errorf("Channels in the post is longer than the max of %d", MaxPostChannels)
+	// ErrPostChannelsLengthLongerThanMax - post channel has characters longer than max length error
+	ErrPostChannelsLengthLongerThanMax = fmt.Errorf("Channels must be less than max of %d characters", PostChannelsMaxCharacters)
 
-// ErrPostChannelsLengthLongerThanMax - post channel has characters longer than max length error
-var ErrPostChannelsLengthLongerThanMax = fmt.Errorf("Channels must be less than max of %d characters", PostChannelsMaxCharacters)
+	// ErrPostReferenceEmpty - post has an empty reference error
+	ErrPostReferenceEmpty = errors.New("Reference must not be empty")
 
-// ErrPostReferenceEmpty - post has an empty reference error
-var ErrPostReferenceEmpty = errors.New("Reference must not be empty")
+	// ErrPostReferenceLongerThanMax - post reference has characters longer than max length error
+	ErrPostReferenceLongerThanMax = fmt.Errorf("Reference is longer than the max of %d", PostReferenceMaxCharacters)
 
-// ErrPostReferenceLongerThanMax - post reference has characters longer than max length error
-var ErrPostReferenceLongerThanMax = fmt.Errorf("Reference is longer than the max of %d", PostReferenceMaxCharacters)
+	// ErrPostReferenceSpaces - post reference has spaces error
+	ErrPostReferenceSpaces = errors.New("Reference cannot contain spaces")
 
-// ErrPostReferenceSpaces - post reference has spaces error
-var ErrPostReferenceSpaces = errors.New("Reference cannot contain spaces")
+	// ErrPostImagesLongerThanMax - post images longer than max error
+	ErrPostImagesLongerThanMax = fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
 
-// ErrPostImagesLongerThanMax - post images longer than max error
-var ErrPostImagesLongerThanMax = fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
+	// ErrPostImageTinyFormat - post tiny image hash incorrectly formatted error
+	ErrPostImageTinyFormat = errors.New("Tiny image hashes must be properly formatted CID")
 
-// ErrPostImageTinyFormat - post tiny image hash incorrectly formatted error
-var ErrPostImageTinyFormat = errors.New("Tiny image hashes must be properly formatted CID")
+	// ErrPostImageSmallFormat - post small image hash incorrectly formatted error
+	ErrPostImageSmallFormat = errors.New("Small image hashes must be properly formatted CID")
 
-// ErrPostImageSmallFormat - post small image hash incorrectly formatted error
-var ErrPostImageSmallFormat = errors.New("Small image hashes must be properly formatted CID")
+	// ErrPostImageMediumFormat - post medium image hash incorrectly formatted error
+	ErrPostImageMediumFormat = errors.New("Medium image hashes must be properly formatted CID")
 
-// ErrPostImageMediumFormat - post medium image hash incorrectly formatted error
-var ErrPostImageMediumFormat = errors.New("Medium image hashes must be properly formatted CID")
+	// ErrPostImageLargeFormat - post large image hash incorrectly formatted error
+	ErrPostImageLargeFormat = errors.New("Large image hashes must be properly formatted CID")
 
-// ErrPostImageLargeFormat - post large image hash incorrectly formatted error
-var ErrPostImageLargeFormat = errors.New("Large image hashes must be properly formatted CID")
+	// ErrPostImageOriginalFormat - post original image hash incorrectly formatted error
+	ErrPostImageOriginalFormat = errors.New("Original image hashes must be properly formatted CID")
 
-// ErrPostImageOriginalFormat - post original image hash incorrectly formatted error
-var ErrPostImageOriginalFormat = errors.New("Original image hashes must be properly formatted CID")
+	// ErrPostImageFilenameNil - post image filename is nil error
+	ErrPostImageFilenameNil = errors.New("Image file names must not be nil")
 
-// ErrPostImageFilenameNil - post image filename is nil error
-var ErrPostImageFilenameNil = errors.New("Image file names must not be nil")
-
-// ErrPostImageFilenameLengthMax - post image filename length longer than max
-var ErrPostImageFilenameLengthMax = fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+	// ErrPostImageFilenameLengthMax - post image filename length longer than max
+	ErrPostImageFilenameLengthMax = fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+)
 
 // JSON structure returned for each post from GETPosts
 type postData struct {
