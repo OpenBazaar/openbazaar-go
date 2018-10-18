@@ -37,6 +37,80 @@ const (
 	PostReferenceMaxCharacters = 256
 )
 
+// Errors
+
+// ErrPostUnknownPanic - post has an unknown panic error
+var ErrPostUnknownPanic = errors.New("Unknown panic")
+
+// ErrPostSlugNotEmpty - post slug is empty error
+var ErrPostSlugNotEmpty = errors.New("Slug must not be empty")
+
+// ErrPostSlugLongerThanMax - post slug longer than max characters error
+var ErrPostSlugLongerThanMax = fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+
+// ErrPostSlugSpaces - post slug has spaces error
+var ErrPostSlugSpaces = errors.New("Slugs cannot contain spaces")
+
+// ErrPostSlugFileSeparators - post slug has file separators
+var ErrPostSlugFileSeparators = errors.New("Slugs cannot contain file separators")
+
+// ErrPostInvalidType - post type is invalid error
+var ErrPostInvalidType = errors.New("Invalid post type")
+
+// ErrPostStatusLongerThanMax - post 'status' is longer than max characters error
+var ErrPostStatusLongerThanMax = fmt.Errorf("Status is longer than the max of %d", PostStatusMaxCharacters)
+
+// ErrPostLongFormLongerThanMax - post 'longForm' is longer than max characters error
+var ErrPostLongFormLongerThanMax = fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
+
+// ErrPostTagsLongerThanMax - post tags longer than max length error
+var ErrPostTagsLongerThanMax = fmt.Errorf("Tags in the post is longer than the max of %d", MaxPostTags)
+
+// ErrPostTagsEmpty - post has empty tags error
+var ErrPostTagsEmpty = errors.New("Tags must not be empty")
+
+// ErrPostTagsLengthLongerThanMax - post tag has characters longer than max length error
+var ErrPostTagsLengthLongerThanMax = fmt.Errorf("Tags must be less than max of %d characters", PostTagsMaxCharacters)
+
+// ErrPostChannelsLongerThanMax - post channels longer than max length error
+var ErrPostChannelsLongerThanMax = fmt.Errorf("Channels in the post is longer than the max of %d", MaxPostChannels)
+
+// ErrPostChannelsLengthLongerThanMax - post channel has characters longer than max length error
+var ErrPostChannelsLengthLongerThanMax = fmt.Errorf("Channels must be less than max of %d characters", PostChannelsMaxCharacters)
+
+// ErrPostReferenceEmpty - post has an empty reference error
+var ErrPostReferenceEmpty = errors.New("Reference must not be empty")
+
+// ErrPostReferenceLongerThanMax - post reference has characters longer than max length error
+var ErrPostReferenceLongerThanMax = fmt.Errorf("Reference is longer than the max of %d", PostReferenceMaxCharacters)
+
+// ErrPostReferenceSpaces - post reference has spaces error
+var ErrPostReferenceSpaces = errors.New("Reference cannot contain spaces")
+
+// ErrPostImagesLongerThanMax - post images longer than max error
+var ErrPostImagesLongerThanMax = fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
+
+// ErrPostImageTinyFormat - post tiny image hash incorrectly formatted error
+var ErrPostImageTinyFormat = errors.New("Tiny image hashes must be properly formatted CID")
+
+// ErrPostImageSmallFormat - post small image hash incorrectly formatted error
+var ErrPostImageSmallFormat = errors.New("Small image hashes must be properly formatted CID")
+
+// ErrPostImageMediumFormat - post medium image hash incorrectly formatted error
+var ErrPostImageMediumFormat = errors.New("Medium image hashes must be properly formatted CID")
+
+// ErrPostImageLargeFormat - post large image hash incorrectly formatted error
+var ErrPostImageLargeFormat = errors.New("Large image hashes must be properly formatted CID")
+
+// ErrPostImageOriginalFormat - post original image hash incorrectly formatted error
+var ErrPostImageOriginalFormat = errors.New("Original image hashes must be properly formatted CID")
+
+// ErrPostImageFilenameNil - post image filename is nil error
+var ErrPostImageFilenameNil = errors.New("Image file names must not be nil")
+
+// ErrPostImageFilenameLengthMax - post image filename length longer than max
+var ErrPostImageFilenameLengthMax = fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+
 // JSON structure returned for each post from GETPosts
 type postData struct {
 	Hash      string      `json:"hash"`
@@ -487,106 +561,106 @@ func validatePost(post *pb.Post) (err error) {
 			case error:
 				err = x
 			default:
-				err = errors.New("Unknown panic")
+				err = ErrPostUnknownPanic
 			}
 		}
 	}()
 
 	// Slug
 	if post.Slug == "" {
-		return errors.New("Slug must not be empty")
+		return ErrPostSlugNotEmpty
 	}
 	if len(post.Slug) > SentenceMaxCharacters {
-		return fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+		return ErrPostSlugLongerThanMax
 	}
 	if strings.Contains(post.Slug, " ") {
-		return errors.New("Slugs cannot contain spaces")
+		return ErrPostSlugSpaces
 	}
 	if strings.Contains(post.Slug, "/") {
-		return errors.New("Slugs cannot contain file separators")
+		return ErrPostSlugFileSeparators
 	}
 
 	// Type
 	if _, ok := pb.Post_PostType_value[post.PostType.String()]; !ok {
-		return errors.New("Invalid post type")
+		return ErrPostInvalidType
 	}
 
 	// Status
 	if len(post.Status) > PostStatusMaxCharacters {
-		return fmt.Errorf("Status is longer than the max of %d", PostStatusMaxCharacters)
+		return ErrPostStatusLongerThanMax
 	}
 
 	// Long Form
 	if len(post.LongForm) > PostLongFormMaxCharacters {
-		return fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
+		return ErrPostLongFormLongerThanMax
 	}
 
 	// Tags
 	if len(post.Tags) > MaxPostTags {
-		return fmt.Errorf("Tags in the post is longer than the max of %d", MaxPostTags)
+		return ErrPostTagsLongerThanMax
 	}
 	for _, tag := range post.Tags {
 		if tag == "" {
-			return errors.New("Tags must not be empty")
+			return ErrPostTagsEmpty
 		}
 		if len(tag) > PostTagsMaxCharacters {
-			return fmt.Errorf("Tags must be less than max of %d characters", PostTagsMaxCharacters)
+			return ErrPostTagsLengthLongerThanMax
 		}
 	}
 
 	// Channels
 	if len(post.Channels) > MaxPostChannels {
-		return fmt.Errorf("Channels in the post is longer than the max of %d", MaxPostChannels)
+		return ErrPostChannelsLongerThanMax
 	}
 	for _, channel := range post.Channels {
 		if len(channel) > PostChannelsMaxCharacters {
-			return fmt.Errorf("Channels must be less than max of %d characters", PostChannelsMaxCharacters)
+			return ErrPostChannelsLengthLongerThanMax
 		}
 	}
 
 	// Reference
 	if post.PostType == pb.Post_COMMENT || post.PostType == pb.Post_REPOST {
 		if post.Reference == "" {
-			return errors.New("Reference must not be empty")
+			return ErrPostReferenceEmpty
 		}
 		if len(post.Reference) > PostReferenceMaxCharacters {
-			return fmt.Errorf("Reference is longer than the max of %d", PostReferenceMaxCharacters)
+			return ErrPostReferenceLongerThanMax
 		}
 		if strings.Contains(post.Reference, " ") {
-			return errors.New("Reference cannot contain spaces")
+			return ErrPostReferenceSpaces
 		}
 	}
 
 	// Images
 	if len(post.Images) > MaxListItems {
-		return fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
+		return ErrPostImagesLongerThanMax
 	}
 	for _, img := range post.Images {
 		_, err := cid.Decode(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be properly formatted CID")
+			return ErrPostImageTinyFormat
 		}
 		_, err = cid.Decode(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be properly formatted CID")
+			return ErrPostImageSmallFormat
 		}
 		_, err = cid.Decode(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be properly formatted CID")
+			return ErrPostImageMediumFormat
 		}
 		_, err = cid.Decode(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be properly formatted CID")
+			return ErrPostImageLargeFormat
 		}
 		_, err = cid.Decode(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be properly formatted CID")
+			return ErrPostImageOriginalFormat
 		}
 		if img.Filename == "" {
-			return errors.New("Image file names must not be nil")
+			return ErrPostImageFilenameNil
 		}
 		if len(img.Filename) > FilenameMaxCharacters {
-			return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+			return ErrPostImageFilenameLengthMax
 		}
 	}
 
