@@ -1,10 +1,11 @@
 package api
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 type TransactionQuery struct {

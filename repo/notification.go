@@ -2,8 +2,7 @@ package repo
 
 import (
 	"crypto/rand"
-	"encoding/json"
-	//"errors"
+	"encoding/json" //"errors"
 	"fmt"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"time"

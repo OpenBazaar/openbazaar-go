@@ -1,12 +1,12 @@
 package test
 
 import (
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
 
 	"github.com/OpenBazaar/openbazaar-go/schema"
-	"io/ioutil"
 )
 
 // NewAPIConfig returns a new config object for the API tests

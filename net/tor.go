@@ -5,12 +5,13 @@ import (
 	"crypto/rsa"
 	"encoding/pem"
 	"errors"
-	"github.com/yawning/bulb"
-	"github.com/yawning/bulb/utils/pkcs1"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/yawning/bulb"
+	"github.com/yawning/bulb/utils/pkcs1"
 )
 
 // Return the Tor control port if Tor is running or an error
