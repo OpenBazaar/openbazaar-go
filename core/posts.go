@@ -226,38 +226,37 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		return postData{}, err
 	}
 
-	/* Generic function to loop through each element in an array
-	and check if a certain string-type variable exists */
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
-		}
-		return false
-	}
-
 	/* Add a tag in the post to an array called tags,
 	which will be added to the postData object below */
-	tags := []string{}
+	tags := make([]string, 0, 15)
+	tagMap := make(map[string]struct{}, 15)
 	for _, tag := range post.Post.Tags {
-		if !contains(tags, tag) {
-			tags = append(tags, tag)
+		if _, ok := tagMap[tag]; ok {
+			continue
 		}
-		if len(tags) > 15 {
-			tags = tags[0:15]
+		tagMap[tag] = struct{}{}
+
+		tags = append(tags, tag)
+
+		if len(tags) >= 15 {
+			break
 		}
 	}
 
 	/* Add a channel in the post to an array called channels,
 	which will be added to the postData object below */
-	channels := []string{}
+	channels := make([]string, 0, 15)
+	channelMap := make(map[string]struct{}, 15)
 	for _, channel := range post.Post.Channels {
-		if !contains(channels, channel) {
-			channels = append(channels, channel)
+		if _, ok := channelMap[channel]; ok {
+			continue
 		}
-		if len(channels) > 15 {
-			channels = channels[0:15]
+		channelMap[channel] = struct{}{}
+
+		channels = append(channels, channel)
+
+		if len(channels) >= 15 {
+			break
 		}
 	}
 
