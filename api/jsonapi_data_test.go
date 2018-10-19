@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 const notFoundJSON = `{"success": false,"reason": "Not Found"}`
@@ -325,7 +326,7 @@ const insuffientFundsJSON = `{
 // Posts
 //
 
-const postJSON = `{
+var postJSON = fmt.Sprintf(`{
 	"slug": "test1",
 	"vendorID": {
 			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
@@ -337,7 +338,7 @@ const postJSON = `{
 			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
     "status": "test1",
-    "postType": "POST",
+    "postType": "%s",
 	"longForm": "This is a test post dawg.",
 	"images": [
 			{
@@ -356,7 +357,7 @@ const postJSON = `{
         "nike"
     ],
 	"timestamp": "2017-11-02T04:15:07.972887695Z"
-}`
+}`, pb.Post_POST.String())
 
 const postJSONResponse = `{"slug": "test1"}`
 
