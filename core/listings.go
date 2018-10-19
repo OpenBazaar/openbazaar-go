@@ -652,7 +652,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 }
 
 // IsItemForSale Check to see we are selling the given listing. Used when validating an order.
-// FIXME: This wont scale well. We will need to store the hash of active listings in a db to do an indexed search.
+// FIXME: This won't scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {

@@ -53,7 +53,7 @@ const (
 	// leaves a review the state should be set to COMPLETE.
 	OrderState_PAYMENT_FINALIZED OrderState = 13
 	// We screwed up and produced a order which didn't validate. This state is only used for offline orders. If a processing
-	// error occured with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
+	// error occurred with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
 	// commits the order to the database.
 	OrderState_PROCESSING_ERROR OrderState = 14
 )

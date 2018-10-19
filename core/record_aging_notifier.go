@@ -169,7 +169,7 @@ func (notifier *recordAgingNotifier) generateSellerDisputeNotifications() (*noti
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf("%s %s %s", err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return nil, fmt.Errorf("commiting vendor dispute notifications: %s", err.Error())
+		return nil, fmt.Errorf("committing vendor dispute notifications: %s", err.Error())
 	}
 	notifier.datastore.Notifications().Unlock()
 
@@ -248,7 +248,7 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeTimeoutNotifications() 
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return nil, fmt.Errorf("commiting purchase dispute notifications: %s", err.Error())
+		return nil, fmt.Errorf("committing purchase dispute notifications: %s", err.Error())
 	}
 	notifier.datastore.Notifications().Unlock()
 
@@ -323,7 +323,7 @@ func (notifier *recordAgingNotifier) generateBuyerDisputeExpiryNotifications() (
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return nil, fmt.Errorf("commiting buyer expiration notifications: %s", err.Error())
+		return nil, fmt.Errorf("committing buyer expiration notifications: %s", err.Error())
 	}
 	notifier.datastore.Notifications().Unlock()
 
@@ -402,7 +402,7 @@ func (notifier *recordAgingNotifier) generateModeratorDisputeExpiryNotifications
 		if rollbackErr := notificationTx.Rollback(); rollbackErr != nil {
 			err = fmt.Errorf(err.Error(), "\nand also failed during rollback:", rollbackErr.Error())
 		}
-		return nil, fmt.Errorf("commiting dispute expiration notifications: %s", err.Error())
+		return nil, fmt.Errorf("committing dispute expiration notifications: %s", err.Error())
 	}
 	notifier.datastore.Notifications().Unlock()
 

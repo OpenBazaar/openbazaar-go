@@ -18,7 +18,7 @@ type NetworkService interface {
 	// Handle incoming streams
 	HandleNewStream(s inet.Stream)
 
-	// Get handler for mesage type
+	// Get handler for message type
 	HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error)
 
 	// Send request to a peer and wait for the response

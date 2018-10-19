@@ -807,7 +807,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 				}
 				if notifier.GetType() == repo.NotifierTypeBuyerDisputeExpiry {
 					broadcastCount++ // += 1
-					t.Logf("Notification Recieved: %+v\n", notifier)
+					t.Logf("Notification Received: %+v\n", notifier)
 				} else {
 					t.Errorf("Unexpected notification received: %s", notifier.GetType())
 				}

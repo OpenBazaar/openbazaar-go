@@ -2282,7 +2282,7 @@ func (i *jsonAPIHandler) POSTGroupChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(chat.Subject) <= 0 {
-		ErrorResponse(w, http.StatusBadRequest, "Group chats must include a unquie subject to be used as the groupd chat ID")
+		ErrorResponse(w, http.StatusBadRequest, "Group chats must include a unique subject to be used as the group chat ID")
 		return
 	}
 	if len(chat.Message) > 20000 {
