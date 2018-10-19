@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
 	"github.com/microcosm-cc/bluemonday"
 
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
@@ -107,15 +105,8 @@ type ListingData struct {
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
-	slugFromTitle := func(title string) string {
-		l := SentenceMaxCharacters - SlugBuffer
-		if len(title) < SentenceMaxCharacters-SlugBuffer {
-			l = len(title)
-		}
-		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
-	}
 	counter := 1
-	slugBase := slugFromTitle(title)
+	slugBase := createSlugFor(title)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetListingFromSlug(slugToTry)

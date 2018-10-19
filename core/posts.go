@@ -6,7 +6,6 @@ import (
 	"fmt"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -16,7 +15,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
 )
 
 // Constants for validation
@@ -134,15 +132,8 @@ type postImage struct {
 //GeneratePostSlug  [Create a slug for the post based on the status, if a slug is missing]
 func (n *OpenBazaarNode) GeneratePostSlug(status string) (string, error) {
 	status = strings.Replace(status, "/", "", -1)
-	slugFromStatus := func(status string) string {
-		l := SentenceMaxCharacters - SlugBuffer
-		if len(status) < SentenceMaxCharacters-SlugBuffer {
-			l = len(status)
-		}
-		return url.QueryEscape(sanitize.Path(strings.ToLower(status[:l])))
-	}
 	counter := 1
-	slugBase := slugFromStatus(status)
+	slugBase := createSlugFor(status)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetPostFromSlug(slugToTry)

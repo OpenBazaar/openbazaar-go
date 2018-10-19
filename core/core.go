@@ -2,12 +2,16 @@ package core
 
 import (
 	"errors"
+
+	"net/url"
 	"path"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/kennygrant/sanitize"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
@@ -278,4 +282,13 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 // IPFSIdentityString - IPFS identifier
 func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
+}
+
+// createSlugFor Create a slug from a string
+func createSlugFor(slugName string) string {
+	l := SentenceMaxCharacters - SlugBuffer
+	if len(slugName) < SentenceMaxCharacters-SlugBuffer {
+		l = len(slugName)
+	}
+	return url.QueryEscape(sanitize.Path(strings.ToLower(slugName[:l])))
 }
