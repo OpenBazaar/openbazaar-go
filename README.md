@@ -19,13 +19,12 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 - [Usage](#usage)
   - [Options](#options)
 - [Documentation](#documentation)
-- [Todo](#todo)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Install
 
-A typical install of OpenBazaar contains a bundle of the server daemon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download.html. If you are looking to run the server daemon by itself or to contribute to developement see below for instructions.
+A typical install of OpenBazaar contains a bundle of the server daemon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download. If you are looking to run the server daemon by itself or to contribute to developement see below for instructions.
 
 ### Install Pre-built Packages
 
@@ -45,13 +44,14 @@ We are using a [fork](https://github.com/OpenBazaar/go-ipfs) of go-ipfs in the d
 
 ## Updating
 
-You can either pull in remote changes as normal or run `go get -u github.com/OpenBazaar/openbazaar-go`
+You can either pull in remote changes as normal or run `go get -u github.com/OpenBazaar/openbazaar-go`.
 
 ## Usage
 
-You can run the server with `go run openbazaard.go start`
+You can run the server with `go run openbazaard.go start`.
 
 ### Options
+
 ```
 Usage:
   openbazaard [OPTIONS] start [start-OPTIONS]
@@ -103,5 +103,4 @@ Contributions are definitely welcome! Please read the contributing [guidelines](
 
 ## License
 
-MIT
-
+[MIT](https://github.com/OpenBazaar/openbazaar-go/blob/master/LICENSE).
