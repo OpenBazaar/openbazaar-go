@@ -49,7 +49,7 @@ enum OrderState {
     PAYMENT_FINALIZED    = 13;
 
     // We screwed up and produced a order which didn't validate. This state is only used for offline orders. If a processing
-    // error occured with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
+    // error occurred with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
     // commits the order to the database.
     PROCESSING_ERROR     = 14;
 }

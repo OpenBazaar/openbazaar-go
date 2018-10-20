@@ -54,7 +54,7 @@ func ValidateRating(rating *pb.Rating) (bool, error) {
 	}
 	valid, err = vendorKey.Verify(ser, rating.RatingData.VendorSig.Signature)
 	if !valid || err != nil {
-		return false, errors.New("invaid vendor signature")
+		return false, errors.New("invalid vendor signature")
 	}
 
 	// Validate vendor peerID matches pubkey

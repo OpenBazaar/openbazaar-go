@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-// Resursively add a directory to IPFS and return the root hash
+// Recursively add a directory to IPFS and return the root hash
 func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 	s := strings.Split(root, "/")
 	dirName := s[len(s)-1]

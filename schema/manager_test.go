@@ -246,7 +246,7 @@ func TestCreateIdentityKey(t *testing.T) {
 func TestInitializeDatabaseSQL(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	if _, err := database.Exec(InitializeDatabaseSQL("foobarbaz")); err != nil {
-		t.Fatal("Expected InitializeDatabaseSQL to return executeable SQL, but got error:", err.Error())
+		t.Fatal("Expected InitializeDatabaseSQL to return executable SQL, but got error:", err.Error())
 	}
 }
 

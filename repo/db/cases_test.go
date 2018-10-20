@@ -782,7 +782,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		t.Error("Expected to see case which was initially notified")
 	}
 	if sawFinallyNotifiedCase {
-		t.Error("Expected NOT to see case which recieved it's final notification")
+		t.Error("Expected NOT to see case which received it's final notification")
 	}
 	if sawResolvedCase {
 		t.Error("Expected NOT to see case which is resolved")
