@@ -47,6 +47,7 @@ linters:
     - goconst
     - govet
     - megacheck
+    - misspell
   disable:
     - errcheck
     - golint
