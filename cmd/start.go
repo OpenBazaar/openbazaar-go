@@ -751,7 +751,7 @@ func (x *Start) Execute(args []string) error {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()
 			}
-			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+			TL := lis.NewTransactionListener(core.Node.Multiwallet, core.Node.Datastore, core.Node.Broadcast)
 			for ct, wal := range mw {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)

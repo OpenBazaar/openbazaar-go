@@ -516,7 +516,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			if err := validateVendorID(sl.Listing); err != nil {
 				return nil, err
 			}
-			if err := validateListing(sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
+			if err := n.validateListing(sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
 				return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
 			}
 			if err := verifySignaturesOnListing(sl); err != nil {

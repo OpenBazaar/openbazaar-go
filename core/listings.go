@@ -178,7 +178,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Check the listing data is correct for continuing
 	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
-	if err := validateListing(listing, testingEnabled); err != nil {
+	if err := n.validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
@@ -350,7 +350,7 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	}
 
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -855,7 +855,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func validateListing(listing *pb.Listing, testnet bool) (err error) {
+func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -1162,7 +1162,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -1263,7 +1263,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) error {
 	switch {
 	case len(listing.Coupons) > 0:
 		return ErrCryptocurrencyListingIllegalField("coupons")
@@ -1279,12 +1279,14 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	currency, err := CurrencyFromString(listing.Metadata.CoinType)
-	if err != nil {
-		return err
+	var expectedDivisibility uint32
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.CoinType); err != nil {
+		expectedDivisibility = DefaultCurrencyDivisibility
+	} else {
+		expectedDivisibility = uint32(wallet.ExchangeRates().UnitsPerCoin())
 	}
 
-	if listing.Metadata.CoinDivisibility != currency.Divisibility() {
+	if listing.Metadata.CoinDivisibility != expectedDivisibility {
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
