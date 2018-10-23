@@ -96,6 +96,7 @@ Help Options:
 ## Documentation
 
 When ready we will put up a full documentation of the OpenBazaar protocol and the JSON API at https://docs.openbazaar.org
+Currently, the docs can be accessed from https://api.openbazaar.org/
 
 ## Contributing
 
