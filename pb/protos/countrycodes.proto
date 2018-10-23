@@ -3,6 +3,7 @@ option go_package = "pb";
 
 
 enum CountryCode {
+    option allow_alias = true;
     NA                             = 0;
 
     AFGHANISTAN                    = 1;
@@ -237,6 +238,7 @@ enum CountryCode {
 
     SURINAME                       = 210;
     SVALBARD                       = 211;
+    ESWATINI                       = 212;
     SWAZILAND                      = 212;
     SWEDEN                         = 213;
     SWITZERLAND                    = 214;
@@ -275,6 +277,7 @@ enum CountryCode {
     YEMEN                          = 244;
     ZAMBIA                         = 245;
     ZIMBABWE                       = 246;
+    UNITED_STATES_MINOR_ISLANDS    = 247;
 
     ALL                            = 500;
     AFRICA                         = 501;

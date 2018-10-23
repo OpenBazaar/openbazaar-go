@@ -3,10 +3,12 @@
 
 package pb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import timestamp "github.com/golang/protobuf/ptypes/timestamp"
+import (
+	fmt "fmt"
+	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -36,16 +38,17 @@ func (m *Post) Reset()         { *m = Post{} }
 func (m *Post) String() string { return proto.CompactTextString(m) }
 func (*Post) ProtoMessage()    {}
 func (*Post) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_7550a98cd626f791, []int{0}
+	return fileDescriptor_b14bd1586479c33d, []int{0}
 }
+
 func (m *Post) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post.Unmarshal(m, b)
 }
 func (m *Post) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Post.Marshal(b, m, deterministic)
 }
-func (dst *Post) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Post.Merge(dst, src)
+func (m *Post) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post.Merge(m, src)
 }
 func (m *Post) XXX_Size() int {
 	return xxx_messageInfo_Post.Size(m)
@@ -121,16 +124,17 @@ func (m *Post_Image) Reset()         { *m = Post_Image{} }
 func (m *Post_Image) String() string { return proto.CompactTextString(m) }
 func (*Post_Image) ProtoMessage()    {}
 func (*Post_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_7550a98cd626f791, []int{0, 0}
+	return fileDescriptor_b14bd1586479c33d, []int{0, 0}
 }
+
 func (m *Post_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post_Image.Unmarshal(m, b)
 }
 func (m *Post_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Post_Image.Marshal(b, m, deterministic)
 }
-func (dst *Post_Image) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Post_Image.Merge(dst, src)
+func (m *Post_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Post_Image.Merge(m, src)
 }
 func (m *Post_Image) XXX_Size() int {
 	return xxx_messageInfo_Post_Image.Size(m)
@@ -196,16 +200,17 @@ func (m *SignedPost) Reset()         { *m = SignedPost{} }
 func (m *SignedPost) String() string { return proto.CompactTextString(m) }
 func (*SignedPost) ProtoMessage()    {}
 func (*SignedPost) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_7550a98cd626f791, []int{1}
+	return fileDescriptor_b14bd1586479c33d, []int{1}
 }
+
 func (m *SignedPost) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedPost.Unmarshal(m, b)
 }
 func (m *SignedPost) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedPost.Marshal(b, m, deterministic)
 }
-func (dst *SignedPost) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SignedPost.Merge(dst, src)
+func (m *SignedPost) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedPost.Merge(m, src)
 }
 func (m *SignedPost) XXX_Size() int {
 	return xxx_messageInfo_SignedPost.Size(m)
@@ -243,9 +248,9 @@ func init() {
 	proto.RegisterType((*SignedPost)(nil), "SignedPost")
 }
 
-func init() { proto.RegisterFile("posts.proto", fileDescriptor_posts_7550a98cd626f791) }
+func init() { proto.RegisterFile("posts.proto", fileDescriptor_b14bd1586479c33d) }
 
-var fileDescriptor_posts_7550a98cd626f791 = []byte{
+var fileDescriptor_b14bd1586479c33d = []byte{
 	// 342 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x91, 0x4f, 0x4b, 0xc3, 0x40,
 	0x10, 0xc5, 0x49, 0xf3, 0xc7, 0x66, 0x22, 0x08, 0x8b, 0xc8, 0x1a, 0x84, 0x86, 0x7a, 0xe9, 0x29,
