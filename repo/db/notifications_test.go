@@ -79,7 +79,7 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 				t.Errorf("Expected: %s", subject.GetType())
 				t.Errorf("Actual: %s", actual.GetType())
 			}
-			if reflect.DeepEqual(subject, actual) != true {
+			if !reflect.DeepEqual(subject, actual) {
 				t.Error("Expected found notification to equal each other")
 				t.Errorf("Expected: %+v\n", subject)
 				t.Errorf("Actual: %+v\n", actual)
@@ -87,7 +87,7 @@ func TestNotficationsDB_PutRecord(t *testing.T) {
 			}
 		}
 
-		if foundNotification == false {
+		if !foundNotification {
 			t.Errorf("Expected to find notification, but was not found\nExpected type: (%s) Expected ID: (%s)", subject.GetType(), subject.GetID())
 			t.Errorf("Found records: %+v", allNotifications)
 		}

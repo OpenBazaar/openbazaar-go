@@ -324,8 +324,5 @@ func (c *ConfigDB) IsEncrypted() bool {
 	defer c.lock.Unlock()
 	pwdCheck := "select count(*) from sqlite_master;"
 	_, err := c.db.Exec(pwdCheck) // Fails if wrong password is entered
-	if err != nil {
-		return true
-	}
-	return false
+	return err != nil
 }

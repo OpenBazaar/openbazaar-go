@@ -37,7 +37,7 @@ type notifierSummary map[string]*notifierResult
 
 func (result notifierSummary) Add(operand *notifierResult) {
 	if result == nil {
-		result = make(map[string]*notifierResult, 0)
+		result = make(map[string]*notifierResult)
 	}
 	result[operand.subject] = operand
 }
