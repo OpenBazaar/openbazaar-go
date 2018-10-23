@@ -62,6 +62,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
 
         print("ManageCryptoListingsTest - PASS")
 
+
 if __name__ == '__main__':
     print("Running ManageCryptoListingsTest")
     ManageCryptoListingsTest().main(["--regtest", "--disableexchangerates"])
