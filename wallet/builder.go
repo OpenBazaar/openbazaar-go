@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"errors"
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -180,6 +181,9 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	// requested SPV for either Bitcoin or BitcoinCash. If so, we'll override the
 	// API implementation in the multiwallet map with an SPV implementation.
 	if cfg.ConfigFile.BTC != nil && strings.ToUpper(cfg.ConfigFile.BTC.Type) == "SPV" {
+		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
+			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
+		}
 		var tp net.Addr
 		if cfg.ConfigFile.BTC.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BTC.TrustedPeer)
@@ -214,9 +218,16 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		if err != nil {
 			return nil, err
 		}
-		mw[wallet.Bitcoin] = bitcoinSPVWallet
+		if testnet {
+			mw[wallet.TestnetBitcoin] = bitcoinSPVWallet
+		} else {
+			mw[wallet.Bitcoin] = bitcoinSPVWallet
+		}
 	}
 	if cfg.ConfigFile.BCH != nil && strings.ToUpper(cfg.ConfigFile.BCH.Type) == "SPV" {
+		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
+			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
+		}
 		var tp net.Addr
 		if cfg.ConfigFile.BCH.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BCH.TrustedPeer)
@@ -251,7 +262,11 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		if err != nil {
 			return nil, err
 		}
-		mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
+		if testnet {
+			mw[wallet.TestnetBitcoinCash] = bitcoinCashSPVWallet
+		} else {
+			mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
+		}
 	}
 
 	return mw, nil

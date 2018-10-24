@@ -31,6 +31,7 @@ linters-settings:
 
 linters:
   enable:
+    - unconvert
     - gofmt
     - ineffassign
     - staticcheck
@@ -46,10 +47,9 @@ linters:
     - lll
     - goconst
     - govet
+    - megacheck
   disable:
     - errcheck
     - golint
-    - megacheck
     - goimports
-    - unconvert
     - prealloc

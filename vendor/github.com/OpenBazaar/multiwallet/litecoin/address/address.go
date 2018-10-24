@@ -52,7 +52,23 @@ var (
 	// than assuming or defaulting to one or the other, this error is
 	// returned and the caller must decide how to decode the address.
 	ErrAddressCollision = errors.New("address collision")
+
+	scriptHashAddrIDs map[byte]struct{}
 )
+
+const (
+	NetIDMainnetP2S2  = 0x32
+	NetIDTestnetP2SH2 = 0x3A
+)
+
+func init() {
+	scriptHashAddrIDs = make(map[byte]struct{})
+	scriptHashAddrIDs[chaincfg.MainNetParams.ScriptHashAddrID] = struct{}{}
+	scriptHashAddrIDs[chaincfg.TestNet3Params.ScriptHashAddrID] = struct{}{}
+	scriptHashAddrIDs[chaincfg.RegressionNetParams.ScriptHashAddrID] = struct{}{}
+	scriptHashAddrIDs[NetIDMainnetP2S2] = struct{}{}
+	scriptHashAddrIDs[NetIDTestnetP2SH2] = struct{}{}
+}
 
 // encodeAddress returns a human-readable payment address given a ripemd160 hash
 // and netID which encodes the litecoin network and address type.  It is used
@@ -189,7 +205,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 	switch len(decoded) {
 	case ripemd160.Size: // P2PKH or P2SH
 		isP2PKH := ltcparams.IsPubKeyHashAddrID(netID)
-		isP2SH := ltcparams.IsScriptHashAddrID(netID)
+		isP2SH := IsScriptHashAddrID(netID)
 		switch hash160 := decoded; {
 		case isP2PKH && isP2SH:
 			return nil, ErrAddressCollision
@@ -754,4 +770,15 @@ func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (btcuti
 		return NewAddressWitnessPubKeyHash(pkScript[2:], chainParams)
 	}
 	return nil, errors.New("unknown script type")
+}
+
+// IsScriptHashAddrID returns whether the id is an identifier known to prefix a
+// pay-to-script-hash address on any default or registered network.  This is
+// used when decoding an address string into a specific address type.  It is up
+// to the caller to check both this and IsPubKeyHashAddrID and decide whether an
+// address is a pubkey hash address, script hash address, neither, or
+// undeterminable (if both return true).
+func IsScriptHashAddrID(id byte) bool {
+	_, ok := scriptHashAddrIDs[id]
+	return ok
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
+	"sort"
 )
 
 type ZCashWallet struct {
@@ -207,6 +208,7 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 

@@ -204,19 +204,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	ct := wi.Bitcoin
-	cfgf, err := ioutil.ReadFile(path.Join(repoPath, "config"))
-	if err == nil {
-		wcfg, err := schema.GetWalletConfig(cfgf)
-		if err == nil {
-			switch wcfg.Type {
-			case "bitcoincash":
-				ct = wi.BitcoinCash
-			case "zcashd":
-				ct = wi.Zcash
-			}
-		}
-	}
-
 	if x.BitcoinCash {
 		ct = wi.BitcoinCash
 	} else if x.ZCash != "" {
@@ -241,6 +228,7 @@ func (x *Start) Execute(args []string) error {
 	if sqliteDB.Config().IsEncrypted() {
 		sqliteDB.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
@@ -277,11 +265,6 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan tor config:", err)
 		return err
 	}
-	walletCfg, err := schema.GetWalletConfig(configFile)
-	if err != nil {
-		log.Error("scan wallet config:", err)
-		return err
-	}
 	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		log.Error("scan data sharing config:", err)
@@ -306,13 +289,6 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		log.Error("scan wallets config:", err)
 		return err
-	}
-
-	if x.BitcoinCash {
-		walletCfg.Type = "bitcoincash"
-	} else if x.ZCash != "" {
-		walletCfg.Type = "zcashd"
-		walletCfg.Binary = x.ZCash
 	}
 
 	// IPFS node setup
@@ -498,7 +474,7 @@ func (x *Start) Execute(args []string) error {
 	ctx := commands.Context{}
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*config.Config, error) {
+	ctx.LoadConfig = func(_ string) (*config.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
@@ -508,7 +484,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -550,9 +526,6 @@ func (x *Start) Execute(args []string) error {
 		params = chaincfg.RegressionNetParams
 	} else {
 		params = chaincfg.MainNetParams
-	}
-	if x.Regtest && (strings.ToLower(walletCfg.Type) == "spvwallet" || strings.ToLower(walletCfg.Type) == "bitcoincash") && walletCfg.TrustedPeer == "" {
-		return errors.New("Trusted peer must be set if using regtest with the spvwallet")
 	}
 
 	// Multiwallet setup
@@ -705,22 +678,23 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		IpfsNode:             nd,
-		RootHash:             ipath.Path(e.Value).String(),
-		RepoPath:             repoPath,
-		Datastore:            sqliteDB,
-		Multiwallet:          mw,
-		NameSystem:           ns,
+		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
+		IpfsNode:                      nd,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 30 * time.Second,
+		Pubsub:               ps,
 		PushNodes:            pushNodes,
-		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
+		RegressionTestEnable: x.Regtest,
+		RepoPath:             repoPath,
+		RootHash:             ipath.Path(e.Value).String(),
+		TestnetEnable:        x.Testnet,
 		TorDialer:            torDialer,
 		UserAgent:            core.USERAGENT,
-		BanManager:           bm,
-		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
-		Pubsub:               ps,
-		TestnetEnable:        x.Testnet,
-		RegressionTestEnable: x.Regtest,
-		MasterPrivateKey:     mPrivKey,
 	}
 	core.PublishLock.Lock()
 
@@ -772,13 +746,6 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	go func() {
-		<-dht.DefaultBootstrapConfig.DoneChan
-		core.Node.Service = service.New(core.Node, sqliteDB)
-
-		core.Node.StartMessageRetriever()
-		core.Node.StartPointerRepublisher()
-		core.Node.StartRecordAgingNotifier()
-
 		if !x.DisableWallet {
 			// If the wallet doesn't allow resyncing from a specific height to scan for unpaid orders, wait for all messages to process before continuing.
 			if resyncManager == nil {
@@ -802,6 +769,13 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
+		<-dht.DefaultBootstrapConfig.DoneChan
+		core.Node.Service = service.New(core.Node, sqliteDB)
+
+		core.Node.StartMessageRetriever()
+		core.Node.StartPointerRepublisher()
+		core.Node.StartRecordAgingNotifier()
+
 		core.PublishLock.Unlock()
 		err = core.Node.UpdateFollow()
 		if err != nil {

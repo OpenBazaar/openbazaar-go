@@ -16,7 +16,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         buyer = self.nodes[1]
 
         # generate some coins and send them to buyer
-        api_url = buyer["gateway_url"] + "wallet/address"
+        api_url = buyer["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -37,8 +37,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         # post listing to vendor
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.bitcoincash:
-            listing_json["metadata"]["pricingCurrency"] = "tbch"
+        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -57,10 +56,12 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         resp = json.loads(r.text)
         listingId = resp[0]["hash"]
 
+
         # buyer send order
         with open('testdata/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
+        order_json["paymentCoin"] = "t" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -72,6 +73,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
         orderId = resp["orderId"]
         payment_address = resp["paymentAddress"]
         payment_amount = resp["amount"]
+
 
         # check the purchase saved correctly
         api_url = buyer["gateway_url"] + "ob/order/" + orderId
@@ -97,6 +99,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
+            "wallet": self.cointype,
             "address": payment_address,
             "amount": payment_amount,
             "feeLevel": "NORMAL"
@@ -137,6 +140,7 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
 
         order_json["items"][0]["listingHash"] = listingId
+        order_json["paymentCoin"] = "t" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         resp = json.loads(r.text)
@@ -150,6 +154,8 @@ class PurchaseDirectOnlineTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseDirectOnlineTest - FAIL: Purchase POST failed with incorrect remainingInventory: %d", resp["remainingInventory"])
 
         print("PurchaseDirectOnlineTest - PASS")
+
+
 if __name__ == '__main__':
     print("Running PurchaseDirectOnlineTest")
     PurchaseDirectOnlineTest().main(["--regtest", "--disableexchangerates"])

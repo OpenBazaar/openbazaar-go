@@ -110,9 +110,10 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 			return "", "", 0, false, errors.New("moderator is not capable of moderating this transaction")
 		}
 
-		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), profile.ModeratorInfo.AcceptedCurrencies) {
+		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
 			return "", "", 0, false, errors.New("moderator does not accept our currency")
 		}
+		contract.BuyerOrder.Payment = payment
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
 			return "", "", 0, false, err
@@ -159,7 +160,6 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.Address = addr.EncodeAddress()
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
-		contract.BuyerOrder.Payment = payment
 		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
 
 		err = wal.AddWatchedAddress(addr)
@@ -244,13 +244,14 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
+	payment.Coin = data.PaymentCoin
+	contract.BuyerOrder.Payment = payment
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 
 	payment.Amount = total
-	contract.BuyerOrder.Payment = payment
 	contract, err = n.SignOrder(contract)
 	if err != nil {
 		return "", "", 0, false, err
@@ -532,7 +533,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 			listing = addedListings[item.ListingHash]
 		}
 
-		if !currencyInAcceptedCurrenciesList(wal.CurrencyCode(), listing.Metadata.AcceptedCurrencies) {
+		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, listing.Metadata.AcceptedCurrencies) {
 			return nil, errors.New("listing does not accept the selected currency")
 		}
 
@@ -550,7 +551,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 		if listing.Metadata.Version < 3 {
 			i.Quantity = uint32(item.Quantity)
 		} else {
-			i.Quantity64 = uint64(item.Quantity)
+			i.Quantity64 = item.Quantity
 		}
 
 		i.Memo = item.Memo
@@ -677,6 +678,9 @@ func (n *OpenBazaarNode) EstimateOrderTotal(data *PurchaseData) (uint64, error) 
 	if err != nil {
 		return 0, err
 	}
+	payment := new(pb.Order_Payment)
+	payment.Coin = data.PaymentCoin
+	contract.BuyerOrder.Payment = payment
 	return n.CalculateOrderTotal(contract)
 }
 
@@ -803,7 +807,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 			satoshis += uint64(float32(satoshis) * l.Metadata.PriceModifier / 100.0)
 			itemQuantity = 1
 		} else {
-			satoshis, err = n.getPriceInSatoshi(l.Metadata.PricingCurrency, l.Item.Price)
+			satoshis, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, l.Item.Price)
 		}
 		if err != nil {
 			return 0, err
@@ -822,7 +826,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 					if sku.Surcharge < 0 {
 						surcharge = uint64(-sku.Surcharge)
 					}
-					satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, surcharge)
+					satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, surcharge)
 					if err != nil {
 						return 0, err
 					}
@@ -847,7 +851,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 				if id.B58String() == vendorCoupon.GetHash() {
 					if discount := vendorCoupon.GetPriceDiscount(); discount > 0 {
-						satoshis, err := n.getPriceInSatoshi(l.Metadata.PricingCurrency, discount)
+						satoshis, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, l.Metadata.PricingCurrency, discount)
 						if err != nil {
 							return 0, err
 						}
@@ -867,7 +871,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 				}
 			}
 		}
-		itemTotal *= uint64(itemQuantity)
+		itemTotal *= itemQuantity
 		total += itemTotal
 	}
 
@@ -934,14 +938,14 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		if !ok {
 			return 0, errors.New("shipping service not found in listing")
 		}
-		shippingSatoshi, err := n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.Price)
+		shippingSatoshi, err := n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, listing.Metadata.PricingCurrency, service.Price)
 		if err != nil {
 			return 0, err
 		}
 
 		var secondarySatoshi uint64
 		if service.AdditionalItemPrice > 0 {
-			secondarySatoshi, err = n.getPriceInSatoshi(listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
+			secondarySatoshi, err = n.getPriceInSatoshi(contract.BuyerOrder.Payment.Coin, listing.Metadata.PricingCurrency, service.AdditionalItemPrice)
 			if err != nil {
 				return 0, err
 			}
@@ -977,9 +981,9 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
-				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
 			} else if is[0].version >= 2 {
-				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * uint64((is[0].quantity - 1))
+				shippingTotal += (is[0].secondary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
 			} else {
 				return 0, errors.New("unknown listing version")
 			}
@@ -994,7 +998,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 			highest = s.primary
 			i = x
 		}
-		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * uint64(s.quantity)
+		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * s.quantity
 	}
 	shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
 	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
@@ -1010,15 +1014,14 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 	}
 }
 
-func (n *OpenBazaarNode) getPriceInSatoshi(currencyCode string, amount uint64) (uint64, error) {
-	for cc := range n.Multiwallet {
-		if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(cc.CurrencyCode()) {
-			return amount, nil
-		}
+func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount uint64) (uint64, error) {
+	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) {
+		return amount, nil
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(currencyCode)
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(paymentCoin)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("currency %s not found in multiwallet", paymentCoin)
 	}
 
 	if wal.ExchangeRates() == nil {

@@ -273,7 +273,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
-		err = n.Datastore.Inventory().Put(listing.Slug, i, int64(s.Quantity))
+		err = n.Datastore.Inventory().Put(listing.Slug, i, s.Quantity)
 		if err != nil {
 			return err
 		}
@@ -851,7 +851,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = int64(count)
+				s.Quantity = count
 				break
 			}
 		}
@@ -1230,7 +1230,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		for _, region := range shippingOption.Regions {
 			if int(region) == 0 {
 				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 247 && int(region) != 500 {
+			} else if int(region) > 246 && int(region) != 500 {
 				return errors.New("Invalid shipping region")
 			}
 

@@ -25,6 +25,7 @@ import (
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
 	rb "github.com/roasbeef/btcutil"
+	"sort"
 )
 
 type LitecoinWallet struct {
@@ -202,6 +203,7 @@ func (w *LitecoinWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 

@@ -130,7 +130,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 }
 
 // GetModeratorFee - fetch moderator fee
-func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode string) (uint64, error) {
+func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, currencyCode string) (uint64, error) {
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return 0, err
@@ -152,7 +152,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode s
 			}
 			return profile.ModeratorInfo.Fee.FixedFee.Amount, nil
 		}
-		fee, err := n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
+		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 		if err != nil {
 			return 0, err
 		} else if fee >= transactionTotal {
@@ -165,7 +165,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode s
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(currencyCode) {
 			fixed = profile.ModeratorInfo.Fee.FixedFee.Amount
 		} else {
-			fixed, err = n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
+			fixed, err = n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 			if err != nil {
 				return 0, err
 			}

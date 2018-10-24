@@ -26,6 +26,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
+	"sort"
 )
 
 type BitcoinWallet struct {
@@ -207,6 +208,7 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 

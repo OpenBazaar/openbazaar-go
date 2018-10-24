@@ -218,17 +218,25 @@ func (p *PurchasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sor
 }
 
 func (p *PurchasesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
+	if addr == nil {
+		return nil, pb.OrderState(0), false, nil, fmt.Errorf("unable to find purchase with nil payment address")
+	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
 	stmt, err := p.db.Prepare("select contract, state, funded, transactions from purchases where paymentAddr=?")
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err
 	}
 	defer stmt.Close()
-	var contract []byte
-	var stateInt int
-	var fundedInt *int
-	var serializedTransactions []byte
+
+	var (
+		contract               []byte
+		stateInt               int
+		fundedInt              *int
+		serializedTransactions []byte
+	)
 	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err

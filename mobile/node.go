@@ -183,7 +183,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -264,14 +264,15 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:         config.RepoPath,
-		Datastore:        sqliteDB,
-		Multiwallet:      mw,
-		NameSystem:       ns,
-		UserAgent:        core.USERAGENT,
-		PushNodes:        pushNodes,
-		BanManager:       bm,
-		MasterPrivateKey: mPrivKey,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 5 * time.Second,
+		PushNodes:                     pushNodes,
+		RepoPath:                      config.RepoPath,
+		UserAgent:                     core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -294,7 +295,7 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*ipfsconfig.Config, error) {
+	ctx.LoadConfig = func(_ string) (*ipfsconfig.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
@@ -360,25 +361,6 @@ func (n *Node) Start() error {
 
 	go func() {
 		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
-		<-dht.DefaultBootstrapConfig.DoneChan
-		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
-		MR := ret.NewMessageRetriever(ret.MRConfig{
-			Db:        n.OpenBazaarNode.Datastore,
-			IPFSNode:  n.OpenBazaarNode.IpfsNode,
-			BanManger: n.OpenBazaarNode.BanManager,
-			Service:   core.Node.Service,
-			PrefixLen: 14,
-			PushNodes: core.Node.PushNodes,
-			Dialer:    nil,
-			SendAck:   n.OpenBazaarNode.SendOfflineAck,
-			SendError: n.OpenBazaarNode.SendError,
-		})
-		go MR.Run()
-		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
-		go PR.Run()
-		n.OpenBazaarNode.PointerRepublisher = PR
-		MR.Wait()
 		if !n.config.DisableWallet {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()
@@ -400,6 +382,25 @@ func (n *Node) Start() error {
 				}()
 			}
 		}
+		<-dht.DefaultBootstrapConfig.DoneChan
+		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
+		MR := ret.NewMessageRetriever(ret.MRConfig{
+			Db:        n.OpenBazaarNode.Datastore,
+			IPFSNode:  n.OpenBazaarNode.IpfsNode,
+			BanManger: n.OpenBazaarNode.BanManager,
+			Service:   core.Node.Service,
+			PrefixLen: 14,
+			PushNodes: core.Node.PushNodes,
+			Dialer:    nil,
+			SendAck:   n.OpenBazaarNode.SendOfflineAck,
+			SendError: n.OpenBazaarNode.SendError,
+		})
+		go MR.Run()
+		n.OpenBazaarNode.MessageRetriever = MR
+		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		go PR.Run()
+		n.OpenBazaarNode.PointerRepublisher = PR
+		MR.Wait()
 
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()

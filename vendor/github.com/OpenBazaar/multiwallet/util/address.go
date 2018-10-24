@@ -11,6 +11,9 @@ import (
 )
 
 func DecodeAddress(address string, params *chaincfg.Params) (btcutil.Address, error) {
+	if len(address) == 0 {
+		return nil, errors.New("unknown address")
+	}
 	if addr, err := btcutil.DecodeAddress(address, params); err == nil {
 		return addr, nil
 	}

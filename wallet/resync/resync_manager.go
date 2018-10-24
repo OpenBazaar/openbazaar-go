@@ -58,13 +58,14 @@ func (r *ResyncManager) CheckUnfunded() {
 		r.sales.SetNeedsResync(uf.OrderId, false)
 	}
 	if r.mw != nil {
-		for cc, wal := range r.mw {
-			rbt, ok := wallets[strings.ToUpper(cc.String())]
-			if !ok {
+		for cc, rbt := range wallets {
+			wal, err := r.mw.WalletForCurrencyCode(cc)
+			if err != nil {
+				log.Warningf("ResyncManager: no wallet for sale with payment coin %s", cc)
 				continue
 			}
-			log.Infof("Rolling back %s blockchain %s looking for payments for %d orders\n", cc.String(), time.Since(rbt), len(unfunded))
-			wal.ReSyncBlockchain(rollbackTime)
+			log.Infof("Rolling back %s blockchain %s looking for payments for %d orders\n", cc, time.Since(rbt), len(unfunded))
+			wal.ReSyncBlockchain(rbt)
 		}
 	}
 }
