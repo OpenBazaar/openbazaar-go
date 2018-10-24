@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/op/go-logging"
-
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/op/go-logging"
 )
 
 // DISPUTE CASES

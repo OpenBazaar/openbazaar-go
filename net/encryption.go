@@ -8,10 +8,11 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"errors"
-	"golang.org/x/crypto/hkdf"
-	"golang.org/x/crypto/nacl/box"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"io"
+
+	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/nacl/box"
 )
 
 const (
