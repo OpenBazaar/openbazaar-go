@@ -44,7 +44,7 @@ var ErrCloseFailureCaseExpired = errors.New("unable to close expired case")
 var ErrCloseFailureNoOutpoints = errors.New("unable to close case with missing outpoints")
 
 // ErrOpenFailureOrderExpired - tried disputing expired order err
-var ErrOpenFailureOrderExpired = errors.New("unable to open case beacuse order is too old to dispute")
+var ErrOpenFailureOrderExpired = errors.New("unable to open case because order is too old to dispute")
 
 // OpenDispute - open a dispute
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
@@ -881,7 +881,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		}
 
 		// TODO: the bitcoin cash check is temporary in case someone files a dispute for an order that was created when the prefix was still being used
-		// on the address. We can remove this 45 days after the release of 2.2.2 as it wont be possible for this condition to exist at this point.
+		// on the address. We can remove this 45 days after the release of 2.2.2 as it won't be possible for this condition to exist at this point.
 		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() && contract.BuyerOrder.Payment.Address != n.normalizeBitcoinCashAddress(addr.EncodeAddress()) {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
@@ -919,7 +919,7 @@ func (n *OpenBazaarNode) verifyPaymentDestinationIsInWallet(output *pb.DisputeRe
 	}
 
 	if !n.Wallet.HasKey(addr) {
-		return errors.New("Moderator dispute resolution payout address is not defined in your wallet to recieve funds")
+		return errors.New("Moderator dispute resolution payout address is not defined in your wallet to receive funds")
 	}
 	return nil
 }

@@ -98,7 +98,7 @@ type Start struct {
 	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
 	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
 	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" defaut:"debug"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" default:"debug"`
 	NoLogFiles           bool     `short:"f" long:"nologfiles" description:"save logs on disk"`
 	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
 	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`

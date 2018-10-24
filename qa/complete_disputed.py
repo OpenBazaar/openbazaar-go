@@ -262,7 +262,7 @@ class CompleteDisputedTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("CompleteDisputedTest - FAIL: Charlie failed to detect the dispute resolution")
 
-        # Bob relase funds
+        # Bob release funds
         release = {
             "OrderID": orderId,
         }

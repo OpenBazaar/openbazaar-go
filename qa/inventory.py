@@ -88,7 +88,7 @@ class InventoryTest(OpenBazaarTestFramework):
         if not self.assert_correct_time(resp["lastUpdated"]):
             raise TestFailure("InventoryTest - FAIL: Inventory GET did not return a correct looking timestamp")
 
-        # Get a non existant slug from alice's inventory as bob
+        # Get a non existent slug from alice's inventory as bob
         api_url = bob["gateway_url"] + "ob/inventory/" + alicePeerID + "/ron-swanson-loves-the-government-tshirt"
         r = requests.get(api_url)
         resp = json.loads(r.text)
@@ -99,7 +99,7 @@ class InventoryTest(OpenBazaarTestFramework):
         if resp["reason"] != "Could not find slug in inventory":
             raise TestFailure("InventoryTest - FAIL: Inventory GET non-existant slug failed with the wrong error")
 
-        # Try to get a non existant peer's inventory
+        # Try to get a non existent peer's inventory
         api_url = bob["gateway_url"] + "ob/inventory/Qmf56jASQYk7ccmyUHQssemyQc3YmEqiSos6GubHM3UtNS"
         r = requests.get(api_url)
         resp = json.loads(r.text)

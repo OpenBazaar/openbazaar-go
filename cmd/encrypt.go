@@ -104,7 +104,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 		return err
 	}
 	if sqlliteDB.Config().IsEncrypted() {
-		fmt.Println("The database is alredy encrypted")
+		fmt.Println("The database is already encrypted")
 		return nil
 	}
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {

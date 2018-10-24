@@ -7,7 +7,7 @@ import (
 
 // A Resolver will resolve domain names into PeerIDs that can then been used in IPNS queries.
 // OpenBazaar is intended to be agnostic to the underlying name systems as they all have their own
-// postives and negatives. New name systems can be added by implementing the Resolver interface
+// positives and negatives. New name systems can be added by implementing the Resolver interface
 // although only nodes which are updated with the new Resolver will be able to visit such domains.
 type Resolver interface {
 	// Resolve a domain name into a PeerIDs

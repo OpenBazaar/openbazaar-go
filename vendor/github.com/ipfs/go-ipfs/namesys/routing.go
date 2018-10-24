@@ -175,7 +175,7 @@ func (r *routingResolver) resolveOnce(ctx context.Context, pname string, options
 	}()
 
 	go func() {
-		val, err := r.datastore.Get(ds.NewKey(keyCachePrefix + name))
+		val, err := r.datastore.Get(dshelp.NewKeyFromBinary([]byte(keyCachePrefix + name)))
 		if err == nil {
 			b, ok := val.([]byte)
 			if ok {
@@ -277,6 +277,11 @@ func checkEOL(e *pb.IpnsEntry) (time.Time, bool) {
 }
 
 func putToDatabase(datastore ds.Datastore, name string, ipnsRec, pubkey []byte) {
-	datastore.Put(dshelp.NewKeyFromBinary([]byte(name)), ipnsRec)
-	datastore.Put(ds.NewKey(keyCachePrefix+strings.TrimPrefix(name, "/ipns/")), pubkey)
+	if !strings.HasPrefix(name, "/ipns/") {
+		name = "/ipns/" + name
+	}
+	rkey := dshelp.NewKeyFromBinary([]byte(name))
+	pkey := dshelp.NewKeyFromBinary([]byte(keyCachePrefix+strings.TrimPrefix(name, "/ipns/")))
+	datastore.Put(rkey, ipnsRec)
+	datastore.Put(pkey, pubkey)
 }
