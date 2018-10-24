@@ -300,7 +300,7 @@ func (n *OpenBazaarNode) SendOrderConfirmation(peerID string, contract *pb.Ricar
 	return n.sendMessage(peerID, &k, m)
 }
 
-// SendCancel - send order cancelled msg to peer
+// SendCancel - send order canceled msg to peer
 func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 	a := &any.Any{Value: []byte(orderID)}
 	m := pb.Message{

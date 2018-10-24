@@ -805,7 +805,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		}
 	}
 
-	// There should be one fulfilment signature for each vendorOrderFulfilment object
+	// There should be one fulfillment signature for each vendorOrderFulfilment object
 	var fulfilmentSigs []*pb.Signature
 	for _, sig := range contract.Signatures {
 		if sig.Section == pb.Signature_ORDER_FULFILLMENT {
