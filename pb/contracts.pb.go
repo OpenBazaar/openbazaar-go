@@ -3,12 +3,10 @@
 
 package pb
 
-import (
-	fmt "fmt"
-	proto "github.com/golang/protobuf/proto"
-	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-	math "math"
-)
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+import timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -38,7 +36,6 @@ var Listing_Metadata_ContractType_name = map[int32]string{
 	3: "CROWD_FUND",
 	4: "CRYPTOCURRENCY",
 }
-
 var Listing_Metadata_ContractType_value = map[string]int32{
 	"PHYSICAL_GOOD":  0,
 	"DIGITAL_GOOD":   1,
@@ -50,9 +47,8 @@ var Listing_Metadata_ContractType_value = map[string]int32{
 func (x Listing_Metadata_ContractType) String() string {
 	return proto.EnumName(Listing_Metadata_ContractType_name, int32(x))
 }
-
 func (Listing_Metadata_ContractType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 0, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0, 0}
 }
 
 type Listing_Metadata_Format int32
@@ -66,7 +62,6 @@ var Listing_Metadata_Format_name = map[int32]string{
 	0: "FIXED_PRICE",
 	2: "MARKET_PRICE",
 }
-
 var Listing_Metadata_Format_value = map[string]int32{
 	"FIXED_PRICE":  0,
 	"MARKET_PRICE": 2,
@@ -75,9 +70,8 @@ var Listing_Metadata_Format_value = map[string]int32{
 func (x Listing_Metadata_Format) String() string {
 	return proto.EnumName(Listing_Metadata_Format_name, int32(x))
 }
-
 func (Listing_Metadata_Format) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 0, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0, 1}
 }
 
 type Listing_ShippingOption_ShippingType int32
@@ -91,7 +85,6 @@ var Listing_ShippingOption_ShippingType_name = map[int32]string{
 	0: "LOCAL_PICKUP",
 	1: "FIXED_PRICE",
 }
-
 var Listing_ShippingOption_ShippingType_value = map[string]int32{
 	"LOCAL_PICKUP": 0,
 	"FIXED_PRICE":  1,
@@ -100,9 +93,8 @@ var Listing_ShippingOption_ShippingType_value = map[string]int32{
 func (x Listing_ShippingOption_ShippingType) String() string {
 	return proto.EnumName(Listing_ShippingOption_ShippingType_name, int32(x))
 }
-
 func (Listing_ShippingOption_ShippingType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 2, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2, 0}
 }
 
 type Order_Payment_Method int32
@@ -118,7 +110,6 @@ var Order_Payment_Method_name = map[int32]string{
 	1: "DIRECT",
 	2: "MODERATED",
 }
-
 var Order_Payment_Method_value = map[string]int32{
 	"ADDRESS_REQUEST": 0,
 	"DIRECT":          1,
@@ -128,9 +119,8 @@ var Order_Payment_Method_value = map[string]int32{
 func (x Order_Payment_Method) String() string {
 	return proto.EnumName(Order_Payment_Method_name, int32(x))
 }
-
 func (Order_Payment_Method) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 2, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 2, 0}
 }
 
 type Signature_Section int32
@@ -156,7 +146,6 @@ var Signature_Section_name = map[int32]string{
 	6: "DISPUTE_RESOLUTION",
 	7: "REFUND",
 }
-
 var Signature_Section_value = map[string]int32{
 	"LISTING":            0,
 	"ORDER":              1,
@@ -171,9 +160,8 @@ var Signature_Section_value = map[string]int32{
 func (x Signature_Section) String() string {
 	return proto.EnumName(Signature_Section_name, int32(x))
 }
-
 func (Signature_Section) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{17, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{17, 0}
 }
 
 type RicardianContract struct {
@@ -197,17 +185,16 @@ func (m *RicardianContract) Reset()         { *m = RicardianContract{} }
 func (m *RicardianContract) String() string { return proto.CompactTextString(m) }
 func (*RicardianContract) ProtoMessage()    {}
 func (*RicardianContract) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{0}
 }
-
 func (m *RicardianContract) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RicardianContract.Unmarshal(m, b)
 }
 func (m *RicardianContract) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RicardianContract.Marshal(b, m, deterministic)
 }
-func (m *RicardianContract) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RicardianContract.Merge(m, src)
+func (dst *RicardianContract) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RicardianContract.Merge(dst, src)
 }
 func (m *RicardianContract) XXX_Size() int {
 	return xxx_messageInfo_RicardianContract.Size(m)
@@ -315,17 +302,16 @@ func (m *Listing) Reset()         { *m = Listing{} }
 func (m *Listing) String() string { return proto.CompactTextString(m) }
 func (*Listing) ProtoMessage()    {}
 func (*Listing) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1}
 }
-
 func (m *Listing) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing.Unmarshal(m, b)
 }
 func (m *Listing) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing.Marshal(b, m, deterministic)
 }
-func (m *Listing) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing.Merge(m, src)
+func (dst *Listing) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing.Merge(dst, src)
 }
 func (m *Listing) XXX_Size() int {
 	return xxx_messageInfo_Listing.Size(m)
@@ -427,17 +413,16 @@ func (m *Listing_Metadata) Reset()         { *m = Listing_Metadata{} }
 func (m *Listing_Metadata) String() string { return proto.CompactTextString(m) }
 func (*Listing_Metadata) ProtoMessage()    {}
 func (*Listing_Metadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0}
 }
-
 func (m *Listing_Metadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Metadata.Unmarshal(m, b)
 }
 func (m *Listing_Metadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Metadata.Marshal(b, m, deterministic)
 }
-func (m *Listing_Metadata) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Metadata.Merge(m, src)
+func (dst *Listing_Metadata) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Metadata.Merge(dst, src)
 }
 func (m *Listing_Metadata) XXX_Size() int {
 	return xxx_messageInfo_Listing_Metadata.Size(m)
@@ -547,17 +532,16 @@ func (m *Listing_Item) Reset()         { *m = Listing_Item{} }
 func (m *Listing_Item) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item) ProtoMessage()    {}
 func (*Listing_Item) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1}
 }
-
 func (m *Listing_Item) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item.Unmarshal(m, b)
 }
 func (m *Listing_Item) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Item.Marshal(b, m, deterministic)
 }
-func (m *Listing_Item) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Item.Merge(m, src)
+func (dst *Listing_Item) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Item.Merge(dst, src)
 }
 func (m *Listing_Item) XXX_Size() int {
 	return xxx_messageInfo_Listing_Item.Size(m)
@@ -665,17 +649,16 @@ func (m *Listing_Item_Option) Reset()         { *m = Listing_Item_Option{} }
 func (m *Listing_Item_Option) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Option) ProtoMessage()    {}
 func (*Listing_Item_Option) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 1, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 0}
 }
-
 func (m *Listing_Item_Option) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Option.Unmarshal(m, b)
 }
 func (m *Listing_Item_Option) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Item_Option.Marshal(b, m, deterministic)
 }
-func (m *Listing_Item_Option) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Item_Option.Merge(m, src)
+func (dst *Listing_Item_Option) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Item_Option.Merge(dst, src)
 }
 func (m *Listing_Item_Option) XXX_Size() int {
 	return xxx_messageInfo_Listing_Item_Option.Size(m)
@@ -719,17 +702,16 @@ func (m *Listing_Item_Option_Variant) Reset()         { *m = Listing_Item_Option
 func (m *Listing_Item_Option_Variant) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Option_Variant) ProtoMessage()    {}
 func (*Listing_Item_Option_Variant) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 1, 0, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 0, 0}
 }
-
 func (m *Listing_Item_Option_Variant) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Option_Variant.Unmarshal(m, b)
 }
 func (m *Listing_Item_Option_Variant) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Item_Option_Variant.Marshal(b, m, deterministic)
 }
-func (m *Listing_Item_Option_Variant) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Item_Option_Variant.Merge(m, src)
+func (dst *Listing_Item_Option_Variant) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Item_Option_Variant.Merge(dst, src)
 }
 func (m *Listing_Item_Option_Variant) XXX_Size() int {
 	return xxx_messageInfo_Listing_Item_Option_Variant.Size(m)
@@ -768,17 +750,16 @@ func (m *Listing_Item_Sku) Reset()         { *m = Listing_Item_Sku{} }
 func (m *Listing_Item_Sku) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Sku) ProtoMessage()    {}
 func (*Listing_Item_Sku) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 1, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 1}
 }
-
 func (m *Listing_Item_Sku) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Sku.Unmarshal(m, b)
 }
 func (m *Listing_Item_Sku) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Item_Sku.Marshal(b, m, deterministic)
 }
-func (m *Listing_Item_Sku) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Item_Sku.Merge(m, src)
+func (dst *Listing_Item_Sku) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Item_Sku.Merge(dst, src)
 }
 func (m *Listing_Item_Sku) XXX_Size() int {
 	return xxx_messageInfo_Listing_Item_Sku.Size(m)
@@ -833,17 +814,16 @@ func (m *Listing_Item_Image) Reset()         { *m = Listing_Item_Image{} }
 func (m *Listing_Item_Image) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Image) ProtoMessage()    {}
 func (*Listing_Item_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 1, 2}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 2}
 }
-
 func (m *Listing_Item_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Image.Unmarshal(m, b)
 }
 func (m *Listing_Item_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Item_Image.Marshal(b, m, deterministic)
 }
-func (m *Listing_Item_Image) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Item_Image.Merge(m, src)
+func (dst *Listing_Item_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Item_Image.Merge(dst, src)
 }
 func (m *Listing_Item_Image) XXX_Size() int {
 	return xxx_messageInfo_Listing_Item_Image.Size(m)
@@ -910,17 +890,16 @@ func (m *Listing_ShippingOption) Reset()         { *m = Listing_ShippingOption{}
 func (m *Listing_ShippingOption) String() string { return proto.CompactTextString(m) }
 func (*Listing_ShippingOption) ProtoMessage()    {}
 func (*Listing_ShippingOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 2}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2}
 }
-
 func (m *Listing_ShippingOption) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_ShippingOption.Unmarshal(m, b)
 }
 func (m *Listing_ShippingOption) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_ShippingOption.Marshal(b, m, deterministic)
 }
-func (m *Listing_ShippingOption) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_ShippingOption.Merge(m, src)
+func (dst *Listing_ShippingOption) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_ShippingOption.Merge(dst, src)
 }
 func (m *Listing_ShippingOption) XXX_Size() int {
 	return xxx_messageInfo_Listing_ShippingOption.Size(m)
@@ -973,17 +952,16 @@ func (m *Listing_ShippingOption_Service) Reset()         { *m = Listing_Shipping
 func (m *Listing_ShippingOption_Service) String() string { return proto.CompactTextString(m) }
 func (*Listing_ShippingOption_Service) ProtoMessage()    {}
 func (*Listing_ShippingOption_Service) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 2, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2, 0}
 }
-
 func (m *Listing_ShippingOption_Service) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_ShippingOption_Service.Unmarshal(m, b)
 }
 func (m *Listing_ShippingOption_Service) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_ShippingOption_Service.Marshal(b, m, deterministic)
 }
-func (m *Listing_ShippingOption_Service) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_ShippingOption_Service.Merge(m, src)
+func (dst *Listing_ShippingOption_Service) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_ShippingOption_Service.Merge(dst, src)
 }
 func (m *Listing_ShippingOption_Service) XXX_Size() int {
 	return xxx_messageInfo_Listing_ShippingOption_Service.Size(m)
@@ -1036,17 +1014,16 @@ func (m *Listing_Tax) Reset()         { *m = Listing_Tax{} }
 func (m *Listing_Tax) String() string { return proto.CompactTextString(m) }
 func (*Listing_Tax) ProtoMessage()    {}
 func (*Listing_Tax) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 3}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 3}
 }
-
 func (m *Listing_Tax) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Tax.Unmarshal(m, b)
 }
 func (m *Listing_Tax) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Tax.Marshal(b, m, deterministic)
 }
-func (m *Listing_Tax) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Tax.Merge(m, src)
+func (dst *Listing_Tax) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Tax.Merge(dst, src)
 }
 func (m *Listing_Tax) XXX_Size() int {
 	return xxx_messageInfo_Listing_Tax.Size(m)
@@ -1104,17 +1081,16 @@ func (m *Listing_Coupon) Reset()         { *m = Listing_Coupon{} }
 func (m *Listing_Coupon) String() string { return proto.CompactTextString(m) }
 func (*Listing_Coupon) ProtoMessage()    {}
 func (*Listing_Coupon) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{1, 4}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 4}
 }
-
 func (m *Listing_Coupon) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Coupon.Unmarshal(m, b)
 }
 func (m *Listing_Coupon) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Listing_Coupon.Marshal(b, m, deterministic)
 }
-func (m *Listing_Coupon) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Listing_Coupon.Merge(m, src)
+func (dst *Listing_Coupon) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Listing_Coupon.Merge(dst, src)
 }
 func (m *Listing_Coupon) XXX_Size() int {
 	return xxx_messageInfo_Listing_Coupon.Size(m)
@@ -1125,34 +1101,49 @@ func (m *Listing_Coupon) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Listing_Coupon proto.InternalMessageInfo
 
-func (m *Listing_Coupon) GetTitle() string {
-	if m != nil {
-		return m.Title
-	}
-	return ""
-}
-
 type isListing_Coupon_Code interface {
 	isListing_Coupon_Code()
+}
+type isListing_Coupon_Discount interface {
+	isListing_Coupon_Discount()
 }
 
 type Listing_Coupon_Hash struct {
 	Hash string `protobuf:"bytes,2,opt,name=hash,proto3,oneof"`
 }
-
 type Listing_Coupon_DiscountCode struct {
 	DiscountCode string `protobuf:"bytes,3,opt,name=discountCode,proto3,oneof"`
 }
+type Listing_Coupon_PercentDiscount struct {
+	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
+}
+type Listing_Coupon_PriceDiscount struct {
+	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
+}
 
-func (*Listing_Coupon_Hash) isListing_Coupon_Code() {}
-
-func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code() {}
+func (*Listing_Coupon_Hash) isListing_Coupon_Code()                {}
+func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code()        {}
+func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
+func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount()   {}
 
 func (m *Listing_Coupon) GetCode() isListing_Coupon_Code {
 	if m != nil {
 		return m.Code
 	}
 	return nil
+}
+func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
+	if m != nil {
+		return m.Discount
+	}
+	return nil
+}
+
+func (m *Listing_Coupon) GetTitle() string {
+	if m != nil {
+		return m.Title
+	}
+	return ""
 }
 
 func (m *Listing_Coupon) GetHash() string {
@@ -1167,29 +1158,6 @@ func (m *Listing_Coupon) GetDiscountCode() string {
 		return x.DiscountCode
 	}
 	return ""
-}
-
-type isListing_Coupon_Discount interface {
-	isListing_Coupon_Discount()
-}
-
-type Listing_Coupon_PercentDiscount struct {
-	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
-}
-
-type Listing_Coupon_PriceDiscount struct {
-	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
-}
-
-func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
-
-func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount() {}
-
-func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
-	if m != nil {
-		return m.Discount
-	}
-	return nil
 }
 
 func (m *Listing_Coupon) GetPercentDiscount() float32 {
@@ -1332,17 +1300,16 @@ func (m *Order) Reset()         { *m = Order{} }
 func (m *Order) String() string { return proto.CompactTextString(m) }
 func (*Order) ProtoMessage()    {}
 func (*Order) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2}
 }
-
 func (m *Order) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order.Unmarshal(m, b)
 }
 func (m *Order) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order.Marshal(b, m, deterministic)
 }
-func (m *Order) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order.Merge(m, src)
+func (dst *Order) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order.Merge(dst, src)
 }
 func (m *Order) XXX_Size() int {
 	return xxx_messageInfo_Order.Size(m)
@@ -1440,17 +1407,16 @@ func (m *Order_Shipping) Reset()         { *m = Order_Shipping{} }
 func (m *Order_Shipping) String() string { return proto.CompactTextString(m) }
 func (*Order_Shipping) ProtoMessage()    {}
 func (*Order_Shipping) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 0}
 }
-
 func (m *Order_Shipping) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Shipping.Unmarshal(m, b)
 }
 func (m *Order_Shipping) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order_Shipping.Marshal(b, m, deterministic)
 }
-func (m *Order_Shipping) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order_Shipping.Merge(m, src)
+func (dst *Order_Shipping) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order_Shipping.Merge(dst, src)
 }
 func (m *Order_Shipping) XXX_Size() int {
 	return xxx_messageInfo_Order_Shipping.Size(m)
@@ -1528,17 +1494,16 @@ func (m *Order_Item) Reset()         { *m = Order_Item{} }
 func (m *Order_Item) String() string { return proto.CompactTextString(m) }
 func (*Order_Item) ProtoMessage()    {}
 func (*Order_Item) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1}
 }
-
 func (m *Order_Item) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item.Unmarshal(m, b)
 }
 func (m *Order_Item) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order_Item.Marshal(b, m, deterministic)
 }
-func (m *Order_Item) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order_Item.Merge(m, src)
+func (dst *Order_Item) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order_Item.Merge(dst, src)
 }
 func (m *Order_Item) XXX_Size() int {
 	return xxx_messageInfo_Order_Item.Size(m)
@@ -1617,17 +1582,16 @@ func (m *Order_Item_Option) Reset()         { *m = Order_Item_Option{} }
 func (m *Order_Item_Option) String() string { return proto.CompactTextString(m) }
 func (*Order_Item_Option) ProtoMessage()    {}
 func (*Order_Item_Option) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 1, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1, 0}
 }
-
 func (m *Order_Item_Option) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item_Option.Unmarshal(m, b)
 }
 func (m *Order_Item_Option) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order_Item_Option.Marshal(b, m, deterministic)
 }
-func (m *Order_Item_Option) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order_Item_Option.Merge(m, src)
+func (dst *Order_Item_Option) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order_Item_Option.Merge(dst, src)
 }
 func (m *Order_Item_Option) XXX_Size() int {
 	return xxx_messageInfo_Order_Item_Option.Size(m)
@@ -1664,17 +1628,16 @@ func (m *Order_Item_ShippingOption) Reset()         { *m = Order_Item_ShippingOp
 func (m *Order_Item_ShippingOption) String() string { return proto.CompactTextString(m) }
 func (*Order_Item_ShippingOption) ProtoMessage()    {}
 func (*Order_Item_ShippingOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 1, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1, 1}
 }
-
 func (m *Order_Item_ShippingOption) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item_ShippingOption.Unmarshal(m, b)
 }
 func (m *Order_Item_ShippingOption) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order_Item_ShippingOption.Marshal(b, m, deterministic)
 }
-func (m *Order_Item_ShippingOption) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order_Item_ShippingOption.Merge(m, src)
+func (dst *Order_Item_ShippingOption) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order_Item_ShippingOption.Merge(dst, src)
 }
 func (m *Order_Item_ShippingOption) XXX_Size() int {
 	return xxx_messageInfo_Order_Item_ShippingOption.Size(m)
@@ -1717,17 +1680,16 @@ func (m *Order_Payment) Reset()         { *m = Order_Payment{} }
 func (m *Order_Payment) String() string { return proto.CompactTextString(m) }
 func (*Order_Payment) ProtoMessage()    {}
 func (*Order_Payment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{2, 2}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 2}
 }
-
 func (m *Order_Payment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Payment.Unmarshal(m, b)
 }
 func (m *Order_Payment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Order_Payment.Marshal(b, m, deterministic)
 }
-func (m *Order_Payment) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Order_Payment.Merge(m, src)
+func (dst *Order_Payment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Order_Payment.Merge(dst, src)
 }
 func (m *Order_Payment) XXX_Size() int {
 	return xxx_messageInfo_Order_Payment.Size(m)
@@ -1810,17 +1772,16 @@ func (m *OrderConfirmation) Reset()         { *m = OrderConfirmation{} }
 func (m *OrderConfirmation) String() string { return proto.CompactTextString(m) }
 func (*OrderConfirmation) ProtoMessage()    {}
 func (*OrderConfirmation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{3}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{3}
 }
-
 func (m *OrderConfirmation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderConfirmation.Unmarshal(m, b)
 }
 func (m *OrderConfirmation) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderConfirmation.Marshal(b, m, deterministic)
 }
-func (m *OrderConfirmation) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderConfirmation.Merge(m, src)
+func (dst *OrderConfirmation) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderConfirmation.Merge(dst, src)
 }
 func (m *OrderConfirmation) XXX_Size() int {
 	return xxx_messageInfo_OrderConfirmation.Size(m)
@@ -1879,17 +1840,16 @@ func (m *OrderReject) Reset()         { *m = OrderReject{} }
 func (m *OrderReject) String() string { return proto.CompactTextString(m) }
 func (*OrderReject) ProtoMessage()    {}
 func (*OrderReject) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{4}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{4}
 }
-
 func (m *OrderReject) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderReject.Unmarshal(m, b)
 }
 func (m *OrderReject) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderReject.Marshal(b, m, deterministic)
 }
-func (m *OrderReject) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderReject.Merge(m, src)
+func (dst *OrderReject) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderReject.Merge(dst, src)
 }
 func (m *OrderReject) XXX_Size() int {
 	return xxx_messageInfo_OrderReject.Size(m)
@@ -1933,17 +1893,16 @@ func (m *RatingSignature) Reset()         { *m = RatingSignature{} }
 func (m *RatingSignature) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature) ProtoMessage()    {}
 func (*RatingSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{5}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5}
 }
-
 func (m *RatingSignature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature.Unmarshal(m, b)
 }
 func (m *RatingSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RatingSignature.Marshal(b, m, deterministic)
 }
-func (m *RatingSignature) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RatingSignature.Merge(m, src)
+func (dst *RatingSignature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RatingSignature.Merge(dst, src)
 }
 func (m *RatingSignature) XXX_Size() int {
 	return xxx_messageInfo_RatingSignature.Size(m)
@@ -1983,17 +1942,16 @@ func (m *RatingSignature_TransactionMetadata) Reset()         { *m = RatingSigna
 func (m *RatingSignature_TransactionMetadata) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature_TransactionMetadata) ProtoMessage()    {}
 func (*RatingSignature_TransactionMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{5, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5, 0}
 }
-
 func (m *RatingSignature_TransactionMetadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata.Unmarshal(m, b)
 }
 func (m *RatingSignature_TransactionMetadata) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata.Marshal(b, m, deterministic)
 }
-func (m *RatingSignature_TransactionMetadata) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RatingSignature_TransactionMetadata.Merge(m, src)
+func (dst *RatingSignature_TransactionMetadata) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RatingSignature_TransactionMetadata.Merge(dst, src)
 }
 func (m *RatingSignature_TransactionMetadata) XXX_Size() int {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata.Size(m)
@@ -2056,17 +2014,16 @@ func (m *RatingSignature_TransactionMetadata_Image) Reset() {
 func (m *RatingSignature_TransactionMetadata_Image) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature_TransactionMetadata_Image) ProtoMessage()    {}
 func (*RatingSignature_TransactionMetadata_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{5, 0, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5, 0, 0}
 }
-
 func (m *RatingSignature_TransactionMetadata_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Unmarshal(m, b)
 }
 func (m *RatingSignature_TransactionMetadata_Image) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Marshal(b, m, deterministic)
 }
-func (m *RatingSignature_TransactionMetadata_Image) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Merge(m, src)
+func (dst *RatingSignature_TransactionMetadata_Image) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Merge(dst, src)
 }
 func (m *RatingSignature_TransactionMetadata_Image) XXX_Size() int {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Size(m)
@@ -2124,17 +2081,16 @@ func (m *BitcoinSignature) Reset()         { *m = BitcoinSignature{} }
 func (m *BitcoinSignature) String() string { return proto.CompactTextString(m) }
 func (*BitcoinSignature) ProtoMessage()    {}
 func (*BitcoinSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{6}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{6}
 }
-
 func (m *BitcoinSignature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BitcoinSignature.Unmarshal(m, b)
 }
 func (m *BitcoinSignature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BitcoinSignature.Marshal(b, m, deterministic)
 }
-func (m *BitcoinSignature) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BitcoinSignature.Merge(m, src)
+func (dst *BitcoinSignature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BitcoinSignature.Merge(dst, src)
 }
 func (m *BitcoinSignature) XXX_Size() int {
 	return xxx_messageInfo_BitcoinSignature.Size(m)
@@ -2182,17 +2138,16 @@ func (m *OrderFulfillment) Reset()         { *m = OrderFulfillment{} }
 func (m *OrderFulfillment) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment) ProtoMessage()    {}
 func (*OrderFulfillment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{7}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7}
 }
-
 func (m *OrderFulfillment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment.Unmarshal(m, b)
 }
 func (m *OrderFulfillment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderFulfillment.Marshal(b, m, deterministic)
 }
-func (m *OrderFulfillment) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderFulfillment.Merge(m, src)
+func (dst *OrderFulfillment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderFulfillment.Merge(dst, src)
 }
 func (m *OrderFulfillment) XXX_Size() int {
 	return xxx_messageInfo_OrderFulfillment.Size(m)
@@ -2278,17 +2233,16 @@ func (m *OrderFulfillment_PhysicalDelivery) Reset()         { *m = OrderFulfillm
 func (m *OrderFulfillment_PhysicalDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_PhysicalDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_PhysicalDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{7, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 0}
 }
-
 func (m *OrderFulfillment_PhysicalDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Unmarshal(m, b)
 }
 func (m *OrderFulfillment_PhysicalDelivery) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Marshal(b, m, deterministic)
 }
-func (m *OrderFulfillment_PhysicalDelivery) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Merge(m, src)
+func (dst *OrderFulfillment_PhysicalDelivery) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Merge(dst, src)
 }
 func (m *OrderFulfillment_PhysicalDelivery) XXX_Size() int {
 	return xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Size(m)
@@ -2325,17 +2279,16 @@ func (m *OrderFulfillment_DigitalDelivery) Reset()         { *m = OrderFulfillme
 func (m *OrderFulfillment_DigitalDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_DigitalDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_DigitalDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{7, 1}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 1}
 }
-
 func (m *OrderFulfillment_DigitalDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_DigitalDelivery.Unmarshal(m, b)
 }
 func (m *OrderFulfillment_DigitalDelivery) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderFulfillment_DigitalDelivery.Marshal(b, m, deterministic)
 }
-func (m *OrderFulfillment_DigitalDelivery) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderFulfillment_DigitalDelivery.Merge(m, src)
+func (dst *OrderFulfillment_DigitalDelivery) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderFulfillment_DigitalDelivery.Merge(dst, src)
 }
 func (m *OrderFulfillment_DigitalDelivery) XXX_Size() int {
 	return xxx_messageInfo_OrderFulfillment_DigitalDelivery.Size(m)
@@ -2373,17 +2326,16 @@ func (m *OrderFulfillment_CryptocurrencyDelivery) Reset() {
 func (m *OrderFulfillment_CryptocurrencyDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_CryptocurrencyDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_CryptocurrencyDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{7, 2}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 2}
 }
-
 func (m *OrderFulfillment_CryptocurrencyDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Unmarshal(m, b)
 }
 func (m *OrderFulfillment_CryptocurrencyDelivery) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Marshal(b, m, deterministic)
 }
-func (m *OrderFulfillment_CryptocurrencyDelivery) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Merge(m, src)
+func (dst *OrderFulfillment_CryptocurrencyDelivery) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Merge(dst, src)
 }
 func (m *OrderFulfillment_CryptocurrencyDelivery) XXX_Size() int {
 	return xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Size(m)
@@ -2414,17 +2366,16 @@ func (m *OrderFulfillment_Payout) Reset()         { *m = OrderFulfillment_Payout
 func (m *OrderFulfillment_Payout) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_Payout) ProtoMessage()    {}
 func (*OrderFulfillment_Payout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{7, 3}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 3}
 }
-
 func (m *OrderFulfillment_Payout) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_Payout.Unmarshal(m, b)
 }
 func (m *OrderFulfillment_Payout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderFulfillment_Payout.Marshal(b, m, deterministic)
 }
-func (m *OrderFulfillment_Payout) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderFulfillment_Payout.Merge(m, src)
+func (dst *OrderFulfillment_Payout) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderFulfillment_Payout.Merge(dst, src)
 }
 func (m *OrderFulfillment_Payout) XXX_Size() int {
 	return xxx_messageInfo_OrderFulfillment_Payout.Size(m)
@@ -2470,17 +2421,16 @@ func (m *OrderCompletion) Reset()         { *m = OrderCompletion{} }
 func (m *OrderCompletion) String() string { return proto.CompactTextString(m) }
 func (*OrderCompletion) ProtoMessage()    {}
 func (*OrderCompletion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{8}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{8}
 }
-
 func (m *OrderCompletion) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderCompletion.Unmarshal(m, b)
 }
 func (m *OrderCompletion) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OrderCompletion.Marshal(b, m, deterministic)
 }
-func (m *OrderCompletion) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OrderCompletion.Merge(m, src)
+func (dst *OrderCompletion) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OrderCompletion.Merge(dst, src)
 }
 func (m *OrderCompletion) XXX_Size() int {
 	return xxx_messageInfo_OrderCompletion.Size(m)
@@ -2531,17 +2481,16 @@ func (m *Rating) Reset()         { *m = Rating{} }
 func (m *Rating) String() string { return proto.CompactTextString(m) }
 func (*Rating) ProtoMessage()    {}
 func (*Rating) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{9}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{9}
 }
-
 func (m *Rating) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Rating.Unmarshal(m, b)
 }
 func (m *Rating) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Rating.Marshal(b, m, deterministic)
 }
-func (m *Rating) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Rating.Merge(m, src)
+func (dst *Rating) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Rating.Merge(dst, src)
 }
 func (m *Rating) XXX_Size() int {
 	return xxx_messageInfo_Rating.Size(m)
@@ -2590,17 +2539,16 @@ func (m *Rating_RatingData) Reset()         { *m = Rating_RatingData{} }
 func (m *Rating_RatingData) String() string { return proto.CompactTextString(m) }
 func (*Rating_RatingData) ProtoMessage()    {}
 func (*Rating_RatingData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{9, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{9, 0}
 }
-
 func (m *Rating_RatingData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Rating_RatingData.Unmarshal(m, b)
 }
 func (m *Rating_RatingData) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Rating_RatingData.Marshal(b, m, deterministic)
 }
-func (m *Rating_RatingData) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Rating_RatingData.Merge(m, src)
+func (dst *Rating_RatingData) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Rating_RatingData.Merge(dst, src)
 }
 func (m *Rating_RatingData) XXX_Size() int {
 	return xxx_messageInfo_Rating_RatingData.Size(m)
@@ -2724,17 +2672,16 @@ func (m *Dispute) Reset()         { *m = Dispute{} }
 func (m *Dispute) String() string { return proto.CompactTextString(m) }
 func (*Dispute) ProtoMessage()    {}
 func (*Dispute) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{10}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{10}
 }
-
 func (m *Dispute) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Dispute.Unmarshal(m, b)
 }
 func (m *Dispute) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Dispute.Marshal(b, m, deterministic)
 }
-func (m *Dispute) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Dispute.Merge(m, src)
+func (dst *Dispute) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Dispute.Merge(dst, src)
 }
 func (m *Dispute) XXX_Size() int {
 	return xxx_messageInfo_Dispute.Size(m)
@@ -2796,17 +2743,16 @@ func (m *DisputeResolution) Reset()         { *m = DisputeResolution{} }
 func (m *DisputeResolution) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution) ProtoMessage()    {}
 func (*DisputeResolution) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{11}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11}
 }
-
 func (m *DisputeResolution) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution.Unmarshal(m, b)
 }
 func (m *DisputeResolution) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisputeResolution.Marshal(b, m, deterministic)
 }
-func (m *DisputeResolution) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisputeResolution.Merge(m, src)
+func (dst *DisputeResolution) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeResolution.Merge(dst, src)
 }
 func (m *DisputeResolution) XXX_Size() int {
 	return xxx_messageInfo_DisputeResolution.Size(m)
@@ -2874,17 +2820,16 @@ func (m *DisputeResolution_Payout) Reset()         { *m = DisputeResolution_Payo
 func (m *DisputeResolution_Payout) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout) ProtoMessage()    {}
 func (*DisputeResolution_Payout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{11, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11, 0}
 }
-
 func (m *DisputeResolution_Payout) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution_Payout.Unmarshal(m, b)
 }
 func (m *DisputeResolution_Payout) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisputeResolution_Payout.Marshal(b, m, deterministic)
 }
-func (m *DisputeResolution_Payout) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisputeResolution_Payout.Merge(m, src)
+func (dst *DisputeResolution_Payout) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeResolution_Payout.Merge(dst, src)
 }
 func (m *DisputeResolution_Payout) XXX_Size() int {
 	return xxx_messageInfo_DisputeResolution_Payout.Size(m)
@@ -2945,17 +2890,16 @@ func (m *DisputeResolution_Payout_Output) Reset()         { *m = DisputeResoluti
 func (m *DisputeResolution_Payout_Output) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout_Output) ProtoMessage()    {}
 func (*DisputeResolution_Payout_Output) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{11, 0, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11, 0, 0}
 }
-
 func (m *DisputeResolution_Payout_Output) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution_Payout_Output.Unmarshal(m, b)
 }
 func (m *DisputeResolution_Payout_Output) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisputeResolution_Payout_Output.Marshal(b, m, deterministic)
 }
-func (m *DisputeResolution_Payout_Output) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisputeResolution_Payout_Output.Merge(m, src)
+func (dst *DisputeResolution_Payout_Output) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeResolution_Payout_Output.Merge(dst, src)
 }
 func (m *DisputeResolution_Payout_Output) XXX_Size() int {
 	return xxx_messageInfo_DisputeResolution_Payout_Output.Size(m)
@@ -2973,13 +2917,11 @@ type isDisputeResolution_Payout_Output_ScriptOrAddress interface {
 type DisputeResolution_Payout_Output_Script struct {
 	Script string `protobuf:"bytes,1,opt,name=script,proto3,oneof"`
 }
-
 type DisputeResolution_Payout_Output_Address struct {
 	Address string `protobuf:"bytes,3,opt,name=address,proto3,oneof"`
 }
 
-func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
-
+func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress()  {}
 func (*DisputeResolution_Payout_Output_Address) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
 
 func (m *DisputeResolution_Payout_Output) GetScriptOrAddress() isDisputeResolution_Payout_Output_ScriptOrAddress {
@@ -3088,17 +3030,16 @@ func (m *DisputeAcceptance) Reset()         { *m = DisputeAcceptance{} }
 func (m *DisputeAcceptance) String() string { return proto.CompactTextString(m) }
 func (*DisputeAcceptance) ProtoMessage()    {}
 func (*DisputeAcceptance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{12}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{12}
 }
-
 func (m *DisputeAcceptance) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeAcceptance.Unmarshal(m, b)
 }
 func (m *DisputeAcceptance) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_DisputeAcceptance.Marshal(b, m, deterministic)
 }
-func (m *DisputeAcceptance) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisputeAcceptance.Merge(m, src)
+func (dst *DisputeAcceptance) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DisputeAcceptance.Merge(dst, src)
 }
 func (m *DisputeAcceptance) XXX_Size() int {
 	return xxx_messageInfo_DisputeAcceptance.Size(m)
@@ -3136,17 +3077,16 @@ func (m *Outpoint) Reset()         { *m = Outpoint{} }
 func (m *Outpoint) String() string { return proto.CompactTextString(m) }
 func (*Outpoint) ProtoMessage()    {}
 func (*Outpoint) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{13}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{13}
 }
-
 func (m *Outpoint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Outpoint.Unmarshal(m, b)
 }
 func (m *Outpoint) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Outpoint.Marshal(b, m, deterministic)
 }
-func (m *Outpoint) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Outpoint.Merge(m, src)
+func (dst *Outpoint) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Outpoint.Merge(dst, src)
 }
 func (m *Outpoint) XXX_Size() int {
 	return xxx_messageInfo_Outpoint.Size(m)
@@ -3193,17 +3133,16 @@ func (m *Refund) Reset()         { *m = Refund{} }
 func (m *Refund) String() string { return proto.CompactTextString(m) }
 func (*Refund) ProtoMessage()    {}
 func (*Refund) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{14}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{14}
 }
-
 func (m *Refund) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Refund.Unmarshal(m, b)
 }
 func (m *Refund) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Refund.Marshal(b, m, deterministic)
 }
-func (m *Refund) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Refund.Merge(m, src)
+func (dst *Refund) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Refund.Merge(dst, src)
 }
 func (m *Refund) XXX_Size() int {
 	return xxx_messageInfo_Refund.Size(m)
@@ -3261,17 +3200,16 @@ func (m *Refund_TransactionInfo) Reset()         { *m = Refund_TransactionInfo{}
 func (m *Refund_TransactionInfo) String() string { return proto.CompactTextString(m) }
 func (*Refund_TransactionInfo) ProtoMessage()    {}
 func (*Refund_TransactionInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{14, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{14, 0}
 }
-
 func (m *Refund_TransactionInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Refund_TransactionInfo.Unmarshal(m, b)
 }
 func (m *Refund_TransactionInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Refund_TransactionInfo.Marshal(b, m, deterministic)
 }
-func (m *Refund_TransactionInfo) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Refund_TransactionInfo.Merge(m, src)
+func (dst *Refund_TransactionInfo) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Refund_TransactionInfo.Merge(dst, src)
 }
 func (m *Refund_TransactionInfo) XXX_Size() int {
 	return xxx_messageInfo_Refund_TransactionInfo.Size(m)
@@ -3307,17 +3245,16 @@ func (m *VendorFinalizedPayment) Reset()         { *m = VendorFinalizedPayment{}
 func (m *VendorFinalizedPayment) String() string { return proto.CompactTextString(m) }
 func (*VendorFinalizedPayment) ProtoMessage()    {}
 func (*VendorFinalizedPayment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{15}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{15}
 }
-
 func (m *VendorFinalizedPayment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VendorFinalizedPayment.Unmarshal(m, b)
 }
 func (m *VendorFinalizedPayment) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_VendorFinalizedPayment.Marshal(b, m, deterministic)
 }
-func (m *VendorFinalizedPayment) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_VendorFinalizedPayment.Merge(m, src)
+func (dst *VendorFinalizedPayment) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_VendorFinalizedPayment.Merge(dst, src)
 }
 func (m *VendorFinalizedPayment) XXX_Size() int {
 	return xxx_messageInfo_VendorFinalizedPayment.Size(m)
@@ -3349,17 +3286,16 @@ func (m *ID) Reset()         { *m = ID{} }
 func (m *ID) String() string { return proto.CompactTextString(m) }
 func (*ID) ProtoMessage()    {}
 func (*ID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{16}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{16}
 }
-
 func (m *ID) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ID.Unmarshal(m, b)
 }
 func (m *ID) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ID.Marshal(b, m, deterministic)
 }
-func (m *ID) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ID.Merge(m, src)
+func (dst *ID) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ID.Merge(dst, src)
 }
 func (m *ID) XXX_Size() int {
 	return xxx_messageInfo_ID.Size(m)
@@ -3410,17 +3346,16 @@ func (m *ID_Pubkeys) Reset()         { *m = ID_Pubkeys{} }
 func (m *ID_Pubkeys) String() string { return proto.CompactTextString(m) }
 func (*ID_Pubkeys) ProtoMessage()    {}
 func (*ID_Pubkeys) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{16, 0}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{16, 0}
 }
-
 func (m *ID_Pubkeys) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ID_Pubkeys.Unmarshal(m, b)
 }
 func (m *ID_Pubkeys) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ID_Pubkeys.Marshal(b, m, deterministic)
 }
-func (m *ID_Pubkeys) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ID_Pubkeys.Merge(m, src)
+func (dst *ID_Pubkeys) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ID_Pubkeys.Merge(dst, src)
 }
 func (m *ID_Pubkeys) XXX_Size() int {
 	return xxx_messageInfo_ID_Pubkeys.Size(m)
@@ -3457,17 +3392,16 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{17}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{17}
 }
-
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Signature.Unmarshal(m, b)
 }
 func (m *Signature) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Signature.Marshal(b, m, deterministic)
 }
-func (m *Signature) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Signature.Merge(m, src)
+func (dst *Signature) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Signature.Merge(dst, src)
 }
 func (m *Signature) XXX_Size() int {
 	return xxx_messageInfo_Signature.Size(m)
@@ -3505,17 +3439,16 @@ func (m *SignedListing) Reset()         { *m = SignedListing{} }
 func (m *SignedListing) String() string { return proto.CompactTextString(m) }
 func (*SignedListing) ProtoMessage()    {}
 func (*SignedListing) Descriptor() ([]byte, []int) {
-	return fileDescriptor_b6d125f880f9ca35, []int{18}
+	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{18}
 }
-
 func (m *SignedListing) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedListing.Unmarshal(m, b)
 }
 func (m *SignedListing) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SignedListing.Marshal(b, m, deterministic)
 }
-func (m *SignedListing) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SignedListing.Merge(m, src)
+func (dst *SignedListing) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SignedListing.Merge(dst, src)
 }
 func (m *SignedListing) XXX_Size() int {
 	return xxx_messageInfo_SignedListing.Size(m)
@@ -3548,11 +3481,6 @@ func (m *SignedListing) GetSignature() []byte {
 }
 
 func init() {
-	proto.RegisterEnum("Listing_Metadata_ContractType", Listing_Metadata_ContractType_name, Listing_Metadata_ContractType_value)
-	proto.RegisterEnum("Listing_Metadata_Format", Listing_Metadata_Format_name, Listing_Metadata_Format_value)
-	proto.RegisterEnum("Listing_ShippingOption_ShippingType", Listing_ShippingOption_ShippingType_name, Listing_ShippingOption_ShippingType_value)
-	proto.RegisterEnum("Order_Payment_Method", Order_Payment_Method_name, Order_Payment_Method_value)
-	proto.RegisterEnum("Signature_Section", Signature_Section_name, Signature_Section_value)
 	proto.RegisterType((*RicardianContract)(nil), "RicardianContract")
 	proto.RegisterType((*Listing)(nil), "Listing")
 	proto.RegisterType((*Listing_Metadata)(nil), "Listing.Metadata")
@@ -3598,11 +3526,16 @@ func init() {
 	proto.RegisterType((*ID_Pubkeys)(nil), "ID.Pubkeys")
 	proto.RegisterType((*Signature)(nil), "Signature")
 	proto.RegisterType((*SignedListing)(nil), "SignedListing")
+	proto.RegisterEnum("Listing_Metadata_ContractType", Listing_Metadata_ContractType_name, Listing_Metadata_ContractType_value)
+	proto.RegisterEnum("Listing_Metadata_Format", Listing_Metadata_Format_name, Listing_Metadata_Format_value)
+	proto.RegisterEnum("Listing_ShippingOption_ShippingType", Listing_ShippingOption_ShippingType_name, Listing_ShippingOption_ShippingType_value)
+	proto.RegisterEnum("Order_Payment_Method", Order_Payment_Method_name, Order_Payment_Method_value)
+	proto.RegisterEnum("Signature_Section", Signature_Section_name, Signature_Section_value)
 }
 
-func init() { proto.RegisterFile("contracts.proto", fileDescriptor_b6d125f880f9ca35) }
+func init() { proto.RegisterFile("contracts.proto", fileDescriptor_contracts_c1e9c5924aff92eb) }
 
-var fileDescriptor_b6d125f880f9ca35 = []byte{
+var fileDescriptor_contracts_c1e9c5924aff92eb = []byte{
 	// 3296 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5a, 0xbd, 0x73, 0x1b, 0xd7,
 	0xb5, 0x17, 0xbe, 0x81, 0x03, 0x90, 0x00, 0xaf, 0x68, 0x19, 0x0f, 0xe3, 0x67, 0x51, 0x3b, 0xb2,
