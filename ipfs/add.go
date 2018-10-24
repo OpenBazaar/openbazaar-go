@@ -2,10 +2,6 @@ package ipfs
 
 import (
 	"context"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	_ "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/merkledag"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io"
 	"io/ioutil"
@@ -13,9 +9,14 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreunix"
+	_ "github.com/ipfs/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/merkledag"
 )
 
-// Resursively add a directory to IPFS and return the root hash
+// Recursively add a directory to IPFS and return the root hash
 func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 	s := strings.Split(root, "/")
 	dirName := s[len(s)-1]

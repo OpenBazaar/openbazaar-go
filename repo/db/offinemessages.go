@@ -2,9 +2,10 @@ package db
 
 import (
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type OfflineMessagesDB struct {

@@ -1,15 +1,9 @@
 package ipfs
 
 import (
-	"errors"
-
 	"context"
+	"errors"
 	"fmt"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/namesys"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-	path "github.com/ipfs/go-ipfs/path"
-	"github.com/op/go-logging"
 	"gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
 	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	dhtpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
@@ -18,6 +12,12 @@ import (
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"time"
+
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/namesys"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
+	path "github.com/ipfs/go-ipfs/path"
+	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("ipfs")

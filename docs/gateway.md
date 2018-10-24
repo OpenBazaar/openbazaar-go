@@ -27,7 +27,7 @@ Next turn off OpenBazaar API as you don't want to give public access to this:
 }
 ````
 
-Finally when you run the server use the `--disablewallet` option as you wont be needing it.
+Finally when you run the server use the `--disablewallet` option as you won't be needing it.
 
 ### Writable Gateway
 

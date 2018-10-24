@@ -2,9 +2,10 @@ package db
 
 import (
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"strconv"
 	"sync"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
 type ModeratedDB struct {

@@ -3,14 +3,15 @@ package db
 import (
 	"bytes"
 	"encoding/hex"
+	"strconv"
+	"sync"
+	"testing"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"strconv"
-	"sync"
-	"testing"
 )
 
 func mustNewStxo() wallet.Stxo {

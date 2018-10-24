@@ -248,7 +248,7 @@ class DisputeCloseBuyerTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseBuyerTest - FAIL: Charlie failed to detect the dispute resolution")
 
-        # Bob relase funds
+        # Bob release funds
         release = {
             "OrderID": orderId,
         }

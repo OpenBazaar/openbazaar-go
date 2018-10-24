@@ -2,21 +2,15 @@ package core
 
 import (
 	"errors"
-	"path"
-	"sync"
-	"time"
-
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/op/go-logging"
-	"golang.org/x/net/context"
-	"golang.org/x/net/proxy"
-
 	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"path"
+	"sync"
+	"time"
 
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -27,6 +21,10 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/op/go-logging"
+	"golang.org/x/net/context"
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -257,7 +255,7 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 	defer cancel()
 	if peerKey == nil {
 		var pubKey libp2p.PubKey
-		keyval, err := n.IpfsNode.Repo.Datastore().Get(ds.NewKey(KeyCachePrefix + peerID.Pretty()))
+		keyval, err := n.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix + peerID.Pretty())))
 		if err != nil {
 			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
 			if err != nil {
