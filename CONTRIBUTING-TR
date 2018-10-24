@@ -1,0 +1,39 @@
+Katkıda bulunmak
+
+OpenBazaar açık kaynaklı bir projedir. Katkıları severiz! Bu belge bazı katkı kurallarını özetlemektedir, böylece katkılarınız kod tabanına dahil edilebilir.
+
+Sorunlar
+
+Sorunlar öncelikle hata raporları ve doğrudan eyleme geçirilebilir özellikler için kullanılmalıdır. Bir soruyu sormak veya bir tartışmaya başlamak için bir sorun açarsanız sorun olur, ancak sorun birkaç gün sonra kapanırsa suç işlemeyin. Protokolün genel tartışması muhtemelen daha gevşek bir şekilde ortaya çıktı.
+
+Git Yönergeleri
+
+Her işlemden önce gofmt'i çalıştırmalısınız. Eğer koşmazsan Travis başarısız olur. Çoğu IDE, gofmt dosyasını kaydetme veya belirli zamanlarda çalıştırmak için ayarlama yeteneğine sahiptir.
+
+Tüm taahhütler, repoda .golangci.yml config kullanılarak golangci-lint ile kontrol edilir.
+
+Ek olarak, Go Report Card puanını A veya daha iyi tutmak isteriz. Bu nedenle, diğer testleri de göz önünde bulundurun.
+
+Testler
+
+Yeni kod eklerseniz, lütfen onunla bir birim testi gönderin. PR'ı onsuz kabul etmeyebiliriz. Ayrıca, taahhütleriniz tarafından etkilendikleri takdirde mevcut testlerde uygun değişiklikleri yapmanız da beklenir. Bu ayrıca qa paketindeki entegrasyon testlerini de içerir.
+
+Çekme Talepleri
+
+PR'nız birleştirmeye hazır değilse, bir şekilde bunu belirttiğinizden emin olun. Örneğin, PR başlığına [WIP] yerleştirerek. İdeal olarak PR mesajındaki ilerlemeyi izlemek için PR mesajında ​​bir görev listesi eklemeniz gerekir.
+
+PR, birleşmeden önce yazma erişimi olan ekibin birden fazla üyesi tarafından onaylanmalıdır.
+
+Yorumlar
+
+Bir şeyleri tutarlı bir şekilde tutmak için, fragmanların büyük harfle başlaması ve süre olmadan bitmesi gerekir. Yorum bir veya daha fazla tam cümleyse (bir cümle en az bir konu ve bir fiile sahipse), cümleler bir süre ile bitmelidir.
+
+Kesinleştirmeler
+
+Lütfen tüm taahhütlerinizi atomik olarak saklayın.
+
+Ayrıca, büyük git taahhüt mesajının yedi kuralını da uyguladığınızdan emin olun.
+
+1. Vücuttan boş bir satır ile ayrı bir konu 2. Konu satırını 50 karakterle sınırlandırın 3. Konu satırını genişletin 4. Konu satırını bir süre ile bitirmeyin. 5. Konu satırındaki zorunlu duygudurumu kullanın. 72 karakterde vücut 7. Ne ve neden nasıl olduğunu açıklamak için bedeni kullanın
+
+Son olarak, lütfen taahhütlerinizi imzalayın.
