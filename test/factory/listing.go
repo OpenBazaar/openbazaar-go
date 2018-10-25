@@ -115,7 +115,7 @@ func NewListingWithShippingRegions(slug string) *pb.Listing {
 		{
 			Name:    "usps",
 			Type:    pb.Listing_ShippingOption_FIXED_PRICE,
-			Regions: []pb.CountryCode{pb.CountryCode(pb.CountryCode_UNITED_KINGDOM)},
+			Regions: []pb.CountryCode{pb.CountryCode_UNITED_KINGDOM},
 			Services: []*pb.Listing_ShippingOption_Service{
 				{
 					Name:              "standard",

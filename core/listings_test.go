@@ -69,8 +69,8 @@ func TestValidShippingRegionUsingDefinedCountryCodes(t *testing.T) {
 func TestListingProtobufAlias(t *testing.T) {
 	countrycodes := []pb.CountryCode{
 		pb.CountryCode(212),
-		pb.CountryCode(pb.CountryCode_SWAZILAND),
-		pb.CountryCode(pb.CountryCode_ESWATINI),
+		pb.CountryCode_SWAZILAND,
+		pb.CountryCode_ESWATINI,
 	}
 	for _, cc := range countrycodes {
 		var (
