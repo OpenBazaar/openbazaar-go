@@ -137,7 +137,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifiedAtColumnOnCasesExists = true
 		}
 	}
-	if lastNotifiedAtColumnOnCasesExists == false {
+	if !lastNotifiedAtColumnOnCasesExists {
 		t.Error("Expected lastNotifiedAt column to exist on cases and not be nullable")
 	}
 
@@ -156,7 +156,7 @@ func TestMigration007(t *testing.T) {
 		if actualCase.CaseId != caseID {
 			t.Error("Unexpected case ID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualCase.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualCase.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on case to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
@@ -178,7 +178,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifiedColumnOnPurchasesExists = true
 		}
 	}
-	if lastNotifiedColumnOnPurchasesExists == false {
+	if !lastNotifiedColumnOnPurchasesExists {
 		t.Error("Expected lastNotifiedAt column on purchases to exist on purchases and not be nullable")
 	}
 
@@ -197,7 +197,7 @@ func TestMigration007(t *testing.T) {
 		if actualPurchase.OrderId != purchaseID {
 			t.Error("Unexpected orderID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualPurchase.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualPurchase.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
@@ -219,7 +219,7 @@ func TestMigration007(t *testing.T) {
 			lastNotifierColumnOnSalesExists = true
 		}
 	}
-	if lastNotifierColumnOnSalesExists == false {
+	if !lastNotifierColumnOnSalesExists {
 		t.Error("Expected lastNotifiedAt column on sales to exist on sales and not be nullable")
 	}
 
@@ -238,7 +238,7 @@ func TestMigration007(t *testing.T) {
 		if actualSale.OrderId != saleID {
 			t.Error("Unexpected orderID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualSale.LastNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualSale.LastNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}

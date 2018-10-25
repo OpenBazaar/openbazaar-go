@@ -1,6 +1,7 @@
 package net
 
 import (
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -8,7 +9,6 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/op/go-logging"
 	"golang.org/x/net/context"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 )
 
 var log = logging.MustGetLogger("service")
@@ -53,7 +53,7 @@ func (r *PointerRepublisher) Republish() {
 	for _, p := range pointers {
 		switch p.Purpose {
 		case ipfs.MESSAGE:
-			if time.Now().Sub(p.Timestamp) > kPointerExpiration {
+			if time.Since(p.Timestamp) > kPointerExpiration {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				go ipfs.PublishPointer(r.ipfsNode, ctx, p)

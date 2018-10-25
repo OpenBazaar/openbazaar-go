@@ -180,7 +180,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 				OrderId:     orderId,
 				Price: repo.ListingPrice{
 					Amount:           contract.BuyerOrder.Payment.Amount,
-					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract, orderId),
+					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract),
 					CurrencyCode:     contract.BuyerOrder.Payment.Coin,
 					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
 				},
@@ -219,7 +219,7 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
 }
 
-func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract, orderID string) uint32 {
+func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
 	var currencyDivisibility = contract.VendorListings[0].Metadata.CoinDivisibility
 	if currencyDivisibility != 0 {
 		return currencyDivisibility

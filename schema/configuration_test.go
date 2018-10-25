@@ -3,7 +3,6 @@ package schema
 import (
 	"reflect"
 	"testing"
-
 	"time"
 )
 
@@ -27,7 +26,7 @@ func TestGetApiConfig(t *testing.T) {
 	if reflect.ValueOf(config.HTTPHeaders).Kind() != reflect.Map {
 		t.Error("Headers is not a map")
 	}
-	if config.Enabled != true {
+	if !config.Enabled {
 		t.Error("Enabled is not true")
 	}
 	if !config.SSL {

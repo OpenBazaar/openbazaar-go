@@ -3,9 +3,10 @@ package migrations
 import (
 	"database/sql"
 	"fmt"
-	"github.com/OpenBazaar/wallet-interface"
 	"path"
 	"strings"
+
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var WalletCoinType wallet.CoinType

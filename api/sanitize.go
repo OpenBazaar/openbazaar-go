@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/microcosm-cc/bluemonday"

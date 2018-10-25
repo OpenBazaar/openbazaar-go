@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/op/go-logging"
-
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/op/go-logging"
 )
 
 // DISPUTE CASES
@@ -24,7 +23,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
-		broadcastChannel = make(chan repo.Notifier, 0)
+		broadcastChannel = make(chan repo.Notifier)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
 		firstInterval    = repo.ModeratorDisputeExpiry_firstInterval
@@ -179,7 +178,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 	}
 
 	var (
-		closeAsyncChannelVerifier = make(chan bool, 0)
+		closeAsyncChannelVerifier = make(chan bool)
 		broadcastCount            = 0
 	)
 	go func() {
@@ -228,7 +227,7 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 		switch caseID {
 		case neverNotified.CaseID, notifiedUpToFifteenDay.CaseID, notifiedUpToFourtyDays.CaseID, notifiedUpToFourtyFourDays.CaseID:
-			durationFromActual := time.Now().Sub(time.Unix(lastDisputeExpiryNotifiedAt, 0))
+			durationFromActual := time.Since(time.Unix(lastDisputeExpiryNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastDisputeExpiryNotifiedAt set when executed, was %s", caseID, time.Unix(lastDisputeExpiryNotifiedAt, 0).String())
 			}
@@ -346,34 +345,34 @@ func TestPerformTaskCreatesModeratorDisputeExpiryNotifications(t *testing.T) {
 		}
 	}
 
-	if checkNeverNotifiedFifteenDay != true {
+	if !checkNeverNotifiedFifteenDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFifteenDay")
 	}
-	if checkNeverNotifiedFourtyDay != true {
+	if !checkNeverNotifiedFourtyDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyDay")
 	}
-	if checkNeverNotifiedFourtyFourDay != true {
+	if !checkNeverNotifiedFourtyFourDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyFourDay")
 	}
-	if checkNeverNotifiedFourtyFiveDay != true {
+	if !checkNeverNotifiedFourtyFiveDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNeverNotifiedFourtyFiveDay")
 	}
-	if checkNotifiedToFifteenDaysFourtyDay != true {
+	if !checkNotifiedToFifteenDaysFourtyDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyDay")
 	}
-	if checkNotifiedToFifteenDaysFourtyFourDay != true {
+	if !checkNotifiedToFifteenDaysFourtyFourDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyFourDay")
 	}
-	if checkNotifiedToFifteenDaysFourtyFiveDay != true {
+	if !checkNotifiedToFifteenDaysFourtyFiveDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFifteenDaysFourtyFiveDay")
 	}
-	if checkNotifiedToFourtyDaysFourtyFourDay != true {
+	if !checkNotifiedToFourtyDaysFourtyFourDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDaysFourtyFourDay")
 	}
-	if checkNotifiedToFourtyDaysFourtyFiveDay != true {
+	if !checkNotifiedToFourtyDaysFourtyFiveDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyDaysFourtyFiveDay")
 	}
-	if checkNotifiedToFourtyFourDaysFourtyFiveDay != true {
+	if !checkNotifiedToFourtyFourDaysFourtyFiveDay {
 		t.Errorf("Expected dispute expiry notification missing: checkNotifiedToFourtyFourDaysFourtyFiveDay")
 	}
 }
@@ -384,7 +383,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
-		broadcastChannel = make(chan repo.Notifier, 0)
+		broadcastChannel = make(chan repo.Notifier)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
 		firstInterval    = repo.BuyerDisputeTimeout_firstInterval
@@ -490,7 +489,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	var (
-		closeAsyncChannelVerifier = make(chan bool, 0)
+		closeAsyncChannelVerifier = make(chan bool)
 		broadcastCount            = 0
 	)
 	go func() {
@@ -539,7 +538,7 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		}
 		switch orderID {
 		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID, notifiedUpToFourtyFourDays.OrderID:
-			durationFromActual := time.Now().Sub(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
+			durationFromActual := time.Since(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastDisputeTimeoutNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeTimeoutNotifiedAt, 0).String())
 			}
@@ -657,34 +656,34 @@ func TestPerformTaskCreatesBuyerDisputeTimeoutNotifications(t *testing.T) {
 		}
 	}
 
-	if checkNeverNotifiedPurchaseFirstNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseFirstNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseFirstNotificationSeen")
 	}
-	if checkNeverNotifiedPurchaseSecondNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseSecondNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseSecondNotificationSeen")
 	}
-	if checkNeverNotifiedPurchaseThirdNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseThirdNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseThirdNotificationSeen")
 	}
-	if checkNeverNotifiedPurchaseLastNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseLastNotificationSeen")
 	}
-	if checkFifteenDayPurchaseSecondNotificationSeen != true {
+	if !checkFifteenDayPurchaseSecondNotificationSeen {
 		t.Errorf("Expected notification missing: checkFifteenDayPurchaseSecondNotificationSeen")
 	}
-	if checkFifteenDayPurchaseThirdNotificationSeen != true {
+	if !checkFifteenDayPurchaseThirdNotificationSeen {
 		t.Errorf("Expected notification missing: checkFifteenDayPurchaseThirdNotificationSeen")
 	}
-	if checkFifteenDayPurchaseLastNotificationSeen != true {
+	if !checkFifteenDayPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkFifteenDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyDayPurchaseThirdNotificationSeen != true {
+	if !checkFourtyDayPurchaseThirdNotificationSeen {
 		t.Errorf("Expected notification missing: checkFourtyDayPurchaseThirdNotificationSeen")
 	}
-	if checkFourtyDayPurchaseLastNotificationSeen != true {
+	if !checkFourtyDayPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkFourtyDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyFourDayPurchaseLastNotificationSeen != true {
+	if !checkFourtyFourDayPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkFourtyFourDayPurchaseLastNotificationSeen")
 	}
 }
@@ -694,7 +693,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
-		broadcastChannel = make(chan repo.Notifier, 0)
+		broadcastChannel = make(chan repo.Notifier)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
 		firstInterval    = repo.BuyerDisputeExpiry_firstInterval
@@ -794,7 +793,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 	}
 
 	var (
-		closeAsyncChannelVerifier = make(chan bool, 0)
+		closeAsyncChannelVerifier = make(chan bool)
 		broadcastCount            = 0
 	)
 	go func() {
@@ -807,7 +806,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 				}
 				if notifier.GetType() == repo.NotifierTypeBuyerDisputeExpiry {
 					broadcastCount++ // += 1
-					t.Logf("Notification Recieved: %+v\n", notifier)
+					t.Logf("Notification Received: %+v\n", notifier)
 				} else {
 					t.Errorf("Unexpected notification received: %s", notifier.GetType())
 				}
@@ -847,7 +846,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		}
 		switch orderID {
 		case neverNotified.OrderID, notifiedUpToFifteenDay.OrderID, notifiedUpToFourtyDay.OrderID:
-			durationFromActual := time.Now().Sub(time.Unix(lastDisputeExpiryNotifiedAt, 0))
+			durationFromActual := time.Since(time.Unix(lastDisputeExpiryNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastDisputeExpiryNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeExpiryNotifiedAt, 0).String())
 			}
@@ -944,22 +943,22 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 		}
 	}
 
-	if checkNeverNotifiedPurchaseFirstNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseFirstNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseFirstNotificationSeen")
 	}
-	if checkNeverNotifiedPurchaseSecondNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseSecondNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseSecondNotificationSeen")
 	}
-	if checkNeverNotifiedPurchaseLastNotificationSeen != true {
+	if !checkNeverNotifiedPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedPurchaseLastNotificationSeen")
 	}
-	if checkFifteenDayPurchaseSecondNotificationSeen != true {
+	if !checkFifteenDayPurchaseSecondNotificationSeen {
 		t.Errorf("Expected notification missing: checkFifteenDayPurchaseSecondNotificationSeen")
 	}
-	if checkFifteenDayPurchaseLastNotificationSeen != true {
+	if !checkFifteenDayPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkFifteenDayPurchaseLastNotificationSeen")
 	}
-	if checkFourtyDayPurchaseLastNotificationSeen != true {
+	if !checkFourtyDayPurchaseLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkFourtyDayPurchaseLastNotificationSeen")
 	}
 }
@@ -970,7 +969,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	// each notification is suppose to be sent. With no notifications already queued,
 	// it should produce all the old notifications up to the most recent one expected
 	var (
-		broadcastChannel = make(chan repo.Notifier, 0)
+		broadcastChannel = make(chan repo.Notifier)
 		timeStart        = time.Now().Add(time.Duration(-50*24) * time.Hour)
 		twelveHours      = time.Duration(12) * time.Hour
 		lastInterval     = repo.VendorDisputeTimeout_lastInterval
@@ -1043,7 +1042,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 	}
 
 	var (
-		closeAsyncChannelVerifier = make(chan bool, 0)
+		closeAsyncChannelVerifier = make(chan bool)
 		broadcastCount            = 0
 	)
 	go func() {
@@ -1092,7 +1091,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		}
 		switch orderID {
 		case neverNotified.OrderID:
-			durationFromActual := time.Now().Sub(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
+			durationFromActual := time.Since(time.Unix(lastDisputeTimeoutNotifiedAt, 0))
 			if durationFromActual > (time.Duration(5) * time.Second) {
 				t.Errorf("Expected %s to have lastDisputeTimeoutNotifiedAt set when executed, was %s", orderID, time.Unix(lastDisputeTimeoutNotifiedAt, 0).String())
 			}
@@ -1154,7 +1153,7 @@ func TestPerformTaskCreatesVendorDisputeTimeoutNotifications(t *testing.T) {
 		}
 	}
 
-	if checkNeverNotifiedSaleLastNotificationSeen != true {
+	if !checkNeverNotifiedSaleLastNotificationSeen {
 		t.Errorf("Expected notification missing: checkNeverNotifiedSale_LastNotificationSeen")
 	}
 }

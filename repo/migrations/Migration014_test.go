@@ -3,13 +3,14 @@ package migrations_test
 import (
 	"bytes"
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/OpenBazaar/wallet-interface"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 func TestMigration014(t *testing.T) {
@@ -123,7 +124,7 @@ func TestMigration014(t *testing.T) {
 			coinColumnExists = true
 		}
 	}
-	if coinColumnExists == false {
+	if !coinColumnExists {
 		t.Error("Expected coin column to exist on keys")
 	}
 	for keysRows.Next() {
@@ -168,7 +169,7 @@ func TestMigration014(t *testing.T) {
 			coinColumnExists = true
 		}
 	}
-	if coinColumnExists == false {
+	if !coinColumnExists {
 		t.Error("Expected coin column to exist on utxos")
 	}
 	for utxosRows.Next() {
@@ -210,7 +211,7 @@ func TestMigration014(t *testing.T) {
 			coinColumnExists = true
 		}
 	}
-	if coinColumnExists == false {
+	if !coinColumnExists {
 		t.Error("Expected coin column to exist on stxos")
 	}
 	for stxosRows.Next() {
@@ -258,7 +259,7 @@ func TestMigration014(t *testing.T) {
 			coinColumnExists = true
 		}
 	}
-	if coinColumnExists == false {
+	if !coinColumnExists {
 		t.Error("Expected coin column to exist on txns")
 	}
 	for txnsRows.Next() {
@@ -307,7 +308,7 @@ func TestMigration014(t *testing.T) {
 			coinColumnExists = true
 		}
 	}
-	if coinColumnExists == false {
+	if !coinColumnExists {
 		t.Error("Expected coin column to exist on watchedScripts")
 	}
 	for watchedScriptRows.Next() {

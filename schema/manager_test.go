@@ -19,7 +19,7 @@ func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if subject.testModeEnabled != false {
+	if subject.testModeEnabled {
 		t.Error("Expected test mode to be disabled by default")
 	}
 	if subject.os != runtime.GOOS {
@@ -33,7 +33,7 @@ func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Equal(expectedIdentity, subject.IdentityKey()) != true {
+	if !bytes.Equal(expectedIdentity, subject.IdentityKey()) {
 		t.Error("Expected IdentityKey() to provide the identity key for the testMnemonic but was different")
 	}
 
@@ -48,16 +48,16 @@ func TestNewSchemaManagerSetsReasonableDefaults(t *testing.T) {
 		TestModeEnabled: true,
 		Mnemonic:        testMnemonic,
 	})
-	if subject.testModeEnabled != true {
+	if !subject.testModeEnabled {
 		t.Error("Expected test mode to be enabled")
 	}
-	if strings.HasPrefix(subject.DataPath(), expectedDataPath) != true {
+	if !strings.HasPrefix(subject.DataPath(), expectedDataPath) {
 		t.Errorf("Expected DataPath to start with %s", expectedDataPath)
 	}
 	if len(subject.Mnemonic()) == 0 {
 		t.Error("Expected mnemonic to be generated when not provided")
 	}
-	if bytes.Equal(expectedIdentity, subject.IdentityKey()) != true {
+	if !bytes.Equal(expectedIdentity, subject.IdentityKey()) {
 		t.Error("Expected IdentityKey() to provide the identity key for the testMnemonic but was different")
 	}
 }
@@ -106,7 +106,7 @@ func TestSchemaManagerChecksIsInitialized(t *testing.T) {
 		DataPath:        GenerateTempPath(),
 		TestModeEnabled: true,
 	})
-	if subject.IsInitialized() != false {
+	if subject.IsInitialized() {
 		t.Error("Expected subject to not be initialized and return false")
 	}
 
@@ -116,7 +116,7 @@ func TestSchemaManagerChecksIsInitialized(t *testing.T) {
 	if err := subject.InitializeDatabase(); err != nil {
 		t.Fatal(err)
 	}
-	if subject.IsInitialized() != false {
+	if subject.IsInitialized() {
 		t.Error("Expected subject to not be initialized and return false")
 	}
 
@@ -124,7 +124,7 @@ func TestSchemaManagerChecksIsInitialized(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to initialize configuration file")
 	}
-	if subject.IsInitialized() != true {
+	if !subject.IsInitialized() {
 		t.Error("Expected subject to be initialized (config is present and valid) and return true")
 	}
 	if len(subject.IdentityKey()) == 0 {
@@ -181,7 +181,7 @@ func TestBuildSchemaDirectories(t *testing.T) {
 		DataPath:        permissionlessPath,
 		TestModeEnabled: true,
 	})
-	if err := paths.BuildSchemaDirectories(); err != nil && os.IsPermission(err) == false {
+	if err := paths.BuildSchemaDirectories(); err != nil && !os.IsPermission(err) {
 		t.Error("Expected build directories to fail due to lack of permissions")
 	}
 	paths.DestroySchemaDirectories()
@@ -213,7 +213,7 @@ func checkDirectoryCreation(t *testing.T, directory string) {
 		t.Errorf("created directory %s could not be opened", directory)
 	}
 	fi, _ := f.Stat()
-	if fi.IsDir() == false {
+	if !fi.IsDir() {
 		t.Errorf("maybeCreateOBDirectories did not create the directory %s", directory)
 	}
 	if fi.Mode().String()[1:3] != "rw" {
@@ -238,7 +238,7 @@ func TestCreateIdentityKey(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unexpected error generating actual identity key")
 	}
-	if bytes.Equal(actualIdentity, expectedIdentityKey) != true {
+	if !bytes.Equal(actualIdentity, expectedIdentityKey) {
 		t.Error("Actual identity was different from expected identity")
 	}
 }
@@ -246,7 +246,7 @@ func TestCreateIdentityKey(t *testing.T) {
 func TestInitializeDatabaseSQL(t *testing.T) {
 	database, _ := sql.Open("sqlite3", ":memory:")
 	if _, err := database.Exec(InitializeDatabaseSQL("foobarbaz")); err != nil {
-		t.Fatal("Expected InitializeDatabaseSQL to return executeable SQL, but got error:", err.Error())
+		t.Fatal("Expected InitializeDatabaseSQL to return executable SQL, but got error:", err.Error())
 	}
 }
 
@@ -259,7 +259,7 @@ func TestInitializeDatabase(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected InitializeDatabase to fail when directories do not exist")
 	}
-	if strings.Contains(err.Error(), "unable to open database file") == false {
+	if !strings.Contains(err.Error(), "unable to open database file") {
 		t.Error("Expected error to indicate unable to open database file, received:", err.Error())
 	}
 
@@ -353,7 +353,7 @@ func TestInitializeIPFSRepo(t *testing.T) {
 		}
 		if key == "identityKey" {
 			identityPresent = true
-			if bytes.Equal(value, subject.IdentityKey()) != true {
+			if !bytes.Equal(value, subject.IdentityKey()) {
 				t.Error("Unexpected identity key saved in database")
 			}
 		}
@@ -363,19 +363,19 @@ func TestInitializeIPFSRepo(t *testing.T) {
 			if err != nil {
 				t.Error("Unable to parse creationTime:", err.Error())
 			}
-			if time.Now().Sub(timeValue) > (time.Duration(5) * time.Second) {
+			if time.Since(timeValue) > (time.Duration(5) * time.Second) {
 				t.Error("Unexpected creationTime to be set within the last 5 seconds")
 			}
 		}
 	}
 
-	if mnemonicPresent == false {
+	if !mnemonicPresent {
 		t.Error("Expected mnemonic key to be created in config table")
 	}
-	if identityPresent == false {
+	if !identityPresent {
 		t.Error("Expected identityKey key to be created in config table")
 	}
-	if creationDatePresent == false {
+	if !creationDatePresent {
 		t.Error("Expected creationDate key to be created in config table")
 	}
 }

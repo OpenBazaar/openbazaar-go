@@ -12,16 +12,16 @@ import (
 func TestDisputeCaseRecordIsExpired(t *testing.T) {
 	now := time.Now()
 	expirationTime := time.Duration(45*24) * time.Hour
-	if (&repo.DisputeCaseRecord{Timestamp: now}).IsExpired(now) != false {
+	if (&repo.DisputeCaseRecord{Timestamp: now}).IsExpired(now) {
 		t.Error("Expected recently opened dispute to NOT be expired")
 	}
-	if (&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpired(now.Add(-time.Duration(1))) != false {
+	if (&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpired(now.Add(-time.Duration(1))) {
 		t.Error("Expected a dispute to NOT be expired just before expected expiration")
 	}
-	if (&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpired(now) != true {
+	if !(&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpired(now) {
 		t.Error("Expected a dispute to not expired at exactly the expiration time but was NOT")
 	}
-	if (&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpiredNow() != true {
+	if !(&repo.DisputeCaseRecord{Timestamp: now.Add(-expirationTime)}).IsExpiredNow() {
 		t.Error("Expected a dispute to be expired when now is after the expirationTime but was NOT")
 	}
 }
@@ -42,13 +42,13 @@ func TestResolutionPaymentOutpoints(t *testing.T) {
 
 	subject.BuyerOutpoints = nil
 	if subject.ResolutionPaymentOutpoints(repo.PayoutRatio{Buyer: 100, Vendor: 0})[0].Hash != vendorOutpoints[0].Hash {
-		t.Error("expected outpoints to substitude vendor set when buyer set is missing")
+		t.Error("expected outpoints to substitute vendor set when buyer set is missing")
 	}
 
 	subject.BuyerOutpoints = buyerOutpoints
 	subject.VendorOutpoints = nil
 	if subject.ResolutionPaymentOutpoints(repo.PayoutRatio{Buyer: 0, Vendor: 100})[0].Hash != buyerOutpoints[0].Hash {
-		t.Error("expected outpoints to substitude vendor set when buyer set is missing")
+		t.Error("expected outpoints to substitute vendor set when buyer set is missing")
 	}
 }
 

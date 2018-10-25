@@ -3,13 +3,12 @@ package db_test
 import (
 	"bytes"
 	"database/sql"
+	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -385,7 +384,7 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	if state != pb.OrderState_DISPUTED {
 		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, state)
 	}
-	if read != false {
+	if read {
 		t.Errorf("Expected read=%v got %v", false, read)
 	}
 	if date.After(time.Now()) || date.Equal(time.Time{}) {
@@ -754,14 +753,14 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		switch c.CaseID {
 		case neverNotified.CaseID:
 			sawNeverNotifiedCase = true
-			if reflect.DeepEqual(c, neverNotified) != true {
+			if !reflect.DeepEqual(c, neverNotified) {
 				t.Error("Expected neverNotified to match, but did not")
 				t.Error("Expected:", neverNotified)
 				t.Error("Actual:", c)
 			}
 		case initialNotified.CaseID:
 			sawInitialNotifiedCase = true
-			if reflect.DeepEqual(c, initialNotified) != true {
+			if !reflect.DeepEqual(c, initialNotified) {
 				t.Error("Expected initialNotified to match, but did not")
 				t.Error("Expected:", initialNotified)
 				t.Error("Actual:", c)
@@ -775,16 +774,16 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		}
 	}
 
-	if sawNeverNotifiedCase == false {
+	if !sawNeverNotifiedCase {
 		t.Error("Expected to see case which was never notified")
 	}
-	if sawInitialNotifiedCase == false {
+	if !sawInitialNotifiedCase {
 		t.Error("Expected to see case which was initially notified")
 	}
-	if sawFinallyNotifiedCase == true {
-		t.Error("Expected NOT to see case which recieved it's final notification")
+	if sawFinallyNotifiedCase {
+		t.Error("Expected NOT to see case which received it's final notification")
 	}
-	if sawResolvedCase == true {
+	if sawResolvedCase {
 		t.Error("Expected NOT to see case which is resolved")
 	}
 }
@@ -943,11 +942,11 @@ func TestUpdateDisputeLastDisputeExpiryNotifiedAt(t *testing.T) {
 		}
 		switch caseID {
 		case disputeOne.CaseID:
-			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeOne.LastDisputeExpiryNotifiedAt) != true {
+			if !time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeOne.LastDisputeExpiryNotifiedAt) {
 				t.Error("Expected disputeOne.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		case disputeTwo.CaseID:
-			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeTwo.LastDisputeExpiryNotifiedAt) != true {
+			if !time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(disputeTwo.LastDisputeExpiryNotifiedAt) {
 				t.Error("Expected disputeTwo.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		default:
