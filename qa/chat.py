@@ -1,7 +1,5 @@
 import requests
 import json
-import time
-from collections import OrderedDict
 from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 
 
