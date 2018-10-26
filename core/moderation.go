@@ -3,19 +3,17 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/OpenBazaar/jsonpb"
-	"golang.org/x/net/context"
-
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"golang.org/x/net/context"
 )
 
 // ModeratorPointerID  moderator ipfs multihash

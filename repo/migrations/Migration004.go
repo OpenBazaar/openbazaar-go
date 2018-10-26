@@ -2,10 +2,10 @@ package migrations
 
 import (
 	"database/sql"
+	"os"
 	"path"
 
 	_ "github.com/mutecomm/go-sqlcipher"
-	"os"
 )
 
 type Migration004 struct{}

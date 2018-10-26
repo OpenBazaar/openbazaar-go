@@ -3,13 +3,14 @@ package migrations_test
 import (
 	"bytes"
 	"database/sql"
-	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
-	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/OpenBazaar/wallet-interface"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 func TestMigration014(t *testing.T) {

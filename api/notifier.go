@@ -1,11 +1,11 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/smtp"
 	"strings"
 
-	"errors"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )

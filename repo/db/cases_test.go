@@ -3,13 +3,12 @@ package db_test
 import (
 	"bytes"
 	"database/sql"
+	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -782,7 +781,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		t.Error("Expected to see case which was initially notified")
 	}
 	if sawFinallyNotifiedCase {
-		t.Error("Expected NOT to see case which recieved it's final notification")
+		t.Error("Expected NOT to see case which received it's final notification")
 	}
 	if sawResolvedCase {
 		t.Error("Expected NOT to see case which is resolved")

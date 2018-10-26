@@ -37,7 +37,7 @@ And make the following changes to the SSL parameters.
 ```
 The SSLCert and SSLKey paramenters require the absolute paths to the server.crt and server.key files we generated above.
 
-If you skipped Step 1 because you have your own SSL cert, then set the paths to your certficate and key files.
+If you skipped Step 1 because you have your own SSL cert, then set the paths to your certificate and key files.
 
 ### Step 3: Install the CA cert in the operating system of your client's computer.
 

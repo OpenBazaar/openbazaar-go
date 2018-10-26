@@ -2,8 +2,7 @@ package repo
 
 import (
 	"crypto/rand"
-	"encoding/json"
-	//"errors"
+	"encoding/json" //"errors"
 	"fmt"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"time"
@@ -16,7 +15,7 @@ type Notifier interface {
 	// Until we can represent this as part of the interface, the Notifiers which
 	// do not get persisted can safely return an empty string. Notifiers which are
 	// persisted and return a non-unique GetID() string will eventually fail the DB's
-	// uniqueness contraints during runtime.
+	// uniqueness constraints during runtime.
 	GetID() string
 
 	// GetType returns the type as a NotificationType

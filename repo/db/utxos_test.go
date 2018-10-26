@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
+	"strconv"
+	"sync"
+	"testing"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/wire"
-	"strconv"
-	"sync"
-	"testing"
 )
 
 var uxdb repo.UnspentTransactionOutputStore
