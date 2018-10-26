@@ -634,16 +634,20 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 		return err
 	}
 	if len(resp.Cids) == 0 {
-		log.Debugf("Peer %s requested no blocks", peerID)
+		log.Debugf("peer %s requested no blocks", peerID)
 		return nil
 	}
 	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerID)
 	for _, id := range resp.Cids {
 		decoded, err := cid.Decode(id)
 		if err != nil {
+			log.Debugf("failed decoding store block (%s) for peer (%s)", id, peerID)
 			continue
 		}
-		n.SendBlock(peerID, *decoded)
+		if err := n.SendBlock(peerID, *decoded); err != nil {
+			log.Debugf("failed sending store block (%s) to peer (%s)", id, peerID)
+			continue
+		}
 	}
 	return nil
 }
