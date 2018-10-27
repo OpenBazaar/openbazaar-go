@@ -878,9 +878,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 
-		// TODO: the bitcoin cash check is temporary in case someone files a dispute for an order that was created when the prefix was still being used
-		// on the address. We can remove this 45 days after the release of 2.2.2 as it won't be possible for this condition to exist at this point.
-		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() && contract.BuyerOrder.Payment.Address != n.normalizeBitcoinCashAddress(addr.EncodeAddress()) {
+		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
 
