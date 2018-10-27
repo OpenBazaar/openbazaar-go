@@ -1082,18 +1082,3 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 
 	return nil
 }
-
-func (n *OpenBazaarNode) normalizeBitcoinCashAddress(addr string) string {
-	if NormalizeCurrencyCode(n.Wallet.CurrencyCode()) == "BCH" || NormalizeCurrencyCode(n.Wallet.CurrencyCode()) == "TBCH" {
-		prefix := "bitcoincash:"
-		if n.TestnetEnable {
-			prefix = "bchtest:"
-		} else if n.RegressionTestEnable {
-			prefix = "bchreg:"
-		}
-		if !strings.HasPrefix(addr, prefix) {
-			return prefix + addr
-		}
-	}
-	return addr
-}
