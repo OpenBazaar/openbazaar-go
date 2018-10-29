@@ -235,7 +235,10 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 		return nil, err
 	}
 
-	service.node.IpfsNode.Peerstore.AddPubKey(id, pubkey)
+	err = service.node.IpfsNode.Peerstore.AddPubKey(id, pubkey)
+	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
+	}
 	err = service.node.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix+id.Pretty())), env.Pubkey)
 	if err != nil {
 		log.Errorf("handleOfflineRelayError: %s", err.Error())
