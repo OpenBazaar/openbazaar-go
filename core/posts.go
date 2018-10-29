@@ -226,48 +226,14 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		return postData{}, err
 	}
 
-	/* Add a tag in the post to an array called tags,
-	which will be added to the postData object below */
-	tags := make([]string, 0, 15)
-	tagMap := make(map[string]struct{}, 15)
-	for _, tag := range post.Post.Tags {
-		if _, ok := tagMap[tag]; ok {
-			continue
-		}
-		tagMap[tag] = struct{}{}
-
-		tags = append(tags, tag)
-
-		if len(tags) >= 15 {
-			break
-		}
-	}
-
-	/* Add a channel in the post to an array called channels,
-	which will be added to the postData object below */
-	channels := make([]string, 0, 15)
-	channelMap := make(map[string]struct{}, 15)
-	for _, channel := range post.Post.Channels {
-		if _, ok := channelMap[channel]; ok {
-			continue
-		}
-		channelMap[channel] = struct{}{}
-
-		channels = append(channels, channel)
-
-		if len(channels) >= 15 {
-			break
-		}
-	}
-
 	// Create the postData object
 	ld := postData{
 		Hash:      postHash,
 		Slug:      post.Post.Slug,
 		PostType:  post.Post.PostType.String(),
 		Status:    post.Post.Status,
-		Tags:      tags,
-		Channels:  channels,
+		Tags:      makeUnique(post.Post.Tags, 15),
+		Channels:  makeUnique(post.Post.Channels, 15),
 		Reference: post.Post.Reference,
 	}
 
@@ -291,6 +257,24 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 
 	// Returns postData in its final form
 	return ld, nil
+}
+
+// makeUnique returns a new slice of unique strings based on src which is not mutated
+func makeUnique(src []string, maxLength int) []string {
+	result := make([]string, 0, maxLength)
+	uniqueMap := make(map[string]struct{}, maxLength)
+	for _, v := range src {
+		if _, ok := uniqueMap[v]; ok {
+			continue
+		}
+		uniqueMap[v] = struct{}{}
+
+		result = append(result, v)
+		if len(result) >= maxLength {
+			break
+		}
+	}
+	return result
 }
 
 //getPostIndex  [Get the post's index]
