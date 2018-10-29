@@ -28,7 +28,7 @@ Example:
 
 ### Run the Server
 
-You can now run an instance of the server from the new data directory with the daradir option. Multiple intances can be run simultaneously, one for each data directory you've created.
+You can now run an instance of the server from the new data directory with the daradir option. Multiple instances can be run simultaneously, one for each data directory you've created.
 
 Example:
 `go run openbazaard.go start -d=c://Users/Username/OpenBazaar2.0StoreB`

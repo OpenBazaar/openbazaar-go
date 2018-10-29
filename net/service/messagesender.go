@@ -61,14 +61,6 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSende
 	return ms, nil
 }
 
-func (service *OpenBazaarService) newMessageSender(p peer.ID) *messageSender {
-	return &messageSender{
-		p:        p,
-		service:  service,
-		requests: make(map[int32]chan *pb.Message, 2), // low initial capacity
-	}
-}
-
 // invalidate is called before this messageSender is removed from the strmap.
 // It prevents the messageSender from being reused/reinitialized and then
 // forgotten (leaving the stream open).
@@ -112,7 +104,7 @@ func (ms *messageSender) prep() error {
 
 // streamReuseTries is the number of times we will try to reuse a stream to a
 // given peer before giving up and reverting to the old one-message-per-stream
-// behaviour.
+// behavior.
 const streamReuseTries = 3
 
 func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
@@ -153,6 +145,8 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 	ms.requestlk.Lock()
 	ms.requests[pmes.RequestId] = returnChan
 	ms.requestlk.Unlock()
+
+	defer ms.closeRequest(pmes.RequestId)
 
 	ms.lk.Lock()
 	defer ms.lk.Unlock()

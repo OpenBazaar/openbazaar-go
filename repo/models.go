@@ -134,6 +134,7 @@ type Case struct {
 }
 
 type UnfundedSale struct {
-	OrderId   string
-	Timestamp time.Time
+	OrderId     string
+	Timestamp   time.Time
+	PaymentCoin string
 }

@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"encoding/hex"
+	"sync"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"sync"
 )
 
 type WatchedScriptsDB struct {

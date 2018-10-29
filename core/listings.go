@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -14,16 +16,12 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
-	"github.com/microcosm-cc/bluemonday"
-
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -103,6 +101,12 @@ type ListingData struct {
 	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
 	CoinType           string    `json:"coinType"`
 }
+
+var (
+	ErrShippingRegionMustBeSet          = errors.New("shipping region must be set")
+	ErrShippingRegionUndefined          = errors.New("undefined shipping region")
+	ErrShippingRegionMustNotBeContinent = errors.New("cannot specify continent as shipping region")
+)
 
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -273,7 +277,7 @@ func (n *OpenBazaarNode) SetListingInventory(listing *pb.Listing) error {
 	}
 	// Update inventory
 	for i, s := range listing.Item.Skus {
-		err = n.Datastore.Inventory().Put(listing.Slug, i, int64(s.Quantity))
+		err = n.Datastore.Inventory().Put(listing.Slug, i, s.Quantity)
 		if err != nil {
 			return err
 		}
@@ -663,7 +667,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 }
 
 // IsItemForSale Check to see we are selling the given listing. Used when validating an order.
-// FIXME: This wont scale well. We will need to store the hash of active listings in a db to do an indexed search.
+// FIXME: This won't scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
@@ -851,7 +855,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
-				s.Quantity = int64(count)
+				s.Quantity = count
 				break
 			}
 		}
@@ -1186,6 +1190,24 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 	return nil
 }
 
+func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
+	for _, region := range shippingOption.Regions {
+		if int32(region) == 0 {
+			return ErrShippingRegionMustBeSet
+		}
+		_, ok := proto.EnumValueMap("CountryCode")[region.String()]
+		if !ok {
+			return ErrShippingRegionUndefined
+		}
+		if ok {
+			if int32(region) > 500 {
+				return ErrShippingRegionMustNotBeContinent
+			}
+		}
+	}
+	return nil
+}
+
 func validatePhysicalListing(listing *pb.Listing) error {
 	if listing.Metadata.PricingCurrency == "" {
 		return errors.New("Listing pricing currency code must not be empty")
@@ -1227,13 +1249,8 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
-		for _, region := range shippingOption.Regions {
-			if int(region) == 0 {
-				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 246 && int(region) != 500 {
-				return errors.New("Invalid shipping region")
-			}
-
+		if err := ValidShippingRegion(shippingOption); err != nil {
+			return fmt.Errorf("Invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)

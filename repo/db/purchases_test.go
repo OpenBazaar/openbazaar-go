@@ -529,14 +529,14 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		switch p.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedPurchase = true
-			if reflect.DeepEqual(p, neverNotified) != true {
+			if !reflect.DeepEqual(p, neverNotified) {
 				t.Error("Expected neverNotified to match, but did not")
 				t.Error("Expected:", neverNotified)
 				t.Error("Actual:", p)
 			}
 		case initialNotified.OrderID:
 			sawInitialNotifiedPurchase = true
-			if reflect.DeepEqual(p, initialNotified) != true {
+			if !reflect.DeepEqual(p, initialNotified) {
 				t.Error("Expected initialNotified to match, but did not")
 				t.Error("Expected:", initialNotified)
 				t.Error("Actual:", p)
@@ -550,16 +550,16 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		}
 	}
 
-	if sawNeverNotifiedPurchase == false {
+	if !sawNeverNotifiedPurchase {
 		t.Error("Expected to see purchase which was never notified")
 	}
-	if sawInitialNotifiedPurchase == false {
+	if !sawInitialNotifiedPurchase {
 		t.Error("Expected to see purchase which was initially notified")
 	}
-	if sawFinallyNotifiedPurchase == true {
-		t.Error("Expected NOT to see purchase which recieved it's final notification")
+	if sawFinallyNotifiedPurchase {
+		t.Error("Expected NOT to see purchase which received it's final notification")
 	}
-	if sawNeverNotifiedButUndisputeable == true {
+	if sawNeverNotifiedButUndisputeable {
 		t.Error("Expected NOT to see undisputeable purchase")
 	}
 }
@@ -636,11 +636,11 @@ func TestUpdatePurchaseLastDisputeTimeoutNotifiedAt(t *testing.T) {
 
 		switch orderID {
 		case purchaseOne.OrderID:
-			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseOne.LastDisputeTimeoutNotifiedAt) != true {
+			if !time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseOne.LastDisputeTimeoutNotifiedAt) {
 				t.Error("Expected purchaseOne.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		case purchaseTwo.OrderID:
-			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseTwo.LastDisputeTimeoutNotifiedAt) != true {
+			if !time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(purchaseTwo.LastDisputeTimeoutNotifiedAt) {
 				t.Error("Expected purchaseTwo.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		default:
@@ -731,14 +731,14 @@ func TestGetPurchasesForDisputeExpiryNotificationReturnsRelevantRecords(t *testi
 		switch p.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedPurchase = true
-			if reflect.DeepEqual(p, neverNotified) != true {
+			if !reflect.DeepEqual(p, neverNotified) {
 				t.Error("Expected neverNotified to match, but did not")
 				t.Errorf("Expected: %+v", neverNotified)
 				t.Errorf("Actual: %+v", p)
 			}
 		case initialNotified.OrderID:
 			sawInitialNotifiedPurchase = true
-			if reflect.DeepEqual(p, initialNotified) != true {
+			if !reflect.DeepEqual(p, initialNotified) {
 				t.Error("Expected initialNotified to match, but did not")
 				t.Errorf("Expected: %+v", initialNotified)
 				t.Errorf("Actual: %+v", p)
@@ -752,16 +752,16 @@ func TestGetPurchasesForDisputeExpiryNotificationReturnsRelevantRecords(t *testi
 		}
 	}
 
-	if sawNeverNotifiedPurchase == false {
+	if !sawNeverNotifiedPurchase {
 		t.Error("Expected to see purchase which was never notified")
 	}
-	if sawInitialNotifiedPurchase == false {
+	if !sawInitialNotifiedPurchase {
 		t.Error("Expected to see purchase which was initially notified")
 	}
-	if sawFinallyNotifiedPurchase == true {
-		t.Error("Expected NOT to see purchase which recieved it's final notification")
+	if sawFinallyNotifiedPurchase {
+		t.Error("Expected NOT to see purchase which received it's final notification")
 	}
-	if sawNeverNotifiedButUndisputed == true {
+	if sawNeverNotifiedButUndisputed {
 		t.Error("Expected NOT to see undisputed purchase")
 	}
 }
@@ -837,11 +837,11 @@ func TestUpdatePurchaseLastDisputeExpiryNotifiedAt(t *testing.T) {
 
 		switch orderID {
 		case purchaseOne.OrderID:
-			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseOne.LastDisputeExpiryNotifiedAt) != true {
+			if !time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseOne.LastDisputeExpiryNotifiedAt) {
 				t.Error("Expected purchaseOne.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		case purchaseTwo.OrderID:
-			if time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseTwo.LastDisputeExpiryNotifiedAt) != true {
+			if !time.Unix(lastDisputeExpiryNotifiedAt, 0).Equal(purchaseTwo.LastDisputeExpiryNotifiedAt) {
 				t.Error("Expected purchaseTwo.LastDisputeExpiryNotifiedAt to be updated")
 			}
 		default:

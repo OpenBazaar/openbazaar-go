@@ -5,11 +5,12 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"sync"
+	"testing"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
-	"sync"
-	"testing"
 )
 
 var kdb repo.KeyStore
@@ -177,12 +178,12 @@ func TestGetLastKeyIndex(t *testing.T) {
 		last = b
 	}
 	idx, used, err := kdb.GetLastKeyIndex(wallet.EXTERNAL)
-	if err != nil || idx != 99 || used != false {
+	if err != nil || idx != 99 || used {
 		t.Error("Failed to fetch correct last index")
 	}
 	kdb.MarkKeyAsUsed(last)
 	_, used, err = kdb.GetLastKeyIndex(wallet.EXTERNAL)
-	if err != nil || used != true {
+	if err != nil || !used {
 		t.Error("Failed to fetch correct last index")
 	}
 }

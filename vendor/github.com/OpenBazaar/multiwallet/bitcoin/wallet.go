@@ -2,12 +2,20 @@ package bitcoin
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"time"
 
+	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/client"
+	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/keys"
+	"github.com/OpenBazaar/multiwallet/service"
+	"github.com/OpenBazaar/multiwallet/util"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -18,13 +26,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
-
-	"encoding/hex"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/config"
-	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
+	"sort"
 )
 
 type BitcoinWallet struct {
@@ -37,9 +39,11 @@ type BitcoinWallet struct {
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
+
+	exchangeRates wi.ExchangeRates
 }
 
-func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer) (*BitcoinWallet, error) {
+func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	mPrivKey, err := hd.NewMaster(seed, params)
@@ -59,12 +63,19 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 	if err != nil {
 		return nil, err
 	}
+	var er wi.ExchangeRates
+	if !disableExchangeRates {
+		er = exchangerates.NewBitcoinPriceFetcher(proxy)
+	}
 
-	wm := service.NewWalletService(cfg.DB, km, c, params, wi.Bitcoin)
+	wm, err := service.NewWalletService(cfg.DB, km, c, params, wi.Bitcoin, cache)
+	if err != nil {
+		return nil, err
+	}
 
 	fp := spvwallet.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, cfg.FeeAPI.String(), proxy)
 
-	return &BitcoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey}, nil
+	return &BitcoinWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
 }
 
 func keyToAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btc.Address, error) {
@@ -197,6 +208,7 @@ func (w *BitcoinWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 
@@ -299,6 +311,10 @@ func (w *BitcoinWallet) Close() {
 	w.client.Close()
 }
 
+func (w *BitcoinWallet) ExchangeRates() wi.ExchangeRates {
+	return w.exchangeRates
+}
+
 func (w *BitcoinWallet) DumpTables(wr io.Writer) {
 	fmt.Fprintln(wr, "Transactions-----")
 	txns, _ := w.db.Txns().GetAll(true)
@@ -314,12 +330,15 @@ func (w *BitcoinWallet) DumpTables(wr io.Writer) {
 
 // Build a client.Transaction so we can ingest it into the wallet service then broadcast
 func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
 	cTxn := client.Transaction{
 		Txid:          tx.TxHash().String(),
 		Locktime:      int(tx.LockTime),
 		Version:       int(tx.Version),
 		Confirmations: 0,
 		Time:          time.Now().Unix(),
+		RawBytes:      buf.Bytes(),
 	}
 	utxos, err := w.db.Utxos().GetAll()
 	if err != nil {
@@ -368,8 +387,6 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 		cTxn.Outputs = append(cTxn.Outputs, output)
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
 	_, err = w.client.Broadcast(buf.Bytes())
 	return err
 }

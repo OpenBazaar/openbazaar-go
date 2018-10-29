@@ -25,7 +25,7 @@ func NewGateway(n *core.OpenBazaarNode, authCookie http.Cookie, l net.Listener, 
 	log.SetBackend(logging.AddModuleLevel(logger))
 	topMux := http.NewServeMux()
 
-	jsonAPI := newJsonAPIHandler(n, authCookie, config)
+	jsonAPI := newJSONAPIHandler(n, authCookie, config)
 	wsAPI := newWSAPIHandler(n, authCookie, config)
 	n.Broadcast = manageNotifications(n, wsAPI.h.Broadcast)
 

@@ -12,8 +12,8 @@ RUN cd Python-3.6.0 && \
     ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 
 RUN pip3.6 install requests python-bitcoinlib && \
-    wget https://bitcoin.org/bin/bitcoin-core-0.16.0/bitcoin-0.16.0-x86_64-linux-gnu.tar.gz && \
-    tar -xvzf bitcoin-0.16.0-x86_64-linux-gnu.tar.gz -C /opt
+    wget https://bitcoin.org/bin/bitcoin-core-0.16.3/bitcoin-0.16.3-x86_64-linux-gnu.tar.gz && \
+    tar -xvzf bitcoin-0.16.3-x86_64-linux-gnu.tar.gz -C /opt
 
 RUN wget https://github.com/google/protobuf/releases/download/v3.6.0/protoc-3.6.0-linux-x86_64.zip && \
     unzip ./protoc-3.6.0-linux-x86_64.zip -x readme.txt && \

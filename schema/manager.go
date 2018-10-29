@@ -129,7 +129,7 @@ func (m *openbazaarSchemaManager) IdentityKey() []byte { return m.identityKey }
 // Identity returns the struct representation of the []byte IdentityKey
 func (m *openbazaarSchemaManager) Identity() (*config.Identity, error) {
 	if len(m.identityKey) == 0 {
-		// All public constuctors set this value and should not occur during runtime
+		// All public constructors set this value and should not occur during runtime
 		return nil, errors.New("identity key is not generated")
 	}
 	identity, err := ipfs.IdentityFromKey(m.identityKey)
@@ -243,7 +243,7 @@ func (m *openbazaarSchemaManager) DestroySchemaDirectories() {
 // ResetForJSONApiTest will reset the internal set of the schema without disturbing the
 // node running on top of it
 func (m *openbazaarSchemaManager) ResetForJSONApiTest() error {
-	if m.testModeEnabled == false {
+	if !m.testModeEnabled {
 		return errors.New("destroy schema directories bypassed: must run while TestModeEnabled is true")
 	}
 
@@ -264,7 +264,7 @@ func (m *openbazaarSchemaManager) ResetForJSONApiTest() error {
 	return nil
 }
 
-// InitializeDatabaseSQL returns the executeable SQL string which initializes
+// InitializeDatabaseSQL returns the executable SQL string which initializes
 // the database schema. It assumes the target is an empty SQLite3 database which
 // supports encryption via the `PRAGMA key` statement
 func InitializeDatabaseSQL(encryptionPassword string) string {
@@ -409,17 +409,23 @@ func (m *openbazaarSchemaManager) InitializeIPFSRepo() error {
 
 	_, err = insertConfigRow.Exec("mnemonic", m.Mnemonic())
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 	_, err = insertConfigRow.Exec("identityKey", m.IdentityKey())
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 	_, err = insertConfigRow.Exec("creationDate", time.Now().Format(time.RFC3339))
 	if err != nil {
-		tx.Rollback()
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return rollbackErr
+		}
 		return err
 	}
 

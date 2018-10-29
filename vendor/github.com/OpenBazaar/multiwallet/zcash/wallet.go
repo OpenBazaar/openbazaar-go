@@ -17,12 +17,14 @@ import (
 	"golang.org/x/net/proxy"
 
 	"encoding/hex"
+	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/multiwallet/keys"
 	"github.com/OpenBazaar/multiwallet/service"
 	"github.com/OpenBazaar/multiwallet/util"
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
+	"sort"
 )
 
 type ZCashWallet struct {
@@ -35,9 +37,11 @@ type ZCashWallet struct {
 
 	mPrivKey *hd.ExtendedKey
 	mPubKey  *hd.ExtendedKey
+
+	exchangeRates wi.ExchangeRates
 }
 
-func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer) (*ZCashWallet, error) {
+func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*ZCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	mPrivKey, err := hd.NewMaster(seed, params)
@@ -58,11 +62,19 @@ func NewZCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Par
 		return nil, err
 	}
 
-	wm := service.NewWalletService(cfg.DB, km, c, params, wi.Zcash)
+	wm, err := service.NewWalletService(cfg.DB, km, c, params, wi.Zcash, cache)
+	if err != nil {
+		return nil, err
+	}
+
+	var er wi.ExchangeRates
+	if !disableExchangeRates {
+		er = NewZcashPriceFetcher(proxy)
+	}
 
 	fp := util.NewFeeDefaultProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee)
 
-	return &ZCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey}, nil
+	return &ZCashWallet{cfg.DB, km, params, c, wm, fp, mPrivKey, mPubKey, er}, nil
 }
 
 func zcashCashAddress(key *hd.ExtendedKey, params *chaincfg.Params) (btcutil.Address, error) {
@@ -196,6 +208,7 @@ func (w *ZCashWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
+	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 
@@ -313,6 +326,10 @@ func (w *ZCashWallet) Close() {
 	w.client.Close()
 }
 
+func (w *ZCashWallet) ExchangeRates() wi.ExchangeRates {
+	return w.exchangeRates
+}
+
 func (w *ZCashWallet) DumpTables(wr io.Writer) {
 	fmt.Fprintln(wr, "Transactions-----")
 	txns, _ := w.db.Txns().GetAll(true)
@@ -328,12 +345,15 @@ func (w *ZCashWallet) DumpTables(wr io.Writer) {
 
 // Build a client.Transaction so we can ingest it into the wallet service then broadcast
 func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) error {
+	var buf bytes.Buffer
+	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
 	cTxn := client.Transaction{
 		Txid:          tx.TxHash().String(),
 		Locktime:      int(tx.LockTime),
 		Version:       int(tx.Version),
 		Confirmations: 0,
 		Time:          time.Now().Unix(),
+		RawBytes:      buf.Bytes(),
 	}
 	utxos, err := w.db.Utxos().GetAll()
 	if err != nil {
@@ -382,8 +402,6 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) error {
 		cTxn.Outputs = append(cTxn.Outputs, output)
 	}
 	w.ws.ProcessIncomingTransaction(cTxn)
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
 	_, err = w.client.Broadcast(buf.Bytes())
 	return err
 }

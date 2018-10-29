@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	//eth "github.com/OpenBazaar/go-ethwallet/wallet"
 	"github.com/OpenBazaar/multiwallet/bitcoin"
 	"github.com/OpenBazaar/multiwallet/bitcoincash"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -48,7 +49,7 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 		var w wallet.Wallet
 		switch coin.CoinType {
 		case wallet.Bitcoin:
-			w, err = bitcoin.NewBitcoinWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy)
+			w, err = bitcoin.NewBitcoinWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy, cfg.Cache, cfg.DisableExchangeRates)
 			if err != nil {
 				return nil, err
 			}
@@ -58,7 +59,7 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 				multiwallet[wallet.TestnetBitcoin] = w
 			}
 		case wallet.BitcoinCash:
-			w, err = bitcoincash.NewBitcoinCashWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy)
+			w, err = bitcoincash.NewBitcoinCashWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy, cfg.Cache, cfg.DisableExchangeRates)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +69,7 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 				multiwallet[wallet.TestnetBitcoinCash] = w
 			}
 		case wallet.Zcash:
-			w, err = zcash.NewZCashWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy)
+			w, err = zcash.NewZCashWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy, cfg.Cache, cfg.DisableExchangeRates)
 			if err != nil {
 				return nil, err
 			}
@@ -78,7 +79,7 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 				multiwallet[wallet.TestnetZcash] = w
 			}
 		case wallet.Litecoin:
-			w, err = litecoin.NewLitecoinWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy)
+			w, err = litecoin.NewLitecoinWallet(coin, cfg.Mnemonic, cfg.Params, cfg.Proxy, cfg.Cache, cfg.DisableExchangeRates)
 			if err != nil {
 				return nil, err
 			}
@@ -87,6 +88,12 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 			} else {
 				multiwallet[wallet.TestnetLitecoin] = w
 			}
+			/*case wallet.Ethereum:
+			w, err = eth.NewEthereumWallet(coin, cfg.Mnemonic)
+			if err != nil {
+				return nil, err
+			}
+			multiwallet[coin.CoinType] = w*/
 		}
 	}
 	return multiwallet, nil

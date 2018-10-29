@@ -225,17 +225,25 @@ func (s *SalesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 }
 
 func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
+	if addr == nil {
+		return nil, pb.OrderState(0), false, nil, fmt.Errorf("unable to find sale with nil payment address")
+	}
+
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
 	stmt, err := s.db.Prepare("select contract, state, funded, transactions from sales where paymentAddr=?")
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err
 	}
 	defer stmt.Close()
-	var contract []byte
-	var stateInt int
-	var fundedInt *int
-	var serializedTransactions []byte
+
+	var (
+		contract               []byte
+		stateInt               int
+		fundedInt              *int
+		serializedTransactions []byte
+	)
 	err = stmt.QueryRow(addr.EncodeAddress()).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions)
 	if err != nil {
 		return nil, pb.OrderState(0), false, nil, err
@@ -307,7 +315,7 @@ func (s *SalesDB) GetNeedsResync() ([]repo.UnfundedSale, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	var ret []repo.UnfundedSale
-	rows, err := s.db.Query(`select orderID, timestamp from sales where state=? and needsSync=?`, 1, 1)
+	rows, err := s.db.Query(`select orderID, contract, timestamp from sales where state=? and needsSync=?`, 1, 1)
 	if err != nil {
 		return ret, err
 	}
@@ -315,12 +323,18 @@ func (s *SalesDB) GetNeedsResync() ([]repo.UnfundedSale, error) {
 	for rows.Next() {
 		var orderID string
 		var timestamp int
-		err := rows.Scan(&orderID, &timestamp)
+		var contractBytes []byte
+		err := rows.Scan(&orderID, &contractBytes, &timestamp)
 		if err != nil {
 			return ret, err
 		}
 		if timestamp > 0 {
-			ret = append(ret, repo.UnfundedSale{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0)})
+			rc := new(pb.RicardianContract)
+			err = jsonpb.UnmarshalString(string(contractBytes), rc)
+			if err != nil {
+				return ret, err
+			}
+			ret = append(ret, repo.UnfundedSale{OrderId: orderID, Timestamp: time.Unix(int64(timestamp), 0), PaymentCoin: rc.BuyerOrder.Payment.Coin})
 		}
 	}
 	return ret, nil

@@ -3,7 +3,6 @@ package test
 import (
 	"os"
 	"path"
-
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"

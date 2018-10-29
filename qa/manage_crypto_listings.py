@@ -30,6 +30,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
 
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
         if r.status_code != 200:
@@ -61,6 +62,7 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
             raise TestFailure("ManageCryptoListingsTest - FAIL: Incorrect listing count: %d", len(resp))
 
         print("ManageCryptoListingsTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running ManageCryptoListingsTest")

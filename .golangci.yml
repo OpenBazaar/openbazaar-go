@@ -6,6 +6,8 @@ run:
 issues:
   max-per-linter: 999999
   max-same: 999999
+  exclude:
+    - composite literal uses unkeyed fields
 
 linters-settings:
   errcheck:
@@ -21,7 +23,7 @@ linters-settings:
   dupl:
     threshold: 600
   goconst:
-    min-occurrences: 5
+    min-occurrences: 10
   gocyclo:
     min-complexity: 180
   lll:
@@ -29,6 +31,7 @@ linters-settings:
 
 linters:
   enable:
+    - unconvert
     - gofmt
     - ineffassign
     - staticcheck
@@ -42,12 +45,11 @@ linters:
     - gocyclo
     - nakedret
     - lll
-  disable:
-    - errcheck
+    - goconst
     - govet
-    - golint
     - megacheck
     - goimports
-    - unconvert
+  disable:
+    - errcheck
+    - golint
     - prealloc
-    - goconst

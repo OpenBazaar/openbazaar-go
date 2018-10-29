@@ -3,11 +3,10 @@ package core_test
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test"
+	"github.com/golang/protobuf/proto"
 )
 
 func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
@@ -66,6 +65,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		Shipping: &pb.Order_Shipping{
 			Country: pb.CountryCode_UNITED_STATES,
 		},
+		Payment: &pb.Order_Payment{
+			Coin: "BTC",
+		},
 	}
 	contract.BuyerOrder = order
 
@@ -75,8 +77,7 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		t.Error(err)
 	}
 	if total != 125000 {
-		t.Error("Calculated wrong order total")
-		return
+		t.Errorf("Calculated wrong order total. Wanted %d, got %d", 125000, total)
 	}
 
 	// Test higher quantity
@@ -339,6 +340,9 @@ func TestOpenBazaarNode_CalculateOrderTotal(t *testing.T) {
 		},
 		Shipping: &pb.Order_Shipping{
 			Country: pb.CountryCode_UNITED_STATES,
+		},
+		Payment: &pb.Order_Payment{
+			Coin: "BTC",
 		},
 	}
 	contract2.BuyerOrder = order2

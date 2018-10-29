@@ -124,6 +124,7 @@ type Transaction struct {
 	Confirmations int      `json:"confirmations"`
 	Time          int64    `json:"time"`
 	BlockTime     int64    `json:"blocktime"`
+	RawBytes      []byte   `json:"rawbytes"`
 }
 
 type RawTxResponse struct {

@@ -1,11 +1,12 @@
 package selfhosted
 
 import (
-	"github.com/ipfs/go-ipfs/core/mock"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"os"
 	"testing"
+
+	"github.com/ipfs/go-ipfs/core/mock"
 )
 
 func TestSelfHostedStorage_Store(t *testing.T) {

@@ -57,11 +57,11 @@ type Config struct {
 	// A logger. You can write the logs to file or stdout or however else you want.
 	Logger logging.Backend
 
-	// An exchange rate provider implementation for Bitcoin Cash
-	ExchangeRateProvider wallet.ExchangeRates
-
 	// A slice of additional items to add to the bloom filter
 	AdditionalFilters [][]byte
+
+	// Disable exchange rate provider
+	DisableExchangeRates bool
 }
 
 func NewDefaultConfig() *Config {

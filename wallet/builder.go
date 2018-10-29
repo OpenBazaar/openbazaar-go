@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"errors"
 	"net"
 	"net/url"
 	"os"
@@ -22,14 +23,15 @@ import (
 )
 
 type WalletConfig struct {
-	ConfigFile         *schema.WalletsConfig
-	RepoPath           string
-	Logger             logging.Backend
-	DB                 *db.DB
-	Mnemonic           string
-	WalletCreationDate time.Time
-	Params             *chaincfg.Params
-	Proxy              proxy.Dialer
+	ConfigFile           *schema.WalletsConfig
+	RepoPath             string
+	Logger               logging.Backend
+	DB                   *db.DB
+	Mnemonic             string
+	WalletCreationDate   time.Time
+	Params               *chaincfg.Params
+	Proxy                proxy.Dialer
+	DisableExchangeRates bool
 }
 
 // Build a new multiwallet using values from the config file
@@ -55,6 +57,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	defaultConfig.Proxy = cfg.Proxy
 	defaultConfig.Params = cfg.Params
 	defaultConfig.Logger = cfg.Logger
+	defaultConfig.DisableExchangeRates = cfg.DisableExchangeRates
 
 	// For each coin we want to override the default database with our own sqlite db
 	// We'll only override the default settings if the coin exists in the config file
@@ -211,6 +214,9 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	// requested SPV for either Bitcoin or BitcoinCash. If so, we'll override the
 	// API implementation in the multiwallet map with an SPV implementation.
 	if cfg.ConfigFile.BTC != nil && strings.ToUpper(cfg.ConfigFile.BTC.Type) == "SPV" {
+		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
+			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
+		}
 		var tp net.Addr
 		if cfg.ConfigFile.BTC.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BTC.TrustedPeer)
@@ -225,28 +231,36 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		bitcoinPath := path.Join(cfg.RepoPath, "bitcoin")
 		os.Mkdir(bitcoinPath, os.ModePerm)
 		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:     cfg.Mnemonic,
-			Params:       cfg.Params,
-			MaxFee:       uint64(cfg.ConfigFile.BTC.MaxFee),
-			LowFee:       uint64(cfg.ConfigFile.BTC.LowFeeDefault),
-			MediumFee:    uint64(cfg.ConfigFile.BTC.MediumFeeDefault),
-			HighFee:      uint64(cfg.ConfigFile.BTC.HighFeeDefault),
-			FeeAPI:       *feeAPI,
-			RepoPath:     bitcoinPath,
-			CreationDate: cfg.WalletCreationDate,
-			DB:           CreateWalletDB(cfg.DB, wallet.Bitcoin),
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Proxy:        cfg.Proxy,
-			Logger:       cfg.Logger,
+			Mnemonic:             cfg.Mnemonic,
+			Params:               cfg.Params,
+			MaxFee:               uint64(cfg.ConfigFile.BTC.MaxFee),
+			LowFee:               uint64(cfg.ConfigFile.BTC.LowFeeDefault),
+			MediumFee:            uint64(cfg.ConfigFile.BTC.MediumFeeDefault),
+			HighFee:              uint64(cfg.ConfigFile.BTC.HighFeeDefault),
+			FeeAPI:               *feeAPI,
+			RepoPath:             bitcoinPath,
+			CreationDate:         cfg.WalletCreationDate,
+			DB:                   CreateWalletDB(cfg.DB, wallet.Bitcoin),
+			UserAgent:            "OpenBazaar",
+			TrustedPeer:          tp,
+			Proxy:                cfg.Proxy,
+			Logger:               cfg.Logger,
+			DisableExchangeRates: cfg.DisableExchangeRates,
 		}
 		bitcoinSPVWallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
 		if err != nil {
 			return nil, err
 		}
-		mw[wallet.Bitcoin] = bitcoinSPVWallet
+		if testnet {
+			mw[wallet.TestnetBitcoin] = bitcoinSPVWallet
+		} else {
+			mw[wallet.Bitcoin] = bitcoinSPVWallet
+		}
 	}
 	if cfg.ConfigFile.BCH != nil && strings.ToUpper(cfg.ConfigFile.BCH.Type) == "SPV" {
+		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
+			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
+		}
 		var tp net.Addr
 		if cfg.ConfigFile.BCH.TrustedPeer != "" {
 			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BCH.TrustedPeer)
@@ -261,26 +275,31 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		bitcoinCashPath := path.Join(cfg.RepoPath, "bitcoincash")
 		os.Mkdir(bitcoinCashPath, os.ModePerm)
 		bitcoinCashConfig := &bitcoincash.Config{
-			Mnemonic:     cfg.Mnemonic,
-			Params:       cfg.Params,
-			MaxFee:       uint64(cfg.ConfigFile.BCH.MaxFee),
-			LowFee:       uint64(cfg.ConfigFile.BCH.LowFeeDefault),
-			MediumFee:    uint64(cfg.ConfigFile.BCH.MediumFeeDefault),
-			HighFee:      uint64(cfg.ConfigFile.BCH.HighFeeDefault),
-			FeeAPI:       *feeAPI,
-			RepoPath:     bitcoinCashPath,
-			CreationDate: cfg.WalletCreationDate,
-			DB:           CreateWalletDB(cfg.DB, wallet.BitcoinCash),
-			UserAgent:    "OpenBazaar",
-			TrustedPeer:  tp,
-			Proxy:        cfg.Proxy,
-			Logger:       cfg.Logger,
+			Mnemonic:             cfg.Mnemonic,
+			Params:               cfg.Params,
+			MaxFee:               uint64(cfg.ConfigFile.BCH.MaxFee),
+			LowFee:               uint64(cfg.ConfigFile.BCH.LowFeeDefault),
+			MediumFee:            uint64(cfg.ConfigFile.BCH.MediumFeeDefault),
+			HighFee:              uint64(cfg.ConfigFile.BCH.HighFeeDefault),
+			FeeAPI:               *feeAPI,
+			RepoPath:             bitcoinCashPath,
+			CreationDate:         cfg.WalletCreationDate,
+			DB:                   CreateWalletDB(cfg.DB, wallet.BitcoinCash),
+			UserAgent:            "OpenBazaar",
+			TrustedPeer:          tp,
+			Proxy:                cfg.Proxy,
+			Logger:               cfg.Logger,
+			DisableExchangeRates: cfg.DisableExchangeRates,
 		}
 		bitcoinCashSPVWallet, err := bitcoincash.NewSPVWallet(bitcoinCashConfig)
 		if err != nil {
 			return nil, err
 		}
-		mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
+		if testnet {
+			mw[wallet.TestnetBitcoinCash] = bitcoinCashSPVWallet
+		} else {
+			mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
+		}
 	}
 
 	return mw, nil

@@ -99,6 +99,9 @@ type Wallet interface {
 	// Return the number of confirmations and the height for a transaction
 	GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error)
 
+	// Return the exchange rate implementation associated with this wallet
+	ExchangeRates() ExchangeRates
+
 	// Cleanly disconnect from the wallet
 	Close()
 }

@@ -104,7 +104,7 @@ func TestMigration008(t *testing.T) {
 		0,                      // lastNotifiedAt unix timestamp
 
 		disputedPurchaseID,                          // purchase order id
-		string(disputedPurchaseContractData),        // purchase contract blob
+		disputedPurchaseContractData,                // purchase contract blob
 		migrations.Migration008_OrderState_DISPUTED, // order state int
 		0, // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
@@ -175,7 +175,7 @@ func TestMigration008(t *testing.T) {
 			lastDisputeExpiryNotifiedAtColumnOnCasesExists = true
 		}
 	}
-	if lastDisputeExpiryNotifiedAtColumnOnCasesExists == false {
+	if !lastDisputeExpiryNotifiedAtColumnOnCasesExists {
 		t.Error("Expected lastDisputeExpiryNotifiedAt column to exist on cases")
 	}
 
@@ -194,7 +194,7 @@ func TestMigration008(t *testing.T) {
 		if actualCase.CaseId != caseID {
 			t.Error("Unexpected case ID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualCase.LastDisputeExpiryNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualCase.LastDisputeExpiryNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastDisputeExpiryNotifiedAt on case to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
@@ -226,13 +226,13 @@ func TestMigration008(t *testing.T) {
 			disputedAtOnPurchaseExists = true
 		}
 	}
-	if lastDisputeTimeoutNotifiedColumnOnPurchasesExists == false {
+	if !lastDisputeTimeoutNotifiedColumnOnPurchasesExists {
 		t.Error("Expected lastDisputeTimeoutNotifiedAt column to exist on purchases")
 	}
-	if lastDisputeExpiryNotifiedColumnOnPurchasesExists == false {
+	if !lastDisputeExpiryNotifiedColumnOnPurchasesExists {
 		t.Error("Expected lastDisputeExpiryNotifiedAt column to exist on purchases")
 	}
-	if disputedAtOnPurchaseExists == false {
+	if !disputedAtOnPurchaseExists {
 		t.Error("Expected disputedAt column to exist on purchases")
 	}
 
@@ -251,12 +251,12 @@ func TestMigration008(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualPurchase.LastDisputeTimeoutNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualPurchase.LastDisputeTimeoutNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastDisputeTimeoutNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}
 		if actualPurchase.OrderState == migrations.Migration008_OrderState_DISPUTED {
-			timeSinceMigration := time.Now().Sub(time.Unix(actualPurchase.LastDisputeExpiryNotifiedAt, 0))
+			timeSinceMigration := time.Since(time.Unix(actualPurchase.LastDisputeExpiryNotifiedAt, 0))
 			if timeSinceMigration > (time.Duration(2) * time.Second) {
 				t.Errorf("Expected lastDisputeExpiryNotifiedAt on purchase to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 			}
@@ -291,7 +291,7 @@ func TestMigration008(t *testing.T) {
 			lastDisputeTimeoutNotifierColumnOnSalesExists = true
 		}
 	}
-	if lastDisputeTimeoutNotifierColumnOnSalesExists == false {
+	if !lastDisputeTimeoutNotifierColumnOnSalesExists {
 		t.Error("Expected lastDisputeTimeoutNotifiedAt column on sales to exist on sales and not be nullable")
 	}
 
@@ -310,7 +310,7 @@ func TestMigration008(t *testing.T) {
 		if actualSale.OrderId != saleID {
 			t.Error("Unexpected orderID returned")
 		}
-		timeSinceMigration := time.Now().Sub(time.Unix(actualSale.LastDisputeTimeoutNotifiedAt, 0))
+		timeSinceMigration := time.Since(time.Unix(actualSale.LastDisputeTimeoutNotifiedAt, 0))
 		if timeSinceMigration > (time.Duration(2) * time.Second) {
 			t.Errorf("Expected lastDisputeTimeoutNotifiedAt on sale to be set within the last 2 seconds, but was set %s ago", timeSinceMigration)
 		}

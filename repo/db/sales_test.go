@@ -552,20 +552,20 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		neverNotifiedButUndisputeable = &repo.SaleRecord{
 			Contract:                     factory.NewUndisputeableContract(),
 			OrderID:                      "neverNotifiedButUndisputed",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		neverNotified = &repo.SaleRecord{
 			Contract:                     expectedContractOne,
 			OrderID:                      "neverNotified",
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Unix(0, 0),
 		}
 		finallyNotified = &repo.SaleRecord{
 			Contract:                     factory.NewContract(),
-			OrderState:                   pb.OrderState(pb.OrderState_FULFILLED),
+			OrderState:                   pb.OrderState_FULFILLED,
 			OrderID:                      "finalNotificationSent",
 			Timestamp:                    timeStart,
 			LastDisputeTimeoutNotifiedAt: time.Now(),
@@ -605,7 +605,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		switch s.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedSale = true
-			if reflect.DeepEqual(s, neverNotified) != true {
+			if !reflect.DeepEqual(s, neverNotified) {
 				t.Error("Expected neverNotified to match, but did not")
 				t.Error("Expected:", neverNotified)
 				t.Error("Actual:", s)
@@ -619,13 +619,13 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		}
 	}
 
-	if sawNeverNotifiedSale == false {
+	if !sawNeverNotifiedSale {
 		t.Error("Expected to see sale which was never notified")
 	}
-	if sawFinallyNotifiedSale == true {
-		t.Error("Expected NOT to see sale which recieved it's final notification")
+	if sawFinallyNotifiedSale {
+		t.Error("Expected NOT to see sale which received it's final notification")
 	}
-	if sawNeverNotifiedButUndisputeable == true {
+	if sawNeverNotifiedButUndisputeable {
 		t.Error("Expected NOT to see sale which is undisputeable")
 	}
 }
@@ -702,11 +702,11 @@ func TestUpdateSaleLastDisputeTimeoutNotifiedAt(t *testing.T) {
 
 		switch orderID {
 		case saleOne.OrderID:
-			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleOne.LastDisputeTimeoutNotifiedAt) != true {
+			if !time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleOne.LastDisputeTimeoutNotifiedAt) {
 				t.Error("Expected saleOne.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		case saleTwo.OrderID:
-			if time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleTwo.LastDisputeTimeoutNotifiedAt) != true {
+			if !time.Unix(lastDisputeTimeoutNotifiedAt, 0).Equal(saleTwo.LastDisputeTimeoutNotifiedAt) {
 				t.Error("Expected saleTwo.LastDisputeTimeoutNotifiedAt to be updated")
 			}
 		default:

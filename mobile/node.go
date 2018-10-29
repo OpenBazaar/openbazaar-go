@@ -4,6 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
+	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
+	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
+	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
+	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -27,7 +38,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/wallet"
 	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
+	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
@@ -42,17 +53,6 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 )
 
 // Node configuration structure
@@ -94,12 +94,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
 
-	// Coin type
-	ct := wi.Bitcoin
-	migrations.WalletCoinType = ct
+	migrations.WalletCoinType = config.CoinType
 
-	// Database
-	sqliteDB, err := initializeRepo(config.RepoPath, password, mnemonic, config.Testnet, time.Now(), ct)
+	sqliteDB, err := initializeRepo(config.RepoPath, "", "", true, time.Now(), config.CoinType)
 	if err != nil && err != repo.ErrRepoExists {
 		return nil, err
 	}
@@ -127,6 +124,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	if err != nil {
 		return nil, err
 	}
+
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err
@@ -185,7 +183,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -211,13 +209,14 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// Multiwallet setup
 	multiwalletConfig := &wallet.WalletConfig{
-		ConfigFile:         walletsConfig,
-		DB:                 sqliteDB.DB(),
-		Params:             &params,
-		RepoPath:           config.RepoPath,
-		Logger:             logger,
-		WalletCreationDate: creationDate,
-		Mnemonic:           mn,
+		ConfigFile:           walletsConfig,
+		DB:                   sqliteDB.DB(),
+		Params:               &params,
+		RepoPath:             config.RepoPath,
+		Logger:               logger,
+		WalletCreationDate:   creationDate,
+		Mnemonic:             mn,
+		DisableExchangeRates: config.DisableExchangerates,
 	}
 	mw, err := wallet.NewMultiWallet(multiwalletConfig)
 	if err != nil {
@@ -225,12 +224,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 
 	core.PublishLock.Lock()
-
-	// Exchange rates
-	var exchangeRates wi.ExchangeRates
-	if !config.DisableExchangerates {
-		exchangeRates = exchangerates.NewBitcoinPriceFetcher(nil)
-	}
 
 	// Set up the ban manager
 	settings, err := sqliteDB.Settings().Get()
@@ -271,15 +264,15 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		RepoPath:         config.RepoPath,
-		Datastore:        sqliteDB,
-		Multiwallet:      mw,
-		NameSystem:       ns,
-		ExchangeRates:    exchangeRates,
-		UserAgent:        core.USERAGENT,
-		PushNodes:        pushNodes,
-		BanManager:       bm,
-		MasterPrivateKey: mPrivKey,
+		BanManager:                    bm,
+		Datastore:                     sqliteDB,
+		MasterPrivateKey:              mPrivKey,
+		Multiwallet:                   mw,
+		NameSystem:                    ns,
+		OfflineMessageFailoverTimeout: 5 * time.Second,
+		PushNodes:                     pushNodes,
+		RepoPath:                      config.RepoPath,
+		UserAgent:                     core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
@@ -302,7 +295,7 @@ func (n *Node) startIPFSNode(repoPath string, config *ipfscore.BuildCfg) (*ipfsc
 
 	ctx.Online = true
 	ctx.ConfigRoot = repoPath
-	ctx.LoadConfig = func(path string) (*ipfsconfig.Config, error) {
+	ctx.LoadConfig = func(_ string) (*ipfsconfig.Config, error) {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
@@ -367,6 +360,28 @@ func (n *Node) Start() error {
 	go gateway.Serve()
 
 	go func() {
+		resyncManager := resync.NewResyncManager(n.OpenBazaarNode.Datastore.Sales(), n.OpenBazaarNode.Multiwallet)
+		if !n.config.DisableWallet {
+			if resyncManager == nil {
+				core.Node.WaitForMessageRetrieverCompletion()
+			}
+			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+			for ct, wal := range n.OpenBazaarNode.Multiwallet {
+				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
+				wal.AddTransactionListener(WL.OnTransactionReceived)
+				wal.AddTransactionListener(TL.OnTransactionReceived)
+			}
+			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
+			go su.Start()
+			go n.OpenBazaarNode.Multiwallet.Start()
+			if resyncManager != nil {
+				go resyncManager.Start()
+				go func() {
+					core.Node.WaitForMessageRetrieverCompletion()
+					resyncManager.CheckUnfunded()
+				}()
+			}
+		}
 		<-dht.DefaultBootstrapConfig.DoneChan
 		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
@@ -386,17 +401,6 @@ func (n *Node) Start() error {
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
-		if !n.config.DisableWallet {
-			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range n.OpenBazaarNode.Multiwallet {
-				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
-				wal.AddTransactionListener(WL.OnTransactionReceived)
-				wal.AddTransactionListener(TL.OnTransactionReceived)
-			}
-			su := wallet.NewStatusUpdater(n.OpenBazaarNode.Multiwallet, n.OpenBazaarNode.Broadcast, n.OpenBazaarNode.IpfsNode.Context())
-			go su.Start()
-			go n.OpenBazaarNode.Multiwallet.Start()
-		}
 
 		core.PublishLock.Unlock()
 		core.Node.UpdateFollow()
@@ -415,7 +419,6 @@ func (n *Node) Stop() error {
 	core.Node.Datastore.Close()
 	repoLockFile := filepath.Join(core.Node.RepoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
-	core.Node.Wallet.Close()
 	core.Node.Multiwallet.Close()
 	core.Node.IpfsNode.Close()
 	return nil

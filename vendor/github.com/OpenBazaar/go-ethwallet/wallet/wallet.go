@@ -34,15 +34,10 @@ import (
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
 
-const (
-	// InfuraAPIKey is the hard coded Infura API key
-	InfuraAPIKey = "openbazaar"
-)
-
 // EthConfiguration - used for eth specific configuration
 type EthConfiguration struct {
-	RopstenPPAddress string `yaml:"ROPSTEN_PPv2_ADDRESS"`
-	RegistryAddress  string `yaml:"ROPSTEN_REGISTRY"`
+	RopstenPPAddress       string `yaml:"ROPSTEN_PPv2_ADDRESS"`
+	RopstenRegistryAddress string `yaml:"ROPSTEN_REGISTRY"`
 }
 
 // EthRedeemScript - used to represent redeem script for eth wallet
@@ -82,9 +77,8 @@ type EthereumWallet struct {
 	account  *Account
 	address  *EthAddress
 	service  *Service
-	registry *Registry
-	ppsct    *Escrow
-	db       wi.Datastore
+	registry *Walletcm
+	ppsct    *Wallet
 }
 
 // NewEthereumWalletWithKeyfile will return a reference to the Eth Wallet
@@ -112,7 +106,7 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 		log.Fatalf("ethereum config not valid: %s", err.Error())
 	}
 
-	reg, err := NewRegistry(common.HexToAddress(ethConfig.RegistryAddress), client)
+	reg, err := NewWalletcm(common.HexToAddress(ethConfig.RopstenRegistryAddress), client)
 	if err != nil {
 		log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
@@ -124,12 +118,12 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, nil}
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil}
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
 func NewEthereumWallet(cfg config.CoinConfig, mnemonic string) (*EthereumWallet, error) {
-	client, err := NewEthClient(cfg.ClientAPI.String() + "/" + InfuraAPIKey)
+	client, err := NewEthClient(cfg.ClientAPI.String())
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
 		return nil, err
@@ -157,34 +151,21 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string) (*EthereumWallet,
 	}
 	addr := myAccount.Address()
 
-	ethConfig := EthConfiguration{}
+	_, filename, _, _ := runtime.Caller(0)
+	conf, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../configuration.yaml"))
 
-	var regAddr interface{}
-	var ok bool
-	if regAddr, ok = cfg.Options["RegistryAddress"]; !ok {
-		log.Errorf("ethereum registry not found: %s", err.Error())
+	if err != nil {
+		log.Errorf("ethereum config not found: %s", err.Error())
+		return nil, err
+	}
+	ethConfig := EthConfiguration{}
+	err = yaml.Unmarshal(conf, &ethConfig)
+	if err != nil {
+		log.Errorf("ethereum config not valid: %s", err.Error())
 		return nil, err
 	}
 
-	ethConfig.RegistryAddress = regAddr.(string)
-
-	/*
-		_, filename, _, _ := runtime.Caller(0)
-		conf, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../configuration.yaml"))
-
-		if err != nil {
-			log.Errorf("ethereum config not found: %s", err.Error())
-			return nil, err
-		}
-
-		err = yaml.Unmarshal(conf, &ethConfig)
-		if err != nil {
-			log.Errorf("ethereum config not valid: %s", err.Error())
-			return nil, err
-		}
-	*/
-
-	reg, err := NewRegistry(common.HexToAddress(ethConfig.RegistryAddress), client)
+	reg, err := NewWalletcm(common.HexToAddress(ethConfig.RopstenRegistryAddress), client)
 	if err != nil {
 		log.Errorf("error initilaizing contract failed: %s", err.Error())
 		return nil, err
@@ -197,7 +178,7 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string) (*EthereumWallet,
 	//	log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	//}
 
-	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil, cfg.DB}, nil
+	return &EthereumWallet{client, myAccount, &EthAddress{&addr}, &Service{}, reg, nil}, nil
 }
 
 // Params - return nil to comply
@@ -238,13 +219,13 @@ func (wallet *EthereumWallet) IsDust(amount int64) bool {
 
 // MasterPrivateKey - Get the master private key
 func (wallet *EthereumWallet) MasterPrivateKey() *hd.ExtendedKey {
-	return hd.NewExtendedKey([]byte{0x00, 0x00, 0x00, 0x00}, wallet.account.privateKey.D.Bytes(),
-		wallet.account.address.Bytes(), wallet.account.address.Bytes(), 0, 0, true)
+	return hd.NewExtendedKey([]byte{0x00, 0x00, 0x00, 0x00}, wallet.account.key.PrivateKey.D.Bytes(),
+		wallet.account.key.Address.Bytes(), wallet.account.key.Address.Bytes(), 0, 0, true)
 }
 
 // MasterPublicKey - Get the master public key
 func (wallet *EthereumWallet) MasterPublicKey() *hd.ExtendedKey {
-	publicKey := wallet.account.privateKey.Public()
+	publicKey := wallet.account.key.PrivateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Fatal("error casting public key to ECDSA")
@@ -252,7 +233,7 @@ func (wallet *EthereumWallet) MasterPublicKey() *hd.ExtendedKey {
 
 	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
 	return hd.NewExtendedKey([]byte{0x00, 0x00, 0x00, 0x00}, publicKeyBytes,
-		wallet.account.address.Bytes(), wallet.account.address.Bytes(), 0, 0, false)
+		wallet.account.key.Address.Bytes(), wallet.account.key.Address.Bytes(), 0, 0, false)
 }
 
 // ChildKey Generate a child key using the given chaincode. The key is used in multisig transactions.
@@ -415,7 +396,7 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
+	auth := bind.NewKeyedTransactor(wallet.account.key.PrivateKey)
 
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei
@@ -431,7 +412,7 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 		return nil, nil, errors.New("no escrow contract available")
 	}
 
-	smtct, err := NewEscrow(ver.Implementation, wallet.client)
+	smtct, err := NewWallet(ver.Implementation, wallet.client)
 	if err != nil {
 		log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
@@ -508,7 +489,7 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	var sigs []wi.Signature
 	shash := crypto.Keccak256(redeemScript)
 
-	sig, err := crypto.Sign(shash, wallet.account.privateKey)
+	sig, err := crypto.Sign(shash, wallet.account.key.PrivateKey)
 	if err != nil {
 		log.Errorf("error signing in createmultisig : %v", err)
 	}
@@ -569,7 +550,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		return nil, err
 	}
 
-	smtct, err := NewEscrow(rScript.MultisigAddress, wallet.client)
+	smtct, err := NewWallet(rScript.MultisigAddress, wallet.client)
 	if err != nil {
 		log.Fatalf("error initilaizing contract failed: %s", err.Error())
 	}
@@ -591,7 +572,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth := bind.NewKeyedTransactor(wallet.account.privateKey)
+	auth := bind.NewKeyedTransactor(wallet.account.key.PrivateKey)
 
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0) // in wei

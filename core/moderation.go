@@ -3,19 +3,17 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/OpenBazaar/jsonpb"
-	"golang.org/x/net/context"
-
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"golang.org/x/net/context"
 )
 
 // ModeratorPointerID  moderator ipfs multihash
@@ -130,7 +128,7 @@ func (n *OpenBazaarNode) RemoveSelfAsModerator() error {
 }
 
 // GetModeratorFee - fetch moderator fee
-func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode string) (uint64, error) {
+func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, currencyCode string) (uint64, error) {
 	file, err := ioutil.ReadFile(path.Join(n.RepoPath, "root", "profile.json"))
 	if err != nil {
 		return 0, err
@@ -152,7 +150,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode s
 			}
 			return profile.ModeratorInfo.Fee.FixedFee.Amount, nil
 		}
-		fee, err := n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
+		fee, err := n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 		if err != nil {
 			return 0, err
 		} else if fee >= transactionTotal {
@@ -165,7 +163,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, currencyCode s
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(currencyCode) {
 			fixed = profile.ModeratorInfo.Fee.FixedFee.Amount
 		} else {
-			fixed, err = n.getPriceInSatoshi(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
+			fixed, err = n.getPriceInSatoshi(paymentCoin, profile.ModeratorInfo.Fee.FixedFee.CurrencyCode, profile.ModeratorInfo.Fee.FixedFee.Amount)
 			if err != nil {
 				return 0, err
 			}
