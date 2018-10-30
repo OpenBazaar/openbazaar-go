@@ -31,6 +31,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
+		if output.Address == nil {
+			continue
+		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
@@ -43,6 +46,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 	}
 	for _, input := range cb.Inputs {
+		if input.LinkedAddress == nil {
+			continue
+		}
 		isForSale := true
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(input.LinkedAddress)
 		if err != nil {
