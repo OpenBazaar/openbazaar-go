@@ -4,11 +4,12 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"strconv"
+	"sync"
+
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/btcec"
-	"strconv"
-	"sync"
 )
 
 type KeysDB struct {

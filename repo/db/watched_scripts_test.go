@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/hex"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/wallet-interface"
 	"sync"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/wallet-interface"
 )
 
 var wsdb repo.WatchedScriptStore

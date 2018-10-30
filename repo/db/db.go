@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"path"
 	"sync"
-
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"

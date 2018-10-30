@@ -2,10 +2,6 @@ package ipfs
 
 import (
 	"context"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	_ "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/merkledag"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io"
 	"io/ioutil"
@@ -13,6 +9,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/coreunix"
+	_ "github.com/ipfs/go-ipfs/core/mock"
+	"github.com/ipfs/go-ipfs/merkledag"
 )
 
 // Recursively add a directory to IPFS and return the root hash
