@@ -2,6 +2,7 @@
 ![banner](https://i.imgur.com/iOnXDXK.png)
 OpenBazaar Server Daemon in Go
 
+[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Build Status](https://travis-ci.org/OpenBazaar/openbazaar-go.svg?branch=master)](https://travis-ci.org/OpenBazaar/openbazaar-go)
 [![Coverage Status](https://coveralls.io/repos/github/OpenBazaar/openbazaar-go/badge.svg?branch=master)](https://coveralls.io/github/OpenBazaar/openbazaar-go?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/OpenBazaar/openbazaar-go)](https://goreportcard.com/report/github.com/OpenBazaar/openbazaar-go)
@@ -101,8 +102,11 @@ Documentation of the OpenBazaar protocol has not been formalized yet. If you wou
 
 ## Contributing
 
-Contributions are definitely welcome! Please read the contributing [guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTING.md) before starting.
+We :heart: contributions from everyone! We welcome [bug reports](https://github.com/OpenBazaar/openbazaar-go/issues/), [bug fixes](https://github.com/OpenBazaar/openbazaar-go/pulls) and feedback on the library is always appreciated. Look at the [Contributor Guidelines](CONTRIBUTING.md) before starting.
+
+## [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/OpenBazaar/openbazaar-go/issues) [![GitHub contributors](https://img.shields.io/github/contributors/OpenBazaar/openbazaar-go.svg)](https://GitHub.com/OpenBazaar/openbazaar-go/graphs/contributors/)
 
 ## License
 
-[MIT](https://github.com/OpenBazaar/openbazaar-go/blob/master/LICENSE).
+This library is released under the [MIT License](https://github.com/OpenBazaar/openbazaar-go/blob/master/LICENSE)
+
