@@ -8,11 +8,14 @@ import "contracts.proto";
 message Post {
     string slug                         = 1;
     ID vendorID                         = 2;
-    string title                        = 3;
+    string status                       = 3;
     string longForm                     = 4;
     repeated Image images               = 5;
     repeated string tags                = 6;
-    google.protobuf.Timestamp timestamp = 7;
+    repeated string channels            = 7;
+    PostType postType                   = 8;
+    string reference                    = 9;
+    google.protobuf.Timestamp timestamp = 10;
 
     message Image {
         string filename = 1;
@@ -21,6 +24,12 @@ message Post {
         string medium   = 4;
         string small    = 5;
         string tiny     = 6;
+    }
+
+    enum PostType {
+        POST        = 0;
+        COMMENT     = 1;
+        REPOST      = 2;
     }
 }
 

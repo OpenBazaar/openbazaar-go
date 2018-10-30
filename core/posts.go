@@ -6,7 +6,6 @@ import (
 	"fmt"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -16,24 +15,111 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
 )
 
 // Constants for validation
 const (
-	PostTitleMaxCharacters    = 280
+	// PostStatusMaxCharacters - Maximum length of the status field of a post
+	PostStatusMaxCharacters = 280
+	// PostLongFormMaxCharacters - Maximum length of the longForm field of a post
 	PostLongFormMaxCharacters = 50000
-	MaxPostTags               = 50
-	PostTagsMaxCharacters     = 80
+	// PostMaximumTotalTags - Maximum number of tags a post can have
+	PostMaximumTotalTags = 50
+	// PostMaximumTotalChannels - Maximum number of channels a post can be addressed to
+	PostMaximumTotalChannels = 30
+	// PostTagsMaxCharacters - Maximum character length of a tag
+	PostTagsMaxCharacters = 256
+	// PostChannelsMaxCharacters - Maximum character length of a channel
+	PostChannelsMaxCharacters = 256
+	// PostReferenceMaxCharacters - Maximum character length of a reference
+	PostReferenceMaxCharacters = 256
+)
+
+// Errors
+var (
+	// ErrPostUnknownValidationPanic - post has an unknown panic error
+	ErrPostUnknownValidationPanic = errors.New("unexpected validation panic")
+
+	// ErrPostSlugNotEmpty - post slug is empty error
+	ErrPostSlugNotEmpty = errors.New("slug must not be empty")
+
+	// ErrPostSlugTooLong - post slug longer than max characters error
+	ErrPostSlugTooLong = fmt.Errorf("slug is longer than the max of %d", SentenceMaxCharacters)
+
+	// ErrPostSlugContainsSpaces - post slug has spaces error
+	ErrPostSlugContainsSpaces = errors.New("slugs cannot contain spaces")
+
+	// ErrPostSlugContainsSlashes - post slug has file separators
+	ErrPostSlugContainsSlashes = errors.New("slugs cannot contain file separators")
+
+	// ErrPostInvalidType - post type is invalid error
+	ErrPostInvalidType = errors.New("invalid post type")
+
+	// ErrPostStatusTooLong - post 'status' is longer than max characters error
+	ErrPostStatusTooLong = fmt.Errorf("status is longer than the max of %d", PostStatusMaxCharacters)
+
+	// ErrPostBodyTooLong - post 'longForm' is longer than max characters error
+	ErrPostBodyTooLong = fmt.Errorf("post is longer than the max of %d characters", PostLongFormMaxCharacters)
+
+	// ErrPostTagsTooMany - post tags longer than max length error
+	ErrPostTagsTooMany = fmt.Errorf("tags in the post is longer than the max of %d", PostMaximumTotalTags)
+
+	// ErrPostTagsEmpty - post has empty tags error
+	ErrPostTagsEmpty = errors.New("tags must not be empty")
+
+	// ErrPostTagTooLong - post tag has characters longer than max length error
+	ErrPostTagTooLong = fmt.Errorf("tags must be less than max of %d characters", PostTagsMaxCharacters)
+
+	// ErrPostChannelsTooMany - post channels longer than max length error
+	ErrPostChannelsTooMany = fmt.Errorf("channels in the post is longer than the max of %d", PostMaximumTotalChannels)
+
+	// ErrPostChannelTooLong - post channel has characters longer than max length error
+	ErrPostChannelTooLong = fmt.Errorf("channels must be less than max of %d characters", PostChannelsMaxCharacters)
+
+	// ErrPostReferenceEmpty - post has an empty reference error
+	ErrPostReferenceEmpty = errors.New("reference must not be empty")
+
+	// ErrPostReferenceTooLong - post reference has characters longer than max length error
+	ErrPostReferenceTooLong = fmt.Errorf("reference is longer than the max of %d", PostReferenceMaxCharacters)
+
+	// ErrPostReferenceContainsSpaces - post reference has spaces error
+	ErrPostReferenceContainsSpaces = errors.New("reference cannot contain spaces")
+
+	// ErrPostImagesTooMany - post images longer than max error
+	ErrPostImagesTooMany = fmt.Errorf("number of post images is greater than the max of %d", MaxListItems)
+
+	// ErrPostImageTinyFormatInvalid - post tiny image hash incorrectly formatted error
+	ErrPostImageTinyFormatInvalid = errors.New("tiny image hashes must be properly formatted CID")
+
+	// ErrPostImageSmallFormatInvalid - post small image hash incorrectly formatted error
+	ErrPostImageSmallFormatInvalid = errors.New("small image hashes must be properly formatted CID")
+
+	// ErrPostImageMediumFormatInvalid - post medium image hash incorrectly formatted error
+	ErrPostImageMediumFormatInvalid = errors.New("medium image hashes must be properly formatted CID")
+
+	// ErrPostImageLargeFInvalidormat - post large image hash incorrectly formatted error
+	ErrPostImageLargeFormatInvalid = errors.New("large image hashes must be properly formatted CID")
+
+	// ErrPostImageOriginalFormatInvalid - post original image hash incorrectly formatted error
+	ErrPostImageOriginalFormatInvalid = errors.New("original image hashes must be properly formatted CID")
+
+	// ErrPostImageFilenameNil - post image filename is nil error
+	ErrPostImageFilenameNil = errors.New("image file names must not be nil")
+
+	// ErrPostImageFilenameTooLong - post image filename length longer than max
+	ErrPostImageFilenameTooLong = fmt.Errorf("image filename length must be less than the max of %d", FilenameMaxCharacters)
 )
 
 // JSON structure returned for each post from GETPosts
 type postData struct {
 	Hash      string      `json:"hash"`
 	Slug      string      `json:"slug"`
-	Title     string      `json:"title"`
+	PostType  string      `json:"postType"`
+	Status    string      `json:"status"`
 	Images    []postImage `json:"images"`
 	Tags      []string    `json:"tags"`
+	Channels  []string    `json:"channels"`
+	Reference string      `json:"reference"`
 	Timestamp string      `json:"timestamp"`
 }
 
@@ -43,18 +129,11 @@ type postImage struct {
 	Medium string `json:"medium"`
 }
 
-//GeneratePostSlug  [Create a slug for the post based on the title, if a slug is missing]
-func (n *OpenBazaarNode) GeneratePostSlug(title string) (string, error) {
-	title = strings.Replace(title, "/", "", -1)
-	slugFromTitle := func(title string) string {
-		l := SentenceMaxCharacters - SlugBuffer
-		if len(title) < SentenceMaxCharacters-SlugBuffer {
-			l = len(title)
-		}
-		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
-	}
+//GeneratePostSlug  [Create a slug for the post based on the status, if a slug is missing]
+func (n *OpenBazaarNode) GeneratePostSlug(status string) (string, error) {
+	status = strings.Replace(status, "/", "", -1)
 	counter := 1
-	slugBase := slugFromTitle(title)
+	slugBase := createSlugFor(status)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetPostFromSlug(slugToTry)
@@ -147,35 +226,15 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 		return postData{}, err
 	}
 
-	/* Generic function to loop through each element in an array
-	and check if a certain string-type variable exists */
-	contains := func(s []string, e string) bool {
-		for _, a := range s {
-			if a == e {
-				return true
-			}
-		}
-		return false
-	}
-
-	/* Add a tag in the post to an array called tags,
-	which will be added to the postData object below */
-	tags := []string{}
-	for _, tag := range post.Post.Tags {
-		if !contains(tags, tag) {
-			tags = append(tags, tag)
-		}
-		if len(tags) > 15 {
-			tags = tags[0:15]
-		}
-	}
-
 	// Create the postData object
 	ld := postData{
-		Hash:  postHash,
-		Slug:  post.Post.Slug,
-		Title: post.Post.Title,
-		Tags:  tags,
+		Hash:      postHash,
+		Slug:      post.Post.Slug,
+		PostType:  post.Post.PostType.String(),
+		Status:    post.Post.Status,
+		Tags:      makeUnique(post.Post.Tags, 15),
+		Channels:  makeUnique(post.Post.Channels, 15),
+		Reference: post.Post.Reference,
 	}
 
 	// Add a timestamp to postData if it doesn't exist
@@ -198,6 +257,24 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 
 	// Returns postData in its final form
 	return ld, nil
+}
+
+// makeUnique returns a new slice of unique strings based on src which is not mutated
+func makeUnique(src []string, maxLength int) []string {
+	result := make([]string, 0, maxLength)
+	uniqueMap := make(map[string]struct{}, maxLength)
+	for _, v := range src {
+		if _, ok := uniqueMap[v]; ok {
+			continue
+		}
+		uniqueMap[v] = struct{}{}
+
+		result = append(result, v)
+		if len(result) >= maxLength {
+			break
+		}
+	}
+	return result
 }
 
 //getPostIndex  [Get the post's index]
@@ -459,81 +536,106 @@ func validatePost(post *pb.Post) (err error) {
 			case error:
 				err = x
 			default:
-				err = errors.New("Unknown panic")
+				err = ErrPostUnknownValidationPanic
 			}
 		}
 	}()
 
 	// Slug
 	if post.Slug == "" {
-		return errors.New("Slug must not be empty")
+		return ErrPostSlugNotEmpty
 	}
 	if len(post.Slug) > SentenceMaxCharacters {
-		return fmt.Errorf("Slug is longer than the max of %d", SentenceMaxCharacters)
+		return ErrPostSlugTooLong
 	}
 	if strings.Contains(post.Slug, " ") {
-		return errors.New("Slugs cannot contain spaces")
+		return ErrPostSlugContainsSpaces
 	}
 	if strings.Contains(post.Slug, "/") {
-		return errors.New("Slugs cannot contain file separators")
+		return ErrPostSlugContainsSlashes
 	}
 
-	// Tile
-	if post.Title == "" {
-		return errors.New("Post must have a title")
+	// Type
+	if _, ok := pb.Post_PostType_value[post.PostType.String()]; !ok {
+		return ErrPostInvalidType
 	}
-	if len(post.Title) > PostTitleMaxCharacters {
-		return fmt.Errorf("Title is longer than the max of %d", PostTitleMaxCharacters)
+
+	// Status
+	if len(post.Status) > PostStatusMaxCharacters {
+		return ErrPostStatusTooLong
 	}
 
 	// Long Form
 	if len(post.LongForm) > PostLongFormMaxCharacters {
-		return fmt.Errorf("Post is longer than the max of %d characters", PostLongFormMaxCharacters)
+		return ErrPostBodyTooLong
 	}
 
 	// Tags
-	if len(post.Tags) > MaxPostTags {
-		return fmt.Errorf("Tags in the post is longer than the max of %d characters", MaxPostTags)
+	if len(post.Tags) > PostMaximumTotalTags {
+		return ErrPostTagsTooMany
 	}
 	for _, tag := range post.Tags {
 		if tag == "" {
-			return errors.New("Tags must not be empty")
+			return ErrPostTagsEmpty
 		}
 		if len(tag) > PostTagsMaxCharacters {
-			return fmt.Errorf("Tags must be less than max of %d", PostTagsMaxCharacters)
+			return ErrPostTagTooLong
+		}
+	}
+
+	// Channels
+	if len(post.Channels) > PostMaximumTotalChannels {
+		return ErrPostChannelsTooMany
+	}
+	for _, channel := range post.Channels {
+		if len(channel) > PostChannelsMaxCharacters {
+			return ErrPostChannelTooLong
+		}
+	}
+
+	// Reference
+	if post.PostType == pb.Post_COMMENT || post.PostType == pb.Post_REPOST {
+		if post.Reference == "" {
+			return ErrPostReferenceEmpty
+		}
+		if len(post.Reference) > PostReferenceMaxCharacters {
+			return ErrPostReferenceTooLong
+		}
+		if strings.Contains(post.Reference, " ") {
+			return ErrPostReferenceContainsSpaces
 		}
 	}
 
 	// Images
 	if len(post.Images) > MaxListItems {
-		return fmt.Errorf("Number of post images is greater than the max of %d", MaxListItems)
+		return ErrPostImagesTooMany
 	}
 	for _, img := range post.Images {
 		_, err := cid.Decode(img.Tiny)
 		if err != nil {
-			return errors.New("Tiny image hashes must be properly formatted CID")
+			return ErrPostImageTinyFormatInvalid
 		}
 		_, err = cid.Decode(img.Small)
 		if err != nil {
-			return errors.New("Small image hashes must be properly formatted CID")
+			return ErrPostImageSmallFormatInvalid
 		}
 		_, err = cid.Decode(img.Medium)
 		if err != nil {
-			return errors.New("Medium image hashes must be properly formatted CID")
+			return ErrPostImageMediumFormatInvalid
 		}
 		_, err = cid.Decode(img.Large)
 		if err != nil {
-			return errors.New("Large image hashes must be properly formatted CID")
+			return ErrPostImageLargeFormatInvalid
 		}
 		_, err = cid.Decode(img.Original)
 		if err != nil {
-			return errors.New("Original image hashes must be properly formatted CID")
+			return ErrPostImageOriginalFormatInvalid
 		}
 		if img.Filename == "" {
-			return errors.New("Image file names must not be nil")
+			return ErrPostImageFilenameNil
 		}
 		if len(img.Filename) > FilenameMaxCharacters {
-			return fmt.Errorf("Image filename length must be less than the max of %d", FilenameMaxCharacters)
+			return ErrPostImageFilenameTooLong
 		}
 	}
 
