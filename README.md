@@ -24,7 +24,7 @@ This repository contains the OpenBazaar server daemon which handles the heavy li
 
 ## Install
 
-A typical install of OpenBazaar contains a bundle of the server daemon and user interface. If this is what you are looking for you can find an installer at https://openbazaar.org/download. If you are looking to run the server daemon by itself or to contribute to development see below for instructions.
+A typical install of OpenBazaar contains a bundle of the server daemon and user interface. If this is what you are looking for, you can find an installer at https://openbazaar.org/download. If you are looking to run the server daemon by itself or to contribute to development, see below for instructions.
 
 ### Install Pre-built Packages
 
@@ -95,12 +95,13 @@ Help Options:
 
 ## Documentation
 
-When ready we will put up a full documentation of the OpenBazaar protocol and the JSON API at https://docs.openbazaar.org
+Documentation of the OpenBazaar protocol has not been formalized yet. If you would like to help, please reach out on [Slack](https://openbazaar.slack.com/) or via a new issue on GitHub.
+
+`openbazaar-go` exposes an HTTP API which permits high-level interactions on the network and the internal wallet. Find the HTTP API documentation at [https://api.openbazaar.org](https://api.openbazaar.org).
 
 ## Contributing
 
-Contributions are definitely welcome! Please read the contributing [guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTING.md) before starting.
+Contributions are definitely welcome! Please read the Contributing [Guidelines](https://github.com/OpenBazaar/openbazaar-go/blob/master/CONTRIBUTING.md) before starting.
 
 ## License
-
 [MIT](https://github.com/OpenBazaar/openbazaar-go/blob/master/LICENSE).
