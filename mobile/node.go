@@ -365,7 +365,7 @@ func (n *Node) Start() error {
 			if resyncManager == nil {
 				core.Node.WaitForMessageRetrieverCompletion()
 			}
-			TL := lis.NewTransactionListener(core.Node.Datastore, core.Node.Broadcast)
+			TL := lis.NewTransactionListener(n.OpenBazaarNode.Multiwallet, core.Node.Datastore, core.Node.Broadcast)
 			for ct, wal := range n.OpenBazaarNode.Multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)

@@ -65,9 +65,6 @@ const (
 	PriceModifierMin = -99.99
 	// PriceModifierMax = max price modifier
 	PriceModifierMax = 1000.00
-
-	// DefaultCoinDivisibility - decimals for price
-	DefaultCoinDivisibility uint32 = 1e8
 )
 
 type price struct {
@@ -185,7 +182,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Check the listing data is correct for continuing
 	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
-	if err := validateListing(listing, testingEnabled); err != nil {
+	if err := n.validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
@@ -357,7 +354,7 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	}
 
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -447,10 +444,6 @@ func setCryptocurrencyListingDefaults(listing *pb.Listing) {
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-}
-
-func coinDivisibilityForType(coinType string) uint32 {
-	return DefaultCoinDivisibility
 }
 
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
@@ -866,7 +859,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func validateListing(listing *pb.Listing, testnet bool) (err error) {
+func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -1173,7 +1166,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -1287,7 +1280,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) error {
 	switch {
 	case len(listing.Coupons) > 0:
 		return ErrCryptocurrencyListingIllegalField("coupons")
@@ -1303,7 +1296,14 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+	var expectedDivisibility uint32
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.CoinType); err != nil {
+		expectedDivisibility = DefaultCurrencyDivisibility
+	} else {
+		expectedDivisibility = uint32(wallet.ExchangeRates().UnitsPerCoin())
+	}
+
+	if listing.Metadata.CoinDivisibility != expectedDivisibility {
 		return ErrListingCoinDivisibilityIncorrect
 	}
 
