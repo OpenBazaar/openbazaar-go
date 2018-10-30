@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
