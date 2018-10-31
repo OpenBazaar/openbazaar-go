@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	host "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
@@ -190,10 +191,18 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	if pmes.MessageType != pb.Message_BLOCK {
 		log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
 	}
+
 	ms, err := service.messageSenderForPeer(p)
 	if err != nil {
 		return err
 	}
+
+	// Add new p2p-circuit address for all people [extreme hack]
+	newAddr, err := ma.NewMultiaddr("/ip4/138.68.5.113/tcp/9005/ws/ipfs/QmRmZGBZNorXMSiNfwx5Z1pbDMoN4nBCTK4KrbvUbfAfMp/p2p-circuit/ipfs/" + peer.IDB58Encode(ms.p))
+	if err != nil {
+		return err
+	}
+	service.host.Peerstore().AddAddr(ms.p, newAddr, ps.PermanentAddrTTL)
 
 	cancelCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
