@@ -6,6 +6,8 @@ import (
 	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
 	ggio "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/io"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	"math/rand"
 	"sync"
 	"time"
@@ -89,6 +91,13 @@ func (ms *messageSender) prep() error {
 	if ms.s != nil {
 		return nil
 	}
+
+	// Add new p2p-circuit address for all people [extreme hack]
+	//newAddr, err := ma.NewMultiaddr("/ip4/138.68.5.113/tcp/9005/ws/ipfs/QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o/p2p-circuit/ipfs/" + peer.IDB58Encode(ms.p))
+	newAddr, err := ma.NewMultiaddr("/p2p-circuit/ipfs/" + peer.IDB58Encode(ms.p))
+	ms.service.host.Peerstore().AddAddr(ms.p, newAddr, ps.PermanentAddrTTL)
+	newAddr, err = ma.NewMultiaddr("/dns4/webchat.ob1.io/tcp/9999/wss/ipfs/QmVc37Xishzc8R3ZXn1p4Mm27nkSWhGSVdRr9Zi3NPRq8V/p2p-circuit/ipfs/" + peer.IDB58Encode(ms.p))
+	ms.service.host.Peerstore().AddAddr(ms.p, newAddr, ps.PermanentAddrTTL)
 
 	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
 	if err != nil {
