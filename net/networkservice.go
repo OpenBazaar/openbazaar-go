@@ -2,10 +2,10 @@ package net
 
 import (
 	"context"
+	"errors"
 	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 
-	"errors"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
@@ -18,7 +18,7 @@ type NetworkService interface {
 	// Handle incoming streams
 	HandleNewStream(s inet.Stream)
 
-	// Get handler for mesage type
+	// Get handler for message type
 	HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error)
 
 	// Send request to a peer and wait for the response

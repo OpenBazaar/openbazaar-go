@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -17,20 +18,23 @@ import (
 var log = logging.MustGetLogger("transaction-listener")
 
 type TransactionListener struct {
-	db        repo.Datastore
-	broadcast chan repo.Notifier
+	broadcast   chan repo.Notifier
+	db          repo.Datastore
+	multiwallet multiwallet.MultiWallet
 	*sync.Mutex
 }
 
-func NewTransactionListener(db repo.Datastore, broadcast chan repo.Notifier) *TransactionListener {
-	l := &TransactionListener{db, broadcast, new(sync.Mutex)}
-	return l
+func NewTransactionListener(mw multiwallet.MultiWallet, db repo.Datastore, broadcast chan repo.Notifier) *TransactionListener {
+	return &TransactionListener{broadcast, db, mw, new(sync.Mutex)}
 }
 
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	l.Lock()
 	defer l.Unlock()
 	for _, output := range cb.Outputs {
+		if output.Address == nil {
+			continue
+		}
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
@@ -43,6 +47,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		}
 	}
 	for _, input := range cb.Inputs {
+		if input.LinkedAddress == nil {
+			continue
+		}
 		isForSale := true
 		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(input.LinkedAddress)
 		if err != nil {
@@ -143,11 +150,10 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			}
 		}
 	}
-
 }
 
 func (l *TransactionListener) processSalePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {
-	funding := output.Value
+	var funding = output.Value
 	for _, r := range records {
 		funding += r.Value
 		// If we have already seen this transaction for some reason, just return
@@ -173,14 +179,21 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 			l.adjustInventory(contract)
 
 			n := repo.OrderNotification{
-				repo.NewNotificationID(),
-				"order",
-				contract.VendorListings[0].Item.Title,
-				contract.BuyerOrder.BuyerID.PeerID,
-				contract.BuyerOrder.BuyerID.Handle,
-				repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
-				orderId,
-				contract.VendorListings[0].Slug,
+				BuyerHandle: contract.BuyerOrder.BuyerID.Handle,
+				BuyerID:     contract.BuyerOrder.BuyerID.PeerID,
+				ID:          repo.NewNotificationID(),
+				ListingType: contract.VendorListings[0].Metadata.ContractType.String(),
+				OrderId:     orderId,
+				Price: repo.ListingPrice{
+					Amount:           contract.BuyerOrder.Payment.Amount,
+					CoinDivisibility: currencyDivisibilityFromContract(l.multiwallet, contract),
+					CurrencyCode:     contract.BuyerOrder.Payment.Coin,
+					PriceModifier:    contract.VendorListings[0].Metadata.PriceModifier,
+				},
+				Slug:      contract.VendorListings[0].Slug,
+				Thumbnail: repo.Thumbnail{contract.VendorListings[0].Item.Images[0].Tiny, contract.VendorListings[0].Item.Images[0].Small},
+				Title:     contract.VendorListings[0].Item.Title,
+				Type:      "order",
 			}
 
 			l.broadcast <- n
@@ -210,6 +223,18 @@ func (l *TransactionListener) processSalePayment(txid string, output wallet.Tran
 		bumpable = true
 	}
 	l.db.TxMetadata().Put(repo.Metadata{txid, "", title, orderId, thumbnail, bumpable})
+}
+
+func currencyDivisibilityFromContract(mw multiwallet.MultiWallet, contract *pb.RicardianContract) uint32 {
+	var currencyDivisibility = contract.VendorListings[0].Metadata.CoinDivisibility
+	if currencyDivisibility != 0 {
+		return currencyDivisibility
+	}
+	wallet, err := mw.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err == nil {
+		return uint32(wallet.ExchangeRates().UnitsPerCoin())
+	}
+	return core.DefaultCurrencyDivisibility
 }
 
 func (l *TransactionListener) processPurchasePayment(txid string, output wallet.TransactionOutput, contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord) {

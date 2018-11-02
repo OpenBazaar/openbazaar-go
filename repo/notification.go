@@ -2,8 +2,7 @@ package repo
 
 import (
 	"crypto/rand"
-	"encoding/json"
-	//"errors"
+	"encoding/json" //"errors"
 	"fmt"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"time"
@@ -16,7 +15,7 @@ type Notifier interface {
 	// Until we can represent this as part of the interface, the Notifiers which
 	// do not get persisted can safely return an empty string. Notifiers which are
 	// persisted and return a non-unique GetID() string will eventually fail the DB's
-	// uniqueness contraints during runtime.
+	// uniqueness constraints during runtime.
 	GetID() string
 
 	// GetType returns the type as a NotificationType
@@ -400,15 +399,24 @@ type messageTypingWrapper struct {
 	MessageRead Notifier `json:"messageTyping"`
 }
 
+type ListingPrice struct {
+	Amount           uint64  `json:"amount"`
+	CurrencyCode     string  `json:"currencyCode"`
+	PriceModifier    float32 `json:"priceModifier"`
+	CoinDivisibility uint32  `json:"coinDivisibility"`
+}
+
 type OrderNotification struct {
-	ID          string           `json:"notificationId"`
-	Type        NotificationType `json:"type"`
-	Title       string           `json:"title"`
-	BuyerID     string           `json:"buyerId"`
 	BuyerHandle string           `json:"buyerHandle"`
-	Thumbnail   Thumbnail        `json:"thumbnail"`
+	BuyerID     string           `json:"buyerId"`
+	ID          string           `json:"notificationId"`
+	ListingType string           `json:"listingType"`
 	OrderId     string           `json:"orderId"`
+	Price       ListingPrice     `json:"price"`
 	Slug        string           `json:"slug"`
+	Thumbnail   Thumbnail        `json:"thumbnail"`
+	Title       string           `json:"title"`
+	Type        NotificationType `json:"type"`
 }
 
 func (n OrderNotification) Data() ([]byte, error) {

@@ -139,6 +139,7 @@ func (ns *mpns) resolveOnce(ctx context.Context, name string, options *opts.Reso
 		// fails return from cache.
 		res, ok = ns.resolvers["pubsub"]
 		if ok {
+			options.DoNotSubscribe = true
 			p, err := res.resolveOnce(ctx, fullKey, options)
 			if err == nil {
 				return makePath(p)

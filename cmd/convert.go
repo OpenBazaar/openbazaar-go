@@ -1,34 +1,30 @@
 package cmd
 
 import (
+	"bufio"
+	"context"
 	"database/sql"
 	"encoding/json"
-
-	"context"
+	"errors"
 	"fmt"
-	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/pb"
+	"io/ioutil"
 	"os"
 	"path"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-
-	ipfscore "github.com/ipfs/go-ipfs/core"
-	"io/ioutil"
 	"strings"
-
-	"bufio"
-	"errors"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
-
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/golang/protobuf/proto"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"golang.org/x/crypto/ssh/terminal"
 	"syscall"
 	"time"
+
+	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/wallet-interface"
+	"github.com/golang/protobuf/proto"
+	ipfscore "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Convert struct {

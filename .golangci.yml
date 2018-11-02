@@ -48,8 +48,8 @@ linters:
     - goconst
     - govet
     - megacheck
+    - goimports
   disable:
     - errcheck
     - golint
-    - goimports
     - prealloc

@@ -129,7 +129,7 @@ func (m *openbazaarSchemaManager) IdentityKey() []byte { return m.identityKey }
 // Identity returns the struct representation of the []byte IdentityKey
 func (m *openbazaarSchemaManager) Identity() (*config.Identity, error) {
 	if len(m.identityKey) == 0 {
-		// All public constuctors set this value and should not occur during runtime
+		// All public constructors set this value and should not occur during runtime
 		return nil, errors.New("identity key is not generated")
 	}
 	identity, err := ipfs.IdentityFromKey(m.identityKey)
@@ -264,7 +264,7 @@ func (m *openbazaarSchemaManager) ResetForJSONApiTest() error {
 	return nil
 }
 
-// InitializeDatabaseSQL returns the executeable SQL string which initializes
+// InitializeDatabaseSQL returns the executable SQL string which initializes
 // the database schema. It assumes the target is an empty SQLite3 database which
 // supports encryption via the `PRAGMA key` statement
 func InitializeDatabaseSQL(encryptionPassword string) string {

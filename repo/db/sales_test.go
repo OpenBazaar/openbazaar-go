@@ -623,7 +623,7 @@ func TestGetSalesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		t.Error("Expected to see sale which was never notified")
 	}
 	if sawFinallyNotifiedSale {
-		t.Error("Expected NOT to see sale which recieved it's final notification")
+		t.Error("Expected NOT to see sale which received it's final notification")
 	}
 	if sawNeverNotifiedButUndisputeable {
 		t.Error("Expected NOT to see sale which is undisputeable")

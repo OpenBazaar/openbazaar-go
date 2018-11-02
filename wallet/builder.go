@@ -2,6 +2,13 @@ package wallet
 
 import (
 	"errors"
+	"net"
+	"net/url"
+	"os"
+	"path"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -13,12 +20,6 @@ import (
 	"github.com/cpacia/BitcoinCash-Wallet"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
-	"net"
-	"net/url"
-	"os"
-	"path"
-	"strings"
-	"time"
 )
 
 type WalletConfig struct {

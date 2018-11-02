@@ -8,14 +8,13 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/op/go-logging"
-
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/op/go-logging"
 )
 
 // DISPUTE CASES
@@ -807,7 +806,7 @@ func TestPerformTaskCreatesPurchaseExpiryNotifications(t *testing.T) {
 				}
 				if notifier.GetType() == repo.NotifierTypeBuyerDisputeExpiry {
 					broadcastCount++ // += 1
-					t.Logf("Notification Recieved: %+v\n", notifier)
+					t.Logf("Notification Received: %+v\n", notifier)
 				} else {
 					t.Errorf("Unexpected notification received: %s", notifier.GetType())
 				}

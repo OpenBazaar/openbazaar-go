@@ -17,7 +17,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
 
         # generate some coins and send them to buyer
         time.sleep(4)
-        api_url = buyer["gateway_url"] + "wallet/address"
+        api_url = buyer["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -38,6 +38,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         # post listing to vendor
         with open('testdata/listing_crypto.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
+        listing_json["metadata"]["acceptedCurrencies"] = ["t" + self.cointype]
 
         api_url = vendor["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -71,6 +72,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
         with open('testdata/order_crypto.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
+        order_json["paymentCoin"] = "t" + self.cointype
         api_url = buyer["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -119,6 +121,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
+            "wallet": self.cointype,
             "address": payment_address,
             "amount": payment_amount,
             "feeLevel": "NORMAL"
@@ -190,6 +193,7 @@ class PurchaseCryptoListingTest(OpenBazaarTestFramework):
             raise TestFailure("PurchaseCryptoListingTest - FAIL: Inventory incorrect: %d", resp["ether"]["inventory"])
 
         print("PurchaseCryptoListingTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running PurchaseCryptoListingTest")

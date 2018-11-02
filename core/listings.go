@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -14,16 +16,12 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
-	"github.com/microcosm-cc/bluemonday"
-
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/proto"
+	"github.com/kennygrant/sanitize"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 const (
@@ -67,9 +65,6 @@ const (
 	PriceModifierMin = -99.99
 	// PriceModifierMax = max price modifier
 	PriceModifierMax = 1000.00
-
-	// DefaultCoinDivisibility - decimals for price
-	DefaultCoinDivisibility uint32 = 1e8
 )
 
 type price struct {
@@ -103,6 +98,12 @@ type ListingData struct {
 	AcceptedCurrencies []string  `json:"acceptedCurrencies"`
 	CoinType           string    `json:"coinType"`
 }
+
+var (
+	ErrShippingRegionMustBeSet          = errors.New("shipping region must be set")
+	ErrShippingRegionUndefined          = errors.New("undefined shipping region")
+	ErrShippingRegionMustNotBeContinent = errors.New("cannot specify continent as shipping region")
+)
 
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
@@ -181,7 +182,7 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 
 	// Check the listing data is correct for continuing
 	testingEnabled := n.TestNetworkEnabled() || n.RegressionNetworkEnabled()
-	if err := validateListing(listing, testingEnabled); err != nil {
+	if err := n.validateListing(listing, testingEnabled); err != nil {
 		return sl, err
 	}
 
@@ -353,7 +354,7 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	}
 
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -443,10 +444,6 @@ func setCryptocurrencyListingDefaults(listing *pb.Listing) {
 	listing.Item.Options = []*pb.Listing_Item_Option{}
 	listing.ShippingOptions = []*pb.Listing_ShippingOption{}
 	listing.Metadata.Format = pb.Listing_Metadata_MARKET_PRICE
-}
-
-func coinDivisibilityForType(coinType string) uint32 {
-	return DefaultCoinDivisibility
 }
 
 func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingData, error) {
@@ -663,7 +660,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 }
 
 // IsItemForSale Check to see we are selling the given listing. Used when validating an order.
-// FIXME: This wont scale well. We will need to store the hash of active listings in a db to do an indexed search.
+// FIXME: This won't scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
@@ -862,7 +859,7 @@ func (n *OpenBazaarNode) GetListingFromSlug(slug string) (*pb.SignedListing, err
 /* Performs a ton of checks to make sure the listing is formatted correctly. We should not allow
    invalid listings to be saved or purchased as it can lead to ambiguity when moderating a dispute
    or possible attacks. This function needs to be maintained in conjunction with contracts.proto */
-func validateListing(listing *pb.Listing, testnet bool) (err error) {
+func (n *OpenBazaarNode) validateListing(listing *pb.Listing, testnet bool) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			switch x := r.(type) {
@@ -1169,7 +1166,7 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 			return err
 		}
 	} else if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY {
-		err := validateCryptocurrencyListing(listing)
+		err := n.validateCryptocurrencyListing(listing)
 		if err != nil {
 			return err
 		}
@@ -1183,6 +1180,24 @@ func validateListing(listing *pb.Listing, testnet bool) (err error) {
 		}
 	}
 
+	return nil
+}
+
+func ValidShippingRegion(shippingOption *pb.Listing_ShippingOption) error {
+	for _, region := range shippingOption.Regions {
+		if int32(region) == 0 {
+			return ErrShippingRegionMustBeSet
+		}
+		_, ok := proto.EnumValueMap("CountryCode")[region.String()]
+		if !ok {
+			return ErrShippingRegionUndefined
+		}
+		if ok {
+			if int32(region) > 500 {
+				return ErrShippingRegionMustNotBeContinent
+			}
+		}
+	}
 	return nil
 }
 
@@ -1227,13 +1242,8 @@ func validatePhysicalListing(listing *pb.Listing) error {
 		if len(shippingOption.Regions) == 0 {
 			return errors.New("Shipping options must specify at least one region")
 		}
-		for _, region := range shippingOption.Regions {
-			if int(region) == 0 {
-				return errors.New("Shipping region cannot be NA")
-			} else if int(region) > 246 && int(region) != 500 {
-				return errors.New("Invalid shipping region")
-			}
-
+		if err := ValidShippingRegion(shippingOption); err != nil {
+			return fmt.Errorf("Invalid shipping option (%s): %s", shippingOption.String(), err.Error())
 		}
 		if len(shippingOption.Regions) > MaxCountryCodes {
 			return fmt.Errorf("Number of shipping regions is greater than the max of %d", MaxCountryCodes)
@@ -1270,7 +1280,7 @@ func validatePhysicalListing(listing *pb.Listing) error {
 	return nil
 }
 
-func validateCryptocurrencyListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) validateCryptocurrencyListing(listing *pb.Listing) error {
 	switch {
 	case len(listing.Coupons) > 0:
 		return ErrCryptocurrencyListingIllegalField("coupons")
@@ -1286,7 +1296,14 @@ func validateCryptocurrencyListing(listing *pb.Listing) error {
 		return ErrCryptocurrencyListingCoinTypeRequired
 	}
 
-	if listing.Metadata.CoinDivisibility != coinDivisibilityForType(listing.Metadata.CoinType) {
+	var expectedDivisibility uint32
+	if wallet, err := n.Multiwallet.WalletForCurrencyCode(listing.Metadata.CoinType); err != nil {
+		expectedDivisibility = DefaultCurrencyDivisibility
+	} else {
+		expectedDivisibility = uint32(wallet.ExchangeRates().UnitsPerCoin())
+	}
+
+	if listing.Metadata.CoinDivisibility != expectedDivisibility {
 		return ErrListingCoinDivisibilityIncorrect
 	}
 

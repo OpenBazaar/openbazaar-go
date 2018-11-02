@@ -1,11 +1,12 @@
 package ipfs
 
 import (
-	"github.com/ipfs/go-ipfs/core/mock"
 	"io/ioutil"
 	"os"
 	"path"
 	"testing"
+
+	"github.com/ipfs/go-ipfs/core/mock"
 )
 
 func TestMain(m *testing.M) {
