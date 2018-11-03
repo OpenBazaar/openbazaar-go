@@ -8,6 +8,7 @@ import (
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"math"
 	"path"
 	"sync"
 	"time"
@@ -222,15 +223,30 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 		}
 	}
 	for _, p := range n.PushNodes {
-		go func(pid peer.ID) {
-			err := n.SendStore(pid.Pretty(), graph)
-			if err != nil {
-				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
-			}
-		}(p)
+		go retryableSeedStoreToPeer(p)
 	}
 
 	return nil
+}
+
+const retryCount = 5
+
+func retryableSeedStoreToPeer(pid peer.ID) {
+	var retryTimeout = 2 * time.Second
+	for {
+		err := n.SendStore(pid.Pretty(), graph)
+		if err != nil {
+			if retryTimeout > math.Pow((2*time.Second), retryCount) {
+				log.Errorf("error pushing to peer %s: %s", pid.Pretty(), err.Error())
+				return
+			}
+			log.Errorf("error pushing to peer %s...backing off: %s", pid.Pretty(), err.Error())
+			time.Sleep(retryTimeout)
+			retryTimeout += retryTimeout
+			continue
+		}
+		return
+	}
 }
 
 // SetUpRepublisher - periodic publishing to IPNS
