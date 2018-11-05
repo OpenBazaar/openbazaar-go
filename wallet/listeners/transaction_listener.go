@@ -10,6 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
@@ -28,6 +29,29 @@ func NewTransactionListener(mw multiwallet.MultiWallet, db repo.Datastore, broad
 	return &TransactionListener{broadcast, db, mw, new(sync.Mutex)}
 }
 
+func (l *TransactionListener) getOrderDetails(orderID string, address btc.Address, isSales bool) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, error) {
+	var contract *pb.RicardianContract
+	var state pb.OrderState
+	var funded bool
+	var records []*wallet.TransactionRecord
+	var err error
+	if isSales {
+		if orderID != "" {
+			contract, state, funded, records, _, err = l.db.Sales().GetByOrderId(orderID)
+		} else {
+			contract, state, funded, records, err = l.db.Sales().GetByPaymentAddress(address)
+		}
+	} else {
+		if orderID != "" {
+			contract, state, funded, records, _, err = l.db.Purchases().GetByOrderId(orderID)
+		} else {
+			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(address)
+		}
+	}
+
+	return contract, state, funded, records, err
+}
+
 func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallback) {
 	l.Lock()
 	defer l.Unlock()
@@ -35,12 +59,20 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 		if output.Address == nil {
 			continue
 		}
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
+		var contract *pb.RicardianContract
+		var state pb.OrderState
+		var funded bool
+		var records []*wallet.TransactionRecord
+		var err error
+
+		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, true)
+
+		//contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(output.Address)
 		if err == nil && state != pb.OrderState_PROCESSING_ERROR {
 			l.processSalePayment(cb.Txid, output, contract, state, funded, records)
 			continue
 		}
-		contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(output.Address)
+		contract, state, funded, records, err = l.getOrderDetails(output.OrderID, output.Address, false)
 		if err == nil {
 			l.processPurchasePayment(cb.Txid, output, contract, state, funded, records)
 			continue
@@ -51,9 +83,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 		isForSale := true
-		contract, state, funded, records, err := l.db.Sales().GetByPaymentAddress(input.LinkedAddress)
+		contract, state, funded, records, err := l.getOrderDetails(input.OrderID, input.LinkedAddress, true)
 		if err != nil {
-			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(input.LinkedAddress)
+			contract, state, funded, records, err = l.getOrderDetails(input.OrderID, input.LinkedAddress, false)
 			if err != nil {
 				continue
 			}
