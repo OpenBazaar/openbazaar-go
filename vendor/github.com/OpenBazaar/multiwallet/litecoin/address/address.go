@@ -731,7 +731,11 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 			return nil, errors.New(nilAddrErrStr)
 		}
 		return payToPubKeyHashScript(addr.ScriptAddress())
-
+	case *AddressWitnessScriptHash:
+		if addr == nil {
+			return nil, errors.New(nilAddrErrStr)
+		}
+		return payToScriptHashScript(addr.ScriptAddress())
 	case *AddressScriptHash:
 		if addr == nil {
 			return nil, errors.New(nilAddrErrStr)
