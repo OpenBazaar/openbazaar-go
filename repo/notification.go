@@ -443,6 +443,7 @@ type PaymentNotification struct {
 	Type         NotificationType `json:"type"`
 	OrderId      string           `json:"orderId"`
 	FundingTotal uint64           `json:"fundingTotal"`
+	CoinType     string           `json:"cointype"`
 }
 
 func (n PaymentNotification) Data() ([]byte, error) {
