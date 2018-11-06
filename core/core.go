@@ -222,15 +222,19 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 		}
 	}
 	for _, p := range n.PushNodes {
-		go n.retryableSeedStoreToPeer(p, graph)
+		go n.retryableSeedStoreToPeer(p, hash, graph)
 	}
 
 	return nil
 }
 
-func (n *OpenBazaarNode) retryableSeedStoreToPeer(pid peer.ID, graph []cid.Cid) {
+func (n *OpenBazaarNode) retryableSeedStoreToPeer(pid peer.ID, graphHash string, graph []cid.Cid) {
 	var retryTimeout = 2 * time.Second
 	for {
+		if graphHash != n.RootHash {
+			log.Errorf("root hash has changed, aborting push to %s", pid.Pretty())
+			return
+		}
 		err := n.SendStore(pid.Pretty(), graph)
 		if err != nil {
 			if retryTimeout > 60*time.Second {
