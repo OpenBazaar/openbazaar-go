@@ -155,11 +155,16 @@ func (n *OpenBazaarNode) SignListing(listing *pb.Listing) (*pb.SignedListing, er
 	if listing.Metadata.ContractType == pb.Listing_Metadata_CRYPTOCURRENCY && len(listing.Metadata.AcceptedCurrencies) != 1 {
 		return sl, errors.New("a cryptocurrency listing must only have one accepted currency")
 	}
+	currencyMap := make(map[string]bool)
 	for _, acceptedCurrency := range listing.Metadata.AcceptedCurrencies {
 		_, err := n.Multiwallet.WalletForCurrencyCode(acceptedCurrency)
 		if err != nil {
 			return sl, fmt.Errorf("currency %s is not found in multiwallet", acceptedCurrency)
 		}
+		if currencyMap[NormalizeCurrencyCode(acceptedCurrency)] {
+			return sl, errors.New("duplicate accepted currency in listing")
+		}
+		currencyMap[NormalizeCurrencyCode(acceptedCurrency)] = true
 	}
 
 	// Sanitize a few critical fields
