@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"strconv"
 	"sync"
 	"time"
@@ -146,7 +147,7 @@ func (ws *WalletService) ProcessIncomingTransaction(tx client.Transaction) {
 					utxo := client.Utxo{
 						Txid:          tx.Txid,
 						ScriptPubKey:  out.ScriptPubKey.Hex,
-						Satoshis:      int64(out.Value * util.SatoshisPerCoin(ws.coinType)),
+						Satoshis:      int64(math.Round(out.Value * float64(util.SatoshisPerCoin(ws.coinType)))),
 						Vout:          out.N,
 						Address:       addr,
 						Confirmations: 0,
@@ -450,7 +451,8 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 		if len(out.ScriptPubKey.Addresses) == 0 {
 			continue
 		}
-		v := int64(out.Value * util.SatoshisPerCoin(ws.coinType))
+
+		v := int64(math.Round(out.Value * float64(util.SatoshisPerCoin(ws.coinType))))
 
 		txout := wire.NewTxOut(v, script)
 		msgTx.TxOut = append(msgTx.TxOut, txout)
