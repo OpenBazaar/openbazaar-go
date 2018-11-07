@@ -1,11 +1,12 @@
 package core
 
 import (
+	"context"
 	"errors"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"sync"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -29,12 +29,19 @@ const (
 // OfflineMessageWaitGroup - used for offline msgs
 var OfflineMessageWaitGroup sync.WaitGroup
 
+// DefaultTimeoutContext returns a context with the maximum timeout desired
+// for the user interface. This timeout context should NOT be applied to
+// background processes or services.
+func (n *OpenBazaarNode) DefaultTimeoutContext(background context.Context) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(background, n.OfflineMessageFailoverTimeout)
+}
+
 func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb.Message) error {
 	p, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
@@ -139,10 +146,9 @@ func (n *OpenBazaarNode) GetPeerStatus(peerID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
 	defer cancel()
-	m := pb.Message{MessageType: pb.Message_PING}
-	_, err = n.Service.SendRequest(ctx, p, &m)
+	_, err = n.Service.SendRequest(ctx, p, &pb.Message{MessageType: pb.Message_PING})
 	if err != nil {
 		return "offline", nil
 	}
@@ -260,8 +266,6 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 		return resp, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
 		return resp, err
@@ -271,6 +275,8 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 		Payload:     any,
 	}
 
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
+	defer cancel()
 	resp, err = n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
 		return resp, err
@@ -464,7 +470,7 @@ func (n *OpenBazaarNode) SendChat(peerID string, chatMessage *pb.Chat) error {
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &m)
 	if err != nil && chatMessage.Flag != pb.Chat_TYPING {
@@ -565,12 +571,13 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerID string) error {
 
 // SendBlock - send requested ipfs block to peer
 func (n *OpenBazaarNode) SendBlock(peerID string, id cid.Cid) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
 	block, err := n.IpfsNode.Blocks.GetBlock(ctx, &id)
 	if err != nil {
+		cancel()
 		return err
 	}
+	cancel()
 
 	b := &pb.Block{
 		Cid:     block.Cid().String(),
@@ -589,7 +596,9 @@ func (n *OpenBazaarNode) SendBlock(peerID string, id cid.Cid) error {
 	if err != nil {
 		return err
 	}
-	return n.Service.SendMessage(context.Background(), p, &m)
+	ctx, cancel = n.DefaultTimeoutContext(context.Background())
+	defer cancel()
+	return n.Service.SendMessage(ctx, p, &m)
 }
 
 // SendStore - send requested stores to peer
@@ -615,7 +624,9 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	if err != nil {
 		return err
 	}
-	pmes, err := n.Service.SendRequest(context.Background(), p, &m)
+	ctx, cancel := n.DefaultTimeoutContext(context.Background())
+	defer cancel()
+	pmes, err := n.Service.SendRequest(ctx, p, &m)
 	if err != nil {
 		return err
 	}
@@ -634,16 +645,20 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 		return err
 	}
 	if len(resp.Cids) == 0 {
-		log.Debugf("Peer %s requested no blocks", peerID)
+		log.Debugf("peer %s requested no blocks", peerID)
 		return nil
 	}
 	log.Debugf("Sending %d blocks to %s", len(resp.Cids), peerID)
 	for _, id := range resp.Cids {
 		decoded, err := cid.Decode(id)
 		if err != nil {
+			log.Debugf("failed decoding store block (%s) for peer (%s)", id, peerID)
 			continue
 		}
-		n.SendBlock(peerID, *decoded)
+		if err := n.SendBlock(peerID, *decoded); err != nil {
+			log.Debugf("failed sending store block (%s) to peer (%s)", id, peerID)
+			continue
+		}
 	}
 	return nil
 }

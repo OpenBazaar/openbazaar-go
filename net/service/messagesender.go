@@ -26,8 +26,13 @@ type messageSender struct {
 	requestlk sync.Mutex
 }
 
-var ReadMessageTimeout = time.Minute * 5
-var ErrReadTimeout = fmt.Errorf("timed out reading response")
+var (
+	ReadMessageTimeout = time.Minute * 5
+
+	ErrContextTimeout  = fmt.Errorf("context timeout exceeded")
+	ErrReadTimeout     = fmt.Errorf("timed out reading response")
+	ErrRetriesExceeded = fmt.Errorf("maximum retries exceeded")
+)
 
 func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSender, error) {
 	service.senderlk.Lock()
@@ -36,6 +41,7 @@ func (service *OpenBazaarService) messageSenderForPeer(p peer.ID) (*messageSende
 		service.senderlk.Unlock()
 		return ms, nil
 	}
+	log.Debugf("%s creating new sender", p)
 	ms = &messageSender{p: p, service: service, requests: make(map[int32]chan *pb.Message, 2)}
 	service.sender[p] = ms
 	service.senderlk.Unlock()
@@ -90,10 +96,14 @@ func (ms *messageSender) prep() error {
 		return nil
 	}
 
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
+	log.Debugf("%s creating new stream", ms.p)
+	ctx, cancel := ms.service.node.DefaultTimeoutContext(ms.service.ctx)
+	defer cancel()
+	nstr, err := ms.service.host.NewStream(ctx, ms.p, ProtocolOpenBazaar)
 	if err != nil {
 		return err
 	}
+	log.Debugf("%s stream created", ms.p)
 
 	ms.r = ggio.NewDelimitedReader(nstr, inet.MessageSizeMax)
 	ms.w = ggio.NewDelimitedWriter(nstr)
@@ -108,6 +118,7 @@ func (ms *messageSender) prep() error {
 const streamReuseTries = 3
 
 func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) error {
+	log.Debugf("%s sending message", ms.p)
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	retry := false
@@ -149,13 +160,16 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) erro
 
 	select {
 	case r := <-response:
+		log.Debugf("%s done sending message", ms.p)
 		return r
 	case <-ctx.Done():
+		log.Debugf("%s timeout sending message", ms.p)
 		return ErrContextTimeout
 	}
 }
 
 func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb.Message, error) {
+	log.Debugf("%s sending request", ms.p)
 	pmes.RequestId = rand.Int31()
 	returnChan := make(chan *pb.Message)
 	ms.requestlk.Lock()
@@ -166,49 +180,77 @@ func (ms *messageSender) SendRequest(ctx context.Context, pmes *pb.Message) (*pb
 
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
+
+	type readResponse struct {
+		msg *pb.Message
+		err error
+	}
+	response := make(chan readResponse, 1)
 	retry := false
-	for {
-		if err := ms.prep(); err != nil {
-			return nil, err
-		}
 
-		if err := ms.w.WriteMsg(pmes); err != nil {
-			ms.s.Reset()
-			ms.s = nil
-
-			if retry {
-				return nil, err
-			} else {
-				retry = true
-				continue
+	go func() {
+		for {
+			if err := ms.prep(); err != nil {
+				response <- readResponse{nil, err}
+				return
 			}
-		}
 
-		mes, err := ms.ctxReadMsg(ctx, returnChan)
-		if err != nil {
-			ms.s.Reset()
-			ms.s = nil
-			return nil, err
-		}
+			log.Debugf("%s writing request", ms.p)
+			if err := ms.w.WriteMsg(pmes); err != nil {
+				ms.s.Reset()
+				ms.s = nil
 
-		if ms.singleMes > streamReuseTries {
-			ms.s.Close()
-			ms.s = nil
-		} else if retry {
-			ms.singleMes++
-		}
+				if retry {
+					response <- readResponse{nil, err}
+					return
+				} else {
+					retry = true
+					continue
+				}
+			}
 
-		return mes, nil
+			log.Debugf("%s reading response from request", ms.p)
+			mes, err := ms.ctxReadMsg(ctx, returnChan)
+			if err != nil {
+				ms.s.Reset()
+				ms.s = nil
+				response <- readResponse{nil, err}
+				return
+			}
+
+			if ms.singleMes > streamReuseTries {
+				ms.s.Close()
+				ms.s = nil
+			} else if retry {
+				ms.singleMes++
+			}
+
+			response <- readResponse{mes, nil}
+			return
+		}
+	}()
+
+	select {
+	case r := <-response:
+		log.Debugf("%s done sending request", ms.p)
+		return r.msg, r.err
+	case <-ctx.Done():
+		log.Debugf("%s timeout sending request", ms.p)
+		return nil, ErrContextTimeout
 	}
 }
 
 // stop listening for responses
 func (ms *messageSender) closeRequest(id int32) {
+	log.Debugf("%s closing request", ms.p)
 	ms.requestlk.Lock()
 	ch, ok := ms.requests[id]
 	if ok {
 		close(ch)
 		delete(ms.requests, id)
+		log.Debugf("%s closed request", ms.p)
+	} else {
+		log.Debugf("%s request not found... abort close", ms.p)
 	}
 	ms.requestlk.Unlock()
 }
@@ -219,10 +261,13 @@ func (ms *messageSender) ctxReadMsg(ctx context.Context, returnChan chan *pb.Mes
 
 	select {
 	case mes := <-returnChan:
+		log.Debugf("%s context read responded", ms.p)
 		return mes, nil
 	case <-ctx.Done():
+		log.Debugf("%s context read timeout", ms.p)
 		return nil, ctx.Err()
 	case <-t.C:
+		log.Debugf("%s context read timer expire", ms.p)
 		return nil, ErrReadTimeout
 	}
 }

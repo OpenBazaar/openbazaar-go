@@ -68,19 +68,22 @@ func (service *OpenBazaarService) DisconnectFromPeer(p peer.ID) error {
 }
 
 func (service *OpenBazaarService) HandleNewStream(s inet.Stream) {
+	log.Debugf("handling stream from peer %s", s.Conn().RemotePeer())
 	go service.handleNewMessage(s)
 }
 
 func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 	defer s.Close()
-	cr := ctxio.NewReader(service.ctx, s) // ok to use. we defer close stream in this func
-	r := ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
-	mPeer := s.Conn().RemotePeer()
-
 	// Check if banned
+	var mPeer = s.Conn().RemotePeer()
 	if service.node.BanManager.IsBanned(mPeer) {
 		return
 	}
+
+	var (
+		cr = ctxio.NewReader(service.ctx, s)
+		r  = ggio.NewDelimitedReader(cr, inet.MessageSizeMax)
+	)
 
 	ms, err := service.messageSenderForPeer(mPeer)
 	if err != nil {
@@ -166,7 +169,9 @@ func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pm
 		return nil, err
 	}
 
-	rpmes, err := ms.SendRequest(ctx, pmes)
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	rpmes, err := ms.SendRequest(cancelCtx, pmes)
 	if err != nil {
 		log.Debugf("No response from %s", p.Pretty())
 		return nil, err
@@ -190,7 +195,9 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 		return err
 	}
 
-	if err := ms.SendMessage(ctx, pmes); err != nil {
+	cancelCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if err := ms.SendMessage(cancelCtx, pmes); err != nil {
 		return err
 	}
 	return nil
