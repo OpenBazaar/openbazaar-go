@@ -111,31 +111,47 @@ func (ms *messageSender) SendMessage(ctx context.Context, pmes *pb.Message) erro
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	retry := false
-	for {
-		if err := ms.prep(); err != nil {
-			return err
-		}
 
-		if err := ms.w.WriteMsg(pmes); err != nil {
-			ms.s.Reset()
-			ms.s = nil
+	response := make(chan error, 1)
 
-			if retry {
-				return err
-			} else {
-				retry = true
-				continue
+	go func() {
+		for {
+			if err := ms.prep(); err != nil {
+				response <- err
+				return
 			}
-		}
 
-		if ms.singleMes > streamReuseTries {
-			ms.s.Close()
-			ms.s = nil
-		} else if retry {
-			ms.singleMes++
-		}
+			log.Debugf("%s writing message", ms.p)
+			if err := ms.w.WriteMsg(pmes); err != nil {
+				ms.s.Reset()
+				ms.s = nil
 
-		return nil
+				if retry {
+					response <- err
+					return
+				} else {
+					retry = true
+					continue
+				}
+			}
+
+			if ms.singleMes > streamReuseTries {
+				ms.s.Close()
+				ms.s = nil
+			} else if retry {
+				ms.singleMes++
+			}
+
+			response <- nil
+			return
+		}
+	}()
+
+	select {
+	case r := <-response:
+		return r
+	case <-ctx.Done():
+		return ErrContextTimeout
 	}
 }
 
