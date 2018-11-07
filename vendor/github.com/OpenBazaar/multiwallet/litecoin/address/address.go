@@ -735,7 +735,7 @@ func PayToAddrScript(addr btcutil.Address) ([]byte, error) {
 		if addr == nil {
 			return nil, errors.New(nilAddrErrStr)
 		}
-		return payToScriptHashScript(addr.ScriptAddress())
+		return payToWitnessScriptHashScript(addr.ScriptAddress())
 	case *AddressScriptHash:
 		if addr == nil {
 			return nil, errors.New(nilAddrErrStr)
@@ -760,6 +760,12 @@ func payToPubKeyHashScript(pubKeyHash []byte) ([]byte, error) {
 func payToScriptHashScript(scriptHash []byte) ([]byte, error) {
 	return txscript.NewScriptBuilder().AddOp(txscript.OP_HASH160).AddData(scriptHash).
 		AddOp(txscript.OP_EQUAL).Script()
+}
+
+// payToWitnessPubKeyHashScript creates a new script to pay to a version 0
+// script hash witness program. The passed hash is expected to be valid.
+func payToWitnessScriptHashScript(scriptHash []byte) ([]byte, error) {
+	return txscript.NewScriptBuilder().AddOp(txscript.OP_0).AddData(scriptHash).Script()
 }
 
 func ExtractPkScriptAddrs(pkScript []byte, chainParams *chaincfg.Params) (btcutil.Address, error) {

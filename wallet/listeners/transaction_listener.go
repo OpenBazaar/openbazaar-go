@@ -298,6 +298,7 @@ func (l *TransactionListener) processPurchasePayment(txid string, output wallet.
 			"payment",
 			orderId,
 			uint64(funding),
+			contract.BuyerOrder.Payment.Coin,
 		}
 		l.broadcast <- n
 		l.db.Notifications().PutRecord(repo.NewNotification(n, time.Now(), false))
