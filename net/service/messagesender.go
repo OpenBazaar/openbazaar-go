@@ -101,6 +101,9 @@ func (ms *messageSender) prep() error {
 	log.Debugf("%s creating new stream", ms.p)
 	// Add new p2p-circuit address for all people [extreme hack]
 	newAddr, err := ma.NewMultiaddr("/ip4/138.68.5.113/wss/9999/ipfs/QmRmZGBZNorXMSiNfwx5Z1pbDMoN4nBCTK4KrbvUbfAfMp/p2p-circuit/ipfs/" + peer.IDB58Encode(ms.p))
+	if err != nil {
+		return err
+	}
 	ms.service.host.Peerstore().AddAddr(ms.p, newAddr, ps.PermanentAddrTTL)
 
 	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)

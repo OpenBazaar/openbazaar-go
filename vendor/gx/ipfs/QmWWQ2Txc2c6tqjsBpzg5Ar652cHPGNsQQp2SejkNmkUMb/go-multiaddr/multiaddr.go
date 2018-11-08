@@ -2,6 +2,7 @@ package multiaddr
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -59,6 +60,11 @@ func (m *multiaddr) Bytes() []byte {
 
 // String returns the string representation of a Multiaddr
 func (m *multiaddr) String() string {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Printf("Panic in String on input %q: %s", hex.EncodeToString(m.bytes), e)
+		}
+	}()
 	s, err := bytesToString(m.bytes)
 	if err != nil {
 		panic("multiaddr failed to convert back to string. corrupted?")
