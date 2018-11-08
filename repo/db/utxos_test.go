@@ -44,21 +44,21 @@ func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore
 	return NewUnspentTransactionStore(database, new(sync.Mutex), wallet.Bitcoin), appSchema.DestroySchemaDirectories, nil
 }
 
-func mustNewUxdbWithUtxo() (repo.UnspentTransactionOutputStore, wallet.Utxo, error) {
+func mustNewUxdbWithUtxo() (repo.UnspentTransactionOutputStore, wallet.Utxo, func(), error) {
 	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
 	utxo := mustNewUtxo()
 	if err != nil {
-		return nil, utxo, err
+		return nil, utxo, teardown, err
 	}
-	defer teardown()
-	return uxdb, utxo, uxdb.Put(utxo)
+	return uxdb, utxo, teardown, uxdb.Put(utxo)
 }
 
 func TestUtxoPut(t *testing.T) {
-	var uxdb, utxo, err = mustNewUxdbWithUtxo()
+	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer teardown()
 	stmt, _ := uxdb.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
 	defer stmt.Close()
 
@@ -86,10 +86,11 @@ func TestUtxoPut(t *testing.T) {
 }
 
 func TestUtxoGetAll(t *testing.T) {
-	var uxdb, utxo, err = mustNewUxdbWithUtxo()
+	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer teardown()
 	utxos, err := uxdb.GetAll()
 	if err != nil {
 		t.Error(err)
@@ -112,10 +113,11 @@ func TestUtxoGetAll(t *testing.T) {
 }
 
 func TestSetWatchOnlyUtxo(t *testing.T) {
-	var uxdb, utxo, err = mustNewUxdbWithUtxo()
+	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer teardown()
 	err = uxdb.SetWatchOnly(utxo)
 	if err != nil {
 		t.Error(err)
@@ -136,10 +138,11 @@ func TestSetWatchOnlyUtxo(t *testing.T) {
 }
 
 func TestDeleteUtxo(t *testing.T) {
-	var uxdb, utxo, err = mustNewUxdbWithUtxo()
+	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
+	defer teardown()
 	err = uxdb.Delete(utxo)
 	if err != nil {
 		t.Error(err)
