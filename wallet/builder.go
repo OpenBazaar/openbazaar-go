@@ -12,7 +12,7 @@ import (
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	db "github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -61,6 +61,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 
 	// For each coin we want to override the default database with our own sqlite db
 	// We'll only override the default settings if the coin exists in the config file
+	var coinCfgs []config.CoinConfig
 	for _, coin := range defaultConfig.Coins {
 		switch coin.CoinType {
 		case wallet.Bitcoin:
@@ -90,6 +91,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPI = *api
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.BitcoinCash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -117,6 +119,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPI = *api
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.Zcash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -144,6 +147,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPI = *api
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.Litecoin:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -171,8 +175,10 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPI = *api
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		}
 	}
+	defaultConfig.Coins = coinCfgs
 	mw, err := multiwallet.NewMultiWallet(defaultConfig)
 	if err != nil {
 		return nil, err
