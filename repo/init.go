@@ -162,7 +162,7 @@ func addConfigExtensions(repoRoot string) error {
 		ws = schema.WalletsConfig{
 			BTC: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://btc.bloqapi.net/insight-api",
+				API:              "https://btc.insight.openbazaar.org/insight-api",
 				APITestnet:       "https://test-insight.bitpay.com/api",
 				MaxFee:           200,
 				FeeAPI:           "https://btc.fees.openbazaar.org",
@@ -181,7 +181,7 @@ func addConfigExtensions(repoRoot string) error {
 			},
 			LTC: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://insight.litecore.io/api",
+				API:              "https://ltc.insight.openbazaar.org/insight-lite-api",
 				APITestnet:       "https://testnet.litecore.io/api",
 				MaxFee:           200,
 				HighFeeDefault:   20,
