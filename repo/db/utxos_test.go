@@ -44,15 +44,18 @@ func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore
 	return NewUnspentTransactionStore(database, new(sync.Mutex), wallet.Bitcoin), appSchema.DestroySchemaDirectories, nil
 }
 
-func TestUtxoPut(t *testing.T) {
+func mustNewUxdbWithUtxo() (repo.UnspentTransactionOutputStore, wallet.Utxo, error) {
 	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
+	utxo := mustNewUtxo()
 	if err != nil {
-		t.Fatal(err)
+		return nil, utxo, err
 	}
 	defer teardown()
+	return uxdb, utxo, uxdb.Put(utxo)
+}
 
-	utxo := mustNewUtxo()
-	err = uxdb.Put(utxo)
+func TestUtxoPut(t *testing.T) {
+	var uxdb, utxo, err = mustNewUxdbWithUtxo()
 	if err != nil {
 		t.Error(err)
 	}
@@ -83,14 +86,7 @@ func TestUtxoPut(t *testing.T) {
 }
 
 func TestUtxoGetAll(t *testing.T) {
-	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer teardown()
-
-	utxo := mustNewUtxo()
-	err = uxdb.Put(utxo)
+	var uxdb, utxo, err = mustNewUxdbWithUtxo()
 	if err != nil {
 		t.Error(err)
 	}
@@ -116,14 +112,7 @@ func TestUtxoGetAll(t *testing.T) {
 }
 
 func TestSetWatchOnlyUtxo(t *testing.T) {
-	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer teardown()
-
-	utxo := mustNewUtxo()
-	err = uxdb.Put(utxo)
+	var uxdb, utxo, err = mustNewUxdbWithUtxo()
 	if err != nil {
 		t.Error(err)
 	}
@@ -147,14 +136,7 @@ func TestSetWatchOnlyUtxo(t *testing.T) {
 }
 
 func TestDeleteUtxo(t *testing.T) {
-	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer teardown()
-
-	utxo := mustNewUtxo()
-	err = uxdb.Put(utxo)
+	var uxdb, utxo, err = mustNewUxdbWithUtxo()
 	if err != nil {
 		t.Error(err)
 	}
