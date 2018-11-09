@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
@@ -74,21 +74,21 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		OrigName:     false,
 	}
 
-	var currencies []string
+	var acceptedCurrencies []string
 	settingsData, _ := n.Datastore.Settings().Get()
 	if settingsData.PreferredCurrencies != nil {
-		currencies = append(currencies, *settingsData.PreferredCurrencies...)
+		for _, ct := range *settingsData.PreferredCurrencies {
+			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct))
+		}
 	} else {
 		for ct := range n.Multiwallet {
-			currencies = append(currencies, ct.CurrencyCode())
+			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct.CurrencyCode()))
 		}
 	}
 
-	for _, cc := range currencies {
-		profile.Currencies = append(profile.Currencies, NormalizeCurrencyCode(cc))
-		if profile.ModeratorInfo != nil {
-			profile.ModeratorInfo.AcceptedCurrencies = append(profile.ModeratorInfo.AcceptedCurrencies, NormalizeCurrencyCode(cc))
-		}
+	profile.Currencies = acceptedCurrencies
+	if profile.ModeratorInfo != nil {
+		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
 	}
 
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
