@@ -1,2 +1,2 @@
-requests=2.18.4
-python-bitcoinlib=0.8.0
+requests==2.18.4
+python-bitcoinlib==0.8.0
