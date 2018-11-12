@@ -1,12 +1,11 @@
-// +build linux darwin freebsd netbsd openbsd
-// +build nofuse
+// +build !windows,nofuse
 
 package commands
 
 import (
 	cmds "github.com/ipfs/go-ipfs/commands"
 
-	"gx/ipfs/QmceUdzxkimdYsgtX733uNgzf1DLHyBKN6ehGSp85ayppM/go-ipfs-cmdkit"
+	"gx/ipfs/Qmde5VP1qUkyQXKCfmEUA7bP64V2HAptbJ7phuPp7jXWwg/go-ipfs-cmdkit"
 )
 
 var MountCmd = &cmds.Command{

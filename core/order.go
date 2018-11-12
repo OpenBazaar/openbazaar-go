@@ -21,7 +21,7 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	ipfspath "github.com/ipfs/go-ipfs/path"
+	//ipfspath "github.com/ipfs/go-ipfs/path"
 )
 
 type option struct {

@@ -15,18 +15,18 @@ import (
 	keystore "github.com/ipfs/go-ipfs/keystore"
 	repo "github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/common"
-	config "github.com/ipfs/go-ipfs/repo/config"
 	mfsr "github.com/ipfs/go-ipfs/repo/fsrepo/migrations"
-	serialize "github.com/ipfs/go-ipfs/repo/fsrepo/serialize"
 	dir "github.com/ipfs/go-ipfs/thirdparty/dir"
 
-	"github.com/ipfs/go-ipfs/Godeps/_workspace/src/github.com/mitchellh/go-homedir"
-
-	util "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
-	lockfile "gx/ipfs/QmPdqSMmiwtQCBC515gFtMW2mP14HsfgnyQ2k5xPQVxMge/go-fs-lock"
-	logging "gx/ipfs/QmRb5jh8z2E8hMGN2tkvs1yHynUanqnZ3UeKwgN1i9P1F8/go-log"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	measure "gx/ipfs/QmbJgZGRtkFeSdCxBCPaMKWRDYbqMxHyFfvjQGcWzpqsDe/go-ds-measure"
+	config "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	serialize "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config/serialize"
+	util "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
+	measure "gx/ipfs/QmQS6UXi1R87y9nEgnCNmG6YfMzvBSLir7xUheMNFP3hoe/go-ds-measure"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	logging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	lockfile "gx/ipfs/Qmc4w3gm2TqoEbTYjpPs5FXP8DEB6cuvZWPy6bUTKiht7a/go-fs-lock"
+	homedir "gx/ipfs/QmdcULN1WCzgoQmcCaUAmEhwcxHYsDrbZ2LvRJKCL8dMrK/go-homedir"
 )
 
 // LockFile is the filename of the repo lock, relative to config dir
@@ -36,7 +36,7 @@ const LockFile = "repo.lock"
 var log = logging.Logger("fsrepo")
 
 // version number that we are currently expecting to see
-var RepoVersion = 6
+var RepoVersion = 7
 
 var migrationInstructions = `See https://github.com/ipfs/fs-repo-migrations/blob/master/run.md
 Sorry for the inconvenience. In the future, these will run automatically.`
@@ -175,8 +175,10 @@ func open(repoPath string) (repo.Repo, error) {
 		return nil, err
 	}
 
-	if r.config.Experimental.FilestoreEnabled {
+	if r.config.Experimental.FilestoreEnabled || r.config.Experimental.UrlstoreEnabled {
 		r.filemgr = filestore.NewFileManager(r.ds, filepath.Dir(r.path))
+		r.filemgr.AllowFiles = r.config.Experimental.FilestoreEnabled
+		r.filemgr.AllowUrls = r.config.Experimental.UrlstoreEnabled
 	}
 
 	keepLocked = true
@@ -400,6 +402,9 @@ func (r *FSRepo) openDatastore() error {
 	} else if r.config.Datastore.Spec == nil {
 		return fmt.Errorf("required Datastore.Spec entry missing from config file")
 	}
+	if r.config.Datastore.NoSync {
+		log.Warning("NoSync is now deprecated in favor of datastore specific settings. If you want to disable fsync on flatfs set 'sync' to false. See https://github.com/ipfs/go-ipfs/blob/master/docs/datastores.md#flatfs.")
+	}
 
 	dsc, err := AnyDatastoreConfig(r.config.Datastore.Spec)
 	if err != nil {
@@ -593,6 +598,14 @@ func (r *FSRepo) SetConfigKey(key string, value interface{}) error {
 		return err
 	}
 
+	// Load private key to guard against it being overwritten.
+	// NOTE: this is a temporary measure to secure this field until we move
+	// keys out of the config file.
+	pkval, err := common.MapGetKV(mapconf, config.PrivKeySelector)
+	if err != nil {
+		return err
+	}
+
 	// Get the type of the value associated with the key
 	oldValue, err := common.MapGetKV(mapconf, key)
 	ok := true
@@ -633,6 +646,11 @@ func (r *FSRepo) SetConfigKey(key string, value interface{}) error {
 		return err
 	}
 
+	// replace private key, in case it was overwritten.
+	if err := common.MapSetKV(mapconf, config.PrivKeySelector, pkval); err != nil {
+		return err
+	}
+
 	// This step doubles as to validate the map against the struct
 	// before serialization
 	conf, err := config.FromMap(mapconf)
@@ -656,29 +674,7 @@ func (r *FSRepo) Datastore() repo.Datastore {
 
 // GetStorageUsage computes the storage space taken by the repo in bytes
 func (r *FSRepo) GetStorageUsage() (uint64, error) {
-	pth, err := config.PathRoot()
-	if err != nil {
-		return 0, err
-	}
-
-	pth, err = filepath.EvalSymlinks(pth)
-	if err != nil {
-		log.Debugf("filepath.EvalSymlinks error: %s", err)
-		return 0, err
-	}
-
-	var du uint64
-	err = filepath.Walk(pth, func(p string, f os.FileInfo, err error) error {
-		if err != nil {
-			log.Debugf("filepath.Walk error: %s", err)
-			return nil
-		}
-		if f != nil {
-			du += uint64(f.Size())
-		}
-		return nil
-	})
-	return du, err
+	return ds.DiskUsage(r.Datastore())
 }
 
 func (r *FSRepo) SwarmKey() ([]byte, error) {
@@ -688,15 +684,11 @@ func (r *FSRepo) SwarmKey() ([]byte, error) {
 	f, err := os.Open(spath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
-		} else {
-			return nil, err
+			err = nil
 		}
-	}
-	defer f.Close()
-	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	return ioutil.ReadAll(f)
 }

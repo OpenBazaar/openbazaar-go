@@ -1,0 +1,22 @@
+{
+  "author": "golang",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "golang.org/x/crypto"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.11.0",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "go-crypto",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.1"
+}
+

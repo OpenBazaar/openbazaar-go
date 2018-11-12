@@ -10,8 +10,8 @@ import (
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-	path "github.com/ipfs/go-ipfs/path"
+	//pb "github.com/ipfs/go-ipfs/namesys/pb"
+	//path "github.com/ipfs/go-ipfs/path"
 )
 
 // Resolve an IPNS record. This is a multi-step process.

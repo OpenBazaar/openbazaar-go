@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/repo/config"
+	//"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/tyler-smith/go-bip39"

@@ -13,7 +13,7 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	_ "github.com/ipfs/go-ipfs/core/mock"
-	"github.com/ipfs/go-ipfs/merkledag"
+	//"github.com/ipfs/go-ipfs/merkledag"
 )
 
 // Recursively add a directory to IPFS and return the root hash

@@ -1,13 +1,221 @@
 {
-  "name": "openbazaar-go",
   "author": "chris",
-  "version": "0.12.4",
-  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
-  "language": "english",
-  "license": "",
   "bugs": {
     "url": "https://github.com/OpenBazaar/openbazaar-go"
   },
-  "gxVersion": "0.11.0"
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmfVj3x4D6Jkq9SEoi5n2NmoUomLwoeiwnYz2KQa15wRw6",
+      "name": "base32",
+      "version": "0.0.2"
+    },
+    {
+      "author": "why",
+      "hash": "QmfB3oNXGGq9S4B2a9YeCajoATms3Zw2VvDm8fK7VeLSV8",
+      "name": "go-unixfs",
+      "version": "1.1.16"
+    },
+    {
+      "author": "stebalien",
+      "hash": "Qmej7nf81hi2x2tvjRBF3mcp74sQyuDH4VMYDGd1YtXjb2",
+      "name": "go-block-format",
+      "version": "0.1.6"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES",
+      "name": "go-ipld-format",
+      "version": "0.5.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy",
+      "name": "go-libp2p-metrics",
+      "version": "2.0.4"
+    },
+    {
+      "hash": "Qmde5VP1qUkyQXKCfmEUA7bP64V2HAptbJ7phuPp7jXWwg",
+      "name": "go-ipfs-cmdkit",
+      "version": "1.2.0"
+    },
+    {
+      "author": "mitchellh",
+      "hash": "QmdcULN1WCzgoQmcCaUAmEhwcxHYsDrbZ2LvRJKCL8dMrK",
+      "name": "go-homedir",
+      "version": "1.0.0"
+    },
+    {
+      "author": "lgierth",
+      "hash": "QmdZ4PvPHFQVLLEve7DgoKDcSY19wwpGBB1GKjjKi2rEL1",
+      "name": "dir-index-html"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmbYQHTSz4Sg4Y2Vyd7hftGgM1yXwSUBKb47VpoPRuP5Nc",
+      "name": "go-ds-flatfs",
+      "version": "1.3.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b",
+      "name": "go-addr-util",
+      "version": "1.2.6"
+    },
+    {
+      "author": "dignifiedquire",
+      "hash": "Qmc4w3gm2TqoEbTYjpPs5FXP8DEB6cuvZWPy6bUTKiht7a",
+      "name": "go-fs-lock",
+      "version": "0.1.8"
+    },
+    {
+      "author": "stebalien",
+      "hash": "QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg",
+      "name": "go-ipns",
+      "version": "0.1.13"
+    },
+    {
+      "author": "why",
+      "hash": "QmZc5PLgxW61uTPG24TroxHDF6xzgbhZZQf5i53ciQC47Y",
+      "name": "go-ipfs-addr",
+      "version": "0.1.25"
+    },
+    {
+      "author": "libp2p",
+      "hash": "QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr",
+      "name": "go-libp2p-interface-pnet",
+      "version": "2.1.6"
+    },
+    {
+      "author": "blang",
+      "hash": "QmYRGECuvQnRX73fcvPnGbYijBcGN2HbKZQ7jh26qmLiHG",
+      "name": "semver",
+      "version": "3.5.1"
+    },
+    {
+      "author": "jbenet",
+      "hash": "QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9",
+      "name": "go-datastore",
+      "version": "2.4.0"
+    },
+    {
+      "author": "marten-seemann",
+      "hash": "QmVX7uSFmFLZRFsN9QNPDJf7Pmhuv4GdedrKYrt2xXm5ag",
+      "name": "go-libp2p-quic-transport",
+      "version": "0.2.9"
+    },
+    {
+      "author": "magik6k",
+      "hash": "QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR",
+      "name": "go-ipfs-config",
+      "version": "0.2.16"
+    },
+    {
+      "author": "hsanjuan",
+      "hash": "QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo",
+      "name": "go-ipfs-ds-help",
+      "version": "0.0.2"
+    },
+    {
+      "hash": "QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe",
+      "name": "go-libp2p-kad-dht",
+      "version": "4.4.12"
+    },
+    {
+      "author": "elgris",
+      "hash": "QmP2i47tnU23ijdshrZtuvrSkQPtf9HhsMb9fwGVe8owj2",
+      "name": "jsondiff",
+      "version": "0.0.0"
+    },
+    {
+      "author": "cheggaaa",
+      "hash": "QmPtj12fdwuAqj9sBSTNUxBNu8kCGNp8b3o8yUzMm5GHpq",
+      "name": "pb",
+      "version": "1.0.25"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmY4dowpPFCBsbaoaJc9mNWso64eDJsm32LJznwPNaAiJG",
+      "name": "go-libp2p-pubsub",
+      "version": "0.11.3"
+    },
+    {
+      "author": "Stebalien",
+      "hash": "QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK",
+      "name": "go-libp2p-routing-helpers",
+      "version": "0.3.8"
+    },
+    {
+      "author": "libp2p",
+      "hash": "QmY4Q5JC4vxLEi8EpVxJM4rcRryEVtH1zRKVTAm6BKV1pg",
+      "name": "go-libp2p-pnet",
+      "version": "3.0.4"
+    },
+    {
+      "author": "kevina",
+      "hash": "QmQJSeE3CX4zos9qeaG8EhecEK9zvrTEfTG84J8C5NVRwt",
+      "name": "go-cidutil",
+      "version": "0.1.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmSFihvoND3eDaAYRCeLgLPt62yCPgMZs1NSZmKFEtJQQw",
+      "name": "go-libp2p-floodsub",
+      "version": "0.9.10"
+    },
+    {
+      "author": "hsanjuan",
+      "hash": "QmUwXQs8aZ472DmXZ8uJNf7HJNKoMJQVa7RaCz7ujZ3ua9",
+      "name": "go-mfs",
+      "version": "0.1.18"
+    },
+    {
+      "author": "stebalien",
+      "hash": "QmUhJjacEW7gDGsvxzn8NqyfCWRksgTtYeaGvQmgYvrmWH",
+      "name": "go-libp2p-pubsub-router",
+      "version": "0.5.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTSih5JrkhMH62dp1oGjEwcaC38dxXBgRwTbeQEL4mPcU",
+      "name": "go-libp2p-connmgr",
+      "version": "0.3.23"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTQuFQWHAWy4wMH6ZyPfGiawA5u9T8rs79FENoV8yXaoS",
+      "name": "client_golang",
+      "version": "0.1.4"
+    },
+    {
+      "hash": "QmSXUokcP4TJpFfqozT69AVAYRtzXVMUjzQVkYX41R9Svs",
+      "name": "go-ipfs-cmds",
+      "version": "2.0.5"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQS6UXi1R87y9nEgnCNmG6YfMzvBSLir7xUheMNFP3hoe",
+      "name": "go-ds-measure",
+      "version": "1.4.3"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmQine7gvHncNevKtG9QXxf3nXcwSj6aDDmMm52mHofEEp",
+      "name": "tar-utils",
+      "version": "0.0.3"
+    },
+    {
+      "author": "bazil",
+      "hash": "QmSJBsmLP1XMjv8hxYg2rUMdPDB7YUpyBo9idjrJ6Cmq6F",
+      "name": "fuse",
+      "version": "0.2.3"
+    }
+  ],
+  "gxVersion": "0.11.0",
+  "language": "english",
+  "license": "",
+  "name": "openbazaar-go",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.12.4"
 }
 

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/merkledag"
+	//"github.com/ipfs/go-ipfs/merkledag"
 )
 
 // This function takes a Cid directory object and walks it returning each linked cid in the graph

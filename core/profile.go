@@ -17,7 +17,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
-	ipnspath "github.com/ipfs/go-ipfs/path"
+	//ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 // KeyCachePrefix - cache prefix for public key

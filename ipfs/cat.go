@@ -9,7 +9,7 @@ import (
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
-	"github.com/ipfs/go-ipfs/path"
+	//"github.com/ipfs/go-ipfs/path"
 )
 
 // Fetch data from IPFS given the hash

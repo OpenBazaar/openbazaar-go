@@ -14,7 +14,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	ipfsPath "github.com/ipfs/go-ipfs/path"
+	//ipfsPath "github.com/ipfs/go-ipfs/path"
 )
 
 var (

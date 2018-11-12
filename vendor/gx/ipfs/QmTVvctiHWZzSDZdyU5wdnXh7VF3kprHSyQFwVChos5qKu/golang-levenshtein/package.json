@@ -1,0 +1,17 @@
+{
+  "author": "texttheater",
+  "bugs": {
+    "URL": "https://github.com/texttheater/golang-levenshtein/issues",
+    "url": "https://github.com/texttheater/golang-levenshtein/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/texttheater/golang-levenshtein"
+  },
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "golang-levenshtein",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.0"
+}
+

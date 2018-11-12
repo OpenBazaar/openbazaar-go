@@ -1,0 +1,20 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/prometheus/client_model"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmZHU2gx42NPTYXzw6pJkuX6xCE7bKECp6e8QcPdoLx8sx",
+      "name": "protobuf",
+      "version": "3.6.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "client_model",
+  "version": "0.0.0"
+}
+

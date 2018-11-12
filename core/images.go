@@ -17,8 +17,8 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
-	"github.com/ipfs/go-ipfs/unixfs/io"
+	//ipnspath "github.com/ipfs/go-ipfs/path"
+	//"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
 )
 

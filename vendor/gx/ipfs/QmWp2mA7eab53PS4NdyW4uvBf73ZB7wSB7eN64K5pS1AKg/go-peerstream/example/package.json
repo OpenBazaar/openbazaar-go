@@ -1,0 +1,42 @@
+{
+  "author": "hector",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-peerstream"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-peerstream/example"
+  },
+  "gxDependencies": [
+    {
+      "author": "multiformats",
+      "hash": "QmXY77cVe7rVRQXZZQRioukUM7aRW3BTcAgJe12MCtb3Ji",
+      "name": "go-multiaddr",
+      "version": "1.2.4"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTvzVdANd5UWYxEqV9czC9gPZX6k7BCSVYcz91Gwz6J7A",
+      "name": "go-tcp-transport",
+      "version": "1.2.5"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNWCEvi7bPRcvqAV8AKLGVNoQdArWi7NJayka2SM4XtRe",
+      "name": "go-smux-yamux",
+      "version": "2.0.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmfT8oJ8o8AY417RNu1bUYsnDPipPHSCdVcWjYRsDNFL4M",
+      "name": "go-peerstream",
+      "version": "2.1.1"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "example",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.0"
+}
+

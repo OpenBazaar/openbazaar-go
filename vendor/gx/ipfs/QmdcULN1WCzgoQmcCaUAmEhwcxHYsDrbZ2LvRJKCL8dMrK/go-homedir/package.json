@@ -1,0 +1,17 @@
+{
+  "author": "mitchellh",
+  "bugs": {
+    "URL": "https://github.com/mitchellh/go-homedir/issues",
+    "url": "https://github.com/mitchellh/go-homedir/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/mitchellh/go-homedir"
+  },
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-homedir",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.0"
+}
+

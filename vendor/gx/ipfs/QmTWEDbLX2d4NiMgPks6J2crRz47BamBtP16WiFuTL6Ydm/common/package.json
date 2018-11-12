@@ -1,0 +1,40 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/prometheus/common"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmNeSwALyTCrgtCTsPiF7tcDN6uLtdi8qCMtFm7nct1nm1",
+      "name": "httprouter",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmZHU2gx42NPTYXzw6pJkuX6xCE7bKECp6e8QcPdoLx8sx",
+      "name": "protobuf",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmQzJ5r1Ku82GvPwMEPtFhq3S3ZtC5LnEsS8zhTMPBPYw3",
+      "name": "golang_protobuf_extensions",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmYaVovLzgcdBpCLEAnW41p8ujvCUxe3TFpfJxjK5qbzn7",
+      "name": "client_model",
+      "version": "0.0.0"
+    },
+    {
+      "hash": "QmRvYNctevGUW52urgmoFZscT6buMKqhHezLUS64WepGWn",
+      "name": "go-net",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "common",
+  "version": "0.0.0"
+}
+

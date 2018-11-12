@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
-	npb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipfspath "github.com/ipfs/go-ipfs/path"
-	ipnspath "github.com/ipfs/go-ipfs/path"
+	//ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
+	//npb "github.com/ipfs/go-ipfs/namesys/pb"
+	//ipfspath "github.com/ipfs/go-ipfs/path"
+	//ipnspath "github.com/ipfs/go-ipfs/path"
 )
 
 /*

@@ -1,0 +1,24 @@
+{
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipfs-cmdkit"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipfs-cmdkit",
+    "goversion": "1.7"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-ipfs-cmdkit",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.2.0"
+}
+

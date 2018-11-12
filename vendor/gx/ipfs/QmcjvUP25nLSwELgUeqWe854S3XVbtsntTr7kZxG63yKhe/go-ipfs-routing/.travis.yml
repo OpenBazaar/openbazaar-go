@@ -1,0 +1,21 @@
+sudo: false
+
+language: go
+go:
+  - 1.9
+  
+install:
+  - go get github.com/whyrusleeping/gx
+  - go get github.com/whyrusleeping/gx-go
+script:
+  - make test
+  
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash)
+
+cache:
+  directories:
+    - $GOPATH/src/gx
+
+notifications:
+email: false

@@ -1,0 +1,36 @@
+{
+  "author": "onsi",
+  "bugs": {
+    "url": "https://github.com/onsi/gomega"
+  },
+  "gx": {
+    "dvcsimport": "github.com/onsi/gomega"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNNARAR2ncSEDKGVAjsE77VYAtNE6qMMPEC7hfWMwMdF9",
+      "name": "yaml.v2",
+      "version": "0.0.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmVcxhXDbXjNoAdmYBWbY1eU67kQ8eZUHjG4mAYZUtZZu3",
+      "name": "go-text",
+      "version": "0.2.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmRvYNctevGUW52urgmoFZscT6buMKqhHezLUS64WepGWn",
+      "name": "go-net",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "gomega",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.1.0"
+}
+

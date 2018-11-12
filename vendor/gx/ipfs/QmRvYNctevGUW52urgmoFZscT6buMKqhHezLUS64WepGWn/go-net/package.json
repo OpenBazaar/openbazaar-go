@@ -1,0 +1,22 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "golang.org/x/net"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmVcxhXDbXjNoAdmYBWbY1eU67kQ8eZUHjG4mAYZUtZZu3",
+      "name": "go-text",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "issues_url": "",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "go-net",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.0"
+}
+
