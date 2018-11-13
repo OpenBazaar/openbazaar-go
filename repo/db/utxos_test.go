@@ -9,22 +9,9 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 )
-
-func mustNewUtxo() wallet.Utxo {
-	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
-	outpoint := wire.NewOutPoint(sh1, 0)
-	return wallet.Utxo{
-		Op:           *outpoint,
-		AtHeight:     300000,
-		Value:        100000000,
-		ScriptPubkey: []byte("scriptpubkey"),
-		WatchOnly:    false,
-	}
-}
 
 func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore, func(), error) {
 	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
@@ -46,7 +33,7 @@ func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore
 
 func mustNewUxdbWithUtxo() (repo.UnspentTransactionOutputStore, wallet.Utxo, func(), error) {
 	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
-	utxo := mustNewUtxo()
+	utxo := factory.NewUtxo()
 	if err != nil {
 		return nil, utxo, teardown, err
 	}
