@@ -229,7 +229,6 @@ func (x *Convert) Execute(args []string) error {
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
-		DNSResolver: nil,
 		Routing:     nil,
 	}
 
