@@ -481,7 +481,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
+		dhtutil.QuerySize = int(querySize)
 	} else {
 		dhtutil.QuerySize = 16
 	}
