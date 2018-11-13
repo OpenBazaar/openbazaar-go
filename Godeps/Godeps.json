@@ -469,11 +469,6 @@
 			"Rev": "e6033d5e21b7569ff3696b190c0e94af5cd12742"
 		},
 		{
-			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/network",
-			"Comment": "v0.4.11-86-ge6033d5e2",
-			"Rev": "e6033d5e21b7569ff3696b190c0e94af5cd12742"
-		},
-		{
 			"ImportPath": "github.com/ipfs/go-ipfs/exchange/bitswap/notifications",
 			"Comment": "v0.4.11-86-ge6033d5e2",
 			"Rev": "e6033d5e21b7569ff3696b190c0e94af5cd12742"
