@@ -31,22 +31,22 @@ func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore
 	return NewUnspentTransactionStore(database, new(sync.Mutex), wallet.Bitcoin), appSchema.DestroySchemaDirectories, nil
 }
 
-func mustNewUxdbWithUtxo() (repo.UnspentTransactionOutputStore, wallet.Utxo, func(), error) {
-	var uxdb, teardown, err = buildNewUnspentTransactionOutputStore()
+func newPopulatedUtxoStore() (repo.UnspentTransactionOutputStore, wallet.Utxo, func(), error) {
+	var utxoDB, teardown, err = buildNewUnspentTransactionOutputStore()
 	utxo := factory.NewUtxo()
 	if err != nil {
 		return nil, utxo, teardown, err
 	}
-	return uxdb, utxo, teardown, uxdb.Put(utxo)
+	return utxoDB, utxo, teardown, utxoDB.Put(utxo)
 }
 
 func TestUtxoPut(t *testing.T) {
-	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
-	stmt, _ := uxdb.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
+	stmt, _ := utxoDB.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var outpoint string
@@ -73,12 +73,12 @@ func TestUtxoPut(t *testing.T) {
 }
 
 func TestUtxoGetAll(t *testing.T) {
-	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
-	utxos, err := uxdb.GetAll()
+	utxos, err := utxoDB.GetAll()
 	if err != nil {
 		t.Error(err)
 	}
@@ -100,16 +100,16 @@ func TestUtxoGetAll(t *testing.T) {
 }
 
 func TestSetWatchOnlyUtxo(t *testing.T) {
-	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
-	err = uxdb.SetWatchOnly(utxo)
+	err = utxoDB.SetWatchOnly(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	stmt, _ := uxdb.PrepareQuery("select watchOnly from utxos where outpoint=?")
+	stmt, _ := utxoDB.PrepareQuery("select watchOnly from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var watchOnlyInt int
@@ -125,16 +125,16 @@ func TestSetWatchOnlyUtxo(t *testing.T) {
 }
 
 func TestDeleteUtxo(t *testing.T) {
-	var uxdb, utxo, teardown, err = mustNewUxdbWithUtxo()
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
-	err = uxdb.Delete(utxo)
+	err = utxoDB.Delete(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	utxos, err := uxdb.GetAll()
+	utxos, err := utxoDB.GetAll()
 	if err != nil {
 		t.Error(err)
 	}
