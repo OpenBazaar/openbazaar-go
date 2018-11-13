@@ -2,7 +2,7 @@ package ipfs
 
 import (
 	"context"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -13,7 +13,7 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	_ "github.com/ipfs/go-ipfs/core/mock"
-	//"github.com/ipfs/go-ipfs/merkledag"
+	"gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
 )
 
 // Recursively add a directory to IPFS and return the root hash
