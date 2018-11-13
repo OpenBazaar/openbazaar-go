@@ -222,15 +222,32 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 		}
 	}
 	for _, p := range n.PushNodes {
-		go func(pid peer.ID) {
-			err := n.SendStore(pid.Pretty(), graph)
-			if err != nil {
-				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
-			}
-		}(p)
+		go n.retryableSeedStoreToPeer(p, hash, graph)
 	}
 
 	return nil
+}
+
+func (n *OpenBazaarNode) retryableSeedStoreToPeer(pid peer.ID, graphHash string, graph []cid.Cid) {
+	var retryTimeout = 2 * time.Second
+	for {
+		if graphHash != n.RootHash {
+			log.Errorf("root hash has changed, aborting push to %s", pid.Pretty())
+			return
+		}
+		err := n.SendStore(pid.Pretty(), graph)
+		if err != nil {
+			if retryTimeout > 60*time.Second {
+				log.Errorf("error pushing to peer %s: %s", pid.Pretty(), err.Error())
+				return
+			}
+			log.Errorf("error pushing to peer %s...backing off: %s", pid.Pretty(), err.Error())
+			time.Sleep(retryTimeout)
+			retryTimeout *= 2
+			continue
+		}
+		return
+	}
 }
 
 // SetUpRepublisher - periodic publishing to IPNS
