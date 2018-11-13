@@ -1,0 +1,24 @@
+{
+  "author": "fsnotify",
+  "bugs": {
+    "URL": "https://github.com/fsnotify/fsnotify/issues",
+    "url": "https://github.com/fsnotify/fsnotify/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/fsnotify/fsnotify"
+  },
+  "gxDependencies": [
+    {
+      "author": "golang",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.7.0",
+  "language": "go",
+  "license": "BSD-new",
+  "name": "fsnotify",
+  "version": "0.1.1"
+}
+

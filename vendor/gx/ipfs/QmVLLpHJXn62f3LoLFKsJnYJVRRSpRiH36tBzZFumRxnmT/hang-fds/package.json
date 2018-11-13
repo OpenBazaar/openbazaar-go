@@ -1,0 +1,24 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {
+    "url": "https://github.com/jbenet/hang-fds"
+  },
+  "gx": {
+    "dvcsimport": "github.com/jbenet/hang-fds"
+  },
+  "gxDependencies": [
+    {
+      "author": "jbenet",
+      "hash": "Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC",
+      "name": "go-multiaddr-net",
+      "version": "1.6.5"
+    }
+  ],
+  "gxVersion": "0.8.0",
+  "language": "go",
+  "license": "",
+  "name": "hang-fds",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.13"
+}
+

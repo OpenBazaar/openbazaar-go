@@ -1,0 +1,36 @@
+{
+  "author": "ipfs",
+  "bugs": {
+    "URL": "https://github.com/ipfs/go-metrics-prometheus/issues",
+    "url": "https://github.com/ipfs/go-metrics-prometheus/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-metrics-prometheus"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTQuFQWHAWy4wMH6ZyPfGiawA5u9T8rs79FENoV8yXaoS",
+      "name": "client_golang",
+      "version": "0.1.4"
+    },
+    {
+      "author": "ipfs",
+      "hash": "QmekzFM3hPZjTjUFGTABdQkEnQ3PTiMstY198PwSFr5w1Q",
+      "name": "go-metrics-interface",
+      "version": "0.2.0"
+    },
+    {
+      "hash": "QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae",
+      "name": "go-log",
+      "version": "1.5.7"
+    }
+  ],
+  "gxVersion": "0.9.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-metrics-prometheus",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.3.10"
+}
+

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"time"
+	"fmt"
 
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
 	goprocessctx "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context"
@@ -391,6 +392,7 @@ func (h *BasicHost) newStream(ctx context.Context, p peer.ID, pid protocol.ID) (
 func (h *BasicHost) Connect(ctx context.Context, pi pstore.PeerInfo) error {
 	// absorb addresses into peerstore
 	h.Peerstore().AddAddrs(pi.ID, pi.Addrs, pstore.TempAddrTTL)
+	fmt.Println("GOT HERE")
 
 	if h.Network().Connectedness(pi.ID) == inet.Connected {
 		return nil

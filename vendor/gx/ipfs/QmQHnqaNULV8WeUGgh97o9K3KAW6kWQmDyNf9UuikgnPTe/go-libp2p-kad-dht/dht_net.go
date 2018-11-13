@@ -108,6 +108,14 @@ func (dht *IpfsDHT) handleNewMessage(s inet.Stream) {
 	}
 }
 
+func (dht *IpfsDHT) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
+	return dht.sendRequest(ctx, p, pmes)
+}
+
+func (dht *IpfsDHT) SendMessage(ctx context.Context, p peer.ID, pmes *pb.Message) error {
+	return dht.sendMessage(ctx, p, pmes)
+}
+
 // sendRequest sends out a request, but also makes sure to
 // measure the RTT for latency measurements.
 func (dht *IpfsDHT) sendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
