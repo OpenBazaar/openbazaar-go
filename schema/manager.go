@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	//"github.com/ipfs/go-ipfs/repo/config"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/tyler-smith/go-bip39"
@@ -535,10 +535,10 @@ func MustDefaultConfig() *config.Config {
 
 		Ipns: config.Ipns{
 			ResolveCacheSize:   128,
-			RecordLifetime:     "7d",
+			RecordLifetime:     "168h",
 			RepublishPeriod:    "24h",
-			QuerySize:          5,
-			UsePersistentCache: true,
+			//QuerySize:          5,
+			//UsePersistentCache: true,
 		},
 
 		Gateway: config.Gateway{
