@@ -45,6 +45,24 @@ If you used your own SSL cert issued by a CA, you can skip this step as the Open
 
 If you followed Step 1 and generated a self-signed certificate you will need to install the `OpenBazaar.crt` in the operating system of the computer on which you plan to run the client. By default self-signed certificates are rejected, which is why you need to install this root certificate.
 
+From a shell this might look something like:
+
+**win32/64**
+```shell
+  certutil.exe -addstore -user Root your.crt
+```
+- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/certutil#BKMK_Store
+
+**darwin**
+```shell
+  security add-trusted-cert -p ssl your.crt
+```
+
+**linux**
+```shell
+  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n 127.0.0.1 -i your.pem
+```
+
 To download the `OpenBazaar.crt` from your remote server you can use any file transfer program such as `SFTP`.
 
 Once `OpenBazaar.crt` is on your local computer you should just be able to double click it to install it.
