@@ -485,7 +485,7 @@ func MustDefaultConfig() *config.Config {
 				"/ip6/::/tcp/9005/ws",
 			},
 			//API:     "",
-			//Gateway: "/ip4/127.0.0.1/tcp/4002",
+			Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
 		},
 
 		Datastore: config.Datastore{
