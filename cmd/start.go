@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht"
 	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/opts"
 	dhtutil "gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/util"
@@ -258,11 +257,6 @@ func (x *Start) Execute(args []string) error {
 	//	log.Error("scan tor config:", err)
 	//	return err
 	//}
-	walletCfg, err := schema.GetWalletConfig(configFile)
-	if err != nil {
-		log.Error("scan wallet config:", err)
-		return err
-	}
 	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		log.Error("scan data sharing config:", err)
@@ -352,7 +346,7 @@ func (x *Start) Execute(args []string) error {
 	//var onionTransport *oniontp.OnionTransport
 	var torDialer proxy.Dialer
 	var usingTor, usingClearnet bool
-	var controlPort int
+	//var controlPort int
 	for i, addr := range cfg.Addresses.Swarm {
 		m, err := ma.NewMultiaddr(addr)
 		if err != nil {
@@ -371,18 +365,21 @@ func (x *Start) Execute(args []string) error {
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
-		} else if p[0].Name == "onion" {
-			usingTor = true
-			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
-			t, err := ma.ProtocolsWithString("/onion")
-			if err != nil {
-				log.Error("wrapping onion protocol:", err)
-				return err
-			}
-			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
 		} else {
 			usingClearnet = true
 		}
+		
+		//} else if p[0].Name == "onion" {
+		//	usingTor = true
+		//	addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
+		//	t, err := ma.ProtocolsWithString("/onion")
+		//	if err != nil {
+		//		log.Error("wrapping onion protocol:", err)
+		//		return err
+		//	}
+		//	addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
+		//}
+
 	}
 	// Create Tor transport
 	//if usingTor {
@@ -768,7 +765,7 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
-		<-dht.DefaultBootstrapConfig.DoneChan
+		//<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, sqliteDB)
 
 		core.Node.StartMessageRetriever()
@@ -786,7 +783,7 @@ func (x *Start) Execute(args []string) error {
 				log.Error(err)
 			}
 		}
-		core.Node.SetUpRepublisher(republishInterval)
+		//core.Node.SetUpRepublisher(republishInterval)
 	}()
 
 	// Start gateway

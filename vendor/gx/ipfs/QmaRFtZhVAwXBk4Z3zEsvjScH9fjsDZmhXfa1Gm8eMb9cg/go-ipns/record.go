@@ -3,7 +3,6 @@ package ipns
 import (
 	"bytes"
 	"errors"
-	"fmt"
 
 	pb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 
@@ -21,7 +20,6 @@ var _ record.Validator = Validator{}
 
 // RecordKey returns the libp2p record key for a given peer ID.
 func RecordKey(pid peer.ID) string {
-	fmt.Println(string(pid))
 	return "/ipns/" + string(pid)
 }
 

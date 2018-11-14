@@ -12,7 +12,6 @@ import (
 	"io"
 	"sync"
 	"time"
-	"fmt"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/pb"
