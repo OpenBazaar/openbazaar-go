@@ -2,42 +2,51 @@ package db
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/hex"
 	"strconv"
 	"sync"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/openbazaar-go/test/factory"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 )
 
-var uxdb repo.UnspentTransactionOutputStore
-var utxo wallet.Utxo
-
-func init() {
-	conn, _ := sql.Open("sqlite3", ":memory:")
-	initDatabaseTables(conn, "")
-	uxdb = NewUnspentTransactionStore(conn, new(sync.Mutex), wallet.Bitcoin)
-	sh1, _ := chainhash.NewHashFromStr("e941e1c32b3dd1a68edc3af9f7fe711f35aaca60f758c2dd49561e45ca2c41c0")
-	outpoint := wire.NewOutPoint(sh1, 0)
-	utxo = wallet.Utxo{
-		Op:           *outpoint,
-		AtHeight:     300000,
-		Value:        100000000,
-		ScriptPubkey: []byte("scriptpubkey"),
-		WatchOnly:    false,
+func buildNewUnspentTransactionOutputStore() (repo.UnspentTransactionOutputStore, func(), error) {
+	appSchema := schema.MustNewCustomSchemaManager(schema.SchemaContext{
+		DataPath:        schema.GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := appSchema.BuildSchemaDirectories(); err != nil {
+		return nil, nil, err
 	}
+	if err := appSchema.InitializeDatabase(); err != nil {
+		return nil, nil, err
+	}
+	database, err := appSchema.OpenDatabase()
+	if err != nil {
+		return nil, nil, err
+	}
+	return NewUnspentTransactionStore(database, new(sync.Mutex), wallet.Bitcoin), appSchema.DestroySchemaDirectories, nil
+}
+
+func newPopulatedUtxoStore() (repo.UnspentTransactionOutputStore, wallet.Utxo, func(), error) {
+	var utxoDB, teardown, err = buildNewUnspentTransactionOutputStore()
+	utxo := factory.NewUtxo()
+	if err != nil {
+		return nil, utxo, teardown, err
+	}
+	return utxoDB, utxo, teardown, utxoDB.Put(utxo)
 }
 
 func TestUtxoPut(t *testing.T) {
-	err := uxdb.Put(utxo)
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	stmt, _ := uxdb.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
+	defer teardown()
+	stmt, _ := utxoDB.PrepareQuery("select outpoint, value, height, scriptPubKey from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var outpoint string
@@ -64,11 +73,12 @@ func TestUtxoPut(t *testing.T) {
 }
 
 func TestUtxoGetAll(t *testing.T) {
-	err := uxdb.Put(utxo)
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
-	utxos, err := uxdb.GetAll()
+	defer teardown()
+	utxos, err := utxoDB.GetAll()
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,15 +100,16 @@ func TestUtxoGetAll(t *testing.T) {
 }
 
 func TestSetWatchOnlyUtxo(t *testing.T) {
-	err := uxdb.Put(utxo)
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+	err = utxoDB.SetWatchOnly(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	err = uxdb.SetWatchOnly(utxo)
-	if err != nil {
-		t.Error(err)
-	}
-	stmt, _ := uxdb.PrepareQuery("select watchOnly from utxos where outpoint=?")
+	stmt, _ := utxoDB.PrepareQuery("select watchOnly from utxos where outpoint=?")
 	defer stmt.Close()
 
 	var watchOnlyInt int
@@ -114,15 +125,16 @@ func TestSetWatchOnlyUtxo(t *testing.T) {
 }
 
 func TestDeleteUtxo(t *testing.T) {
-	err := uxdb.Put(utxo)
+	var utxoDB, utxo, teardown, err = newPopulatedUtxoStore()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+	err = utxoDB.Delete(utxo)
 	if err != nil {
 		t.Error(err)
 	}
-	err = uxdb.Delete(utxo)
-	if err != nil {
-		t.Error(err)
-	}
-	utxos, err := uxdb.GetAll()
+	utxos, err := utxoDB.GetAll()
 	if err != nil {
 		t.Error(err)
 	}

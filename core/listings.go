@@ -8,7 +8,6 @@ import (
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
@@ -20,8 +19,8 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
-	"github.com/kennygrant/sanitize"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/op/go-logging"
 )
 
 const (
@@ -108,15 +107,8 @@ var (
 // GenerateSlug - slugify the title of the listing
 func (n *OpenBazaarNode) GenerateSlug(title string) (string, error) {
 	title = strings.Replace(title, "/", "", -1)
-	slugFromTitle := func(title string) string {
-		l := SentenceMaxCharacters - SlugBuffer
-		if len(title) < SentenceMaxCharacters-SlugBuffer {
-			l = len(title)
-		}
-		return url.QueryEscape(sanitize.Path(strings.ToLower(title[:l])))
-	}
 	counter := 1
-	slugBase := slugFromTitle(title)
+	slugBase := createSlugFor(title)
 	slugToTry := slugBase
 	for {
 		_, err := n.GetListingFromSlug(slugToTry)
@@ -667,6 +659,7 @@ func (n *OpenBazaarNode) GetListingCount() int {
 // IsItemForSale Check to see we are selling the given listing. Used when validating an order.
 // FIXME: This won't scale well. We will need to store the hash of active listings in a db to do an indexed search.
 func (n *OpenBazaarNode) IsItemForSale(listing *pb.Listing) bool {
+	var log = logging.MustGetLogger("core")
 	serializedListing, err := proto.Marshal(listing)
 	if err != nil {
 		log.Error(err)

@@ -686,14 +686,14 @@ func (x *Start) Execute(args []string) error {
 		Multiwallet:                   mw,
 		NameSystem:                    ns,
 		OfflineMessageFailoverTimeout: 30 * time.Second,
-		Pubsub:                        ps,
-		PushNodes:                     pushNodes,
-		RegressionTestEnable:          x.Regtest,
-		RepoPath:                      repoPath,
-		RootHash:                      ipath.Path(e.Value).String(),
-		TestnetEnable:                 x.Testnet,
-		TorDialer:                     torDialer,
-		UserAgent:                     core.USERAGENT,
+		Pubsub:               ps,
+		PushNodes:            pushNodes,
+		RegressionTestEnable: x.Regtest,
+		RepoPath:             repoPath,
+		RootHash:             ipath.Path(e.Value).String(),
+		TestnetEnable:        x.Testnet,
+		TorDialer:            torDialer,
+		UserAgent:            core.USERAGENT,
 	}
 	core.PublishLock.Lock()
 

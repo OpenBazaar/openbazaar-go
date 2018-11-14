@@ -3799,7 +3799,7 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// The post isn't in the path and is new, therefore add required data (slug, timestamp)
 		// Generate a slug from the title
-		ld.Slug, err = i.node.GeneratePostSlug(ld.Title)
+		ld.Slug, err = i.node.GeneratePostSlug(ld.Status)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
