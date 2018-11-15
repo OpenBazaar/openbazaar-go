@@ -63,7 +63,6 @@ var (
 		BootstrapNodeDefault_LeMarcheSerpette,
 		BootstrapNodeDefault_BrixtonVillage,
 		BootstrapNodeDefault_Johari,
-		BootstrapNodeDefault_DuoSearch,
 	}
 	BootstrapAddressesTestnet = []string{
 		BootstrapNodeTestnet_BrooklynFlea,
