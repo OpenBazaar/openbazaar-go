@@ -110,6 +110,18 @@ type Start struct {
 	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
 }
 
+var (
+	mainConfig			[]byte
+	apiConfig			*schema.APIConfig
+	torConfig			*schema.TorConfig
+	dataSharingConfig	*schema.DataSharing
+	resolverConfig		*schema.ResolverConfig
+	coinConfig			*schema.CoinConfig
+	walletsConfig		*schema.WalletsConfig
+	republishInterval	time.Duration
+	dropboxToken		string
+)
+
 func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
 
@@ -162,22 +174,9 @@ func (x *Start) Execute(args []string) error {
 	// Create user-agent file
 	createUserAgentFile(repoPath, x.UserAgent)
 
-	// If the database cannot be decrypted, exit
-	if sqliteDB.Config().IsEncrypted() {
-		sqliteDB.Close()
-		fmt.Print("Database is encrypted, enter your password: ")
-		// nolint:unconvert
-		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
-		fmt.Println("")
-		pw := string(bytePassword)
-		sqliteDB, err = InitializeRepo(repoPath, pw, "", isTestnet, time.Now(), ct)
-		if err != nil && err != repo.ErrRepoExists {
-			return err
-		}
-		if sqliteDB.Config().IsEncrypted() {
-			log.Error("Invalid password")
-			os.Exit(3)
-		}
+	err = ensureDatabaseAccess(sqliteDB, repoPath, isTestnet, coinType)
+	if err != nil {
+		log.Error("error initializing data folder")
 	}
 
 	// Get creation date. Ignore the error and use a default timestamp.
@@ -186,46 +185,8 @@ func (x *Start) Execute(args []string) error {
 		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
 
-	// Load config
-	configFile, err := ioutil.ReadFile(path.Join(repoPath, "config"))
+	err = getConfigFiles(repoPath)
 	if err != nil {
-		log.Error("read config:", err)
-		return err
-	}
-
-	apiConfig, err := schema.GetAPIConfig(configFile)
-	if err != nil {
-		log.Error("scan api config:", err)
-		return err
-	}
-	torConfig, err := schema.GetTorConfig(configFile)
-	if err != nil {
-		log.Error("scan tor config:", err)
-		return err
-	}
-	dataSharing, err := schema.GetDataSharing(configFile)
-	if err != nil {
-		log.Error("scan data sharing config:", err)
-		return err
-	}
-	dropboxToken, err := schema.GetDropboxApiToken(configFile)
-	if err != nil {
-		log.Error("scan dropbox api token:", err)
-		return err
-	}
-	resolverConfig, err := schema.GetResolverConfig(configFile)
-	if err != nil {
-		log.Error("scan resolver config:", err)
-		return err
-	}
-	republishInterval, err := schema.GetRepublishInterval(configFile)
-	if err != nil {
-		log.Error("scan republish interval config:", err)
-		return err
-	}
-	walletsConfig, err := schema.GetWalletsConfig(configFile)
-	if err != nil {
-		log.Error("scan wallets config:", err)
 		return err
 	}
 
@@ -258,7 +219,7 @@ func (x *Start) Execute(args []string) error {
 
 	// Setup testnet
 	if x.Testnet || x.Regtest {
-		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(configFile)
+		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(mainConfig)
 		if err != nil {
 			log.Error(err)
 			return err
@@ -268,7 +229,7 @@ func (x *Start) Execute(args []string) error {
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
-		dataSharing.PushTo = []string{}
+		dataSharingConfig.PushTo = []string{}
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -508,7 +469,7 @@ func (x *Start) Execute(args []string) error {
 
 	// Push nodes
 	var pushNodes []peer.ID
-	for _, pnd := range dataSharing.PushTo {
+	for _, pnd := range dataSharingConfig.PushTo {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
 			log.Error("Invalid peerID in DataSharing config")
@@ -616,7 +577,7 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
+		AcceptStoreRequests:           dataSharingConfig.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
 		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
@@ -737,6 +698,72 @@ func (x *Start) Execute(args []string) error {
 	return nil
 }
 
+func getConfigFiles(datafolder string) error {
+	var err error
+	mainConfig, err = ioutil.ReadFile(path.Join(datafolder, "config"))
+	if err != nil {
+		log.Error("read config:", err)
+		return err
+	}
+
+	apiConfig, err = schema.GetAPIConfig(mainConfig)
+	if err != nil {
+		log.Error("scan api config:", err)
+		return err
+	}
+	torConfig, err = schema.GetTorConfig(mainConfig)
+	if err != nil {
+		log.Error("scan tor config:", err)
+		return err
+	}
+	dataSharingConfig, err = schema.GetDataSharing(mainConfig)
+	if err != nil {
+		log.Error("scan data sharing config:", err)
+		return err
+	}
+	dropboxToken, err = schema.GetDropboxApiToken(mainConfig)
+	if err != nil {
+		log.Error("scan dropbox api token:", err)
+		return err
+	}
+	resolverConfig, err = schema.GetResolverConfig(mainConfig)
+	if err != nil {
+		log.Error("scan resolver config:", err)
+		return err
+	}
+	republishInterval, err = schema.GetRepublishInterval(mainConfig)
+	if err != nil {
+		log.Error("scan republish interval config:", err)
+		return err
+	}
+	walletsConfig, err = schema.GetWalletsConfig(mainConfig)
+	if err != nil {
+		log.Error("scan wallets config:", err)
+		return err
+	}
+	return nil
+}
+
+func ensureDatabaseAccess(db *db.SQLiteDatastore, datafolder string, testnet bool, coinType wi.CoinType) error {
+	if db.Config().IsEncrypted() {
+		db.Close()
+		fmt.Print("Database is encrypted, enter your password: ")
+		// nolint:unconvert
+		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
+		fmt.Println("")
+		pw := string(bytePassword)
+		db, err := InitializeRepo(datafolder, pw, "", testnet, time.Now(), coinType)
+		if err != nil && err != repo.ErrRepoExists {
+			return err
+		}
+		if db.Config().IsEncrypted() {
+			log.Error("Invalid password")
+			os.Exit(3)
+		}
+	}
+	return nil
+}
+
 func createUserAgentFile(dataFolder string, useragent string) error {
 	userAgentBytes := []byte(core.USERAGENT + useragent)
 	err := ioutil.WriteFile(path.Join(dataFolder, "root", "user_agent"), userAgentBytes, os.ModePerm)
@@ -744,6 +771,7 @@ func createUserAgentFile(dataFolder string, useragent string) error {
 		log.Error("write user_agent:", err)
 		return err
 	}
+	return nil
 }
 
 func getCoinType(x *Start) wi.CoinType {
