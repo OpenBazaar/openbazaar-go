@@ -160,12 +160,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Create user-agent file
-	userAgentBytes := []byte(core.USERAGENT + x.UserAgent)
-	err = ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
-	if err != nil {
-		log.Error("write user_agent:", err)
-		return err
-	}
+	createUserAgentFile(repoPath, x.UserAgent)
 
 	// If the database cannot be decrypted, exit
 	if sqliteDB.Config().IsEncrypted() {
@@ -740,6 +735,15 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func createUserAgentFile(dataFolder string, useragent string) error {
+	userAgentBytes := []byte(core.USERAGENT + useragent)
+	err := ioutil.WriteFile(path.Join(dataFolder, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	if err != nil {
+		log.Error("write user_agent:", err)
+		return err
+	}
 }
 
 func getCoinType(x *Start) wi.CoinType {
