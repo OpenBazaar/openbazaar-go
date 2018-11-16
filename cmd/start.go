@@ -121,6 +121,7 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("Invalid combination of tor and dual stack modes")
 	}
 
+	// Check if user launched with Testnet
 	isTestnet := false
 	if x.Testnet || x.Regtest {
 		isTestnet = true
@@ -134,83 +135,26 @@ func (x *Start) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	if x.BitcoinCash {
-		repoPath += "-bitcoincash"
-	} else if x.ZCash != "" {
-		repoPath += "-zcash"
-	}
 	if x.DataDir != "" {
 		repoPath = x.DataDir
 	}
 
-	repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
-	os.Remove(repoLockFile)
+	// Remove lockfile if present
+	removeLockfile(repoPath)
 
 	// Logging
-	w := &lumberjack.Logger{
-		Filename:   path.Join(repoPath, "logs", "ob.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
-	}
-	var backendStdoutFormatter logging.Backend
-	if x.Verbose {
-		backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-		backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-		logging.SetBackend(backendStdoutFormatter)
-	}
+	setupLogging(repoPath, x.Verbose, x.LogLevel, x.NoLogFiles)
 
-	if !x.NoLogFiles {
-		backendFile := logging.NewLogBackend(w, "", 0)
-		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-		if x.Verbose {
-			logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
-		} else {
-			logging.SetBackend(backendFileFormatter)
-		}
-		ipfslogging.LdJSONFormatter()
-		w2 := &lumberjack.Logger{
-			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
-			MaxSize:    10, // Megabytes
-			MaxBackups: 3,
-			MaxAge:     30, // Days
-		}
-		ipfslogging.Output(w2)()
-	}
-
-	var level logging.Level
-	switch strings.ToLower(x.LogLevel) {
-	case "debug":
-		level = logging.DEBUG
-	case "info":
-		level = logging.INFO
-	case "notice":
-		level = logging.NOTICE
-	case "warning":
-		level = logging.WARNING
-	case "error":
-		level = logging.ERROR
-	case "critical":
-		level = logging.CRITICAL
-	default:
-		level = logging.DEBUG
-	}
-	logging.SetLevel(level, "")
-
+	// Increase OS file descriptors to prevent crashes
 	err = core.CheckAndSetUlimit()
 	if err != nil {
 		return err
 	}
 
-	ct := wi.Bitcoin
-	if x.BitcoinCash {
-		ct = wi.BitcoinCash
-	} else if x.ZCash != "" {
-		ct = wi.Zcash
-	}
+	coinType := getCoinType(x)
+	migrations.WalletCoinType = coinType
 
-	migrations.WalletCoinType = ct
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
+	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), coinType)
 	if err != nil && err != repo.ErrRepoExists {
 		return err
 	}
@@ -796,6 +740,72 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	return nil
+}
+
+func getCoinType(x *Start) wi.CoinType {
+	if x.BitcoinCash {
+		return wi.BitcoinCash
+	} else if x.ZCash != "" {
+		return wi.Zcash
+	}
+	return wi.Bitcoin
+}
+
+func setupLogging(repoPath string, verbose bool, loglevel string, noLogFiles bool) {
+	w := &lumberjack.Logger{
+		Filename:   path.Join(repoPath, "logs", "ob.log"),
+		MaxSize:    10, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	var backendStdoutFormatter logging.Backend
+	if verbose {
+		backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
+		backendStdoutFormatter = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+		logging.SetBackend(backendStdoutFormatter)
+	}
+
+	if !noLogFiles {
+		backendFile := logging.NewLogBackend(w, "", 0)
+		backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+		if verbose {
+			logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+		} else {
+			logging.SetBackend(backendFileFormatter)
+		}
+		ipfslogging.LdJSONFormatter()
+		w2 := &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "ipfs.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
+		ipfslogging.Output(w2)()
+	}
+
+	var level logging.Level
+	switch strings.ToLower(loglevel) {
+	case "debug":
+		level = logging.DEBUG
+	case "info":
+		level = logging.INFO
+	case "notice":
+		level = logging.NOTICE
+	case "warning":
+		level = logging.WARNING
+	case "error":
+		level = logging.ERROR
+	case "critical":
+		level = logging.CRITICAL
+	default:
+		level = logging.DEBUG
+	}
+	logging.SetLevel(level, "")
+}
+
+func removeLockfile(repoPath string) {
+	repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
+	os.Remove(repoLockFile)
 }
 
 func setTestmodeRecordAgingIntervals() {
