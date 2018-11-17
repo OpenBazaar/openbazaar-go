@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/OpenBazaar/multiwallet"
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
@@ -131,7 +132,16 @@ var (
 	controlPort 		int
 	dnsResolver			namesys.Resolver
 	ipfsNode			*ipfscore.IpfsNode
+	noLogFiles			bool
+	creationDate		time.Time
+	params 				chaincfg.Params
+	pushNodes 			[]peer.ID
+	authCookie 			http.Cookie
+	banManager			*obnet.BanManager
 	)
+
+var offlineMessageFailoverTimeout = 30 * time.Second
+
 
 func (x *Start) Execute(args []string) error {
 	var err error
@@ -168,7 +178,8 @@ func (x *Start) Execute(args []string) error {
 	removeLockfile()
 
 	// Logging
-	setupLogging(x.Verbose, x.LogLevel, x.NoLogFiles)
+	noLogFiles = x.NoLogFiles
+	setupLogging(x.Verbose, x.LogLevel)
 
 	// Increase OS file descriptors to prevent crashes
 	err = core.CheckAndSetUlimit()
@@ -193,7 +204,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Get creation date. Ignore the error and use a default timestamp.
-	creationDate, err := sqliteDB.Config().GetCreationDate()
+	creationDate, err = sqliteDB.Config().GetCreationDate()
 	if err != nil {
 		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
@@ -203,9 +214,19 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
+	// If SSL files are not specified it cannot be enabled
+	if checkSSLConfiguration() != nil {
+		return err
+	}
+
 	ipfsConfig, err := getIPFSConfig()
 	if err != nil {
 		return err
+	}
+
+	// If Gateway is not specified the server cannot listen for network messages
+	if len(ipfsConfig.Addresses.Gateway) <= 0 {
+		return ErrNoGateways
 	}
 
 	ipfsConfig.Identity, err = getIPFSIdentity(*sqliteDB)
@@ -215,6 +236,7 @@ func (x *Start) Execute(args []string) error {
 
 	if x.Testnet || x.Regtest {
 		setupTestnet()
+		setTestmodeRecordAgingIntervals()
 	}
 
 	configureIPFSSwarmForTor(x.Tor, x.DualStack)
@@ -247,7 +269,7 @@ func (x *Start) Execute(args []string) error {
 
 	ipfsNode, err = ipfscore.NewNode(cctx, getNodeConfig())
 	if err != nil {
-		log.Error("create new ipfs node:", err)
+		log.Error("create new IPFS node:", err)
 		return err
 	}
 
@@ -262,12 +284,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set IPNS query size
-	querySize := ipfsConfig.Ipns.QuerySize
-	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
-	} else {
-		dhtutil.QuerySize = 16
-	}
+	setDHTQuerySize()
 
 	log.Info("Peer ID: ", ipfsNode.Identity.Pretty())
 	printSwarmAddrs(ipfsNode)
@@ -275,181 +292,65 @@ func (x *Start) Execute(args []string) error {
 	// Get current directory root hash
 	ipfsRootHash, err := getIPFSRootHash()
 
-	// Wallet
-	mn, err := sqliteDB.Config().GetMnemonic()
+	// Set up Push Nodes
+	err = setupPushNodes()
+	if err != nil {
+		return err
+	}
+
+	// Set up OpenBazaar multiwallet
+	mnemonic, err := sqliteDB.Config().GetMnemonic()
 	if err != nil {
 		log.Error("get config mnemonic:", err)
 		return err
 	}
-	var params chaincfg.Params
-	if x.Testnet {
-		params = chaincfg.TestNet3Params
-	} else if x.Regtest {
-		params = chaincfg.RegressionNetParams
-	} else {
-		params = chaincfg.MainNetParams
-	}
 
-	// Multiwallet setup
-	var walletLogWriter io.Writer
-	if x.NoLogFiles {
-		walletLogWriter = &DummyWriter{}
-	} else {
-		walletLogWriter = &lumberjack.Logger{
-			Filename:   path.Join(repoPath, "logs", "wallet.log"),
-			MaxSize:    10, // Megabytes
-			MaxBackups: 3,
-			MaxAge:     30, // Days
-		}
+	multiwallet, err := setupWallet(sqliteDB, mnemonic, x.Testnet, x.Regtest, x.DisableExchangeRates)
+	if err != nil {
+		log.Error("Multiwallet setup failed:")
+		return err
 	}
-	walletLogFile := logging.NewLogBackend(walletLogWriter, "", 0)
-	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
-	walletLogger := logging.MultiLogger(walletFileFormatter)
-	multiwalletConfig := &wallet.WalletConfig{
-		ConfigFile:           walletsConfig,
-		DB:                   sqliteDB.DB(),
-		Params:               &params,
-		RepoPath:             repoPath,
-		Logger:               walletLogger,
-		Proxy:                torDialer,
-		WalletCreationDate:   creationDate,
-		Mnemonic:             mn,
-		DisableExchangeRates: x.DisableExchangeRates,
-	}
-	mw, err := wallet.NewMultiWallet(multiwalletConfig)
+	masterPrivateKey, err := getMasterPrivateKey(mnemonic)
 	if err != nil {
 		return err
 	}
-	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), mw)
 
-	// Master key setup
-	seed := bip39.NewSeed(mn, "")
-	mPrivKey, err := hdkeychain.NewMaster(seed, &params)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
+	resyncManager := resync.NewResyncManager(sqliteDB.Sales(), multiwallet)
 
-	// Push nodes
-	var pushNodes []peer.ID
-	for _, pnd := range dataSharingConfig.PushTo {
-		p, err := peer.IDB58Decode(pnd)
-		if err != nil {
-			log.Error("Invalid peerID in DataSharing config")
-			return err
-		}
-		pushNodes = append(pushNodes, p)
-	}
-
-	// Authenticated gateway
-	gatewayMaddr, err := ma.NewMultiaddr(ipfsConfig.Addresses.Gateway)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	// Override config file preference if this is Mainnet, open internet and API enabled
-	if addr != "127.0.0.1" && params.Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
-		apiConfig.Authenticated = true
-	}
-	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, x.AllowIP...)
-
-	// Create authentication cookie
-	var authCookie http.Cookie
-	authCookie.Name = "OpenBazaar_Auth_Cookie"
-
+	// Configure cookie for authenticated gateway
 	if x.AuthCookie != "" {
+		authCookie.Name = "OpenBazaar_Auth_Cookie"
 		authCookie.Value = x.AuthCookie
 		apiConfig.Authenticated = true
 	} else {
-		cookiePrefix := authCookie.Name + "="
-		cookiePath := path.Join(repoPath, ".cookie")
-		cookie, err := ioutil.ReadFile(cookiePath)
-		if err != nil {
-			authBytes := make([]byte, 32)
-			_, err = rand.Read(authBytes)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			authCookie.Value = base58.Encode(authBytes)
-			f, err := os.Create(cookiePath)
-			if err != nil {
-				log.Error(err)
-				return err
-			}
-			cookie := cookiePrefix + authCookie.Value
-			_, werr := f.Write([]byte(cookie))
-			if werr != nil {
-				log.Error(werr)
-				return werr
-			}
-			f.Close()
-		} else {
-			if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-				return errors.New("Invalid authentication cookie. Delete it to generate a new one")
-			}
-			split := strings.SplitAfter(string(cookie), cookiePrefix)
-			authCookie.Value = split[1]
-		}
+		setAuthCookie(x.AllowIP)
 	}
 
 	// Set up the ban manager
-	settings, err := sqliteDB.Settings().Get()
-	if err != nil && err != db.SettingsNotSetError {
-		log.Error(err)
-		return err
-	}
-	var blockedNodes []peer.ID
-	if settings.BlockedNodes != nil {
-		for _, pid := range *settings.BlockedNodes {
-			id, err := peer.IDB58Decode(pid)
-			if err != nil {
-				continue
-			}
-			blockedNodes = append(blockedNodes, id)
-		}
-	}
-	bm := obnet.NewBanManager(blockedNodes)
+	setupBanManager(sqliteDB)
 
-	// Create namesys resolvers
-	resolvers := []obns.Resolver{
-		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
-	}
-	if !(usingTor && !usingClearnet) {
-		resolvers = append(resolvers, obns.NewDNSResolver())
-	}
-	ns, err := obns.NewNameSystem(resolvers)
+	// Set up custom name system
+	nameSystem, err := getNameSystem()
 	if err != nil {
-		log.Error(err)
+		log.Error("Could not configure custom name system")
 		return err
-	}
-
-	if x.Testnet {
-		setTestmodeRecordAgingIntervals()
 	}
 
 	// Build pubsub
-	publisher := ipfs.NewPubsubPublisher(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
-	subscriber := ipfs.NewPubsubSubscriber(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
-	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
+	pubSub := getPubSub()
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
 		AcceptStoreRequests:           dataSharingConfig.AcceptStoreRequests,
-		BanManager:                    bm,
+		BanManager:                    banManager,
 		Datastore:                     sqliteDB,
 		IPNSBackupAPI:                 ipfsConfig.Ipns.BackUpAPI,
 		IpfsNode:                      ipfsNode,
-		MasterPrivateKey:              mPrivKey,
-		Multiwallet:                   mw,
-		NameSystem:                    ns,
-		OfflineMessageFailoverTimeout: 30 * time.Second,
-		Pubsub:               ps,
+		MasterPrivateKey:              masterPrivateKey,
+		Multiwallet:                   multiwallet,
+		NameSystem:                    nameSystem,
+		OfflineMessageFailoverTimeout: offlineMessageFailoverTimeout,
+		Pubsub:               pubSub,
 		PushNodes:            pushNodes,
 		RegressionTestEnable: x.Regtest,
 		RepoPath:             repoPath,
@@ -461,45 +362,19 @@ func (x *Start) Execute(args []string) error {
 	core.PublishLock.Lock()
 
 	// Offline messaging storage
-	var storage sto.OfflineMessagingStorage
-	if x.Storage == "self-hosted" || x.Storage == "" {
-		storage = selfhosted.NewSelfHostedStorage(repoPath, core.Node.IpfsNode, pushNodes, core.Node.SendStore)
-	} else if x.Storage == "dropbox" {
-		if usingTor && !usingClearnet {
-			log.Error("Dropbox can not be used with Tor")
-			return errors.New("Dropbox can not be used with Tor")
-		}
-
-		if dropboxToken == "" {
-			err = errors.New("Dropbox token not set in config file")
-			log.Error(err)
-			return err
-		}
-		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-	} else {
-		err = errors.New("Invalid storage option")
-		log.Error(err)
+	core.Node.MessageStorage, err = getOfflineStorage(x.Storage)
+	if err != nil {
 		return err
 	}
-	core.Node.MessageStorage = storage
 
-	if len(ipfsConfig.Addresses.Gateway) <= 0 {
-		return ErrNoGateways
-	}
-	if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
-		return errors.New("SSL cert and key files must be set when SSL is enabled")
-	}
-
+	// Set up OpenBazaar API Gateway Server
 	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *apiConfig, x.NoLogFiles)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
+	// Set up IPFS Server
 	if ipfsConfig.Addresses.API != "" {
 		if _, err := serveHTTPApi(&ctx); err != nil {
 			log.Error(err)
@@ -514,15 +389,15 @@ func (x *Start) Execute(args []string) error {
 				core.Node.WaitForMessageRetrieverCompletion()
 			}
 			TL := lis.NewTransactionListener(core.Node.Multiwallet, core.Node.Datastore, core.Node.Broadcast)
-			for ct, wal := range mw {
+			for ct, wal := range multiwallet {
 				WL := lis.NewWalletListener(core.Node.Datastore, core.Node.Broadcast, ct)
 				wal.AddTransactionListener(WL.OnTransactionReceived)
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
 			log.Info("Starting multiwallet...")
-			su := wallet.NewStatusUpdater(mw, core.Node.Broadcast, ipfsNode.Context())
-			go su.Start()
-			go mw.Start()
+			statusUpdater := wallet.NewStatusUpdater(multiwallet, core.Node.Broadcast, ipfsNode.Context())
+			go statusUpdater.Start()
+			go multiwallet.Start()
 			if resyncManager != nil {
 				go resyncManager.Start()
 				go func() {
@@ -552,13 +427,219 @@ func (x *Start) Execute(args []string) error {
 		core.Node.SetUpRepublisher(republishInterval)
 	}()
 
-	// Start gateway
+	// Start the OpenBazaar API Gateway Server
 	err = gateway.Serve()
 	if err != nil {
 		log.Error(err)
 	}
 
 	return nil
+}
+
+func checkSSLConfiguration() error {
+	if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
+		return errors.New("SSL cert and key files must be set when SSL is enabled")
+	}
+	return nil
+}
+
+func getOfflineStorage(customStorage string) (sto.OfflineMessagingStorage, error) {
+	var storage sto.OfflineMessagingStorage
+	var err error
+	if customStorage == "self-hosted" || customStorage == "" {
+		storage = selfhosted.NewSelfHostedStorage(repoPath, core.Node.IpfsNode, pushNodes, core.Node.SendStore)
+	} else if customStorage == "dropbox" {
+		if usingTor && !usingClearnet {
+			log.Error("Dropbox can not be used with Tor")
+			return nil, errors.New("Dropbox can not be used with Tor")
+		}
+
+		if dropboxToken == "" {
+			err = errors.New("Dropbox token not set in config file")
+			log.Error(err)
+			return nil, err
+		}
+		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+	} else {
+		err = errors.New("Invalid storage option")
+		log.Error(err)
+		return nil, err
+	}
+	return storage, nil
+}
+
+func getPubSub() ipfs.Pubsub {
+	publisher := ipfs.NewPubsubPublisher(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
+	return ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
+}
+
+func getNameSystem() (*obns.NameSystem, error) {
+	resolvers := []obns.Resolver{
+		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
+	}
+	if !(usingTor && !usingClearnet) {
+		resolvers = append(resolvers, obns.NewDNSResolver())
+	}
+	ns, err := obns.NewNameSystem(resolvers)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return ns, nil
+}
+
+func setupBanManager(sqliteDB *db.SQLiteDatastore) error {
+	settings, err := sqliteDB.Settings().Get()
+	if err != nil && err != db.SettingsNotSetError {
+		log.Error(err)
+		return err
+	}
+	var blockedNodes []peer.ID
+	if settings.BlockedNodes != nil {
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedNodes = append(blockedNodes, id)
+		}
+	}
+	banManager = obnet.NewBanManager(blockedNodes)
+	return nil
+}
+
+func setAuthCookie(allowIP []string) error {
+	gatewayMaddr, err := ma.NewMultiaddr(ipfsConfig.Addresses.Gateway)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	// Override config file preference if this is Mainnet, open internet and API enabled
+	if addr != "127.0.0.1" && params.Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
+		apiConfig.Authenticated = true
+	}
+	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, allowIP...)
+
+	// Create authentication cookie
+	var authCookie http.Cookie
+	authCookie.Name = "OpenBazaar_Auth_Cookie"
+
+	cookiePrefix := authCookie.Name + "="
+	cookiePath := path.Join(repoPath, ".cookie")
+	cookie, err := ioutil.ReadFile(cookiePath)
+	if err != nil {
+		authBytes := make([]byte, 32)
+		_, err = rand.Read(authBytes)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		authCookie.Value = base58.Encode(authBytes)
+		f, err := os.Create(cookiePath)
+		if err != nil {
+			log.Error(err)
+			return err
+		}
+		cookie := cookiePrefix + authCookie.Value
+		_, werr := f.Write([]byte(cookie))
+		if werr != nil {
+			log.Error(werr)
+			return werr
+		}
+		f.Close()
+	} else {
+		if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
+			return errors.New("Invalid authentication cookie. Delete it to generate a new one")
+		}
+		split := strings.SplitAfter(string(cookie), cookiePrefix)
+		authCookie.Value = split[1]
+	}
+	return nil
+}
+
+func setupPushNodes() error {
+	for _, pnd := range dataSharingConfig.PushTo {
+		p, err := peer.IDB58Decode(pnd)
+		if err != nil {
+			log.Error("Invalid peerID in DataSharing config")
+			return err
+		}
+		pushNodes = append(pushNodes, p)
+	}
+	return nil
+}
+
+func getMasterPrivateKey(mnemonic string) (*hdkeychain.ExtendedKey, error) {
+	// Master key setup
+	seed := bip39.NewSeed(mnemonic, "")
+	mPrivKey, err := hdkeychain.NewMaster(seed, &params)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	return mPrivKey, nil
+}
+
+func setupWallet(db *db.SQLiteDatastore, mnemonic string, isTestnet bool, isRegtest bool, disableExchangeRates bool) (multiwallet.MultiWallet, error) {
+	if isTestnet {
+		params = chaincfg.TestNet3Params
+	} else if isRegtest {
+		params = chaincfg.RegressionNetParams
+	} else {
+		params = chaincfg.MainNetParams
+	}
+
+	// Multiwallet setup
+	var walletLogWriter io.Writer
+	if noLogFiles {
+		walletLogWriter = &DummyWriter{}
+	} else {
+		walletLogWriter = &lumberjack.Logger{
+			Filename:   path.Join(repoPath, "logs", "wallet.log"),
+			MaxSize:    10, // Megabytes
+			MaxBackups: 3,
+			MaxAge:     30, // Days
+		}
+	}
+	walletLogFile := logging.NewLogBackend(walletLogWriter, "", 0)
+	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
+	walletLogger := logging.MultiLogger(walletFileFormatter)
+	multiwalletConfig := &wallet.WalletConfig{
+		ConfigFile:           walletsConfig,
+		DB:                   db.DB(),
+		Params:               &params,
+		RepoPath:             repoPath,
+		Logger:               walletLogger,
+		Proxy:                torDialer,
+		WalletCreationDate:   creationDate,
+		Mnemonic:             mnemonic,
+		DisableExchangeRates: disableExchangeRates,
+	}
+	mw, err := wallet.NewMultiWallet(multiwalletConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return mw, nil
+}
+
+func setDHTQuerySize() {
+	querySize := ipfsConfig.Ipns.QuerySize
+	if querySize <= 20 && querySize > 0 {
+		dhtutil.QuerySize = querySize
+	} else {
+		dhtutil.QuerySize = 16
+	}
 }
 
 func getIPFSRootHash() (*namepb.IpnsEntry, error) {
@@ -865,7 +946,7 @@ func getCoinType(x *Start) wi.CoinType {
 	return wi.Bitcoin
 }
 
-func setupLogging(verbose bool, loglevel string, noLogFiles bool) {
+func setupLogging(verbose bool, loglevel string) {
 	w := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "ob.log"),
 		MaxSize:    10, // Megabytes
