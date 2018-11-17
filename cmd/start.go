@@ -74,6 +74,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -112,6 +113,7 @@ type Start struct {
 
 var (
 	mainConfig			[]byte
+	ipfsConfig			config.Config
 	apiConfig			*schema.APIConfig
 	torConfig			*schema.TorConfig
 	dataSharingConfig	*schema.DataSharing
@@ -120,9 +122,20 @@ var (
 	walletsConfig		*schema.WalletsConfig
 	republishInterval	time.Duration
 	dropboxToken		string
-)
+	nodeRepo			ipfsrepo.Repo
+	repoPath			string
+	onionTransport 		*oniontp.OnionTransport
+	torDialer 			proxy.Dialer
+	usingTor			bool
+	usingClearnet 		bool
+	controlPort 		int
+	dnsResolver			namesys.Resolver
+	ipfsNode			*ipfscore.IpfsNode
+	)
 
 func (x *Start) Execute(args []string) error {
+	var err error
+
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -143,7 +156,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set repo path
-	repoPath, err := repo.GetRepoPath(isTestnet)
+	repoPath, err = repo.GetRepoPath(isTestnet)
 	if err != nil {
 		return err
 	}
@@ -152,10 +165,10 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Remove lockfile if present
-	removeLockfile(repoPath)
+	removeLockfile()
 
 	// Logging
-	setupLogging(repoPath, x.Verbose, x.LogLevel, x.NoLogFiles)
+	setupLogging(x.Verbose, x.LogLevel, x.NoLogFiles)
 
 	// Increase OS file descriptors to prevent crashes
 	err = core.CheckAndSetUlimit()
@@ -172,9 +185,9 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Create user-agent file
-	createUserAgentFile(repoPath, x.UserAgent)
+	createUserAgentFile(x.UserAgent)
 
-	err = ensureDatabaseAccess(sqliteDB, repoPath, isTestnet, coinType)
+	err = ensureDatabaseAccess(sqliteDB, isTestnet, coinType)
 	if err != nil {
 		log.Error("error initializing data folder")
 	}
@@ -185,186 +198,54 @@ func (x *Start) Execute(args []string) error {
 		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
 
-	err = getConfigFiles(repoPath)
+	err = getConfigFiles()
 	if err != nil {
 		return err
 	}
 
-	// IPFS node setup
-	r, err := fsrepo.Open(repoPath)
+	ipfsConfig, err := getIPFSConfig()
 	if err != nil {
-		log.Error("open repo:", err)
 		return err
 	}
+
+	ipfsConfig.Identity, err = getIPFSIdentity(*sqliteDB)
+	if err != nil {
+		return err
+	}
+
+	if x.Testnet || x.Regtest {
+		setupTestnet()
+	}
+
+	configureIPFSSwarmForTor(x.Tor, x.DualStack)
+
+	processSwarmAddresses(x.STUN)
+
+	dnsResolver = namesys.NewDNSResolver()	// Custom DNS resolver
+
+	// Set up the Tor transport if user has enabled it
+	if usingTor {
+		err = setupTorTransport(x.TorPassword)
+		if err != nil {
+			return err
+		}
+		// If we're using Tor exclusively, set the proxy dialer and dns resolver
+		if !usingClearnet {
+			log.Notice("Using Tor exclusively")
+			torDialer, err = onionTransport.TorDialer()
+			if err != nil {
+				log.Error("dialing Tor network:", err)
+				return err
+			}
+			// TODO: maybe create a tor resolver impl later
+			dnsResolver = nil	// Disable DNS resolution due to privacy requirements
+		}
+	}
+
 	cctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cfg, err := r.Config()
-	if err != nil {
-		log.Error("get repo config:", err)
-		return err
-	}
-
-	identityKey, err := sqliteDB.Config().GetIdentityKey()
-	if err != nil {
-		log.Error("get identity key:", err)
-		return err
-	}
-	identity, err := ipfs.IdentityFromKey(identityKey)
-	if err != nil {
-		log.Error("get identity from key:", err)
-		return err
-	}
-	cfg.Identity = identity
-
-	// Setup testnet
-	if x.Testnet || x.Regtest {
-		testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(mainConfig)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
-		cfg.Bootstrap = testnetBootstrapAddrs
-		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
-		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
-
-		dataSharingConfig.PushTo = []string{}
-	}
-
-	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
-	if err != nil {
-		log.Error("create onion key:", err)
-		return err
-	}
-	onionAddrString := "/onion/" + onionAddr + ":4003"
-	if x.Tor {
-		cfg.Addresses.Swarm = []string{}
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
-	} else if x.DualStack {
-		cfg.Addresses.Swarm = []string{}
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/4001")
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip6/::/tcp/4001")
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip6/::/tcp/9005/ws")
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
-	}
-	// Iterate over our address and process them as needed
-	var onionTransport *oniontp.OnionTransport
-	var torDialer proxy.Dialer
-	var usingTor, usingClearnet bool
-	var controlPort int
-	for i, addr := range cfg.Addresses.Swarm {
-		m, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			log.Error("creating swarm multihash:", err)
-			return err
-		}
-		p := m.Protocols()
-		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
-		if x.STUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
-			usingClearnet = true
-			port, serr := obnet.Stun()
-			if serr != nil {
-				log.Error("stun setup:", serr)
-				return err
-			}
-			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
-			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
-			break
-		} else if p[0].Name == "onion" {
-			usingTor = true
-			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
-			t, err := ma.ProtocolsWithString("/onion")
-			if err != nil {
-				log.Error("wrapping onion protocol:", err)
-				return err
-			}
-			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
-		} else {
-			usingClearnet = true
-		}
-	}
-	// Create Tor transport
-	if usingTor {
-		torControl := torConfig.TorControl
-		if torControl == "" {
-			controlPort, err = obnet.GetTorControlPort()
-			if err != nil {
-				log.Error("get tor control port:", err)
-				return err
-			}
-			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
-		}
-		torPw := torConfig.Password
-		if x.TorPassword != "" {
-			torPw = x.TorPassword
-		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
-		if err != nil {
-			log.Error("setup tor transport:", err)
-			return err
-		}
-	}
-	// If we're only using Tor set the proxy dialer and dns resolver
-	dnsResolver := namesys.NewDNSResolver()
-	if usingTor && !usingClearnet {
-		log.Notice("Using Tor exclusively")
-		torDialer, err = onionTransport.TorDialer()
-		if err != nil {
-			log.Error("dailing tor network:", err)
-			return err
-		}
-		// TODO: maybe create a tor resolver impl later
-		dnsResolver = nil
-	}
-
-	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
-		// no addresses to begin with. we'll start later.
-		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
-		if err != nil {
-			return nil, err
-		}
-
-		network := (*swarm.Network)(swrm)
-		network.Swarm().AddTransport(onionTransport)
-
-		for _, f := range fs {
-			network.Swarm().Filters.AddDialFilter(f)
-		}
-
-		var host *p2pbhost.BasicHost
-		if usingTor && !usingClearnet {
-			host = p2pbhost.New(network)
-		} else {
-			hostOpts := []interface{}{bwr}
-			if !opts.DisableNatPortMap {
-				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
-			}
-			host = p2pbhost.New(network, hostOpts...)
-		}
-		return host, nil
-	}
-
-	ncfg := &ipfscore.BuildCfg{
-		Repo:   r,
-		Online: true,
-		ExtraOpts: map[string]bool{
-			"mplex": true,
-		},
-		DNSResolver: dnsResolver,
-		Routing:     DHTOption,
-	}
-
-	if cfg.Ipns.UsePersistentCache {
-		ncfg.ExtraOpts["ipnsps"] = true
-	}
-
-	if onionTransport != nil {
-		ncfg.Host = defaultHostOption
-	}
-	nd, err := ipfscore.NewNode(cctx, ncfg)
+	ipfsNode, err = ipfscore.NewNode(cctx, getNodeConfig())
 	if err != nil {
 		log.Error("create new ipfs node:", err)
 		return err
@@ -377,40 +258,22 @@ func (x *Start) Execute(args []string) error {
 		return fsrepo.ConfigAt(repoPath)
 	}
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
-		return nd, nil
+		return ipfsNode, nil
 	}
 
 	// Set IPNS query size
-	querySize := cfg.Ipns.QuerySize
+	querySize := ipfsConfig.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
 		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
 
-	log.Info("Peer ID: ", nd.Identity.Pretty())
-	printSwarmAddrs(nd)
+	log.Info("Peer ID: ", ipfsNode.Identity.Pretty())
+	printSwarmAddrs(ipfsNode)
 
 	// Get current directory root hash
-	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
-	if hasherr != nil {
-		log.Error("get ipns key:", hasherr)
-		return hasherr
-	}
-	val := ival.([]byte)
-	dhtrec := new(recpb.Record)
-	err = proto.Unmarshal(val, dhtrec)
-	if err != nil {
-		log.Error("unmarshal record", err)
-		return err
-	}
-	e := new(namepb.IpnsEntry)
-	err = proto.Unmarshal(dhtrec.GetValue(), e)
-	if err != nil {
-		log.Error("unmarshal record value", err)
-		return err
-	}
+	ipfsRootHash, err := getIPFSRootHash()
 
 	// Wallet
 	mn, err := sqliteDB.Config().GetMnemonic()
@@ -479,7 +342,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated gateway
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	gatewayMaddr, err := ma.NewMultiaddr(ipfsConfig.Addresses.Gateway)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -571,8 +434,8 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Build pubsub
-	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
-	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	publisher := ipfs.NewPubsubPublisher(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), ipfsNode.PeerHost, ipfsNode.Routing, ipfsNode.Repo.Datastore(), ipfsNode.Floodsub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
 	// OpenBazaar node setup
@@ -580,8 +443,8 @@ func (x *Start) Execute(args []string) error {
 		AcceptStoreRequests:           dataSharingConfig.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
-		IpfsNode:                      nd,
+		IPNSBackupAPI:                 ipfsConfig.Ipns.BackUpAPI,
+		IpfsNode:                      ipfsNode,
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
 		NameSystem:                    ns,
@@ -590,7 +453,7 @@ func (x *Start) Execute(args []string) error {
 		PushNodes:            pushNodes,
 		RegressionTestEnable: x.Regtest,
 		RepoPath:             repoPath,
-		RootHash:             ipath.Path(e.Value).String(),
+		RootHash:             ipath.Path(ipfsRootHash.Value).String(),
 		TestnetEnable:        x.Testnet,
 		TorDialer:            torDialer,
 		UserAgent:            core.USERAGENT,
@@ -624,7 +487,7 @@ func (x *Start) Execute(args []string) error {
 	}
 	core.Node.MessageStorage = storage
 
-	if len(cfg.Addresses.Gateway) <= 0 {
+	if len(ipfsConfig.Addresses.Gateway) <= 0 {
 		return ErrNoGateways
 	}
 	if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
@@ -637,7 +500,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	if cfg.Addresses.API != "" {
+	if ipfsConfig.Addresses.API != "" {
 		if _, err := serveHTTPApi(&ctx); err != nil {
 			log.Error(err)
 			return err
@@ -657,7 +520,7 @@ func (x *Start) Execute(args []string) error {
 				wal.AddTransactionListener(TL.OnTransactionReceived)
 			}
 			log.Info("Starting multiwallet...")
-			su := wallet.NewStatusUpdater(mw, core.Node.Broadcast, nd.Context())
+			su := wallet.NewStatusUpdater(mw, core.Node.Broadcast, ipfsNode.Context())
 			go su.Start()
 			go mw.Start()
 			if resyncManager != nil {
@@ -698,9 +561,228 @@ func (x *Start) Execute(args []string) error {
 	return nil
 }
 
-func getConfigFiles(datafolder string) error {
+func getIPFSRootHash() (*namepb.IpnsEntry, error) {
 	var err error
-	mainConfig, err = ioutil.ReadFile(path.Join(datafolder, "config"))
+	_, ipnskey := namesys.IpnsKeysForID(ipfsNode.Identity)
+	ival, hasherr := ipfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
+	if hasherr != nil {
+		log.Error("get ipns key:", hasherr)
+		return &namepb.IpnsEntry{}, hasherr
+	}
+	val := ival.([]byte)
+	dhtrec := new(recpb.Record)
+	err = proto.Unmarshal(val, dhtrec)
+	if err != nil {
+		log.Error("unmarshal record", err)
+		return &namepb.IpnsEntry{}, err
+	}
+	e := new(namepb.IpnsEntry)
+	err = proto.Unmarshal(dhtrec.GetValue(), e)
+	if err != nil {
+		log.Error("unmarshal record value", err)
+		return &namepb.IpnsEntry{}, err
+	}
+	return e, nil
+}
+
+func getNodeConfig() *ipfscore.BuildCfg {
+	nodeConfig := &ipfscore.BuildCfg{
+		Repo:   nodeRepo,
+		Online: true,
+		ExtraOpts: map[string]bool{
+			"mplex": true,
+		},
+		DNSResolver: dnsResolver,
+		Routing:     DHTOption,
+	}
+
+	if ipfsConfig.Ipns.UsePersistentCache {
+		nodeConfig.ExtraOpts["ipnsps"] = true
+	}
+
+	if onionTransport != nil {
+		nodeConfig.Host = defaultHostOption
+	}
+	return nodeConfig
+}
+
+func defaultHostOption(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
+	// no addresses to begin with. we'll start later.
+	swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
+	if err != nil {
+		return nil, err
+	}
+
+	network := (*swarm.Network)(swrm)
+	network.Swarm().AddTransport(onionTransport)
+
+	for _, f := range fs {
+		network.Swarm().Filters.AddDialFilter(f)
+	}
+
+	var host *p2pbhost.BasicHost
+	if usingTor && !usingClearnet {
+		host = p2pbhost.New(network)
+	} else {
+		hostOpts := []interface{}{bwr}
+		if !opts.DisableNatPortMap {
+			hostOpts = append(hostOpts, p2pbhost.NATPortMap)
+		}
+		host = p2pbhost.New(network, hostOpts...)
+	}
+	return host, nil
+}
+
+func setupTorTransport(password string) error {
+	var err error
+	torControl := torConfig.TorControl
+	if torControl == "" {
+		controlPort, err = obnet.GetTorControlPort()
+		if err != nil {
+			log.Error("get tor control port:", err)
+			return err
+		}
+		torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+	}
+	torPw := torConfig.Password
+	if password != "" {
+		torPw = password
+	}
+	onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
+	if err != nil {
+		log.Error("setup tor transport:", err)
+		return err
+	}
+	return nil
+}
+
+func processSwarmAddresses(isUsingSTUN bool) error {
+	for i, addr := range ipfsConfig.Addresses.Swarm {
+		m, err := ma.NewMultiaddr(addr)
+
+		if err != nil {
+			log.Error("creating swarm multihash:", err)
+			return err
+		}
+		p := m.Protocols()
+
+		// If we are using UTP and the stun option has been select, run stun and replace the port in the address
+		if isUsingSTUN && p[0].Name == "ip4" && p[1].Name == "udp" && p[2].Name == "utp" {
+			usingClearnet = true
+			port, serr := obnet.Stun()
+			if serr != nil {
+				log.Error("stun setup:", serr)
+				return err
+			}
+			ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm[:i], ipfsConfig.Addresses.Swarm[i+1:]...)
+			ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
+			break
+		} else if p[0].Name == "onion" {
+			usingTor = true
+			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
+			t, err := ma.ProtocolsWithString("/onion")
+			if err != nil {
+				log.Error("wrapping onion protocol:", err)
+				return err
+			}
+			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
+		} else {
+			usingClearnet = true
+		}
+	}
+	return nil
+}
+
+func getOnionAddress() (string, error) {
+	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
+	if err != nil {
+		log.Error("create onion key:", err)
+		return "", err
+	}
+	return "/onion/" + onionAddr + ":4003", nil
+}
+
+// Configure IPFS Swarm for Tor and dual stack nodes
+func configureIPFSSwarmForTor(isTor bool, isDualStack bool) error {
+	onionAddrString, err := getOnionAddress()
+	if err != nil {
+		return err
+	}
+
+	if isTor {
+		ipfsConfig.Addresses.Swarm = []string{}
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, onionAddrString)
+	} else if isDualStack {
+		ipfsConfig.Addresses.Swarm = []string{}
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, onionAddrString)
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/tcp/4001")
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip6/::/tcp/4001")
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip6/::/tcp/9005/ws")
+		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
+	}
+	return nil
+}
+
+// Retrieves identity key from the database and uses it to get the
+// IPFS identity which contains the private key and peer ID
+func getIPFSIdentity(db db.SQLiteDatastore) (config.Identity, error) {
+	identityKey, err := db.Config().GetIdentityKey()
+	if err != nil {
+		log.Error("get identity key:", err)
+		return config.Identity{}, err
+	}
+	identity, err := ipfs.IdentityFromKey(identityKey)
+	if err != nil {
+		log.Error("get identity from key:", err)
+	}
+	return identity, err
+}
+
+func getIPFSRepo() (ipfsrepo.Repo, error) {
+	repo, err := fsrepo.Open(repoPath)
+	if err != nil {
+		log.Error("open repo:", err)
+		return nil, err
+	}
+	return repo, nil
+}
+
+func getIPFSConfig() (*config.Config, error) {
+	var err error
+	nodeRepo, err = getIPFSRepo()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := nodeRepo.Config()
+	if err != nil {
+		log.Error("get repo config:", err)
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// Configure the node's bootstrap peers and protocol tags for testnet
+func setupTestnet() error {
+	testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(mainConfig)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	cfg, err := nodeRepo.Config()
+	cfg.Bootstrap = testnetBootstrapAddrs
+	dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+	bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
+	service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
+
+	dataSharingConfig.PushTo = []string{}
+	return nil
+}
+
+func getConfigFiles() error {
+	var err error
+	mainConfig, err = ioutil.ReadFile(path.Join(repoPath, "config"))
 	if err != nil {
 		log.Error("read config:", err)
 		return err
@@ -744,7 +826,7 @@ func getConfigFiles(datafolder string) error {
 	return nil
 }
 
-func ensureDatabaseAccess(db *db.SQLiteDatastore, datafolder string, testnet bool, coinType wi.CoinType) error {
+func ensureDatabaseAccess(db *db.SQLiteDatastore, testnet bool, coinType wi.CoinType) error {
 	if db.Config().IsEncrypted() {
 		db.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
@@ -752,7 +834,7 @@ func ensureDatabaseAccess(db *db.SQLiteDatastore, datafolder string, testnet boo
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
-		db, err := InitializeRepo(datafolder, pw, "", testnet, time.Now(), coinType)
+		db, err := InitializeRepo(repoPath, pw, "", testnet, time.Now(), coinType)
 		if err != nil && err != repo.ErrRepoExists {
 			return err
 		}
@@ -764,9 +846,9 @@ func ensureDatabaseAccess(db *db.SQLiteDatastore, datafolder string, testnet boo
 	return nil
 }
 
-func createUserAgentFile(dataFolder string, useragent string) error {
+func createUserAgentFile(useragent string) error {
 	userAgentBytes := []byte(core.USERAGENT + useragent)
-	err := ioutil.WriteFile(path.Join(dataFolder, "root", "user_agent"), userAgentBytes, os.ModePerm)
+	err := ioutil.WriteFile(path.Join(repoPath, "root", "user_agent"), userAgentBytes, os.ModePerm)
 	if err != nil {
 		log.Error("write user_agent:", err)
 		return err
@@ -783,7 +865,7 @@ func getCoinType(x *Start) wi.CoinType {
 	return wi.Bitcoin
 }
 
-func setupLogging(repoPath string, verbose bool, loglevel string, noLogFiles bool) {
+func setupLogging(verbose bool, loglevel string, noLogFiles bool) {
 	w := &lumberjack.Logger{
 		Filename:   path.Join(repoPath, "logs", "ob.log"),
 		MaxSize:    10, // Megabytes
@@ -835,7 +917,7 @@ func setupLogging(repoPath string, verbose bool, loglevel string, noLogFiles boo
 	logging.SetLevel(level, "")
 }
 
-func removeLockfile(repoPath string) {
+func removeLockfile() {
 	repoLockFile := filepath.Join(repoPath, fsrepo.LockFile)
 	os.Remove(repoLockFile)
 }
