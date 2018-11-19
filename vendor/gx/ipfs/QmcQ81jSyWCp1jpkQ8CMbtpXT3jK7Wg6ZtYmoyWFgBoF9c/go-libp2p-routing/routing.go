@@ -100,25 +100,17 @@ func KeyForPublicKey(id peer.ID) string {
 // If the ValueStore is also a PubKeyFetcher, this method will call GetPublicKey
 // (which may be better optimized) instead of GetValue.
 func GetPublicKey(r ValueStore, ctx context.Context, p peer.ID) (ci.PubKey, error) {
-	switch k, err := p.ExtractPublicKey(); err {
-	case peer.ErrNoPublicKey:
-		// check the datastore
-	case nil:
-		return k, nil
-	default:
-		return nil, err
-	}
-
 	if dht, ok := r.(PubKeyFetcher); ok {
 		// If we have a DHT as our routing system, use optimized fetcher
 		return dht.GetPublicKey(ctx, p)
-	}
-	key := KeyForPublicKey(p)
-	pkval, err := r.GetValue(ctx, key)
-	if err != nil {
-		return nil, err
-	}
+	} else {
+		key := "/pk/" + string(p)
+		pkval, err := r.GetValue(ctx, key)
+		if err != nil {
+			return nil, err
+		}
 
-	// get PublicKey from node.Data
-	return ci.UnmarshalPublicKey(pkval)
+		// get PublicKey from node.Data
+		return ci.UnmarshalPublicKey(pkval)
+	}
 }
