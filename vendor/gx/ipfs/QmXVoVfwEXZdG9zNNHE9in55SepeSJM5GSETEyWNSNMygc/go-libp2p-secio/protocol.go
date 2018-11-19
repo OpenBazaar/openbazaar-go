@@ -205,10 +205,18 @@ func (s *secureSession) runHandshakeSync() error {
 		// No peer set. We're accepting a remote connection.
 		s.remotePeer = actualRemotePeer
 	default:
-		// Peer mismatch. Bail.
-		s.insecure.Close()
-		log.Debugf("expected peer %s, got peer %s", s.remotePeer, actualRemotePeer)
-		return ErrWrongPeer
+		actualRemotePeer, err := peer.FlexPubKey(s.remote.permanentPubKey)
+		if err != nil {
+			return err
+		}
+		if s.remotePeer != actualRemotePeer {
+			// Peer mismatch. Bail.
+			s.insecure.Close()
+
+			log.Debugf("expected peer %s, got peer %s", s.remotePeer, actualRemotePeer)
+			return ErrWrongPeer
+		}
+
 	}
 
 	log.Debugf("1.1 Identify: %s Remote Peer Identified as %s", s.localPeer, s.remotePeer)
