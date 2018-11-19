@@ -537,8 +537,8 @@ func MustDefaultConfig() *config.Config {
 			ResolveCacheSize:   128,
 			RecordLifetime:     "168h",
 			RepublishPeriod:    "24h",
-			//QuerySize:          5,
-			//UsePersistentCache: true,
+			QuerySize:          5,
+			UsePersistentCache: true,
 		},
 
 		Gateway: config.Gateway{
