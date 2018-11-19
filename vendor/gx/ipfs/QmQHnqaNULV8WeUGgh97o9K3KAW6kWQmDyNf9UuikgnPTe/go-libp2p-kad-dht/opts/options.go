@@ -9,8 +9,8 @@ import (
 	dssync "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore/sync"
 )
 
-var ProtocolDHT protocol.ID = "/ipfs/kad/1.0.0"
-var ProtocolDHTOld protocol.ID = "/ipfs/dht"
+var ProtocolDHT protocol.ID = "/openbazaar/kad/1.0.0"
+var ProtocolDHTOld protocol.ID = "/openbazaar/dht"
 var DefaultProtocols = []protocol.ID{ProtocolDHT, ProtocolDHTOld}
 
 // Options is a structure containing all the options that can be used when constructing a DHT.
