@@ -9,6 +9,8 @@ import (
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	ic "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	b58 "gx/ipfs/QmWFAMPqsEyUX7gDUsRVmMWz59FxSpJ1b2v6bJ1yYzo7jY/go-base58-fast/base58"
+	mc "gx/ipfs/QmNhVCV7kgAqW6oh6n8m9myxT2ksGPhVZnHkzkBvR5qg2d/go-multicodec-packed"
+
 )
 
 // MaxInlineKeyLength is the maximum length a key can be for it to be inlined in
@@ -68,6 +70,52 @@ func (id ID) MatchesPublicKey(pk ic.PubKey) bool {
 		return false
 	}
 	return oid == id
+}
+
+var MultihashDecodeErr = errors.New("unable to decode multihash")
+var MultihashCodecErr = errors.New("unexpected multihash codec")
+var MultihashLengthErr = errors.New("unexpected multihash length")
+var CodePrefixErr = errors.New("unexpected code prefix")
+
+func (id ID) ExtractEd25519PublicKey() (ic.PubKey, error) {
+	// ed25519 pubkey identity format
+	// <identity mc><length (2 + 32 = 34)><ed25519-pub mc><ed25519 pubkey>
+	// <0x00       ><0x22                ><0xed01        ><ed25519 pubkey>
+
+	var nilPubKey ic.PubKey
+
+	// Decode multihash
+	decoded, err := mh.Decode([]byte(id))
+	if err != nil {
+		return nilPubKey, MultihashDecodeErr
+	}
+
+	// Check ID multihash codec
+	if decoded.Code != mh.ID {
+		return nilPubKey, MultihashCodecErr
+	}
+
+	// Check multihash length
+	if decoded.Length != 2+32 {
+		return nilPubKey, MultihashLengthErr
+	}
+
+	// Split prefix
+	code, pubKeyBytes := mc.SplitPrefix(decoded.Digest)
+
+	// Check ed25519 code
+	if code != mc.Ed25519Pub {
+		return nilPubKey, CodePrefixErr
+	}
+
+	// Unmarshall public key
+	pubKey, err := ic.UnmarshalEd25519PublicKey(pubKeyBytes)
+	if err != nil {
+		// Should never occur because of the check decoded.Length != 2+32
+		return nilPubKey, fmt.Errorf("Unexpected error unmarshalling Ed25519 public key")
+	}
+
+	return pubKey, nil
 }
 
 // ExtractPublicKey attempts to extract the public key from an ID
@@ -144,8 +192,7 @@ func IDHexEncode(id ID) string {
 	return hex.EncodeToString([]byte(id))
 }
 
-// IDFromPublicKey returns the Peer ID corresponding to pk
-func IDFromPublicKey(pk ic.PubKey) (ID, error) {
+func FlexPubKey(pk ic.PubKey) (ID, error) {
 	b, err := pk.Bytes()
 	if err != nil {
 		return "", err
@@ -154,6 +201,20 @@ func IDFromPublicKey(pk ic.PubKey) (ID, error) {
 	if len(b) <= MaxInlineKeyLength {
 		alg = mh.ID
 	}
+	hash, _ := mh.Sum(b, alg, -1)
+	return ID(hash), nil
+}
+
+// IDFromPublicKey returns the Peer ID corresponding to pk
+func IDFromPublicKey(pk ic.PubKey) (ID, error) {
+	b, err := pk.Bytes()
+	if err != nil {
+		return "", err
+	}
+	var alg uint64 = mh.SHA2_256
+	//if len(b) <= MaxInlineKeyLength {
+	//	alg = mh.ID
+	//}
 	hash, _ := mh.Sum(b, alg, -1)
 	return ID(hash), nil
 }
