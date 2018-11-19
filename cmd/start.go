@@ -452,9 +452,11 @@ func (x *Start) Execute(args []string) error {
 		Routing:     DHTOption,
 	}
 
-	//if cfg.Ipns.UsePersistentCache {
-	//	ncfg.ExtraOpts["ipnsps"] = true
-	//}
+	if cfg.Ipns.UsePersistentCache {
+		ncfg.ExtraOpts["ipnsps"] = true
+	}
+
+	ncfg.ExtraOpts["pubsub"] = true
 
 	//if onionTransport != nil {
 	//	ncfg.Host = defaultHostOption
@@ -765,7 +767,7 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
-		//<-dht.DefaultBootstrapConfig.DoneChan
+		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, sqliteDB)
 
 		core.Node.StartMessageRetriever()
