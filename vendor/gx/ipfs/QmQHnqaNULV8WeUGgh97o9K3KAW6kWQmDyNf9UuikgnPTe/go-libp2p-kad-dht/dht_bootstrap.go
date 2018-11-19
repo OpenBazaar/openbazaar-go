@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"sync"
 	"time"
 
 	u "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
@@ -24,6 +25,7 @@ type BootstrapConfig struct {
 	Queries int           // how many queries to run per period
 	Period  time.Duration // how often to run periodic bootstrap.
 	Timeout time.Duration // how long to wait for a bootstrap query to run
+	DoneChan chan struct{}
 }
 
 var DefaultBootstrapConfig = BootstrapConfig{
@@ -39,7 +41,11 @@ var DefaultBootstrapConfig = BootstrapConfig{
 	Period: time.Duration(5 * time.Minute),
 
 	Timeout: time.Duration(10 * time.Second),
+
+	DoneChan: make(chan struct{}),
 }
+
+var bootstrapOnce sync.Once
 
 // Bootstrap ensures the dht routing table remains healthy as peers come and go.
 // it builds up a list of peers by requesting random peer IDs. The Bootstrap
@@ -76,6 +82,8 @@ func (dht *IpfsDHT) BootstrapWithConfig(cfg BootstrapConfig) (goprocess.Process,
 	if cfg.Queries <= 0 {
 		return nil, fmt.Errorf("invalid number of queries: %d", cfg.Queries)
 	}
+
+	defer bootstrapOnce.Do(func() { close(DefaultBootstrapConfig.DoneChan) })
 
 	proc := dht.Process().Go(func(p goprocess.Process) {
 		<-p.Go(dht.bootstrapWorker(cfg)).Closed()
