@@ -251,7 +251,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]client.Transaction, er
 		if err != nil {
 			return nil, err
 		}
-		resp, err := i.doRequest("/addrs/"+addr, http.MethodGet, nil, q)
+		resp, err := i.doRequest("/address/"+addr, http.MethodGet, nil, q)
 		if err != nil {
 			return nil, err
 		}
