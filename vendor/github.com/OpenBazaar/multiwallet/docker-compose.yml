@@ -1,0 +1,14 @@
+version: '3'
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/go/src/github.com/OpenBazaar/multiwallet
+    ports:
+      - "4001:4001"
+      - "4002:4002"
+      - "9005:9005"
+    security_opt:
+      - seccomp:unconfined #req: delve for golang

@@ -1,0 +1,13 @@
+FROM golang:1.10
+VOLUME /var/lib/openbazaar
+
+WORKDIR /go/src/github.com/OpenBazaar/multiwallet
+RUN curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh && \
+		go get -u github.com/derekparker/delve/cmd/dlv
+
+RUN useradd -ms /bin/bash ob_user
+USER ob_user
+
+COPY . .
+
+ENTRYPOINT ["/bin/bash"]

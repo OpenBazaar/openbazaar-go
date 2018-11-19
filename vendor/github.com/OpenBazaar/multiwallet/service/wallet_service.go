@@ -429,7 +429,8 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 		if !ok {
 			continue
 		}
-		value -= in.Satoshis
+		v := int64(math.Round(in.Value * float64(util.SatoshisPerCoin(ws.coinType))))
+		value -= v
 		if !sa.WatchOnly {
 			hits++
 		}

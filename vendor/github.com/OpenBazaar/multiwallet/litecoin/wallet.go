@@ -3,6 +3,7 @@ package litecoin
 import (
 	"bytes"
 	"fmt"
+	"github.com/OpenBazaar/multiwallet/client/blockbook"
 	"io"
 	"time"
 
@@ -57,7 +58,7 @@ func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.
 		return nil, err
 	}
 
-	c, err := client.NewInsightClient(cfg.ClientAPI.String(), proxy)
+	c, err := blockbook.NewBlockBookClient(cfg.ClientAPI.String(), proxy)
 	if err != nil {
 		return nil, err
 	}

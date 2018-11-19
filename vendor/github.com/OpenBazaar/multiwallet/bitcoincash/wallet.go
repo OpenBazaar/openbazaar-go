@@ -3,6 +3,7 @@ package bitcoincash
 import (
 	"bytes"
 	"fmt"
+	"github.com/OpenBazaar/multiwallet/client/blockbook"
 	"io"
 	"time"
 
@@ -58,7 +59,7 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 		return nil, err
 	}
 
-	c, err := client.NewInsightClient(cfg.ClientAPI.String(), proxy)
+	c, err := blockbook.NewBlockBookClient(cfg.ClientAPI.String(), proxy)
 	if err != nil {
 		return nil, err
 	}

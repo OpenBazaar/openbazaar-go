@@ -83,7 +83,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 	if coinTypes[wallet.Bitcoin] {
 		var apiEndpoint string
 		if !testnet {
-			apiEndpoint = "https://btc.bloqapi.net/insight-api"
+			apiEndpoint = "https://btc.blockbook.api.openbazaar.org/"
 		} else {
 			apiEndpoint = "https://test-insight.bitpay.com/api"
 		}
@@ -105,7 +105,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 	if coinTypes[wallet.BitcoinCash] {
 		var apiEndpoint string
 		if !testnet {
-			apiEndpoint = "https://bitcoincash.blockexplorer.com/api"
+			apiEndpoint = "https://bch.blockbook.api.openbazaar.org/"
 		} else {
 			apiEndpoint = "https://test-bch-insight.bitpay.com/api"
 		}
@@ -126,7 +126,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 	if coinTypes[wallet.Zcash] {
 		var apiEndpoint string
 		if !testnet {
-			apiEndpoint = "https://zcashnetwork.info/api"
+			apiEndpoint = "https://zec.blockbook.api.openbazaar.org/"
 		} else {
 			apiEndpoint = "https://explorer.testnet.z.cash/api"
 		}
@@ -147,7 +147,7 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 	if coinTypes[wallet.Litecoin] {
 		var apiEndpoint string
 		if !testnet {
-			apiEndpoint = "https://ltc.coin.space/api"
+			apiEndpoint = "https://ltc.blockbook.api.openbazaar.org/"
 		} else {
 			apiEndpoint = "https://testnet.litecore.io/api"
 		}
