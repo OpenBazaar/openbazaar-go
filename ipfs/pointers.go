@@ -88,12 +88,12 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 }
 
 func PutPointerToPeer(node *core.IpfsNode, ctx context.Context, peer peer.ID, pointer Pointer) error {
-	dht := node.Routing.(*routing.IpfsDHT)
+	dht := node.DHT
 	return putPointer(ctx, dht, peer, pointer.Value, pointer.Cid.Bytes())
 }
 
 func GetPointersFromPeer(node *core.IpfsNode, ctx context.Context, p peer.ID, key cid.Cid) ([]*ps.PeerInfo, error) {
-	dht := node.Routing.(*routing.IpfsDHT)
+	dht := node.DHT
 	pmes := dhtpb.NewMessage(dhtpb.Message_GET_PROVIDERS, key.Bytes(), 0)
 	resp, err := dht.SendRequest(ctx, p, pmes)
 	if err != nil {
@@ -103,7 +103,7 @@ func GetPointersFromPeer(node *core.IpfsNode, ctx context.Context, p peer.ID, ke
 }
 
 func addPointer(node *core.IpfsNode, ctx context.Context, k cid.Cid, pi ps.PeerInfo) error {
-	dht := node.Routing.(*routing.IpfsDHT)
+	dht := node.DHT
 	peers, err := dht.GetClosestPeers(ctx, k.KeyString())
 	if err != nil {
 		return err
