@@ -33,7 +33,7 @@ func send(msg *protocol.Message, c *Channel, args []interface{}) error {
 
 			msg.Args += string(json)
 			if i < len(args)-1 {
-				msg.Args += ", "
+				msg.Args += ","
 			}
 		}
 	}
