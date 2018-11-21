@@ -400,7 +400,7 @@ func (x *Start) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
+		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, usingTor && usingClearnet)
 		if err != nil {
 			log.Error("setup tor transport:", err)
 			return err

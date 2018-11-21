@@ -1165,7 +1165,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If we want our own inventory get it from the local database and return
-	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
+	getPersonalInventory := peerIDString == "" || peerIDString == i.node.IPFSIdentityString()
 	if getPersonalInventory {
 		var (
 			err       error
@@ -3271,7 +3271,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
+	fmt.Fprintf(w, `{"estimatedFee": %d}`, fee)
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {

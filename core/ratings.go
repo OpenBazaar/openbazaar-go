@@ -139,8 +139,8 @@ func (n *OpenBazaarNode) GetRatingCounts() (uint32, float32, error) {
 	var totalRating float32
 	for _, i := range index {
 		ratingCount += uint32(i.Count)
-		totalRating += (float32(i.Count) * i.Average)
+		totalRating += float32(i.Count) * i.Average
 	}
-	averageRating := (totalRating / float32(ratingCount))
+	averageRating := totalRating / float32(ratingCount)
 	return ratingCount, averageRating, nil
 }

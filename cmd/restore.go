@@ -216,7 +216,7 @@ func (x *Restore) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
+		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, usingTor && usingClearnet)
 		if err != nil {
 			PrintError(err.Error())
 			return err
