@@ -473,7 +473,7 @@ func hasImpliedURLSecurity(u url.URL) bool { return u.Scheme == "https" }
 
 func (i *BlockBookClient) Broadcast(tx []byte) (string, error) {
 	txHex := hex.EncodeToString(tx)
-	resp, err := i.doRequest("tx/send", http.MethodPost, []byte(txHex), nil)
+	resp, err := i.doRequest("sendtx/"+txHex, http.MethodGet, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("error broadcasting tx: %s", err)
 	}
