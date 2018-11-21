@@ -213,9 +213,7 @@ func (i *BlockBookClient) GetTransactions(addrs []btcutil.Address) ([]client.Tra
 	txChan := make(chan txsOrError)
 	go func() {
 		var wg sync.WaitGroup
-		for range addrs {
-			wg.Add(1)
-		}
+		wg.Add(len(addrs))
 		for _, addr := range addrs {
 			go func(a string) {
 				txs, err := i.getTransactions(a)
@@ -264,9 +262,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]client.Transaction, er
 		txChan := make(chan txOrError)
 		go func() {
 			var wg sync.WaitGroup
-			for range res.Transactions {
-				wg.Add(1)
-			}
+			wg.Add(len(res.Transactions))
 			for _, txid := range res.Transactions {
 				go func(id string) {
 					tx, err := i.GetTransaction(id)
@@ -300,15 +296,14 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]client.Utxo, erro
 	utxoChan := make(chan utxoOrError)
 	var wg sync.WaitGroup
 	go func() {
-		for range addrs {
-			wg.Add(1)
-		}
+		wg.Add(len(addrs))
 		for _, addr := range addrs {
-			go func() {
+			go func(addr btcutil.Address) {
+				defer wg.Done()
+
 				resp, err := i.doRequest("/utxo/"+addr.String(), http.MethodGet, nil, nil)
 				if err != nil {
 					utxoChan <- utxoOrError{nil, err}
-					wg.Done()
 					return
 				}
 				var utxos []client.Utxo
@@ -316,33 +311,29 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]client.Utxo, erro
 				defer resp.Body.Close()
 				if err = decoder.Decode(&utxos); err != nil {
 					utxoChan <- utxoOrError{nil, err}
-					wg.Done()
 					return
 				}
 				for z, u := range utxos {
 					f, err := toFloat(u.AmountIface)
 					if err != nil {
 						utxoChan <- utxoOrError{nil, err}
-						wg.Done()
 						return
 					}
 					utxos[z].Amount = f
 				}
 				var wg2 sync.WaitGroup
-				for range utxos {
-					wg2.Add(1)
-				}
+				wg2.Add(len(utxos))
 				for _, u := range utxos {
 					go func(ut client.Utxo) {
+						defer wg2.Done()
+
 						tx, err := i.GetTransaction(ut.Txid)
 						if err != nil {
 							utxoChan <- utxoOrError{nil, err}
-							wg2.Done()
 							return
 						}
 						if len(tx.Outputs)-1 < ut.Vout {
 							utxoChan <- utxoOrError{nil, errors.New("transaction has invalid number of outputs")}
-							wg2.Done()
 							return
 						}
 						ut.ScriptPubKey = tx.Outputs[ut.Vout].ScriptPubKey.Hex
@@ -350,12 +341,10 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]client.Utxo, erro
 							ut.Address = tx.Outputs[ut.Vout].ScriptPubKey.Addresses[0]
 						}
 						utxoChan <- utxoOrError{&ut, nil}
-						wg2.Done()
 					}(u)
 				}
 				wg2.Wait()
-				wg.Done()
-			}()
+			}(addr)
 		}
 		wg.Wait()
 		close(utxoChan)
