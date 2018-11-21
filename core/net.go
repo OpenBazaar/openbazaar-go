@@ -183,11 +183,11 @@ func (n *OpenBazaarNode) Follow(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	any, err := ptypes.MarshalAny(sd)
+	pbAny, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = any
+	m.Payload = pbAny
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -235,11 +235,11 @@ func (n *OpenBazaarNode) Unfollow(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	any, err := ptypes.MarshalAny(sd)
+	pbAny, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = any
+	m.Payload = pbAny
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -265,13 +265,13 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
-	any, err := ptypes.MarshalAny(contract)
+	pbAny, err := ptypes.MarshalAny(contract)
 	if err != nil {
 		return resp, err
 	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER,
-		Payload:     any,
+		Payload:     pbAny,
 	}
 
 	resp, err = n.Service.SendRequest(ctx, p, &m)
@@ -509,11 +509,11 @@ func (n *OpenBazaarNode) SendModeratorAdd(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	any, err := ptypes.MarshalAny(sd)
+	pbAny, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = any
+	m.Payload = pbAny
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -553,11 +553,11 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	any, err := ptypes.MarshalAny(sd)
+	pbAny, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = any
+	m.Payload = pbAny
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
