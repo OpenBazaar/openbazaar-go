@@ -116,15 +116,15 @@ func encryptRSA(pubKey *libp2p.RsaPublicKey, plaintext []byte) ([]byte, error) {
 	// Derive MAC and AES keys from the secret key using hkdf
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, secretKey, Salt, nil)
+	hkdfReader := hkdf.New(hash, secretKey, Salt, nil)
 
 	aesKey := make([]byte, AESKeyBytes)
-	_, err = io.ReadFull(hkdf, aesKey)
+	_, err = io.ReadFull(hkdfReader, aesKey)
 	if err != nil {
 		return nil, err
 	}
 	macKey := make([]byte, MacKeyBytes)
-	_, err = io.ReadFull(hkdf, macKey)
+	_, err = io.ReadFull(hkdfReader, macKey)
 	if err != nil {
 		return nil, err
 	}
@@ -215,15 +215,15 @@ func decryptRSA(privKey *libp2p.RsaPrivateKey, ciphertext []byte) ([]byte, error
 	// Derive the AES and MAC keys from the secret key using hdkf
 	hash := sha256.New
 
-	hkdf := hkdf.New(hash, secretKey, Salt, nil)
+	hkdfReader := hkdf.New(hash, secretKey, Salt, nil)
 
 	aesKey := make([]byte, AESKeyBytes)
-	_, err = io.ReadFull(hkdf, aesKey)
+	_, err = io.ReadFull(hkdfReader, aesKey)
 	if err != nil {
 		return nil, err
 	}
 	macKey := make([]byte, MacKeyBytes)
-	_, err = io.ReadFull(hkdf, macKey)
+	_, err = io.ReadFull(hkdfReader, macKey)
 	if err != nil {
 		return nil, err
 	}
