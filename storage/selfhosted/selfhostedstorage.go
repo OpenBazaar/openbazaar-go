@@ -50,8 +50,8 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if err != nil {
 		return nil, err
 	}
-	for _, peer := range s.pushNodes {
-		go s.store(peer.Pretty(), []cid.Cid{*id})
+	for _, nodeID := range s.pushNodes {
+		go s.store(nodeID.Pretty(), []cid.Cid{*id})
 	}
 	maAddr, err := ma.NewMultiaddr("/ipfs/" + addr + "/")
 	if err != nil {
