@@ -33,9 +33,9 @@ func IdentityFromKey(privkey []byte) (config.Identity, error) {
 }
 
 func IdentityKeyFromSeed(seed []byte, bits int) ([]byte, error) {
-	hmac := hmac.New(sha256.New, []byte("OpenBazaar seed"))
-	hmac.Write(seed)
-	reader := bytes.NewReader(hmac.Sum(nil))
+	hm := hmac.New(sha256.New, []byte("OpenBazaar seed"))
+	hm.Write(seed)
+	reader := bytes.NewReader(hm.Sum(nil))
 	sk, _, err := libp2p.GenerateKeyPairWithReader(libp2p.Ed25519, bits, reader)
 	if err != nil {
 		return nil, err
