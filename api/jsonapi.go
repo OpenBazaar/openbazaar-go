@@ -42,7 +42,7 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
 type JSONAPIConfig struct {
