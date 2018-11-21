@@ -10,7 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-var SettingsNotSetError error = errors.New("Settings not set")
+var SettingsNotSetError = errors.New("Settings not set")
 
 type SettingsDB struct {
 	modelStore

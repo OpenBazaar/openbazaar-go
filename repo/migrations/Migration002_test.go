@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testConfig2 string = `{
+var testConfig2 = `{
     "Crosspost-gateways": [
 	    "https://gateway.ob1.io/",
 	    "https://gateway.duosear.ch/"

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testConfig string = `{
+var testConfig = `{
     "Wallet": {
 	    "Binary": "",
 	    "FeeAPI": "https://bitcoinfees.21.co/api/v1/fees/recommended",
