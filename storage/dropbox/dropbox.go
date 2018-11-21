@@ -30,10 +30,10 @@ func NewDropBoxStorage(apiToken string) (*DropBoxStorage, error) {
 func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr, error) {
 	api := dropbox.Client(s.apiToken, dropbox.Options{Verbose: true})
 	hash := sha256.Sum256(ciphertext)
-	hex := hex.EncodeToString(hash[:])
+	hexStr := hex.EncodeToString(hash[:])
 
 	// Upload ciphertext
-	uploadArg := files.NewCommitInfo("/" + hex)
+	uploadArg := files.NewCommitInfo("/" + hexStr)
 	r := bytes.NewReader(ciphertext)
 	_, err := api.Upload(uploadArg, r)
 	if err != nil {
@@ -41,7 +41,7 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 	}
 
 	// Set public sharing
-	sharingArg := sharing.NewCreateSharedLinkArg("/" + hex)
+	sharingArg := sharing.NewCreateSharedLinkArg("/" + hexStr)
 	res, err := api.CreateSharedLink(sharingArg)
 	if err != nil {
 		return nil, err
