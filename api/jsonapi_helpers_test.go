@@ -202,9 +202,9 @@ func httpGet(endpoint string) ([]byte, error) {
 func jsonFor(t *testing.T, fixture proto.Message) string {
 	m := jsonpb.Marshaler{}
 
-	json, err := m.MarshalToString(fixture)
+	jsonStr, err := m.MarshalToString(fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return json
+	return jsonStr
 }
