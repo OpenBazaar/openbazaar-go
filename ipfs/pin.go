@@ -2,6 +2,7 @@ package ipfs
 
 import (
 	"context"
+
 	"github.com/ipfs/go-ipfs/core/coreapi"
 
 	"github.com/ipfs/go-ipfs/core"

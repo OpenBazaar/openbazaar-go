@@ -14,11 +14,12 @@ import (
 	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
 	"time"
 
+	"gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	pb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
+
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/op/go-logging"
-	"gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	pb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 var log = logging.MustGetLogger("ipfs")
@@ -92,7 +93,7 @@ func getPreviousSeqNo(ctx context.Context, nd *core.IpfsNode, ipnskey string) (u
 func PutRecordToRouting(ctx context.Context, ipnskey string, k ci.PrivKey, value path.Path, seqnum uint64, eol time.Time, r routing.ValueStore) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	
+
 	entry, err := ipns.Create(k, []byte(value), seqnum, eol)
 	if err != nil {
 		return err
