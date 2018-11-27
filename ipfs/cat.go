@@ -2,14 +2,15 @@ package ipfs
 
 import (
 	"context"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	"github.com/ipfs/go-ipfs/path"
+	"gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 )
 
 // Fetch data from IPFS given the hash
@@ -21,7 +22,14 @@ func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 		path = "/ipfs/" + path
 	}
 
-	r, err := coreunix.Cat(ctx, n, path)
+	fpath, err := iface.ParsePath(path)
+	if err != nil {
+		return nil, err
+	}
+
+	api := coreapi.NewCoreAPI(n)
+
+	r, err := api.Unixfs().Get(ctx, fpath)
 	if err != nil {
 		return nil, err
 	}
