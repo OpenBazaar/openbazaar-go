@@ -5,44 +5,49 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
-	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
-	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
-	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
-	"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
-	oniontp "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport"
-	ipld "gx/ipfs/Qme5bWv7wtjUNGsK2BNGVUFPKiuxWrsqrtvYwCLRw8YFES/go-ipld-format"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht"
+
+	//addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
+	//p2pbhost "gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p/p2p/host/basic"
+	//p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	//dht "gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht"
+	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/opts"
+	dhtutil "gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/util"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	//swarm "gx/ipfs/QmVHhT8NxtApPTndiZPe4JNGNUxGWtJe3ebyxtRz4HnbEp/go-libp2p-swarm"
+	//ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	//pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	//smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
+	//"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
+	//upgrader "gx/ipfs/QmeUjhpfGkrMtE6s7JjU2xLhfzprSDh16QUxGVr3wTrKSx/go-libp2p-transport-upgrader"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	//metrics "gx/ipfs/QmeaTjsfPf6vQ3WU2BUdjakgvKUHpuv3Fjxvb75N5iksMx/go-libp2p-metrics"
+	//oniontp "github.com/OpenBazaar/go-onion-transport"
+	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"
 	"io/ioutil"
-	"net"
+	//"net"
 	"os"
 	"path"
-	"strconv"
+	//"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	obnet "github.com/OpenBazaar/openbazaar-go/net"
+	//obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/ipfs/go-ipfs/core"
 	ipfscore "github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
-	ipfspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"golang.org/x/crypto/ssh/terminal"
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	ipfspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 )
 
 type Restore struct {
@@ -148,108 +153,112 @@ func (x *Restore) Execute(args []string) error {
 			PrintError(err.Error())
 			return err
 		}
+
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 	}
 
 	cfg.Identity = identity
 
 	// Tor configuration
-	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	onionAddrString := "/onion/" + onionAddr + ":4003"
-	if x.Tor {
-		cfg.Addresses.Swarm = []string{}
-		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
-	}
-	torConfig, err := schema.GetTorConfig(configFile)
-	if err != nil {
-		PrintError(err.Error())
-		return err
-	}
-	var usingTor, usingClearnet bool
-	var controlPort int
-	for _, addr := range cfg.Addresses.Swarm {
-		m, err := ma.NewMultiaddr(addr)
-		if err != nil {
-			PrintError(err.Error())
-			return err
-		}
-		p := m.Protocols()
-		if p[0].Name == "onion" {
-			usingTor = true
-			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
-			t, err := ma.ProtocolsWithString("/onion")
-			if err != nil {
-				PrintError(err.Error())
-				return err
-			}
-			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
-			if err != nil {
-				PrintError(err.Error())
-				return err
-			}
-		} else {
-			usingClearnet = true
-		}
-	}
+	//onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
+	//if err != nil {
+	//	log.Error(err)
+	//	return err
+	//}
+	//onionAddrString := "/onion/" + onionAddr + ":4003"
+	//if x.Tor {
+	//	cfg.Addresses.Swarm = []string{}
+	//	cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, onionAddrString)
+	//}
+	//torConfig, err := schema.GetTorConfig(configFile)
+	//if err != nil {
+	//	PrintError(err.Error())
+	//	return err
+	//}
+	//var usingTor, usingClearnet bool
+	//var controlPort int
+	//for _, addr := range cfg.Addresses.Swarm {
+	//	m, err := ma.NewMultiaddr(addr)
+	//	if err != nil {
+	//		PrintError(err.Error())
+	//		return err
+	//	}
+	//	p := m.Protocols()
+	//	if p[0].Name == "onion" {
+	//		usingTor = true
+	//		addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
+	//		t, err := ma.ProtocolsWithString("/onion")
+	//		if err != nil {
+	//			PrintError(err.Error())
+	//			return err
+	//		}
+	//		addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
+	//		if err != nil {
+	//			PrintError(err.Error())
+	//			return err
+	//		}
+	//	} else {
+	//		usingClearnet = true
+	//	}
+	//}
 	// Create Tor transport
-	var onionTransport *oniontp.OnionTransport
-	if usingTor {
-		torControl := torConfig.TorControl
-		if torControl == "" {
-			controlPort, err = obnet.GetTorControlPort()
-			if err != nil {
-				PrintError(err.Error())
-				return err
-			}
-			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
-		}
-		torPw := torConfig.Password
-		if x.TorPassword != "" {
-			torPw = x.TorPassword
-		}
-		if x.TorPassword != "" {
-			torPw = x.TorPassword
-		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
-		if err != nil {
-			PrintError(err.Error())
-			return err
-		}
-	}
+	//var onionTransport *oniontp.OnionTransport
+	//if usingTor {
+	//	torControl := torConfig.TorControl
+	//	if torControl == "" {
+	//		controlPort, err = obnet.GetTorControlPort()
+	//		if err != nil {
+	//			PrintError(err.Error())
+	//			return err
+	//		}
+	//		torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+	//	}
+	//	torPw := torConfig.Password
+	//	if x.TorPassword != "" {
+	//		torPw = x.TorPassword
+	//	}
+	//	if x.TorPassword != "" {
+	//		torPw = x.TorPassword
+	//	}
+	//	onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
+	//	if err != nil {
+	//		PrintError(err.Error())
+	//		return err
+	//	}
+	//}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
-		// no addresses to begin with. we'll start later.
-		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
-		if err != nil {
-			return nil, err
-		}
-
-		network := (*swarm.Network)(swrm)
-		network.Swarm().AddTransport(onionTransport)
-
-		for _, f := range fs {
-			network.Swarm().Filters.AddDialFilter(f)
-		}
-
-		var host *p2pbhost.BasicHost
-		if usingTor && !usingClearnet {
-			host = p2pbhost.New(network)
-		} else {
-			hostOpts := []interface{}{bwr}
-			if !opts.DisableNatPortMap {
-				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
-			}
-			host = p2pbhost.New(network, hostOpts...)
-		}
-		return host, nil
-	}
+	//defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
+	//	// no addresses to begin with. we'll start later.
+	//	//upgrader.Upgrader{}
+	//	//protec, tpt,
+	//	swrm := swarm.NewSwarm(ctx, id, ps, bwr)
+	//	swrm.AddTransport(onionTransport)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	network := (*swarm.Network)(swrm)
+	//	network.Swarm().AddTransport(onionTransport)
+	//
+	//	for _, f := range fs {
+	//		network.Swarm().Filters.AddDialFilter(f)
+	//	}
+	//
+	//	var host *p2pbhost.BasicHost
+	//	if usingTor && !usingClearnet {
+	//		host = p2pbhost.New(network)
+	//	} else {
+	//		hostOpts := []interface{}{bwr}
+	//		if !opts.DisableNatPortMap {
+	//			hostOpts = append(hostOpts, p2pbhost.NATPortMap)
+	//		}
+	//		host = p2pbhost.New(network, hostOpts...)
+	//	}
+	//	return host, nil
+	//}
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
@@ -258,12 +267,11 @@ func (x *Restore) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
-		DNSResolver: nil,
 		Routing:     DHTOption,
 	}
-	if onionTransport != nil {
-		ncfg.Host = defaultHostOption
-	}
+	//if onionTransport != nil {
+	//	ncfg.Host = defaultHostOption
+	//}
 	fmt.Println("Starting node...")
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
@@ -344,7 +352,7 @@ func RestoreFile(repoPath, peerID, filename string, n *core.IpfsNode, wg *sync.W
 	}
 }
 
-func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid.Cid, wg *sync.WaitGroup) {
+func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id cid.Cid, wg *sync.WaitGroup) {
 	defer wg.Done()
 	node, err := nd.DAG.Get(context.Background(), id)
 	if err != nil {
@@ -358,7 +366,14 @@ func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid
 			cctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 			defer cancel()
 
-			r, err := coreunix.Cat(cctx, nd, "/ipfs/"+link.Cid.String())
+			fpath, err := iface.ParsePath("/ipfs/"+link.Cid.String())
+			if err != nil {
+				return
+			}
+
+			api := coreapi.NewCoreAPI(nd)
+
+			r, err := api.Unixfs().Get(cctx, fpath)
 			if err != nil {
 				PrintError(fmt.Sprintf("Error retrieving %s\n", path.Join(directory, link.Name)))
 				return
@@ -369,7 +384,8 @@ func RestoreDirectory(repoPath, directory string, nd *ipfscore.IpfsNode, id *cid
 				PrintError(err.Error())
 				return
 			}
-			r.WriteTo(f)
+			filecontents, _ := ioutil.ReadAll(r)
+			ioutil.WriteFile(f.Name(), filecontents, 0755)
 		}(l)
 	}
 
