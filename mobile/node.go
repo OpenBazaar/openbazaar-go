@@ -66,9 +66,9 @@ type Node struct {
 }
 
 
-var fileLogFormat = logging.MustStringFormatter(
-	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
-)
+//var fileLogFormat = logging.MustStringFormatter(
+//	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+//)
 
 // NewNode create the configuration file for a new node
 func NewNode(repoPath string, authenticationToken string, testnet bool, userAgent string, walletTrustedPeer string, password string, mnemonic string) *Node {
