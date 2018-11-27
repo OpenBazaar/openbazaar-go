@@ -485,7 +485,7 @@ func MustDefaultConfig() *config.Config {
 				"/ip4/0.0.0.0/tcp/9005/ws",
 				"/ip6/::/tcp/9005/ws",
 			},
-			API:     "",
+			API:     []string{},
 			Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
 		},
 
