@@ -5,26 +5,20 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
-	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
-	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
+	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht"
+	"gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/opts"
+	dhtutil "gx/ipfs/QmQHnqaNULV8WeUGgh97o9K3KAW6kWQmDyNf9UuikgnPTe/go-libp2p-kad-dht/util"
+	"gx/ipfs/QmS73grfbWgWrNztd8Lns9GCG3jjRNDfcPYg2VYQzKDZSt/go-ipfs-ds-help"
 	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
-	oniontp "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	recpb "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record/pb"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	"gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
 	"io"
 	"io/ioutil"
 	"net"
@@ -63,17 +57,16 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
-	"github.com/ipfs/go-ipfs/namesys"
-	namepb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipath "github.com/ipfs/go-ipfs/path"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	namepb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -259,11 +252,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan api config:", err)
 		return err
 	}
-	torConfig, err := schema.GetTorConfig(configFile)
-	if err != nil {
-		log.Error("scan tor config:", err)
-		return err
-	}
+	//torConfig, err := schema.GetTorConfig(configFile)
+	//if err != nil {
+	//	log.Error("scan tor config:", err)
+	//	return err
+	//}
 	dataSharing, err := schema.GetDataSharing(configFile)
 	if err != nil {
 		log.Error("scan data sharing config:", err)
@@ -325,7 +318,7 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
@@ -350,10 +343,10 @@ func (x *Start) Execute(args []string) error {
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
 	}
 	// Iterate over our address and process them as needed
-	var onionTransport *oniontp.OnionTransport
+	//var onionTransport *oniontp.OnionTransport
 	var torDialer proxy.Dialer
 	var usingTor, usingClearnet bool
-	var controlPort int
+	//var controlPort int
 	for i, addr := range cfg.Addresses.Swarm {
 		m, err := ma.NewMultiaddr(addr)
 		if err != nil {
@@ -372,80 +365,83 @@ func (x *Start) Execute(args []string) error {
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm[:i], cfg.Addresses.Swarm[i+1:]...)
 			cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
-		} else if p[0].Name == "onion" {
-			usingTor = true
-			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
-			t, err := ma.ProtocolsWithString("/onion")
-			if err != nil {
-				log.Error("wrapping onion protocol:", err)
-				return err
-			}
-			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
 		} else {
 			usingClearnet = true
 		}
+		
+		//} else if p[0].Name == "onion" {
+		//	usingTor = true
+		//	addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
+		//	t, err := ma.ProtocolsWithString("/onion")
+		//	if err != nil {
+		//		log.Error("wrapping onion protocol:", err)
+		//		return err
+		//	}
+		//	addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
+		//}
+
 	}
 	// Create Tor transport
-	if usingTor {
-		torControl := torConfig.TorControl
-		if torControl == "" {
-			controlPort, err = obnet.GetTorControlPort()
-			if err != nil {
-				log.Error("get tor control port:", err)
-				return err
-			}
-			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
-		}
-		torPw := torConfig.Password
-		if x.TorPassword != "" {
-			torPw = x.TorPassword
-		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
-		if err != nil {
-			log.Error("setup tor transport:", err)
-			return err
-		}
-	}
+	//if usingTor {
+	//	torControl := torConfig.TorControl
+	//	if torControl == "" {
+	//		controlPort, err = obnet.GetTorControlPort()
+	//		if err != nil {
+	//			log.Error("get tor control port:", err)
+	//			return err
+	//		}
+	//		torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
+	//	}
+	//	torPw := torConfig.Password
+	//	if x.TorPassword != "" {
+	//		torPw = x.TorPassword
+	//	}
+	//	onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
+	//	if err != nil {
+	//		log.Error("setup tor transport:", err)
+	//		return err
+	//	}
+	//}
 	// If we're only using Tor set the proxy dialer and dns resolver
-	dnsResolver := namesys.NewDNSResolver()
-	if usingTor && !usingClearnet {
-		log.Notice("Using Tor exclusively")
-		torDialer, err = onionTransport.TorDialer()
-		if err != nil {
-			log.Error("dailing tor network:", err)
-			return err
-		}
-		// TODO: maybe create a tor resolver impl later
-		dnsResolver = nil
-	}
+	//dnsResolver := namesys.NewDNSResolver()
+	//if usingTor && !usingClearnet {
+	//	log.Notice("Using Tor exclusively")
+	//	torDialer, err = onionTransport.TorDialer()
+	//	if err != nil {
+	//		log.Error("dailing tor network:", err)
+	//		return err
+	//	}
+	//	// TODO: maybe create a tor resolver impl later
+	//	dnsResolver = nil
+	//}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
-		// no addresses to begin with. we'll start later.
-		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
-		if err != nil {
-			return nil, err
-		}
-
-		network := (*swarm.Network)(swrm)
-		network.Swarm().AddTransport(onionTransport)
-
-		for _, f := range fs {
-			network.Swarm().Filters.AddDialFilter(f)
-		}
-
-		var host *p2pbhost.BasicHost
-		if usingTor && !usingClearnet {
-			host = p2pbhost.New(network)
-		} else {
-			hostOpts := []interface{}{bwr}
-			if !opts.DisableNatPortMap {
-				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
-			}
-			host = p2pbhost.New(network, hostOpts...)
-		}
-		return host, nil
-	}
+	//defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
+	//	// no addresses to begin with. we'll start later.
+	//	swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	network := (*swarm.Network)(swrm)
+	//	network.Swarm().AddTransport(onionTransport)
+	//
+	//	for _, f := range fs {
+	//		network.Swarm().Filters.AddDialFilter(f)
+	//	}
+	//
+	//	var host *p2pbhost.BasicHost
+	//	if usingTor && !usingClearnet {
+	//		host = p2pbhost.New(network)
+	//	} else {
+	//		hostOpts := []interface{}{bwr}
+	//		if !opts.DisableNatPortMap {
+	//			hostOpts = append(hostOpts, p2pbhost.NATPortMap)
+	//		}
+	//		host = p2pbhost.New(network, hostOpts...)
+	//	}
+	//	return host, nil
+	//}
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
@@ -453,7 +449,6 @@ func (x *Start) Execute(args []string) error {
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
-		DNSResolver: dnsResolver,
 		Routing:     DHTOption,
 	}
 
@@ -461,9 +456,11 @@ func (x *Start) Execute(args []string) error {
 		ncfg.ExtraOpts["ipnsps"] = true
 	}
 
-	if onionTransport != nil {
-		ncfg.Host = defaultHostOption
-	}
+	ncfg.ExtraOpts["pubsub"] = true
+
+	//if onionTransport != nil {
+	//	ncfg.Host = defaultHostOption
+	//}
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error("create new ipfs node:", err)
@@ -483,7 +480,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
+		dhtutil.QuerySize = int(querySize)
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -492,13 +489,13 @@ func (x *Start) Execute(args []string) error {
 	printSwarmAddrs(nd)
 
 	// Get current directory root hash
-	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
+	ipnskey := "/ipns/"+string(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if hasherr != nil {
 		log.Error("get ipns key:", hasherr)
 		return hasherr
 	}
-	val := ival.([]byte)
+	val := ival
 	dhtrec := new(recpb.Record)
 	err = proto.Unmarshal(val, dhtrec)
 	if err != nil {
@@ -579,7 +576,9 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated gateway
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	// This is now an array so we just grab the first one
+
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway[0])
 	if err != nil {
 		log.Error(err)
 		return err
@@ -671,8 +670,8 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Build pubsub
-	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
-	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
 	// OpenBazaar node setup
@@ -737,7 +736,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	if cfg.Addresses.API != "" {
+	if len(cfg.Addresses.API) > 0 {
 		if _, err := serveHTTPApi(&ctx); err != nil {
 			log.Error(err)
 			return err
@@ -863,7 +862,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	}
 
 	// Create a network listener
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway[0])
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
 	}
@@ -921,18 +920,19 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	apiFileFormatter := logging.NewBackendFormatter(apiFile, fileLogFormat)
 	ml := logging.MultiLogger(apiFileFormatter)
 
-	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, ml, opts...)
+	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
 }
 
 var DHTOption ipfscore.RoutingOption = constructDHTRouting
 
 const IpnsValidatorTag = "ipns"
 
-func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
-	dhtRouting := dht.NewDHT(ctx, host, dstore)
-	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
-	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
-	return dhtRouting, nil
+func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	return dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests
@@ -943,9 +943,9 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 	}
 
 	apiAddr := cfg.Addresses.API
-	apiMaddr, err := ma.NewMultiaddr(apiAddr)
+	apiMaddr, err := ma.NewMultiaddr(apiAddr[0])
 	if err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr, err)
+		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr[0], err)
 	}
 
 	apiLis, err := manet.Listen(apiMaddr)
@@ -991,7 +991,7 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 
 	errc := make(chan error)
 	go func() {
-		errc <- corehttp.Serve(node, apiLis.NetListener(), opts...)
+		errc <- corehttp.Serve(node, manet.NetListener(apiLis), opts...)
 		close(errc)
 	}()
 	return errc, nil
