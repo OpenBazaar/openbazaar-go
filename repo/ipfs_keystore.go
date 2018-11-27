@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"io/ioutil"
 	"os"
 	"path"
@@ -14,7 +14,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	ipfsPath "github.com/ipfs/go-ipfs/path"
+	ipfsPath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 )
 
 var (
@@ -49,7 +49,7 @@ func PublishObjectToIPFS(ipfsNode *core.IpfsNode, tempDir string, name string, d
 		return "", err
 	}
 
-	return hash, ipfs.PublishAltRoot(ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultPublishLifetime))
+	return hash, ipfs.PublishAltRoot(ipfsNode, name, ipfsPath.FromString("/ipfs/"+hash), time.Now().Add(namesys.DefaultRecordTTL))
 }
 
 // GetObjectFromIPFS gets the requested name from ipfs or the local cache
