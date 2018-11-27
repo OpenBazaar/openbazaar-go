@@ -32,6 +32,11 @@ import (
 	"syscall"
 	"time"
 
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	namepb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -63,10 +68,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
-	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	namepb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -368,7 +369,7 @@ func (x *Start) Execute(args []string) error {
 		} else {
 			usingClearnet = true
 		}
-		
+
 		//} else if p[0].Name == "onion" {
 		//	usingTor = true
 		//	addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
@@ -449,7 +450,7 @@ func (x *Start) Execute(args []string) error {
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
-		Routing:     DHTOption,
+		Routing: DHTOption,
 	}
 
 	if cfg.Ipns.UsePersistentCache {
@@ -480,7 +481,7 @@ func (x *Start) Execute(args []string) error {
 	// Set IPNS query size
 	querySize := cfg.Ipns.QuerySize
 	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = int(querySize)
+		dhtutil.QuerySize = querySize
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -489,7 +490,7 @@ func (x *Start) Execute(args []string) error {
 	printSwarmAddrs(nd)
 
 	// Get current directory root hash
-	ipnskey := "/ipns/"+string(nd.Identity)
+	ipnskey := "/ipns/" + string(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
 	if hasherr != nil {
 		log.Error("get ipns key:", hasherr)
