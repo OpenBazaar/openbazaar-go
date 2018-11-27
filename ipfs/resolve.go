@@ -10,7 +10,7 @@ import (
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	"github.com/ipfs/go-ipfs/namesys/pb"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	"github.com/ipfs/go-ipfs/path"
 )
 
