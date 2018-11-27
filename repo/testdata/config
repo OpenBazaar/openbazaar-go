@@ -84,7 +84,7 @@
   "Ipns": {
     "BackUpAPI": "https://gateway.ob1.io/ob/ipns/",
     "QuerySize": 1,
-    "RecordLifetime": "7d",
+    "RecordLifetime": "7*24",
     "RepublishPeriod": "24h",
     "ResolveCacheSize": 128,
     "UsePersistentCache": true
