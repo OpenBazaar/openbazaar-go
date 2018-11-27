@@ -1,0 +1,24 @@
+{
+  "author": "mattn",
+  "bugs": {
+    "url": "https://github.com/mattn/go-isatty"
+  },
+  "gx": {
+    "dvcsimport": "github.com/mattn/go-isatty"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-isatty",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.0"
+}
+

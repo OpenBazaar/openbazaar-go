@@ -1,0 +1,16 @@
+{
+  "author": "hashicorp",
+  "bugs": {
+    "url": "https://github.com/hashicorp/errwrap"
+  },
+  "gx": {
+    "dvcsimport": "github.com/hashicorp/errwrap"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MPL",
+  "name": "go-errwrap",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.0"
+}
+

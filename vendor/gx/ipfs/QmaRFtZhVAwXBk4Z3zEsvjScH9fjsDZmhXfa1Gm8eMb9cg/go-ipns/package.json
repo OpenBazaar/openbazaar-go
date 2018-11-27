@@ -1,0 +1,58 @@
+{
+  "author": "stebalien",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipns/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipns"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A",
+      "name": "go-ipfs-util",
+      "version": "1.2.8"
+    },
+    {
+      "hash": "QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae",
+      "name": "go-log",
+      "version": "1.5.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n",
+      "name": "go-libp2p-crypto",
+      "version": "2.0.1"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB",
+      "name": "go-libp2p-peer",
+      "version": "2.4.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX",
+      "name": "go-libp2p-peerstore",
+      "version": "2.0.6"
+    },
+    {
+      "hash": "Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL",
+      "name": "go-libp2p-record",
+      "version": "4.1.8"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8",
+      "name": "gogo-protobuf",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-ipns",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.13"
+}
+

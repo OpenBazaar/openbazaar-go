@@ -1,0 +1,20 @@
+{
+  "author": "whyrusleeping",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/matttproud/golang_protobuf_extensions"
+  },
+  "gxDependencies": [
+    {
+      "hash": "QmZHU2gx42NPTYXzw6pJkuX6xCE7bKECp6e8QcPdoLx8sx",
+      "name": "protobuf",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "",
+  "name": "golang_protobuf_extensions",
+  "version": "0.0.0"
+}
+

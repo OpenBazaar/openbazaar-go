@@ -1,0 +1,14 @@
+{
+  "name": "mplex-test",
+  "version": "1.0.0",
+  "description": "mplex test program",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "interface-connection": "^0.3.2",
+    "libp2p-mplex": "^0.7.0",
+    "pull-stream": "^3.6.7",
+    "stream-to-pull-stream": "^1.7.2",
+    "tcp": "^1.0.0"
+  }
+}

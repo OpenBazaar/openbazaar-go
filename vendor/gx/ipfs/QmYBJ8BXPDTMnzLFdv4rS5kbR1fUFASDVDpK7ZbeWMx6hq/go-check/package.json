@@ -1,0 +1,16 @@
+{
+  "author": "gustavo",
+  "bugs": {
+    "url": "https://github.com/go-check/check"
+  },
+  "gx": {
+    "dvcsimport": "github.com/go-check/check"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "BSD-2-Clause",
+  "name": "go-check",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.0"
+}
+

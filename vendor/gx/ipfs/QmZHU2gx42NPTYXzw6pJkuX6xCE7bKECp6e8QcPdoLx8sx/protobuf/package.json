@@ -1,0 +1,13 @@
+{
+  "author": "golang",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "github.com/golang/protobuf"
+  },
+  "gxVersion": "0.4.0",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "protobuf",
+  "version": "3.6.0"
+}
+

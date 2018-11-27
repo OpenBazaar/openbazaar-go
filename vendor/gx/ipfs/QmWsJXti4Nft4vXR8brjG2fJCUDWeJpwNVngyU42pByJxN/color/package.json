@@ -1,0 +1,36 @@
+{
+  "author": "fatih",
+  "bugs": {
+    "url": "https://github.com/fatih/color/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/fatih/color"
+  },
+  "gxDependencies": [
+    {
+      "author": "mattn",
+      "hash": "QmWVGFCGGTAGrT3adV261k1h6nntcyDhGVszGV2i2pzwPe",
+      "name": "go-isatty",
+      "version": "0.2.0"
+    },
+    {
+      "author": "mattn",
+      "hash": "QmTsHcKgTQ4VeYZd8eKYpTXeLW7KNwkRD9wjnrwsV2sToq",
+      "name": "go-colorable",
+      "version": "0.2.0"
+    },
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "color",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.2"
+}
+

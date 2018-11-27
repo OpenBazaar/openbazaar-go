@@ -1,0 +1,24 @@
+{
+  "author": "davidlazar",
+  "bugs": {
+    "URL": "https://github.com/davidlazar/go-crypto/issues",
+    "url": "https://github.com/davidlazar/go-crypto/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/davidlazar/go-crypto"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmW7VUmSvhvSGbYbdsh7uRjhGmsYkc9fL8aJ5CorxxrU5N",
+      "name": "go-crypto",
+      "version": "0.2.1"
+    }
+  ],
+  "gxVersion": "0.9.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-crypto-dav",
+  "version": "0.2.2"
+}
+

@@ -1,0 +1,16 @@
+{
+  "author": "urfave",
+  "bugs": {
+    "url": "https://github.com/urfave/cli"
+  },
+  "gx": {
+    "dvcsimport": "github.com/urfave/cli"
+  },
+  "gxVersion": "0.10.0",
+  "language": "go",
+  "license": "MIT",
+  "name": "cli",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.19.1"
+}
+

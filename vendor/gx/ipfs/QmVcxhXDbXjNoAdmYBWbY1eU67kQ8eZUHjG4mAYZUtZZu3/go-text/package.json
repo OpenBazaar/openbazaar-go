@@ -1,0 +1,15 @@
+{
+  "author": "golang",
+  "bugs": {},
+  "gx": {
+    "dvcsimport": "golang.org/x/text"
+  },
+  "gxVersion": "0.12.1",
+  "issues_url": "",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "go-text",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.2.0"
+}
+

@@ -1,0 +1,16 @@
+{
+  "author": "mr-tron",
+  "bugs": {
+    "url": "github.com/mr-tron/base58/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/mr-tron/base58"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-base58-fast",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.1"
+}
+

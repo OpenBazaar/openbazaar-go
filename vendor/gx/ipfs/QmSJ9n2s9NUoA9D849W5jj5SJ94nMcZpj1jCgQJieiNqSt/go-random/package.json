@@ -1,0 +1,24 @@
+{
+  "author": "jbenet",
+  "bugs": {
+    "url": "https://github.com/jbenet/go-random/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/jbenet/go-random"
+  },
+  "gxDependencies": [
+    {
+      "author": "dustin",
+      "hash": "QmPSBJL4momYnE7DcUyk2DVhD6rH488ZmHBGLbxNdhU44K",
+      "name": "go-humanize",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-random",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.0"
+}
+

@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	opts "github.com/ipfs/go-ipfs/namesys/opts"
-	path "github.com/ipfs/go-ipfs/path"
+
+	path "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 	isd "gx/ipfs/QmZmmuAXgX73UQmX1jRKjTGmjzq24Jinqkq8vzkBtno4uX/go-is-domain"
 )
 
@@ -21,19 +22,18 @@ type DNSResolver struct {
 }
 
 // NewDNSResolver constructs a name resolver using DNS TXT records.
-func NewDNSResolver() Resolver {
-	return &DNSResolver{lookupTXT: net.LookupTXT}
-}
-
-// newDNSResolver constructs a name resolver using DNS TXT records,
-// returning a resolver instead of NewDNSResolver's Resolver.
-func newDNSResolver() resolver {
+func NewDNSResolver() *DNSResolver {
 	return &DNSResolver{lookupTXT: net.LookupTXT}
 }
 
 // Resolve implements Resolver.
 func (r *DNSResolver) Resolve(ctx context.Context, name string, options ...opts.ResolveOpt) (path.Path, error) {
-	return resolve(ctx, r, name, opts.ProcessOpts(options), "/ipns/")
+	return resolve(ctx, r, name, opts.ProcessOpts(options))
+}
+
+// ResolveAsync implements Resolver.
+func (r *DNSResolver) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan Result {
+	return resolveAsync(ctx, r, name, opts.ProcessOpts(options))
 }
 
 type lookupRes struct {
@@ -44,12 +44,15 @@ type lookupRes struct {
 // resolveOnce implements resolver.
 // TXT records for a given domain name should contain a b58
 // encoded multihash.
-func (r *DNSResolver) resolveOnce(ctx context.Context, name string, options *opts.ResolveOpts) (path.Path, error) {
+func (r *DNSResolver) resolveOnceAsync(ctx context.Context, name string, options opts.ResolveOpts) <-chan onceResult {
+	out := make(chan onceResult, 1)
 	segments := strings.SplitN(name, "/", 2)
 	domain := segments[0]
 
 	if !isd.IsDomain(domain) {
-		return "", errors.New("not a valid domain name")
+		out <- onceResult{err: errors.New("not a valid domain name")}
+		close(out)
+		return out
 	}
 	log.Debugf("DNSResolver resolving %s", domain)
 
@@ -59,39 +62,52 @@ func (r *DNSResolver) resolveOnce(ctx context.Context, name string, options *opt
 	subChan := make(chan lookupRes, 1)
 	go workDomain(r, "_dnslink."+domain, subChan)
 
-	var subRes lookupRes
-	select {
-	case subRes = <-subChan:
-	case <-ctx.Done():
-		return "", ctx.Err()
-	}
-
-	var p path.Path
-	if subRes.error == nil {
-		p = subRes.path
-	} else {
-		var rootRes lookupRes
-		select {
-		case rootRes = <-rootChan:
-		case <-ctx.Done():
-			return "", ctx.Err()
+	appendPath := func(p path.Path) (path.Path, error) {
+		if len(segments) > 1 {
+			return path.FromSegments("", strings.TrimRight(p.String(), "/"), segments[1])
 		}
-		if rootRes.error == nil {
-			p = rootRes.path
-		} else {
-			return "", ErrResolveFailed
-		}
-	}
-	if len(segments) > 1 {
-		return path.FromSegments("", strings.TrimRight(p.String(), "/"), segments[1])
-	} else {
 		return p, nil
 	}
+
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case subRes, ok := <-subChan:
+				if !ok {
+					subChan = nil
+					break
+				}
+				if subRes.error == nil {
+					p, err := appendPath(subRes.path)
+					emitOnceResult(ctx, out, onceResult{value: p, err: err})
+					return
+				}
+			case rootRes, ok := <-rootChan:
+				if !ok {
+					rootChan = nil
+					break
+				}
+				if rootRes.error == nil {
+					p, err := appendPath(rootRes.path)
+					emitOnceResult(ctx, out, onceResult{value: p, err: err})
+				}
+			case <-ctx.Done():
+				return
+			}
+			if subChan == nil && rootChan == nil {
+				return
+			}
+		}
+	}()
+
+	return out
 }
 
 func workDomain(r *DNSResolver, name string, res chan lookupRes) {
-	txt, err := r.lookupTXT(name)
+	defer close(res)
 
+	txt, err := r.lookupTXT(name)
 	if err != nil {
 		// Error is != nil
 		res <- lookupRes{"", err}

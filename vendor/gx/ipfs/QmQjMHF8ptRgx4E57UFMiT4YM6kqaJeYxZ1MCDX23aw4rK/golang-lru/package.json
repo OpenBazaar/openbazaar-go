@@ -1,0 +1,16 @@
+{
+  "author": "hashicorp",
+  "bugs": {
+    "url": "https://github.com/hashicorp/golang-lru"
+  },
+  "gx": {
+    "dvcsimport": "github.com/hashicorp/golang-lru"
+  },
+  "gxVersion": "0.11.0",
+  "language": "go",
+  "license": "Mozilla Public License 2.0",
+  "name": "golang-lru",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "2017.10.18"
+}
+

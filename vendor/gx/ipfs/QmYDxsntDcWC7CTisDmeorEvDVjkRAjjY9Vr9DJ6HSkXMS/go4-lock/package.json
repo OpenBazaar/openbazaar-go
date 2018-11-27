@@ -1,0 +1,24 @@
+{
+  "author": "hsanjuan",
+  "bugs": {
+    "url": "https://github.com/camlistore/go4/tree/master/lock"
+  },
+  "gx": {
+    "dvcsimport": "go4.org/lock"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "Apache 2.0",
+  "name": "go4-lock",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.3"
+}
+
