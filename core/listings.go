@@ -465,8 +465,8 @@ func (n *OpenBazaarNode) extractListingData(listing *pb.SignedListing) (ListingD
 		return false
 	}
 
-	shipsTo := []string{}
-	freeShipping := []string{}
+	var shipsTo []string
+	var freeShipping []string
 	for _, shippingOption := range listing.Listing.ShippingOptions {
 		for _, region := range shippingOption.Regions {
 			if !contains(shipsTo, region.String()) {

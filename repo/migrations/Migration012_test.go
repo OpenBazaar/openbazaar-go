@@ -322,7 +322,7 @@ func testMigration012_assertListingIndexMigratedCorrectly(t *testing.T) {
 	}
 
 	// Check that correct listing's hashes changed
-	listingsIndex := []*migrations.Migration012_ListingData{}
+	var listingsIndex []*migrations.Migration012_ListingData
 	err = json.Unmarshal(listingsIndexJSON, &listingsIndex)
 	if err != nil {
 		t.Fatal(err)

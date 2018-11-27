@@ -243,7 +243,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	}
 
 	// Add images to postData if they exist
-	imageArray := []postImage{}
+	var imageArray []postImage
 	if len(post.Post.Images) > 0 {
 		for _, imageSlice := range post.Post.Images {
 			imageObject := postImage{imageSlice.Tiny, imageSlice.Small, imageSlice.Medium}

@@ -78,7 +78,7 @@ listingLoop:
 			listing := new(pb.Listing)
 			metadata := new(pb.Listing_Metadata)
 			item := new(pb.Listing_Item)
-			shipping := []*pb.Listing_ShippingOption{}
+			var shipping []*pb.Listing_ShippingOption
 			listing.Metadata = metadata
 			listing.Item = item
 			listing.ShippingOptions = shipping

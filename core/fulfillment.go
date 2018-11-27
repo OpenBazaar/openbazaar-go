@@ -140,7 +140,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 
 	fulfillment.RatingSignature = rs
 
-	fulfils := []*pb.OrderFulfillment{}
+	var fulfils []*pb.OrderFulfillment
 
 	rc.VendorOrderFulfillment = append(fulfils, fulfillment)
 	rc, err = n.SignOrderFulfillment(rc)
