@@ -2,7 +2,7 @@ package namesys
 
 import (
 	"context"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 )
 
 // A Resolver will resolve domain names into PeerIDs that can then been used in IPNS queries.

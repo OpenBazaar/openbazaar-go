@@ -3,7 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
