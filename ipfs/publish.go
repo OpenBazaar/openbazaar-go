@@ -3,21 +3,22 @@ package ipfs
 import (
 	"context"
 	"errors"
-	"fmt"
-	"gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	dhtpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns"
+
+	ci "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmS73grfbWgWrNztd8Lns9GCG3jjRNDfcPYg2VYQzKDZSt/go-ipfs-ds-help"
+	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	dhtpb "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record/pb"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	//"fmt"
+	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
 	"time"
 
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/namesys"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-	path "github.com/ipfs/go-ipfs/path"
 	"github.com/op/go-logging"
+	"gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	pb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 var log = logging.MustGetLogger("ipfs")
@@ -37,11 +38,7 @@ func Publish(n *core.IpfsNode, hash string) error {
 
 // Publish another IPFS record at /ipns/<peerID>:<altRoot>
 func PublishAltRoot(nd *core.IpfsNode, altRoot string, value path.Path, eol time.Time) error {
-	hash, err := mh.FromB58String(nd.Identity.Pretty())
-	if err != nil {
-		return err
-	}
-	ipnskey := "/ipns/" + string(hash) + ":" + altRoot
+	ipnskey := "/ipns/" + nd.Identity.Pretty() + ":" + altRoot
 
 	// get previous records sequence number
 	seqnum, err := getPreviousSeqNo(context.Background(), nd, ipnskey)
@@ -62,12 +59,8 @@ func getPreviousSeqNo(ctx context.Context, nd *core.IpfsNode, ipnskey string) (u
 	}
 	var val []byte
 	if err == nil {
-		prbytes, ok := prevrec.([]byte)
-		if !ok {
-			return 0, fmt.Errorf("unexpected type returned from datastore: %#v", prevrec)
-		}
 		dhtrec := new(dhtpb.Record)
-		err := proto.Unmarshal(prbytes, dhtrec)
+		err := proto.Unmarshal(prevrec, dhtrec)
 		if err != nil {
 			return 0, err
 		}
@@ -99,8 +92,8 @@ func getPreviousSeqNo(ctx context.Context, nd *core.IpfsNode, ipnskey string) (u
 func PutRecordToRouting(ctx context.Context, ipnskey string, k ci.PrivKey, value path.Path, seqnum uint64, eol time.Time, r routing.ValueStore) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	entry, err := namesys.CreateRoutingEntryData(k, value, seqnum, eol)
+	
+	entry, err := ipns.Create(k, []byte(value), seqnum, eol)
 	if err != nil {
 		return err
 	}
