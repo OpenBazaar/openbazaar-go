@@ -160,8 +160,8 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
-		DNSResolver: nil,
-		Routing:     nil,
+		//DNSResolver: nil,
+		Routing: nil,
 	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
