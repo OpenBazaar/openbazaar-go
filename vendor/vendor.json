@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "Q3PBY/02oEbEs4qkhBgEcZKUZhQ=",
+			"path": "github.com/gogo/protobuf/proto",
+			"revision": "211a54c57504366b3bf4b490fb3c0a5f5b8d290b",
+			"revisionTime": "2018-11-04T16:40:17Z"
+		}
+	],
+	"rootPath": "github.com/OpenBazaar/openbazaar-go"
+}
