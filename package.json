@@ -601,6 +601,18 @@
       "hash": "QmSKoeo64CA54WNWqzVXHi5aT2LbgzP7B9VzQjW5yh7d4H",
       "name": "go-libp2p-transport",
       "version": "2.2.7"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmNhVCV7kgAqW6oh6n8m9myxT2ksGPhVZnHkzkBvR5qg2d",
+      "name": "go-multicodec-packed",
+      "version": "0.1.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV",
+      "name": "gogo-protobuf",
+      "version": "0.0.0"
     }
   ],
   "gxVersion": "0.11.0",
