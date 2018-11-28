@@ -9,6 +9,12 @@
 			"revisionTime": "2017-01-16T20:05:12Z"
 		},
 		{
+			"checksumSHA1": "eprxoxj4XKxASXUBJcnVb47RauM=",
+			"path": "github.com/agl/ed25519/extra25519",
+			"revision": "5312a61534124124185d41f09206b9fef1d88403",
+			"revisionTime": "2017-01-16T20:05:12Z"
+		},
+		{
 			"checksumSHA1": "Q3PBY/02oEbEs4qkhBgEcZKUZhQ=",
 			"path": "github.com/gogo/protobuf/proto",
 			"revision": "211a54c57504366b3bf4b490fb3c0a5f5b8d290b",
