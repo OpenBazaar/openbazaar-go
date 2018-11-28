@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"crypto/ecdsa"
 	"io/ioutil"
 	"os"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	bip39 "github.com/tyler-smith/go-bip39"
+	"github.com/tyler-smith/go-bip39"
 )
 
 // EthAddress implements the WalletAddress interface
@@ -39,7 +40,9 @@ func (addr EthAddress) IsForNet(params *chaincfg.Params) bool {
 
 // Account represents ethereum keystore
 type Account struct {
-	key *keystore.Key
+	// key *keystore.Key
+	privateKey *ecdsa.PrivateKey
+	address    common.Address
 }
 
 // NewAccountFromKeyfile returns the account imported
@@ -50,7 +53,8 @@ func NewAccountFromKeyfile(keyFile, password string) (*Account, error) {
 	}
 
 	return &Account{
-		key: key,
+		privateKey: key.PrivateKey,
+		address:    crypto.PubkeyToAddress(key.PrivateKey.PublicKey),
 	}, nil
 }
 
@@ -97,12 +101,7 @@ func NewAccountFromMnemonic(mnemonic, password string) (*Account, error) {
 		fmt.Println("address : ", address)
 	*/
 
-	key := &keystore.Key{
-		Address:    crypto.PubkeyToAddress(privateKeyECDSA.PublicKey),
-		PrivateKey: privateKeyECDSA,
-	}
-
-	return &Account{key}, nil
+	return &Account{privateKey: privateKeyECDSA, address: crypto.PubkeyToAddress(privateKeyECDSA.PublicKey)}, nil
 }
 
 func importKey(keyFile, password string) (*keystore.Key, error) {
@@ -120,12 +119,12 @@ func importKey(keyFile, password string) (*keystore.Key, error) {
 
 // Address returns the eth address
 func (account *Account) Address() common.Address {
-	return account.key.Address
+	return account.address
 }
 
 // SignTransaction will sign the txn
 func (account *Account) SignTransaction(signer types.Signer, tx *types.Transaction) (*types.Transaction, error) {
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), account.key.PrivateKey)
+	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), account.privateKey)
 	if err != nil {
 		return nil, err
 	}
