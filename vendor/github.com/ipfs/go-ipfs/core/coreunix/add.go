@@ -15,6 +15,7 @@ import (
 	"github.com/ipfs/go-ipfs/pin"
 
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	posinfo "gx/ipfs/QmQyUyYcpKG1u53V7N25qRTGw5XwaAxTMKXbduqHotQztg/go-ipfs-posinfo"
 	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"
 	dag "gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
@@ -50,6 +51,7 @@ type Object struct {
 // NewAdder Returns a new Adder used for a file add operation.
 func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCBlockstore, ds ipld.DAGService) (*Adder, error) {
 	bufferedDS := ipld.NewBufferedDAG(ctx, ds)
+	builder := cid.V1Builder{Codec: 0x71, MhType: mh.SHA2_256}
 
 	return &Adder{
 		ctx:        ctx,
@@ -59,10 +61,14 @@ func NewAdder(ctx context.Context, p pin.Pinner, bs bstore.GCBlockstore, ds ipld
 		bufferedDS: bufferedDS,
 		Progress:   false,
 		Hidden:     true,
+		Silent:     false,
 		Pin:        true,
+		RawLeaves:  true,
 		Trickle:    false,
 		Wrap:       false,
 		Chunker:    "",
+		CidBuilder: builder,
+		NoCopy:     false,
 	}, nil
 }
 
