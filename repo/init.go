@@ -206,9 +206,9 @@ func addConfigExtensions(repoRoot string) error {
 				MediumFeeDefault: 15,
 				LowFeeDefault:    7,
 				CustomConfig: map[string]string{
-					"RegistryAddress":        "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
-					"RinkebyRegistryAddress": "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
-					"RopstenRegistryAddress": "0x029d6a0cd4ce98315690f4ea52945545d9c0f460",
+					"RegistryAddress":        "0x403d907982474cdd51687b09a8968346159378f3",
+					"RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
+					"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
 				},
 			},
 		}
