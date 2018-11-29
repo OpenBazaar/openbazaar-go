@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
@@ -198,6 +199,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	}
 	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 
@@ -205,26 +207,40 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	env := pb.Envelope{}
 	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 
 	// Validate the signature
 	ser, err := proto.Marshal(env.Message)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
+		log.Errorf("handleOfflineRelayError: signature failed to verify")
 		return nil, err
 	}
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
+	}
+
+	err = service.node.IpfsNode.Peerstore.AddPubKey(id, pubkey)
+	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
+	}
+	err = service.node.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix+id.Pretty())), env.Pubkey)
+	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 	}
 
 	// Get handler for this message type

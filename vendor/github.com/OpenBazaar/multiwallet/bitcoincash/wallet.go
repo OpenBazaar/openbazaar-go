@@ -2,11 +2,18 @@ package bitcoincash
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/client"
+	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/keys"
+	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/OpenBazaar/multiwallet/service"
+	"github.com/OpenBazaar/multiwallet/util"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -19,21 +26,13 @@ import (
 	"github.com/cpacia/bchutil"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
-
-	"encoding/hex"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/config"
-	"github.com/OpenBazaar/multiwallet/keys"
-	"github.com/OpenBazaar/multiwallet/service"
-	"github.com/OpenBazaar/multiwallet/util"
-	"sort"
 )
 
 type BitcoinCashWallet struct {
 	db     wi.Datastore
 	km     *keys.KeyManager
 	params *chaincfg.Params
-	client client.APIClient
+	client model.APIClient
 	ws     *service.WalletService
 	fp     *bcw.FeeProvider
 
@@ -59,7 +58,7 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 		return nil, err
 	}
 
-	c, err := client.NewInsightClient(cfg.ClientAPI.String(), proxy)
+	c, err := client.NewClientPool(cfg.ClientAPIs, proxy)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +204,6 @@ func (w *BitcoinCashWallet) Transactions() ([]wi.Txn, error) {
 		tx.Status = status
 		txns[i] = tx
 	}
-	sort.Sort(util.TxnSorter(txns))
 	return txns, nil
 }
 
@@ -222,7 +220,7 @@ func (w *BitcoinCashWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
 	return w.fp.GetFeePerByte(feeLevel)
 }
 
-func (w *BitcoinCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
+func (w *BitcoinCashWallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
 	tx, err := w.buildTx(amount, addr, feeLevel, nil)
 	if err != nil {
 		return nil, err
@@ -344,7 +342,7 @@ func (w *BitcoinCashWallet) DumpTables(wr io.Writer) {
 func (w *BitcoinCashWallet) Broadcast(tx *wire.MsgTx) error {
 	var buf bytes.Buffer
 	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.BaseEncoding)
-	cTxn := client.Transaction{
+	cTxn := model.Transaction{
 		Txid:          tx.TxHash().String(),
 		Locktime:      int(tx.LockTime),
 		Version:       int(tx.Version),
@@ -368,10 +366,10 @@ func (w *BitcoinCashWallet) Broadcast(tx *wire.MsgTx) error {
 		if err != nil {
 			return err
 		}
-		input := client.Input{
+		input := model.Input{
 			Txid: in.PreviousOutPoint.Hash.String(),
 			Vout: int(in.PreviousOutPoint.Index),
-			ScriptSig: client.Script{
+			ScriptSig: model.Script{
 				Hex: hex.EncodeToString(in.SignatureScript),
 			},
 			Sequence: uint32(in.Sequence),
@@ -386,10 +384,10 @@ func (w *BitcoinCashWallet) Broadcast(tx *wire.MsgTx) error {
 		if err != nil {
 			return err
 		}
-		output := client.Output{
+		output := model.Output{
 			N: n,
-			ScriptPubKey: client.OutScript{
-				Script: client.Script{
+			ScriptPubKey: model.OutScript{
+				Script: model.Script{
 					Hex: hex.EncodeToString(out.PkScript),
 				},
 				Addresses: []string{addr.String()},

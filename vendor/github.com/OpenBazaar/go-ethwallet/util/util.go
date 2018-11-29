@@ -6,10 +6,17 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/shopspring/decimal"
 )
+
+// ExtractChaincode used to get the chaincode out of extended key
+func ExtractChaincode(key *hdkeychain.ExtendedKey) []byte {
+	return base58.Decode(key.String())[13:45]
+}
 
 // IsValidAddress validate hex address
 func IsValidAddress(iaddress interface{}) bool {

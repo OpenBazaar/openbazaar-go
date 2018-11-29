@@ -13,7 +13,7 @@ import (
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -740,7 +740,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Address  string `json:"address"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
-		Memo     string `json:"memo"`
+		Memo     string `json:"memo"` /* memo must contain the orderID */
 	}
 	decoder := json.NewDecoder(r.Body)
 	var snd Send
@@ -770,7 +770,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
 		return
 	}
-	txid, err := wal.Spend(snd.Amount, addr, feeLevel)
+	txid, err := wal.Spend(snd.Amount, addr, feeLevel, snd.Memo)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -789,7 +789,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	var thumbnail string
 	var memo string
 	var title string
-	contract, _, _, _, err := i.node.Datastore.Purchases().GetByPaymentAddress(addr)
+	contract, _, _, _, _, err := i.node.Datastore.Purchases().GetByOrderId(memo)
 	if contract != nil && err == nil {
 		orderID, _ = i.node.CalcOrderID(contract.BuyerOrder)
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
@@ -3799,7 +3799,7 @@ func (i *jsonAPIHandler) POSTPost(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// The post isn't in the path and is new, therefore add required data (slug, timestamp)
 		// Generate a slug from the title
-		ld.Slug, err = i.node.GeneratePostSlug(ld.Title)
+		ld.Slug, err = i.node.GeneratePostSlug(ld.Status)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return

@@ -8,7 +8,6 @@ import (
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -876,7 +875,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		mECKey, err := wal.MasterPublicKey().ECPubKey()
+		mECKey, err := n.MasterPrivateKey.ECPubKey()
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
@@ -903,9 +902,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			return validationErrors
 		}
 
-		// TODO: the bitcoin cash check is temporary in case someone files a dispute for an order that was created when the prefix was still being used
-		// on the address. We can remove this 45 days after the release of 2.2.2 as it wont be possible for this condition to exist at this point.
-		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() && contract.BuyerOrder.Payment.Address != n.normalizeBitcoinCashAddress(addr.EncodeAddress(), wal) {
+		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() {
 			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
 		}
 
@@ -1116,19 +1113,4 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	return nil
-}
-
-func (n *OpenBazaarNode) normalizeBitcoinCashAddress(addr string, wal wallet.Wallet) string {
-	if NormalizeCurrencyCode(wal.CurrencyCode()) == "BCH" || NormalizeCurrencyCode(wal.CurrencyCode()) == "TBCH" {
-		prefix := "bitcoincash:"
-		if n.TestnetEnable {
-			prefix = "bchtest:"
-		} else if n.RegressionTestEnable {
-			prefix = "bchreg:"
-		}
-		if !strings.HasPrefix(addr, prefix) {
-			return prefix + addr
-		}
-	}
-	return addr
 }

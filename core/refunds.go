@@ -94,7 +94,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL)
+		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL, orderID)
 		if err != nil {
 			return err
 		}

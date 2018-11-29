@@ -1,0 +1,64 @@
+language: go
+
+os:
+  - linux
+
+go:
+  - "1.11.1"
+
+sudo: required
+
+services:
+  - docker
+
+go_import_path: github.com/hunterlong/tokenbalance
+
+cache:
+  directories:
+  - $GOPATH/pkg/dep
+  - ~/.cache
+  - $GOPATH/src/github.com/hunterlong/tokenbalance/vendor
+
+before_deploy:
+  - git config --local user.name "hunterlong"
+  - git config --local user.email "info@socialeck.com"
+  - make tag
+
+deploy:
+  provider: releases
+  api_key: $GH_TOKEN
+  file:
+    - "build/tokenbalance-osx-x64.tar.gz"
+    - "build/tokenbalance-osx-x32.tar.gz"
+    - "build/tokenbalance-linux-x64.tar.gz"
+    - "build/tokenbalance-linux-x32.tar.gz"
+    - "build/tokenbalance-linux-arm7.tar.gz"
+    - "build/tokenbalance-linux-arm64.tar.gz"
+    - "build/tokenbalance-linux-alpine.tar.gz"
+    - "build/tokenbalance-windows-x64.zip"
+    - "build/tokenbalance-windows-x32.zip"
+  skip_cleanup: true
+
+branches:
+  except:
+    - /^v\d/
+
+before_install:
+  - curl -L -s https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 -o $GOPATH/bin/dep
+  - chmod +x $GOPATH/bin/dep
+
+before_script:
+  - make dev-deps
+  - make dep
+
+script:
+  - make install
+  - make test
+  - make coverage
+
+after_success:
+  - travis_wait 30 docker pull karalabe/xgo-latest
+  - make release
+
+after_deploy:
+  - make publish

@@ -12,7 +12,7 @@ import (
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	db "github.com/OpenBazaar/openbazaar-go/repo/db"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -61,114 +61,70 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 
 	// For each coin we want to override the default database with our own sqlite db
 	// We'll only override the default settings if the coin exists in the config file
+	var coinCfgs []config.CoinConfig
 	for _, coin := range defaultConfig.Coins {
 		switch coin.CoinType {
 		case wallet.Bitcoin:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.BTC != nil {
-				api, err := url.Parse(cfg.ConfigFile.BTC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.BTC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.BTC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.BTC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.BTC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.BTC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.BTC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.BTC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.APITestnet}
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.BitcoinCash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.BCH != nil {
-				api, err := url.Parse(cfg.ConfigFile.BCH.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.BCH.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.BCH.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.BCH.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.BCH.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.BCH.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.BCH.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.BCH.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.APITestnet}
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.Zcash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.ZEC != nil {
-				api, err := url.Parse(cfg.ConfigFile.ZEC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.ZEC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.ZEC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.ZEC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.ZEC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.ZEC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.ZEC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.ZEC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.APITestnet}
 				}
 			}
+			coinCfgs = append(coinCfgs, coin)
 		case wallet.Litecoin:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.LTC != nil {
-				api, err := url.Parse(cfg.ConfigFile.LTC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.LTC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.LTC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.LTC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.LTC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.LTC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.LTC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.LTC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.APITestnet}
 				}
 			}
 		case wallet.Ethereum:
@@ -179,23 +135,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 				if err != nil {
 					return nil, err
 				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.ETH.API
 				coin.LowFee = uint64(cfg.ConfigFile.ETH.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.ETH.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.ETH.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.ETH.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.ETH.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.ETH.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.APITestnet}
 				}
 				coin.Options = map[string]interface{}{
 					"RegistryAddress":        "0x403d907982474cdd51687b09a8968346159378f3",
@@ -205,6 +153,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			}
 		}
 	}
+	defaultConfig.Coins = coinCfgs
 	mw, err := multiwallet.NewMultiWallet(defaultConfig)
 	if err != nil {
 		return nil, err

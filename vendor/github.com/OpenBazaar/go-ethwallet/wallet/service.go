@@ -4,11 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/OpenBazaar/wallet-interface"
 )
 
 // Service - used to represent WalletService
@@ -54,7 +53,7 @@ func (ws *Service) ChainTip() (uint32, chainhash.Hash) {
 // UpdateState - updates state
 func (ws *Service) UpdateState() {
 	// Start by fetching the chain height from the API
-	log.Debugf("Querying for %s chain height", ws.coinType.String())
+	log.Debugf("querying for %s chain height", ws.coinType.String())
 	best, err := ws.client.HeaderByNumber(context.Background(), nil)
 	if err == nil {
 		log.Debugf("%s chain height: %d", ws.coinType.String(), best.Nonce)
@@ -63,7 +62,7 @@ func (ws *Service) UpdateState() {
 		ws.bestBlock = best.TxHash.String()
 		ws.lock.Unlock()
 	} else {
-		log.Error("Error querying API for chain height: %s", err.Error())
+		log.Errorf("error querying API for chain height: %s", err.Error())
 	}
 
 }
