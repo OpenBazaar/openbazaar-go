@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/OpenBazaar/openbazaar-go",
 	"GoVersion": "go1.10",
-	"GodepVersion": "v80",
+	"GodepVersion": "v79",
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
@@ -13,15 +13,15 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/golang-socketio",
-			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+			"Rev": "909b73d947ae79609bc2c5b03cb480f35180c564"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/golang-socketio/protocol",
-			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+			"Rev": "909b73d947ae79609bc2c5b03cb480f35180c564"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/golang-socketio/transport",
-			"Rev": "9fab7b0eb211a7134cea662b8de11496a41de94e"
+			"Rev": "909b73d947ae79609bc2c5b03cb480f35180c564"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/jsonpb",
