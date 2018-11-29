@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/OpenBazaar/openbazaar-go",
 	"GoVersion": "go1.10",
-	"GodepVersion": "v79",
+	"GodepVersion": "v80",
 	"Deps": [
 		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
@@ -29,75 +29,75 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/bitcoin",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/bitcoincash",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/client/transport",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/config",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/datastore",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/keys",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin/address",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/litecoin/params",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/service",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/util",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/zcash",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/zcash/address",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet",
-			"Rev": "91d1e8451c43b13686b912e3a7115f30870542f0"
+			"Rev": "4da6964dfd36e87b8c963b68f34498c2ff71810b"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/spvwallet/exchangerates",
-			"Rev": "91d1e8451c43b13686b912e3a7115f30870542f0"
+			"Rev": "4da6964dfd36e87b8c963b68f34498c2ff71810b"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/wallet-interface",
-			"Rev": "d837bb1b605915c0497a296f3bcb1cf15d1f4d3b"
+			"Rev": "90321224966c0c88e02e99f1f9d3cef18a77f399"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/zcashd-wallet",
@@ -263,13 +263,13 @@
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet",
-			"Comment": "v0.3.0-54-gb636a21",
-			"Rev": "b636a21a73a04d908285d9959e33c69712cdb45b"
+			"Comment": "v0.3.0-56-g7bd3a60",
+			"Rev": "7bd3a60205212141115744bd79247c223cd9311e"
 		},
 		{
 			"ImportPath": "github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Comment": "v0.3.0-54-gb636a21",
-			"Rev": "b636a21a73a04d908285d9959e33c69712cdb45b"
+			"Comment": "v0.3.0-56-g7bd3a60",
+			"Rev": "7bd3a60205212141115744bd79247c223cd9311e"
 		},
 		{
 			"ImportPath": "github.com/cpacia/bchutil",
@@ -1901,7 +1901,7 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/cache",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/ltcsuite/ltcwallet/wallet/txrules",
@@ -1950,255 +1950,255 @@
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/wallet-interface",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/chaincfg",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/op/go-logging",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/tyler-smith/go-bip39",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/spvwallet",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/spvwallet/exchangerates",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/blockchain",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/btcec",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/chaincfg/chainhash",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/txscript",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/wire",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/coinset",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/hdkeychain",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/txsort",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcwallet/wallet/txauthor",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcwallet/wallet/txrules",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/net/proxy",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/cpacia/BitcoinCash-Wallet",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/cpacia/BitcoinCash-Wallet/exchangerates",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/cpacia/bchutil",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/golang-socketio",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/golang-socketio/protocol",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ltcsuite/ltcwallet/wallet/txrules",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcutil",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/crypto/pbkdf2",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/boltdb/bolt",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/addrmgr",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/connmgr",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/peer",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/bloom",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/goleveldb/leveldb/errors",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/cevaris/ordered_map",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/mitchellh/go-homedir",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcd/database",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btclog",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/crypto/ripemd160",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/base58",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcutil/bech32",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcwallet/internal/helpers",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/btcwallet/wallet/internal/txsizes",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/net/internal/socks",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/golang-socketio/transport",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/gorilla/websocket",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/golangcrypto/ripemd160",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ltcsuite/ltcd/chaincfg",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ltcsuite/ltcutil/base58",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcd/txscript",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcd/wire",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcd/btcec",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcd/chaincfg",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcd/chaincfg/chainhash",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcutil/base58",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/roasbeef/btcutil/bech32",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/sys/unix",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/go-socks/socks",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/davecgh/go-spew/spew",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/goleveldb/leveldb/storage",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/btcsuite/goleveldb/leveldb/util",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ltcsuite/ltcd/chaincfg/chainhash",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ltcsuite/ltcd/wire",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/crypto/scrypt",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/tyler-smith/go-bip39/wordlists",
-			"Rev": "cf2b153c18db03ff8270a1c1ebf99e84feb6602b"
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		},
 		{
 			"ImportPath": "github.com/OpenBazaar/go-ethwallet/wallet",
@@ -2497,6 +2497,246 @@
 			"ImportPath": "github.com/ethereum/go-ethereum/vendor/github.com/golang/snappy",
 			"Comment": "v1.8.19-1-ga7501d0c4",
 			"Rev": "a7501d0c419f8c1dc8b4004c115dd2d4e3b524b7"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/go-ethwallet/wallet",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/client/blockbook",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/client/insight",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/OpenBazaar/go-ethwallet/util",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/accounts/abi",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/accounts/abi/bind",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/accounts/keystore",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/common",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/common/hexutil",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/core/types",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/crypto",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/crypto/sha3",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/ethclient",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/event",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/hunterlong/tokenbalance",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/sirupsen/logrus",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/gopkg.in/yaml.v2",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/model",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/shopspring/decimal",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/common/math",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/log",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/deckarep/golang-set",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/accounts",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/pborman/uuid",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/rjeczalik/notify",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/params",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/rlp",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/trie",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/crypto/secp256k1",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/rpc",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/common/mclock",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/konsorten/go-windows-terminal-sequences",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/crypto/ssh/terminal",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/go-stack/stack",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/google/uuid",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/allegro/bigcache",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/common/prque",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/ethdb",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/metrics",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/ethereum/go-ethereum/p2p/netutil",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/rs/cors",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/net/websocket",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/gopkg.in/natefinch/npipe.v2",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/aristanetworks/goarista/monotime",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/golang.org/x/sys/windows",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/allegro/bigcache/queue",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/errors",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/filter",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/iterator",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/opt",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/util",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/cache",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/comparer",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/journal",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/memdb",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/storage",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/syndtr/goleveldb/leveldb/table",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
+		},
+		{
+			"ImportPath": "github.com/OpenBazaar/multiwallet/vendor/github.com/golang/snappy",
+			"Rev": "80041837287a5655854579ae02e2f2e5c13611ea"
 		}
 	]
 }

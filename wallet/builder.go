@@ -68,27 +68,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.BTC != nil {
-				api, err := url.Parse(cfg.ConfigFile.BTC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.BTC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.BTC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.BTC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.BTC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.BTC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.BTC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.BTC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.APITestnet}
 				}
 			}
 			coinCfgs = append(coinCfgs, coin)
@@ -96,27 +84,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.BCH != nil {
-				api, err := url.Parse(cfg.ConfigFile.BCH.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.BCH.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.BCH.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.BCH.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.BCH.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.BCH.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.BCH.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.BCH.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.APITestnet}
 				}
 			}
 			coinCfgs = append(coinCfgs, coin)
@@ -124,27 +100,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.ZEC != nil {
-				api, err := url.Parse(cfg.ConfigFile.ZEC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.ZEC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.ZEC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.ZEC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.ZEC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.ZEC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.ZEC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.ZEC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.APITestnet}
 				}
 			}
 			coinCfgs = append(coinCfgs, coin)
@@ -152,27 +116,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.LTC != nil {
-				api, err := url.Parse(cfg.ConfigFile.LTC.FeeAPI)
-				if err != nil {
-					return nil, err
-				}
-				coin.FeeAPI = *api
+				coin.FeeAPI = cfg.ConfigFile.LTC.FeeAPI
 				coin.LowFee = uint64(cfg.ConfigFile.LTC.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.LTC.MediumFeeDefault)
 				coin.HighFee = uint64(cfg.ConfigFile.LTC.HighFeeDefault)
 				coin.MaxFee = uint64(cfg.ConfigFile.LTC.MaxFee)
 				if !testnet {
-					api, err := url.Parse(cfg.ConfigFile.LTC.API)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.API}
 				} else {
-					api, err := url.Parse(cfg.ConfigFile.LTC.APITestnet)
-					if err != nil {
-						return nil, err
-					}
-					coin.ClientAPI = *api
+					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.APITestnet}
 				}
 			}
 			coinCfgs = append(coinCfgs, coin)

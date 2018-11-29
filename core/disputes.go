@@ -875,7 +875,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
 		}
-		mECKey, err := wal.MasterPublicKey().ECPubKey()
+		mECKey, err := n.MasterPrivateKey.ECPubKey()
 		if err != nil {
 			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
 			return validationErrors
