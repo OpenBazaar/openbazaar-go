@@ -3,12 +3,19 @@ package service
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/OpenBazaar/multiwallet/cache"
+	"github.com/OpenBazaar/multiwallet/keys"
+	laddr "github.com/OpenBazaar/multiwallet/litecoin/address"
+	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/OpenBazaar/multiwallet/util"
+	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -17,14 +24,6 @@ import (
 	"github.com/btcsuite/btcutil"
 	"github.com/cpacia/bchutil"
 	"github.com/op/go-logging"
-
-	"encoding/json"
-	"github.com/OpenBazaar/multiwallet/cache"
-	"github.com/OpenBazaar/multiwallet/client"
-	"github.com/OpenBazaar/multiwallet/keys"
-	laddr "github.com/OpenBazaar/multiwallet/litecoin/address"
-	"github.com/OpenBazaar/multiwallet/util"
-	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
 )
 
 var Log = logging.MustGetLogger("WalletService")
@@ -32,7 +31,7 @@ var Log = logging.MustGetLogger("WalletService")
 type WalletService struct {
 	db       wallet.Datastore
 	km       *keys.KeyManager
-	client   client.APIClient
+	client   model.APIClient
 	params   *chaincfg.Params
 	coinType wallet.CoinType
 
@@ -55,7 +54,7 @@ type HashAndHeight struct {
 
 const nullHash = "0000000000000000000000000000000000000000000000000000000000000000"
 
-func NewWalletService(db wallet.Datastore, km *keys.KeyManager, client client.APIClient, params *chaincfg.Params, coinType wallet.CoinType, cache cache.Cacher) (*WalletService, error) {
+func NewWalletService(db wallet.Datastore, km *keys.KeyManager, client model.APIClient, params *chaincfg.Params, coinType wallet.CoinType, cache cache.Cacher) (*WalletService, error) {
 	var (
 		ws = &WalletService{
 			db:          db,
@@ -128,7 +127,7 @@ func (ws *WalletService) listen() {
 }
 
 // This is a transaction fresh off the wire. Let's save it to the db.
-func (ws *WalletService) ProcessIncomingTransaction(tx client.Transaction) {
+func (ws *WalletService) ProcessIncomingTransaction(tx model.Transaction) {
 	Log.Debugf("New incoming %s transaction: %s", ws.coinType.String(), tx.Txid)
 	addrs := ws.getStoredAddresses()
 	ws.lock.RLock()
@@ -144,7 +143,7 @@ func (ws *WalletService) ProcessIncomingTransaction(tx client.Transaction) {
 		for _, out := range tx.Outputs {
 			for _, addr := range out.ScriptPubKey.Addresses {
 				if addr == sa.Addr.String() {
-					utxo := client.Utxo{
+					utxo := model.Utxo{
 						Txid:          tx.Txid,
 						ScriptPubKey:  out.ScriptPubKey.Hex,
 						Satoshis:      int64(math.Round(out.Value * float64(util.SatoshisPerCoin(ws.coinType)))),
@@ -171,7 +170,7 @@ func (ws *WalletService) ProcessIncomingTransaction(tx client.Transaction) {
 }
 
 // A new block was found let's update our chain height and best hash and check for a reorg
-func (ws *WalletService) processIncomingBlock(block client.Block) {
+func (ws *WalletService) processIncomingBlock(block model.Block) {
 	Log.Infof("Received new %s block at height %d: %s", ws.coinType.String(), block.Height, block.Hash)
 	ws.lock.RLock()
 	currentBest := ws.bestBlock
@@ -268,7 +267,7 @@ func (ws *WalletService) syncUtxos(addrs map[string]storedAddress) {
 // For each API response we will have to figure out height at which the UTXO has confirmed (if it has) and
 // build a UTXO object suitable for saving to the database. If the database contains any UTXOs not returned
 // by the API we will delete them.
-func (ws *WalletService) saveUtxosToDB(utxos []client.Utxo, addrs map[string]storedAddress) {
+func (ws *WalletService) saveUtxosToDB(utxos []model.Utxo, addrs map[string]storedAddress) {
 	// Get current utxos
 	currentUtxos, err := ws.db.Utxos().GetAll()
 	if err != nil {
@@ -303,7 +302,7 @@ func (ws *WalletService) saveUtxosToDB(utxos []client.Utxo, addrs map[string]sto
 	}
 }
 
-func (ws *WalletService) saveSingleUtxoToDB(u client.Utxo, addrs map[string]storedAddress, chainHeight int32) {
+func (ws *WalletService) saveSingleUtxoToDB(u model.Utxo, addrs map[string]storedAddress, chainHeight int32) {
 	ch, err := chainhash.NewHashFromStr(u.Txid)
 	if err != nil {
 		Log.Error("Error converting to chainhash for %s: %s", ws.coinType.String(), err.Error())
@@ -364,7 +363,7 @@ func (ws *WalletService) syncTxs(addrs map[string]storedAddress) {
 // if the transaction was exclusively for our `watch only` addresses. We will also build a Tx object suitable
 // for saving to the db and delete any existing txs not returned by the API. Finally, for any output matching a key
 // in our wallet we need to mark that key as used in the db
-func (ws *WalletService) saveTxsToDB(txns []client.Transaction, addrs map[string]storedAddress) {
+func (ws *WalletService) saveTxsToDB(txns []model.Transaction, addrs map[string]storedAddress) {
 	ws.lock.RLock()
 	chainHeight := int32(ws.chainHeight)
 	ws.lock.RUnlock()
@@ -375,7 +374,7 @@ func (ws *WalletService) saveTxsToDB(txns []client.Transaction, addrs map[string
 	}
 }
 
-func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int32, addrs map[string]storedAddress) {
+func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32, addrs map[string]storedAddress) {
 	msgTx := wire.NewMsgTx(int32(u.Version))
 	msgTx.LockTime = uint32(u.Locktime)
 	hits := 0
@@ -429,7 +428,8 @@ func (ws *WalletService) saveSingleTxToDB(u client.Transaction, chainHeight int3
 		if !ok {
 			continue
 		}
-		value -= in.Satoshis
+		v := int64(math.Round(in.Value * float64(util.SatoshisPerCoin(ws.coinType))))
+		value -= v
 		if !sa.WatchOnly {
 			hits++
 		}

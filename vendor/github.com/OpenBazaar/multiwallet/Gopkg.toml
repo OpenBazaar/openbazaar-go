@@ -116,3 +116,11 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[override]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "1.8.19"
+
+[[prune.project]]
+    name = "github.com/ethereum/go-ethereum"
+    unused-packages = false
