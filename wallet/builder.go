@@ -131,10 +131,6 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
 			if cfg.ConfigFile.ETH != nil {
-				api, err := url.Parse(cfg.ConfigFile.ETH.API)
-				if err != nil {
-					return nil, err
-				}
 				coin.FeeAPI = cfg.ConfigFile.ETH.API
 				coin.LowFee = uint64(cfg.ConfigFile.ETH.LowFeeDefault)
 				coin.MediumFee = uint64(cfg.ConfigFile.ETH.MediumFeeDefault)
