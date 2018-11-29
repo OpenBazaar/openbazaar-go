@@ -223,7 +223,7 @@ func (w *BitcoinWallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
 	return w.fp.GetFeePerByte(feeLevel)
 }
 
-func (w *BitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
+func (w *BitcoinWallet) Spend(amount int64, addr btc.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
 	tx, err := w.buildTx(amount, addr, feeLevel, nil)
 	if err != nil {
 		return nil, err

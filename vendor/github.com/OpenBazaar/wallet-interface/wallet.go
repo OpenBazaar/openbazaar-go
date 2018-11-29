@@ -65,7 +65,7 @@ type Wallet interface {
 	GetFeePerByte(feeLevel FeeLevel) uint64
 
 	// Send bitcoins to an external wallet
-	Spend(amount int64, addr btc.Address, feeLevel FeeLevel) (*chainhash.Hash, error)
+	Spend(amount int64, addr btc.Address, feeLevel FeeLevel, referenceID string) (*chainhash.Hash, error)
 
 	// Bump the fee for the given transaction
 	BumpFee(txid chainhash.Hash) (*chainhash.Hash, error)

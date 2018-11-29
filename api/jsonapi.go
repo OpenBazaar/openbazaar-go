@@ -740,7 +740,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		Address  string `json:"address"`
 		Amount   int64  `json:"amount"`
 		FeeLevel string `json:"feeLevel"`
-		Memo     string `json:"memo"`
+		Memo     string `json:"memo"` /* memo must contain the orderID */
 	}
 	decoder := json.NewDecoder(r.Body)
 	var snd Send
@@ -770,7 +770,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
 		return
 	}
-	txid, err := wal.Spend(snd.Amount, addr, feeLevel)
+	txid, err := wal.Spend(snd.Amount, addr, feeLevel, snd.Memo)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -789,7 +789,7 @@ func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) 
 	var thumbnail string
 	var memo string
 	var title string
-	contract, _, _, _, err := i.node.Datastore.Purchases().GetByPaymentAddress(addr)
+	contract, _, _, _, _, err := i.node.Datastore.Purchases().GetByOrderId(memo)
 	if contract != nil && err == nil {
 		orderID, _ = i.node.CalcOrderID(contract.BuyerOrder)
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
