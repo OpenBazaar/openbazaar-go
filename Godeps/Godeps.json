@@ -4,6 +4,11 @@
 	"GodepVersion": "v80",
 	"Deps": [
 		{
+			"ImportPath": "github.com/google/uuid",
+			"Comment": "1.0.0-8-g9b3b1e0",
+			"Rev": "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+		},
+		{
 			"ImportPath": "github.com/OpenBazaar/bitcoind-wallet",
 			"Rev": "b4407c920f4471aabeb8d6e502fb48c7447babcd"
 		},
