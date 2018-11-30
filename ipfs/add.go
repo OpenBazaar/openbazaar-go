@@ -26,6 +26,9 @@ func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 	s := strings.Split(root, "/")
 	dirName := s[len(s)-1]
 	h, err := coreunix.AddR(n, root)
+	if err != nil {
+		return "", err
+	}
 
 	i, err := cid.Decode(h)
 	if err != nil {
