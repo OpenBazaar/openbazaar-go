@@ -734,109 +734,51 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, string(out))
 }
 
-func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
-	type Send struct {
-		Wallet   string `json:"wallet"`
-		Address  string `json:"address"`
-		Amount   int64  `json:"amount"`
-		FeeLevel string `json:"feeLevel"`
-		Memo     string `json:"memo"` /* memo must contain the orderID */
-	}
+func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.Request) {
+	var spendArgs core.SpendRequest
 	decoder := json.NewDecoder(r.Body)
-	var snd Send
-	err := decoder.Decode(&snd)
+	err := decoder.Decode(&spendArgs)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var feeLevel wallet.FeeLevel
-	switch strings.ToUpper(snd.FeeLevel) {
-	case "PRIORITY":
-		feeLevel = wallet.PRIOIRTY
-	case "NORMAL":
-		feeLevel = wallet.NORMAL
-	case "ECONOMIC":
-		feeLevel = wallet.ECONOMIC
-	default:
-		feeLevel = wallet.NORMAL
-	}
-	wal, err := i.node.Multiwallet.WalletForCurrencyCode(snd.Wallet)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "Unknown wallet type")
+
+	if spendArgs.OrderID == "" {
+		ErrorResponse(w, http.StatusBadRequest, "Missing order id")
 		return
-	}
-	addr, err := wal.DecodeAddress(snd.Address)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "ERROR_INVALID_ADDRESS")
-		return
-	}
-	txid, err := wal.Spend(snd.Amount, addr, feeLevel, snd.Memo)
-	if err != nil {
-		switch {
-		case err == wallet.ErrorInsuffientFunds:
-			ErrorResponse(w, http.StatusBadRequest, `ERROR_INSUFFICIENT_FUNDS`)
-			return
-		case err == wallet.ErrorDustAmount:
-			ErrorResponse(w, http.StatusBadRequest, `ERROR_DUST_AMOUNT`)
-			return
-		default:
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
 	}
 
-	var orderID string
-	var thumbnail string
-	var memo string
-	var title string
-	contract, _, _, _, _, err := i.node.Datastore.Purchases().GetByOrderId(memo)
-	if contract != nil && err == nil {
-		orderID, _ = i.node.CalcOrderID(contract.BuyerOrder)
-		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
-			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
-			title = contract.VendorListings[0].Item.Title
-		}
-	}
-	if title == "" {
-		memo = snd.Memo
-	} else {
-		memo = title
-	}
-
-	if err := i.node.Datastore.TxMetadata().Put(repo.Metadata{
-		Txid:       txid.String(),
-		Address:    snd.Address,
-		Memo:       memo,
-		OrderId:    orderID,
-		Thumbnail:  thumbnail,
-		CanBumpFee: false,
-	}); err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+	spendArgs.RequireAssociatedOrder = true
+	result, err := i.node.Spend(&spendArgs)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	type response struct {
-		Txid               string    `json:"txid"`
-		Amount             int64     `json:"amount"`
-		ConfirmedBalance   int64     `json:"confirmedBalance"`
-		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
-		Timestamp          time.Time `json:"timestamp"`
-		Memo               string    `json:"memo"`
-	}
-	confirmed, unconfirmed := wal.Balance()
-	txn, err := wal.GetTransaction(*txid)
+
+	ser, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	resp := &response{
-		Txid:               txid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
-		Amount:             -(txn.Value),
-		Timestamp:          txn.Timestamp,
-		Memo:               memo,
+	SanitizedResponse(w, string(ser))
+}
+
+func (i *jsonAPIHandler) POSTSpendCoins(w http.ResponseWriter, r *http.Request) {
+	var spendArgs core.SpendRequest
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&spendArgs)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
 	}
-	ser, err := json.MarshalIndent(resp, "", "    ")
+
+	result, err := i.node.Spend(&spendArgs)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ser, err := json.MarshalIndent(result, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
