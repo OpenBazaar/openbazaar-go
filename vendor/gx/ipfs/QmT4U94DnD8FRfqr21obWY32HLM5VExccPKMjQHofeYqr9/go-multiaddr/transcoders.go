@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+
+	cid "github.com/ipfs/go-cid"
 )
 
 type Transcoder interface {
@@ -171,6 +173,11 @@ var TranscoderP2P = NewTranscoderFromFunctions(p2pStB, p2pBtS, p2pVal)
 
 func p2pStB(s string) ([]byte, error) {
 	// the address is a varint prefixed multihash string representation
+	if len(s) > 46 {
+		c, _ := cid.Decode(s)
+		return c.Hash(), nil
+	}
+
 	m, err := mh.FromB58String(s)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse p2p addr: %s %s", s, err)
