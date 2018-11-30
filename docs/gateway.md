@@ -1,6 +1,6 @@
 Configuring the Gateway when Running a Client
 =============================================
-Since the server and client are on different machines you will need to replace the loopback address with the IP address of the device interface which has access to the internet.  On Linux, `ip addr show` will give you your IP address.
+Since the server and client are on different machines, you will need to replace the loopback address with the IP address of the device interface which has access to the internet.  On Linux, `ip addr show` will give you your IP address.
 
 First, locate the `config` inside the OpenBazaar2.0 data folder.
 
