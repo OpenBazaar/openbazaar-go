@@ -22,6 +22,7 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 }
 
+//nolint:dupl
 func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(path, "/ob/listing"):
@@ -111,6 +112,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	}
 }
 
+//nolint:dupl
 func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(path, "/ob/status"):

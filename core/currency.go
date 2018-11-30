@@ -87,14 +87,14 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		title     string
 		memo      = args.Memo
 	)
-	if memo == "" && title != "" {
-		memo = title
-	}
 	if args.RequireAssociatedOrder {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 			title = contract.VendorListings[0].Item.Title
 		}
+	}
+	if memo == "" && title != "" {
+		memo = title
 	}
 
 	if err := n.Datastore.TxMetadata().Put(repo.Metadata{

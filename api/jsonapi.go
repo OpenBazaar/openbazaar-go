@@ -744,7 +744,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 	}
 
 	if spendArgs.OrderID == "" {
-		ErrorResponse(w, http.StatusBadRequest, "Missing order id")
+		ErrorResponse(w, http.StatusBadRequest, core.ErrOrderNotFound.Error())
 		return
 	}
 
