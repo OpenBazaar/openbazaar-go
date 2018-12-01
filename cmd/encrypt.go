@@ -73,6 +73,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	var pw string
 	for {
 		fmt.Print("Enter a veerrrry strong password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)
@@ -87,6 +88,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 	}
 	for {
 		fmt.Print("Confirm your password: ")
+		// nolint:unconvert
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		resp := string(bytePassword)
@@ -104,7 +106,7 @@ func (x *EncryptDatabase) Execute(args []string) error {
 		return err
 	}
 	if sqlliteDB.Config().IsEncrypted() {
-		fmt.Println("The database is alredy encrypted")
+		fmt.Println("The database is already encrypted")
 		return nil
 	}
 	if err := os.MkdirAll(path.Join(repoPath, "tmp", "datastore"), os.ModePerm); err != nil {

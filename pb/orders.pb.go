@@ -53,7 +53,7 @@ const (
 	// leaves a review the state should be set to COMPLETE.
 	OrderState_PAYMENT_FINALIZED OrderState = 13
 	// We screwed up and produced a order which didn't validate. This state is only used for offline orders. If a processing
-	// error occured with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
+	// error occurred with an open connection between buyer and vendor the vendor just rejects the order on the spot neither party
 	// commits the order to the database.
 	OrderState_PROCESSING_ERROR OrderState = 14
 )
@@ -97,16 +97,16 @@ func (x OrderState) String() string {
 	return proto.EnumName(OrderState_name, int32(x))
 }
 func (OrderState) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_orders_ff3346d4b80932ce, []int{0}
+	return fileDescriptor_orders_c6051e92f6cf6ced, []int{0}
 }
 
 func init() {
 	proto.RegisterEnum("OrderState", OrderState_name, OrderState_value)
 }
 
-func init() { proto.RegisterFile("orders.proto", fileDescriptor_orders_ff3346d4b80932ce) }
+func init() { proto.RegisterFile("orders.proto", fileDescriptor_orders_c6051e92f6cf6ced) }
 
-var fileDescriptor_orders_ff3346d4b80932ce = []byte{
+var fileDescriptor_orders_c6051e92f6cf6ced = []byte{
 	// 243 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x90, 0x4d, 0x4e, 0xc3, 0x30,
 	0x10, 0x85, 0xa1, 0x94, 0xfe, 0x4c, 0x53, 0x18, 0xdc, 0x22, 0x38, 0x03, 0x0b, 0x36, 0x9c, 0xc0,

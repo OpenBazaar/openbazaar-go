@@ -2,11 +2,9 @@ package core
 
 import (
 	"encoding/base64"
-	"image"
-	// load gif
+	"image" // load gif
 	_ "image/gif"
-	"image/jpeg"
-	// load png
+	"image/jpeg" // load png
 	_ "image/png"
 	"io/ioutil"
 	"net"
@@ -17,12 +15,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
-
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // SetAvatarImages - set avatar image from the base64 encoded image string
@@ -159,7 +156,7 @@ func (n *OpenBazaarNode) FetchHeader(peerID string, size string, useCache bool) 
 
 // FetchImage - fetch ipfs image
 func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string, useCache bool) (io.DagReader, error) {
-	query := "/ipns/" + peerID + "/images/" + size + "/" + imageType
+	query := "/" + peerID + "/images/" + size + "/" + imageType
 	b, err := n.IPNSResolveThenCat(ipnspath.FromString(query), time.Minute, useCache)
 	if err != nil {
 		return nil, err

@@ -19,7 +19,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         # generate some coins and send them to bob
         generated_coins = 10
         time.sleep(4)
-        api_url = bob["gateway_url"] + "wallet/address"
+        api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -64,8 +64,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.bitcoincash:
-            listing_json["metadata"]["pricingCurrency"] = "tbch"
+        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
 
         listing_json["moderators"] = [moderatorId]
         api_url = alice["gateway_url"] + "ob/listing"
@@ -90,6 +89,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
         order_json["moderator"] = moderatorId
+        order_json["paymentCoin"] = "t" + self.cointype
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -127,6 +127,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
+            "wallet": self.cointype,
             "address": payment_address,
             "amount": payment_amount,
             "feeLevel": "NORMAL"
@@ -247,7 +248,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         if resp["state"] != "RESOLVED":
             raise TestFailure("DisputeCloseSplitTest - FAIL: Charlie failed to detect the dispute resolution")
 
-        # Bob relase funds
+        # Bob release funds
         release = {
             "OrderID": orderId,
         }
@@ -261,7 +262,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         time.sleep(20)
 
         # Check bob received payout
-        api_url = bob["gateway_url"] + "wallet/balance"
+        api_url = bob["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -278,7 +279,7 @@ class DisputeCloseSplitTest(OpenBazaarTestFramework):
         time.sleep(2)
 
         # Check alice received payout
-        api_url = alice["gateway_url"] + "wallet/balance"
+        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)

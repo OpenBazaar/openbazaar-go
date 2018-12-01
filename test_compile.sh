@@ -3,8 +3,8 @@
 set -e
 pwd
 go test -coverprofile=api.cover.out ./api
-go test -coverprofile=bitcoin.cover.out ./bitcoin
-go test -coverprofile=bitcoin.listeners.cover.out ./bitcoin/listeners
+go test -coverprofile=bitcoin.cover.out ./wallet
+go test -coverprofile=bitcoin.listeners.cover.out ./wallet/listeners
 go test -coverprofile=core.cover.out ./core
 go test -coverprofile=ipfs.cover.out ./ipfs
 go test -coverprofile=mobile.cover.out ./mobile

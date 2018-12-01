@@ -2,19 +2,8 @@ package net
 
 import (
 	"context"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/proxy"
-
-	"github.com/ipfs/go-ipfs/core"
-
-	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-
 	"errors"
-	"github.com/op/go-logging"
+	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
@@ -27,6 +16,15 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/proto"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/op/go-logging"
+	"golang.org/x/net/proxy"
 )
 
 const (
@@ -347,7 +345,7 @@ func (m *MessageRetriever) attemptDecrypt(ciphertext []byte, pid peer.ID, addr m
 	m.handleMessage(env, addr.String(), nil)
 }
 
-// handleMessage loads the hander for this message type and attempts to process the message. Some message types (such
+// handleMessage loads the handler for this message type and attempts to process the message. Some message types (such
 // as those partaining to an order) need to be processed in order. In these cases the handler returns a net.OutOfOrderMessage error
 // and we must save the message to the database to await further processing.
 func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.ID) error {
@@ -420,7 +418,7 @@ var MessageProcessingOrder = []pb.Message_MessageType{
 
 // processQueuedMessages loads all the saved messaged from the database for processing. For each message it sorts them into a
 // queue based on message type and then processes the queue in order. Any messages that successfully process can then be deleted
-// from the databse.
+// from the database.
 func (m *MessageRetriever) processQueuedMessages() {
 	messageQueue := make(map[pb.Message_MessageType][]offlineMessage)
 	for _, messageType := range MessageProcessingOrder {

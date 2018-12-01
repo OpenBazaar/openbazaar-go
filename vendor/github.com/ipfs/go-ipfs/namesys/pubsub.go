@@ -4,14 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"sync"
-	"time"
-
-	opts "github.com/ipfs/go-ipfs/namesys/opts"
-	pb "github.com/ipfs/go-ipfs/namesys/pb"
-	path "github.com/ipfs/go-ipfs/path"
-
 	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
 	floodsub "gx/ipfs/QmSFihvoND3eDaAYRCeLgLPt62yCPgMZs1NSZmKFEtJQQw/go-libp2p-floodsub"
@@ -26,6 +18,13 @@ import (
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"strings"
+	"sync"
+	"time"
+
+	opts "github.com/ipfs/go-ipfs/namesys/opts"
+	pb "github.com/ipfs/go-ipfs/namesys/pb"
+	path "github.com/ipfs/go-ipfs/path"
 )
 
 var ErrorNotSubscribed = errors.New("cache is stale because not subscribed to name")
@@ -218,7 +217,7 @@ func (r *PubsubResolver) resolveOnce(ctx context.Context, name string, options *
 		pubk := id.ExtractPublicKey()
 		if pubk == nil {
 			getKey := func() (ci.PubKey, error) {
-				keyVal, err := r.ds.Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix+name)))
+				keyVal, err := r.ds.Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix + name)))
 				if err == nil {
 					keyBytes, ok := keyVal.([]byte)
 					if ok {

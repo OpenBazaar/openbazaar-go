@@ -51,7 +51,7 @@ func tryFormatLoggableKey(k string) (string, error) {
 
 	c, err := cid.Cast([]byte(cstr))
 	if err != nil {
-		return fmt.Sprintf("/%s/%s", proto, "key not valid cid"), nil
+		return "", fmt.Errorf("loggableKey could not cast key to a CID: %x %v", k, err)
 	}
 	return fmt.Sprintf("/%s/%s", proto, c.String()), nil
 }

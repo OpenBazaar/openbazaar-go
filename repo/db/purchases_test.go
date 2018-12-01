@@ -557,7 +557,7 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		t.Error("Expected to see purchase which was initially notified")
 	}
 	if sawFinallyNotifiedPurchase {
-		t.Error("Expected NOT to see purchase which recieved it's final notification")
+		t.Error("Expected NOT to see purchase which received it's final notification")
 	}
 	if sawNeverNotifiedButUndisputeable {
 		t.Error("Expected NOT to see undisputeable purchase")
@@ -759,7 +759,7 @@ func TestGetPurchasesForDisputeExpiryNotificationReturnsRelevantRecords(t *testi
 		t.Error("Expected to see purchase which was initially notified")
 	}
 	if sawFinallyNotifiedPurchase {
-		t.Error("Expected NOT to see purchase which recieved it's final notification")
+		t.Error("Expected NOT to see purchase which received it's final notification")
 	}
 	if sawNeverNotifiedButUndisputed {
 		t.Error("Expected NOT to see undisputed purchase")

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"path"
 	"sync"
-
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -85,6 +84,15 @@ func NewSQLiteDatastore(db *sql.DB, l *sync.Mutex, coinType wallet.CoinType) *SQ
 		db:              db,
 		lock:            l,
 	}
+}
+
+type DB struct {
+	SqlDB *sql.DB
+	Lock  *sync.Mutex
+}
+
+func (d *SQLiteDatastore) DB() *DB {
+	return &DB{d.db, d.lock}
 }
 
 func (d *SQLiteDatastore) Ping() error {

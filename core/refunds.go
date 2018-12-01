@@ -5,11 +5,10 @@ import (
 	"errors"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // RefundOrder - refund buyer
@@ -25,6 +24,10 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		return err
 	}
 	refundMsg.Timestamp = ts
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return err
+	}
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		var outValue int64
@@ -40,7 +43,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			}
 		}
 
-		refundAddress, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
@@ -53,7 +56,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return err
 		}
@@ -61,7 +64,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		if err != nil {
 			return err
 		}
-		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -70,7 +73,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 			return err
 		}
 
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return err
 		}
@@ -87,11 +90,11 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 				outValue += r.Value
 			}
 		}
-		refundAddr, err := n.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddr, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return err
 		}
-		txid, err := n.Wallet.Spend(outValue, refundAddr, wallet.NORMAL)
+		txid, err := wal.Spend(outValue, refundAddr, wallet.NORMAL, orderID)
 		if err != nil {
 			return err
 		}

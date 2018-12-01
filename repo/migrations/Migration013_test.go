@@ -43,7 +43,7 @@ func TestMigration013Helpers(t *testing.T) {
 			t.Error(coin, err)
 		}
 		if actualAddr != addr {
-			t.Errorf("Expected script to address convertion to be symmetric, but was not in the %s example", coin)
+			t.Errorf("Expected script to address conversion to be symmetric, but was not in the %s example", coin)
 			t.Error("Actual:  ", actualAddr)
 			t.Error("Expected:", addr)
 		}
@@ -54,7 +54,7 @@ func TestMigration013Helpers(t *testing.T) {
 			t.Error(coin, err)
 		}
 		if !bytes.Equal(actualScript, expectedScript) {
-			t.Errorf("Expected address to script convertion to be symmetric, but was not in the %s example", coin)
+			t.Errorf("Expected address to script conversion to be symmetric, but was not in the %s example", coin)
 			t.Error("Actual:  ", actualScript)
 			t.Error("Expected:", expectedScript)
 		}

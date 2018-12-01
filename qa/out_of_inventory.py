@@ -24,8 +24,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.bitcoincash:
-            listing_json["metadata"]["pricingCurrency"] = "tbch"
+        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
         listing_json["item"]["skus"][4]["quantity"] = 0
 
         api_url = alice["gateway_url"] + "ob/listing"
@@ -50,7 +49,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         requests.get(api_url)
 
         # generate some coins and send them to bob
-        api_url = bob["gateway_url"] + "wallet/address"
+        api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -71,6 +70,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         with open('testdata/order_direct.json') as order_file:
             order_json = json.load(order_file, object_pairs_hook=OrderedDict)
         order_json["items"][0]["listingHash"] = listingId
+        order_json["paymentCoin"] = "t" + self.cointype
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))
         if r.status_code == 404:
@@ -98,6 +98,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
 
         # fund order
         spend = {
+            "wallet": self.cointype,
             "address": payment_address,
             "amount": payment_amount,
             "feeLevel": "NORMAL"
@@ -143,7 +144,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
             raise TestFailure("OutOfInventoryTest - FAIL: Alice incorrectly saved as unfunded")
 
         # check alice balance is zero
-        api_url = alice["gateway_url"] + "wallet/balance"
+        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -173,7 +174,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         time.sleep(2)
 
         # Check the funds moved into alice's wallet
-        api_url = alice["gateway_url"] + "wallet/balance"
+        api_url = alice["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)

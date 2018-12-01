@@ -104,7 +104,7 @@ func TestMigration008(t *testing.T) {
 		0,                      // lastNotifiedAt unix timestamp
 
 		disputedPurchaseID,                          // purchase order id
-		string(disputedPurchaseContractData),        // purchase contract blob
+		disputedPurchaseContractData,                // purchase contract blob
 		migrations.Migration008_OrderState_DISPUTED, // order state int
 		0, // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp

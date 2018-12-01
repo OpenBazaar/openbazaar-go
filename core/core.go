@@ -2,22 +2,19 @@ package core
 
 import (
 	"errors"
-	"path"
-	"sync"
-	"time"
-
-	"github.com/OpenBazaar/wallet-interface"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/op/go-logging"
-	"golang.org/x/net/context"
-	"golang.org/x/net/proxy"
-
 	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"net/url"
+	"path"
+	"strings"
+	"sync"
+	"time"
 
+	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -25,7 +22,12 @@ import (
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ipfs/go-ipfs/core"
+	"github.com/kennygrant/sanitize"
+	"github.com/op/go-logging"
+	"golang.org/x/net/context"
+	"golang.org/x/net/proxy"
 )
 
 var (
@@ -64,14 +66,19 @@ type OpenBazaarNode struct {
 	// Websocket channel used for pushing data to the UI
 	Broadcast chan repo.Notifier
 
-	// Bitcoin wallet implementation
-	Wallet wallet.Wallet
+	// A map of cryptocurrency wallets
+	Multiwallet multiwallet.MultiWallet
 
 	// Storage for our outgoing messages
 	MessageStorage sto.OfflineMessagingStorage
 
 	// A service that periodically checks the dht for outstanding messages
 	MessageRetriever *ret.MessageRetriever
+
+	// OfflineMessageFailoverTimeout is the duration until the protocol
+	// will stop looking for the peer to send a direct message and failover to
+	// sending an offline message
+	OfflineMessageFailoverTimeout time.Duration
 
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher
@@ -80,7 +87,7 @@ type OpenBazaarNode struct {
 	NameSystem *namesys.NameSystem
 
 	// A service that periodically fetches and caches the bitcoin exchange rates
-	ExchangeRates wallet.ExchangeRates
+	//ExchangeRates wallet.ExchangeRates
 
 	// Optional nodes to push user data to
 	PushNodes []peer.ID
@@ -106,6 +113,9 @@ type OpenBazaarNode struct {
 
 	// Generic pubsub interface
 	Pubsub ipfs.Pubsub
+
+	// The master private key derived from the mnemonic
+	MasterPrivateKey *hdkeychain.ExtendedKey
 
 	TestnetEnable        bool
 	RegressionTestEnable bool
@@ -215,15 +225,32 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 		}
 	}
 	for _, p := range n.PushNodes {
-		go func(pid peer.ID) {
-			err := n.SendStore(pid.Pretty(), graph)
-			if err != nil {
-				log.Errorf("Error pushing data to peer %s: %s", pid.Pretty(), err.Error())
-			}
-		}(p)
+		go n.retryableSeedStoreToPeer(p, hash, graph)
 	}
 
 	return nil
+}
+
+func (n *OpenBazaarNode) retryableSeedStoreToPeer(pid peer.ID, graphHash string, graph []cid.Cid) {
+	var retryTimeout = 2 * time.Second
+	for {
+		if graphHash != n.RootHash {
+			log.Errorf("root hash has changed, aborting push to %s", pid.Pretty())
+			return
+		}
+		err := n.SendStore(pid.Pretty(), graph)
+		if err != nil {
+			if retryTimeout > 60*time.Second {
+				log.Errorf("error pushing to peer %s: %s", pid.Pretty(), err.Error())
+				return
+			}
+			log.Errorf("error pushing to peer %s...backing off: %s", pid.Pretty(), err.Error())
+			time.Sleep(retryTimeout)
+			retryTimeout *= 2
+			continue
+		}
+		return
+	}
 }
 
 // SetUpRepublisher - periodic publishing to IPNS
@@ -278,4 +305,13 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 // IPFSIdentityString - IPFS identifier
 func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
+}
+
+// createSlugFor Create a slug from a string
+func createSlugFor(slugName string) string {
+	l := SentenceMaxCharacters - SlugBuffer
+	if len(slugName) < SentenceMaxCharacters-SlugBuffer {
+		l = len(slugName)
+	}
+	return url.QueryEscape(sanitize.Path(strings.ToLower(slugName[:l])))
 }

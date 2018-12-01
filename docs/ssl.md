@@ -37,13 +37,31 @@ And make the following changes to the SSL parameters.
 ```
 The SSLCert and SSLKey paramenters require the absolute paths to the server.crt and server.key files we generated above.
 
-If you skipped Step 1 because you have your own SSL cert, then set the paths to your certficate and key files.
+If you skipped Step 1 because you have your own SSL cert, then set the paths to your certificate and key files.
 
 ### Step 3: Install the CA cert in the operating system of your client's computer.
 
 If you used your own SSL cert issued by a CA, you can skip this step as the OpenBazaar client should recognize it as a valid certificate.
 
 If you followed Step 1 and generated a self-signed certificate you will need to install the `OpenBazaar.crt` in the operating system of the computer on which you plan to run the client. By default self-signed certificates are rejected, which is why you need to install this root certificate.
+
+From a shell this might look something like:
+
+**win32/64**
+```shell
+  certutil.exe -addstore -user Root your.crt
+```
+- https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/certutil#BKMK_Store
+
+**darwin**
+```shell
+  security add-trusted-cert -p ssl your.crt
+```
+
+**linux**
+```shell
+  certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n 127.0.0.1 -i your.pem
+```
 
 To download the `OpenBazaar.crt` from your remote server you can use any file transfer program such as `SFTP`.
 

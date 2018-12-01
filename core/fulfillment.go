@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"time"
 
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
@@ -30,9 +28,13 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		currentAddress := n.Wallet.CurrentAddress(wallet.EXTERNAL)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		if err != nil {
+			return err
+		}
+		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.EncodeAddress()
-		payout.PayoutFeePerByte = n.Wallet.GetFeePerByte(wallet.NORMAL)
+		payout.PayoutFeePerByte = wal.GetFeePerByte(wallet.NORMAL)
 		var ins []wallet.TransactionInput
 		var outValue int64
 		for _, r := range records {
@@ -55,7 +57,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		mPrivKey := n.Wallet.MasterPrivateKey()
+		mPrivKey := n.MasterPrivateKey
 		if err != nil {
 			return err
 		}
@@ -63,7 +65,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-		vendorKey, err := n.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		vendorKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return err
 		}
@@ -72,7 +74,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			return err
 		}
 
-		signatures, err := n.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
 		if err != nil {
 			return err
 		}
@@ -236,10 +238,14 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		if err != nil {
+			return err
+		}
 		if fulfillment.Payout == nil {
 			return errors.New("Payout object for multisig is nil")
 		}
-		_, err := n.Wallet.DecodeAddress(fulfillment.Payout.PayoutAddress)
+		_, err = wal.DecodeAddress(fulfillment.Payout.PayoutAddress)
 		if err != nil {
 			return errors.New("Invalid payout address")
 		}

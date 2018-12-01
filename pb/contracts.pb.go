@@ -1101,34 +1101,49 @@ func (m *Listing_Coupon) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Listing_Coupon proto.InternalMessageInfo
 
-func (m *Listing_Coupon) GetTitle() string {
-	if m != nil {
-		return m.Title
-	}
-	return ""
-}
-
 type isListing_Coupon_Code interface {
 	isListing_Coupon_Code()
+}
+type isListing_Coupon_Discount interface {
+	isListing_Coupon_Discount()
 }
 
 type Listing_Coupon_Hash struct {
 	Hash string `protobuf:"bytes,2,opt,name=hash,proto3,oneof"`
 }
-
 type Listing_Coupon_DiscountCode struct {
 	DiscountCode string `protobuf:"bytes,3,opt,name=discountCode,proto3,oneof"`
 }
+type Listing_Coupon_PercentDiscount struct {
+	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
+}
+type Listing_Coupon_PriceDiscount struct {
+	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
+}
 
-func (*Listing_Coupon_Hash) isListing_Coupon_Code() {}
-
-func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code() {}
+func (*Listing_Coupon_Hash) isListing_Coupon_Code()                {}
+func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code()        {}
+func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
+func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount()   {}
 
 func (m *Listing_Coupon) GetCode() isListing_Coupon_Code {
 	if m != nil {
 		return m.Code
 	}
 	return nil
+}
+func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
+	if m != nil {
+		return m.Discount
+	}
+	return nil
+}
+
+func (m *Listing_Coupon) GetTitle() string {
+	if m != nil {
+		return m.Title
+	}
+	return ""
 }
 
 func (m *Listing_Coupon) GetHash() string {
@@ -1143,29 +1158,6 @@ func (m *Listing_Coupon) GetDiscountCode() string {
 		return x.DiscountCode
 	}
 	return ""
-}
-
-type isListing_Coupon_Discount interface {
-	isListing_Coupon_Discount()
-}
-
-type Listing_Coupon_PercentDiscount struct {
-	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
-}
-
-type Listing_Coupon_PriceDiscount struct {
-	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
-}
-
-func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
-
-func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount() {}
-
-func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
-	if m != nil {
-		return m.Discount
-	}
-	return nil
 }
 
 func (m *Listing_Coupon) GetPercentDiscount() float32 {
@@ -2925,13 +2917,11 @@ type isDisputeResolution_Payout_Output_ScriptOrAddress interface {
 type DisputeResolution_Payout_Output_Script struct {
 	Script string `protobuf:"bytes,1,opt,name=script,proto3,oneof"`
 }
-
 type DisputeResolution_Payout_Output_Address struct {
 	Address string `protobuf:"bytes,3,opt,name=address,proto3,oneof"`
 }
 
-func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
-
+func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress()  {}
 func (*DisputeResolution_Payout_Output_Address) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
 
 func (m *DisputeResolution_Payout_Output) GetScriptOrAddress() isDisputeResolution_Payout_Output_ScriptOrAddress {

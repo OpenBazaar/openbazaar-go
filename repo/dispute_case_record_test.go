@@ -42,13 +42,13 @@ func TestResolutionPaymentOutpoints(t *testing.T) {
 
 	subject.BuyerOutpoints = nil
 	if subject.ResolutionPaymentOutpoints(repo.PayoutRatio{Buyer: 100, Vendor: 0})[0].Hash != vendorOutpoints[0].Hash {
-		t.Error("expected outpoints to substitude vendor set when buyer set is missing")
+		t.Error("expected outpoints to substitute vendor set when buyer set is missing")
 	}
 
 	subject.BuyerOutpoints = buyerOutpoints
 	subject.VendorOutpoints = nil
 	if subject.ResolutionPaymentOutpoints(repo.PayoutRatio{Buyer: 0, Vendor: 100})[0].Hash != buyerOutpoints[0].Hash {
-		t.Error("expected outpoints to substitude vendor set when buyer set is missing")
+		t.Error("expected outpoints to substitute vendor set when buyer set is missing")
 	}
 }
 

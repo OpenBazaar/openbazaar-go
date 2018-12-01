@@ -24,8 +24,7 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
         # post listing to alice
         with open('testdata/listing.json') as listing_file:
             listing_json = json.load(listing_file, object_pairs_hook=OrderedDict)
-        if self.bitcoincash:
-            listing_json["metadata"]["pricingCurrency"] = "tbch"
+        listing_json["metadata"]["pricingCurrency"] = "t" + self.cointype
 
         api_url = alice["gateway_url"] + "ob/listing"
         r = requests.post(api_url, data=json.dumps(listing_json, indent=4))
@@ -49,7 +48,7 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
         requests.get(api_url)
 
         # generate some coins and send them to bob
-        api_url = bob["gateway_url"] + "wallet/address"
+        api_url = bob["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -73,6 +72,7 @@ class PurchaseOfflineErrorTest(OpenBazaarTestFramework):
 
         # set empty shipping address to trigger error
         order_json["address"] = ""
+        order_json["paymentCoin"] = "t" + self.cointype
 
         api_url = bob["gateway_url"] + "ob/purchase"
         r = requests.post(api_url, data=json.dumps(order_json, indent=4))

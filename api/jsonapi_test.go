@@ -177,8 +177,8 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing should contain exactly 1 acceptedCurrency")
 	}
 
-	if respObj[0].AcceptedCurrencies[0] != "tbtc" {
-		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
+	if respObj[0].AcceptedCurrencies[0] != "TBTC" {
+		t.Fatal("Listing acceptedCurrencies should contain 'TBTC'")
 	}
 }
 
@@ -225,6 +225,7 @@ func TestListingAcceptedCurrencies(t *testing.T) {
 		t.Fatal("Listing acceptedCurrenc9es should contain 'TBTC'")
 	}
 }
+
 func TestListings(t *testing.T) {
 	goodListingJSON := jsonFor(t, factory.NewListing("ron-swanson-tshirt"))
 	updatedListing := factory.NewListing("ron-swanson-tshirt")
@@ -447,7 +448,7 @@ func TestWallet(t *testing.T) {
 		{"GET", "/wallet/address", "", 200, walletAddressJSONResponse},
 		{"GET", "/wallet/balance", "", 200, walletBalanceJSONResponse},
 		{"GET", "/wallet/mnemonic", "", 200, walletMneumonicJSONResponse},
-		{"POST", "/wallet/spend", spendJSON, 400, insuffientFundsJSON},
+		{"POST", "/wallet/spend/", spendJSON, 400, insuffientFundsJSON},
 		// TODO: Test successful spend on regnet with coins
 	})
 }

@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 const notFoundJSON = `{"success": false,"reason": "Not Found"}`
@@ -58,7 +60,13 @@ const settingsJSON = `{
         "password": "letmein",
         "senderEmail": "notifications@urbanart.com",
         "recipientEmail": "Dave@gmail.com"
-    }
+    },
+    "preferredCurrencies": [
+	"btc",
+	"bch",
+	"ltc",
+	"zec"
+    ]
 }`
 
 const settingsUpdateJSON = `{
@@ -91,7 +99,13 @@ const settingsUpdateJSON = `{
         "password": "letmein",
         "senderEmail": "notifications@urbanart.com",
         "recipientEmail": "Dave@gmail.com"
-    }
+    },
+    "preferredCurrencies": [
+	"btc",
+	"bch",
+	"ltc",
+	"zec"
+    ]
 }`
 
 const settingsPatchJSON = `{
@@ -302,15 +316,42 @@ const moderatorValidJSON = `{
 
 const walletMneumonicJSONResponse = `{"mnemonic": "correct horse battery staple"}`
 
-const walletAddressJSONResponse = `{"address": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5"}`
+const walletAddressJSONResponse = `{
+    "TBCH": "qptj7gckxunjzd0dtjhmllm44we5ry9sv5r05a59v8",
+    "TBTC": "moLsBry5Dk8AN3QT3i1oxZdwD12MYRfTL5",
+    "TLTC": "mtNyfJ4Sc38PFyCWMmGsYjAGrXsqwJ4gCD",
+    "TZEC": "tmUD2Zc2tCDCy2AE7xjMrTtPJd26m6RAP2t"
+}`
 
-const walletBalanceJSONResponse = `{"confirmed": 0, "unconfirmed": 0, "height": 0}`
+const walletBalanceJSONResponse = `{
+    "TBCH": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "TBTC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "TLTC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    },
+    "TZEC": {
+        "confirmed": 0,
+        "height": 0,
+        "unconfirmed": 0
+    }
+}`
 
 //
 // Spending
 //
 
 const spendJSON = `{
+	"wallet": "btc",
 	"address": "1HYhu8e2wv19LZ2umXoo1pMiwzy2rL32UQ",
 	"amount": 1700000,
 	"feeLevel": "NORMAL"
@@ -325,7 +366,7 @@ const insuffientFundsJSON = `{
 // Posts
 //
 
-const postJSON = `{
+var postJSON = fmt.Sprintf(`{
 	"slug": "test1",
 	"vendorID": {
 			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
@@ -336,7 +377,8 @@ const postJSON = `{
 			},
 			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
-	"title": "test1",
+    "status": "test1",
+    "postType": "%s",
 	"longForm": "This is a test post dawg.",
 	"images": [
 			{
@@ -349,14 +391,17 @@ const postJSON = `{
 			}
 	],
 	"tags": [
-			"Yo"
-	],
+			"yeezy"
+    ],
+    "channels": [
+        "nike"
+    ],
 	"timestamp": "2017-11-02T04:15:07.972887695Z"
-}`
+}`, pb.Post_POST.String())
 
 const postJSONResponse = `{"slug": "test1"}`
 
-const postUpdateJSON = `{
+var postUpdateJSON = fmt.Sprintf(`{
 	"slug": "test1",
 	"vendorID": {
 			"peerID": "QmRxFnmPSJdRN9vckxBW7W9bcz7grJNoqbk1dRvuNtPSUD",
@@ -367,7 +412,8 @@ const postUpdateJSON = `{
 			},
 			"bitcoinSig": "MEUCIQD08Qj1Ahu/8HgJPV/jq5Qxr2Nc5ixQxqAYo4+GZMFBCgIgfeWgWQ+ZXcT1pNiUSyldD1UaAaihtDXgaGYZZYD9boQ="
 	},
-	"title": "test1",
+    "status": "test1",
+    "postType": "%s",
 	"longForm": "This is a test post dawgs and cats.",
 	"images": [
 			{
@@ -380,7 +426,10 @@ const postUpdateJSON = `{
 			}
 	],
 	"tags": [
-			"Yo"
-	],
+			"yeezy"
+    ],
+    "channels": [
+        "nike"
+    ],
 	"timestamp": "2017-11-02T04:16:09.281618842Z"
-}`
+}`, pb.Post_POST.String())

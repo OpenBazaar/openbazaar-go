@@ -159,17 +159,8 @@ func addConfigExtensions(repoRoot string) error {
 		return err
 	}
 	var (
-		w = schema.WalletConfig{
-			Type:             "spvwallet",
-			MaxFee:           2000,
-			FeeAPI:           "https://btc.fees.openbazaar.org",
-			HighFeeDefault:   160,
-			MediumFeeDefault: 60,
-			LowFeeDefault:    20,
-			TrustedPeer:      "",
-		}
 		ws = schema.WalletsConfig{
-			BTC: schema.CoinConfig{
+			BTC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://btc.bloqapi.net/insight-api",
 				APITestnet:       "https://test-insight.bitpay.com/api",
@@ -179,7 +170,7 @@ func addConfigExtensions(repoRoot string) error {
 				MediumFeeDefault: 10,
 				LowFeeDefault:    1,
 			},
-			BCH: schema.CoinConfig{
+			BCH: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://bch-insight.bitpay.com/api",
 				APITestnet:       "https://test-bch-insight.bitpay.com/api",
@@ -188,7 +179,7 @@ func addConfigExtensions(repoRoot string) error {
 				MediumFeeDefault: 5,
 				LowFeeDefault:    1,
 			},
-			LTC: schema.CoinConfig{
+			LTC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://insight.litecore.io/api",
 				APITestnet:       "https://testnet.litecore.io/api",
@@ -197,7 +188,7 @@ func addConfigExtensions(repoRoot string) error {
 				MediumFeeDefault: 10,
 				LowFeeDefault:    5,
 			},
-			ZEC: schema.CoinConfig{
+			ZEC: &schema.CoinConfig{
 				Type:             "API",
 				API:              "https://zcashnetwork.info/api",
 				APITestnet:       "https://explorer.testnet.z.cash/api",
@@ -225,9 +216,6 @@ func addConfigExtensions(repoRoot string) error {
 			Id: "https://resolver.onename.com/",
 		}
 	)
-	if err := r.SetConfigKey("Wallet", w); err != nil {
-		return err
-	}
 	if err := r.SetConfigKey("Wallets", ws); err != nil {
 		return err
 	}

@@ -2,34 +2,32 @@ package namesys
 
 import (
 	"context"
+	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
+	logging "gx/ipfs/QmRb5jh8z2E8hMGN2tkvs1yHynUanqnZ3UeKwgN1i9P1F8/go-log"
+	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	lru "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru"
+	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"strings"
 	"time"
 
 	opts "github.com/ipfs/go-ipfs/namesys/opts"
 	pb "github.com/ipfs/go-ipfs/namesys/pb"
 	path "github.com/ipfs/go-ipfs/path"
-
-	u "gx/ipfs/QmNiJuT8Ja3hMVpBHXv3Q6dwmperaQ6JjLtpMQgMCD7xvx/go-ipfs-util"
-	logging "gx/ipfs/QmRb5jh8z2E8hMGN2tkvs1yHynUanqnZ3UeKwgN1i9P1F8/go-log"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	lru "gx/ipfs/QmVYxfoJQiZijTgPNHCHgHELvQpbsJNTg6Crmc3dQkj3yy/golang-lru"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 )
 
 var log = logging.Logger("namesys")
-const keyCachePrefix = "/pubkey/"
+var keyCachePrefix = "/pubkey/"
 
 // routingResolver implements NSResolver for the main IPFS SFS-like naming
 type routingResolver struct {
-	routing            routing.ValueStore
-	datastore          ds.Datastore
-	cache              *lru.Cache
+	routing   routing.ValueStore
+	datastore ds.Datastore
+	cache     *lru.Cache
 }
 
 func (r *routingResolver) cacheGet(name string) (path.Path, bool) {
@@ -103,9 +101,9 @@ func NewRoutingResolver(route routing.ValueStore, cachesize int, ds ds.Datastore
 	}
 
 	return &routingResolver{
-		routing:            route,
-		cache:              cache,
-		datastore:          ds,
+		routing:   route,
+		cache:     cache,
+		datastore: ds,
 	}
 }
 
@@ -281,7 +279,7 @@ func putToDatabase(datastore ds.Datastore, name string, ipnsRec, pubkey []byte) 
 		name = "/ipns/" + name
 	}
 	rkey := dshelp.NewKeyFromBinary([]byte(name))
-	pkey := dshelp.NewKeyFromBinary([]byte(keyCachePrefix+strings.TrimPrefix(name, "/ipns/")))
+	pkey := dshelp.NewKeyFromBinary([]byte(keyCachePrefix + strings.TrimPrefix(name, "/ipns/")))
 	datastore.Put(rkey, ipnsRec)
 	datastore.Put(pkey, pubkey)
 }

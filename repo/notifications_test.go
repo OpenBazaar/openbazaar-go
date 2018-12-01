@@ -47,9 +47,9 @@ func TestWebsocketDataIsUnmarshalable(t *testing.T) {
 }
 
 // TestNotificationMarshalling ensures that the new Notification marshal format is
-// functioning properly. This applies to notifications which have been marshalled in
+// functioning properly. This applies to notifications which have been marshaled in
 // the datastore with json.Marshal(Notification{}). Some notifications have been
-// marshalled in the datastore with json.Marshal(Notification{}.NotifierData), and
+// marshaled in the datastore with json.Marshal(Notification{}.NotifierData), and
 // TestLegacyNotificationMarshalling covers those cases.
 func TestNotificationMarshalling(t *testing.T) {
 	for _, n := range createNotificationExamples() {
@@ -80,8 +80,8 @@ func TestNotificationMarshalling(t *testing.T) {
 	}
 }
 
-// TestLegacyNotificationMarshalling ensures that the legacy Notification marshalling is
-// functioning properly. This applies to notifications which have been marshalled in
+// TestLegacyNotificationMarshalling ensures that the legacy Notification marshaling is
+// functioning properly. This applies to notifications which have been marshaled in
 // the datastore with json.Marshal(Notification{}.NotifierData).
 func TestLegacyNotificationMarshalling(t *testing.T) {
 	for _, n := range createLegacyNotificationExamples() {

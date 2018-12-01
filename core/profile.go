@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,13 +14,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/imdario/mergo"
 	ipnspath "github.com/ipfs/go-ipfs/path"
-
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // KeyCachePrefix - cache prefix for public key
@@ -59,7 +57,7 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 
 // UpdateProfile - update user profile
 func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
-	mPubkey, err := n.Wallet.MasterPublicKey().ECPubKey()
+	mPubkey, err := n.MasterPrivateKey.ECPubKey()
 	if err != nil {
 		return err
 	}
@@ -76,13 +74,23 @@ func (n *OpenBazaarNode) UpdateProfile(profile *pb.Profile) error {
 		OrigName:     false,
 	}
 
-	if profile.Currencies == nil {
-		profile.Currencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+	var acceptedCurrencies []string
+	settingsData, _ := n.Datastore.Settings().Get()
+	if settingsData.PreferredCurrencies != nil {
+		for _, ct := range *settingsData.PreferredCurrencies {
+			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct))
+		}
+	} else {
+		for ct := range n.Multiwallet {
+			acceptedCurrencies = append(acceptedCurrencies, NormalizeCurrencyCode(ct.CurrencyCode()))
+		}
 	}
 
+	profile.Currencies = acceptedCurrencies
 	if profile.ModeratorInfo != nil {
-		profile.ModeratorInfo.AcceptedCurrencies = []string{NormalizeCurrencyCode(n.Wallet.CurrencyCode())}
+		profile.ModeratorInfo.AcceptedCurrencies = acceptedCurrencies
 	}
+
 	profile.PeerID = n.IpfsNode.Identity.Pretty()
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {

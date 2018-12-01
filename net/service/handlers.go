@@ -4,13 +4,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"time"
-
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	blocks "gx/ipfs/Qmej7nf81hi2x2tvjRBF3mcp74sQyuDH4VMYDGd1YtXjb2/go-block-format"
 	"strconv"
+	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/net"
@@ -199,6 +199,7 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	}
 	plaintext, err := net.Decrypt(service.node.IpfsNode.PrivateKey, pmes.Payload.Value)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 
@@ -206,26 +207,40 @@ func (service *OpenBazaarService) handleOfflineRelay(p peer.ID, pmes *pb.Message
 	env := pb.Envelope{}
 	err = proto.Unmarshal(plaintext, &env)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 
 	// Validate the signature
 	ser, err := proto.Marshal(env.Message)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 	pubkey, err := libp2p.UnmarshalPublicKey(env.Pubkey)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
 	}
 	valid, err := pubkey.Verify(ser, env.Signature)
 	if err != nil || !valid {
+		log.Errorf("handleOfflineRelayError: signature failed to verify")
 		return nil, err
 	}
 
 	id, err := peer.IDFromPublicKey(pubkey)
 	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 		return nil, err
+	}
+
+	err = service.node.IpfsNode.Peerstore.AddPubKey(id, pubkey)
+	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
+	}
+	err = service.node.IpfsNode.Repo.Datastore().Put(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix+id.Pretty())), env.Pubkey)
+	if err != nil {
+		log.Errorf("handleOfflineRelayError: %s", err.Error())
 	}
 
 	// Get handler for this message type
@@ -292,6 +307,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 	currentTime := time.Now()
 	purchaseTime := time.Unix(contract.BuyerOrder.Timestamp.Seconds, int64(contract.BuyerOrder.Timestamp.Nanos))
 
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return errorResponse(err.Error()), err
+	}
+
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		total, err := service.node.CalculateOrderTotal(contract)
 		if err != nil {
@@ -323,11 +343,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		service.node.Wallet.AddWatchedAddress(addr)
+		wal.AddWatchedAddress(addr)
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
 			service.node.Datastore.Sales().SetNeedsResync(orderId, true)
@@ -350,11 +370,11 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			return errorResponse(err.Error()), err
 		}
-		service.node.Wallet.AddWatchedAddress(addr)
+		wal.AddWatchedAddress(addr)
 		contract, err = service.node.NewOrderConfirmation(contract, false, false)
 		if err != nil {
 			return errorResponse("Error building order confirmation"), errors.New("Error building order confirmation")
@@ -384,12 +404,12 @@ func (service *OpenBazaarService) handleOrder(peer peer.ID, pmes *pb.Message, op
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		addr, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.Payment.Address)
+		addr, err := wal.DecodeAddress(contract.BuyerOrder.Payment.Address)
 		if err != nil {
 			log.Error(err)
 			return errorResponse(err.Error()), err
 		}
-		service.node.Wallet.AddWatchedAddress(addr)
+		wal.AddWatchedAddress(addr)
 		log.Debugf("Received offline moderated ORDER message from %s", peer.Pretty())
 		service.node.Datastore.Sales().Put(orderId, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if currentTime.After(purchaseTime) {
@@ -534,6 +554,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return nil, err
+	}
+
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		// Sweep the address into our wallet
 		var txInputs []wallet.TransactionInput
@@ -543,7 +568,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 				if err != nil {
 					return nil, err
 				}
-				addr, err := service.node.Wallet.DecodeAddress(r.Address)
+				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return nil, err
 				}
@@ -562,7 +587,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		mPrivKey := service.node.MasterPrivateKey
 		if err != nil {
 			return nil, err
 		}
@@ -570,7 +595,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		buyerKey, err := service.node.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		buyerKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return nil, err
 		}
@@ -578,11 +603,11 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
-		_, err = service.node.Wallet.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
+		_, err = wal.SweepAddress(txInputs, &refundAddress, buyerKey, &redeemScript, wallet.NORMAL)
 		if err != nil {
 			return nil, err
 		}
@@ -601,7 +626,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -614,7 +639,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		mPrivKey := service.node.MasterPrivateKey
 		if err != nil {
 			return nil, err
 		}
@@ -622,7 +647,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		buyerKey, err := service.node.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		buyerKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return nil, err
 		}
@@ -631,7 +656,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 
-		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return nil, err
 		}
@@ -640,7 +665,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
+		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -700,6 +725,11 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		return nil, net.DuplicateMessage
 	}
 
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return nil, err
+	}
+
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
 		var outValue int64
@@ -715,7 +745,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			}
 		}
 
-		refundAddress, err := service.node.Wallet.DecodeAddress(contract.BuyerOrder.RefundAddress)
+		refundAddress, err := wal.DecodeAddress(contract.BuyerOrder.RefundAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -728,7 +758,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		mPrivKey := service.node.Wallet.MasterPrivateKey()
+		mPrivKey := service.node.MasterPrivateKey
 		if err != nil {
 			return nil, err
 		}
@@ -736,7 +766,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 		if err != nil {
 			return nil, err
 		}
-		buyerKey, err := service.node.Wallet.ChildKey(mECKey.Serialize(), chaincode, true)
+		buyerKey, err := wal.ChildKey(mECKey.Serialize(), chaincode, true)
 		if err != nil {
 			return nil, err
 		}
@@ -745,7 +775,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			return nil, err
 		}
 
-		buyerSignatures, err := service.node.Wallet.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
+		buyerSignatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, buyerKey, redeemScript, contract.BuyerOrder.RefundFee)
 		if err != nil {
 			return nil, err
 		}
@@ -754,7 +784,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 			sig := wallet.Signature{InputIndex: s.InputIndex, Signature: s.Signature}
 			vendorSignatures = append(vendorSignatures, sig)
 		}
-		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
+		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.BuyerOrder.RefundFee, true)
 		if err != nil {
 			return nil, err
 		}
@@ -883,6 +913,11 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		return nil, net.DuplicateMessage
 	}
 
+	wal, err := service.node.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		return nil, err
+	}
+
 	contract.BuyerOrderCompletion = rc.BuyerOrderCompletion
 	for _, sig := range rc.Signatures {
 		if sig.Section == pb.Signature_ORDER_COMPLETION {
@@ -909,12 +944,12 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 		}
 		var payoutAddress btcutil.Address
 		if len(contract.VendorOrderFulfillment) > 0 {
-			payoutAddress, err = service.node.Wallet.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
+			payoutAddress, err = wal.DecodeAddress(contract.VendorOrderFulfillment[0].Payout.PayoutAddress)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			payoutAddress = service.node.Wallet.CurrentAddress(wallet.EXTERNAL)
+			payoutAddress = wal.CurrentAddress(wallet.EXTERNAL)
 		}
 		var output = wallet.TransactionOutput{
 			Address: payoutAddress,
@@ -937,7 +972,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 			buyerSignatures = append(buyerSignatures, sig)
 		}
 
-		_, err = service.node.Wallet.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
+		_, err = wal.Multisign(ins, []wallet.TransactionOutput{output}, buyerSignatures, vendorSignatures, redeemScript, contract.VendorOrderFulfillment[0].Payout.PayoutFeePerByte, true)
 		if err != nil {
 			return nil, err
 		}

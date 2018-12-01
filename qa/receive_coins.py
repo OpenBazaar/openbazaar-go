@@ -13,7 +13,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
 
     def run_test(self):
         time.sleep(4)
-        api_url = self.nodes[0]["gateway_url"] + "wallet/address"
+        api_url = self.nodes[0]["gateway_url"] + "wallet/address/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -24,7 +24,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
         self.send_bitcoin_cmd("sendtoaddress", address, 10)
         time.sleep(20)
-        api_url = self.nodes[0]["gateway_url"] + "wallet/balance"
+        api_url = self.nodes[0]["gateway_url"] + "wallet/balance/" + self.cointype
         r = requests.get(api_url)
         if r.status_code == 200:
             resp = json.loads(r.text)
@@ -38,6 +38,7 @@ class ReceiveCoinsTest(OpenBazaarTestFramework):
             raise TestFailure("ReceiveCoinsTest - FAIL: Unknown response")
 
         print("ReceiveCoinsTest - PASS")
+
 
 if __name__ == '__main__':
     print("Running ReceiveCoinsTest")

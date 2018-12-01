@@ -29,22 +29,12 @@ type ResolverConfig struct {
 	Eth string `json:".eth"`
 }
 
-type WalletConfig struct {
-	Type             string
-	Binary           string
-	MaxFee           int
-	FeeAPI           string
-	HighFeeDefault   int
-	MediumFeeDefault int
-	LowFeeDefault    int
-	TrustedPeer      string
-}
-
 type WalletsConfig struct {
-	BTC CoinConfig `json:"BTC"`
-	BCH CoinConfig `json:"BCH"`
-	LTC CoinConfig `json:"LTC"`
-	ZEC CoinConfig `json:"ZEC"`
+	BTC *CoinConfig `json:"BTC"`
+	BCH *CoinConfig `json:"BCH"`
+	LTC *CoinConfig `json:"LTC"`
+	ZEC *CoinConfig `json:"ZEC"`
+	ETH *CoinConfig `json:"ETH"`
 }
 
 type CoinConfig struct {
@@ -56,6 +46,8 @@ type CoinConfig struct {
 	HighFeeDefault   int
 	MediumFeeDefault int
 	LowFeeDefault    int
+	TrustedPeer      string
+	CustomConfig     interface{}
 }
 
 type DataSharing struct {
@@ -63,7 +55,7 @@ type DataSharing struct {
 	PushTo              []string
 }
 
-var MalformedConfigError error = errors.New("Config file is malformed")
+var MalformedConfigError error = errors.New("config file is malformed")
 
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	var cfgIface interface{}
@@ -200,102 +192,6 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	}
 
 	return apiConfig, nil
-}
-
-func GetWalletConfig(cfgBytes []byte) (*WalletConfig, error) {
-	var cfgIface interface{}
-	err := json.Unmarshal(cfgBytes, &cfgIface)
-	if err != nil {
-		return nil, MalformedConfigError
-	}
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	walletIface, ok := cfg["Wallet"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	wallet, ok := walletIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	feeAPI, ok := wallet["FeeAPI"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	feeAPIstr, ok := feeAPI.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	trustedPeer, ok := wallet["TrustedPeer"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	trustedPeerStr, ok := trustedPeer.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	low, ok := wallet["LowFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	lowFloat, ok := low.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	medium, ok := wallet["MediumFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	mediumFloat, ok := medium.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	high, ok := wallet["HighFeeDefault"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	highFloat, ok := high.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	maxFee, ok := wallet["MaxFee"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	maxFeeFloat, ok := maxFee.(float64)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	walletType, ok := wallet["Type"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	walletTypeStr, ok := walletType.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	binary, ok := wallet["Binary"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	binaryStr, ok := binary.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	wCfg := &WalletConfig{
-		Type:             walletTypeStr,
-		Binary:           binaryStr,
-		MaxFee:           int(maxFeeFloat),
-		FeeAPI:           feeAPIstr,
-		HighFeeDefault:   int(highFloat),
-		MediumFeeDefault: int(mediumFloat),
-		LowFeeDefault:    int(lowFloat),
-		TrustedPeer:      trustedPeerStr,
-	}
-	return wCfg, nil
 }
 
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
