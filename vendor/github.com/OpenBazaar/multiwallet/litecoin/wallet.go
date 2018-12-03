@@ -396,6 +396,7 @@ func (w *LitecoinWallet) Broadcast(tx *wire.MsgTx) error {
 			N:        n,
 			Addr:     addr.String(),
 			Satoshis: u.Value,
+			Value:    float64(u.Value) / util.SatoshisPerCoin(wi.Litecoin),
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)
 	}
