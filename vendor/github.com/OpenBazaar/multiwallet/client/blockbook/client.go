@@ -457,6 +457,7 @@ func (i *BlockBookClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 					Log.Errorf("Error downloading tx after socket notification: %s", err.Error())
 					return
 				}
+				tx.Time = time.Now().Unix()
 				i.txNotifyChan <- *tx
 			}
 		}
@@ -474,7 +475,7 @@ func (i *BlockBookClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 
 func (i *BlockBookClient) Broadcast(tx []byte) (string, error) {
 	txHex := hex.EncodeToString(tx)
-	resp, err := i.RequestFunc("sendtx/"+ txHex, http.MethodGet, nil, nil)
+	resp, err := i.RequestFunc("sendtx/"+txHex, http.MethodGet, nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("error broadcasting tx: %s", err)
 	}

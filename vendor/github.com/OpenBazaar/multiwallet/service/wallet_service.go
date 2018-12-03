@@ -391,7 +391,7 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		return
 	}
 	var relevant bool
-	cb := wallet.TransactionCallback{Txid: txHash.String(), Height: height}
+	cb := wallet.TransactionCallback{Txid: txHash.String(), Height: height, Timestamp: time.Unix(u.Time, 0)}
 	for _, in := range u.Inputs {
 		ch, err := chainhash.NewHashFromStr(in.Txid)
 		if err != nil {
@@ -416,11 +416,12 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 			Log.Errorf("error converting outpoint hash for %s: %s", ws.coinType.String(), err.Error())
 			return
 		}
+		v := int64(math.Round(in.Value * float64(util.SatoshisPerCoin(ws.coinType))))
 		cbin := wallet.TransactionInput{
 			OutpointHash:  h,
 			OutpointIndex: op.Index,
 			LinkedAddress: addr,
-			Value:         in.Satoshis,
+			Value:         v,
 		}
 		cb.Inputs = append(cb.Inputs, cbin)
 
@@ -428,9 +429,8 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		if !ok {
 			continue
 		}
-		v := int64(math.Round(in.Value * float64(util.SatoshisPerCoin(ws.coinType))))
-		value -= v
 		if !sa.WatchOnly {
+			value -= v
 			hits++
 		}
 		relevant = true
@@ -463,8 +463,8 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		if !ok {
 			continue
 		}
-		value += v
 		if !sa.WatchOnly {
+			value += v
 			hits++
 			// Mark the key we received coins to as used
 			ws.km.MarkKeyAsUsed(sa.Addr.ScriptAddress())
