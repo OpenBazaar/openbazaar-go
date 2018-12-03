@@ -9,6 +9,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	wallet "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcutil"
 )
 
 // DefaultCurrencyDivisibility is the Divisibility of the Currency if not
@@ -16,25 +17,29 @@ import (
 const DefaultCurrencyDivisibility uint32 = 1e8
 
 type SpendRequest struct {
-	Wallet                 string `json:"wallet"`
+	decodedAddress btcutil.Address
+
 	Address                string `json:"address"`
 	Amount                 int64  `json:"amount"`
 	FeeLevel               string `json:"feeLevel"`
 	Memo                   string `json:"memo"`
 	OrderID                string `json:"orderID"`
 	RequireAssociatedOrder bool   `json:"requireOrder"`
+	Wallet                 string `json:"wallet"`
 }
 
 type SpendResponse struct {
-	Txid               string    `json:"txid"`
 	Amount             int64     `json:"amount"`
 	ConfirmedBalance   int64     `json:"confirmedBalance"`
-	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
-	Timestamp          time.Time `json:"timestamp"`
 	Memo               string    `json:"memo"`
 	OrderID            string    `json:"orderID"`
+	Timestamp          time.Time `json:"timestamp"`
+	Txid               string    `json:"txid"`
+	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
 }
 
+// Spend will attempt to move funds from the node to the destination address described in the
+// SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	var (
 		feeLevel wallet.FeeLevel
@@ -50,6 +55,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	if err != nil {
 		return nil, ErrInvalidSpendAddress
 	}
+	args.decodedAddress = addr
 
 	if args.RequireAssociatedOrder {
 		var err error
@@ -126,16 +132,26 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 }
 
 func (n *OpenBazaarNode) getOrderContractBySpendRequest(args *SpendRequest) (*pb.RicardianContract, error) {
+	var errorStr = "unable to find order from order id or spend address"
 	if args.OrderID != "" {
 		contract, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(args.OrderID)
-		if err == nil && contract != nil {
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s", errorStr, err)
+		}
+		if contract != nil {
 			return contract, nil
 		}
 	}
-	contract, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(args.Address)
-	if err == nil && contract != nil {
-		return contract, nil
+
+	if args.decodedAddress != nil {
+		contract, _, _, _, err := n.Datastore.Purchases().GetByPaymentAddress(args.decodedAddress)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s", errorStr, err)
+		}
+		if contract != nil {
+			return contract, nil
+		}
 	}
 
-	return nil, errors.New("unable to find order from order id or spend address")
+	return nil, errors.New(errorStr)
 }
