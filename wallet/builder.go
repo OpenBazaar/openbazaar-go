@@ -141,11 +141,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 				} else {
 					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.APITestnet}
 				}
-				coin.Options = map[string]interface{}{
-					"RegistryAddress":        "0x403d907982474cdd51687b09a8968346159378f3",
-					"RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-					"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-				}
+				coin.Options = schema.EthereumDefaultOptions()
 			}
 		}
 	}

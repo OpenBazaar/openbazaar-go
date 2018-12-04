@@ -47,7 +47,7 @@ type CoinConfig struct {
 	MediumFeeDefault int
 	LowFeeDefault    int
 	TrustedPeer      string
-	CustomConfig     interface{}
+	WalletOptions    map[string]interface{}
 }
 
 type DataSharing struct {

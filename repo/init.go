@@ -205,11 +205,7 @@ func addConfigExtensions(repoRoot string) error {
 				HighFeeDefault:   30,
 				MediumFeeDefault: 15,
 				LowFeeDefault:    7,
-				CustomConfig: map[string]string{
-					"RegistryAddress":        "0x403d907982474cdd51687b09a8968346159378f3",
-					"RinkebyRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-					"RopstenRegistryAddress": "0x403d907982474cdd51687b09a8968346159378f3",
-				},
+				WalletOptions:    schema.EthereumDefaultOptions(),
 			},
 		}
 
