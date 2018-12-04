@@ -162,8 +162,8 @@ func addConfigExtensions(repoRoot string) error {
 		ws = schema.WalletsConfig{
 			BTC: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://btc.bloqapi.net/insight-api",
-				APITestnet:       "https://test-insight.bitpay.com/api",
+				API:              "https://btc.blockbook.api.openbazaar.org/api",
+				APITestnet:       "https://tbtc.blockbook.api.openbazaar.org/api",
 				MaxFee:           200,
 				FeeAPI:           "https://btc.fees.openbazaar.org",
 				HighFeeDefault:   50,
@@ -172,8 +172,8 @@ func addConfigExtensions(repoRoot string) error {
 			},
 			BCH: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://bch-insight.bitpay.com/api",
-				APITestnet:       "https://test-bch-insight.bitpay.com/api",
+				API:              "https://bch.blockbook.api.openbazaar.org/api",
+				APITestnet:       "https://tbch.blockbook.api.openbazaar.org/api",
 				MaxFee:           200,
 				HighFeeDefault:   10,
 				MediumFeeDefault: 5,
@@ -181,8 +181,8 @@ func addConfigExtensions(repoRoot string) error {
 			},
 			LTC: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://insight.litecore.io/api",
-				APITestnet:       "https://testnet.litecore.io/api",
+				API:              "https://ltc.blockbook.api.openbazaar.org/api",
+				APITestnet:       "https://tltc.blockbook.api.openbazaar.org/api",
 				MaxFee:           200,
 				HighFeeDefault:   20,
 				MediumFeeDefault: 10,
@@ -190,8 +190,8 @@ func addConfigExtensions(repoRoot string) error {
 			},
 			ZEC: &schema.CoinConfig{
 				Type:             "API",
-				API:              "https://zcashnetwork.info/api",
-				APITestnet:       "https://explorer.testnet.z.cash/api",
+				API:              "https://zec.blockbook.api.openbazaar.org/api",
+				APITestnet:       "https://tzec.blockbook.api.openbazaar.org/api",
 				MaxFee:           200,
 				HighFeeDefault:   20,
 				MediumFeeDefault: 10,

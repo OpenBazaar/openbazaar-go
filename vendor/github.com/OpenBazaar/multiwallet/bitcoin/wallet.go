@@ -365,6 +365,7 @@ func (w *BitcoinWallet) Broadcast(tx *wire.MsgTx) error {
 			N:        n,
 			Addr:     addr.String(),
 			Satoshis: u.Value,
+			Value:    float64(u.Value) / util.SatoshisPerCoin(wi.Bitcoin),
 		}
 		cTxn.Inputs = append(cTxn.Inputs, input)
 	}

@@ -22,6 +22,7 @@ func put(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request)
 	}
 }
 
+//nolint:dupl
 func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(path, "/ob/listing"):
@@ -52,6 +53,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTOrderFulfill(w, r)
 	case strings.HasPrefix(path, "/ob/ordercompletion"):
 		i.POSTOrderComplete(w, r)
+	case strings.HasPrefix(path, "/ob/orderspend"):
+		i.POSTSpendCoinsForOrder(w, r)
 	case strings.HasPrefix(path, "/ob/refund"):
 		i.POSTRefund(w, r)
 	case strings.HasPrefix(path, "/wallet/resyncblockchain"):
@@ -109,6 +112,7 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 	}
 }
 
+//nolint:dupl
 func get(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request) {
 	switch {
 	case strings.HasPrefix(path, "/ob/status"):
