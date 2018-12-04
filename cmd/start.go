@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/multiwallet"
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
@@ -39,6 +38,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/OpenBazaar/multiwallet"
+
 	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
@@ -68,6 +69,7 @@ import (
 	"github.com/ipfs/go-ipfs/namesys"
 	namepb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipath "github.com/ipfs/go-ipfs/path"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
@@ -75,7 +77,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	ipfsrepo "github.com/ipfs/go-ipfs/repo"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -113,35 +114,34 @@ type Start struct {
 }
 
 var (
-	mainConfig			[]byte
-	ipfsConfig			config.Config
-	apiConfig			*schema.APIConfig
-	torConfig			*schema.TorConfig
-	dataSharingConfig	*schema.DataSharing
-	resolverConfig		*schema.ResolverConfig
-	coinConfig			*schema.CoinConfig
-	walletsConfig		*schema.WalletsConfig
-	republishInterval	time.Duration
-	dropboxToken		string
-	nodeRepo			ipfsrepo.Repo
-	repoPath			string
-	onionTransport 		*oniontp.OnionTransport
-	torDialer 			proxy.Dialer
-	usingTor			bool
-	usingClearnet 		bool
-	controlPort 		int
-	dnsResolver			namesys.Resolver
-	ipfsNode			*ipfscore.IpfsNode
-	noLogFiles			bool
-	creationDate		time.Time
-	params 				chaincfg.Params
-	pushNodes 			[]peer.ID
-	authCookie 			http.Cookie
-	banManager			*obnet.BanManager
-	)
+	mainConfig        []byte
+	ipfsConfig        config.Config
+	apiConfig         *schema.APIConfig
+	torConfig         *schema.TorConfig
+	dataSharingConfig *schema.DataSharing
+	resolverConfig    *schema.ResolverConfig
+	coinConfig        *schema.CoinConfig
+	walletsConfig     *schema.WalletsConfig
+	republishInterval time.Duration
+	dropboxToken      string
+	nodeRepo          ipfsrepo.Repo
+	repoPath          string
+	onionTransport    *oniontp.OnionTransport
+	torDialer         proxy.Dialer
+	usingTor          bool
+	usingClearnet     bool
+	controlPort       int
+	dnsResolver       namesys.Resolver
+	ipfsNode          *ipfscore.IpfsNode
+	noLogFiles        bool
+	creationDate      time.Time
+	params            chaincfg.Params
+	pushNodes         []peer.ID
+	authCookie        http.Cookie
+	banManager        *obnet.BanManager
+)
 
 var offlineMessageFailoverTimeout = 30 * time.Second
-
 
 func (x *Start) Execute(args []string) error {
 	var err error
@@ -243,7 +243,7 @@ func (x *Start) Execute(args []string) error {
 
 	processSwarmAddresses(x.STUN)
 
-	dnsResolver = namesys.NewDNSResolver()	// Custom DNS resolver
+	dnsResolver = namesys.NewDNSResolver() // Custom DNS resolver
 
 	// Set up the Tor transport if user has enabled it
 	if usingTor {
@@ -260,7 +260,7 @@ func (x *Start) Execute(args []string) error {
 				return err
 			}
 			// TODO: maybe create a tor resolver impl later
-			dnsResolver = nil	// Disable DNS resolution due to privacy requirements
+			dnsResolver = nil // Disable DNS resolution due to privacy requirements
 		}
 	}
 
@@ -350,14 +350,14 @@ func (x *Start) Execute(args []string) error {
 		Multiwallet:                   multiwallet,
 		NameSystem:                    nameSystem,
 		OfflineMessageFailoverTimeout: offlineMessageFailoverTimeout,
-		Pubsub:               pubSub,
-		PushNodes:            pushNodes,
-		RegressionTestEnable: x.Regtest,
-		RepoPath:             repoPath,
-		RootHash:             ipath.Path(ipfsRootHash.Value).String(),
-		TestnetEnable:        x.Testnet,
-		TorDialer:            torDialer,
-		UserAgent:            core.USERAGENT,
+		Pubsub:                        pubSub,
+		PushNodes:                     pushNodes,
+		RegressionTestEnable:          x.Regtest,
+		RepoPath:                      repoPath,
+		RootHash:                      ipath.Path(ipfsRootHash.Value).String(),
+		TestnetEnable:                 x.Testnet,
+		TorDialer:                     torDialer,
+		UserAgent:                     core.USERAGENT,
 	}
 	core.PublishLock.Lock()
 
