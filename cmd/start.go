@@ -120,7 +120,7 @@ var (
 	torConfig         *schema.TorConfig
 	dataSharingConfig *schema.DataSharing
 	resolverConfig    *schema.ResolverConfig
-	coinConfig        *schema.CoinConfig
+	//coinConfig        *schema.CoinConfig
 	walletsConfig     *schema.WalletsConfig
 	republishInterval time.Duration
 	dropboxToken      string
@@ -852,6 +852,11 @@ func setupTestnet() error {
 	}
 
 	cfg, err := nodeRepo.Config()
+	if err != nil {
+		log.Error("Could not retrieve IPFS config", err)
+		return err
+	}
+
 	cfg.Bootstrap = testnetBootstrapAddrs
 	dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 	bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
