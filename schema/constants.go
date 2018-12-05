@@ -39,6 +39,10 @@ const (
 	// End SQL Statements
 
 	// Configuration defaults
+	EthereumRegistryAddressMainnet = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRinkeby = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+
 	DataPushNodeOne = "QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ"
 	DataPushNodeTwo = "QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
 
@@ -69,3 +73,11 @@ var (
 		BootstrapNodeTestnet_Shipshewana,
 	}
 )
+
+func EthereumDefaultOptions() map[string]interface{} {
+	return map[string]interface{}{
+		"RegistryAddress":        EthereumRegistryAddressMainnet,
+		"RinkebyRegistryAddress": EthereumRegistryAddressRinkeby,
+		"RopstenRegistryAddress": EthereumRegistryAddressRopsten,
+	}
+}

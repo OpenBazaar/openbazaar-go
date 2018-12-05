@@ -44,14 +44,15 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	}
 
 	// Create a default config with all four coins
-	coinsToUse := make(map[wallet.CoinType]bool)
-	coinsToUse[wallet.Bitcoin] = true
-	coinsToUse[wallet.BitcoinCash] = true
-	coinsToUse[wallet.Zcash] = true
-	coinsToUse[wallet.Litecoin] = true
+	walletEnableOpt := make(map[wallet.CoinType]bool)
+	walletEnableOpt[wallet.Bitcoin] = true
+	walletEnableOpt[wallet.BitcoinCash] = true
+	walletEnableOpt[wallet.Zcash] = true
+	walletEnableOpt[wallet.Litecoin] = true
+	walletEnableOpt[wallet.Ethereum] = false
 
 	// Apply our openbazaar settings
-	defaultConfig := config.NewDefaultConfig(coinsToUse, cfg.Params)
+	defaultConfig := config.NewDefaultConfig(walletEnableOpt, cfg.Params)
 	defaultConfig.Mnemonic = cfg.Mnemonic
 	defaultConfig.CreationDate = cfg.WalletCreationDate
 	defaultConfig.Proxy = cfg.Proxy
@@ -79,7 +80,6 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.APITestnet}
 				}
 			}
-			coinCfgs = append(coinCfgs, coin)
 		case wallet.BitcoinCash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -95,7 +95,6 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.APITestnet}
 				}
 			}
-			coinCfgs = append(coinCfgs, coin)
 		case wallet.Zcash:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -111,7 +110,6 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.APITestnet}
 				}
 			}
-			coinCfgs = append(coinCfgs, coin)
 		case wallet.Litecoin:
 			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
 			coin.DB = walletDB
@@ -127,8 +125,24 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.APITestnet}
 				}
 			}
-			coinCfgs = append(coinCfgs, coin)
+		case wallet.Ethereum:
+			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
+			coin.DB = walletDB
+			if cfg.ConfigFile.ETH != nil {
+				coin.FeeAPI = cfg.ConfigFile.ETH.API
+				coin.LowFee = uint64(cfg.ConfigFile.ETH.LowFeeDefault)
+				coin.MediumFee = uint64(cfg.ConfigFile.ETH.MediumFeeDefault)
+				coin.HighFee = uint64(cfg.ConfigFile.ETH.HighFeeDefault)
+				coin.MaxFee = uint64(cfg.ConfigFile.ETH.MaxFee)
+				if !testnet {
+					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.API}
+				} else {
+					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.APITestnet}
+				}
+				coin.Options = schema.EthereumDefaultOptions()
+			}
 		}
+		coinCfgs = append(coinCfgs, coin)
 	}
 	defaultConfig.Coins = coinCfgs
 	mw, err := multiwallet.NewMultiWallet(defaultConfig)
