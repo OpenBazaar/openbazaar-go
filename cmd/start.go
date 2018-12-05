@@ -5,6 +5,19 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
+
 	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
@@ -25,22 +38,29 @@ import (
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
 	oniontp "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport"
-	"io"
-	"io/ioutil"
-	"net"
-	"net/http"
-	"os"
-	"path"
-	"path/filepath"
-	"sort"
-	"strconv"
-	"strings"
-	"syscall"
-	"time"
-
-	"github.com/OpenBazaar/multiwallet"
 
 	bstk "github.com/OpenBazaar/go-blockstackclient"
+	"github.com/OpenBazaar/multiwallet"
+	wi "github.com/OpenBazaar/wallet-interface"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/fatih/color"
+	"github.com/ipfs/go-ipfs/commands"
+	ipfscore "github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/corehttp"
+	"github.com/ipfs/go-ipfs/namesys"
+	namepb "github.com/ipfs/go-ipfs/namesys/pb"
+	ipath "github.com/ipfs/go-ipfs/path"
+	ipfsrepo "github.com/ipfs/go-ipfs/repo"
+	"github.com/ipfs/go-ipfs/repo/config"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/natefinch/lumberjack"
+	"github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
+	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/proxy"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -57,61 +77,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/wallet"
 	lis "github.com/OpenBazaar/openbazaar-go/wallet/listeners"
 	"github.com/OpenBazaar/openbazaar-go/wallet/resync"
-	wi "github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/fatih/color"
-	"github.com/ipfs/go-ipfs/commands"
-	ipfscore "github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/corehttp"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
-	"github.com/ipfs/go-ipfs/namesys"
-	namepb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipath "github.com/ipfs/go-ipfs/path"
-	ipfsrepo "github.com/ipfs/go-ipfs/repo"
-	"github.com/ipfs/go-ipfs/repo/config"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/natefinch/lumberjack"
-	"github.com/op/go-logging"
-	"github.com/tyler-smith/go-bip39"
-	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/net/proxy"
 )
-
-var stdoutLogFormat = logging.MustStringFormatter(
-	`%{color:reset}%{color}%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
-)
-
-var fileLogFormat = logging.MustStringFormatter(
-	`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
-)
-
-var (
-	ErrNoGateways = errors.New("No gateway addresses configured")
-)
-
-type Start struct {
-	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
-	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
-	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
-	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" default:"debug"`
-	NoLogFiles           bool     `short:"f" long:"nologfiles" description:"save logs on disk"`
-	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
-	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
-	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
-	AuthCookie           string   `short:"c" long:"authcookie" description:"turn on API authentication and use this specific cookie"`
-	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
-	Verbose              bool     `short:"v" long:"verbose" description:"print openbazaar logs to stdout"`
-	TorPassword          string   `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
-	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
-	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
-	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
-	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
-	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
-	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
-	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
-}
 
 var (
 	mainConfig        []byte
@@ -139,21 +105,64 @@ var (
 	pushNodes         []peer.ID
 	authCookie        http.Cookie
 	banManager        *obnet.BanManager
+
+	stdoutLogFormat = logging.MustStringFormatter(
+		`%{color:reset}%{color}%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+	)
+
+	fileLogFormat = logging.MustStringFormatter(
+		`%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
+	)
+
+	// ErrNoGateways - no gateway error
+	ErrNoGateways = errors.New("no gateway addresses configured")
+
+	// DHTOption - set the dht option
+	DHTOption ipfscore.RoutingOption = constructDHTRouting
+
+	offlineMessageFailoverTimeout = 30 * time.Second
 )
 
-var offlineMessageFailoverTimeout = 30 * time.Second
+// IPNSValidatorTag - validator tag for ipns
+const IPNSValidatorTag = "ipns"
 
+// Start - the cmd line arguments for start
+type Start struct {
+	Password             string   `short:"p" long:"password" description:"the encryption password if the database is encrypted"`
+	Testnet              bool     `short:"t" long:"testnet" description:"use the test network"`
+	Regtest              bool     `short:"r" long:"regtest" description:"run in regression test mode"`
+	LogLevel             string   `short:"l" long:"loglevel" description:"set the logging level [debug, info, notice, warning, error, critical]" default:"debug"`
+	NoLogFiles           bool     `short:"f" long:"nologfiles" description:"save logs on disk"`
+	AllowIP              []string `short:"a" long:"allowip" description:"only allow API connections from these IPs"`
+	STUN                 bool     `short:"s" long:"stun" description:"use stun on µTP IPv4"`
+	DataDir              string   `short:"d" long:"datadir" description:"specify the data directory to be used"`
+	AuthCookie           string   `short:"c" long:"authcookie" description:"turn on API authentication and use this specific cookie"`
+	UserAgent            string   `short:"u" long:"useragent" description:"add a custom user-agent field"`
+	Verbose              bool     `short:"v" long:"verbose" description:"print openbazaar logs to stdout"`
+	TorPassword          string   `long:"torpassword" description:"Set the tor control password. This will override the tor password in the config."`
+	Tor                  bool     `long:"tor" description:"Automatically configure the daemon to run as a Tor hidden service and use Tor exclusively. Requires Tor to be running."`
+	DualStack            bool     `long:"dualstack" description:"Automatically configure the daemon to run as a Tor hidden service IN ADDITION to using the clear internet. Requires Tor to be running. WARNING: this mode is not private"`
+	DisableWallet        bool     `long:"disablewallet" description:"disable the wallet functionality of the node"`
+	DisableExchangeRates bool     `long:"disableexchangerates" description:"disable the exchange rate service to prevent api queries"`
+	Storage              string   `long:"storage" description:"set the outgoing message storage option [self-hosted, dropbox] default=self-hosted"`
+	BitcoinCash          bool     `long:"bitcoincash" description:"use a Bitcoin Cash wallet in a dedicated data directory"`
+	ZCash                string   `long:"zcash" description:"use a ZCash wallet in a dedicated data directory. To use this you must pass in the location of the zcashd binary."`
+	Mode                 string   `short:"m" long:"mode" description:"set the mode [desktop, mobile]" default:"desktop"`
+}
+
+// Execute - start the server
 func (x *Start) Execute(args []string) error {
 	var err error
+	var sqliteDB *db.SQLiteDatastore
 
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
-		return errors.New("Invalid combination of testnet and regtest modes")
+		return errors.New("invalid combination of testnet and regtest modes")
 	}
 
 	if x.Tor && x.DualStack {
-		return errors.New("Invalid combination of tor and dual stack modes")
+		return errors.New("invalid combination of tor and dual stack modes")
 	}
 
 	// Check if user launched with Testnet
@@ -162,7 +171,7 @@ func (x *Start) Execute(args []string) error {
 		isTestnet = true
 	}
 	if x.BitcoinCash && x.ZCash != "" {
-		return errors.New("Bitcoin Cash and ZCash cannot be used at the same time")
+		return errors.New("coins Bitcoin Cash and ZCash cannot be used at the same time")
 	}
 
 	// Set repo path
@@ -187,18 +196,17 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	coinType := getCoinType(x)
-	migrations.WalletCoinType = coinType
-
-	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), coinType)
-	if err != nil && err != repo.ErrRepoExists {
+	// Create user-agent file
+	err = createUserAgentFile(x.UserAgent)
+	if err != nil {
+		log.Error("error creating the user agent")
 		return err
 	}
 
-	// Create user-agent file
-	createUserAgentFile(x.UserAgent)
+	coinType := getCoinType(x)
+	migrations.WalletCoinType = coinType
 
-	err = ensureDatabaseAccess(sqliteDB, isTestnet, coinType)
+	sqliteDB, err = ensureDatabaseAccess(repoPath, x.Password, isTestnet, coinType)
 	if err != nil {
 		log.Error("error initializing data folder")
 	}
@@ -350,14 +358,14 @@ func (x *Start) Execute(args []string) error {
 		Multiwallet:                   multiwallet,
 		NameSystem:                    nameSystem,
 		OfflineMessageFailoverTimeout: offlineMessageFailoverTimeout,
-		Pubsub:               pubSub,
-		PushNodes:            pushNodes,
-		RegressionTestEnable: x.Regtest,
-		RepoPath:             repoPath,
-		RootHash:             ipath.Path(ipfsRootHash.Value).String(),
-		TestnetEnable:        x.Testnet,
-		TorDialer:            torDialer,
-		UserAgent:            core.USERAGENT,
+		Pubsub:                        pubSub,
+		PushNodes:                     pushNodes,
+		RegressionTestEnable:          x.Regtest,
+		RepoPath:                      repoPath,
+		RootHash:                      ipath.Path(ipfsRootHash.Value).String(),
+		TestnetEnable:                 x.Testnet,
+		TorDialer:                     torDialer,
+		UserAgent:                     core.USERAGENT,
 	}
 	core.PublishLock.Lock()
 
@@ -376,7 +384,7 @@ func (x *Start) Execute(args []string) error {
 
 	// Set up IPFS Server
 	if ipfsConfig.Addresses.API != "" {
-		if _, err := serveHTTPApi(&ctx); err != nil {
+		if _, err := serveHTTPAPI(&ctx); err != nil {
 			log.Error(err)
 			return err
 		}
@@ -843,29 +851,6 @@ func getIPFSConfig() (*config.Config, error) {
 	return cfg, nil
 }
 
-// Configure the node's bootstrap peers and protocol tags for testnet
-func setupTestnet() error {
-	testnetBootstrapAddrs, err := schema.GetTestnetBootstrapAddrs(mainConfig)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	cfg, err := nodeRepo.Config()
-	if err != nil {
-		log.Error("Could not retrieve IPFS config", err)
-		return err
-	}
-
-	cfg.Bootstrap = testnetBootstrapAddrs
-	dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
-	bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
-	service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
-
-	dataSharingConfig.PushTo = []string{}
-	return nil
-}
-
 func getConfigFiles() error {
 	var err error
 	mainConfig, err = ioutil.ReadFile(path.Join(repoPath, "config"))
@@ -912,7 +897,11 @@ func getConfigFiles() error {
 	return nil
 }
 
-func ensureDatabaseAccess(db *db.SQLiteDatastore, testnet bool, coinType wi.CoinType) error {
+func ensureDatabaseAccess(dbPath, password string, testnet bool, ct wi.CoinType) (*db.SQLiteDatastore, error) {
+	db, err := InitializeRepo(dbPath, password, "", testnet, time.Now(), ct)
+	if err != nil && err != repo.ErrRepoExists {
+		return nil, err
+	}
 	if db.Config().IsEncrypted() {
 		db.Close()
 		fmt.Print("Database is encrypted, enter your password: ")
@@ -920,16 +909,16 @@ func ensureDatabaseAccess(db *db.SQLiteDatastore, testnet bool, coinType wi.Coin
 		bytePassword, _ := terminal.ReadPassword(int(syscall.Stdin))
 		fmt.Println("")
 		pw := string(bytePassword)
-		db, err := InitializeRepo(repoPath, pw, "", testnet, time.Now(), coinType)
+		db, err = InitializeRepo(repoPath, pw, "", testnet, time.Now(), ct)
 		if err != nil && err != repo.ErrRepoExists {
-			return err
+			return db, err
 		}
 		if db.Config().IsEncrypted() {
 			log.Error("Invalid password")
 			os.Exit(3)
 		}
 	}
-	return nil
+	return db, nil
 }
 
 func createUserAgentFile(useragent string) error {
@@ -1008,26 +997,6 @@ func removeLockfile() {
 	os.Remove(repoLockFile)
 }
 
-func setTestmodeRecordAgingIntervals() {
-	repo.VendorDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
-
-	repo.ModeratorDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
-	repo.ModeratorDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
-	repo.ModeratorDisputeExpiry_thirdInterval = time.Duration(59) * time.Minute
-	repo.ModeratorDisputeExpiry_lastInterval = time.Duration(60) * time.Minute
-
-	repo.BuyerDisputeTimeout_firstInterval = time.Duration(20) * time.Minute
-	repo.BuyerDisputeTimeout_secondInterval = time.Duration(40) * time.Minute
-	repo.BuyerDisputeTimeout_thirdInterval = time.Duration(59) * time.Minute
-	repo.BuyerDisputeTimeout_lastInterval = time.Duration(60) * time.Minute
-	repo.BuyerDisputeTimeout_totalDuration = time.Duration(60) * time.Minute
-
-	repo.BuyerDisputeExpiry_firstInterval = time.Duration(20) * time.Minute
-	repo.BuyerDisputeExpiry_secondInterval = time.Duration(40) * time.Minute
-	repo.BuyerDisputeExpiry_lastInterval = time.Duration(59) * time.Minute
-	repo.BuyerDisputeExpiry_totalDuration = time.Duration(60) * time.Minute
-}
-
 // Prints the addresses of the host
 func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	var addrs []string
@@ -1041,31 +1010,8 @@ func printSwarmAddrs(node *ipfscore.IpfsNode) {
 	}
 }
 
-type DummyWriter struct{}
-
-func (d *DummyWriter) Write(p []byte) (n int, err error) {
-	return 0, nil
-}
-
-type DummyListener struct {
-	addr net.Addr
-}
-
-func (d *DummyListener) Addr() net.Addr {
-	return d.addr
-}
-
-func (d *DummyListener) Accept() (net.Conn, error) {
-	conn, _ := net.FileConn(nil)
-	return conn, nil
-}
-
-func (d *DummyListener) Close() error {
-	return nil
-}
-
 // Collects options, creates listener, prints status message and starts serving requests
-func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config schema.APIConfig, noLogFiles bool) (*api.Gateway, error) {
+func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie http.Cookie, config schema.APIConfig, noLogFilesFlag bool) (*api.Gateway, error) {
 	// Get API configuration
 	cfg, err := ctx.GetConfig()
 	if err != nil {
@@ -1117,7 +1063,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 
 	// Create and return an API gateway
 	var w4 io.Writer
-	if noLogFiles {
+	if noLogFilesFlag {
 		w4 = &DummyWriter{}
 	} else {
 		w4 = &lumberjack.Logger{
@@ -1134,33 +1080,29 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, ml, opts...)
 }
 
-var DHTOption ipfscore.RoutingOption = constructDHTRouting
-
-const IpnsValidatorTag = "ipns"
-
 func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
 	dhtRouting := dht.NewDHT(ctx, host, dstore)
-	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
-	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
+	dhtRouting.Validator[IPNSValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
+	dhtRouting.Selector[IPNSValidatorTag] = namesys.IpnsSelectorFunc
 	return dhtRouting, nil
 }
 
-// serveHTTPApi collects options, creates listener, prints status message and starts serving requests
-func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
+// serveHTTPAPI collects options, creates listener, prints status message and starts serving requests
+func serveHTTPAPI(cctx *commands.Context) (<-chan error, error) {
 	cfg, err := cctx.GetConfig()
 	if err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: GetConfig() failed: %s", err)
+		return nil, fmt.Errorf("serveHTTPAPI: GetConfig() failed: %s", err)
 	}
 
 	apiAddr := cfg.Addresses.API
 	apiMaddr, err := ma.NewMultiaddr(apiAddr)
 	if err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr, err)
+		return nil, fmt.Errorf("serveHTTPAPI: invalid API address: %q (err: %s)", apiAddr, err)
 	}
 
 	apiLis, err := manet.Listen(apiMaddr)
 	if err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: manet.Listen(%s) failed: %s", apiMaddr, err)
+		return nil, fmt.Errorf("serveHTTPAPI: manet.Listen(%s) failed: %s", apiMaddr, err)
 	}
 	// we might have listened to /tcp/0 - lets see what we are listing on
 	apiMaddr = apiLis.Multiaddr()
@@ -1192,11 +1134,11 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 
 	node, err := cctx.ConstructNode()
 	if err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: ConstructNode() failed: %s", err)
+		return nil, fmt.Errorf("serveHTTPAPI: ConstructNode() failed: %s", err)
 	}
 
 	if err := node.Repo.SetAPIAddr(apiMaddr); err != nil {
-		return nil, fmt.Errorf("serveHTTPApi: SetAPIAddr() failed: %s", err)
+		return nil, fmt.Errorf("serveHTTPAPI: SetAPIAddr() failed: %s", err)
 	}
 
 	errc := make(chan error)
@@ -1207,6 +1149,7 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 	return errc, nil
 }
 
+// InitializeRepo - return the sqlite db for the coin
 func InitializeRepo(dataDir, password, mnemonic string, testnet bool, creationDate time.Time, coinType wi.CoinType) (*db.SQLiteDatastore, error) {
 	// Database
 	sqliteDB, err := db.Create(dataDir, password, testnet, coinType)
