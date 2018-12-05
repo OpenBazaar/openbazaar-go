@@ -83,7 +83,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 		var rk []byte
 		if contract.DisputeResolution != nil {
 			if contract.VendorOrderConfirmation == nil {
-				return errors.New("Cannot leave review because the vendor never accepted this order")
+				return errors.New("cannot leave review because the vendor never accepted this order")
 			}
 			for _, sig := range contract.VendorOrderConfirmation.RatingSignatures {
 				if sig.Metadata.ListingSlug == r.Slug {
@@ -92,7 +92,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 				}
 			}
 			if len(contract.BuyerOrder.RatingKeys) < len(orderRatings.Ratings) {
-				return errors.New("Invalid number of rating keys in buyer order")
+				return errors.New("invalid number of rating keys in buyer order")
 			}
 			rk = contract.BuyerOrder.RatingKeys[z]
 
@@ -331,7 +331,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			}
 
 			if confirms < minConfirms {
-				EscrowTimeLockedError = fmt.Errorf("Tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
+				EscrowTimeLockedError = fmt.Errorf("tx %s needs %d more confirmations before it can be spent", r.Txid, int(minConfirms-confirms))
 				return EscrowTimeLockedError
 			}
 
@@ -577,11 +577,11 @@ func verifySignaturesOnOrderCompletion(contract *pb.RicardianContract) error {
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
-			return errors.New("Contract does not contain a signature for the order completion")
+			return errors.New("contract does not contain a signature for the order completion")
 		case invalidSigError:
-			return errors.New("Buyer's guid signature on contact failed to verify")
+			return errors.New("buyer's guid signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("Public key in order does not match reported buyer ID")
+			return errors.New("public key in order does not match reported buyer ID")
 		default:
 			return err
 		}

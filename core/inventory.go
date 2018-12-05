@@ -12,7 +12,7 @@ import (
 var (
 	ipfsInventoryCacheMaxDuration = 1 * time.Hour
 	// ErrInventoryNotFoundForSlug - inventory not found error
-	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
+	ErrInventoryNotFoundForSlug = errors.New("could not find slug in inventory")
 )
 
 // InventoryListing is the listing representation stored on IPFS

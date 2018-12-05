@@ -141,16 +141,16 @@ func (x *Convert) Execute(args []string) error {
 	json.Unmarshal(cf, &cfgIface)
 	cfgObj, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	walletIface, ok := cfgObj["Wallet"]
 	if !ok {
-		return errors.New("Config file missing wallet field")
+		return errors.New("config file missing wallet field")
 	}
 	walletCfg, ok := walletIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 	walletCfg["Type"] = cfgtype
 	if strings.ToLower(args[0]) == "zcash" {
@@ -305,7 +305,7 @@ func (x *Convert) Execute(args []string) error {
 	for i, l := range index {
 		h, ok := hashes[l.Slug]
 		if !ok {
-			return errors.New("Malformatted index file")
+			return errors.New("malformatted index file")
 		}
 		l.Hash = h
 		index[i] = l

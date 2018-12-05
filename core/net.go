@@ -624,11 +624,11 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	}
 	defer n.Service.DisconnectFromPeer(p)
 	if pmes.Payload == nil {
-		return errors.New("Peer responded with nil payload")
+		return errors.New("peer responded with nil payload")
 	}
 	if pmes.MessageType == pb.Message_ERROR {
 		log.Errorf("Error response from %s: %s", peerID, string(pmes.Payload.Value))
-		return errors.New("Peer responded with error message")
+		return errors.New("peer responded with error message")
 	}
 
 	resp := new(pb.CidList)

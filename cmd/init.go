@@ -40,7 +40,7 @@ func (x *Init) Execute(args []string) error {
 	if x.WalletCreationDate != "" {
 		creationDate, err = time.Parse(time.RFC3339, x.WalletCreationDate)
 		if err != nil {
-			return errors.New("Wallet creation date timestamp must be in RFC3339 format")
+			return errors.New("wallet creation date timestamp must be in RFC3339 format")
 		}
 	}
 

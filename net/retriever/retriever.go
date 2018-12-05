@@ -368,7 +368,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
 		log.Errorf("Nil handler for message type %s", env.Message.MessageType)
-		return errors.New("Nil handler for message")
+		return errors.New("nil handler for message")
 	}
 
 	// Dispatch handler

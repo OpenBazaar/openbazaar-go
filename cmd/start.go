@@ -85,7 +85,7 @@ var fileLogFormat = logging.MustStringFormatter(
 )
 
 var (
-	ErrNoGateways = errors.New("No gateway addresses configured")
+	ErrNoGateways = errors.New("no gateway addresses configured")
 )
 
 type Start struct {
@@ -114,11 +114,11 @@ func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
-		return errors.New("Invalid combination of testnet and regtest modes")
+		return errors.New("invalid combination of testnet and regtest modes")
 	}
 
 	if x.Tor && x.DualStack {
-		return errors.New("Invalid combination of tor and dual stack modes")
+		return errors.New("invalid combination of tor and dual stack modes")
 	}
 
 	isTestnet := false
@@ -126,7 +126,7 @@ func (x *Start) Execute(args []string) error {
 		isTestnet = true
 	}
 	if x.BitcoinCash && x.ZCash != "" {
-		return errors.New("Bitcoin Cash and ZCash cannot be used at the same time")
+		return errors.New("bitcoin cash and zcash cannot be used at the same time")
 	}
 
 	// Set repo path
@@ -628,7 +628,7 @@ func (x *Start) Execute(args []string) error {
 			f.Close()
 		} else {
 			if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-				return errors.New("Invalid authentication cookie. Delete it to generate a new one")
+				return errors.New("invalid authentication cookie. Delete it to generate a new one")
 			}
 			split := strings.SplitAfter(string(cookie), cookiePrefix)
 			authCookie.Value = split[1]
@@ -703,12 +703,12 @@ func (x *Start) Execute(args []string) error {
 		storage = selfhosted.NewSelfHostedStorage(repoPath, core.Node.IpfsNode, pushNodes, core.Node.SendStore)
 	} else if x.Storage == "dropbox" {
 		if usingTor && !usingClearnet {
-			log.Error("Dropbox can not be used with Tor")
-			return errors.New("Dropbox can not be used with Tor")
+			log.Error("dropbox can not be used with tor")
+			return errors.New("dropbox can not be used with tor")
 		}
 
 		if dropboxToken == "" {
-			err = errors.New("Dropbox token not set in config file")
+			err = errors.New("dropbox token not set in config file")
 			log.Error(err)
 			return err
 		}
@@ -718,7 +718,7 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	} else {
-		err = errors.New("Invalid storage option")
+		err = errors.New("invalid storage option")
 		log.Error(err)
 		return err
 	}

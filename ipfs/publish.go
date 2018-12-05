@@ -22,7 +22,7 @@ import (
 
 var log = logging.MustGetLogger("ipfs")
 
-var pubErr = errors.New(`Name publish failed`)
+var pubErr = errors.New(`name publish failed`)
 
 // Publish a signed IPNS record to our Peer ID
 func Publish(n *core.IpfsNode, hash string) error {

@@ -579,7 +579,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 				delete(listingOptions, strings.ToLower(uopt.Name))
 			}
 			if len(listingOptions) > 0 {
-				return nil, errors.New("Not all options were selected")
+				return nil, errors.New("not all options were selected")
 			}
 
 			for _, option := range item.Options {

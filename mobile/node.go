@@ -276,7 +276,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {
-		return nil, errors.New("No gateway addresses configured")
+		return nil, errors.New("no gateway addresses configured")
 	}
 
 	return &Node{OpenBazaarNode: core.Node, config: *config, ipfsConfig: ncfg, apiConfig: apiConfig}, nil

@@ -500,7 +500,7 @@ func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	}
 
 	if slug == "" {
-		return nil, errors.New("Post does not exist")
+		return nil, errors.New("post does not exist")
 	}
 	return n.GetPostFromSlug(slug)
 }

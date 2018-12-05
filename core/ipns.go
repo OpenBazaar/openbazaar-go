@@ -120,13 +120,13 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 		}
 		if !id.MatchesPublicKey(pubkey) {
 			log.Error(err)
-			return "", fmt.Errorf("Invalid key. Does not hash to %s", peerID)
+			return "", fmt.Errorf("invalid key. Does not hash to %s", peerID)
 		}
 
 		// check sig with pk
 		if ok, err := pubkey.Verify(ipnsEntryDataForSig(entry), entry.Signature); err != nil || !ok {
 			log.Errorf("Signature on IPNS record from gateway validated to %t", ok)
-			return "", fmt.Errorf("Invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
+			return "", fmt.Errorf("invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
 		}
 
 		go func() {

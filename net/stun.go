@@ -26,7 +26,7 @@ const _NATType_name = "NAT_ERRORNAT_UNKNOWNNAT_NONENAT_BLOCKEDNAT_FULLNAT_SYMETR
 
 var _NATType_index = [...]uint8{0, 9, 20, 28, 39, 47, 59, 73, 92, 117}
 
-var errStunFailed = errors.New("Exhausted list of stun servers")
+var errStunFailed = errors.New("exhausted list of stun servers")
 
 func Stun() (int, error) {
 	Shuffle(STUN_SERVERS)
