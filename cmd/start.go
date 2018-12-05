@@ -80,31 +80,22 @@ import (
 )
 
 var (
-	mainConfig        []byte
-	ipfsConfig        config.Config
-	apiConfig         *schema.APIConfig
-	torConfig         *schema.TorConfig
-	dataSharingConfig *schema.DataSharing
-	resolverConfig    *schema.ResolverConfig
-	//coinConfig        *schema.CoinConfig
-	walletsConfig     *schema.WalletsConfig
-	republishInterval time.Duration
-	dropboxToken      string
-	nodeRepo          ipfsrepo.Repo
-	repoPath          string
-	onionTransport    *oniontp.OnionTransport
-	torDialer         proxy.Dialer
-	usingTor          bool
-	usingClearnet     bool
-	controlPort       int
-	dnsResolver       namesys.Resolver
-	ipfsNode          *ipfscore.IpfsNode
-	noLogFiles        bool
-	creationDate      time.Time
-	params            chaincfg.Params
-	pushNodes         []peer.ID
-	authCookie        http.Cookie
-	banManager        *obnet.BanManager
+	cfg            *StartConfig
+	nodeRepo       ipfsrepo.Repo
+	repoPath       string
+	onionTransport *oniontp.OnionTransport
+	torDialer      proxy.Dialer
+	usingTor       bool
+	usingClearnet  bool
+	controlPort    int
+	dnsResolver    namesys.Resolver
+	ipfsNode       *ipfscore.IpfsNode
+	noLogFiles     bool
+	creationDate   time.Time
+	params         chaincfg.Params
+	pushNodes      []peer.ID
+	authCookie     http.Cookie
+	banManager     *obnet.BanManager
 
 	stdoutLogFormat = logging.MustStringFormatter(
 		`%{color:reset}%{color}%{time:15:04:05.000} [%{level}] [%{module}/%{shortfunc}] %{message}`,
@@ -155,6 +146,8 @@ func (x *Start) Execute(args []string) error {
 	var err error
 	var sqliteDB *db.SQLiteDatastore
 
+	swarmAddresses := []string{}
+
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -200,7 +193,7 @@ func (x *Start) Execute(args []string) error {
 	err = createUserAgentFile(x.UserAgent)
 	if err != nil {
 		log.Error("error creating the user agent")
-		return err
+		//return err
 	}
 
 	coinType := getCoinType(x)
@@ -217,45 +210,48 @@ func (x *Start) Execute(args []string) error {
 		log.Error("error loading wallet creation date from database - using unix epoch.")
 	}
 
-	err = getConfigFiles()
+	cfg, err = initConfigFiles()
 	if err != nil {
 		return err
 	}
 
 	// If SSL files are not specified it cannot be enabled
-	if checkSSLConfiguration() != nil {
-		return err
-	}
-
-	ipfsConfig, err := getIPFSConfig()
-	if err != nil {
+	if checkSSLConfiguration(cfg.apiConfig) != nil {
 		return err
 	}
 
 	// If Gateway is not specified the server cannot listen for network messages
-	if len(ipfsConfig.Addresses.Gateway) <= 0 {
+	if len(cfg.ipfsConfig.Addresses.Gateway) <= 0 {
 		return ErrNoGateways
 	}
 
-	ipfsConfig.Identity, err = getIPFSIdentity(*sqliteDB)
+	cfg.ipfsConfig.Identity, err = getIPFSIdentity(*sqliteDB)
 	if err != nil {
 		return err
 	}
 
 	if x.Testnet || x.Regtest {
-		setupTestnet()
+		setupTestnet(cfg.ConfigData)
 		setTestmodeRecordAgingIntervals()
 	}
 
-	configureIPFSSwarmForTor(x.Tor, x.DualStack)
+	swarmAddresses, err = configureIPFSSwarmForTor(x.Tor, x.DualStack)
+	if err != nil {
+		return err
+	}
+	cfg.ipfsConfig.Addresses.Swarm = swarmAddresses
 
-	processSwarmAddresses(x.STUN)
+	swarmAddresses, err = processSwarmAddresses(x.STUN, cfg.ipfsConfig.Addresses.Swarm)
+	if err != nil {
+		return err
+	}
+	cfg.ipfsConfig.Addresses.Swarm = swarmAddresses
 
 	dnsResolver = namesys.NewDNSResolver() // Custom DNS resolver
 
 	// Set up the Tor transport if user has enabled it
 	if usingTor {
-		err = setupTorTransport(x.TorPassword)
+		err = setupTorTransport(x.TorPassword, cfg.torConfig.TorControl, cfg.torConfig.Password)
 		if err != nil {
 			return err
 		}
@@ -275,7 +271,7 @@ func (x *Start) Execute(args []string) error {
 	cctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ipfsNode, err = ipfscore.NewNode(cctx, getNodeConfig())
+	ipfsNode, err = ipfscore.NewNode(cctx, getNodeConfig(cfg.ipfsConfig.Ipns.UsePersistentCache))
 	if err != nil {
 		log.Error("create new IPFS node:", err)
 		return err
@@ -292,7 +288,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set IPNS query size
-	setDHTQuerySize()
+	setDHTQuerySize(cfg.ipfsConfig.Ipns.QuerySize)
 
 	log.Info("Peer ID: ", ipfsNode.Identity.Pretty())
 	printSwarmAddrs(ipfsNode)
@@ -301,7 +297,7 @@ func (x *Start) Execute(args []string) error {
 	ipfsRootHash, err := getIPFSRootHash()
 
 	// Set up Push Nodes
-	err = setupPushNodes()
+	err = setupPushNodes(cfg.dataSharingConfig.PushTo)
 	if err != nil {
 		return err
 	}
@@ -329,16 +325,23 @@ func (x *Start) Execute(args []string) error {
 	if x.AuthCookie != "" {
 		authCookie.Name = "OpenBazaar_Auth_Cookie"
 		authCookie.Value = x.AuthCookie
-		apiConfig.Authenticated = true
+		cfg.apiConfig.Authenticated = true
 	} else {
-		setAuthCookie(x.AllowIP)
+		doAppend, err := setAuthCookie(x.AllowIP, cfg.ipfsConfig.Addresses.Gateway)
+		if err != nil {
+			log.Error(err)
+			// do we bubble this err
+		}
+		if doAppend {
+			cfg.apiConfig.AllowedIPs = append(cfg.apiConfig.AllowedIPs, x.AllowIP...)
+		}
 	}
 
 	// Set up the ban manager
 	setupBanManager(sqliteDB)
 
 	// Set up custom name system
-	nameSystem, err := getNameSystem()
+	nameSystem, err := getNameSystem(cfg.resolverConfig.Id)
 	if err != nil {
 		log.Error("Could not configure custom name system")
 		return err
@@ -349,10 +352,10 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		AcceptStoreRequests:           dataSharingConfig.AcceptStoreRequests,
+		AcceptStoreRequests:           cfg.dataSharingConfig.AcceptStoreRequests,
 		BanManager:                    banManager,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 ipfsConfig.Ipns.BackUpAPI,
+		IPNSBackupAPI:                 cfg.ipfsConfig.Ipns.BackUpAPI,
 		IpfsNode:                      ipfsNode,
 		MasterPrivateKey:              masterPrivateKey,
 		Multiwallet:                   multiwallet,
@@ -376,14 +379,14 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Set up OpenBazaar API Gateway Server
-	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *apiConfig, x.NoLogFiles)
+	gateway, err := newHTTPGateway(core.Node, ctx, authCookie, *cfg.apiConfig, x.NoLogFiles)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 
 	// Set up IPFS Server
-	if ipfsConfig.Addresses.API != "" {
+	if cfg.ipfsConfig.Addresses.API != "" {
 		if _, err := serveHTTPAPI(&ctx); err != nil {
 			log.Error(err)
 			return err
@@ -432,7 +435,7 @@ func (x *Start) Execute(args []string) error {
 				log.Error(err)
 			}
 		}
-		core.Node.SetUpRepublisher(republishInterval)
+		core.Node.SetUpRepublisher(cfg.republishInterval)
 	}()
 
 	// Start the OpenBazaar API Gateway Server
@@ -444,9 +447,9 @@ func (x *Start) Execute(args []string) error {
 	return nil
 }
 
-func checkSSLConfiguration() error {
-	if (apiConfig.SSL && apiConfig.SSLCert == "") || (apiConfig.SSL && apiConfig.SSLKey == "") {
-		return errors.New("SSL cert and key files must be set when SSL is enabled")
+func checkSSLConfiguration(apiCfg *schema.APIConfig) error {
+	if (apiCfg.SSL && apiCfg.SSLCert == "") || (apiCfg.SSL && apiCfg.SSLKey == "") {
+		return errors.New("api SSL cert and key files must be set when SSL is enabled")
 	}
 	return nil
 }
@@ -462,12 +465,12 @@ func getOfflineStorage(customStorage string) (sto.OfflineMessagingStorage, error
 			return nil, errors.New("Dropbox can not be used with Tor")
 		}
 
-		if dropboxToken == "" {
+		if cfg.dropboxToken == "" {
 			err = errors.New("Dropbox token not set in config file")
 			log.Error(err)
 			return nil, err
 		}
-		storage, err = dropbox.NewDropBoxStorage(dropboxToken)
+		storage, err = dropbox.NewDropBoxStorage(cfg.dropboxToken)
 		if err != nil {
 			log.Error(err)
 			return nil, err
@@ -486,9 +489,9 @@ func getPubSub() ipfs.Pubsub {
 	return ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 }
 
-func getNameSystem() (*obns.NameSystem, error) {
+func getNameSystem(id string) (*obns.NameSystem, error) {
 	resolvers := []obns.Resolver{
-		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
+		bstk.NewBlockStackClient(id, torDialer),
 	}
 	if !(usingTor && !usingClearnet) {
 		resolvers = append(resolvers, obns.NewDNSResolver())
@@ -521,22 +524,24 @@ func setupBanManager(sqliteDB *db.SQLiteDatastore) error {
 	return nil
 }
 
-func setAuthCookie(allowIP []string) error {
-	gatewayMaddr, err := ma.NewMultiaddr(ipfsConfig.Addresses.Gateway)
+func setAuthCookie(allowIP []string, gateway string) (bool, error) {
+	appendFlag := false
+	gatewayMaddr, err := ma.NewMultiaddr(gateway)
 	if err != nil {
 		log.Error(err)
-		return err
+		return appendFlag, err
 	}
 	addr, err := gatewayMaddr.ValueForProtocol(ma.P_IP4)
 	if err != nil {
 		log.Error(err)
-		return err
+		return appendFlag, err
 	}
 	// Override config file preference if this is Mainnet, open internet and API enabled
-	if addr != "127.0.0.1" && params.Name == chaincfg.MainNetParams.Name && apiConfig.Enabled {
-		apiConfig.Authenticated = true
+	if addr != "127.0.0.1" && params.Name == chaincfg.MainNetParams.Name {
+		cfg.setAPIConfigAuthenticated()
 	}
-	apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, allowIP...)
+	// apiConfig.AllowedIPs = append(apiConfig.AllowedIPs, allowIP...)
+	appendFlag = true
 
 	// Create authentication cookie
 	var authCookie http.Cookie
@@ -550,36 +555,36 @@ func setAuthCookie(allowIP []string) error {
 		_, err = rand.Read(authBytes)
 		if err != nil {
 			log.Error(err)
-			return err
+			return appendFlag, err
 		}
 		authCookie.Value = base58.Encode(authBytes)
 		f, err := os.Create(cookiePath)
 		if err != nil {
 			log.Error(err)
-			return err
+			return appendFlag, err
 		}
 		cookie := cookiePrefix + authCookie.Value
 		_, werr := f.Write([]byte(cookie))
 		if werr != nil {
 			log.Error(werr)
-			return werr
+			return appendFlag, werr
 		}
 		f.Close()
 	} else {
 		if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-			return errors.New("Invalid authentication cookie. Delete it to generate a new one")
+			return appendFlag, errors.New("Invalid authentication cookie. Delete it to generate a new one")
 		}
 		split := strings.SplitAfter(string(cookie), cookiePrefix)
 		authCookie.Value = split[1]
 	}
-	return nil
+	return appendFlag, nil
 }
 
-func setupPushNodes() error {
-	for _, pnd := range dataSharingConfig.PushTo {
+func setupPushNodes(nodes []string) error {
+	for _, pnd := range nodes {
 		p, err := peer.IDB58Decode(pnd)
 		if err != nil {
-			log.Error("Invalid peerID in DataSharing config")
+			log.Error("invalid peerID in DataSharing config")
 			return err
 		}
 		pushNodes = append(pushNodes, p)
@@ -623,7 +628,7 @@ func setupWallet(db *db.SQLiteDatastore, mnemonic string, isTestnet bool, isRegt
 	walletFileFormatter := logging.NewBackendFormatter(walletLogFile, fileLogFormat)
 	walletLogger := logging.MultiLogger(walletFileFormatter)
 	multiwalletConfig := &wallet.WalletConfig{
-		ConfigFile:           walletsConfig,
+		ConfigFile:           cfg.walletsConfig,
 		DB:                   db.DB(),
 		Params:               &params,
 		RepoPath:             repoPath,
@@ -641,10 +646,9 @@ func setupWallet(db *db.SQLiteDatastore, mnemonic string, isTestnet bool, isRegt
 	return mw, nil
 }
 
-func setDHTQuerySize() {
-	querySize := ipfsConfig.Ipns.QuerySize
-	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
+func setDHTQuerySize(qSize int) {
+	if qSize <= 20 && qSize > 0 {
+		dhtutil.QuerySize = qSize
 	} else {
 		dhtutil.QuerySize = 16
 	}
@@ -674,7 +678,7 @@ func getIPFSRootHash() (*namepb.IpnsEntry, error) {
 	return e, nil
 }
 
-func getNodeConfig() *ipfscore.BuildCfg {
+func getNodeConfig(useIPNSCache bool) *ipfscore.BuildCfg {
 	nodeConfig := &ipfscore.BuildCfg{
 		Repo:   nodeRepo,
 		Online: true,
@@ -685,7 +689,7 @@ func getNodeConfig() *ipfscore.BuildCfg {
 		Routing:     DHTOption,
 	}
 
-	if ipfsConfig.Ipns.UsePersistentCache {
+	if useIPNSCache {
 		nodeConfig.ExtraOpts["ipnsps"] = true
 	}
 
@@ -722,9 +726,9 @@ func defaultHostOption(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr
 	return host, nil
 }
 
-func setupTorTransport(password string) error {
+func setupTorTransport(password, tControl, tPassword string) error {
 	var err error
-	torControl := torConfig.TorControl
+	torControl := tControl
 	if torControl == "" {
 		controlPort, err = obnet.GetTorControlPort()
 		if err != nil {
@@ -733,7 +737,7 @@ func setupTorTransport(password string) error {
 		}
 		torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
 	}
-	torPw := torConfig.Password
+	torPw := tPassword
 	if password != "" {
 		torPw = password
 	}
@@ -745,13 +749,13 @@ func setupTorTransport(password string) error {
 	return nil
 }
 
-func processSwarmAddresses(isUsingSTUN bool) error {
-	for i, addr := range ipfsConfig.Addresses.Swarm {
+func processSwarmAddresses(isUsingSTUN bool, swarm []string) ([]string, error) {
+	for i, addr := range swarm {
 		m, err := ma.NewMultiaddr(addr)
 
 		if err != nil {
 			log.Error("creating swarm multihash:", err)
-			return err
+			return swarm, err
 		}
 		p := m.Protocols()
 
@@ -761,10 +765,10 @@ func processSwarmAddresses(isUsingSTUN bool) error {
 			port, serr := obnet.Stun()
 			if serr != nil {
 				log.Error("stun setup:", serr)
-				return err
+				return swarm, err
 			}
-			ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm[:i], ipfsConfig.Addresses.Swarm[i+1:]...)
-			ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
+			swarm = append(swarm[:i], swarm[i+1:]...)
+			swarm = append(swarm, "/ip4/0.0.0.0/udp/"+strconv.Itoa(port)+"/utp")
 			break
 		} else if p[0].Name == "onion" {
 			usingTor = true
@@ -772,14 +776,14 @@ func processSwarmAddresses(isUsingSTUN bool) error {
 			t, err := ma.ProtocolsWithString("/onion")
 			if err != nil {
 				log.Error("wrapping onion protocol:", err)
-				return err
+				return swarm, err
 			}
 			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
 		} else {
 			usingClearnet = true
 		}
 	}
-	return nil
+	return swarm, nil
 }
 
 func getOnionAddress() (string, error) {
@@ -792,24 +796,23 @@ func getOnionAddress() (string, error) {
 }
 
 // Configure IPFS Swarm for Tor and dual stack nodes
-func configureIPFSSwarmForTor(isTor bool, isDualStack bool) error {
+func configureIPFSSwarmForTor(isTor bool, isDualStack bool) ([]string, error) {
+	retSwarmAddresses := []string{}
 	onionAddrString, err := getOnionAddress()
 	if err != nil {
-		return err
+		return retSwarmAddresses, err
 	}
 
 	if isTor {
-		ipfsConfig.Addresses.Swarm = []string{}
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, onionAddrString)
+		retSwarmAddresses = append(retSwarmAddresses, onionAddrString)
 	} else if isDualStack {
-		ipfsConfig.Addresses.Swarm = []string{}
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, onionAddrString)
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/tcp/4001")
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip6/::/tcp/4001")
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip6/::/tcp/9005/ws")
-		ipfsConfig.Addresses.Swarm = append(ipfsConfig.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
+		retSwarmAddresses = append(retSwarmAddresses, onionAddrString)
+		retSwarmAddresses = append(retSwarmAddresses, "/ip4/0.0.0.0/tcp/4001")
+		retSwarmAddresses = append(retSwarmAddresses, "/ip6/::/tcp/4001")
+		retSwarmAddresses = append(retSwarmAddresses, "/ip6/::/tcp/9005/ws")
+		retSwarmAddresses = append(retSwarmAddresses, "/ip4/0.0.0.0/tcp/9005/ws")
 	}
-	return nil
+	return retSwarmAddresses, nil
 }
 
 // Retrieves identity key from the database and uses it to get the
@@ -825,76 +828,6 @@ func getIPFSIdentity(db db.SQLiteDatastore) (config.Identity, error) {
 		log.Error("get identity from key:", err)
 	}
 	return identity, err
-}
-
-func getIPFSRepo() (ipfsrepo.Repo, error) {
-	repo, err := fsrepo.Open(repoPath)
-	if err != nil {
-		log.Error("open repo:", err)
-		return nil, err
-	}
-	return repo, nil
-}
-
-func getIPFSConfig() (*config.Config, error) {
-	var err error
-	nodeRepo, err = getIPFSRepo()
-	if err != nil {
-		return nil, err
-	}
-
-	cfg, err := nodeRepo.Config()
-	if err != nil {
-		log.Error("get repo config:", err)
-		return nil, err
-	}
-	return cfg, nil
-}
-
-func getConfigFiles() error {
-	var err error
-	mainConfig, err = ioutil.ReadFile(path.Join(repoPath, "config"))
-	if err != nil {
-		log.Error("read config:", err)
-		return err
-	}
-
-	apiConfig, err = schema.GetAPIConfig(mainConfig)
-	if err != nil {
-		log.Error("scan api config:", err)
-		return err
-	}
-	torConfig, err = schema.GetTorConfig(mainConfig)
-	if err != nil {
-		log.Error("scan tor config:", err)
-		return err
-	}
-	dataSharingConfig, err = schema.GetDataSharing(mainConfig)
-	if err != nil {
-		log.Error("scan data sharing config:", err)
-		return err
-	}
-	dropboxToken, err = schema.GetDropboxApiToken(mainConfig)
-	if err != nil {
-		log.Error("scan dropbox api token:", err)
-		return err
-	}
-	resolverConfig, err = schema.GetResolverConfig(mainConfig)
-	if err != nil {
-		log.Error("scan resolver config:", err)
-		return err
-	}
-	republishInterval, err = schema.GetRepublishInterval(mainConfig)
-	if err != nil {
-		log.Error("scan republish interval config:", err)
-		return err
-	}
-	walletsConfig, err = schema.GetWalletsConfig(mainConfig)
-	if err != nil {
-		log.Error("scan wallets config:", err)
-		return err
-	}
-	return nil
 }
 
 func ensureDatabaseAccess(dbPath, password string, testnet bool, ct wi.CoinType) (*db.SQLiteDatastore, error) {
