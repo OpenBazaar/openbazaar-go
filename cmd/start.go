@@ -146,7 +146,7 @@ func (x *Start) Execute(args []string) error {
 	var err error
 	var sqliteDB *db.SQLiteDatastore
 
-	swarmAddresses := []string{}
+	var swarmAddresses []string
 
 	printSplashScreen(x.Verbose)
 
@@ -327,7 +327,7 @@ func (x *Start) Execute(args []string) error {
 		authCookie.Value = x.AuthCookie
 		cfg.apiConfig.Authenticated = true
 	} else {
-		doAppend, err := setAuthCookie(x.AllowIP, cfg.ipfsConfig.Addresses.Gateway)
+		doAppend, err := setAuthCookie(cfg.ipfsConfig.Addresses.Gateway)
 		if err != nil {
 			log.Error(err)
 			// do we bubble this err
@@ -524,7 +524,7 @@ func setupBanManager(sqliteDB *db.SQLiteDatastore) error {
 	return nil
 }
 
-func setAuthCookie(allowIP []string, gateway string) (bool, error) {
+func setAuthCookie(gateway string) (bool, error) {
 	appendFlag := false
 	gatewayMaddr, err := ma.NewMultiaddr(gateway)
 	if err != nil {
