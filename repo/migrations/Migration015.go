@@ -23,6 +23,10 @@ func (m Migration015) Up(repoPath, databasePassword string, testnetEnabled bool)
 	if err != nil {
 		return err
 	}
+	// If this is a custom data directory then just migrate in place
+	if repoPath != mgr.LegacyDataPath() {
+		return writeRepoVer(repoPath, 16)
+	}
 	newRepoPath := mgr.NewDataPath()
 	if _, err := os.Stat(newRepoPath); os.IsNotExist(err) {
 		// New repo directory does not exist so we can
@@ -39,7 +43,7 @@ func (m Migration015) Up(repoPath, databasePassword string, testnetEnabled bool)
 		if err == nil {
 			i, err := strconv.Atoi(strings.Trim(string(version), "\n"))
 			if err == nil && i >= 16 {
-				writeRepoVer(repoPath, 16)
+				return writeRepoVer(repoPath, 16)
 			}
 		}
 		// Something else is already in the new path so let's rename it first
