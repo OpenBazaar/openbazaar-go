@@ -27,6 +27,8 @@ const (
 type openbazaarSchemaManager struct {
 	database        *sql.DB
 	dataPath        string
+	newDataPath     string
+	legacyDataPath  string
 	identityKey     []byte
 	mnemonic        string
 	os              string
@@ -39,6 +41,8 @@ type openbazaarSchemaManager struct {
 // assumed during runtime.
 type SchemaContext struct {
 	DataPath        string
+	NewDataPath     string
+	LegacyDataPath  string
 	IdentityKey     []byte
 	Mnemonic        string
 	OS              string
@@ -63,6 +67,20 @@ func NewCustomSchemaManager(ctx SchemaContext) (*openbazaarSchemaManager, error)
 		}
 		ctx.DataPath = path
 	}
+	if len(ctx.NewDataPath) == 0 {
+		path, err := NewDataDirPathTransform(defaultDataPath(), ctx.TestModeEnabled)
+		if err != nil {
+			return nil, fmt.Errorf("finding root path: %s", err.Error())
+		}
+		ctx.NewDataPath = path
+	}
+	if len(ctx.LegacyDataPath) == 0 {
+		path, err := LegacyDataDirPathTransform(defaultDataPath(), ctx.TestModeEnabled)
+		if err != nil {
+			return nil, fmt.Errorf("finding root path: %s", err.Error())
+		}
+		ctx.LegacyDataPath = path
+	}
 	if len(ctx.OS) == 0 {
 		ctx.OS = runtime.GOOS
 	}
@@ -84,6 +102,8 @@ func NewCustomSchemaManager(ctx SchemaContext) (*openbazaarSchemaManager, error)
 
 	return &openbazaarSchemaManager{
 		dataPath:        ctx.DataPath,
+		newDataPath:     ctx.NewDataPath,
+		legacyDataPath:  ctx.LegacyDataPath,
 		identityKey:     ctx.IdentityKey,
 		mnemonic:        ctx.Mnemonic,
 		os:              ctx.OS,
@@ -118,6 +138,14 @@ func (m *openbazaarSchemaManager) isConfigInitialized() bool {
 
 // DataPath returns the expected location of the data storage directory
 func (m *openbazaarSchemaManager) DataPath() string { return m.dataPath }
+
+// NewDataPath returns the expected location of the data storage directory after
+// the multiwallet migration.
+func (m *openbazaarSchemaManager) NewDataPath() string { return m.newDataPath }
+
+// LegacyDataPath returns the expected location of the data storage directory before
+// the multiwallet migration.
+func (m *openbazaarSchemaManager) LegacyDataPath() string { return m.legacyDataPath }
 
 // Mnemonic returns the configured mnemonic used to generate the
 // identity key used by the schema
