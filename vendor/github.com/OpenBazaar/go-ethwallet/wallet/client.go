@@ -179,12 +179,12 @@ func (client *EthClient) GetTransaction(hash common.Hash) (*types.Transaction, b
 }
 
 // GetLatestBlock - returns the latest block
-func (client *EthClient) GetLatestBlock() (uint32, string, error) {
+func (client *EthClient) GetLatestBlock() (uint32, common.Hash, error) {
 	header, err := client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return 0, "", err
+		return 0, common.BytesToHash([]byte{}), err
 	}
-	return uint32(header.Number.Int64()), header.Hash().String(), nil
+	return uint32(header.Number.Int64()), header.Hash(), nil
 }
 
 // EstimateTxnGas - returns estimated gas

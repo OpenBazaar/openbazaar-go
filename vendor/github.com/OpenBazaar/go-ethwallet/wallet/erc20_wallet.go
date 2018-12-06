@@ -310,7 +310,7 @@ func (wallet *ERC20Wallet) ChainTip() (uint32, chainhash.Hash) {
 	if err != nil {
 		return 0, *h
 	}
-	h, _ = chainhash.NewHashFromStr(hash)
+	h, _ = chainhash.NewHashFromStr(hash.Hex()[2:])
 	return num, *h
 }
 
