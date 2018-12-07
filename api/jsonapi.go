@@ -2368,24 +2368,8 @@ func (i *jsonAPIHandler) POSTFetchProfiles(w http.ResponseWriter, r *http.Reques
 			}(p)
 		}
 		wg.Wait()
-		resp := "[\n"
-		max := len(ret)
-		for i, r := range ret {
-			lines := strings.Split(r, "\n")
-			maxx := len(lines)
-			for x, s := range lines {
-				resp += "    "
-				resp += s
-				if x != maxx-1 {
-					resp += "\n"
-				}
-			}
-			if i != max-1 {
-				resp += ",\n"
-			}
-		}
-		resp += "\n]"
-		SanitizedResponse(w, resp)
+
+		SanitizedResponse(w, prepareOutput(ret))
 	} else {
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
@@ -3060,24 +3044,8 @@ func (i *jsonAPIHandler) POSTFetchRatings(w http.ResponseWriter, r *http.Request
 			}(id)
 		}
 		wg.Wait()
-		resp := "[\n"
-		max := len(ret)
-		for i, r := range ret {
-			lines := strings.Split(r, "\n")
-			maxx := len(lines)
-			for x, s := range lines {
-				resp += "    "
-				resp += s
-				if x != maxx-1 {
-					resp += "\n"
-				}
-			}
-			if i != max-1 {
-				resp += ",\n"
-			}
-		}
-		resp += "\n]"
-		SanitizedResponse(w, resp)
+
+		SanitizedResponse(w, prepareOutput(ret))
 	} else {
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
