@@ -9,7 +9,7 @@ import (
 	"github.com/ipfs/go-ipfs/core"
 )
 
-func Query(n *core.IpfsNode, peerID string) ([]peer.ID, error) {
+func Query(ctx context.Context, n *core.IpfsNode, peerID string) ([]peer.ID, error) {
 	dht, ok := n.Routing.(*routing.IpfsDHT)
 	if !ok {
 		return nil, errors.New("routing is not type IpfsDHT")
@@ -19,7 +19,7 @@ func Query(n *core.IpfsNode, peerID string) ([]peer.ID, error) {
 		return nil, err
 	}
 
-	ch, err := dht.GetClosestPeers(context.Background(), string(id))
+	ch, err := dht.GetClosestPeers(ctx, string(id))
 	if err != nil {
 		return nil, err
 	}

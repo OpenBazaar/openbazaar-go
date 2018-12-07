@@ -9,7 +9,7 @@ import (
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
 	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
@@ -54,6 +54,8 @@ import (
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 )
+
+var DefaultConnectionTimeout = 5 * time.Second
 
 // Node configuration structure
 type Node struct {
@@ -264,15 +266,15 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		BanManager:                    bm,
-		Datastore:                     sqliteDB,
-		MasterPrivateKey:              mPrivKey,
-		Multiwallet:                   mw,
-		NameSystem:                    ns,
-		OfflineMessageFailoverTimeout: 5 * time.Second,
-		PushNodes:                     pushNodes,
-		RepoPath:                      config.RepoPath,
-		UserAgent:                     core.USERAGENT,
+		BanManager:       bm,
+		Datastore:        sqliteDB,
+		MasterPrivateKey: mPrivKey,
+		Multiwallet:      mw,
+		NameSystem:       ns,
+		NetworkTimeout:   DefaultConnectionTimeout,
+		PushNodes:        pushNodes,
+		RepoPath:         config.RepoPath,
+		UserAgent:        core.USERAGENT,
 	}
 
 	if len(cfg.Addresses.Gateway) <= 0 {

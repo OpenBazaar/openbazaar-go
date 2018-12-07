@@ -75,10 +75,8 @@ type OpenBazaarNode struct {
 	// A service that periodically checks the dht for outstanding messages
 	MessageRetriever *ret.MessageRetriever
 
-	// OfflineMessageFailoverTimeout is the duration until the protocol
-	// will stop looking for the peer to send a direct message and failover to
-	// sending an offline message
-	OfflineMessageFailoverTimeout time.Duration
+	// NetworkTimeout is the duration before outbound requests will be stopped
+	NetworkTimeout time.Duration
 
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher

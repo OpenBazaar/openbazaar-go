@@ -989,9 +989,14 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request) {
-	_, peerID := path.Split(r.URL.Path)
-	var peerIDs []string
-	peers, err := ipfs.Query(i.node.IpfsNode, peerID)
+	var (
+		peerIDs     []string
+		_, peerID   = path.Split(r.URL.Path)
+		ctx, cancel = context.WithTimeout(context.Background(), i.node.NetworkTimeout)
+	)
+	defer cancel()
+
+	peers, err := ipfs.Query(ctx, i.node.IpfsNode, peerID)
 	if err == nil {
 		for _, p := range peers {
 			peerIDs = append(peerIDs, p.Pretty())

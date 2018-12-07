@@ -85,7 +85,8 @@ var fileLogFormat = logging.MustStringFormatter(
 )
 
 var (
-	ErrNoGateways = errors.New("No gateway addresses configured")
+	DefaultNetworkTimeout = 30 * time.Second
+	ErrNoGateways         = errors.New("No gateway addresses configured")
 )
 
 type Start struct {
@@ -677,15 +678,15 @@ func (x *Start) Execute(args []string) error {
 
 	// OpenBazaar node setup
 	core.Node = &core.OpenBazaarNode{
-		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
-		BanManager:                    bm,
-		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
-		IpfsNode:                      nd,
-		MasterPrivateKey:              mPrivKey,
-		Multiwallet:                   mw,
-		NameSystem:                    ns,
-		OfflineMessageFailoverTimeout: 30 * time.Second,
+		AcceptStoreRequests:  dataSharing.AcceptStoreRequests,
+		BanManager:           bm,
+		Datastore:            sqliteDB,
+		IPNSBackupAPI:        cfg.Ipns.BackUpAPI,
+		IpfsNode:             nd,
+		MasterPrivateKey:     mPrivKey,
+		Multiwallet:          mw,
+		NameSystem:           ns,
+		NetworkTimeout:       DefaultNetworkTimeout,
 		Pubsub:               ps,
 		PushNodes:            pushNodes,
 		RegressionTestEnable: x.Regtest,
