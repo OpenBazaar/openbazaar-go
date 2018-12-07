@@ -239,11 +239,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -304,11 +300,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -1325,6 +1317,8 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
+	var sl *pb.SignedListing
+
 	urlPath, listingID := path.Split(r.URL.Path)
 	_, peerID := path.Split(urlPath[:len(urlPath)-1])
 	useCache, _ := strconv.ParseBool(r.URL.Query().Get("usecache"))
@@ -1334,101 +1328,28 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
+
+	// Retrieve local listing
 	if peerID == "" || strings.ToLower(peerID) == "listing" || peerID == i.node.IPFSIdentityString() {
-		var sl *pb.SignedListing
-		_, err := cid.Decode(listingID)
-		if err == nil {
-			sl, err = i.node.GetListingFromHash(listingID)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-				return
-			}
-			sl.Hash = listingID
-		} else {
-			sl, err = i.node.GetListingFromSlug(listingID)
-			if err != nil {
-				ErrorResponse(w, http.StatusNotFound, "Listing not found.")
-				return
-			}
-			hash, err := ipfs.GetHashOfFile(i.node.IpfsNode, path.Join(i.node.RepoPath, "root", "listings", listingID+".json"))
-			if err != nil {
-				ErrorResponse(w, http.StatusInternalServerError, err.Error())
-				return
-			}
-			sl.Hash = hash
-		}
-		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
+
+		sl, err := getSignedListing(w, i.node, listingID)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
-		}
-		for _, coupon := range sl.Listing.Coupons {
-			for _, c := range savedCoupons {
-				if coupon.GetHash() == c.Hash {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-					break
-				}
-			}
-		}
-		if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-			for _, so := range sl.Listing.ShippingOptions {
-				for _, ser := range so.Services {
-					ser.AdditionalItemPrice = ser.Price
-				}
-			}
 		}
 
-		out, err := m.MarshalToString(sl)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+		replaceCouponHashesWithPlaintext(w, i.node.Datastore.Coupons(), sl)
+		setAdditionalItemPrices(sl)
+
+		out, _ := getJSONOutput(m, w, sl)
+
 		SanitizedResponseM(w, out, new(pb.SignedListing))
 		return
 	}
 
-	var listingBytes []byte
-	var hash string
-	_, err := cid.Decode(listingID)
-	if err == nil {
-		listingBytes, err = ipfs.Cat(i.node.IpfsNode, listingID, time.Minute)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		hash = listingID
-		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
-	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
-		listingBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings", listingID+".json")), time.Minute, useCache)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		hash, err = ipfs.GetHash(i.node.IpfsNode, bytes.NewReader(listingBytes))
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
-	}
-	sl := new(pb.SignedListing)
-	err = jsonpb.UnmarshalString(string(listingBytes), sl)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	sl.Hash = hash
-	out, err := m.MarshalToString(sl)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	// Retrieve listing from the OpenBazaar network
+	sl, _ = getSignedListingFromNetwork(w, i.node, listingID, peerID, useCache)
+
+	out, _ := getJSONOutput(m, w, sl)
 	SanitizedResponseM(w, out, new(pb.SignedListing))
 }
 
@@ -1472,11 +1393,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(&profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, &profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -1629,11 +1546,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, resp)
 	if isSale {
 		i.node.Datastore.Sales().MarkAsRead(orderID)
 	} else {
@@ -1966,11 +1879,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, resp)
 
 	i.node.Datastore.Cases().MarkAsRead(orderID)
 	SanitizedResponseM(w, out, new(pb.CaseRespApi))
@@ -3811,11 +3720,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 			sl.Hash = hash
 		}
 
-		out, err := m.MarshalToString(sl)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+		out, _ := getJSONOutput(m, w, sl)
 		SanitizedResponseM(w, out, new(pb.SignedPost))
 		return
 	}
@@ -3857,10 +3762,6 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sl.Hash = hash
-	out, err := m.MarshalToString(sl)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, sl)
 	SanitizedResponseM(w, out, new(pb.SignedPost))
 }

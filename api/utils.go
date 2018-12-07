@@ -1,6 +1,8 @@
 package api
 
 import (
+	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -10,12 +12,18 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/OpenBazaar/jsonpb"
+	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/golang/protobuf/proto"
+	cid "github.com/ipfs/go-cid"
+	ipnspath "github.com/ipfs/go-ipfs/path"
 
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 
@@ -185,6 +193,108 @@ func configureAPIAuthentication(r *http.Request, w http.ResponseWriter, configUs
 			return
 		}
 	}
+}
+
+func getJSONOutput(m jsonpb.Marshaler, w http.ResponseWriter, msg proto.Message) (string, error) {
+	out, err := m.MarshalToString(msg)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return "", err
+	}
+	return out, nil
+}
+
+func setAdditionalItemPrices(sl *pb.SignedListing) {
+	if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+		for _, so := range sl.Listing.ShippingOptions {
+			for _, ser := range so.Services {
+				ser.AdditionalItemPrice = ser.Price
+			}
+		}
+	}
+}
+
+func replaceCouponHashesWithPlaintext(w http.ResponseWriter, coupons repo.CouponStore, listing *pb.SignedListing) {
+	savedCoupons, err := coupons.Get(listing.Listing.Slug)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	for _, coupon := range listing.Listing.Coupons {
+		for _, c := range savedCoupons {
+			if coupon.GetHash() == c.Hash {
+				coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+				break
+			}
+		}
+	}
+}
+
+func getSignedListingFromNetwork(w http.ResponseWriter, node *core.OpenBazaarNode, listingID string, peerID string, useCache bool) (*pb.SignedListing, error) {
+	var listingBytes []byte
+	var hash string
+	_, err := cid.Decode(listingID)
+	if err == nil {
+		listingBytes, err = ipfs.Cat(node.IpfsNode, listingID, time.Minute)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return nil, err
+		}
+		hash = listingID
+		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
+	} else {
+		pid, err := node.NameSystem.Resolve(context.Background(), peerID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return nil, err
+		}
+		peerID = pid.Pretty()
+		listingBytes, err = node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings", listingID+".json")), time.Minute, useCache)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, err.Error())
+			return nil, err
+		}
+		hash, err = ipfs.GetHash(node.IpfsNode, bytes.NewReader(listingBytes))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return nil, err
+		}
+		w.Header().Set("Cache-Control", "public, max-age=600, immutable")
+	}
+	sl := new(pb.SignedListing)
+	err = jsonpb.UnmarshalString(string(listingBytes), sl)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return nil, err
+	}
+	sl.Hash = hash
+	return sl, nil
+}
+
+func getSignedListing(w http.ResponseWriter, node *core.OpenBazaarNode, listingID string) (*pb.SignedListing, error) {
+	var sl *pb.SignedListing
+	_, err := cid.Decode(listingID)
+	if err == nil {
+		sl, err = node.GetListingFromHash(listingID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return nil, err
+		}
+		sl.Hash = listingID
+	} else {
+		sl, err = node.GetListingFromSlug(listingID)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
+			return nil, err
+		}
+		hash, err := ipfs.GetHashOfFile(node.IpfsNode, path.Join(node.RepoPath, "root", "listings", listingID+".json"))
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return nil, err
+		}
+		sl.Hash = hash
+	}
+	return sl
 }
 
 func retrieveProfileAsync(node *core.OpenBazaarNode, requestId string, peer ps.PeerInfo, withProfile bool) {
