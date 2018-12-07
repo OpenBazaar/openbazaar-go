@@ -41,10 +41,7 @@ type SpendResponse struct {
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
-	var (
-		feeLevel wallet.FeeLevel
-		contract *pb.RicardianContract
-	)
+	var feeLevel wallet.FeeLevel
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
 	if err != nil {
@@ -57,12 +54,9 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 	args.decodedAddress = addr
 
-	if args.RequireAssociatedOrder {
-		var err error
-		contract, err = n.getOrderContractBySpendRequest(args)
-		if err != nil {
-			return nil, ErrOrderNotFound
-		}
+	contract, err := n.getOrderContractBySpendRequest(args)
+	if err != nil && args.RequireAssociatedOrder {
+		return nil, ErrOrderNotFound
 	}
 
 	switch strings.ToUpper(args.FeeLevel) {
@@ -93,7 +87,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		title     string
 		memo      = args.Memo
 	)
-	if args.RequireAssociatedOrder {
+	if contract != nil {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 			title = contract.VendorListings[0].Item.Title
