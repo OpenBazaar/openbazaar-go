@@ -13,6 +13,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
@@ -56,6 +57,36 @@ func (n *OpenBazaarNode) FetchProfile(peerID string, useCache bool) (pb.Profile,
 		return pro, err
 	}
 	return pro, nil
+}
+
+func (n *OpenBazaarNode) FetchPeersAndProfiles(peerIDs []string, useCache bool) ([]string, error) {
+	var wg sync.WaitGroup
+	var peerProfiles []string
+	for _, mod := range peerIDs {
+		wg.Add(1)
+		go func(m string) {
+			profile, err := n.FetchProfile(m, useCache)
+			if err != nil {
+				wg.Done()
+				return
+			}
+			resp := &pb.PeerAndProfile{PeerId: m, Profile: &profile}
+			mar := jsonpb.Marshaler{
+				EnumsAsInts:  false,
+				EmitDefaults: true,
+				Indent:       "    ",
+				OrigName:     false,
+			}
+			respJSON, err := mar.MarshalToString(resp)
+			if err != nil {
+				return
+			}
+			peerProfiles = append(peerProfiles, respJSON)
+			wg.Done()
+		}(mod)
+	}
+	wg.Wait()
+	return peerProfiles, nil
 }
 
 // UpdateProfile - update user profile
