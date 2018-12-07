@@ -156,8 +156,8 @@ func enableCORS(w http.ResponseWriter, cors *string) {
 	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 }
 
-func configureAPIAuthentication(r *http.Request, w http.ResponseWriter, username string, password string, cookieValue string) {
-	if username == "" || password == "" {
+func configureAPIAuthentication(r *http.Request, w http.ResponseWriter, configUsername string, configPassword string, cookieValue string) {
+	if configUsername == "" || configPassword == "" {
 		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
 		if err != nil {
 			w.WriteHeader(http.StatusForbidden)
@@ -179,7 +179,7 @@ func configureAPIAuthentication(r *http.Request, w http.ResponseWriter, username
 		username, password, ok := r.BasicAuth()
 		h := sha256.Sum256([]byte(password))
 		password = hex.EncodeToString(h[:])
-		if !ok || username != username || strings.ToLower(password) != strings.ToLower(password) {
+		if !ok || configUsername != username || strings.ToLower(password) != strings.ToLower(configPassword) {
 			w.WriteHeader(http.StatusForbidden)
 			fmt.Fprint(w, "403 - Forbidden")
 			return
