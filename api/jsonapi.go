@@ -17,7 +17,6 @@ import (
 
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
@@ -46,8 +45,8 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	ipnspath "github.com/ipfs/go-ipfs/path"
+	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
 type JSONAPIConfig struct {
@@ -98,19 +97,11 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "403 - Forbidden")
 		return
 	}
-	if len(i.config.AllowedIPs) > 0 {
-		remoteAddr := strings.Split(r.RemoteAddr, ":")
-		if !i.config.AllowedIPs[remoteAddr[0]] {
-			w.WriteHeader(http.StatusForbidden)
-			fmt.Fprint(w, "403 - Forbidden")
-			return
-		}
-	}
+
+	checkForUnauthorizedIP(w, i.config.AllowedIPs, r.RemoteAddr)
 
 	if i.config.Cors != nil {
-		w.Header().Set("Access-Control-Allow-Origin", *i.config.Cors)
-		w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,PATCH,DELETE,GET,OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		enableCORS(w, i.config.Cors)
 	}
 
 	for k, v := range i.config.Headers {
@@ -118,48 +109,14 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if i.config.Authenticated {
-		if i.config.Username == "" || i.config.Password == "" {
-			cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
-			if err != nil {
-				w.WriteHeader(http.StatusForbidden)
-				fmt.Fprint(w, "403 - Forbidden")
-				return
-			}
-			if i.config.Cookie.Value != cookie.Value {
-				w.WriteHeader(http.StatusForbidden)
-				fmt.Fprint(w, "403 - Forbidden")
-				return
-			}
-		} else {
-
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				fmt.Fprint(w, "200 - OK")
-				return
-			}
-
-			username, password, ok := r.BasicAuth()
-			h := sha256.Sum256([]byte(password))
-			password = hex.EncodeToString(h[:])
-			if !ok || username != i.config.Username || strings.ToLower(password) != strings.ToLower(i.config.Password) {
-				w.WriteHeader(http.StatusForbidden)
-				fmt.Fprint(w, "403 - Forbidden")
-				return
-			}
-		}
+		configureAPIAuthentication(r, w, i.config.Username, i.config.Password, i.config.Cookie.Value)
 	}
 
 	// Stop here if its Preflighted OPTIONS request
 	if r.Method == "OPTIONS" {
 		return
 	}
-	r.Header.Del("Cookie")
-	r.Header.Del("Authorization")
-	dump, err := httputil.DumpRequest(r, false)
-	if err != nil {
-		log.Error("Error reading http request:", err)
-	}
-	log.Debugf("%s", dump)
+
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error("A panic occurred in the rest api handler!")
@@ -181,6 +138,8 @@ func (i *jsonAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "PATCH":
 		patch(i, u.String(), w, r)
 	}
+
+	writeToAPILog(r)
 }
 
 func ErrorResponse(w http.ResponseWriter, errorCode int, reason string) {

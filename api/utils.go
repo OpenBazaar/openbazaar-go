@@ -2,8 +2,13 @@ package api
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strconv"
 	"strings"
@@ -122,6 +127,64 @@ func generateRandomID() string {
 	idBytes := make([]byte, 16)
 	rand.Read(idBytes)
 	return base58.Encode(idBytes)
+}
+
+func writeToAPILog(r *http.Request) {
+	r.Header.Del("Cookie")
+	r.Header.Del("Authorization")
+	dump, err := httputil.DumpRequest(r, false)
+	if err != nil {
+		log.Error("Error reading http request:", err)
+	}
+	log.Debugf("%s", dump)
+}
+
+func checkForUnauthorizedIP(w http.ResponseWriter, allowed map[string]bool, remote string) {
+	if len(allowed) > 0 {
+		remoteAddr := strings.Split(remote, ":")
+		if !allowed[remoteAddr[0]] {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
+}
+
+func enableCORS(w http.ResponseWriter, cors *string) {
+	w.Header().Set("Access-Control-Allow-Origin", *cors)
+	w.Header().Set("Access-Control-Allow-Methods", "PUT,POST,PATCH,DELETE,GET,OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+}
+
+func configureAPIAuthentication(r *http.Request, w http.ResponseWriter, username string, password string, cookieValue string) {
+	if username == "" || password == "" {
+		cookie, err := r.Cookie("OpenBazaar_Auth_Cookie")
+		if err != nil {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+		if cookieValue != cookie.Value {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	} else {
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "200 - OK")
+			return
+		}
+
+		username, password, ok := r.BasicAuth()
+		h := sha256.Sum256([]byte(password))
+		password = hex.EncodeToString(h[:])
+		if !ok || username != username || strings.ToLower(password) != strings.ToLower(password) {
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, "403 - Forbidden")
+			return
+		}
+	}
 }
 
 func retrieveProfileAsync(node *core.OpenBazaarNode, requestId string, peer ps.PeerInfo, withProfile bool) {
