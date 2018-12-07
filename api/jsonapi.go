@@ -10,7 +10,6 @@ import (
 	"fmt"
 	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
@@ -1730,101 +1729,46 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
+	var moderatorsResponse string
+
 	query := r.URL.Query().Get("async")
 	async, _ := strconv.ParseBool(query)
 	include := r.URL.Query().Get("include")
 
+	withProfile := strings.ToLower(include) == "profile"
+
 	ctx := context.Background()
 	if !async {
-		removeDuplicates := func(xs []string) []string {
-			found := make(map[string]bool)
-			j := 0
-			for i, x := range xs {
-				if !found[x] {
-					found[x] = true
-					(xs)[j] = (xs)[i]
-					j++
-				}
-			}
-			return xs[:j]
-		}
 		peerInfoList, err := ipfs.FindPointers(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 		if err != nil {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		var mods []string
-		for _, p := range peerInfoList {
-			id, err := core.ExtractIDFromPointer(p)
-			if err != nil {
-				continue
-			}
-			mods = append(mods, id)
-		}
-		var resp string
-		removeDuplicates(mods)
-		if strings.ToLower(include) == "profile" {
+
+		mods := getModeratorsFromPeerList(peerInfoList)
+
+		if withProfile {
 			var withProfiles []string
-			var wg sync.WaitGroup
-			for _, mod := range mods {
-				wg.Add(1)
-				go func(m string) {
-					profile, err := i.node.FetchProfile(m, false)
-					if err != nil {
-						wg.Done()
-						return
-					}
-					resp := &pb.PeerAndProfile{PeerId: m, Profile: &profile}
-					mar := jsonpb.Marshaler{
-						EnumsAsInts:  false,
-						EmitDefaults: true,
-						Indent:       "    ",
-						OrigName:     false,
-					}
-					respJSON, err := mar.MarshalToString(resp)
-					if err != nil {
-						return
-					}
-					withProfiles = append(withProfiles, respJSON)
-					wg.Done()
-				}(mod)
-			}
-			wg.Wait()
-			resp = "[\n"
-			max := len(withProfiles)
-			for i, r := range withProfiles {
-				lines := strings.Split(r, "\n")
-				maxx := len(lines)
-				for x, s := range lines {
-					resp += "    "
-					resp += s
-					if x != maxx-1 {
-						resp += "\n"
-					}
-				}
-				if i != max-1 {
-					resp += ",\n"
-				}
-			}
-			resp += "\n]"
+			withProfiles, _ = i.node.FetchPeersAndProfiles(mods, false)
+			moderatorsResponse = formatProfiles(withProfiles)
 		} else {
 			res, err := json.MarshalIndent(mods, "", "    ")
 			if err != nil {
 				ErrorResponse(w, http.StatusInternalServerError, err.Error())
 				return
 			}
-			resp = string(res)
+			moderatorsResponse = string(res)
 		}
-		if resp == "null" {
-			resp = "[]"
+		if moderatorsResponse == "null" {
+			moderatorsResponse = "[]"
 		}
-		SanitizedResponse(w, resp)
+		SanitizedResponse(w, moderatorsResponse)
 	} else {
+
+		// Send back ID for this asynchronous request for tracking
 		id := r.URL.Query().Get("asyncID")
 		if id == "" {
-			idBytes := make([]byte, 16)
-			rand.Read(idBytes)
-			id = base58.Encode(idBytes)
+			id = generateRandomID()
 		}
 
 		type resp struct {
@@ -1834,61 +1778,13 @@ func (i *jsonAPIHandler) GETModerators(w http.ResponseWriter, r *http.Request) {
 		respJSON, _ := json.MarshalIndent(response, "", "    ")
 		w.WriteHeader(http.StatusAccepted)
 		SanitizedResponse(w, string(respJSON))
+
+		// Retrieve profiles and return as they are discovered
 		go func() {
 			peerChan := ipfs.FindPointersAsync(i.node.IpfsNode.Routing.(*routing.IpfsDHT), ctx, core.ModeratorPointerID, 64)
 
-			found := make(map[string]bool)
-			foundMu := sync.Mutex{}
 			for p := range peerChan {
-				go func(pi ps.PeerInfo) {
-					pid, err := core.ExtractIDFromPointer(pi)
-					if err != nil {
-						return
-					}
-
-					// Check and set the peer in `found` with locking
-					foundMu.Lock()
-					if found[pid] {
-						foundMu.Unlock()
-						return
-					}
-					found[pid] = true
-					foundMu.Unlock()
-
-					if strings.ToLower(include) == "profile" {
-						profile, err := i.node.FetchProfile(pid, false)
-						if err != nil {
-							return
-						}
-						resp := pb.PeerAndProfileWithID{Id: id, PeerId: pid, Profile: &profile}
-						m := jsonpb.Marshaler{
-							EnumsAsInts:  false,
-							EmitDefaults: true,
-							Indent:       "    ",
-							OrigName:     false,
-						}
-						respJSON, err := m.MarshalToString(&resp)
-						if err != nil {
-							return
-						}
-						b, err := SanitizeProtobuf(respJSON, new(pb.PeerAndProfileWithID))
-						if err != nil {
-							return
-						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{b}
-					} else {
-						type wsResp struct {
-							ID     string `json:"id"`
-							PeerID string `json:"peerId"`
-						}
-						resp := wsResp{id, pid}
-						data, err := json.MarshalIndent(resp, "", "    ")
-						if err != nil {
-							return
-						}
-						i.node.Broadcast <- repo.PremarshalledNotifier{data}
-					}
-				}(p)
+				retrieveProfileAsync(i.node, id, p, withProfile)
 			}
 		}()
 	}
