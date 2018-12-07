@@ -339,10 +339,10 @@ func (wallet *EthereumWallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address 
 // DecodeAddress - Parse the address string and return an address interface
 func (wallet *EthereumWallet) DecodeAddress(addr string) (btcutil.Address, error) {
 	ethAddr := common.HexToAddress(addr)
-	if wallet.HasKey(EthAddress{&ethAddr}) {
-		return *wallet.address, nil
-	}
-	return EthAddress{}, errors.New("invalid or unknown address")
+	//if wallet.HasKey(EthAddress{&ethAddr}) {
+	//		return *wallet.address, nil
+	//	}
+	return EthAddress{&ethAddr}, nil
 }
 
 // ScriptToAddress - ?
@@ -369,7 +369,11 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed int64) {
 	if err == nil {
 		ucbalance = ucbal.Int64()
 	}
-	return balance, ucbalance
+	ucb := int64(0)
+	if ucbalance > balance {
+		ucb = ucbalance - balance
+	}
+	return balance, ucb
 }
 
 // Transactions - Returns a list of transactions for this wallet
@@ -494,7 +498,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(hash.String())
+		h, err = chainhash.NewHashFromStr(hash.Hex()[2:])
 	}
 	return h, err
 }
@@ -541,7 +545,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			chash, err := chainhash.NewHashFromStr((*hash).Hex())
+			chash, err := chainhash.NewHashFromStr((*hash).Hex()[2:])
 			if err != nil {
 				return nil, err
 			}

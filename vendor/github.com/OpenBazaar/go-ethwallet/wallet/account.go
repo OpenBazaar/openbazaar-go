@@ -20,12 +20,12 @@ type EthAddress struct {
 
 // String representation of eth address
 func (addr EthAddress) String() string {
-	return addr.address.String()
+	return addr.address.Hex()[2:] //String()[2:]
 }
 
 // EncodeAddress returns hex representation of the address
 func (addr EthAddress) EncodeAddress() string {
-	return addr.address.Hex()
+	return addr.address.Hex()[2:]
 }
 
 // ScriptAddress returns byte representation of address

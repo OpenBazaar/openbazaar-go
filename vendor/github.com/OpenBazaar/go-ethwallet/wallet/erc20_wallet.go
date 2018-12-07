@@ -380,7 +380,7 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(hash.String())
+		h, err = chainhash.NewHashFromStr(hash.Hex()[2:])
 	}
 	return h, err
 }
