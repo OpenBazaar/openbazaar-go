@@ -790,17 +790,9 @@ func (i *jsonAPIHandler) POSTSettings(w http.ResponseWriter, r *http.Request) {
 		i := float32(1)
 		settings.MisPaymentBuffer = &i
 	}
-	if settings.BlockedNodes != nil {
-		var blockedIds []peer.ID
-		for _, pid := range *settings.BlockedNodes {
-			id, err := peer.IDB58Decode(pid)
-			if err != nil {
-				continue
-			}
-			blockedIds = append(blockedIds, id)
-		}
-		i.node.BanManager.SetBlockedIds(blockedIds)
-	}
+
+	setBannedNodes(settings, i.node.BanManager)
+
 	if settings.StoreModerators != nil {
 		go i.node.NotifyModerators(*settings.StoreModerators)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
@@ -845,17 +837,9 @@ func (i *jsonAPIHandler) PUTSettings(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusNotFound, "Settings is not yet set. Use POST.")
 		return
 	}
-	if settings.BlockedNodes != nil {
-		var blockedIds []peer.ID
-		for _, pid := range *settings.BlockedNodes {
-			id, err := peer.IDB58Decode(pid)
-			if err != nil {
-				continue
-			}
-			blockedIds = append(blockedIds, id)
-		}
-		i.node.BanManager.SetBlockedIds(blockedIds)
-	}
+
+	setBannedNodes(settings, i.node.BanManager)
+
 	if settings.StoreModerators != nil {
 		go i.node.NotifyModerators(*settings.StoreModerators)
 		if err := i.node.SetModeratorsOnListings(*settings.StoreModerators); err != nil {
@@ -919,17 +903,9 @@ func (i *jsonAPIHandler) PATCHSettings(w http.ResponseWriter, r *http.Request) {
 			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		}
 	}
-	if settings.BlockedNodes != nil {
-		var blockedIds []peer.ID
-		for _, pid := range *settings.BlockedNodes {
-			id, err := peer.IDB58Decode(pid)
-			if err != nil {
-				continue
-			}
-			blockedIds = append(blockedIds, id)
-		}
-		i.node.BanManager.SetBlockedIds(blockedIds)
-	}
+
+	setBannedNodes(settings, i.node.BanManager)
+
 	err = i.node.Datastore.Settings().Update(settings)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
