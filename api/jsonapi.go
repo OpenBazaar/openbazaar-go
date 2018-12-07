@@ -245,11 +245,7 @@ func (i *jsonAPIHandler) POSTProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -310,11 +306,7 @@ func (i *jsonAPIHandler) PUTProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -1313,6 +1305,8 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
+	var sl *pb.SignedListing
+
 	urlPath, listingID := path.Split(r.URL.Path)
 	_, peerID := path.Split(urlPath[:len(urlPath)-1])
 	useCache, _ := strconv.ParseBool(r.URL.Query().Get("usecache"))
@@ -1322,6 +1316,8 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
+
+	// Retrieve local listing
 	if peerID == "" || strings.ToLower(peerID) == "listing" || peerID == i.node.IPFSIdentityString() {
 		var sl *pb.SignedListing
 		_, err := cid.Decode(listingID)
@@ -1356,11 +1352,16 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		out, err := m.MarshalToString(sl)
+		sl, err := getSignedListing(w, i.node, listingID)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+
+		replaceCouponHashesWithPlaintext(w, i.node.Datastore.Coupons(), sl)
+		setAdditionalItemPrices(sl)
+
+		out, _ := getJSONOutput(m, w, sl)
+
 		SanitizedResponseM(w, out, new(pb.SignedListing))
 		return
 	}
@@ -1438,11 +1439,7 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(&profile)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, &profile)
 	SanitizedResponseM(w, out, new(pb.Profile))
 }
 
@@ -1617,11 +1614,7 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, resp)
 	if isSale {
 		i.node.Datastore.Sales().MarkAsRead(orderID)
 	} else {
@@ -1989,11 +1982,7 @@ func (i *jsonAPIHandler) GETCase(w http.ResponseWriter, r *http.Request) {
 		Indent:       "    ",
 		OrigName:     false,
 	}
-	out, err := m.MarshalToString(resp)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, resp)
 
 	i.node.Datastore.Cases().MarkAsRead(orderID)
 	SanitizedResponseM(w, out, new(pb.CaseRespApi))
@@ -3864,11 +3853,7 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 			sl.Hash = hash
 		}
 
-		out, err := m.MarshalToString(sl)
-		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
-			return
-		}
+		out, _ := getJSONOutput(m, w, sl)
 		SanitizedResponseM(w, out, new(pb.SignedPost))
 		return
 	}
@@ -3904,10 +3889,6 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sl.Hash = hash
-	out, err := m.MarshalToString(sl)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	out, _ := getJSONOutput(m, w, sl)
 	SanitizedResponseM(w, out, new(pb.SignedPost))
 }
