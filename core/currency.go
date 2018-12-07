@@ -23,7 +23,7 @@ type SpendRequest struct {
 	Amount                 int64  `json:"amount"`
 	FeeLevel               string `json:"feeLevel"`
 	Memo                   string `json:"memo"`
-	OrderID                string `json:"orderID"`
+	OrderID                string `json:"orderId"`
 	RequireAssociatedOrder bool   `json:"requireOrder"`
 	Wallet                 string `json:"wallet"`
 }
@@ -32,7 +32,7 @@ type SpendResponse struct {
 	Amount             int64     `json:"amount"`
 	ConfirmedBalance   int64     `json:"confirmedBalance"`
 	Memo               string    `json:"memo"`
-	OrderID            string    `json:"orderID"`
+	OrderID            string    `json:"orderId"`
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
 	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
