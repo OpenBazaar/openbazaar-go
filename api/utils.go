@@ -352,3 +352,85 @@ func retrieveProfileAsync(node *core.OpenBazaarNode, requestId string, peer ps.P
 		}
 	}(peer)
 }
+
+func getTradeRecords(r *http.Request, w http.ResponseWriter, node *core.OpenBazaarNode, typeOfRecord string) (string, error) {
+	var query TransactionQuery
+	var ret []byte
+
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&query)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return "", err
+	}
+
+	switch typeOfRecord {
+	case "cases":
+		cases, queryCount, err := node.Datastore.Cases().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return "", err
+		}
+		for n, c := range cases {
+			unread, err := node.Datastore.Chat().GetUnreadCount(c.CaseId)
+			if err != nil {
+				continue
+			}
+			cases[n].UnreadChatMessages = unread
+		}
+		type casesResponse struct {
+			QueryCount int         `json:"queryCount"`
+			Cases      []repo.Case `json:"cases"`
+		}
+		cr := casesResponse{queryCount, cases}
+		ret, err = json.MarshalIndent(cr, "", "    ")
+	case "sales":
+		sales, queryCount, err := node.Datastore.Sales().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return "", err
+		}
+		for n, s := range sales {
+			unread, err := node.Datastore.Chat().GetUnreadCount(s.OrderId)
+			if err != nil {
+				continue
+			}
+			sales[n].UnreadChatMessages = unread
+		}
+		type salesResponse struct {
+			QueryCount int         `json:"queryCount"`
+			Sales      []repo.Sale `json:"sales"`
+		}
+		sr := salesResponse{queryCount, sales}
+
+		ret, err = json.MarshalIndent(sr, "", "    ")
+	case "purchases":
+		purchases, queryCount, err := node.Datastore.Purchases().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return "", err
+		}
+		for n, p := range purchases {
+			unread, err := node.Datastore.Chat().GetUnreadCount(p.OrderId)
+			if err != nil {
+				continue
+			}
+			purchases[n].UnreadChatMessages = unread
+		}
+		type purchasesResponse struct {
+			QueryCount int             `json:"queryCount"`
+			Purchases  []repo.Purchase `json:"purchases"`
+		}
+		pr := purchasesResponse{queryCount, purchases}
+		ret, err = json.MarshalIndent(pr, "", "    ")
+	}
+
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return "", err
+	}
+	if isNullJSON(ret) {
+		ret = []byte("[]")
+	}
+	return string(ret), nil
+}

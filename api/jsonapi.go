@@ -2793,112 +2793,27 @@ func (i *jsonAPIHandler) GETCases(w http.ResponseWriter, r *http.Request) {
 }
 
 func (i *jsonAPIHandler) POSTPurchases(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var query TransactionQuery
-	err := decoder.Decode(&query)
+	records, err := getTradeRecords(r, w, i.node, "purchases")
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	purchases, queryCount, err := i.node.Datastore.Purchases().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	for n, p := range purchases {
-		unread, err := i.node.Datastore.Chat().GetUnreadCount(p.OrderId)
-		if err != nil {
-			continue
-		}
-		purchases[n].UnreadChatMessages = unread
-	}
-	type purchasesResponse struct {
-		QueryCount int             `json:"queryCount"`
-		Purchases  []repo.Purchase `json:"purchases"`
-	}
-	pr := purchasesResponse{queryCount, purchases}
-	ret, err := json.MarshalIndent(pr, "", "    ")
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if isNullJSON(ret) {
-		ret = []byte("[]")
-	}
-	SanitizedResponse(w, string(ret))
+	SanitizedResponse(w, records)
 }
 
 func (i *jsonAPIHandler) POSTSales(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var query TransactionQuery
-	err := decoder.Decode(&query)
+	records, err := getTradeRecords(r, w, i.node, "sales")
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	sales, queryCount, err := i.node.Datastore.Sales().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	for n, s := range sales {
-		unread, err := i.node.Datastore.Chat().GetUnreadCount(s.OrderId)
-		if err != nil {
-			continue
-		}
-		sales[n].UnreadChatMessages = unread
-	}
-	type salesResponse struct {
-		QueryCount int         `json:"queryCount"`
-		Sales      []repo.Sale `json:"sales"`
-	}
-	sr := salesResponse{queryCount, sales}
-
-	ret, err := json.MarshalIndent(sr, "", "    ")
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if isNullJSON(ret) {
-		ret = []byte("[]")
-	}
-	SanitizedResponse(w, string(ret))
+	SanitizedResponse(w, records)
 }
 
 func (i *jsonAPIHandler) POSTCases(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
-	var query TransactionQuery
-	err := decoder.Decode(&query)
+	records, err := getTradeRecords(r, w, i.node, "cases")
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	cases, queryCount, err := i.node.Datastore.Cases().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	for n, c := range cases {
-		unread, err := i.node.Datastore.Chat().GetUnreadCount(c.CaseId)
-		if err != nil {
-			continue
-		}
-		cases[n].UnreadChatMessages = unread
-	}
-	type casesResponse struct {
-		QueryCount int         `json:"queryCount"`
-		Cases      []repo.Case `json:"cases"`
-	}
-	cr := casesResponse{queryCount, cases}
-	ret, err := json.MarshalIndent(cr, "", "    ")
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if isNullJSON(ret) {
-		ret = []byte("[]")
-	}
-	SanitizedResponse(w, string(ret))
+	SanitizedResponse(w, records)
 }
 
 func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
