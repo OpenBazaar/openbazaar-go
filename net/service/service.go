@@ -25,27 +25,29 @@ var log = logging.MustGetLogger("service")
 var ProtocolOpenBazaar protocol.ID = "/openbazaar/app/1.0.0"
 
 type OpenBazaarService struct {
-	host      host.Host
-	self      peer.ID
-	peerstore ps.Peerstore
-	ctx       context.Context
-	broadcast chan repo.Notifier
-	datastore repo.Datastore
-	node      *core.OpenBazaarNode
-	sender    map[peer.ID]*messageSender
-	senderlk  sync.Mutex
+	broadcast      chan repo.Notifier
+	ctx            context.Context
+	datastore      repo.Datastore
+	host           host.Host
+	networkTimeout time.Duration
+	node           *core.OpenBazaarNode
+	peerstore      ps.Peerstore
+	self           peer.ID
+	sender         map[peer.ID]*messageSender
+	senderlk       sync.Mutex
 }
 
 func New(node *core.OpenBazaarNode, datastore repo.Datastore) *OpenBazaarService {
 	service := &OpenBazaarService{
-		host:      node.IpfsNode.PeerHost.(host.Host),
-		self:      node.IpfsNode.Identity,
-		peerstore: node.IpfsNode.PeerHost.Peerstore(),
-		ctx:       node.IpfsNode.Context(),
-		broadcast: node.Broadcast,
-		datastore: datastore,
-		node:      node,
-		sender:    make(map[peer.ID]*messageSender),
+		broadcast:      node.Broadcast,
+		ctx:            node.IpfsNode.Context(),
+		datastore:      datastore,
+		host:           node.IpfsNode.PeerHost.(host.Host),
+		networkTimeout: node.NetworkTimeout,
+		node:           node,
+		peerstore:      node.IpfsNode.PeerHost.Peerstore(),
+		self:           node.IpfsNode.Identity,
+		sender:         make(map[peer.ID]*messageSender),
 	}
 	node.IpfsNode.PeerHost.SetStreamHandler(ProtocolOpenBazaar, service.HandleNewStream)
 	log.Infof("OpenBazaar service running at %s", ProtocolOpenBazaar)

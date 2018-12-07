@@ -90,7 +90,9 @@ func (ms *messageSender) prep() error {
 		return nil
 	}
 
-	nstr, err := ms.service.host.NewStream(ms.service.ctx, ms.p, ProtocolOpenBazaar)
+	ctx, cancel := context.WithTimeout(ms.service.ctx, ms.service.networkTimeout)
+	defer cancel()
+	nstr, err := ms.service.host.NewStream(ctx, ms.p, ProtocolOpenBazaar)
 	if err != nil {
 		return err
 	}
