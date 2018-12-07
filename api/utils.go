@@ -451,3 +451,24 @@ func setBannedNodes(settings repo.SettingsData, manager *net.BanManager) {
 		manager.SetBlockedIds(blockedIds)
 	}
 }
+
+func prepareOutput(results []string) string {
+	resp := "[\n"
+	max := len(results)
+	for i, r := range results {
+		lines := strings.Split(r, "\n")
+		maxx := len(lines)
+		for x, s := range lines {
+			resp += "    "
+			resp += s
+			if x != maxx-1 {
+				resp += "\n"
+			}
+		}
+		if i != max-1 {
+			resp += ",\n"
+		}
+	}
+	resp += "\n]"
+	return resp
+}
