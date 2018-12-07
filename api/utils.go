@@ -18,11 +18,12 @@ import (
 	"sync"
 	"time"
 
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/golang/protobuf/proto"
-	cid "github.com/ipfs/go-cid"
 	ipnspath "github.com/ipfs/go-ipfs/path"
 
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
@@ -294,7 +295,7 @@ func getSignedListing(w http.ResponseWriter, node *core.OpenBazaarNode, listingI
 		}
 		sl.Hash = hash
 	}
-	return sl
+	return sl, nil
 }
 
 func retrieveProfileAsync(node *core.OpenBazaarNode, requestId string, peer ps.PeerInfo, withProfile bool) {
