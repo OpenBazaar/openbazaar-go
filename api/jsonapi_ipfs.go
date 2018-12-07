@@ -13,10 +13,11 @@ import (
 
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/golang/protobuf/proto"
-	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 func (i *jsonAPIHandler) GETStatus(w http.ResponseWriter, r *http.Request) {
