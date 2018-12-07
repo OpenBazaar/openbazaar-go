@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -17,6 +18,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/openbazaar-go/net"
 
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 
@@ -433,4 +436,18 @@ func getTradeRecords(r *http.Request, w http.ResponseWriter, node *core.OpenBaza
 		ret = []byte("[]")
 	}
 	return string(ret), nil
+}
+
+func setBannedNodes(settings repo.SettingsData, manager *net.BanManager) {
+	if settings.BlockedNodes != nil {
+		var blockedIds []peer.ID
+		for _, pid := range *settings.BlockedNodes {
+			id, err := peer.IDB58Decode(pid)
+			if err != nil {
+				continue
+			}
+			blockedIds = append(blockedIds, id)
+		}
+		manager.SetBlockedIds(blockedIds)
+	}
 }
