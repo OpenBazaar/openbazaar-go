@@ -386,7 +386,7 @@ func getTradeRecords(r *http.Request, w http.ResponseWriter, node *core.OpenBaza
 			Cases      []repo.Case `json:"cases"`
 		}
 		cr := casesResponse{queryCount, cases}
-		ret, err = json.MarshalIndent(cr, "", "    ")
+		ret, _ = json.MarshalIndent(cr, "", "    ")
 	case "sales":
 		sales, queryCount, err := node.Datastore.Sales().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
 		if err != nil {
@@ -406,7 +406,7 @@ func getTradeRecords(r *http.Request, w http.ResponseWriter, node *core.OpenBaza
 		}
 		sr := salesResponse{queryCount, sales}
 
-		ret, err = json.MarshalIndent(sr, "", "    ")
+		ret, _ = json.MarshalIndent(sr, "", "    ")
 	case "purchases":
 		purchases, queryCount, err := node.Datastore.Purchases().GetAll(convertOrderStates(query.OrderStates), query.SearchTerm, query.SortByAscending, query.SortByRead, query.Limit, query.Exclude)
 		if err != nil {
@@ -425,7 +425,7 @@ func getTradeRecords(r *http.Request, w http.ResponseWriter, node *core.OpenBaza
 			Purchases  []repo.Purchase `json:"purchases"`
 		}
 		pr := purchasesResponse{queryCount, purchases}
-		ret, err = json.MarshalIndent(pr, "", "    ")
+		ret, _ = json.MarshalIndent(pr, "", "    ")
 	}
 
 	if err != nil {
