@@ -400,7 +400,10 @@ func (w *ZCashWallet) Broadcast(tx *wire.MsgTx) error {
 		}
 		cTxn.Outputs = append(cTxn.Outputs, output)
 	}
-	w.ws.ProcessIncomingTransaction(cTxn)
 	_, err = w.client.Broadcast(buf.Bytes())
-	return err
+	if err != nil {
+		return err
+	}
+	w.ws.ProcessIncomingTransaction(cTxn)
+	return nil
 }
