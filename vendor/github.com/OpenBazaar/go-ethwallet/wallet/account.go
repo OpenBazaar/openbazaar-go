@@ -20,7 +20,7 @@ type EthAddress struct {
 
 // String representation of eth address
 func (addr EthAddress) String() string {
-	return addr.address.Hex()[2:] //String()[2:]
+	return addr.address.Hex() // [2:] //String()[2:]
 }
 
 // EncodeAddress returns hex representation of the address

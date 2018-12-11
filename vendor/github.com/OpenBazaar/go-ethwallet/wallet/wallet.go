@@ -6,12 +6,15 @@ import (
 	"crypto/ecdsa"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
+	"net/http"
 	"path"
 	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/config"
@@ -378,7 +381,32 @@ func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed int64) {
 
 // Transactions - Returns a list of transactions for this wallet
 func (wallet *EthereumWallet) Transactions() ([]wi.Txn, error) {
-	return txns, nil
+	txns, err := wallet.client.eClient.NormalTxByAddress(wallet.account.Address().String(), nil, nil,
+		1, 0, true)
+	if err != nil {
+		return []wi.Txn{}, err
+	}
+
+	ret := []wi.Txn{}
+	for _, t := range txns {
+		status := wi.StatusConfirmed
+		if t.IsError != 0 {
+			status = wi.StatusError
+		}
+		tnew := wi.Txn{
+			Txid:          t.Hash,
+			Value:         t.Value.Int().Int64(),
+			Height:        int32(t.BlockNumber),
+			Timestamp:     t.TimeStamp.Time(),
+			WatchOnly:     false,
+			Confirmations: int64(t.Confirmations),
+			Status:        wi.StatusCode(status),
+			Bytes:         []byte(t.Input),
+		}
+		ret = append(ret, tnew)
+	}
+
+	return ret, nil
 }
 
 // GetTransaction - Get info on a specific transaction
@@ -962,6 +990,7 @@ func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
 // AddTransactionListener - add a txn listener
 func (wallet *EthereumWallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service
+	wallet.listeners = append(wallet.listeners, callback)
 }
 
 // ReSyncBlockchain - Use this to re-download merkle blocks in case of missed transactions
@@ -971,7 +1000,37 @@ func (wallet *EthereumWallet) ReSyncBlockchain(fromTime time.Time) {
 
 // GetConfirmations - Return the number of confirmations and the height for a transaction
 func (wallet *EthereumWallet) GetConfirmations(txid chainhash.Hash) (confirms, atHeight uint32, err error) {
-	return 0, 0, nil
+	// TODO: etherscan api is being used
+	// when mainnet is activated we may need a way to set the
+	// url correctly
+	hash := common.HexToHash(txid.String())
+	urlStr := fmt.Sprintf("https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash=%s", hash.String())
+	res, err := http.Get(urlStr)
+	if err != nil {
+		return 0, 0, err
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return 0, 0, err
+	}
+	var s map[string]interface{}
+	err = json.Unmarshal(body, &s)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	result := s["result"].(map[string]interface{})
+
+	d, _ := strconv.ParseInt(result["blockNumber"].(string), 0, 64)
+
+	n, err := wallet.client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	conf := n.Number.Int64() - d
+
+	return uint32(conf), uint32(n.Number.Int64()), nil
 }
 
 // Close will stop the wallet daemon

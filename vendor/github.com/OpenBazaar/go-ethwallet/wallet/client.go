@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/hunterlong/tokenbalance"
+	"github.com/nanmu42/etherscan-api"
 
 	"github.com/OpenBazaar/go-ethwallet/util"
 )
@@ -26,7 +28,8 @@ import (
 // EthClient represents the eth client
 type EthClient struct {
 	*ethclient.Client
-	url string
+	eClient *etherscan.Client
+	url     string
 }
 
 var txns []wi.Txn
@@ -35,13 +38,22 @@ var txnsLock sync.RWMutex
 // NewEthClient returns a new eth client
 func NewEthClient(url string) (*EthClient, error) {
 	var conn *ethclient.Client
+	var econn *etherscan.Client
+	if strings.Contains(url, "rinkeby") {
+		econn = etherscan.New(etherscan.Rinkby, "your API key")
+	} else if strings.Contains(url, "ropsten") {
+		econn = etherscan.New(etherscan.Ropsten, "your API key")
+	} else {
+		econn = etherscan.New(etherscan.Mainnet, "your API key")
+	}
 	var err error
 	if conn, err = ethclient.Dial(url); err != nil {
 		return nil, err
 	}
 	return &EthClient{
-		Client: conn,
-		url:    url,
+		Client:  conn,
+		eClient: econn,
+		url:     url,
 	}, nil
 
 }
