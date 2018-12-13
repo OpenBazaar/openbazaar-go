@@ -66,6 +66,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		txNotifyChan:    tch,
 		listenLock:      sync.Mutex{},
 	}
+	ic.RequestFunc = ic.doRequest
 	return ic, nil
 }
 
@@ -313,8 +314,8 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 	}
 	utxoChan := make(chan utxoOrError)
 	var wg sync.WaitGroup
+	wg.Add(len(addrs))
 	go func() {
-		wg.Add(len(addrs))
 		for _, addr := range addrs {
 			go func(addr btcutil.Address) {
 				defer wg.Done()
