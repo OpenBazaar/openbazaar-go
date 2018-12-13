@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -2261,6 +2262,27 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	SanitizedResponse(w, `{}`)
+}
+
+func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request) {
+	type ipfsmessage struct {
+		Content string `json:"content"`
+	}
+	var msg ipfsmessage
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&msg)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	sig, err := i.node.IpfsNode.PrivateKey.Sign([]byte(msg.Content))
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, "there was an error signing the submitted content")
+		return
+	}
+
+	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s"}`, base64.URLEncoding.EncodeToString(sig)))
 }
 
 func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
