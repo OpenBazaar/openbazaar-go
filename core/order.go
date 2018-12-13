@@ -19,7 +19,6 @@ import (
 	ipfspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 
 	"github.com/OpenBazaar/jsonpb"
-	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
@@ -88,82 +87,8 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
-		if data.Moderator == n.IpfsNode.Identity.Pretty() {
-			return "", "", 0, false, errors.New("cannot select self as moderator")
-		}
-		if data.Moderator == contract.VendorListings[0].VendorID.PeerID {
-			return "", "", 0, false, errors.New("cannot select vendor as moderator")
-		}
-		payment := new(pb.Order_Payment)
-		payment.Method = pb.Order_Payment_MODERATED
-		payment.Moderator = data.Moderator
-		payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
 
-		profile, err := n.FetchProfile(data.Moderator, true)
-		if err != nil {
-			return "", "", 0, false, errors.New("moderator could not be found")
-		}
-		moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		if !profile.Moderator || profile.ModeratorInfo == nil || len(profile.ModeratorInfo.AcceptedCurrencies) == 0 {
-			return "", "", 0, false, errors.New("moderator is not capable of moderating this transaction")
-		}
-
-		if !currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
-			return "", "", 0, false, errors.New("moderator does not accept our currency")
-		}
-		contract.BuyerOrder.Payment = payment
-		total, err := n.CalculateOrderTotal(contract)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		payment.Amount = total
-		fpb := wal.GetFeePerByte(wallet.NORMAL)
-		if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
-			return "", "", 0, false, errors.New("transaction fee too high for moderated payment")
-		}
-
-		/* Generate a payment address using the first child key derived from the buyers's,
-		   vendors's and moderator's masterPubKey and a random chaincode. */
-		chaincode := make([]byte, 32)
-		_, err = rand.Read(chaincode)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		moderatorKey, err := wal.ChildKey(moderatorKeyBytes, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		modPub, err := moderatorKey.ECPubKey()
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		payment.ModeratorKey = modPub.SerializeCompressed()
-
-		timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		payment.Address = addr.EncodeAddress()
-		payment.RedeemScript = hex.EncodeToString(redeemScript)
-		payment.Chaincode = hex.EncodeToString(chaincode)
-		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
-
-		err = wal.AddWatchedAddress(addr)
+		contract, err := prepareModeratedOrderContract(data, n, contract, wal)
 		if err != nil {
 			return "", "", 0, false, err
 		}
@@ -174,170 +99,124 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		}
 
 		// Send to order vendor
-		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
+		merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil {
-			// Vendor offline
-			// Send using offline messaging
-			log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
-			peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			any, err := ptypes.MarshalAny(contract)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			m := pb.Message{
-				MessageType: pb.Message_ORDER,
-				Payload:     any,
-			}
-			k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			err = n.SendOfflineMessage(peerID, &k, &m)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			orderID, err := n.CalcOrderID(contract.BuyerOrder)
-			if err != nil {
-				return "", "", 0, false, err
-			}
-			n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-			return orderID, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
+			return processOfflineModeratedOrder(n, contract)
 		}
-		// Vendor responded
-		if resp.MessageType == pb.Message_ERROR {
-			return "", "", 0, false, extractErrorMessage(resp)
-		}
-		if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
-			return "", "", 0, false, errors.New("vendor responded to the order with an incorrect message type")
-		}
-		rc := new(pb.RicardianContract)
-		err = proto.Unmarshal(resp.Payload.Value, rc)
-		if err != nil {
-			return "", "", 0, false, errors.New("error parsing the vendor's response")
-		}
-		contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
-		for _, sig := range rc.Signatures {
-			if sig.Section == pb.Signature_ORDER_CONFIRMATION {
-				contract.Signatures = append(contract.Signatures, sig)
-			}
-		}
-		err = n.ValidateOrderConfirmation(contract, true)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		if contract.VendorOrderConfirmation.PaymentAddress != contract.BuyerOrder.Payment.Address {
-			return "", "", 0, false, errors.New("vendor responded with incorrect multisig address")
-		}
-		orderID, err := n.CalcOrderID(contract.BuyerOrder)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		return orderID, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
+		return processOnlineModeratedOrder(merchantResponse, n, contract)
 
 	}
+
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 	payment.Coin = data.PaymentCoin
 	contract.BuyerOrder.Payment = payment
+
+	// Calculate payment amount
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return "", "", 0, false, err
 	}
-
 	payment.Amount = total
+
 	contract, err = n.SignOrder(contract)
 	if err != nil {
 		return "", "", 0, false, err
 	}
 
 	// Send to order vendor and request a payment address
-	resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
+	merchantResponse, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 	if err != nil {
-
-		// Vendor offline
-		// Change payment code to direct
-
-		fpb := wal.GetFeePerByte(wallet.NORMAL)
-		if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
-			return "", "", 0, false, errors.New("transaction fee too high for offline 2of2 multisig payment")
-		}
-		payment.Method = pb.Order_Payment_DIRECT
-
-		/* Generate a payment address using the first child key derived from the buyer's
-		   and vendors's masterPubKeys and a random chaincode. */
-		chaincode := make([]byte, 32)
-		_, err := rand.Read(chaincode)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		payment.Address = addr.EncodeAddress()
-		payment.RedeemScript = hex.EncodeToString(redeemScript)
-		payment.Chaincode = hex.EncodeToString(chaincode)
-
-		err = wal.AddWatchedAddress(addr)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-
-		// Remove signature and resign
-		contract.Signatures = []*pb.Signature{contract.Signatures[0]}
-		contract, err = n.SignOrder(contract)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-
-		// Send using offline messaging
-		log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
-		peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		any, err := ptypes.MarshalAny(contract)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		m := pb.Message{
-			MessageType: pb.Message_ORDER,
-			Payload:     any,
-		}
-		k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.SendOfflineMessage(peerID, &k, &m)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		orderID, err := n.CalcOrderID(contract.BuyerOrder)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
-		if err != nil {
-			return "", "", 0, false, err
-		}
-		return orderID, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
+		return processOfflineDirectOrder(n, wal, contract, payment)
 	}
+	return processOnlineDirectOrder(merchantResponse, n, wal, contract)
+}
+
+func prepareModeratedOrderContract(data *PurchaseData, n *OpenBazaarNode, contract *pb.RicardianContract, wal wallet.Wallet) (*pb.RicardianContract, error) {
+	if data.Moderator == n.IpfsNode.Identity.Pretty() {
+		return nil, errors.New("cannot select self as moderator")
+	}
+	if data.Moderator == contract.VendorListings[0].VendorID.PeerID {
+		return nil, errors.New("cannot select vendor as moderator")
+	}
+	payment := new(pb.Order_Payment)
+	payment.Method = pb.Order_Payment_MODERATED
+	payment.Moderator = data.Moderator
+	payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
+
+	profile, err := n.FetchProfile(data.Moderator, true)
+	if err != nil {
+		return nil, errors.New("moderator could not be found")
+	}
+	moderatorKeyBytes, err := hex.DecodeString(profile.BitcoinPubkey)
+	if err != nil {
+		return nil, err
+	}
+	if !profile.Moderator || profile.ModeratorInfo == nil || len(profile.ModeratorInfo.AcceptedCurrencies) == 0 {
+		return nil, errors.New("moderator is not capable of moderating this transaction")
+	}
+
+	if !currencyInAcceptedCurrenciesList(data.PaymentCoin, profile.ModeratorInfo.AcceptedCurrencies) {
+		return nil, errors.New("moderator does not accept our currency")
+	}
+	contract.BuyerOrder.Payment = payment
+	total, err := n.CalculateOrderTotal(contract)
+	if err != nil {
+		return nil, err
+	}
+	payment.Amount = total
+	fpb := wal.GetFeePerByte(wallet.NORMAL)
+	if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
+		return nil, errors.New("transaction fee too high for moderated payment")
+	}
+
+	/* Generate a payment address using the first child key derived from the buyers's,
+	   vendors's and moderator's masterPubKey and a random chaincode. */
+	chaincode := make([]byte, 32)
+	_, err = rand.Read(chaincode)
+	if err != nil {
+		return nil, err
+	}
+	vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
+	if err != nil {
+		return nil, err
+	}
+	buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
+	if err != nil {
+		return nil, err
+	}
+	moderatorKey, err := wal.ChildKey(moderatorKeyBytes, chaincode, false)
+	if err != nil {
+		return nil, err
+	}
+	modPub, err := moderatorKey.ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+	payment.ModeratorKey = modPub.SerializeCompressed()
+
+	timeout, err := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+	if err != nil {
+		return nil, err
+	}
+	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+	if err != nil {
+		return nil, err
+	}
+	payment.Address = addr.EncodeAddress()
+	payment.RedeemScript = hex.EncodeToString(redeemScript)
+	payment.Chaincode = hex.EncodeToString(chaincode)
+	contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
+
+	err = wal.AddWatchedAddress(addr)
+	if err != nil {
+		return nil, err
+	}
+	return contract, nil
+}
+
+func processOnlineDirectOrder(resp *pb.Message, n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract) (string, string, uint64, bool, error) {
 	// Vendor responded
 	if resp.MessageType == pb.Message_ERROR {
 		return "", "", 0, false, extractErrorMessage(resp)
@@ -349,7 +228,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		return "", "", 0, false, errors.New("vendor responded with nil payload")
 	}
 	rc := new(pb.RicardianContract)
-	err = proto.Unmarshal(resp.Payload.Value, rc)
+	err := proto.Unmarshal(resp.Payload.Value, rc)
 	if err != nil {
 		return "", "", 0, false, errors.New("error parsing the vendor's response")
 	}
@@ -371,7 +250,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	if err != nil {
 		return "", "", 0, false, err
 	}
-	orderID, err = n.CalcOrderID(contract.BuyerOrder)
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return "", "", 0, false, err
 	}
@@ -380,7 +259,153 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		return "", "", 0, false, err
 	}
 	return orderID, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
+}
 
+func processOfflineDirectOrder(n *OpenBazaarNode, wal wallet.Wallet, contract *pb.RicardianContract, payment *pb.Order_Payment) (string, string, uint64, bool, error) {
+	// Vendor offline
+	// Change payment code to direct
+
+	fpb := wal.GetFeePerByte(wallet.NORMAL)
+	if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
+		return "", "", 0, false, errors.New("transaction fee too high for offline 2of2 multisig payment")
+	}
+	payment.Method = pb.Order_Payment_DIRECT
+
+	/* Generate a payment address using the first child key derived from the buyer's
+	   and vendors's masterPubKeys and a random chaincode. */
+	chaincode := make([]byte, 32)
+	_, err := rand.Read(chaincode)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	payment.Address = addr.EncodeAddress()
+	payment.RedeemScript = hex.EncodeToString(redeemScript)
+	payment.Chaincode = hex.EncodeToString(chaincode)
+
+	err = wal.AddWatchedAddress(addr)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+
+	// Remove signature and resign
+	contract.Signatures = []*pb.Signature{contract.Signatures[0]}
+	contract, err = n.SignOrder(contract)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+
+	// Send using offline messaging
+	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
+	peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	any, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_ORDER,
+		Payload:     any,
+	}
+	k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	err = n.SendOfflineMessage(peerID, &k, &m)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	return orderID, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
+}
+
+func processOnlineModeratedOrder(resp *pb.Message, n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, uint64, bool, error) {
+	// Vendor responded
+	if resp.MessageType == pb.Message_ERROR {
+		return "", "", 0, false, extractErrorMessage(resp)
+	}
+	if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
+		return "", "", 0, false, errors.New("vendor responded to the order with an incorrect message type")
+	}
+	rc := new(pb.RicardianContract)
+	err := proto.Unmarshal(resp.Payload.Value, rc)
+	if err != nil {
+		return "", "", 0, false, errors.New("error parsing the vendor's response")
+	}
+	contract.VendorOrderConfirmation = rc.VendorOrderConfirmation
+	for _, sig := range rc.Signatures {
+		if sig.Section == pb.Signature_ORDER_CONFIRMATION {
+			contract.Signatures = append(contract.Signatures, sig)
+		}
+	}
+	err = n.ValidateOrderConfirmation(contract, true)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	if contract.VendorOrderConfirmation.PaymentAddress != contract.BuyerOrder.Payment.Address {
+		return "", "", 0, false, errors.New("vendor responded with incorrect multisig address")
+	}
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	return orderID, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
+}
+
+func processOfflineModeratedOrder(n *OpenBazaarNode, contract *pb.RicardianContract) (string, string, uint64, bool, error) {
+	// Vendor offline
+	// Send using offline messaging
+	log.Warningf("Vendor %s is offline, sending offline order message", contract.VendorListings[0].VendorID.PeerID)
+	peerID, err := peer.IDB58Decode(contract.VendorListings[0].VendorID.PeerID)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	any, err := ptypes.MarshalAny(contract)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	m := pb.Message{
+		MessageType: pb.Message_ORDER,
+		Payload:     any,
+	}
+	k, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	err = n.SendOfflineMessage(peerID, &k, &m)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		return "", "", 0, false, err
+	}
+	n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+	return orderID, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 }
 
 func extractErrorMessage(m *pb.Message) error {
@@ -397,7 +422,6 @@ func extractErrorMessage(m *pb.Message) error {
 	}
 	// For backwards compatibility check for a string payload
 	return errors.New(string(m.Payload.Value))
-
 }
 
 func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.RicardianContract, error) {
@@ -422,69 +446,30 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 
 	contract.BuyerOrder = order
 	order.Version = 2
+	order.Shipping = shipping
+	order.AlternateContactInfo = data.AlternateContactInfo
 
 	if data.RefundAddress != nil {
 		order.RefundAddress = *(data.RefundAddress)
 	} else {
 		order.RefundAddress = wal.NewAddress(wallet.INTERNAL).EncodeAddress()
 	}
-	order.Shipping = shipping
 
-	id := new(pb.ID)
-	profile, err := n.GetProfile()
-	if err == nil {
-		id.Handle = profile.Handle
-	}
-
-	id.PeerID = n.IpfsNode.Identity.Pretty()
-	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	contractIdentity, err := getContractIdentity(n)
 	if err != nil {
 		return nil, err
 	}
-	keys := new(pb.ID_Pubkeys)
-	keys.Identity = pubkey
-	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
-	if err != nil {
-		return nil, err
-	}
-	keys.Bitcoin = ecPubKey.SerializeCompressed()
-	id.Pubkeys = keys
-	// Sign the PeerID with the Bitcoin key
-	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
-	if err != nil {
-		return nil, err
-	}
-	id.BitcoinSig = sig.Serialize()
-	order.BuyerID = id
+	order.BuyerID = contractIdentity
 
 	ts, err := ptypes.TimestampProto(time.Now())
 	if err != nil {
 		return nil, err
 	}
 	order.Timestamp = ts
-	order.AlternateContactInfo = data.AlternateContactInfo
 
-	var ratingKeys [][]byte
-	for range data.Items {
-		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
-		// Also the fix for this will also need to be included in the rating signing code.
-		mPubkey, err := n.MasterPrivateKey.Neuter()
-		if err != nil {
-			return nil, err
-		}
-		ratingKey, err := mPubkey.Child(uint32(ts.Seconds))
-		if err != nil {
-			return nil, err
-		}
-		ecRatingKey, err := ratingKey.ECPubKey()
-		if err != nil {
-			return nil, err
-		}
-		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
+	ratingKeys, err := getRatingKeysForOrder(data, n, ts)
+	if err != nil {
+		return nil, err
 	}
 	order.RatingKeys = ratingKeys
 
@@ -501,35 +486,12 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 
 		var listing *pb.Listing
 		if !exists {
-			// Let's fetch the listing, should be cached
-			b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
+			sl, err := getSignedListing(n, contract, item)
 			if err != nil {
 				return nil, err
 			}
-			sl := new(pb.SignedListing)
-			err = jsonpb.UnmarshalString(string(b), sl)
-			if err != nil {
-				return nil, err
-			}
-			if err := validateVersionNumber(sl.Listing); err != nil {
-				return nil, err
-			}
-			if err := validateVendorID(sl.Listing); err != nil {
-				return nil, err
-			}
-			if err := n.validateListing(sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
-				return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
-			}
-			if err := verifySignaturesOnListing(sl); err != nil {
-				return nil, err
-			}
-			contract.VendorListings = append(contract.VendorListings, sl.Listing)
-			s := new(pb.Signature)
-			s.Section = pb.Signature_LISTING
-			s.SignatureBytes = sl.Signature
-			contract.Signatures = append(contract.Signatures, s)
-			addedListings[item.ListingHash] = sl.Listing
-			listing = sl.Listing
+			addedListings[item.ListingHash] = sl
+			listing = sl
 		} else {
 			listing = addedListings[item.ListingHash]
 		}
@@ -559,39 +521,14 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 
 		if listing.Metadata.ContractType != pb.Listing_Metadata_CRYPTOCURRENCY {
 			// Remove any duplicate coupons
-			couponMap := make(map[string]bool)
-			var coupons []string
-			for _, c := range item.Coupons {
-				if !couponMap[c] {
-					couponMap[c] = true
-					coupons = append(coupons, c)
-				}
-			}
-			i.CouponCodes = coupons
+			i.CouponCodes = dedupeCoupons(item.Coupons)
 
 			// Validate the selected options
-			listingOptions := make(map[string]*pb.Listing_Item_Option)
-			for _, opt := range listing.Item.Options {
-				listingOptions[strings.ToLower(opt.Name)] = opt
+			validatedOptions, err := validateListingOptions(listing.Item.Options, item.Options)
+			if err != nil {
+				return nil, err
 			}
-			for _, uopt := range item.Options {
-				_, ok := listingOptions[strings.ToLower(uopt.Name)]
-				if !ok {
-					return nil, errors.New("selected variant not in listing")
-				}
-				delete(listingOptions, strings.ToLower(uopt.Name))
-			}
-			if len(listingOptions) > 0 {
-				return nil, errors.New("not all options were selected")
-			}
-
-			for _, option := range item.Options {
-				o := &pb.Order_Item_Option{
-					Name:  option.Name,
-					Value: option.Value,
-				}
-				i.Options = append(i.Options, o)
-			}
+			i.Options = validatedOptions
 		}
 
 		// Add shipping to physical listings, and include it for digital and service
@@ -622,6 +559,131 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 	}
 
 	return contract, nil
+}
+
+func validateListingOptions(listingItemOptions []*pb.Listing_Item_Option, itemOptions []option) ([]*pb.Order_Item_Option, error) {
+	var validatedListingOptions []*pb.Order_Item_Option
+	listingOptions := make(map[string]*pb.Listing_Item_Option)
+	for _, opt := range listingItemOptions {
+		listingOptions[strings.ToLower(opt.Name)] = opt
+	}
+	for _, uopt := range itemOptions {
+		_, ok := listingOptions[strings.ToLower(uopt.Name)]
+		if !ok {
+			return nil, errors.New("selected variant not in listing")
+		}
+		delete(listingOptions, strings.ToLower(uopt.Name))
+	}
+	if len(listingOptions) > 0 {
+		return nil, errors.New("Not all options were selected")
+	}
+
+	for _, option := range itemOptions {
+		o := &pb.Order_Item_Option{
+			Name:  option.Name,
+			Value: option.Value,
+		}
+		validatedListingOptions = append(validatedListingOptions, o)
+	}
+	return validatedListingOptions, nil
+}
+
+func dedupeCoupons(itemCoupons []string) []string {
+	couponMap := make(map[string]bool)
+	var coupons []string
+	for _, c := range itemCoupons {
+		if !couponMap[c] {
+			couponMap[c] = true
+			coupons = append(coupons, c)
+		}
+	}
+	return coupons
+}
+
+func getSignedListing(n *OpenBazaarNode, contract *pb.RicardianContract, item item) (*pb.Listing, error) {
+	// Let's fetch the listing, should be cached
+	b, err := ipfs.Cat(n.IpfsNode, item.ListingHash, time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	sl := new(pb.SignedListing)
+	err = jsonpb.UnmarshalString(string(b), sl)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateVersionNumber(sl.Listing); err != nil {
+		return nil, err
+	}
+	if err := validateVendorID(sl.Listing); err != nil {
+		return nil, err
+	}
+	if err := n.validateListing(sl.Listing, n.TestNetworkEnabled() || n.RegressionNetworkEnabled()); err != nil {
+		return nil, fmt.Errorf("listing failed to validate, reason: %q", err.Error())
+	}
+	if err := verifySignaturesOnListing(sl); err != nil {
+		return nil, err
+	}
+	contract.VendorListings = append(contract.VendorListings, sl.Listing)
+	s := new(pb.Signature)
+	s.Section = pb.Signature_LISTING
+	s.SignatureBytes = sl.Signature
+	contract.Signatures = append(contract.Signatures, s)
+	return sl.Listing, nil
+}
+
+func getRatingKeysForOrder(data *PurchaseData, n *OpenBazaarNode, ts *timestamp.Timestamp) ([][]byte, error) {
+	var ratingKeys [][]byte
+	for range data.Items {
+		// FIXME: bug here. This should use a different key for each item. This code doesn't look like it will do that.
+		// Also the fix for this will also need to be included in the rating signing code.
+		mPubkey, err := n.MasterPrivateKey.Neuter()
+		if err != nil {
+			return nil, err
+		}
+		ratingKey, err := mPubkey.Child(uint32(ts.Seconds))
+		if err != nil {
+			return nil, err
+		}
+		ecRatingKey, err := ratingKey.ECPubKey()
+		if err != nil {
+			return nil, err
+		}
+		ratingKeys = append(ratingKeys, ecRatingKey.SerializeCompressed())
+	}
+	return ratingKeys, nil
+}
+
+func getContractIdentity(n *OpenBazaarNode) (*pb.ID, error) {
+	id := new(pb.ID)
+	profile, err := n.GetProfile()
+	if err == nil {
+		id.Handle = profile.Handle
+	}
+
+	id.PeerID = n.IpfsNode.Identity.Pretty()
+	pubkey, err := n.IpfsNode.PrivateKey.GetPublic().Bytes()
+	if err != nil {
+		return nil, err
+	}
+	keys := new(pb.ID_Pubkeys)
+	keys.Identity = pubkey
+	ecPubKey, err := n.MasterPrivateKey.ECPubKey()
+	if err != nil {
+		return nil, err
+	}
+	keys.Bitcoin = ecPubKey.SerializeCompressed()
+	id.Pubkeys = keys
+	// Sign the PeerID with the Bitcoin key
+	ecPrivKey, err := n.MasterPrivateKey.ECPrivKey()
+	if err != nil {
+		return nil, err
+	}
+	sig, err := ecPrivKey.Sign([]byte(id.PeerID))
+	if err != nil {
+		return nil, err
+	}
+	id.BitcoinSig = sig.Serialize()
+	return id, nil
 }
 
 func currencyInAcceptedCurrenciesList(currencyCode string, acceptedCurrencies []string) bool {
