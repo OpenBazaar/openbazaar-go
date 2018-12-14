@@ -2277,11 +2277,20 @@ func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request)
 
 	sig, err := i.node.IpfsNode.PrivateKey.Sign([]byte(msg.Content))
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, "there was an error signing the submitted content")
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s"}`, hex.EncodeToString(sig)))
+	keyBytes, err := i.node.IpfsNode.PrivateKey.Bytes()
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s","pubkey":"%s","peerId":"%s"}`,
+		hex.EncodeToString(sig),
+		hex.EncodeToString(keyBytes),
+		i.node.IpfsNode.Identity.Pretty()))
 }
 
 func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Request) {
