@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -2282,7 +2281,7 @@ func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s"}`, base64.URLEncoding.EncodeToString(sig)))
+	SanitizedResponse(w, fmt.Sprintf(`{"signature": "%s"}`, hex.EncodeToString(sig)))
 }
 
 func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Request) {
@@ -2299,12 +2298,27 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	pubkey, err := crypto.UnmarshalPublicKey([]byte(msg.Pubkey))
+	keyBytes, err := hex.DecodeString(msg.Pubkey)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err = pubkey.Verify([]byte(msg.Content), []byte(msg.Signature))
+	pubkey, err := crypto.UnmarshalPublicKey(keyBytes)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	contentBytes, err := hex.DecodeString(msg.Content)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	sigBytes, err := hex.DecodeString(msg.Signature)
+	if err != nil {
+		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	_, err = pubkey.Verify(contentBytes, sigBytes)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
