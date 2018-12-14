@@ -256,18 +256,13 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 }
 
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
-	var cfgIface interface{}
+	var cfgIface map[string]interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
 		return nil, MalformedConfigError
 	}
 
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	walletIface, ok := cfg["Wallets"]
+	walletIface, ok := cfgIface["Wallets"]
 	if !ok {
 		return nil, MalformedConfigError
 	}

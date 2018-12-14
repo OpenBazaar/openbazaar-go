@@ -146,13 +146,6 @@ func prepareCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wallet
 		testnet          = walletConfig.Params.Name != chaincfg.MainNetParams.Name
 	)
 
-	if testnet {
-		overrideWalletEndpoints = override.APITestnetPool
-		defaultWalletEndpoints = defaultConfig.APITestnetPool
-	} else {
-		overrideWalletEndpoints = override.APIPool
-		defaultWalletEndpoints = defaultConfig.APIPool
-	}
 	switch coin {
 	case wallet.Bitcoin:
 		defaultConfig = defaultConfigSet.BTC
@@ -165,6 +158,14 @@ func prepareCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wallet
 	case wallet.Ethereum:
 		defaultConfig = defaultConfigSet.ETH
 		defaultCoinOptions = schema.EthereumDefaultOptions()
+	}
+
+	if testnet {
+		overrideWalletEndpoints = override.APITestnetPool
+		defaultWalletEndpoints = defaultConfig.APITestnetPool
+	} else {
+		overrideWalletEndpoints = override.APIPool
+		defaultWalletEndpoints = defaultConfig.APIPool
 	}
 
 	var preparedConfig = &mwConfig.CoinConfig{
