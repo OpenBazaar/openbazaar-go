@@ -81,3 +81,35 @@ func EthereumDefaultOptions() map[string]interface{} {
 		"RopstenRegistryAddress": EthereumRegistryAddressRopsten,
 	}
 }
+
+const (
+	WalletTypeAPI = "API"
+	WalletTypeSPV = "SPV"
+)
+
+const (
+	CoinAPIOpenBazaarBTC = "https://btc.api.openbazaar.org/api"
+	CoinAPIOpenBazaarBCH = "https://bch.api.openbazaar.org/api"
+	CoinAPIOpenBazaarLTC = "https://ltc.api.openbazaar.org/api"
+	CoinAPIOpenBazaarZEC = "https://zec.api.openbazaar.org/api"
+	CoinAPIOpenBazaarETH = "https://rinkeby.infura.io"
+
+	CoinAPIOpenBazaarTBTC = "https://tbtc.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTBCH = "https://tbch.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTLTC = "https://tltc.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTZEC = "https://tzec.api.openbazaar.org/api"
+)
+
+var (
+	CoinPoolBTC = []string{CoinAPIOpenBazaarBTC}
+	CoinPoolBCH = []string{CoinAPIOpenBazaarBCH}
+	CoinPoolLTC = []string{CoinAPIOpenBazaarLTC}
+	CoinPoolZEC = []string{CoinAPIOpenBazaarZEC}
+	CoinPoolETH = []string{CoinAPIOpenBazaarETH}
+
+	CoinPoolTBTC = []string{CoinAPIOpenBazaarTBTC}
+	CoinPoolTBCH = []string{CoinAPIOpenBazaarTBCH}
+	CoinPoolTLTC = []string{CoinAPIOpenBazaarTLTC}
+	CoinPoolTZEC = []string{CoinAPIOpenBazaarTZEC}
+	CoinPoolTETH = []string{CoinAPIOpenBazaarETH}
+)

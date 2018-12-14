@@ -1,23 +1,22 @@
 package wallet
 
 import (
-	"errors"
-	"net"
-	"net/url"
-	"os"
-	"path"
-	"strings"
+	"fmt"
 	"time"
 
+	eth "github.com/OpenBazaar/go-ethwallet/wallet"
 	"github.com/OpenBazaar/multiwallet"
-	"github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/bitcoin"
+	"github.com/OpenBazaar/multiwallet/bitcoincash"
+	"github.com/OpenBazaar/multiwallet/cache"
+	mwConfig "github.com/OpenBazaar/multiwallet/config"
+	"github.com/OpenBazaar/multiwallet/litecoin"
+	"github.com/OpenBazaar/multiwallet/zcash"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
-	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/cpacia/BitcoinCash-Wallet"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 )
@@ -38,211 +37,171 @@ type WalletConfig struct {
 // If any of the four standard coins are missing from the config file
 // we will load it with default values.
 func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
-	var testnet bool
-	if cfg.Params.Name != chaincfg.MainNetParams.Name {
-		testnet = true
+	// Create a default config with all coins
+	enableAPIWallet := make(map[wallet.CoinType]*schema.CoinConfig)
+	if cfg.ConfigFile.BTC != nil && cfg.ConfigFile.BTC.Type == "API" {
+		enableAPIWallet[wallet.Bitcoin] = cfg.ConfigFile.BTC
 	}
-
-	// Create a default config with all four coins
-	walletEnableOpt := make(map[wallet.CoinType]bool)
-	walletEnableOpt[wallet.Bitcoin] = true
-	walletEnableOpt[wallet.BitcoinCash] = true
-	walletEnableOpt[wallet.Zcash] = true
-	walletEnableOpt[wallet.Litecoin] = true
-	walletEnableOpt[wallet.Ethereum] = false
-
-	// Apply our openbazaar settings
-	defaultConfig := config.NewDefaultConfig(walletEnableOpt, cfg.Params)
-	defaultConfig.Mnemonic = cfg.Mnemonic
-	defaultConfig.CreationDate = cfg.WalletCreationDate
-	defaultConfig.Proxy = cfg.Proxy
-	defaultConfig.Params = cfg.Params
-	defaultConfig.Logger = cfg.Logger
-	defaultConfig.DisableExchangeRates = cfg.DisableExchangeRates
+	if cfg.ConfigFile.BCH != nil && cfg.ConfigFile.BCH.Type == "API" {
+		enableAPIWallet[wallet.BitcoinCash] = cfg.ConfigFile.BCH
+	}
+	if cfg.ConfigFile.ZEC != nil && cfg.ConfigFile.ZEC.Type == "API" {
+		enableAPIWallet[wallet.Zcash] = cfg.ConfigFile.ZEC
+	}
+	if cfg.ConfigFile.LTC != nil && cfg.ConfigFile.LTC.Type == "API" {
+		enableAPIWallet[wallet.Litecoin] = cfg.ConfigFile.LTC
+	}
+	enableAPIWallet[wallet.Ethereum] = nil
 
 	// For each coin we want to override the default database with our own sqlite db
 	// We'll only override the default settings if the coin exists in the config file
-	var coinCfgs []config.CoinConfig
-	for _, coin := range defaultConfig.Coins {
-		switch coin.CoinType {
-		case wallet.Bitcoin:
-			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
-			coin.DB = walletDB
-			if cfg.ConfigFile.BTC != nil {
-				coin.FeeAPI = cfg.ConfigFile.BTC.FeeAPI
-				coin.LowFee = uint64(cfg.ConfigFile.BTC.LowFeeDefault)
-				coin.MediumFee = uint64(cfg.ConfigFile.BTC.MediumFeeDefault)
-				coin.HighFee = uint64(cfg.ConfigFile.BTC.HighFeeDefault)
-				coin.MaxFee = uint64(cfg.ConfigFile.BTC.MaxFee)
-				if !testnet {
-					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.API}
-				} else {
-					coin.ClientAPIs = []string{cfg.ConfigFile.BTC.APITestnet}
-				}
-			}
-		case wallet.BitcoinCash:
-			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
-			coin.DB = walletDB
-			if cfg.ConfigFile.BCH != nil {
-				coin.FeeAPI = cfg.ConfigFile.BCH.FeeAPI
-				coin.LowFee = uint64(cfg.ConfigFile.BCH.LowFeeDefault)
-				coin.MediumFee = uint64(cfg.ConfigFile.BCH.MediumFeeDefault)
-				coin.HighFee = uint64(cfg.ConfigFile.BCH.HighFeeDefault)
-				coin.MaxFee = uint64(cfg.ConfigFile.BCH.MaxFee)
-				if !testnet {
-					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.API}
-				} else {
-					coin.ClientAPIs = []string{cfg.ConfigFile.BCH.APITestnet}
-				}
-			}
-		case wallet.Zcash:
-			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
-			coin.DB = walletDB
-			if cfg.ConfigFile.ZEC != nil {
-				coin.FeeAPI = cfg.ConfigFile.ZEC.FeeAPI
-				coin.LowFee = uint64(cfg.ConfigFile.ZEC.LowFeeDefault)
-				coin.MediumFee = uint64(cfg.ConfigFile.ZEC.MediumFeeDefault)
-				coin.HighFee = uint64(cfg.ConfigFile.ZEC.HighFeeDefault)
-				coin.MaxFee = uint64(cfg.ConfigFile.ZEC.MaxFee)
-				if !testnet {
-					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.API}
-				} else {
-					coin.ClientAPIs = []string{cfg.ConfigFile.ZEC.APITestnet}
-				}
-			}
-		case wallet.Litecoin:
-			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
-			coin.DB = walletDB
-			if cfg.ConfigFile.LTC != nil {
-				coin.FeeAPI = cfg.ConfigFile.LTC.FeeAPI
-				coin.LowFee = uint64(cfg.ConfigFile.LTC.LowFeeDefault)
-				coin.MediumFee = uint64(cfg.ConfigFile.LTC.MediumFeeDefault)
-				coin.HighFee = uint64(cfg.ConfigFile.LTC.HighFeeDefault)
-				coin.MaxFee = uint64(cfg.ConfigFile.LTC.MaxFee)
-				if !testnet {
-					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.API}
-				} else {
-					coin.ClientAPIs = []string{cfg.ConfigFile.LTC.APITestnet}
-				}
-			}
-		case wallet.Ethereum:
-			walletDB := CreateWalletDB(cfg.DB, coin.CoinType)
-			coin.DB = walletDB
-			if cfg.ConfigFile.ETH != nil {
-				coin.FeeAPI = cfg.ConfigFile.ETH.API
-				coin.LowFee = uint64(cfg.ConfigFile.ETH.LowFeeDefault)
-				coin.MediumFee = uint64(cfg.ConfigFile.ETH.MediumFeeDefault)
-				coin.HighFee = uint64(cfg.ConfigFile.ETH.HighFeeDefault)
-				coin.MaxFee = uint64(cfg.ConfigFile.ETH.MaxFee)
-				if !testnet {
-					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.API}
-				} else {
-					coin.ClientAPIs = []string{cfg.ConfigFile.ETH.APITestnet}
-				}
-				coin.Options = schema.EthereumDefaultOptions()
-			}
-		}
-		coinCfgs = append(coinCfgs, coin)
-	}
-	defaultConfig.Coins = coinCfgs
-	mw, err := multiwallet.NewMultiWallet(defaultConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// Now that we have our multiwallet let's go back and check to see if the user
-	// requested SPV for either Bitcoin or BitcoinCash. If so, we'll override the
-	// API implementation in the multiwallet map with an SPV implementation.
-	if cfg.ConfigFile.BTC != nil && strings.ToUpper(cfg.ConfigFile.BTC.Type) == "SPV" {
-		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
-			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
-		}
-		var tp net.Addr
-		if cfg.ConfigFile.BTC.TrustedPeer != "" {
-			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BTC.TrustedPeer)
+	var newMultiwallet = make(multiwallet.MultiWallet)
+	for coin, coinConfig := range enableAPIWallet {
+		if coinConfig != nil {
+			actualCoin, newWallet, err := createWallet(coin, coinConfig, cfg)
 			if err != nil {
-				return nil, err
+				var logger = logging.MustGetLogger("NewMultiwallet")
+				logger.SetBackend(logging.AddModuleLevel(cfg.Logger))
+				logger.Errorf("failed creating wallet for %s: %s", actualCoin, err)
+				continue
 			}
-		}
-		feeAPI, err := url.Parse(cfg.ConfigFile.BTC.FeeAPI)
-		if err != nil {
-			return nil, err
-		}
-		bitcoinPath := path.Join(cfg.RepoPath, "bitcoin")
-		os.Mkdir(bitcoinPath, os.ModePerm)
-		spvwalletConfig := &spvwallet.Config{
-			Mnemonic:             cfg.Mnemonic,
-			Params:               cfg.Params,
-			MaxFee:               uint64(cfg.ConfigFile.BTC.MaxFee),
-			LowFee:               uint64(cfg.ConfigFile.BTC.LowFeeDefault),
-			MediumFee:            uint64(cfg.ConfigFile.BTC.MediumFeeDefault),
-			HighFee:              uint64(cfg.ConfigFile.BTC.HighFeeDefault),
-			FeeAPI:               *feeAPI,
-			RepoPath:             bitcoinPath,
-			CreationDate:         cfg.WalletCreationDate,
-			DB:                   CreateWalletDB(cfg.DB, wallet.Bitcoin),
-			UserAgent:            "OpenBazaar",
-			TrustedPeer:          tp,
-			Proxy:                cfg.Proxy,
-			Logger:               cfg.Logger,
-			DisableExchangeRates: cfg.DisableExchangeRates,
-		}
-		bitcoinSPVWallet, err := spvwallet.NewSPVWallet(spvwalletConfig)
-		if err != nil {
-			return nil, err
-		}
-		if testnet {
-			mw[wallet.TestnetBitcoin] = bitcoinSPVWallet
-		} else {
-			mw[wallet.Bitcoin] = bitcoinSPVWallet
-		}
-	}
-	if cfg.ConfigFile.BCH != nil && strings.ToUpper(cfg.ConfigFile.BCH.Type) == "SPV" {
-		if cfg.Params.Name == chaincfg.RegressionNetParams.Name && cfg.ConfigFile.BTC.TrustedPeer == "" {
-			return nil, errors.New("trusted peer must be set if using regtest with SPV mode")
-		}
-		var tp net.Addr
-		if cfg.ConfigFile.BCH.TrustedPeer != "" {
-			tp, err = net.ResolveTCPAddr("tcp", cfg.ConfigFile.BCH.TrustedPeer)
-			if err != nil {
-				return nil, err
-			}
-		}
-		feeAPI, err := url.Parse(cfg.ConfigFile.BCH.FeeAPI)
-		if err != nil {
-			return nil, err
-		}
-		bitcoinCashPath := path.Join(cfg.RepoPath, "bitcoincash")
-		os.Mkdir(bitcoinCashPath, os.ModePerm)
-		bitcoinCashConfig := &bitcoincash.Config{
-			Mnemonic:             cfg.Mnemonic,
-			Params:               cfg.Params,
-			MaxFee:               uint64(cfg.ConfigFile.BCH.MaxFee),
-			LowFee:               uint64(cfg.ConfigFile.BCH.LowFeeDefault),
-			MediumFee:            uint64(cfg.ConfigFile.BCH.MediumFeeDefault),
-			HighFee:              uint64(cfg.ConfigFile.BCH.HighFeeDefault),
-			FeeAPI:               *feeAPI,
-			RepoPath:             bitcoinCashPath,
-			CreationDate:         cfg.WalletCreationDate,
-			DB:                   CreateWalletDB(cfg.DB, wallet.BitcoinCash),
-			UserAgent:            "OpenBazaar",
-			TrustedPeer:          tp,
-			Proxy:                cfg.Proxy,
-			Logger:               cfg.Logger,
-			DisableExchangeRates: cfg.DisableExchangeRates,
-		}
-		bitcoinCashSPVWallet, err := bitcoincash.NewSPVWallet(bitcoinCashConfig)
-		if err != nil {
-			return nil, err
-		}
-		if testnet {
-			mw[wallet.TestnetBitcoinCash] = bitcoinCashSPVWallet
-		} else {
-			mw[wallet.BitcoinCash] = bitcoinCashSPVWallet
+			newMultiwallet[actualCoin] = newWallet
 		}
 	}
 
-	return mw, nil
+	return newMultiwallet, nil
+}
+
+func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, cfg *WalletConfig) (wallet.CoinType, wallet.Wallet, error) {
+	var (
+		actualCoin wallet.CoinType
+		testnet    = cfg.Params.Name != chaincfg.MainNetParams.Name
+		coinConfig = prepareCoinConfig(coin, coinConfigOverrides, cfg)
+	)
+
+	switch coin {
+	case wallet.Bitcoin:
+		if testnet {
+			actualCoin = wallet.TestnetBitcoin
+		} else {
+			actualCoin = wallet.Bitcoin
+		}
+		w, err := bitcoin.NewBitcoinWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
+		if err != nil {
+			return actualCoin, nil, err
+		}
+		return actualCoin, w, nil
+	case wallet.BitcoinCash:
+		if testnet {
+			actualCoin = wallet.TestnetBitcoinCash
+		} else {
+			actualCoin = wallet.BitcoinCash
+		}
+		w, err := bitcoincash.NewBitcoinCashWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
+		if err != nil {
+			return actualCoin, nil, err
+		}
+		return actualCoin, w, nil
+	case wallet.Litecoin:
+		if testnet {
+			actualCoin = wallet.TestnetLitecoin
+		} else {
+			actualCoin = wallet.Litecoin
+		}
+		w, err := litecoin.NewLitecoinWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
+		if err != nil {
+			return actualCoin, nil, err
+		}
+		return actualCoin, w, nil
+	case wallet.Zcash:
+		if testnet {
+			actualCoin = wallet.TestnetZcash
+		} else {
+			actualCoin = wallet.Zcash
+		}
+		w, err := zcash.NewZCashWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
+		if err != nil {
+			return actualCoin, nil, err
+		}
+		return actualCoin, w, nil
+	case wallet.Ethereum:
+		actualCoin = wallet.Ethereum
+		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Mnemonic, cfg.Proxy)
+		if err != nil {
+			return actualCoin, nil, err
+		}
+		return actualCoin, w, nil
+	}
+	return wallet.CoinType(4294967295), nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin)
+}
+
+func prepareCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, walletConfig *WalletConfig) *mwConfig.CoinConfig {
+	var (
+		defaultCoinOptions      map[string]interface{}
+		defaultConfig           *schema.CoinConfig
+		overrideWalletEndpoints []string
+		defaultWalletEndpoints  []string
+
+		defaultConfigSet = schema.DefaultWalletsConfig()
+		testnet          = walletConfig.Params.Name != chaincfg.MainNetParams.Name
+	)
+
+	if testnet {
+		overrideWalletEndpoints = override.APITestnetPool
+		defaultWalletEndpoints = defaultConfig.APITestnetPool
+	} else {
+		overrideWalletEndpoints = override.APIPool
+		defaultWalletEndpoints = defaultConfig.APIPool
+	}
+	switch coin {
+	case wallet.Bitcoin:
+		defaultConfig = defaultConfigSet.BTC
+	case wallet.BitcoinCash:
+		defaultConfig = defaultConfigSet.BCH
+	case wallet.Litecoin:
+		defaultConfig = defaultConfigSet.LTC
+	case wallet.Zcash:
+		defaultConfig = defaultConfigSet.ZEC
+	case wallet.Ethereum:
+		defaultConfig = defaultConfigSet.ETH
+		defaultCoinOptions = schema.EthereumDefaultOptions()
+	}
+
+	var preparedConfig = &mwConfig.CoinConfig{
+		ClientAPIs: overrideWalletEndpoints,
+		CoinType:   coin,
+		DB:         CreateWalletDB(walletConfig.DB, coin),
+		FeeAPI:     override.FeeAPI,
+		HighFee:    override.HighFeeDefault,
+		LowFee:     override.LowFeeDefault,
+		MaxFee:     override.MaxFee,
+		MediumFee:  override.MediumFeeDefault,
+		Options:    override.WalletOptions,
+	}
+
+	if preparedConfig.HighFee == 0 {
+		preparedConfig.HighFee = defaultConfig.HighFeeDefault
+	}
+	if preparedConfig.MediumFee == 0 {
+		preparedConfig.MediumFee = defaultConfig.MediumFeeDefault
+	}
+	if preparedConfig.LowFee == 0 {
+		preparedConfig.LowFee = defaultConfig.LowFeeDefault
+	}
+	if preparedConfig.MaxFee == 0 {
+		preparedConfig.MaxFee = defaultConfig.MaxFee
+	}
+	if preparedConfig.ClientAPIs == nil || len(preparedConfig.ClientAPIs) == 0 {
+		preparedConfig.ClientAPIs = defaultWalletEndpoints
+	}
+	if preparedConfig.FeeAPI == "" {
+		preparedConfig.FeeAPI = "https://btc.fees.openbazaar.org"
+	}
+	if len(preparedConfig.Options) == 0 {
+		preparedConfig.Options = defaultCoinOptions
+	}
+
+	return preparedConfig
 }
 
 type WalletDatastore struct {
