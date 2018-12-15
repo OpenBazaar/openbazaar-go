@@ -31,7 +31,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 
 	if addressRequest {
 		addr := wal.NewAddress(wallet.EXTERNAL)
-		oc.PaymentAddress = addr.EncodeAddress()
+		oc.PaymentAddress = addr.String() //addr.EncodeAddress()
 	}
 
 	ts, err := ptypes.TimestampProto(time.Now())

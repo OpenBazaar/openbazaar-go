@@ -155,7 +155,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		payment.Address = addr.EncodeAddress()
+		payment.Address = addr.String() // addr.EncodeAddress()
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
@@ -287,7 +287,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		payment.Address = addr.EncodeAddress()
+		payment.Address = addr.String() // addr.EncodeAddress()
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 
@@ -1366,7 +1366,7 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	if order.Payment.Address != addr.EncodeAddress() {
+	if order.Payment.Address != addr.String() {
 		return errors.New("invalid payment address")
 	}
 	if order.Payment.RedeemScript != hex.EncodeToString(redeemScript) {
@@ -1427,7 +1427,7 @@ func (n *OpenBazaarNode) ValidateModeratedPaymentAddress(order *pb.Order, timeou
 	if err != nil {
 		return err
 	}
-	if order.Payment.Address != addr.EncodeAddress() {
+	if order.Payment.Address != addr.String() {
 		return errors.New("invalid payment address")
 	}
 	if order.Payment.RedeemScript != hex.EncodeToString(redeemScript) {

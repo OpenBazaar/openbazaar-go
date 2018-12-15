@@ -540,7 +540,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, value int6
 	}
 
 	return wi.TransactionCallback{
-		Txid:      txID,
+		Txid:      txID[2:],
 		Outputs:   []wi.TransactionOutput{output},
 		Inputs:    []wi.TransactionInput{},
 		Height:    1,

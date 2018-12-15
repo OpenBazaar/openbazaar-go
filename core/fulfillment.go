@@ -33,7 +33,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 			return err
 		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
-		payout.PayoutAddress = currentAddress.EncodeAddress()
+		payout.PayoutAddress = currentAddress.String()
 		payout.PayoutFeePerByte = wal.GetFeePerByte(wallet.NORMAL)
 		var ins []wallet.TransactionInput
 		var outValue int64

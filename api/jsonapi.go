@@ -684,7 +684,7 @@ func (i *jsonAPIHandler) GETAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addr := wal.CurrentAddress(wallet.EXTERNAL)
-	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.EncodeAddress()))
+	SanitizedResponse(w, fmt.Sprintf(`{"address": "%s"}`, addr.String()))
 }
 
 func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {

@@ -249,10 +249,7 @@ func (wallet *ERC20Wallet) NewAddress(purpose wi.KeyPurpose) btcutil.Address {
 // DecodeAddress - Parse the address string and return an address interface
 func (wallet *ERC20Wallet) DecodeAddress(addr string) (btcutil.Address, error) {
 	ethAddr := common.HexToAddress(addr)
-	if wallet.HasKey(EthAddress{&ethAddr}) {
-		return *wallet.address, nil
-	}
-	return EthAddress{}, errors.New("invalid or unknown address")
+	return EthAddress{&ethAddr}, nil
 }
 
 // ScriptToAddress - ?
@@ -279,12 +276,41 @@ func (wallet *ERC20Wallet) Balance() (confirmed, unconfirmed int64) {
 	if err == nil {
 		ucbalance = ucbal.Int64()
 	}
-	return balance, ucbalance
+	ucb := int64(0)
+	if ucbalance > balance {
+		ucb = ucbalance - balance
+	}
+	return balance, ucb
 }
 
 // Transactions - Returns a list of transactions for this wallet
 func (wallet *ERC20Wallet) Transactions() ([]wi.Txn, error) {
-	return txns, nil
+	txns, err := wallet.client.eClient.NormalTxByAddress(wallet.account.Address().String(), nil, nil,
+		1, 0, true)
+	if err != nil {
+		return []wi.Txn{}, err
+	}
+
+	ret := []wi.Txn{}
+	for _, t := range txns {
+		status := wi.StatusConfirmed
+		if t.IsError != 0 {
+			status = wi.StatusError
+		}
+		tnew := wi.Txn{
+			Txid:          t.Hash,
+			Value:         t.Value.Int().Int64(),
+			Height:        int32(t.BlockNumber),
+			Timestamp:     t.TimeStamp.Time(),
+			WatchOnly:     false,
+			Confirmations: int64(t.Confirmations),
+			Status:        wi.StatusCode(status),
+			Bytes:         []byte(t.Input),
+		}
+		ret = append(ret, tnew)
+	}
+
+	return ret, nil
 }
 
 // GetTransaction - Get info on a specific transaction
@@ -394,7 +420,7 @@ func (wallet *ERC20Wallet) createTxnCallback(txID, orderID string, value int64, 
 	}
 
 	return wi.TransactionCallback{
-		Txid:      txID,
+		Txid:      txID[2:],
 		Outputs:   []wi.TransactionOutput{output},
 		Inputs:    []wi.TransactionInput{},
 		Height:    1,
@@ -834,6 +860,7 @@ func (wallet *ERC20Wallet) AddWatchedAddress(address btcutil.Address) error {
 // AddTransactionListener - add a txn listener
 func (wallet *ERC20Wallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service
+	wallet.listeners = append(wallet.listeners, callback)
 }
 
 // ReSyncBlockchain - Use this to re-download merkle blocks in case of missed transactions
