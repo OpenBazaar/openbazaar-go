@@ -1,7 +1,13 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
+	"net"
+	"net/url"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	eth "github.com/OpenBazaar/go-ethwallet/wallet"
@@ -15,11 +21,14 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/openbazaar-go/schema"
+	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 )
+
+const InvalidCoinType wallet.CoinType = wallet.CoinType(^uint32(0))
 
 type WalletConfig struct {
 	ConfigFile           *schema.WalletsConfig
@@ -33,17 +42,34 @@ type WalletConfig struct {
 	DisableExchangeRates bool
 }
 
-// Build a new multiwallet using values from the config file
-// If any of the four standard coins are missing from the config file
-// we will load it with default values.
+var ErrTrustedPeerRequired = errors.New("trusted peer required in spv wallet config during regtest use")
+
+// NewMultiWallet returns a functional set of wallets using the provided WalletConfig.
+// The value of schema.WalletsConfig.<COIN>.Type must be "API" or will be ignored. BTC
+// and BCH can also use the "SPV" Type.
 func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
-	// Create a default config with all coins
-	enableAPIWallet := make(map[wallet.CoinType]*schema.CoinConfig)
-	if cfg.ConfigFile.BTC != nil && cfg.ConfigFile.BTC.Type == "API" {
-		enableAPIWallet[wallet.Bitcoin] = cfg.ConfigFile.BTC
+	var (
+		logger          = logging.MustGetLogger("NewMultiwallet")
+		enableAPIWallet = make(map[wallet.CoinType]*schema.CoinConfig)
+		enableSPVWallet = make(map[wallet.CoinType]*schema.CoinConfig)
+	)
+	logger.SetBackend(logging.AddModuleLevel(cfg.Logger))
+
+	if cfg.ConfigFile.BTC != nil {
+		switch cfg.ConfigFile.BTC.Type {
+		case schema.WalletTypeAPI:
+			enableAPIWallet[wallet.Bitcoin] = cfg.ConfigFile.BTC
+		case schema.WalletTypeSPV:
+			enableSPVWallet[wallet.Bitcoin] = cfg.ConfigFile.BTC
+		}
 	}
-	if cfg.ConfigFile.BCH != nil && cfg.ConfigFile.BCH.Type == "API" {
-		enableAPIWallet[wallet.BitcoinCash] = cfg.ConfigFile.BCH
+	if cfg.ConfigFile.BCH != nil {
+		switch cfg.ConfigFile.BCH.Type {
+		case schema.WalletTypeAPI:
+			enableAPIWallet[wallet.BitcoinCash] = cfg.ConfigFile.BCH
+		case schema.WalletTypeSPV:
+			enableSPVWallet[wallet.BitcoinCash] = cfg.ConfigFile.BCH
+		}
 	}
 	if cfg.ConfigFile.ZEC != nil && cfg.ConfigFile.ZEC.Type == "API" {
 		enableAPIWallet[wallet.Zcash] = cfg.ConfigFile.ZEC
@@ -53,15 +79,11 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	}
 	enableAPIWallet[wallet.Ethereum] = nil
 
-	// For each coin we want to override the default database with our own sqlite db
-	// We'll only override the default settings if the coin exists in the config file
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
 		if coinConfig != nil {
-			actualCoin, newWallet, err := createWallet(coin, coinConfig, cfg)
+			actualCoin, newWallet, err := createAPIWallet(coin, coinConfig, cfg)
 			if err != nil {
-				var logger = logging.MustGetLogger("NewMultiwallet")
-				logger.SetBackend(logging.AddModuleLevel(cfg.Logger))
 				logger.Errorf("failed creating wallet for %s: %s", actualCoin, err)
 				continue
 			}
@@ -69,14 +91,23 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 		}
 	}
 
+	for coin, coinConfig := range enableSPVWallet {
+		actualCoin, newWallet, err := createSPVWallet(coin, coinConfig, cfg)
+		if err != nil {
+			logger.Errorf("failed creating wallet for %s: %s", actualCoin, err)
+			continue
+		}
+		newMultiwallet[actualCoin] = newWallet
+	}
+
 	return newMultiwallet, nil
 }
 
-func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, cfg *WalletConfig) (wallet.CoinType, wallet.Wallet, error) {
+func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, cfg *WalletConfig) (wallet.CoinType, wallet.Wallet, error) {
 	var (
 		actualCoin wallet.CoinType
 		testnet    = cfg.Params.Name != chaincfg.MainNetParams.Name
-		coinConfig = prepareCoinConfig(coin, coinConfigOverrides, cfg)
+		coinConfig = prepareAPICoinConfig(coin, coinConfigOverrides, cfg)
 	)
 
 	switch coin {
@@ -88,7 +119,7 @@ func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, 
 		}
 		w, err := bitcoin.NewBitcoinWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
 		if err != nil {
-			return actualCoin, nil, err
+			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
 	case wallet.BitcoinCash:
@@ -99,7 +130,7 @@ func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, 
 		}
 		w, err := bitcoincash.NewBitcoinCashWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
 		if err != nil {
-			return actualCoin, nil, err
+			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
 	case wallet.Litecoin:
@@ -110,7 +141,7 @@ func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, 
 		}
 		w, err := litecoin.NewLitecoinWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
 		if err != nil {
-			return actualCoin, nil, err
+			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
 	case wallet.Zcash:
@@ -121,21 +152,136 @@ func createWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, 
 		}
 		w, err := zcash.NewZCashWallet(*coinConfig, cfg.Mnemonic, cfg.Params, cfg.Proxy, cache.NewMockCacher(), cfg.DisableExchangeRates)
 		if err != nil {
-			return actualCoin, nil, err
+			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
 	case wallet.Ethereum:
 		actualCoin = wallet.Ethereum
 		w, err := eth.NewEthereumWallet(*coinConfig, cfg.Mnemonic, cfg.Proxy)
 		if err != nil {
-			return actualCoin, nil, err
+			return InvalidCoinType, nil, err
 		}
 		return actualCoin, w, nil
 	}
-	return wallet.CoinType(4294967295), nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin)
+	return InvalidCoinType, nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin)
 }
 
-func prepareCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, walletConfig *WalletConfig) *mwConfig.CoinConfig {
+func createSPVWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, cfg *WalletConfig) (wallet.CoinType, wallet.Wallet, error) {
+	var (
+		actualCoin         wallet.CoinType
+		notMainnet         = cfg.Params.Name != chaincfg.MainNetParams.Name
+		usingRegnet        = cfg.Params.Name == chaincfg.RegressionNetParams.Name
+		missingTrustedPeer = coinConfigOverrides.TrustedPeer == ""
+	)
+
+	if usingRegnet && missingTrustedPeer {
+		return InvalidCoinType, nil, ErrTrustedPeerRequired
+	}
+
+	coinConfig, err := prepareSPVCoinConfig(coin, coinConfigOverrides, cfg)
+	if err != nil {
+		return InvalidCoinType, nil, err
+	}
+
+	switch coin {
+	case wallet.Bitcoin:
+		if notMainnet {
+			actualCoin = wallet.TestnetBitcoin
+		} else {
+			actualCoin = wallet.Bitcoin
+		}
+	case wallet.BitcoinCash:
+		if notMainnet {
+			actualCoin = wallet.TestnetBitcoinCash
+		} else {
+			actualCoin = wallet.BitcoinCash
+		}
+	}
+	newSPVWallet, err := spvwallet.NewSPVWallet(coinConfig)
+	if err != nil {
+		return InvalidCoinType, nil, err
+	}
+	return actualCoin, newSPVWallet, nil
+}
+
+func ensureWalletRepoPath(repoPath string, coin wallet.CoinType, devGUID string) (string, error) {
+	var (
+		walletPathName = walletPath(coin, devGUID)
+		walletRepoPath = path.Join(repoPath, "wallets", walletPathName)
+	)
+	if err := os.MkdirAll(walletRepoPath, os.ModePerm); err != nil {
+		return "", err
+	}
+	return walletRepoPath, nil
+}
+
+func walletPath(coin wallet.CoinType, devGUID string) string {
+	var (
+		raw         = fmt.Sprintf("%s.%s", coin.String(), devGUID)
+		lowerCoin   = strings.ToLower(raw)
+		trimmedCoin = strings.Replace(lowerCoin, " ", "", -1)
+	)
+	return trimmedCoin
+}
+
+func prepareSPVCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, walletConfig *WalletConfig) (*spvwallet.Config, error) {
+	var (
+		defaultConfig    *schema.CoinConfig
+		defaultConfigSet = schema.DefaultWalletsConfig()
+	)
+
+	switch coin {
+	case wallet.Bitcoin:
+		defaultConfig = defaultConfigSet.BTC
+	case wallet.BitcoinCash:
+		defaultConfig = defaultConfigSet.BCH
+	}
+
+	trustedPeer, err := net.ResolveTCPAddr("tcp", override.TrustedPeer)
+	if err != nil {
+		return nil, fmt.Errorf("resolving tcp address %s: %s", override.TrustedPeer, err.Error())
+	}
+	feeAPI, err := url.Parse(override.FeeAPI)
+	if err != nil {
+		return nil, fmt.Errorf("parsing fee api: %s", err.Error())
+	}
+	walletRepoPath, err := ensureWalletRepoPath(walletConfig.RepoPath, coin, "ob1")
+	if err != nil {
+		return nil, fmt.Errorf("creating wallet repository: %s", err.Error())
+	}
+	preparedConfig := &spvwallet.Config{
+		Mnemonic:             walletConfig.Mnemonic,
+		Params:               walletConfig.Params,
+		MaxFee:               uint64(override.MaxFee),
+		LowFee:               uint64(override.LowFeeDefault),
+		MediumFee:            uint64(override.MediumFeeDefault),
+		HighFee:              uint64(override.HighFeeDefault),
+		FeeAPI:               *feeAPI,
+		RepoPath:             walletRepoPath,
+		CreationDate:         walletConfig.WalletCreationDate,
+		DB:                   CreateWalletDB(walletConfig.DB, coin),
+		UserAgent:            "OpenBazaar",
+		TrustedPeer:          trustedPeer,
+		Proxy:                walletConfig.Proxy,
+		Logger:               walletConfig.Logger,
+		DisableExchangeRates: walletConfig.DisableExchangeRates,
+	}
+	if preparedConfig.HighFee == 0 {
+		preparedConfig.HighFee = defaultConfig.HighFeeDefault
+	}
+	if preparedConfig.MediumFee == 0 {
+		preparedConfig.MediumFee = defaultConfig.MediumFeeDefault
+	}
+	if preparedConfig.LowFee == 0 {
+		preparedConfig.LowFee = defaultConfig.LowFeeDefault
+	}
+	if preparedConfig.MaxFee == 0 {
+		preparedConfig.MaxFee = defaultConfig.MaxFee
+	}
+	return preparedConfig, nil
+}
+
+func prepareAPICoinConfig(coin wallet.CoinType, override *schema.CoinConfig, walletConfig *WalletConfig) *mwConfig.CoinConfig {
 	var (
 		defaultCoinOptions      map[string]interface{}
 		defaultConfig           *schema.CoinConfig
@@ -192,7 +338,7 @@ func prepareCoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wallet
 	if preparedConfig.MaxFee == 0 {
 		preparedConfig.MaxFee = defaultConfig.MaxFee
 	}
-	if preparedConfig.ClientAPIs == nil || len(preparedConfig.ClientAPIs) == 0 {
+	if len(preparedConfig.ClientAPIs) == 0 {
 		preparedConfig.ClientAPIs = defaultWalletEndpoints
 	}
 	if preparedConfig.FeeAPI == "" {
