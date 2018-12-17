@@ -489,7 +489,7 @@ func (i *BlockBookClient) Broadcast(tx []byte) (string, error) {
 	defer resp.Body.Close()
 
 	type Response struct {
-		Txid string `json:"txid"`
+		Txid string `json:"result"`
 	}
 	rs := new(Response)
 	if err = json.NewDecoder(resp.Body).Decode(rs); err != nil {
