@@ -12,6 +12,12 @@ import (
 	"golang.org/x/net/proxy"
 )
 
+const (
+	EthereumRegistryAddressMainnet = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRinkeby = "0x403d907982474cdd51687b09a8968346159378f3"
+	EthereumRegistryAddressRopsten = "0x403d907982474cdd51687b09a8968346159378f3"
+)
+
 type Config struct {
 	// Network parameters. Set mainnet, testnet, or regtest using this.
 	Params *chaincfg.Params
@@ -216,9 +222,9 @@ func NewDefaultConfig(coinTypes map[wallet.CoinType]bool, params *chaincfg.Param
 			ClientAPIs: apiEndpoints,
 			DB:         db,
 			Options: map[string]interface{}{
-				"RegistryAddress":        "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
-				"RinkebyRegistryAddress": "0xab8dd0e05b73529b440d9c9df00b5f490c8596ff",
-				"RopstenRegistryAddress": "0x029d6a0cd4ce98315690f4ea52945545d9c0f460",
+				"RegistryAddress":        EthereumRegistryAddressMainnet,
+				"RinkebyRegistryAddress": EthereumRegistryAddressRinkeby,
+				"RopstenRegistryAddress": EthereumRegistryAddressRopsten,
 			},
 		}
 		cfg.Coins = append(cfg.Coins, ethCfg)
