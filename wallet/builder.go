@@ -352,7 +352,7 @@ func prepareAPICoinConfig(coin wallet.CoinType, override *schema.CoinConfig, wal
 	if len(preparedConfig.ClientAPIs) == 0 {
 		preparedConfig.ClientAPIs = defaultWalletEndpoints
 	}
-	if preparedConfig.FeeAPI == "" {
+	if preparedConfig.CoinType == wallet.Bitcoin && preparedConfig.FeeAPI == "" {
 		preparedConfig.FeeAPI = "https://btc.fees.openbazaar.org"
 	}
 	if len(preparedConfig.Options) == 0 {
