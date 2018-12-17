@@ -6,12 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/cpacia/bchutil"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -203,7 +206,7 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 			Vout:      i.Vout,
 		}
 		if len(i.Addresses) > 0 {
-			newIn.Addr = i.Addresses[0]
+			newIn.Addr = maybeTrimCashAddrPrefix(i.Addresses[0])
 		}
 		ctx.Inputs = append(ctx.Inputs, newIn)
 	}
@@ -212,6 +215,9 @@ func (i *BlockBookClient) GetTransaction(txid string) (*model.Transaction, error
 			Value:        tx.Vout[n].Value,
 			N:            o.N,
 			ScriptPubKey: o.ScriptPubKey,
+		}
+		for i, addr := range newOut.ScriptPubKey.Addresses {
+			newOut.ScriptPubKey.Addresses[i] = maybeTrimCashAddrPrefix(addr)
 		}
 		ctx.Outputs = append(ctx.Outputs, newOut)
 	}
@@ -234,11 +240,11 @@ func (i *BlockBookClient) GetTransactions(addrs []btcutil.Address) ([]model.Tran
 		var wg sync.WaitGroup
 		wg.Add(len(addrs))
 		for _, addr := range addrs {
-			go func(a string) {
-				txs, err := i.getTransactions(a)
+			go func(a btcutil.Address) {
+				txs, err := i.getTransactions(maybeConvertCashAddress(a))
 				txChan <- txsOrError{txs, err}
 				wg.Done()
-			}(addr.String())
+			}(addr)
 		}
 		wg.Wait()
 		close(txChan)
@@ -320,7 +326,7 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 			go func(addr btcutil.Address) {
 				defer wg.Done()
 
-				resp, err := i.RequestFunc("/utxo/"+addr.String(), http.MethodGet, nil, nil)
+				resp, err := i.RequestFunc("/utxo/"+maybeConvertCashAddress(addr), http.MethodGet, nil, nil)
 				if err != nil {
 					utxoChan <- utxoOrError{nil, err}
 					return
@@ -357,7 +363,7 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 						}
 						ut.ScriptPubKey = tx.Outputs[ut.Vout].ScriptPubKey.Hex
 						if len(tx.Outputs[ut.Vout].ScriptPubKey.Addresses[0]) > 0 {
-							ut.Address = tx.Outputs[ut.Vout].ScriptPubKey.Addresses[0]
+							ut.Address = maybeTrimCashAddrPrefix(tx.Outputs[ut.Vout].ScriptPubKey.Addresses[0])
 						}
 						utxoChan <- utxoOrError{&ut, nil}
 					}(u)
@@ -390,11 +396,11 @@ func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
 	defer i.listenLock.Unlock()
 	var args []interface{}
 	args = append(args, "bitcoind/addresstxid")
-	args = append(args, []string{addr.String()})
+	args = append(args, []string{maybeConvertCashAddress(addr)})
 	if i.SocketClient != nil {
 		i.SocketClient.Emit("subscribe", args)
 	} else {
-		i.listenQueue = append(i.listenQueue, addr.String())
+		i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
 	}
 }
 
@@ -562,4 +568,23 @@ func (i *BlockBookClient) EstimateFee(nbBlocks int) (int, error) {
 		return 0, fmt.Errorf("error decoding fee estimate: %s", err)
 	}
 	return int(data[nbBlocks] * 1e8), nil
+}
+
+// maybeConvertCashAddress adds the Bitcoin Cash URI prefix to the address
+// to make blockbook happy if this is a cashaddr.
+func maybeConvertCashAddress(addr btcutil.Address) string {
+	_, isP2PKHCashAddr := addr.(*bchutil.CashAddressPubKeyHash)
+	_, isP2SHCashAddr := addr.(*bchutil.CashAddressScriptHash)
+	if isP2PKHCashAddr || isP2SHCashAddr {
+		if addr.IsForNet(&chaincfg.MainNetParams) {
+			return "bitcoincash:" + addr.String()
+		} else {
+			return "bchtest:" + addr.String()
+		}
+	}
+	return addr.String()
+}
+
+func maybeTrimCashAddrPrefix(addr string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(addr, "bchtest:"), "bitcoincash:")
 }
