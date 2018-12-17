@@ -75,7 +75,7 @@ func DefaultWalletsConfig() *WalletsConfig {
 			Type:             WalletTypeAPI,
 			APIPool:          CoinPoolBCH,
 			APITestnetPool:   CoinPoolTBCH,
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    1,
 			MediumFeeDefault: 5,
 			HighFeeDefault:   10,
@@ -86,7 +86,7 @@ func DefaultWalletsConfig() *WalletsConfig {
 			Type:             WalletTypeAPI,
 			APIPool:          CoinPoolLTC,
 			APITestnetPool:   CoinPoolTLTC,
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    5,
 			MediumFeeDefault: 10,
 			HighFeeDefault:   20,
@@ -97,7 +97,7 @@ func DefaultWalletsConfig() *WalletsConfig {
 			Type:             WalletTypeAPI,
 			APIPool:          CoinPoolZEC,
 			APITestnetPool:   CoinPoolTZEC,
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    5,
 			MediumFeeDefault: 10,
 			HighFeeDefault:   20,
@@ -108,7 +108,7 @@ func DefaultWalletsConfig() *WalletsConfig {
 			Type:             WalletTypeAPI,
 			APIPool:          CoinPoolETH,
 			APITestnetPool:   CoinPoolTETH,
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    7,
 			MediumFeeDefault: 15,
 			HighFeeDefault:   30,

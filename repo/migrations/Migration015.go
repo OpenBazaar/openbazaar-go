@@ -53,7 +53,7 @@ func migration015DefaultWalletConfig() *migration015WalletsConfig {
 			Type:             "API",
 			APIPool:          []string{"https://bch.api.openbazaar.org/api"},
 			APITestnetPool:   []string{"https://tbch.api.openbazaar.org/api"},
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    1,
 			MediumFeeDefault: 5,
 			HighFeeDefault:   10,
@@ -64,7 +64,7 @@ func migration015DefaultWalletConfig() *migration015WalletsConfig {
 			Type:             "API",
 			APIPool:          []string{"https://ltc.api.openbazaar.org/api"},
 			APITestnetPool:   []string{"https://tltc.api.openbazaar.org/api"},
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    5,
 			MediumFeeDefault: 10,
 			HighFeeDefault:   20,
@@ -75,7 +75,7 @@ func migration015DefaultWalletConfig() *migration015WalletsConfig {
 			Type:             "API",
 			APIPool:          []string{"https://zec.api.openbazaar.org/api"},
 			APITestnetPool:   []string{"https://tzec.api.openbazaar.org/api"},
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    5,
 			MediumFeeDefault: 10,
 			HighFeeDefault:   20,
@@ -86,7 +86,7 @@ func migration015DefaultWalletConfig() *migration015WalletsConfig {
 			Type:             "API",
 			APIPool:          []string{"https://rinkeby.infura.io"},
 			APITestnetPool:   []string{"https://rinkeby.infura.io"},
-			FeeAPI:           feeAPI,
+			FeeAPI:           "", // intentionally blank
 			LowFeeDefault:    7,
 			MediumFeeDefault: 15,
 			HighFeeDefault:   30,
