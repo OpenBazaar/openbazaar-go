@@ -30,19 +30,30 @@ import (
 
 const InvalidCoinType wallet.CoinType = wallet.CoinType(^uint32(0))
 
+// ErrTrustedPeerRequired is returned when the config is missing the TrustedPeer field
+var ErrTrustedPeerRequired = errors.New("trusted peer required in spv wallet config during regtest use")
+
+// WalletConfig describes the options needed to create a MultiWallet
 type WalletConfig struct {
-	ConfigFile           *schema.WalletsConfig
-	RepoPath             string
-	Logger               logging.Backend
-	DB                   *db.DB
-	Mnemonic             string
-	WalletCreationDate   time.Time
-	Params               *chaincfg.Params
-	Proxy                proxy.Dialer
+	// ConfigFile contains the options of each native wallet
+	ConfigFile *schema.WalletsConfig
+	// RepoPath is the base path which contains the nodes data directory
+	RepoPath string
+	// Logger is an interface to support internal wallet logging
+	Logger logging.Backend
+	// DB is an interface to support internal transaction persistance
+	DB *db.DB
+	// Mnemonic is the string entropy used to generate the wallet's BIP39-compliant seed
+	Mnemonic string
+	// WalletCreationDate represents the time when new transactions were added by this wallet
+	WalletCreationDate time.Time
+	// Params describe the desired blockchain params to enforce on joining the network
+	Params *chaincfg.Params
+	// Proxy is an interface which allows traffic for the wallet to proxied
+	Proxy proxy.Dialer
+	// DisableExchangeRates will disable usage of the internal exchange rate API
 	DisableExchangeRates bool
 }
-
-var ErrTrustedPeerRequired = errors.New("trusted peer required in spv wallet config during regtest use")
 
 // NewMultiWallet returns a functional set of wallets using the provided WalletConfig.
 // The value of schema.WalletsConfig.<COIN>.Type must be "API" or will be ignored. BTC
