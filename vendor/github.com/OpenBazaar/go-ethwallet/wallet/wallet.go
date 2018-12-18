@@ -85,6 +85,8 @@ type PendingTxn struct {
 	OrderID string
 	Amount  int64
 	Nonce   int32
+	From    string
+	To      string
 }
 
 // SerializePendingTxn - used to serialize eth pending txn
@@ -453,7 +455,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 		hash, err = wallet.Transfer(addr.String(), big.NewInt(amount))
 	} else {
 		// this is a spend which means it has to be linked to an order
-		// specified using the refernceID
+		// specified using the referenceID
 
 		//twoMinutes, _ := time.ParseDuration("2m")
 
@@ -480,6 +482,9 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 				return nil, err
 			}
 			hash, err = wallet.callAddTransaction(ethScript, big.NewInt(amount))
+			if err != nil {
+				log.Errorf("error call add txn: %v", err)
+			}
 		} else {
 			hash, err = wallet.Transfer(addr.String(), big.NewInt(amount))
 		}
@@ -498,13 +503,16 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			if time.Since(start).Seconds() > 120 {
 				flag = true
 			}
+			if err != nil {
+				log.Errorf("error fetching txn rcpt: %v", err)
+			}
 		}
 		if rcpt != nil {
 			// good. so the txn has been processed but we have to account for failed
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.callListeners(wallet.createTxnCallback(hash.Hex(), referenceID, amount, time.Now()))
+				go wallet.callListeners(wallet.createTxnCallback(hash.Hex(), referenceID, addr, amount, time.Now()))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
@@ -514,6 +522,8 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 						Amount:  amount,
 						OrderID: referenceID,
 						Nonce:   nonce,
+						From:    wallet.address.EncodeAddress(),
+						To:      addr.EncodeAddress(),
 					})
 					if err == nil {
 						wallet.db.Txns().Put(data, hash.Hex(), 0, 0, time.Now(), true)
@@ -531,18 +541,26 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 	return h, err
 }
 
-func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, value int64, bTime time.Time) wi.TransactionCallback {
+func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value int64, bTime time.Time) wi.TransactionCallback {
 	output := wi.TransactionOutput{
-		Address: wallet.address,
+		Address: toAddress,
 		Value:   value,
 		Index:   1,
 		OrderID: orderID,
 	}
 
+	input := wi.TransactionInput{
+		OutpointHash:  []byte(txID),
+		OutpointIndex: 1,
+		LinkedAddress: wallet.address,
+		Value:         value,
+		OrderID:       orderID,
+	}
+
 	return wi.TransactionCallback{
 		Txid:      txID[2:],
 		Outputs:   []wi.TransactionOutput{output},
-		Inputs:    []wi.TransactionInput{},
+		Inputs:    []wi.TransactionInput{input},
 		Height:    1,
 		Timestamp: time.Now(),
 		Value:     value,
@@ -567,6 +585,9 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 	}
 
 	rcpt, err = wallet.client.TransactionReceipt(context.Background(), *hash)
+	if err != nil {
+		log.Errorf("error fetching txn rcpt: %v", err)
+	}
 
 	if rcpt != nil {
 		// good. so the txn has been processed but we have to account for failed
@@ -578,7 +599,10 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 				return nil, err
 			}
 			wallet.db.Txns().Delete(chash)
-			go wallet.callListeners(wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, pTxn.Amount, time.Now()))
+			toAddr := common.HexToAddress(pTxn.To)
+			go wallet.callListeners(
+				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
+					pTxn.Amount, time.Now()))
 		}
 	}
 
@@ -903,9 +927,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	sSlice := [][32]byte{} //, 2)
 	vSlice := []uint8{}    //, 2)
 
-	r := [32]byte{}
-	s := [32]byte{}
-	v := uint8(0)
+	var r [32]byte
+	var s [32]byte
+	var v uint8
 
 	if len(sigs1[0].Signature) > 0 {
 		r, s, v = util.SigRSV(sigs1[0].Signature)
@@ -914,9 +938,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		vSlice = append(vSlice, v)
 	}
 
-	r = [32]byte{}
-	s = [32]byte{}
-	v = uint8(0)
+	//r = [32]byte{}
+	//s = [32]byte{}
+	//v = uint8(0)
 
 	if len(sigs2[0].Signature) > 0 {
 		r, s, v = util.SigRSV(sigs2[0].Signature)

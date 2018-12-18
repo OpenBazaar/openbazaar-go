@@ -47,7 +47,7 @@ func (ws *Service) ChainTip() (uint32, chainhash.Hash) {
 	ws.lock.RLock()
 	defer ws.lock.RUnlock()
 	ch, _ := chainhash.NewHashFromStr(ws.bestBlock)
-	return uint32(ws.chainHeight), *ch
+	return ws.chainHeight, *ch
 }
 
 // UpdateState - updates state

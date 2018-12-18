@@ -374,6 +374,9 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 			return nil, err
 		}
 		hash, err = wallet.callAddTokenTransaction(ethScript, big.NewInt(amount))
+		if err != nil {
+			log.Errorf("error call add token txn: %v", err)
+		}
 	} else {
 		hash, err = wallet.Transfer(addr.String(), big.NewInt(amount))
 	}
@@ -398,7 +401,7 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			go wallet.callListeners(wallet.createTxnCallback(hash.String(), referenceID, amount, time.Now()))
+			go wallet.callListeners(wallet.createTxnCallback(hash.String(), referenceID, addr, amount, time.Now()))
 		} else {
 			// there was some error processing this txn
 			return nil, errors.New("problem processing this transaction")
@@ -411,18 +414,26 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 	return h, err
 }
 
-func (wallet *ERC20Wallet) createTxnCallback(txID, orderID string, value int64, bTime time.Time) wi.TransactionCallback {
+func (wallet *ERC20Wallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value int64, bTime time.Time) wi.TransactionCallback {
 	output := wi.TransactionOutput{
-		Address: wallet.address,
+		Address: toAddress,
 		Value:   value,
 		Index:   1,
 		OrderID: orderID,
 	}
 
+	input := wi.TransactionInput{
+		OutpointHash:  []byte(txID),
+		OutpointIndex: 1,
+		LinkedAddress: wallet.address,
+		Value:         value,
+		OrderID:       orderID,
+	}
+
 	return wi.TransactionCallback{
 		Txid:      txID[2:],
 		Outputs:   []wi.TransactionOutput{output},
-		Inputs:    []wi.TransactionInput{},
+		Inputs:    []wi.TransactionInput{input},
 		Height:    1,
 		Timestamp: time.Now(),
 		Value:     value,
@@ -513,7 +524,13 @@ func (wallet *ERC20Wallet) callAddTokenTransaction(script EthRedeemScript, value
 
 	//time.Sleep(2 * time.Minute)
 	header, err := wallet.client.HeaderByNumber(context.Background(), nil)
+	if err != nil {
+		log.Errorf("error fetching latest blk: %v", err)
+	}
 	tclient, err := ethclient.Dial("wss://rinkeby.infura.io/ws")
+	if err != nil {
+		log.Errorf("error establishing ws conn: %v", err)
+	}
 
 	query := ethereum.FilterQuery{
 		Addresses: []common.Address{script.TokenAddress},
@@ -775,9 +792,9 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 	sSlice := [][32]byte{} //, 2)
 	vSlice := []uint8{}    //, 2)
 
-	r := [32]byte{}
-	s := [32]byte{}
-	v := uint8(0)
+	var r [32]byte
+	var s [32]byte
+	var v uint8
 
 	if len(sigs1[0].Signature) > 0 {
 		r, s, v = util.SigRSV(sigs1[0].Signature)
@@ -786,9 +803,9 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 		vSlice = append(vSlice, v)
 	}
 
-	r = [32]byte{}
-	s = [32]byte{}
-	v = uint8(0)
+	//r = [32]byte{}
+	//s = [32]byte{}
+	//v = uint8(0)
 
 	if len(sigs2[0].Signature) > 0 {
 		r, s, v = util.SigRSV(sigs2[0].Signature)
