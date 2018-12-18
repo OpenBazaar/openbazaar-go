@@ -2327,7 +2327,7 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 	}
 
 	if generatedPeer.Pretty() != msg.PeerId {
-		ErrorResponse(w, http.StatusBadRequest, "submitted peerId does not belong to the pubkey")
+		SanitizedResponse(w, `{"error":"PEER_ID_PUBKEY_MISMATCH"}`)
 		return
 	}
 
@@ -2343,11 +2343,10 @@ func (i *jsonAPIHandler) POSTVerifyMessage(w http.ResponseWriter, r *http.Reques
 	}
 	_, err = pubkey.Verify(contentBytes, sigBytes)
 	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+		SanitizedResponse(w, `{"error":"VERIFICATION_FAILED"}`)
 		return
 	}
-
-	SanitizedResponse(w, fmt.Sprintf(`{"peerId":"%s"}`, msg.PeerId))
+	SanitizedResponse(w, fmt.Sprintf(`{"error":"","peerId":"%s"}`, msg.PeerId))
 }
 
 func (i *jsonAPIHandler) POSTChat(w http.ResponseWriter, r *http.Request) {
