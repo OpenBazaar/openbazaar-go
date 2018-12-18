@@ -17,7 +17,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-const RepoVersion = "15"
+const RepoVersion = "16"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -159,56 +159,6 @@ func addConfigExtensions(repoRoot string) error {
 		return err
 	}
 	var (
-		ws = schema.WalletsConfig{
-			BTC: &schema.CoinConfig{
-				Type:             "API",
-				API:              "https://btc.blockbook.api.openbazaar.org/api",
-				APITestnet:       "https://tbtc.blockbook.api.openbazaar.org/api",
-				MaxFee:           200,
-				FeeAPI:           "https://btc.fees.openbazaar.org",
-				HighFeeDefault:   50,
-				MediumFeeDefault: 10,
-				LowFeeDefault:    1,
-			},
-			BCH: &schema.CoinConfig{
-				Type:             "API",
-				API:              "https://bch.blockbook.api.openbazaar.org/api",
-				APITestnet:       "https://tbch.blockbook.api.openbazaar.org/api",
-				MaxFee:           200,
-				HighFeeDefault:   10,
-				MediumFeeDefault: 5,
-				LowFeeDefault:    1,
-			},
-			LTC: &schema.CoinConfig{
-				Type:             "API",
-				API:              "https://ltc.blockbook.api.openbazaar.org/api",
-				APITestnet:       "https://tltc.blockbook.api.openbazaar.org/api",
-				MaxFee:           200,
-				HighFeeDefault:   20,
-				MediumFeeDefault: 10,
-				LowFeeDefault:    5,
-			},
-			ZEC: &schema.CoinConfig{
-				Type:             "API",
-				API:              "https://zec.blockbook.api.openbazaar.org/api",
-				APITestnet:       "https://tzec.blockbook.api.openbazaar.org/api",
-				MaxFee:           200,
-				HighFeeDefault:   20,
-				MediumFeeDefault: 10,
-				LowFeeDefault:    5,
-			},
-			ETH: &schema.CoinConfig{
-				Type:             "API",
-				API:              "https://rinkeby.infura.io",
-				APITestnet:       "https://rinkeby.infura.io",
-				MaxFee:           200,
-				HighFeeDefault:   30,
-				MediumFeeDefault: 15,
-				LowFeeDefault:    7,
-				WalletOptions:    schema.EthereumDefaultOptions(),
-			},
-		}
-
 		a = schema.APIConfig{
 			Enabled:     true,
 			AllowedIPs:  []string{},
@@ -226,7 +176,7 @@ func addConfigExtensions(repoRoot string) error {
 			Id: "https://resolver.onename.com/",
 		}
 	)
-	if err := r.SetConfigKey("Wallets", ws); err != nil {
+	if err := r.SetConfigKey("Wallets", schema.DefaultWalletsConfig()); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("DataSharing", ds); err != nil {
