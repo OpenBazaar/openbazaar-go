@@ -88,16 +88,16 @@ const (
 )
 
 const (
-	CoinAPIOpenBazaarBTC = "https://btc.api.openbazaar.org/api"
-	CoinAPIOpenBazaarBCH = "https://bch.api.openbazaar.org/api"
-	CoinAPIOpenBazaarLTC = "https://ltc.api.openbazaar.org/api"
-	CoinAPIOpenBazaarZEC = "https://zec.api.openbazaar.org/api"
+	CoinAPIOpenBazaarBTC = "https://btc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarBCH = "https://bch.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarLTC = "https://ltc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarZEC = "https://zec.blockbook.api.openbazaar.org/api"
 	CoinAPIOpenBazaarETH = "https://rinkeby.infura.io"
 
-	CoinAPIOpenBazaarTBTC = "https://tbtc.api.openbazaar.org/api"
-	CoinAPIOpenBazaarTBCH = "https://tbch.api.openbazaar.org/api"
-	CoinAPIOpenBazaarTLTC = "https://tltc.api.openbazaar.org/api"
-	CoinAPIOpenBazaarTZEC = "https://tzec.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTBTC = "https://tbtc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTBCH = "https://tbch.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTLTC = "https://tltc.blockbook.api.openbazaar.org/api"
+	CoinAPIOpenBazaarTZEC = "https://tzec.blockbook.api.openbazaar.org/api"
 )
 
 var (
