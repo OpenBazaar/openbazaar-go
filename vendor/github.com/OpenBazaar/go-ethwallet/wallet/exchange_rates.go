@@ -115,9 +115,9 @@ func (z *EthereumPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, er
 	return copy, nil
 }
 
-// UnitsPerCoin - return satoshis in 1 BTC
+// UnitsPerCoin - return weis in 1 ETH
 func (z *EthereumPriceFetcher) UnitsPerCoin() int {
-	return exchange.SatoshiPerBTC
+	return 1000000000000000000
 }
 
 func (z *EthereumPriceFetcher) fetchCurrentRates() error {
