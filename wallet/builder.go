@@ -89,7 +89,7 @@ func NewMultiWallet(cfg *WalletConfig) (multiwallet.MultiWallet, error) {
 	if cfg.ConfigFile.LTC != nil && cfg.ConfigFile.LTC.Type == "API" {
 		enableAPIWallet[wallet.Litecoin] = cfg.ConfigFile.LTC
 	}
-	enableAPIWallet[wallet.Ethereum] = nil
+	enableAPIWallet[wallet.Ethereum] = cfg.ConfigFile.ETH
 
 	var newMultiwallet = make(multiwallet.MultiWallet)
 	for coin, coinConfig := range enableAPIWallet {
