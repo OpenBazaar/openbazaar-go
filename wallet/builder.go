@@ -175,7 +175,7 @@ func createAPIWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		}
 		return actualCoin, w, nil
 	}
-	return InvalidCoinType, nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin)
+	return InvalidCoinType, nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin.String())
 }
 
 func createSPVWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfig, cfg *WalletConfig) (wallet.CoinType, wallet.Wallet, error) {
@@ -210,10 +210,10 @@ func createSPVWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		preparedConfig := &spvwallet.Config{
 			Mnemonic:             cfg.Mnemonic,
 			Params:               cfg.Params,
-			MaxFee:               uint64(coinConfigOverrides.MaxFee),
-			LowFee:               uint64(coinConfigOverrides.LowFeeDefault),
-			MediumFee:            uint64(coinConfigOverrides.MediumFeeDefault),
-			HighFee:              uint64(coinConfigOverrides.HighFeeDefault),
+			MaxFee:               coinConfigOverrides.MaxFee,
+			LowFee:               coinConfigOverrides.LowFeeDefault,
+			MediumFee:            coinConfigOverrides.MediumFeeDefault,
+			HighFee:              coinConfigOverrides.HighFeeDefault,
 			FeeAPI:               *feeAPI,
 			RepoPath:             walletRepoPath,
 			CreationDate:         cfg.WalletCreationDate,
@@ -253,10 +253,10 @@ func createSPVWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		preparedConfig := &bchspv.Config{
 			Mnemonic:             cfg.Mnemonic,
 			Params:               cfg.Params,
-			MaxFee:               uint64(coinConfigOverrides.MaxFee),
-			LowFee:               uint64(coinConfigOverrides.LowFeeDefault),
-			MediumFee:            uint64(coinConfigOverrides.MediumFeeDefault),
-			HighFee:              uint64(coinConfigOverrides.HighFeeDefault),
+			MaxFee:               coinConfigOverrides.MaxFee,
+			LowFee:               coinConfigOverrides.LowFeeDefault,
+			MediumFee:            coinConfigOverrides.MediumFeeDefault,
+			HighFee:              coinConfigOverrides.HighFeeDefault,
 			FeeAPI:               *feeAPI,
 			RepoPath:             walletRepoPath,
 			CreationDate:         cfg.WalletCreationDate,
@@ -292,7 +292,7 @@ func createSPVWallet(coin wallet.CoinType, coinConfigOverrides *schema.CoinConfi
 		}
 		return actualCoin, newSPVWallet, nil
 	}
-	return InvalidCoinType, nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin)
+	return InvalidCoinType, nil, fmt.Errorf("unable to create wallet for unknown coin %s", coin.String())
 }
 
 func ensureWalletRepoPath(repoPath string, coin wallet.CoinType, devGUID string) (string, error) {
