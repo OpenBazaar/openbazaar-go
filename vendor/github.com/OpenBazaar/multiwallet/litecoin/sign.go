@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/chaincfg"
 	"time"
 
 	"github.com/OpenBazaar/spvwallet"
@@ -577,7 +578,7 @@ func (w *LitecoinWallet) generateMultisigScript(keys []hd.ExtendedKey, threshold
 
 func (w *LitecoinWallet) estimateSpendFee(amount int64, feeLevel wi.FeeLevel) (uint64, error) {
 	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
-	addr, err := laddr.DecodeAddress("ltc1q65n2p3r4pwz4qppflml65en4xpdp6srjwultrun6hnddpzct5unsyyq4sf", w.params)
+	addr, err := laddr.DecodeAddress("ltc1q65n2p3r4pwz4qppflml65en4xpdp6srjwultrun6hnddpzct5unsyyq4sf", &chaincfg.MainNetParams)
 	if err != nil {
 		return 0, err
 	}
