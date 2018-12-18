@@ -42,6 +42,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	} else if err != nil && os.IsNotExist(err) {
+		log.Noticef("missing repo version file, migrating from 0")
 		version = []byte("0")
 	}
 	v, err := strconv.Atoi(strings.Trim(string(version), "\n"))
@@ -50,7 +51,7 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 	}
 	x := v
 	for _, m := range Migrations[v:] {
-		log.Noticef("Migrating repo to version %d\n", x+1)
+		log.Noticef("running migration %03d changing schema to version %d...\n", x, x+1)
 		err := m.Up(repoPath, dbPassword, testnet)
 		if err != nil {
 			log.Error(err)
