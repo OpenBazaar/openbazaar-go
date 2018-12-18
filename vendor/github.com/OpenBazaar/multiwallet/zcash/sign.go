@@ -2,9 +2,12 @@ package zcash
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/minio/blake2b-simd"
 	"time"
 
 	"github.com/OpenBazaar/spvwallet"
@@ -22,6 +25,21 @@ import (
 
 	"github.com/OpenBazaar/multiwallet/util"
 	zaddr "github.com/OpenBazaar/multiwallet/zcash/address"
+)
+
+var (
+	txHeaderBytes          = []byte{0x04, 0x00, 0x00, 0x80}
+	txNVersionGroupIDBytes = []byte{0x85, 0x20, 0x2f, 0x89}
+
+	hashPrevOutPersonalization  = []byte("ZcashPrevoutHash")
+	hashSequencePersonalization = []byte("ZcashSequencHash")
+	hashOutputsPersonalization  = []byte("ZcashOutputsHash")
+	sigHashPersonalization      = []byte("ZcashSigHash")
+)
+
+const (
+	sigHashMask     = 0x1f
+	saplingBranchID = 1991772603
 )
 
 func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLevel, optionalOutput *wire.TxOut) (*wire.MsgTx, error) {
@@ -75,6 +93,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 			}
 			wif, _ := btc.NewWIF(privKey, w.params, true)
 			additionalKeysByAddress[addr.EncodeAddress()] = wif
+			inputValues = append(inputValues, c.Value())
 		}
 		return total, inputs, inputValues, scripts, nil
 	}
@@ -99,7 +118,7 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 	if optionalOutput != nil {
 		outputs = append(outputs, optionalOutput)
 	}
-	authoredTx, err := newUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
+	authoredTx, inputValues, err := newUnsignedTransaction(outputs, btc.Amount(feePerKB), inputSource, changeSource)
 	if err != nil {
 		return nil, err
 	}
@@ -113,24 +132,34 @@ func (w *ZCashWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.FeeLev
 		wif := additionalKeysByAddress[addrStr]
 		return wif.PrivKey, wif.CompressPubKey, nil
 	})
-	getScript := txscript.ScriptClosure(func(
-		addr btc.Address) ([]byte, error) {
-		return []byte{}, nil
-	})
 	for i, txIn := range authoredTx.Tx.TxIn {
 		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
-		script, err := txscript.SignTxOutput(w.params,
-			authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, getKey,
-			getScript, txIn.SignatureScript)
+		_, addrs, _, err := txscript.ExtractPkScriptAddrs(prevOutScript, w.params)
 		if err != nil {
-			return nil, errors.New("Failed to sign transaction")
+			return nil, err
+		}
+		key, _, err := getKey(addrs[0])
+		if err != nil {
+			return nil, err
+		}
+		val := int64(inputValues[i].ToUnit(btc.AmountSatoshi))
+		sig, err := rawTxInSignature(authoredTx.Tx, i, prevOutScript, txscript.SigHashAll, key, val)
+		if err != nil {
+			return nil, errors.New("failed to sign transaction")
+		}
+		builder := txscript.NewScriptBuilder()
+		builder.AddData(sig)
+		builder.AddData(key.PubKey().SerializeCompressed())
+		script, err := builder.Script()
+		if err != nil {
+			return nil, err
 		}
 		txIn.SignatureScript = script
 	}
 	return authoredTx.Tx, nil
 }
 
-func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, error) {
+func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInputs txauthor.InputSource, fetchChange txauthor.ChangeSource) (*txauthor.AuthoredTx, []btc.Amount, error) {
 
 	var targetAmount btc.Amount
 	for _, txOut := range outputs {
@@ -139,14 +168,15 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 
 	estimatedSize := EstimateSerializeSize(1, outputs, true, P2PKH)
 	targetFee := txrules.FeeForSerializeSize(feePerKb, estimatedSize)
-
+	var inputValues []btc.Amount
 	for {
-		inputAmount, inputs, _, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputAmount, inputs, vals, scripts, err := fetchInputs(targetAmount + targetFee)
+		inputValues = vals
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if inputAmount < targetAmount+targetFee {
-			return nil, errors.New("insufficient funds available to construct transaction")
+			return nil, nil, errors.New("insufficient funds available to construct transaction")
 		}
 
 		maxSignedSize := EstimateSerializeSize(len(inputs), outputs, true, P2PKH)
@@ -169,10 +199,10 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 			P2PKHOutputSize, txrules.DefaultRelayFeePerKb) {
 			changeScript, err := fetchChange()
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if len(changeScript) > P2PKHPkScriptSize {
-				return nil, errors.New("fee estimation requires change " +
+				return nil, nil, errors.New("fee estimation requires change " +
 					"scripts no larger than P2PKH output scripts")
 			}
 			change := wire.NewTxOut(int64(changeAmount), changeScript)
@@ -186,7 +216,7 @@ func newUnsignedTransaction(outputs []*wire.TxOut, feePerKb btc.Amount, fetchInp
 			PrevScripts: scripts,
 			TotalInput:  inputAmount,
 			ChangeIndex: changeIndex,
-		}, nil
+		}, inputValues, nil
 	}
 }
 
@@ -248,8 +278,10 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	var val int64
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
+	var values []int64
 	for _, in := range ins {
 		val += in.Value
+		values = append(values, in.Value)
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return nil, err
@@ -300,53 +332,43 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 	if err != nil {
 		return nil, err
 	}
-	pk := privKey.PubKey().SerializeCompressed()
-	addressPub, err := btc.NewAddressPubKey(pk, w.params)
-
-	getKey := txscript.KeyClosure(func(addr btc.Address) (*btcec.PrivateKey, bool, error) {
-		if addressPub.EncodeAddress() == addr.EncodeAddress() {
-			wif, err := btc.NewWIF(privKey, w.params, true)
-			if err != nil {
-				return nil, false, err
-			}
-			return wif.PrivKey, wif.CompressPubKey, nil
-		}
-		return nil, false, errors.New("Not found")
-	})
-	getScript := txscript.ScriptClosure(func(addr btc.Address) ([]byte, error) {
-		if redeemScript == nil {
-			return []byte{}, nil
-		}
-		return *redeemScript, nil
-	})
 
 	for i, txIn := range tx.TxIn {
-		prevOutScript := additionalPrevScripts[txIn.PreviousOutPoint]
-		script, err := txscript.SignTxOutput(w.params,
-			tx, i, prevOutScript, txscript.SigHashAll, getKey,
-			getScript, txIn.SignatureScript)
+		sig, err := rawTxInSignature(tx, i, *redeemScript, txscript.SigHashAll, privKey, values[i])
 		if err != nil {
-			return nil, errors.New("Failed to sign transaction")
+			return nil, errors.New("failed to sign transaction")
+		}
+		builder := txscript.NewScriptBuilder()
+		builder.AddOp(txscript.OP_0)
+		builder.AddData(sig)
+		if redeemScript != nil {
+			builder.AddData(*redeemScript)
+		}
+		script, err := builder.Script()
+		if err != nil {
+			return nil, err
 		}
 		txIn.SignatureScript = script
 	}
 
 	// broadcast
-	if err := w.Broadcast(tx); err != nil {
+	txid, err := w.Broadcast(tx)
+	if err != nil {
 		return nil, err
 	}
-	txid := tx.TxHash()
-	return &txid, nil
+	return chainhash.NewHashFromStr(txid)
 }
 
 func (w *ZCashWallet) createMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
 	var sigs []wi.Signature
 	tx := wire.NewMsgTx(1)
+	var values []int64
 	for _, in := range ins {
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return sigs, err
 		}
+		values = append(values, in.Value)
 		outpoint := wire.NewOutPoint(ch, in.OutpointIndex)
 		input := wire.NewTxIn(outpoint, []byte{}, [][]byte{})
 		tx.TxIn = append(tx.TxIn, input)
@@ -379,7 +401,7 @@ func (w *ZCashWallet) createMultisigSignature(ins []wi.TransactionInput, outs []
 	}
 
 	for i := range tx.TxIn {
-		sig, err := txscript.RawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey)
+		sig, err := rawTxInSignature(tx, i, redeemScript, txscript.SigHashAll, signingKey, values[i])
 		if err != nil {
 			continue
 		}
@@ -451,13 +473,11 @@ func (w *ZCashWallet) multisign(ins []wi.TransactionInput, outs []wi.Transaction
 	}
 	// broadcast
 	if broadcast {
-		if err := w.Broadcast(tx); err != nil {
+		if _, err := w.Broadcast(tx); err != nil {
 			return nil, err
 		}
 	}
-	var buf bytes.Buffer
-	tx.BtcEncode(&buf, wire.ProtocolVersion, wire.WitnessEncoding)
-	return buf.Bytes(), nil
+	return serializeVersion4Transaction(tx, 0)
 }
 
 func (w *ZCashWallet) generateMultisigScript(keys []hd.ExtendedKey, threshold int, timeout time.Duration, timeoutKey *hd.ExtendedKey) (addr btc.Address, redeemScript []byte, err error) {
@@ -502,7 +522,7 @@ func (w *ZCashWallet) generateMultisigScript(keys []hd.ExtendedKey, threshold in
 
 func (w *ZCashWallet) estimateSpendFee(amount int64, feeLevel wi.FeeLevel) (uint64, error) {
 	// Since this is an estimate we can use a dummy output address. Let's use a long one so we don't under estimate.
-	addr, err := zaddr.DecodeAddress("t1hASvMj8e6TXWryuB3L5TKXJB7XfNioZP3", w.params)
+	addr, err := zaddr.DecodeAddress("t1hASvMj8e6TXWryuB3L5TKXJB7XfNioZP3", &chaincfg.MainNetParams)
 	if err != nil {
 		return 0, err
 	}
@@ -531,4 +551,308 @@ func (w *ZCashWallet) estimateSpendFee(amount int64, feeLevel wi.FeeLevel) (uint
 		return 0, errors.New("Error building transaction: inputs less than outputs")
 	}
 	return uint64(inval - outval), err
+}
+
+// rawTxInSignature returns the serialized ECDSA signature for the input idx of
+// the given transaction, with hashType appended to it.
+func rawTxInSignature(tx *wire.MsgTx, idx int, prevScriptBytes []byte,
+	hashType txscript.SigHashType, key *btcec.PrivateKey, amt int64) ([]byte, error) {
+
+	hash, err := calcSignatureHash(prevScriptBytes, hashType, tx, idx, amt, 0)
+	if err != nil {
+		return nil, err
+	}
+	signature, err := key.Sign(hash)
+	if err != nil {
+		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+	}
+
+	return append(signature.Serialize(), byte(hashType)), nil
+}
+
+func calcSignatureHash(prevScriptBytes []byte, hashType txscript.SigHashType, tx *wire.MsgTx, idx int, amt int64, expiry uint32) ([]byte, error) {
+
+	// As a sanity check, ensure the passed input index for the transaction
+	// is valid.
+	if idx > len(tx.TxIn)-1 {
+		return nil, fmt.Errorf("idx %d but %d txins", idx, len(tx.TxIn))
+	}
+
+	// We'll utilize this buffer throughout to incrementally calculate
+	// the signature hash for this transaction.
+	var sigHash bytes.Buffer
+
+	// Write header
+	_, err := sigHash.Write(txHeaderBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write group ID
+	_, err = sigHash.Write(txNVersionGroupIDBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Next write out the possibly pre-calculated hashes for the sequence
+	// numbers of all inputs, and the hashes of the previous outs for all
+	// outputs.
+	var zeroHash chainhash.Hash
+
+	// If anyone can pay isn't active, then we can use the cached
+	// hashPrevOuts, otherwise we just write zeroes for the prev outs.
+	if hashType&txscript.SigHashAnyOneCanPay == 0 {
+		sigHash.Write(calcHashPrevOuts(tx))
+	} else {
+		sigHash.Write(zeroHash[:])
+	}
+
+	// If the sighash isn't anyone can pay, single, or none, the use the
+	// cached hash sequences, otherwise write all zeroes for the
+	// hashSequence.
+	if hashType&txscript.SigHashAnyOneCanPay == 0 &&
+		hashType&sigHashMask != txscript.SigHashSingle &&
+		hashType&sigHashMask != txscript.SigHashNone {
+		sigHash.Write(calcHashSequence(tx))
+	} else {
+		sigHash.Write(zeroHash[:])
+	}
+
+	// If the current signature mode isn't single, or none, then we can
+	// re-use the pre-generated hashoutputs sighash fragment. Otherwise,
+	// we'll serialize and add only the target output index to the signature
+	// pre-image.
+	if hashType&sigHashMask != txscript.SigHashSingle &&
+		hashType&sigHashMask != txscript.SigHashNone {
+		sigHash.Write(calcHashOutputs(tx))
+	} else if hashType&sigHashMask == txscript.SigHashSingle && idx < len(tx.TxOut) {
+		var b bytes.Buffer
+		wire.WriteTxOut(&b, 0, 0, tx.TxOut[idx])
+		sigHash.Write(chainhash.DoubleHashB(b.Bytes()))
+	} else {
+		sigHash.Write(zeroHash[:])
+	}
+
+	// Write hash JoinSplits
+	sigHash.Write(make([]byte, 32))
+
+	// Write hash ShieldedSpends
+	sigHash.Write(make([]byte, 32))
+
+	// Write hash ShieldedOutputs
+	sigHash.Write(make([]byte, 32))
+
+	// Write out the transaction's locktime, and the sig hash
+	// type.
+	var bLockTime [4]byte
+	binary.LittleEndian.PutUint32(bLockTime[:], tx.LockTime)
+	sigHash.Write(bLockTime[:])
+
+	// Write expiry
+	var bExpiryTime [4]byte
+	binary.LittleEndian.PutUint32(bExpiryTime[:], expiry)
+	sigHash.Write(bExpiryTime[:])
+
+	// Write valueblance
+	sigHash.Write(make([]byte, 8))
+
+	// Write the hash type
+	var bHashType [4]byte
+	binary.LittleEndian.PutUint32(bHashType[:], uint32(hashType))
+	sigHash.Write(bHashType[:])
+
+	// Next, write the outpoint being spent.
+	sigHash.Write(tx.TxIn[idx].PreviousOutPoint.Hash[:])
+	var bIndex [4]byte
+	binary.LittleEndian.PutUint32(bIndex[:], tx.TxIn[idx].PreviousOutPoint.Index)
+	sigHash.Write(bIndex[:])
+
+	// Write the previous script bytes
+	wire.WriteVarBytes(&sigHash, 0, prevScriptBytes)
+
+	// Next, add the input amount, and sequence number of the input being
+	// signed.
+	var bAmount [8]byte
+	binary.LittleEndian.PutUint64(bAmount[:], uint64(amt))
+	sigHash.Write(bAmount[:])
+	var bSequence [4]byte
+	binary.LittleEndian.PutUint32(bSequence[:], tx.TxIn[idx].Sequence)
+	sigHash.Write(bSequence[:])
+
+	leBranchID := make([]byte, 4)
+	binary.LittleEndian.PutUint32(leBranchID, saplingBranchID)
+	bl, _ := blake2b.New(&blake2b.Config{
+		Size:   32,
+		Person: append(sigHashPersonalization, leBranchID...),
+	})
+	bl.Write(sigHash.Bytes())
+	h := bl.Sum(nil)
+	return h[:], nil
+}
+
+// serializeVersion4Transaction serializes a wire.MsgTx into the zcash version four
+// wire transaction format.
+func serializeVersion4Transaction(tx *wire.MsgTx, expiryHeight uint32) ([]byte, error) {
+	var buf bytes.Buffer
+
+	// Write header
+	_, err := buf.Write(txHeaderBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write group ID
+	_, err = buf.Write(txNVersionGroupIDBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write varint input count
+	count := uint64(len(tx.TxIn))
+	err = wire.WriteVarInt(&buf, wire.ProtocolVersion, count)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write inputs
+	for _, ti := range tx.TxIn {
+		// Write outpoint hash
+		_, err := buf.Write(ti.PreviousOutPoint.Hash[:])
+		if err != nil {
+			return nil, err
+		}
+		// Write outpoint index
+		index := make([]byte, 4)
+		binary.LittleEndian.PutUint32(index, ti.PreviousOutPoint.Index)
+		_, err = buf.Write(index)
+		if err != nil {
+			return nil, err
+		}
+		// Write sigscript
+		err = wire.WriteVarBytes(&buf, wire.ProtocolVersion, ti.SignatureScript)
+		if err != nil {
+			return nil, err
+		}
+		// Write sequence
+		sequence := make([]byte, 4)
+		binary.LittleEndian.PutUint32(sequence, ti.Sequence)
+		_, err = buf.Write(sequence)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Write varint output count
+	count = uint64(len(tx.TxOut))
+	err = wire.WriteVarInt(&buf, wire.ProtocolVersion, count)
+	if err != nil {
+		return nil, err
+	}
+	// Write outputs
+	for _, to := range tx.TxOut {
+		// Write value
+		val := make([]byte, 8)
+		binary.LittleEndian.PutUint64(val, uint64(to.Value))
+		_, err = buf.Write(val)
+		if err != nil {
+			return nil, err
+		}
+		// Write pkScript
+		err = wire.WriteVarBytes(&buf, wire.ProtocolVersion, to.PkScript)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Write nLocktime
+	nLockTime := make([]byte, 4)
+	binary.LittleEndian.PutUint32(nLockTime, tx.LockTime)
+	_, err = buf.Write(nLockTime)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write nExpiryHeight
+	expiry := make([]byte, 4)
+	binary.LittleEndian.PutUint32(expiry, expiryHeight)
+	_, err = buf.Write(expiry)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write nil value balance
+	_, err = buf.Write(make([]byte, 8))
+	if err != nil {
+		return nil, err
+	}
+
+	// Write nil value vShieldedSpend
+	_, err = buf.Write(make([]byte, 1))
+	if err != nil {
+		return nil, err
+	}
+
+	// Write nil value vShieldedOutput
+	_, err = buf.Write(make([]byte, 1))
+	if err != nil {
+		return nil, err
+	}
+
+	// Write nil value vJoinSplit
+	_, err = buf.Write(make([]byte, 1))
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func calcHashPrevOuts(tx *wire.MsgTx) []byte {
+	var b bytes.Buffer
+	for _, in := range tx.TxIn {
+		// First write out the 32-byte transaction ID one of whose
+		// outputs are being referenced by this input.
+		b.Write(in.PreviousOutPoint.Hash[:])
+
+		// Next, we'll encode the index of the referenced output as a
+		// little endian integer.
+		var buf [4]byte
+		binary.LittleEndian.PutUint32(buf[:], in.PreviousOutPoint.Index)
+		b.Write(buf[:])
+	}
+	bl, _ := blake2b.New(&blake2b.Config{
+		Size:   32,
+		Person: hashPrevOutPersonalization,
+	})
+	bl.Write(b.Bytes())
+	h := bl.Sum(nil)
+	return h[:]
+}
+
+func calcHashSequence(tx *wire.MsgTx) []byte {
+	var b bytes.Buffer
+	for _, in := range tx.TxIn {
+		var buf [4]byte
+		binary.LittleEndian.PutUint32(buf[:], in.Sequence)
+		b.Write(buf[:])
+	}
+	bl, _ := blake2b.New(&blake2b.Config{
+		Size:   32,
+		Person: hashSequencePersonalization,
+	})
+	bl.Write(b.Bytes())
+	h := bl.Sum(nil)
+	return h[:]
+}
+
+func calcHashOutputs(tx *wire.MsgTx) []byte {
+	var b bytes.Buffer
+	for _, out := range tx.TxOut {
+		wire.WriteTxOut(&b, 0, 0, out)
+	}
+	bl, _ := blake2b.New(&blake2b.Config{
+		Size:   32,
+		Person: hashOutputsPersonalization,
+	})
+	bl.Write(b.Bytes())
+	h := bl.Sum(nil)
+	return h[:]
 }

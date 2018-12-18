@@ -38,16 +38,16 @@ type WalletsConfig struct {
 }
 
 type CoinConfig struct {
-	Type             string
-	API              string
-	APITestnet       string
-	MaxFee           int
-	FeeAPI           string
-	HighFeeDefault   int
-	MediumFeeDefault int
-	LowFeeDefault    int
-	TrustedPeer      string
-	WalletOptions    map[string]interface{}
+	Type             string                 `json:"Type"`
+	APIPool          []string               `json:"API"`
+	APITestnetPool   []string               `json:"APITestnet"`
+	MaxFee           uint64                 `json:"MaxFee"`
+	FeeAPI           string                 `json:"FeeAPI"`
+	HighFeeDefault   uint64                 `json:"HighFeeDefault"`
+	MediumFeeDefault uint64                 `json:"MediumFeeDefault"`
+	LowFeeDefault    uint64                 `json:"LowFeeDefault"`
+	TrustedPeer      string                 `json:"TrustedPeer"`
+	WalletOptions    map[string]interface{} `json:"WalletOptions"`
 }
 
 type DataSharing struct {
@@ -56,6 +56,67 @@ type DataSharing struct {
 }
 
 var MalformedConfigError error = errors.New("config file is malformed")
+
+func DefaultWalletsConfig() *WalletsConfig {
+	var feeAPI = "https://btc.fees.openbazaar.org"
+	return &WalletsConfig{
+		BTC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolBTC,
+			APITestnetPool:   CoinPoolTBTC,
+			FeeAPI:           feeAPI,
+			LowFeeDefault:    1,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   50,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		BCH: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolBCH,
+			APITestnetPool:   CoinPoolTBCH,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    1,
+			MediumFeeDefault: 5,
+			HighFeeDefault:   10,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		LTC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolLTC,
+			APITestnetPool:   CoinPoolTLTC,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    5,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   20,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		ZEC: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolZEC,
+			APITestnetPool:   CoinPoolTZEC,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    5,
+			MediumFeeDefault: 10,
+			HighFeeDefault:   20,
+			MaxFee:           200,
+			WalletOptions:    nil,
+		},
+		ETH: &CoinConfig{
+			Type:             WalletTypeAPI,
+			APIPool:          CoinPoolETH,
+			APITestnetPool:   CoinPoolTETH,
+			FeeAPI:           "", // intentionally blank
+			LowFeeDefault:    7,
+			MediumFeeDefault: 15,
+			HighFeeDefault:   30,
+			MaxFee:           200,
+			WalletOptions:    EthereumDefaultOptions(),
+		},
+	}
+}
 
 func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 	var cfgIface interface{}
@@ -195,18 +256,13 @@ func GetAPIConfig(cfgBytes []byte) (*APIConfig, error) {
 }
 
 func GetWalletsConfig(cfgBytes []byte) (*WalletsConfig, error) {
-	var cfgIface interface{}
+	var cfgIface map[string]interface{}
 	err := json.Unmarshal(cfgBytes, &cfgIface)
 	if err != nil {
 		return nil, MalformedConfigError
 	}
 
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	walletIface, ok := cfg["Wallets"]
+	walletIface, ok := cfgIface["Wallets"]
 	if !ok {
 		return nil, MalformedConfigError
 	}
