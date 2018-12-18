@@ -2,7 +2,6 @@ package migrations_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -14,7 +13,7 @@ import (
 
 const preMigration016Config = `{
 	"OtherConfigProperty1": [1, 2, 3],
-	"OtherConfigProtery2": "abc123",
+	"OtherConfigProperty2": "abc123",
 	"Wallets":{
 		"BTC": {
 			"API": [
@@ -53,7 +52,7 @@ const preMigration016Config = `{
 
 const postMigration016Config = `{
 	"OtherConfigProperty1": [1, 2, 3],
-	"OtherConfigProtery2": "abc123",
+	"OtherConfigProperty2": "abc123",
 	"Wallets": {
 		"BTC": {
 			"Type": "API",
@@ -145,7 +144,7 @@ const postMigration016Config = `{
 func migration016AssertAPI(t *testing.T, actual interface{}, expected string) {
 	actualSlice := actual.([]interface{})
 	if len(actualSlice) != 1 || actualSlice[0] != expected {
-		t.Fatal("Incorrect API. Wanted: ['"+expected+"'] Got:", actual)
+		t.Fatalf("incorrect api endpoint.\n\twanted: %s\n\tgot: %s\n", expected, actual)
 	}
 }
 
@@ -196,7 +195,6 @@ func TestMigration016(t *testing.T) {
 	bch := w["BCH"].(map[string]interface{})
 	ltc := w["LTC"].(map[string]interface{})
 	zec := w["ZEC"].(map[string]interface{})
-	fmt.Println(btc)
 
 	migration016AssertAPI(t, btc["API"], "https://btc.blockbook.api.openbazaar.org/api")
 	migration016AssertAPI(t, btc["APITestnet"], "https://tbtc.blockbook.api.openbazaar.org/api")
@@ -209,8 +207,8 @@ func TestMigration016(t *testing.T) {
 
 	var re = regexp.MustCompile(`\s`)
 	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration016Config), "") {
-		fmt.Println(re.ReplaceAllString(string(configBytes), ""))
-		t.Fatal("Incorrect post-migration config")
+		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Fatal("incorrect post-migration config")
 	}
 
 	assertCorrectRepoVer(t, repoverPath, "17")
