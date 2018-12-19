@@ -416,9 +416,21 @@ func (i *BlockBookClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 		)
 		if err == nil {
 			socketReady := make(chan struct{})
+
+			// Signal readyness on connection
 			socketClient.On(gosocketio.OnConnection, func(h *gosocketio.Channel, args interface{}) {
 				close(socketReady)
 			})
+
+			// Add logging for disconnections and errors
+			socketClient.On(gosocketio.OnError, func(c *gosocketio.Channel, args interface{}) {
+				Log.Warningf("Socket error:", u.Host, "-", args)
+			})
+			socketClient.On(gosocketio.OnDisconnection, func(c *gosocketio.Channel) {
+				Log.Warningf("Socket disconnected:", u.Host)
+			})
+
+			// Wait for socket to be ready or timeout
 			select {
 			case <-time.After(10 * time.Second):
 				Log.Warningf("Timeout connecting to websocket endpoint %s", u.Host)
