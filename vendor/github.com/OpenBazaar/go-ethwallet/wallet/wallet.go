@@ -550,7 +550,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 	}
 
 	input := wi.TransactionInput{
-		OutpointHash:  []byte(txID),
+		OutpointHash:  []byte(txID[2:]),
 		OutpointIndex: 1,
 		LinkedAddress: wallet.address,
 		Value:         value,
