@@ -9,7 +9,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -100,14 +99,9 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 			continue
 		}
 
-		outpointHash, err := chainhash.NewHash(input.OutpointHash)
-		if err != nil {
-			continue
-		}
-
 		fundsReleased := true
 		for i, r := range records {
-			if r.Txid == outpointHash.String() && r.Index == input.OutpointIndex {
+			if input.LinkedAddress.String() == r.Address {
 				records[i].Spent = true
 			}
 			if records[i].Value > 0 && !records[i].Spent {
