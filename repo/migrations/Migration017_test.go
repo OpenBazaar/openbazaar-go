@@ -35,13 +35,6 @@ const postMigration017Config = `{
 	"OtherConfigProperty2": "abc123"
 }`
 
-func migration017AssertAPI(t *testing.T, actual interface{}, expected string) {
-	actualSlice := actual.([]interface{})
-	if len(actualSlice) != 1 || actualSlice[0] != expected {
-		t.Fatalf("incorrect api endpoint.\n\twanted: %s\n\tgot: %s\n", expected, actual)
-	}
-}
-
 func TestMigration017(t *testing.T) {
 	var testRepo, err = schema.NewCustomSchemaManager(schema.SchemaContext{
 		DataPath:        schema.GenerateTempPath(),
