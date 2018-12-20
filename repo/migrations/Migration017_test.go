@@ -1,9 +1,9 @@
 package migrations_test
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/repo/migrations"
@@ -26,6 +26,7 @@ const postMigration017Config = `{
 	"DataSharing": {
 		"AcceptStoreRequests": false,
 		"PushTo": [
+			"QmbwN82MVyBukT7WTdaQDppaACo62oUfma8dUa5R9nBFHm",
 			"QmY8puEnVx66uEet64gAf4VZRo7oUyMCwG6KdB9KM92EGQ",
 			"QmPPg2qeF3n2KvTRXRZLaTwHCw8JxzF4uZK93RfMoDvf2o"
 		]
@@ -78,23 +79,12 @@ func TestMigration017(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config := map[string]interface{}{}
-	if err = json.Unmarshal(configBytes, &config); err != nil {
-		t.Fatal(err)
+	var re = regexp.MustCompile(`\s`)
+	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(postMigration017Config), "") {
+		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Fatal("incorrect post-migration config")
 	}
 
-	ds := config["DataSharing"].(map[string]interface{})
-
-	if accept, ok := ds["AcceptStoreRequests"].(bool); !ok || accept {
-		t.Fatal("Incorrect config value for AcceptStoreRequests")
-	}
-
-	pushTo := ds["PushTo"].([]interface{})
-	for i, peer := range pushTo {
-		if peer != migrations.Migration017PushToAfter[i] {
-			t.Fatal("Unexpected peer", peer, "wanted:", migrations.Migration017PushToAfter[i])
-		}
-	}
 	assertCorrectRepoVer(t, repoverPath, "18")
 
 	err = m.Down(testRepo.DataPath(), "", true)
@@ -107,22 +97,9 @@ func TestMigration017(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	config = map[string]interface{}{}
-	if err = json.Unmarshal(configBytes, &config); err != nil {
-		t.Fatal(err)
-	}
-
-	ds = config["DataSharing"].(map[string]interface{})
-
-	if accept, ok := ds["AcceptStoreRequests"].(bool); !ok || accept {
-		t.Fatal("Incorrect config value for AcceptStoreRequests")
-	}
-
-	pushTo = ds["PushTo"].([]interface{})
-	for i, peer := range pushTo {
-		if peer != migrations.Migration017PushToBefore[i] {
-			t.Fatal("Unexpected peer", peer, "wanted:", migrations.Migration017PushToBefore[i])
-		}
+	if re.ReplaceAllString(string(configBytes), "") != re.ReplaceAllString(string(preMigration017Config), "") {
+		t.Logf("actual: %s", re.ReplaceAllString(string(configBytes), ""))
+		t.Fatal("incorrect post-migration config")
 	}
 
 	assertCorrectRepoVer(t, repoverPath, "17")
