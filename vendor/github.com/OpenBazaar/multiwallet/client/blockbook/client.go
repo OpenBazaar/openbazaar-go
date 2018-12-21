@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/cpacia/bchutil"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -22,25 +20,70 @@ import (
 	"github.com/OpenBazaar/golang-socketio/protocol"
 	"github.com/OpenBazaar/multiwallet/client/transport"
 	"github.com/OpenBazaar/multiwallet/model"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
+	"github.com/cpacia/bchutil"
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
 )
 
 var Log = logging.MustGetLogger("client")
 
+type wsWatchdog struct {
+	client    *BlockBookClient
+	done      chan struct{}
+	wsStopped chan struct{}
+}
+
+func newWebsocketWatchdog(client *BlockBookClient) *wsWatchdog {
+	return &wsWatchdog{
+		client:    client,
+		done:      make(chan struct{}, 0),
+		wsStopped: make(chan struct{}, 1),
+	}
+}
+
+func (w *wsWatchdog) guardWebsocket() {
+	for {
+		select {
+		case <-w.wsStopped:
+			time.Sleep(1 * time.Second)
+			Log.Warningf("reconnecting websocket %s...", w.client.apiUrl.Host)
+			w.client.stopWebsocket()
+			w.client.startWebsocket()
+			return
+		case <-w.done:
+			return
+		}
+	}
+}
+
+func (w *wsWatchdog) bark() {
+	select {
+	case w.wsStopped <- struct{}{}:
+	default:
+	}
+}
+
+func (w *wsWatchdog) putDown() {
+	close(w.done)
+	close(w.wsStopped)
+}
+
 type BlockBookClient struct {
-	apiUrl          url.URL
-	blockNotifyChan chan model.Block
-	listenLock      sync.Mutex
-	listenQueue     []string
-	proxyDialer     proxy.Dialer
-	txNotifyChan    chan model.Transaction
+	apiUrl            url.URL
+	blockNotifyChan   chan model.Block
+	listenLock        sync.Mutex
+	listenQueue       []string
+	proxyDialer       proxy.Dialer
+	txNotifyChan      chan model.Transaction
+	websocketWatchdog *wsWatchdog
 
 	HTTPClient   http.Client
 	RequestFunc  func(endpoint, method string, body []byte, query url.Values) (*http.Response, error)
 	SocketClient model.SocketClient
+	socketMutex  sync.RWMutex
 }
 
 func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClient, error) {
@@ -69,6 +112,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		txNotifyChan:    tch,
 		listenLock:      sync.Mutex{},
 	}
+	ic.socketMutex.Lock()
 	ic.RequestFunc = ic.doRequest
 	return ic, nil
 }
@@ -86,14 +130,12 @@ func (i *BlockBookClient) EndpointURL() url.URL {
 }
 
 func (i *BlockBookClient) Start() error {
-	go i.setupListeners(i.apiUrl, i.proxyDialer)
+	i.startWebsocket()
 	return nil
 }
 
 func (i *BlockBookClient) Close() {
-	if i.SocketClient != nil {
-		i.SocketClient.Close()
-	}
+	i.stopWebsocket()
 }
 
 func validateScheme(target *url.URL) error {
@@ -398,42 +440,79 @@ func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
 	args = append(args, "bitcoind/addresstxid")
 	args = append(args, []string{maybeConvertCashAddress(addr)})
 	if i.SocketClient != nil {
+		i.socketMutex.RLock()
 		i.SocketClient.Emit("subscribe", args)
+		i.socketMutex.RUnlock()
 	} else {
 		i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
 	}
 }
 
-func (i *BlockBookClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
+func connectSocket(u url.URL, proxyDialer proxy.Dialer) (model.SocketClient, error) {
+	socketClient, err := gosocketio.Dial(
+		gosocketio.GetUrl(u.Hostname(), model.DefaultPort(u), model.HasImpliedURLSecurity(u)),
+		transport.GetDefaultWebsocketTransport(proxyDialer),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Signal readyness on connection
+	socketReady := make(chan struct{})
+	socketClient.On(gosocketio.OnConnection, func(h *gosocketio.Channel, args interface{}) {
+		close(socketReady)
+	})
+
+	// Wait for socket to be ready or timeout
+	select {
+	case <-time.After(10 * time.Second):
+		return nil, fmt.Errorf("timeout connecting to websocket endpoint %s", u.Host)
+	case <-socketReady:
+		break
+	}
+	return socketClient, nil
+}
+
+func (i *BlockBookClient) stopWebsocket() {
+	if i.SocketClient != nil {
+		i.socketMutex.Lock()
+		i.SocketClient.Close()
+		i.SocketClient = nil
+		i.websocketWatchdog.putDown()
+		i.websocketWatchdog = nil
+	}
+}
+
+func (i *BlockBookClient) startWebsocket() {
+	i.listenLock.Lock()
+	defer i.listenLock.Unlock()
 	for {
 		if i.SocketClient != nil {
-			i.listenLock.Lock()
 			break
 		}
-		socketClient, err := gosocketio.Dial(
-			gosocketio.GetUrl(u.Hostname(), model.DefaultPort(u), model.HasImpliedURLSecurity(u)),
-			transport.GetDefaultWebsocketTransport(proxyDialer),
-		)
-		if err == nil {
-			socketReady := make(chan struct{})
-			socketClient.On(gosocketio.OnConnection, func(h *gosocketio.Channel, args interface{}) {
-				close(socketReady)
-			})
-			select {
-			case <-time.After(10 * time.Second):
-				Log.Warningf("Timeout connecting to websocket endpoint %s", u.Host)
-				continue
-			case <-socketReady:
-				break
-			}
-			i.SocketClient = socketClient
+
+		client, err := connectSocket(i.apiUrl, i.proxyDialer)
+		if err != nil {
+			Log.Errorf("reconnect websocket: %s", err.Error())
+			time.Sleep(5 * time.Second)
 			continue
 		}
-		if time.Now().Unix()%60 == 0 {
-			Log.Warningf("Failed to connect to websocket endpoint %s", u.Host)
-		}
-		time.Sleep(time.Second * 2)
+		i.SocketClient = client
+		i.websocketWatchdog = newWebsocketWatchdog(i)
+		go i.websocketWatchdog.guardWebsocket()
+		defer i.socketMutex.Unlock()
+		break
 	}
+
+	// Add logging for disconnections and errors
+	i.SocketClient.On(gosocketio.OnError, func(c *gosocketio.Channel, args interface{}) {
+		Log.Warningf("websocket error: %s - %+v", i.apiUrl.Host, "-", args)
+		i.websocketWatchdog.bark()
+	})
+	i.SocketClient.On(gosocketio.OnDisconnection, func(c *gosocketio.Channel) {
+		Log.Warningf("websocket disconnected: %s", i.apiUrl.Host)
+		i.websocketWatchdog.bark()
+	})
 
 	i.SocketClient.On("bitcoind/hashblock", func(h *gosocketio.Channel, arg interface{}) {
 		best, err := i.GetBestBlock()
@@ -476,8 +555,7 @@ func (i *BlockBookClient) setupListeners(u url.URL, proxyDialer proxy.Dialer) {
 		i.SocketClient.Emit("subscribe", args)
 	}
 	i.listenQueue = []string{}
-	i.listenLock.Unlock()
-	Log.Infof("Connected to websocket endpoint %s", u.Host)
+	Log.Infof("Connected to websocket endpoint %s", i.apiUrl.Host)
 }
 
 func (i *BlockBookClient) Broadcast(tx []byte) (string, error) {
