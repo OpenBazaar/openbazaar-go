@@ -48,7 +48,7 @@ func (x Listing_Metadata_ContractType) String() string {
 	return proto.EnumName(Listing_Metadata_ContractType_name, int32(x))
 }
 func (Listing_Metadata_ContractType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 0, 0}
 }
 
 type Listing_Metadata_Format int32
@@ -71,7 +71,7 @@ func (x Listing_Metadata_Format) String() string {
 	return proto.EnumName(Listing_Metadata_Format_name, int32(x))
 }
 func (Listing_Metadata_Format) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 0, 1}
 }
 
 type Listing_ShippingOption_ShippingType int32
@@ -94,7 +94,7 @@ func (x Listing_ShippingOption_ShippingType) String() string {
 	return proto.EnumName(Listing_ShippingOption_ShippingType_name, int32(x))
 }
 func (Listing_ShippingOption_ShippingType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 2, 0}
 }
 
 type Order_Payment_Method int32
@@ -120,7 +120,7 @@ func (x Order_Payment_Method) String() string {
 	return proto.EnumName(Order_Payment_Method_name, int32(x))
 }
 func (Order_Payment_Method) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 2, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 2, 0}
 }
 
 type Signature_Section int32
@@ -161,7 +161,7 @@ func (x Signature_Section) String() string {
 	return proto.EnumName(Signature_Section_name, int32(x))
 }
 func (Signature_Section) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{17, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{17, 0}
 }
 
 type RicardianContract struct {
@@ -185,7 +185,7 @@ func (m *RicardianContract) Reset()         { *m = RicardianContract{} }
 func (m *RicardianContract) String() string { return proto.CompactTextString(m) }
 func (*RicardianContract) ProtoMessage()    {}
 func (*RicardianContract) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{0}
 }
 func (m *RicardianContract) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RicardianContract.Unmarshal(m, b)
@@ -302,7 +302,7 @@ func (m *Listing) Reset()         { *m = Listing{} }
 func (m *Listing) String() string { return proto.CompactTextString(m) }
 func (*Listing) ProtoMessage()    {}
 func (*Listing) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1}
 }
 func (m *Listing) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing.Unmarshal(m, b)
@@ -413,7 +413,7 @@ func (m *Listing_Metadata) Reset()         { *m = Listing_Metadata{} }
 func (m *Listing_Metadata) String() string { return proto.CompactTextString(m) }
 func (*Listing_Metadata) ProtoMessage()    {}
 func (*Listing_Metadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 0}
 }
 func (m *Listing_Metadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Metadata.Unmarshal(m, b)
@@ -532,7 +532,7 @@ func (m *Listing_Item) Reset()         { *m = Listing_Item{} }
 func (m *Listing_Item) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item) ProtoMessage()    {}
 func (*Listing_Item) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 1}
 }
 func (m *Listing_Item) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item.Unmarshal(m, b)
@@ -649,7 +649,7 @@ func (m *Listing_Item_Option) Reset()         { *m = Listing_Item_Option{} }
 func (m *Listing_Item_Option) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Option) ProtoMessage()    {}
 func (*Listing_Item_Option) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 1, 0}
 }
 func (m *Listing_Item_Option) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Option.Unmarshal(m, b)
@@ -702,7 +702,7 @@ func (m *Listing_Item_Option_Variant) Reset()         { *m = Listing_Item_Option
 func (m *Listing_Item_Option_Variant) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Option_Variant) ProtoMessage()    {}
 func (*Listing_Item_Option_Variant) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 0, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 1, 0, 0}
 }
 func (m *Listing_Item_Option_Variant) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Option_Variant.Unmarshal(m, b)
@@ -750,7 +750,7 @@ func (m *Listing_Item_Sku) Reset()         { *m = Listing_Item_Sku{} }
 func (m *Listing_Item_Sku) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Sku) ProtoMessage()    {}
 func (*Listing_Item_Sku) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 1, 1}
 }
 func (m *Listing_Item_Sku) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Sku.Unmarshal(m, b)
@@ -814,7 +814,7 @@ func (m *Listing_Item_Image) Reset()         { *m = Listing_Item_Image{} }
 func (m *Listing_Item_Image) String() string { return proto.CompactTextString(m) }
 func (*Listing_Item_Image) ProtoMessage()    {}
 func (*Listing_Item_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 1, 2}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 1, 2}
 }
 func (m *Listing_Item_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Item_Image.Unmarshal(m, b)
@@ -890,7 +890,7 @@ func (m *Listing_ShippingOption) Reset()         { *m = Listing_ShippingOption{}
 func (m *Listing_ShippingOption) String() string { return proto.CompactTextString(m) }
 func (*Listing_ShippingOption) ProtoMessage()    {}
 func (*Listing_ShippingOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 2}
 }
 func (m *Listing_ShippingOption) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_ShippingOption.Unmarshal(m, b)
@@ -952,7 +952,7 @@ func (m *Listing_ShippingOption_Service) Reset()         { *m = Listing_Shipping
 func (m *Listing_ShippingOption_Service) String() string { return proto.CompactTextString(m) }
 func (*Listing_ShippingOption_Service) ProtoMessage()    {}
 func (*Listing_ShippingOption_Service) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 2, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 2, 0}
 }
 func (m *Listing_ShippingOption_Service) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_ShippingOption_Service.Unmarshal(m, b)
@@ -1014,7 +1014,7 @@ func (m *Listing_Tax) Reset()         { *m = Listing_Tax{} }
 func (m *Listing_Tax) String() string { return proto.CompactTextString(m) }
 func (*Listing_Tax) ProtoMessage()    {}
 func (*Listing_Tax) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 3}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 3}
 }
 func (m *Listing_Tax) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Tax.Unmarshal(m, b)
@@ -1081,7 +1081,7 @@ func (m *Listing_Coupon) Reset()         { *m = Listing_Coupon{} }
 func (m *Listing_Coupon) String() string { return proto.CompactTextString(m) }
 func (*Listing_Coupon) ProtoMessage()    {}
 func (*Listing_Coupon) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{1, 4}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{1, 4}
 }
 func (m *Listing_Coupon) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Listing_Coupon.Unmarshal(m, b)
@@ -1101,49 +1101,34 @@ func (m *Listing_Coupon) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Listing_Coupon proto.InternalMessageInfo
 
+func (m *Listing_Coupon) GetTitle() string {
+	if m != nil {
+		return m.Title
+	}
+	return ""
+}
+
 type isListing_Coupon_Code interface {
 	isListing_Coupon_Code()
-}
-type isListing_Coupon_Discount interface {
-	isListing_Coupon_Discount()
 }
 
 type Listing_Coupon_Hash struct {
 	Hash string `protobuf:"bytes,2,opt,name=hash,proto3,oneof"`
 }
+
 type Listing_Coupon_DiscountCode struct {
 	DiscountCode string `protobuf:"bytes,3,opt,name=discountCode,proto3,oneof"`
 }
-type Listing_Coupon_PercentDiscount struct {
-	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
-}
-type Listing_Coupon_PriceDiscount struct {
-	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
-}
 
-func (*Listing_Coupon_Hash) isListing_Coupon_Code()                {}
-func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code()        {}
-func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
-func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount()   {}
+func (*Listing_Coupon_Hash) isListing_Coupon_Code() {}
+
+func (*Listing_Coupon_DiscountCode) isListing_Coupon_Code() {}
 
 func (m *Listing_Coupon) GetCode() isListing_Coupon_Code {
 	if m != nil {
 		return m.Code
 	}
 	return nil
-}
-func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
-	if m != nil {
-		return m.Discount
-	}
-	return nil
-}
-
-func (m *Listing_Coupon) GetTitle() string {
-	if m != nil {
-		return m.Title
-	}
-	return ""
 }
 
 func (m *Listing_Coupon) GetHash() string {
@@ -1158,6 +1143,29 @@ func (m *Listing_Coupon) GetDiscountCode() string {
 		return x.DiscountCode
 	}
 	return ""
+}
+
+type isListing_Coupon_Discount interface {
+	isListing_Coupon_Discount()
+}
+
+type Listing_Coupon_PercentDiscount struct {
+	PercentDiscount float32 `protobuf:"fixed32,5,opt,name=percentDiscount,proto3,oneof"`
+}
+
+type Listing_Coupon_PriceDiscount struct {
+	PriceDiscount uint64 `protobuf:"varint,6,opt,name=priceDiscount,proto3,oneof"`
+}
+
+func (*Listing_Coupon_PercentDiscount) isListing_Coupon_Discount() {}
+
+func (*Listing_Coupon_PriceDiscount) isListing_Coupon_Discount() {}
+
+func (m *Listing_Coupon) GetDiscount() isListing_Coupon_Discount {
+	if m != nil {
+		return m.Discount
+	}
+	return nil
 }
 
 func (m *Listing_Coupon) GetPercentDiscount() float32 {
@@ -1300,7 +1308,7 @@ func (m *Order) Reset()         { *m = Order{} }
 func (m *Order) String() string { return proto.CompactTextString(m) }
 func (*Order) ProtoMessage()    {}
 func (*Order) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2}
 }
 func (m *Order) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order.Unmarshal(m, b)
@@ -1407,7 +1415,7 @@ func (m *Order_Shipping) Reset()         { *m = Order_Shipping{} }
 func (m *Order_Shipping) String() string { return proto.CompactTextString(m) }
 func (*Order_Shipping) ProtoMessage()    {}
 func (*Order_Shipping) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 0}
 }
 func (m *Order_Shipping) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Shipping.Unmarshal(m, b)
@@ -1494,7 +1502,7 @@ func (m *Order_Item) Reset()         { *m = Order_Item{} }
 func (m *Order_Item) String() string { return proto.CompactTextString(m) }
 func (*Order_Item) ProtoMessage()    {}
 func (*Order_Item) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 1}
 }
 func (m *Order_Item) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item.Unmarshal(m, b)
@@ -1582,7 +1590,7 @@ func (m *Order_Item_Option) Reset()         { *m = Order_Item_Option{} }
 func (m *Order_Item_Option) String() string { return proto.CompactTextString(m) }
 func (*Order_Item_Option) ProtoMessage()    {}
 func (*Order_Item_Option) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 1, 0}
 }
 func (m *Order_Item_Option) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item_Option.Unmarshal(m, b)
@@ -1628,7 +1636,7 @@ func (m *Order_Item_ShippingOption) Reset()         { *m = Order_Item_ShippingOp
 func (m *Order_Item_ShippingOption) String() string { return proto.CompactTextString(m) }
 func (*Order_Item_ShippingOption) ProtoMessage()    {}
 func (*Order_Item_ShippingOption) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 1, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 1, 1}
 }
 func (m *Order_Item_ShippingOption) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Item_ShippingOption.Unmarshal(m, b)
@@ -1680,7 +1688,7 @@ func (m *Order_Payment) Reset()         { *m = Order_Payment{} }
 func (m *Order_Payment) String() string { return proto.CompactTextString(m) }
 func (*Order_Payment) ProtoMessage()    {}
 func (*Order_Payment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{2, 2}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{2, 2}
 }
 func (m *Order_Payment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Order_Payment.Unmarshal(m, b)
@@ -1772,7 +1780,7 @@ func (m *OrderConfirmation) Reset()         { *m = OrderConfirmation{} }
 func (m *OrderConfirmation) String() string { return proto.CompactTextString(m) }
 func (*OrderConfirmation) ProtoMessage()    {}
 func (*OrderConfirmation) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{3}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{3}
 }
 func (m *OrderConfirmation) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderConfirmation.Unmarshal(m, b)
@@ -1840,7 +1848,7 @@ func (m *OrderReject) Reset()         { *m = OrderReject{} }
 func (m *OrderReject) String() string { return proto.CompactTextString(m) }
 func (*OrderReject) ProtoMessage()    {}
 func (*OrderReject) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{4}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{4}
 }
 func (m *OrderReject) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderReject.Unmarshal(m, b)
@@ -1893,7 +1901,7 @@ func (m *RatingSignature) Reset()         { *m = RatingSignature{} }
 func (m *RatingSignature) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature) ProtoMessage()    {}
 func (*RatingSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{5}
 }
 func (m *RatingSignature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature.Unmarshal(m, b)
@@ -1942,7 +1950,7 @@ func (m *RatingSignature_TransactionMetadata) Reset()         { *m = RatingSigna
 func (m *RatingSignature_TransactionMetadata) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature_TransactionMetadata) ProtoMessage()    {}
 func (*RatingSignature_TransactionMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{5, 0}
 }
 func (m *RatingSignature_TransactionMetadata) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata.Unmarshal(m, b)
@@ -2014,7 +2022,7 @@ func (m *RatingSignature_TransactionMetadata_Image) Reset() {
 func (m *RatingSignature_TransactionMetadata_Image) String() string { return proto.CompactTextString(m) }
 func (*RatingSignature_TransactionMetadata_Image) ProtoMessage()    {}
 func (*RatingSignature_TransactionMetadata_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{5, 0, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{5, 0, 0}
 }
 func (m *RatingSignature_TransactionMetadata_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RatingSignature_TransactionMetadata_Image.Unmarshal(m, b)
@@ -2081,7 +2089,7 @@ func (m *BitcoinSignature) Reset()         { *m = BitcoinSignature{} }
 func (m *BitcoinSignature) String() string { return proto.CompactTextString(m) }
 func (*BitcoinSignature) ProtoMessage()    {}
 func (*BitcoinSignature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{6}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{6}
 }
 func (m *BitcoinSignature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BitcoinSignature.Unmarshal(m, b)
@@ -2138,7 +2146,7 @@ func (m *OrderFulfillment) Reset()         { *m = OrderFulfillment{} }
 func (m *OrderFulfillment) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment) ProtoMessage()    {}
 func (*OrderFulfillment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{7}
 }
 func (m *OrderFulfillment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment.Unmarshal(m, b)
@@ -2233,7 +2241,7 @@ func (m *OrderFulfillment_PhysicalDelivery) Reset()         { *m = OrderFulfillm
 func (m *OrderFulfillment_PhysicalDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_PhysicalDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_PhysicalDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{7, 0}
 }
 func (m *OrderFulfillment_PhysicalDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_PhysicalDelivery.Unmarshal(m, b)
@@ -2279,7 +2287,7 @@ func (m *OrderFulfillment_DigitalDelivery) Reset()         { *m = OrderFulfillme
 func (m *OrderFulfillment_DigitalDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_DigitalDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_DigitalDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 1}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{7, 1}
 }
 func (m *OrderFulfillment_DigitalDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_DigitalDelivery.Unmarshal(m, b)
@@ -2326,7 +2334,7 @@ func (m *OrderFulfillment_CryptocurrencyDelivery) Reset() {
 func (m *OrderFulfillment_CryptocurrencyDelivery) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_CryptocurrencyDelivery) ProtoMessage()    {}
 func (*OrderFulfillment_CryptocurrencyDelivery) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 2}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{7, 2}
 }
 func (m *OrderFulfillment_CryptocurrencyDelivery) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_CryptocurrencyDelivery.Unmarshal(m, b)
@@ -2366,7 +2374,7 @@ func (m *OrderFulfillment_Payout) Reset()         { *m = OrderFulfillment_Payout
 func (m *OrderFulfillment_Payout) String() string { return proto.CompactTextString(m) }
 func (*OrderFulfillment_Payout) ProtoMessage()    {}
 func (*OrderFulfillment_Payout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{7, 3}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{7, 3}
 }
 func (m *OrderFulfillment_Payout) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderFulfillment_Payout.Unmarshal(m, b)
@@ -2421,7 +2429,7 @@ func (m *OrderCompletion) Reset()         { *m = OrderCompletion{} }
 func (m *OrderCompletion) String() string { return proto.CompactTextString(m) }
 func (*OrderCompletion) ProtoMessage()    {}
 func (*OrderCompletion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{8}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{8}
 }
 func (m *OrderCompletion) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OrderCompletion.Unmarshal(m, b)
@@ -2481,7 +2489,7 @@ func (m *Rating) Reset()         { *m = Rating{} }
 func (m *Rating) String() string { return proto.CompactTextString(m) }
 func (*Rating) ProtoMessage()    {}
 func (*Rating) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{9}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{9}
 }
 func (m *Rating) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Rating.Unmarshal(m, b)
@@ -2539,7 +2547,7 @@ func (m *Rating_RatingData) Reset()         { *m = Rating_RatingData{} }
 func (m *Rating_RatingData) String() string { return proto.CompactTextString(m) }
 func (*Rating_RatingData) ProtoMessage()    {}
 func (*Rating_RatingData) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{9, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{9, 0}
 }
 func (m *Rating_RatingData) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Rating_RatingData.Unmarshal(m, b)
@@ -2672,7 +2680,7 @@ func (m *Dispute) Reset()         { *m = Dispute{} }
 func (m *Dispute) String() string { return proto.CompactTextString(m) }
 func (*Dispute) ProtoMessage()    {}
 func (*Dispute) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{10}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{10}
 }
 func (m *Dispute) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Dispute.Unmarshal(m, b)
@@ -2743,7 +2751,7 @@ func (m *DisputeResolution) Reset()         { *m = DisputeResolution{} }
 func (m *DisputeResolution) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution) ProtoMessage()    {}
 func (*DisputeResolution) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{11}
 }
 func (m *DisputeResolution) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution.Unmarshal(m, b)
@@ -2820,7 +2828,7 @@ func (m *DisputeResolution_Payout) Reset()         { *m = DisputeResolution_Payo
 func (m *DisputeResolution_Payout) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout) ProtoMessage()    {}
 func (*DisputeResolution_Payout) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{11, 0}
 }
 func (m *DisputeResolution_Payout) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution_Payout.Unmarshal(m, b)
@@ -2890,7 +2898,7 @@ func (m *DisputeResolution_Payout_Output) Reset()         { *m = DisputeResoluti
 func (m *DisputeResolution_Payout_Output) String() string { return proto.CompactTextString(m) }
 func (*DisputeResolution_Payout_Output) ProtoMessage()    {}
 func (*DisputeResolution_Payout_Output) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{11, 0, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{11, 0, 0}
 }
 func (m *DisputeResolution_Payout_Output) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeResolution_Payout_Output.Unmarshal(m, b)
@@ -2917,11 +2925,13 @@ type isDisputeResolution_Payout_Output_ScriptOrAddress interface {
 type DisputeResolution_Payout_Output_Script struct {
 	Script string `protobuf:"bytes,1,opt,name=script,proto3,oneof"`
 }
+
 type DisputeResolution_Payout_Output_Address struct {
 	Address string `protobuf:"bytes,3,opt,name=address,proto3,oneof"`
 }
 
-func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress()  {}
+func (*DisputeResolution_Payout_Output_Script) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
+
 func (*DisputeResolution_Payout_Output_Address) isDisputeResolution_Payout_Output_ScriptOrAddress() {}
 
 func (m *DisputeResolution_Payout_Output) GetScriptOrAddress() isDisputeResolution_Payout_Output_ScriptOrAddress {
@@ -3030,7 +3040,7 @@ func (m *DisputeAcceptance) Reset()         { *m = DisputeAcceptance{} }
 func (m *DisputeAcceptance) String() string { return proto.CompactTextString(m) }
 func (*DisputeAcceptance) ProtoMessage()    {}
 func (*DisputeAcceptance) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{12}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{12}
 }
 func (m *DisputeAcceptance) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeAcceptance.Unmarshal(m, b)
@@ -3077,7 +3087,7 @@ func (m *Outpoint) Reset()         { *m = Outpoint{} }
 func (m *Outpoint) String() string { return proto.CompactTextString(m) }
 func (*Outpoint) ProtoMessage()    {}
 func (*Outpoint) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{13}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{13}
 }
 func (m *Outpoint) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Outpoint.Unmarshal(m, b)
@@ -3133,7 +3143,7 @@ func (m *Refund) Reset()         { *m = Refund{} }
 func (m *Refund) String() string { return proto.CompactTextString(m) }
 func (*Refund) ProtoMessage()    {}
 func (*Refund) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{14}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{14}
 }
 func (m *Refund) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Refund.Unmarshal(m, b)
@@ -3200,7 +3210,7 @@ func (m *Refund_TransactionInfo) Reset()         { *m = Refund_TransactionInfo{}
 func (m *Refund_TransactionInfo) String() string { return proto.CompactTextString(m) }
 func (*Refund_TransactionInfo) ProtoMessage()    {}
 func (*Refund_TransactionInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{14, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{14, 0}
 }
 func (m *Refund_TransactionInfo) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Refund_TransactionInfo.Unmarshal(m, b)
@@ -3245,7 +3255,7 @@ func (m *VendorFinalizedPayment) Reset()         { *m = VendorFinalizedPayment{}
 func (m *VendorFinalizedPayment) String() string { return proto.CompactTextString(m) }
 func (*VendorFinalizedPayment) ProtoMessage()    {}
 func (*VendorFinalizedPayment) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{15}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{15}
 }
 func (m *VendorFinalizedPayment) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_VendorFinalizedPayment.Unmarshal(m, b)
@@ -3286,7 +3296,7 @@ func (m *ID) Reset()         { *m = ID{} }
 func (m *ID) String() string { return proto.CompactTextString(m) }
 func (*ID) ProtoMessage()    {}
 func (*ID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{16}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{16}
 }
 func (m *ID) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ID.Unmarshal(m, b)
@@ -3346,7 +3356,7 @@ func (m *ID_Pubkeys) Reset()         { *m = ID_Pubkeys{} }
 func (m *ID_Pubkeys) String() string { return proto.CompactTextString(m) }
 func (*ID_Pubkeys) ProtoMessage()    {}
 func (*ID_Pubkeys) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{16, 0}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{16, 0}
 }
 func (m *ID_Pubkeys) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ID_Pubkeys.Unmarshal(m, b)
@@ -3392,7 +3402,7 @@ func (m *Signature) Reset()         { *m = Signature{} }
 func (m *Signature) String() string { return proto.CompactTextString(m) }
 func (*Signature) ProtoMessage()    {}
 func (*Signature) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{17}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{17}
 }
 func (m *Signature) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Signature.Unmarshal(m, b)
@@ -3439,7 +3449,7 @@ func (m *SignedListing) Reset()         { *m = SignedListing{} }
 func (m *SignedListing) String() string { return proto.CompactTextString(m) }
 func (*SignedListing) ProtoMessage()    {}
 func (*SignedListing) Descriptor() ([]byte, []int) {
-	return fileDescriptor_contracts_c1e9c5924aff92eb, []int{18}
+	return fileDescriptor_contracts_8117adc7f50affc6, []int{18}
 }
 func (m *SignedListing) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedListing.Unmarshal(m, b)
@@ -3533,9 +3543,9 @@ func init() {
 	proto.RegisterEnum("Signature_Section", Signature_Section_name, Signature_Section_value)
 }
 
-func init() { proto.RegisterFile("contracts.proto", fileDescriptor_contracts_c1e9c5924aff92eb) }
+func init() { proto.RegisterFile("contracts.proto", fileDescriptor_contracts_8117adc7f50affc6) }
 
-var fileDescriptor_contracts_c1e9c5924aff92eb = []byte{
+var fileDescriptor_contracts_8117adc7f50affc6 = []byte{
 	// 3296 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xc4, 0x5a, 0xbd, 0x73, 0x1b, 0xd7,
 	0xb5, 0x17, 0xbe, 0x81, 0x03, 0x90, 0x00, 0xaf, 0x68, 0x19, 0x0f, 0xe3, 0x67, 0x51, 0x3b, 0xb2,

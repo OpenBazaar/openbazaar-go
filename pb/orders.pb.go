@@ -97,16 +97,16 @@ func (x OrderState) String() string {
 	return proto.EnumName(OrderState_name, int32(x))
 }
 func (OrderState) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_orders_c6051e92f6cf6ced, []int{0}
+	return fileDescriptor_orders_76683c7838852b92, []int{0}
 }
 
 func init() {
 	proto.RegisterEnum("OrderState", OrderState_name, OrderState_value)
 }
 
-func init() { proto.RegisterFile("orders.proto", fileDescriptor_orders_c6051e92f6cf6ced) }
+func init() { proto.RegisterFile("orders.proto", fileDescriptor_orders_76683c7838852b92) }
 
-var fileDescriptor_orders_c6051e92f6cf6ced = []byte{
+var fileDescriptor_orders_76683c7838852b92 = []byte{
 	// 243 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x90, 0x4d, 0x4e, 0xc3, 0x30,
 	0x10, 0x85, 0xa1, 0x94, 0xfe, 0x4c, 0x53, 0x18, 0xdc, 0x22, 0x38, 0x03, 0x0b, 0x36, 0x9c, 0xc0,

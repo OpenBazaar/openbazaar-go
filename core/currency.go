@@ -36,6 +36,7 @@ type SpendResponse struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
 	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+	PeerID             string    `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
@@ -122,6 +123,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
+		PeerID:             contract.VendorListings[0].VendorID.PeerID,
 	}, nil
 }
 

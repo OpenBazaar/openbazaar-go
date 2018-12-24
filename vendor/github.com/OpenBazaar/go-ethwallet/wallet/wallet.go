@@ -418,12 +418,14 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		return wi.Txn{}, err
 	}
 	return wi.Txn{
-		Txid:      tx.Hash().String(),
-		Value:     tx.Value().Int64(),
-		Height:    0,
-		Timestamp: time.Now(),
-		WatchOnly: false,
-		Bytes:     tx.Data(),
+		Txid:        tx.Hash().String(),
+		Value:       tx.Value().Int64(),
+		Height:      0,
+		Timestamp:   time.Now(),
+		WatchOnly:   false,
+		Bytes:       tx.Data(),
+		ToAddress:   tx.To().String(),
+		FromAddress: wallet.address.String(),
 	}, nil
 }
 
@@ -512,7 +514,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.callListeners(wallet.createTxnCallback(hash.Hex(), referenceID, addr, amount, time.Now()))
+				go wallet.CallTransactionListeners(wallet.createTxnCallback(hash.Hex(), referenceID, addr, amount, time.Now()))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
@@ -569,7 +571,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 	}
 }
 
-func (wallet *EthereumWallet) callListeners(txnCB wi.TransactionCallback) {
+func (wallet *EthereumWallet) CallTransactionListeners(txnCB wi.TransactionCallback) {
 	for _, l := range wallet.listeners {
 		go l(txnCB)
 	}
@@ -600,7 +602,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 			}
 			wallet.db.Txns().Delete(chash)
 			toAddr := common.HexToAddress(pTxn.To)
-			go wallet.callListeners(
+			go wallet.CallTransactionListeners(
 				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
 					pTxn.Amount, time.Now()))
 		}
