@@ -417,6 +417,12 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 	if err != nil {
 		return wi.Txn{}, err
 	}
+
+	msg, err := tx.AsMessage(types.HomesteadSigner{})
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
 	return wi.Txn{
 		Txid:        tx.Hash().String(),
 		Value:       tx.Value().Int64(),
@@ -425,7 +431,7 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 		WatchOnly:   false,
 		Bytes:       tx.Data(),
 		ToAddress:   tx.To().String(),
-		FromAddress: wallet.address.String(),
+		FromAddress: msg.From().String(),
 	}, nil
 }
 

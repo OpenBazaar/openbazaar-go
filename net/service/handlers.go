@@ -24,6 +24,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
+	u "github.com/OpenBazaar/openbazaar-go/util"
 )
 
 func (service *OpenBazaarService) HandlerForMsgType(t pb.Message_MessageType) func(peer.ID, *pb.Message, interface{}) (*pb.Message, error) {
@@ -1597,9 +1598,15 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
-	if (contract.BuyerOrder.RefundAddress[:32] != txn.FromAddress[:32]) ||
-		(contract.BuyerOrder.Payment.Address[:32] != txn.ToAddress[:32]) ||
-		(txn.ToAddress[:32] != wal.CurrentAddress(1).String()[:32]) {
+	fmt.Println("contract.BuyerOrder.RefundAddress[:32] ", contract.BuyerOrder.RefundAddress[:32])
+	fmt.Println("txn.FromAddress[:32]  ", txn.FromAddress[:32])
+	fmt.Println("contract.VendorOrderConfirmation.PaymentAddress[:32]  ", contract.VendorOrderConfirmation.PaymentAddress[:32])
+	fmt.Println("txn.ToAddress[:32]  ", txn.ToAddress[:32])
+	fmt.Println("wal.CurrentAddress(1).String()[:32]  ", wal.CurrentAddress(1).String()[:32])
+
+	if !u.AreAddressesEqual(contract.BuyerOrder.RefundAddress, txn.FromAddress) ||
+		!u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) ||
+		!u.AreAddressesEqual(txn.ToAddress, wal.CurrentAddress(1).String()) {
 		return nil, errors.New("the addresses dont match")
 	}
 
