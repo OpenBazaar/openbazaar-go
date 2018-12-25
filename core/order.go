@@ -155,7 +155,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
-		payment.Address = addr.String() // addr.EncodeAddress()
+		payment.Address = addr.EncodeAddress() // addr.String()
 		payment.RedeemScript = hex.EncodeToString(redeemScript)
 		payment.Chaincode = hex.EncodeToString(chaincode)
 		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
