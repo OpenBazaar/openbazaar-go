@@ -1598,8 +1598,19 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
-	if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
-		return nil, errors.New("the addresses dont match")
+	if contract.VendorOrderConfirmation != nil {
+		// the seller has confirmed the order, so a simple check of
+		// the addresses and we are good to proceed
+		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
+			return nil, errors.New("the addresses dont match")
+		}
+	} else {
+		// the seller has not confirmed, so we need to compare the
+		// peerID in the vendorListing to the node peerID
+		if !(contract.VendorListings[0].VendorID.PeerID ==
+			service.node.IpfsNode.Identity.Pretty()) {
+			return nil, errors.New("the seller details dont match")
+		}
 	}
 
 	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
