@@ -47,26 +47,22 @@ source ~/.profile
 Go should now be installed.
 
 ### Install openbazaar-go
+
+Checkout a copy of the source:
 ```
 go get github.com/OpenBazaar/openbazaar-go
 ```
 
 It will use git to checkout the source code into `$GOPATH/src/github.com/OpenBazaar/openbazaar-go`
 
-During the few minutes it takes the process to complete without a progress indicator, then return to blank command line, [read about securing your node](https://github.com/OpenBazaar/openbazaar-go/blob/master/docs/security.md)
+Checkout a release version:
+```
+git checkout v0.12.4
+```
+
+Note: `go get` leaves the repo pointing at `master` which is a branch used for active development. Running OpenBazaar from `master` is NOT recommended. Check the [release versions](https://github.com/OpenBazaar/openbazaar-go/releases) for the available versions that you use iin checkout.
 
 To compile and run the source using the path above, WITHOUT encrypting the database:
 ```
 go run $GOPATH/src/github.com/OpenBazaar/openbazaar-go/openbazaard.go start
 ```
-
-You will then see 
-```
-________                      __________
-\_____  \ ______   ____   ____\______   \_____  _____________  _____ _______
- /   |   \\____ \_/ __ \ /    \|    |  _/\__  \ \___   /\__  \ \__  \\_  __ \ 
-/    |    \  |_> >  ___/|   |  \    |   \ / __ \_/    /  / __ \_/ __ \|  | \/
-\_______  /   __/ \___  >___|  /______  /(____  /_____ \(____  (____  /__|
-        \/|__|        \/     \/       \/      \/      \/     \/     \/
-```
-and the rest of the startup messages to follow.
