@@ -5,8 +5,9 @@ WINDOWS INSTALL NOTES
 
 You need to have Go, Git, and GCC installed to compile and run the OpenBazaar-Go daemon.
 
-- **Go**
-    + https://golang.org
+- **Go v1.10**
+    + https://golang.org/dl
+    + Note: OpenBazaar has not been tested on v1.11 and may cause problems
 - **Git**
     + https://git-scm.com/download/win
 - **TDM-GCC/MinGW-w64**
