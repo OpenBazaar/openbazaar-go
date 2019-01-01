@@ -2,10 +2,11 @@ package multiwallet
 
 import (
 	"errors"
-	"github.com/OpenBazaar/multiwallet/client/blockbook"
-	"github.com/OpenBazaar/multiwallet/client/insight"
 	"strings"
 	"time"
+
+	"github.com/OpenBazaar/multiwallet/client/blockbook"
+	"github.com/OpenBazaar/multiwallet/client/insight"
 
 	eth "github.com/OpenBazaar/go-ethwallet/wallet"
 	"github.com/OpenBazaar/multiwallet/bitcoin"
@@ -91,7 +92,7 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 				multiwallet[wallet.TestnetLitecoin] = w
 			}
 		case wallet.Ethereum:
-			w, err = eth.NewEthereumWallet(coin, cfg.Mnemonic, cfg.Proxy)
+			w, err = eth.NewEthereumWallet(coin, cfg.Params, cfg.Mnemonic, cfg.Proxy)
 			if err != nil {
 				return nil, err
 			}

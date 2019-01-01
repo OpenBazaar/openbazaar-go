@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"github.com/OpenBazaar/multiwallet/config"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -179,7 +181,7 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
-func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
+func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
 	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
@@ -201,7 +203,7 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Diale
 
 		myAccount = &Account{key}
 	*/
-	myAccount, err = NewAccountFromMnemonic(mnemonic, "")
+	myAccount, err = NewAccountFromMnemonic(mnemonic, "", params)
 	if err != nil {
 		log.Errorf("mnemonic based pk generation failed: %s", err.Error())
 		return nil, err
@@ -325,10 +327,25 @@ func (wallet *EthereumWallet) MasterPublicKey() *hd.ExtendedKey {
 // ChildKey Generate a child key using the given chaincode. The key is used in multisig transactions.
 // For most implementations this should just be child key 0.
 func (wallet *EthereumWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
-	if isPrivateKey {
-		return wallet.MasterPrivateKey(), nil
+
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	version := []byte{0x04, 0x88, 0xad, 0xe4} // starts with xprv
+	if !isPrivateKey {
+		version = []byte{0x04, 0x88, 0xb2, 0x1e}
 	}
-	return wallet.MasterPublicKey(), nil
+	/*
+		hdKey := hd.NewExtendedKey(
+			version,
+			keyBytes,
+			chaincode,
+			parentFP,
+			0,
+			0,
+			isPrivateKey)
+		return hdKey.Child(0)
+	*/
+
+	return hd.NewExtendedKey(version, keyBytes, chaincode, parentFP, 0, 0, isPrivateKey), nil
 }
 
 // CurrentAddress - Get the current address for the given purpose
@@ -735,8 +752,10 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 		if err != nil {
 			return nil, nil, err
 		}
-		ecKeys = append(ecKeys, common.BytesToAddress(ecKey.SerializeUncompressed()))
+		ePubkey := ecKey.ToECDSA()
+		ecKeys = append(ecKeys, crypto.PubkeyToAddress(*ePubkey))
 	}
+	fmt.Println("after parsing the pub keys : ", ecKeys)
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
 	if err != nil {
@@ -755,6 +774,9 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 	builder.Buyer = ecKeys[0]
 	builder.Seller = ecKeys[1]
 	builder.MultisigAddress = ver.Implementation
+
+	fmt.Println("eth redeemscript : ")
+	spew.Dump(builder)
 
 	if threshold > 1 {
 		builder.Moderator = ecKeys[2]
