@@ -495,7 +495,7 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		ws.db.Txns().Put(txBytes, txHash.String(), int(value), int(height), ts, hits == 0)
 		cb.Timestamp = ts
 		ws.callbackListeners(cb)
-	} else {
+	} else if height > 0 {
 		ws.db.Txns().UpdateHeight(*txHash, int(height), time.Unix(u.BlockTime, 0))
 		if saved.Height != height {
 			cb.Timestamp = saved.Timestamp
