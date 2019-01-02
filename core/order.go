@@ -700,7 +700,7 @@ func (n *OpenBazaarNode) CancelOfflineOrder(contract *pb.RicardianContract, reco
 			if err != nil {
 				return err
 			}
-			outpointHash, err := hex.DecodeString(r.Txid)
+			outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 			if err != nil {
 				return fmt.Errorf("decoding transaction hash: %s", err.Error())
 			}

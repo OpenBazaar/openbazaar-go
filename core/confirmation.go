@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -113,7 +114,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 				if err != nil {
 					return err
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
@@ -190,7 +191,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 				if err != nil {
 					return fmt.Errorf("decode prior transactions address: %s", err.Error())
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}

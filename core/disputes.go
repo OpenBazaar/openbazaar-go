@@ -8,6 +8,7 @@ import (
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -69,7 +70,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	var outpoints []*pb.Outpoint
 	for _, r := range records {
 		o := new(pb.Outpoint)
-		o.Hash = r.Txid
+		o.Hash = strings.TrimPrefix(r.Txid, "0x")
 		o.Index = r.Index
 		o.Value = uint64(r.Value)
 		outpoints = append(outpoints, o)
@@ -145,7 +146,7 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 		return false
 	}
 	for _, r := range records {
-		hash, err := chainhash.NewHashFromStr(r.Txid)
+		hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
 		if err != nil {
 			log.Errorf("Failed NewHashFromStr(%s): %s", r.Txid, err.Error())
 			return false
@@ -330,7 +331,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = r.Txid
+			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
 			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
@@ -387,7 +388,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = r.Txid
+			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
 			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
@@ -992,7 +993,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	// Create inputs
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
-		decodedHash, err := hex.DecodeString(o.Hash)
+		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
 		if err != nil {
 			return err
 		}
