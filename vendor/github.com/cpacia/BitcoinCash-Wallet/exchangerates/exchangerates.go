@@ -52,7 +52,6 @@ func NewBitcoinCashPriceFetcher(dialer proxy.Dialer) *BitcoinCashPriceFetcher {
 		{"https://poloniex.com/public?command=returnTicker", b.cache, client, PoloniexDecoder{}},
 		{"https://api.kraken.com/0/public/Ticker?pair=BCHUSD", b.cache, client, KrakenDecoder{}},
 	}
-	go b.run()
 	return &b
 }
 
@@ -106,7 +105,7 @@ func (b *BitcoinCashPriceFetcher) fetchCurrentRates() error {
 	return errors.New("All exchange rate API queries failed")
 }
 
-func (b *BitcoinCashPriceFetcher) run() {
+func (b *BitcoinCashPriceFetcher) Run() {
 	b.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
 	for range ticker.C {

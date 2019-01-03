@@ -100,8 +100,10 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		mutex:         new(sync.RWMutex),
 	}
 
+	bpf := exchangerates.NewBitcoinPriceFetcher(config.Proxy)
+	w.exchangeRates = bpf
 	if !config.DisableExchangeRates {
-		w.exchangeRates = exchangerates.NewBitcoinPriceFetcher(config.Proxy)
+		go bpf.Run()
 	}
 
 	w.keyManager, err = NewKeyManager(config.DB.Keys(), w.params, w.masterPrivateKey)
