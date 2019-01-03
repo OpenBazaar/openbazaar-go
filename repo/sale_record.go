@@ -36,7 +36,13 @@ func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 			return true
 		case "TBCH":
 			return true
+		case "LTC":
+			return true
+		case "TLTC":
+			return true
 		case "ZEC":
+			return false
+		case "TZEC":
 			return false
 		}
 	}
