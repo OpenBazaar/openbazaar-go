@@ -53,12 +53,12 @@ func (w *wsWatchdog) guardWebsocket() {
 			w.client.socketMutex.Lock()
 			w.client.SocketClient.Close()
 			w.client.SocketClient = nil
-			w.client.socketMutex.Unlock()
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
 				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
 				w.client.closeWithWebsocketFailure()
 			}
+			w.client.socketMutex.Unlock()
 		case <-w.done:
 			return
 		}
@@ -70,8 +70,6 @@ func (w *wsWatchdog) drainAndRollover() {
 		select {
 		case <-w.wsStopped:
 		default:
-			close(w.wsStopped)
-			w.wsStopped = make(chan struct{}, 20)
 			return
 		}
 	}
@@ -148,6 +146,8 @@ func (i *BlockBookClient) EndpointURL() url.URL {
 }
 
 func (i *BlockBookClient) Start(closeChan chan<- error) error {
+	i.socketMutex.Lock()
+	defer i.socketMutex.Unlock()
 	if err := i.setupListeners(); err != nil {
 		return err
 	}
@@ -156,6 +156,8 @@ func (i *BlockBookClient) Start(closeChan chan<- error) error {
 }
 
 func (i *BlockBookClient) Close() {
+	i.socketMutex.Lock()
+	defer i.socketMutex.Unlock()
 	i.shutdownWebsocket()
 	i.closeChan <- nil
 	close(i.closeChan)
@@ -539,14 +541,10 @@ func (i *BlockBookClient) setupListeners() error {
 			break
 		}
 	}
-	i.socketMutex.Lock()
 	i.SocketClient = client
 	i.websocketWatchdog = newWebsocketWatchdog(i)
 	go i.websocketWatchdog.guardWebsocket()
-	i.socketMutex.Unlock()
 
-	i.socketMutex.RLock()
-	defer i.socketMutex.RUnlock()
 	i.SocketClient.On(gosocketio.OnError, func(c *gosocketio.Channel, args interface{}) {
 		Log.Warningf("websocket error: %s - %+v", i.apiUrl.Host, "-", args)
 		i.websocketWatchdog.bark()
