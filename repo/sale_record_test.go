@@ -83,3 +83,53 @@ func TestSaleRecordKnowsWhetherItSupportsTimedEscrowRelease(t *testing.T) {
 		t.Error("Expected Sales with ZEC as the only accepted currency to support Timed Escrow Release, but did NOT")
 	}
 }
+
+func TestSaleRecord_SupportsTimedEscrowRelease(t *testing.T) {
+	tests := []struct {
+		currency string
+		supportsEscrowRelease bool
+	}{
+		{
+			"BTC",
+			true,
+		},
+		{
+			"TBTC",
+			true,
+		},
+		{
+			"BCH",
+			true,
+		},
+		{
+			"TBCH",
+			true,
+		},
+		{
+			"LTC",
+			true,
+		},
+		{
+			"TLTC",
+			true,
+		},
+		{
+			"ZEC",
+			false,
+		},
+		{
+			"TZEC",
+			false,
+		},
+
+	}
+	subject := factory.NewSaleRecord()
+	for _, test := range tests {
+		subject.Contract.BuyerOrder.Payment.Coin = test.currency
+		supportsEscrowRelease := subject.SupportsTimedEscrowRelease()
+		if supportsEscrowRelease != test.supportsEscrowRelease {
+			t.Errorf("SupportsEscrowRelease test failed for %s." +
+				" Expected %t, got %t", test.currency, test.supportsEscrowRelease, supportsEscrowRelease)
+		}
+	}
+}
