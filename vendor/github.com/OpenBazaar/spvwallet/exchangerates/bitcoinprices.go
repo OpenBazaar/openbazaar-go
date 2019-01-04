@@ -59,7 +59,6 @@ func NewBitcoinPriceFetcher(dialer proxy.Dialer) *BitcoinPriceFetcher {
 		{"https://blockchain.info/ticker", b.cache, client, BlockchainInfoDecoder{}},
 		{"https://api.bitcoincharts.com/v1/weighted_prices.json", b.cache, client, BitcoinChartsDecoder{}},
 	}
-	go b.run()
 	return &b
 }
 
@@ -141,7 +140,7 @@ func (provider *ExchangeRateProvider) fetch() (err error) {
 	return provider.decoder.decode(dataMap, provider.cache)
 }
 
-func (b *BitcoinPriceFetcher) run() {
+func (b *BitcoinPriceFetcher) Run() {
 	b.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
 	for range ticker.C {
