@@ -156,6 +156,7 @@ func (i *BlockBookClient) Start(closeChan chan<- error) error {
 }
 
 func (i *BlockBookClient) Close() {
+	Log.Infof("closing client (%s)...", i.apiUrl.Host)
 	i.socketMutex.Lock()
 	defer i.socketMutex.Unlock()
 	i.shutdownWebsocket()
@@ -171,8 +172,6 @@ func (i *BlockBookClient) closeWithWebsocketFailure() {
 
 func (i *BlockBookClient) shutdownWebsocket() {
 	if i.SocketClient != nil {
-		i.socketMutex.Lock()
-		defer i.socketMutex.Unlock()
 		i.SocketClient.Close()
 		i.SocketClient = nil
 		i.websocketWatchdog.putDown()
