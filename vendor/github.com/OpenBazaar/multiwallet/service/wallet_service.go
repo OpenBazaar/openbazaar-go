@@ -109,7 +109,11 @@ func (ws *WalletService) AddTransactionListener(callback func(callback wallet.Tr
 }
 
 func (ws *WalletService) listen() {
-	addrs := ws.getStoredAddresses()
+	var (
+		addrs     = ws.getStoredAddresses()
+		txChan    = ws.client.TransactionNotify()
+		blockChan = ws.client.BlockNotify()
+	)
 	for _, sa := range addrs {
 		ws.client.ListenAddress(sa.Addr)
 	}
@@ -117,10 +121,10 @@ func (ws *WalletService) listen() {
 	for {
 		select {
 		case <-ws.doneChan:
-			break
-		case tx := <-ws.client.TransactionNotify():
+			return
+		case tx := <-txChan:
 			go ws.ProcessIncomingTransaction(tx)
-		case block := <-ws.client.BlockNotify():
+		case block := <-blockChan:
 			go ws.processIncomingBlock(block)
 		}
 	}
