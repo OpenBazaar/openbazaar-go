@@ -86,7 +86,7 @@ func TestSaleRecordKnowsWhetherItSupportsTimedEscrowRelease(t *testing.T) {
 
 func TestSaleRecord_SupportsTimedEscrowRelease(t *testing.T) {
 	tests := []struct {
-		currency string
+		currency              string
 		supportsEscrowRelease bool
 	}{
 		{
@@ -121,14 +121,13 @@ func TestSaleRecord_SupportsTimedEscrowRelease(t *testing.T) {
 			"TZEC",
 			false,
 		},
-
 	}
 	subject := factory.NewSaleRecord()
 	for _, test := range tests {
 		subject.Contract.BuyerOrder.Payment.Coin = test.currency
 		supportsEscrowRelease := subject.SupportsTimedEscrowRelease()
 		if supportsEscrowRelease != test.supportsEscrowRelease {
-			t.Errorf("SupportsEscrowRelease test failed for %s." +
+			t.Errorf("SupportsEscrowRelease test failed for %s."+
 				" Expected %t, got %t", test.currency, test.supportsEscrowRelease, supportsEscrowRelease)
 		}
 	}
