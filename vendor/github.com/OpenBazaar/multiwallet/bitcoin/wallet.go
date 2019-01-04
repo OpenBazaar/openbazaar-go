@@ -63,9 +63,9 @@ func NewBitcoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.P
 	if err != nil {
 		return nil, err
 	}
-	var er wi.ExchangeRates
+	er := exchangerates.NewBitcoinPriceFetcher(proxy)
 	if !disableExchangeRates {
-		er = exchangerates.NewBitcoinPriceFetcher(proxy)
+		go er.Run()
 	}
 
 	wm, err := service.NewWalletService(cfg.DB, km, c, params, wi.Bitcoin, cache)

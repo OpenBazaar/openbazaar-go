@@ -67,9 +67,9 @@ func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chainc
 	if err != nil {
 		return nil, err
 	}
-	var exchangeRates wi.ExchangeRates
+	exchangeRates := er.NewBitcoinCashPriceFetcher(proxy)
 	if !disableExchangeRates {
-		exchangeRates = er.NewBitcoinCashPriceFetcher(proxy)
+		go exchangeRates.Run()
 	}
 
 	fp := bcw.NewFeeProvider(cfg.MaxFee, cfg.HighFee, cfg.MediumFee, cfg.LowFee, exchangeRates)

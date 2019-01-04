@@ -171,9 +171,9 @@ func (i *BlockBookClient) shutdownWebsocket() {
 	if i.SocketClient != nil {
 		i.socketMutex.Lock()
 		defer i.socketMutex.Unlock()
-		i.websocketWatchdog.putDown()
 		i.SocketClient.Close()
 		i.SocketClient = nil
+		i.websocketWatchdog.putDown()
 	}
 }
 
