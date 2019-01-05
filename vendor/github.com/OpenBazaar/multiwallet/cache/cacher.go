@@ -1,6 +1,9 @@
 package cache
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Cacher interface {
 	Set(string, []byte) error
@@ -8,22 +11,27 @@ type Cacher interface {
 }
 
 func NewMockCacher() Cacher {
-	return exampleWithNoPersistence{
+	return &exampleWithNoPersistence{
 		kv: make(map[string][]byte),
 	}
 }
 
 type exampleWithNoPersistence struct {
-	kv map[string][]byte
+	lock sync.RWMutex
+	kv   map[string][]byte
 }
 
-func (e exampleWithNoPersistence) Set(key string, value []byte) error {
+func (e *exampleWithNoPersistence) Set(key string, value []byte) error {
+	e.lock.Lock()
 	e.kv[key] = value
+	e.lock.Unlock()
 	return nil
 }
 
-func (e exampleWithNoPersistence) Get(key string) ([]byte, error) {
+func (e *exampleWithNoPersistence) Get(key string) ([]byte, error) {
+	e.lock.RLock()
 	value, ok := e.kv[key]
+	e.lock.RUnlock()
 	if !ok {
 		return nil, fmt.Errorf("cached key not found")
 	}

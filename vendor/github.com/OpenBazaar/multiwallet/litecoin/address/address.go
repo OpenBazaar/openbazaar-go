@@ -227,7 +227,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 // an address string into a specific address type.
 func IsBech32SegwitPrefix(prefix string) bool {
 	prefix = strings.ToLower(prefix)
-	if prefix == "ltc1" || prefix == "tltc1"{
+	if prefix == "ltc1" || prefix == "tltc1" {
 		return true
 	}
 	return false
