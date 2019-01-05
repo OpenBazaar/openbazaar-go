@@ -217,13 +217,18 @@ func (ws *WalletService) processIncomingBlock(block model.Block) {
 					for _, u := range utxos {
 						if u.Op.Hash.String() == txn.Txid {
 							u.AtHeight = h
-							ws.db.Utxos().Put(u)
+							if err := ws.db.Utxos().Put(u); err != nil {
+								Log.Errorf("updating utxo confirmation to %d: %s", h, err.Error())
+							}
 							continue
 						}
 					}
 				}
 				// Rebroadcast unconfirmed transactions
-				ws.client.Broadcast(tx.Bytes)
+				_, err = ws.client.Broadcast(tx.Bytes)
+				if err != nil {
+					Log.Errorf("broadcasting unconfirmed utxo: %s", err.Error())
+				}
 			}(tx)
 		}
 	}
