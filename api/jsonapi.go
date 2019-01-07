@@ -1007,7 +1007,7 @@ func (i *jsonAPIHandler) GETClosestPeers(w http.ResponseWriter, r *http.Request)
 func (i *jsonAPIHandler) GETExchangeRate(w http.ResponseWriter, r *http.Request) {
 	s := strings.Split(r.URL.Path, "/")
 	var currencyCode, coinType string
-	if len(s) <= 5 {
+	if len(s) <= 5 && len(s) > 3 {
 		coinType = s[3]
 	}
 	if len(s) >= 5 {
