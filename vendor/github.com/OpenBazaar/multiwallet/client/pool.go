@@ -107,7 +107,6 @@ func (p *ClientPool) runLoop() error {
 	if err := <-closeChan; err != nil {
 		p.poolManager.FailCurrent()
 		p.poolManager.CloseCurrent()
-		p.poolManager.Lock()
 	}
 	return nil
 }

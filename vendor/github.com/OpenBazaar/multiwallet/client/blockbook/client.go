@@ -56,7 +56,10 @@ func (w *wsWatchdog) guardWebsocket() {
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
 				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
-				w.client.closeWithWebsocketFailure()
+				w.client.closeChan <- fmt.Errorf("websocket unavailable")
+				close(w.client.closeChan)
+				w.putDown()
+				return
 			}
 			w.client.socketMutex.Unlock()
 		case <-w.done:
@@ -83,8 +86,9 @@ func (w *wsWatchdog) bark() {
 }
 
 func (w *wsWatchdog) putDown() {
-	close(w.done)
 	close(w.wsStopped)
+	w.done <- struct{}{}
+	close(w.done)
 }
 
 type BlockBookClient struct {
@@ -159,23 +163,13 @@ func (i *BlockBookClient) Close() {
 	Log.Infof("closing client (%s)...", i.apiUrl.Host)
 	i.socketMutex.Lock()
 	defer i.socketMutex.Unlock()
-	i.shutdownWebsocket()
-	i.closeChan <- nil
-	close(i.closeChan)
-}
-
-func (i *BlockBookClient) closeWithWebsocketFailure() {
-	i.shutdownWebsocket()
-	i.closeChan <- fmt.Errorf("websocket unavailable")
-	close(i.closeChan)
-}
-
-func (i *BlockBookClient) shutdownWebsocket() {
 	if i.SocketClient != nil {
 		i.SocketClient.Close()
 		i.SocketClient = nil
 		i.websocketWatchdog.putDown()
 	}
+	i.closeChan <- nil
+	close(i.closeChan)
 }
 
 func validateScheme(target *url.URL) error {

@@ -75,13 +75,20 @@ func newRotationManager(targets []string, proxyDialer proxy.Dialer, doReq reqFun
 		currentTarget: nilTarget,
 		targetHealth:  targetHealth,
 	}
-	m.Lock()
 	return m, nil
 }
 
 func (r *rotationManager) AcquireCurrent() *blockbook.BlockBookClient {
-	r.RLock()
-	return r.clientCache[r.currentTarget]
+	for {
+		r.RLock()
+		if client, ok := r.clientCache[r.currentTarget]; !ok {
+			r.RUnlock()
+			r.SelectNext()
+			continue
+		} else {
+			return client
+		}
+	}
 }
 
 func (r *rotationManager) ReleaseCurrent() {
@@ -89,9 +96,11 @@ func (r *rotationManager) ReleaseCurrent() {
 }
 
 func (r *rotationManager) CloseCurrent() {
+	r.Lock()
+	defer r.Unlock()
+
 	if r.currentTarget != nilTarget {
 		if r.started {
-			r.Lock()
 			r.clientCache[r.currentTarget].Close()
 		}
 		r.currentTarget = nilTarget
@@ -99,20 +108,28 @@ func (r *rotationManager) CloseCurrent() {
 }
 
 func (r *rotationManager) StartCurrent(done chan<- error) error {
+	r.Lock()
+	defer r.Unlock()
+
 	if err := r.clientCache[r.currentTarget].Start(done); err != nil {
 		return err
 	}
 	r.started = true
-	r.Unlock()
 	return nil
 }
 
 func (r *rotationManager) FailCurrent() {
+	r.Lock()
+	defer r.Unlock()
+
 	r.started = false
 	r.targetHealth[r.currentTarget].markUnhealthy()
 }
 
 func (r *rotationManager) SelectNext() {
+	r.Lock()
+	defer r.Unlock()
+
 	if r.currentTarget == nilTarget {
 		var nextAvailableAt time.Time
 		for {
