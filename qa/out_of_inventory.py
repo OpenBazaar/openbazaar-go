@@ -64,7 +64,7 @@ class OutOfInventoryTest(OpenBazaarTestFramework):
         # shutdown alice
         api_url = alice["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(4)
+        time.sleep(10)
 
         # bob send order
         with open('testdata/order_direct.json') as order_file:

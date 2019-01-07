@@ -113,9 +113,10 @@ func NewSPVWallet(config *Config) (*SPVWallet, error) {
 		mutex:         new(sync.RWMutex),
 	}
 
+	er := exchangerates.NewBitcoinCashPriceFetcher(config.Proxy)
+	w.exchangeRates = er
 	if !config.DisableExchangeRates {
-		er := exchangerates.NewBitcoinCashPriceFetcher(config.Proxy)
-		w.exchangeRates = er
+		go er.Run()
 		w.feeProvider.exchangeRates = er
 	}
 

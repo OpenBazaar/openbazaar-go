@@ -25,9 +25,9 @@ type SaleRecord struct {
 // a time-bassed release behavior.
 // TODO: Express this from the wallet-interface instead
 func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
-	if len(r.Contract.VendorListings) > 0 &&
-		len(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies) > 0 {
-		switch strings.ToUpper(r.Contract.VendorListings[0].Metadata.AcceptedCurrencies[0]) {
+	if r.Contract.BuyerOrder != nil &&
+		r.Contract.BuyerOrder.Payment != nil {
+		switch strings.ToUpper(r.Contract.BuyerOrder.Payment.Coin) {
 		case "BTC":
 			return true
 		case "TBTC":
@@ -36,7 +36,13 @@ func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 			return true
 		case "TBCH":
 			return true
+		case "LTC":
+			return true
+		case "TLTC":
+			return true
 		case "ZEC":
+			return false
+		case "TZEC":
 			return false
 		}
 	}
