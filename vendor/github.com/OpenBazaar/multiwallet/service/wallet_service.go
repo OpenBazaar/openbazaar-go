@@ -109,7 +109,11 @@ func (ws *WalletService) AddTransactionListener(callback func(callback wallet.Tr
 }
 
 func (ws *WalletService) listen() {
-	addrs := ws.getStoredAddresses()
+	var (
+		addrs     = ws.getStoredAddresses()
+		txChan    = ws.client.TransactionNotify()
+		blockChan = ws.client.BlockNotify()
+	)
 	for _, sa := range addrs {
 		ws.client.ListenAddress(sa.Addr)
 	}
@@ -117,10 +121,10 @@ func (ws *WalletService) listen() {
 	for {
 		select {
 		case <-ws.doneChan:
-			break
-		case tx := <-ws.client.TransactionNotify():
+			return
+		case tx := <-txChan:
 			go ws.ProcessIncomingTransaction(tx)
-		case block := <-ws.client.BlockNotify():
+		case block := <-blockChan:
 			go ws.processIncomingBlock(block)
 		}
 	}
@@ -495,7 +499,7 @@ func (ws *WalletService) saveSingleTxToDB(u model.Transaction, chainHeight int32
 		ws.db.Txns().Put(txBytes, txHash.String(), int(value), int(height), ts, hits == 0)
 		cb.Timestamp = ts
 		ws.callbackListeners(cb)
-	} else {
+	} else if height > 0 {
 		ws.db.Txns().UpdateHeight(*txHash, int(height), time.Unix(u.BlockTime, 0))
 		if saved.Height != height {
 			cb.Timestamp = saved.Timestamp
