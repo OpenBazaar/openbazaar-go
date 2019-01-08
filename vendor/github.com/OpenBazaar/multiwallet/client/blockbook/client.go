@@ -56,9 +56,10 @@ func (w *wsWatchdog) guardWebsocket() {
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
 				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
+				w.client.socketMutex.Unlock()
 				w.client.closeChan <- fmt.Errorf("websocket unavailable")
 				close(w.client.closeChan)
-				w.putDown()
+				go w.putDown()
 				return
 			}
 			w.client.socketMutex.Unlock()
@@ -86,7 +87,6 @@ func (w *wsWatchdog) bark() {
 }
 
 func (w *wsWatchdog) putDown() {
-	close(w.wsStopped)
 	w.done <- struct{}{}
 	close(w.done)
 }
@@ -164,9 +164,9 @@ func (i *BlockBookClient) Close() {
 	i.socketMutex.Lock()
 	defer i.socketMutex.Unlock()
 	if i.SocketClient != nil {
+		go i.websocketWatchdog.putDown()
 		i.SocketClient.Close()
 		i.SocketClient = nil
-		i.websocketWatchdog.putDown()
 	}
 	i.closeChan <- nil
 	close(i.closeChan)
@@ -473,10 +473,10 @@ func (i *BlockBookClient) ListenAddress(addr btcutil.Address) {
 	var args []interface{}
 	args = append(args, "bitcoind/addresstxid")
 	args = append(args, []string{maybeConvertCashAddress(addr)})
+	i.socketMutex.RLock()
+	defer i.socketMutex.RUnlock()
 	if i.SocketClient != nil {
-		i.socketMutex.RLock()
 		i.SocketClient.Emit("subscribe", args)
-		i.socketMutex.RUnlock()
 	} else {
 		i.listenQueue = append(i.listenQueue, maybeConvertCashAddress(addr))
 	}
@@ -522,6 +522,7 @@ func (i *BlockBookClient) setupListeners() error {
 			setupTimeoutAt = time.Now().Add(10 * time.Second)
 			t              = time.NewTicker(2 * time.Second)
 		)
+		defer t.Stop()
 		for range t.C {
 			if time.Now().After(setupTimeoutAt) {
 				return fmt.Errorf("unable to connect websocket to setup listeners")
