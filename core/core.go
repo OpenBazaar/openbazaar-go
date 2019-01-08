@@ -8,9 +8,7 @@ import (
 	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"net/url"
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -23,9 +21,9 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/kennygrant/sanitize"
-	"github.com/op/go-logging"
+	logging "github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 )
@@ -307,11 +305,13 @@ func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
 }
 
-// createSlugFor Create a slug from a string
+// createSlugFor Create a slug from a multi-lang string
 func createSlugFor(slugName string) string {
 	l := SentenceMaxCharacters - SlugBuffer
-	if len(slugName) < SentenceMaxCharacters-SlugBuffer {
-		l = len(slugName)
+
+	slug := slug.Make(slugName)
+	if len(slug) < SentenceMaxCharacters-SlugBuffer {
+		l = len(slug)
 	}
-	return url.QueryEscape(sanitize.Path(strings.ToLower(slugName[:l])))
+	return slug[:l]
 }
