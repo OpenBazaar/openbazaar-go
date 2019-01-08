@@ -453,6 +453,14 @@ func TestWallet(t *testing.T) {
 	})
 }
 
+func TestExchangeRates(t *testing.T) {
+	runAPITests(t, apiTests{
+		{"GET", "/ob/exchangerates", "", 500, invalidCoinJSON},
+		{"GET", "/ob/exchangerates/", "", 500, invalidCoinJSON},
+		{"GET", "/ob/exchangerates/BTC", "", 200, anyResponseJSON},
+	})
+}
+
 func TestConfig(t *testing.T) {
 	runAPITests(t, apiTests{
 		// TODO: Need better JSON matching
