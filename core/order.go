@@ -74,6 +74,8 @@ const (
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
+
+	log.Debugf("creating contract for vendor %s", contract.VendorListings[0].VendorID.PeerID)
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", 0, false, err
@@ -85,6 +87,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 
 	// Add payment data and send to vendor
 	if data.Moderator != "" { // Moderated payment
+		log.Debugf("processing moderated order for vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		if data.Moderator == n.IpfsNode.Identity.Pretty() {
 			return "", "", 0, false, errors.New("cannot select self as moderator")
 		}
@@ -96,6 +99,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.Moderator = data.Moderator
 		payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
 
+		log.Debugf("fetching moderator profile %s", data.Moderator)
 		profile, err := n.FetchProfile(data.Moderator, true)
 		if err != nil {
 			return "", "", 0, false, errors.New("moderator could not be found")
@@ -112,11 +116,13 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 			return "", "", 0, false, errors.New("moderator does not accept our currency")
 		}
 		contract.BuyerOrder.Payment = payment
+		log.Debugf("calculating order total")
 		total, err := n.CalculateOrderTotal(contract)
 		if err != nil {
 			return "", "", 0, false, err
 		}
 		payment.Amount = total
+		log.Debugf("getting fee per byte from wallet")
 		fpb := wal.GetFeePerByte(wallet.NORMAL)
 		if (fpb * EscrowReleaseSize) > (payment.Amount / 4) {
 			return "", "", 0, false, errors.New("transaction fee too high for moderated payment")
@@ -129,6 +135,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+		log.Debugf("generating child keys")
 		vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
 		if err != nil {
 			return "", "", 0, false, err
@@ -151,6 +158,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+		log.Debugf("generating redemption script")
 		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
 		if err != nil {
 			return "", "", 0, false, err
@@ -160,6 +168,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		payment.Chaincode = hex.EncodeToString(chaincode)
 		contract.BuyerOrder.RefundFee = wal.GetFeePerByte(wallet.NORMAL)
 
+		log.Debugf("ask wallet to watch 2-of-3 payment address")
 		err = wal.AddWatchedAddress(addr)
 		if err != nil {
 			return "", "", 0, false, err
@@ -171,6 +180,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		}
 
 		// Send to order vendor
+		log.Debugf("sending order request to vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		resp, err := n.SendOrder(contract.VendorListings[0].VendorID.PeerID, contract)
 		if err != nil {
 			// Vendor offline
@@ -194,13 +204,19 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 			}
 			err = n.SendOfflineMessage(peerID, &k, &m)
 			if err != nil {
+				log.Debugf("sending offline message failed for vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
 				return "", "", 0, false, err
 			}
 			orderID, err := n.CalcOrderID(contract.BuyerOrder)
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			log.Debugf("sending offline message failed for vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
+			err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
+			if err != nil {
+				log.Errorf("persisting purchase for vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
+				return "", "", 0, false, err
+			}
 			return orderID, contract.BuyerOrder.Payment.Address, contract.BuyerOrder.Payment.Amount, false, err
 		}
 		// Vendor responded
@@ -210,6 +226,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 			return "", "", 0, false, errors.New("vendor responded to the order with an incorrect message type")
 		}
+		log.Debugf("order confirmation received from vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
 		rc := new(pb.RicardianContract)
 		err = proto.Unmarshal(resp.Payload.Value, rc)
 		if err != nil {
@@ -221,6 +238,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 				contract.Signatures = append(contract.Signatures, sig)
 			}
 		}
+		log.Debugf("validating order confirmation from vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		err = n.ValidateOrderConfirmation(contract, true)
 		if err != nil {
 			return "", "", 0, false, err
@@ -232,10 +250,12 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if err != nil {
 			return "", "", 0, false, err
 		}
+		log.Debugf("persisting order confirmation update from vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 		if err != nil {
 			return "", "", 0, false, err
 		}
+		log.Debugf("completed moderated purchase for vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		return orderID, contract.VendorOrderConfirmation.PaymentAddress, contract.BuyerOrder.Payment.Amount, true, nil
 
 	}
@@ -244,6 +264,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
 	payment.Coin = data.PaymentCoin
 	contract.BuyerOrder.Payment = payment
+	log.Debugf("calculating order total")
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
 		return "", "", 0, false, err
@@ -773,6 +794,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 	if err != nil {
 		return 0, err
 	}
+	log.Debugf("refreshing all exchange rates")
 	if wal.ExchangeRates() != nil {
 		wal.ExchangeRates().GetLatestRate("") // Refresh the exchange rates
 	}
@@ -1025,6 +1047,7 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 	if wal.ExchangeRates() == nil {
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
+	log.Debugf("refreshing exchange rate for %s", currencyCode)
 	exchangeRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
@@ -1045,6 +1068,7 @@ func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode 
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
 
+	log.Debugf("refreshing exchange rate for %s", currencyCode)
 	rate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
