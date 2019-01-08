@@ -74,8 +74,6 @@ const (
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
-
-	log.Debugf("creating contract for vendor %s", contract.VendorListings[0].VendorID.PeerID)
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", 0, false, err
