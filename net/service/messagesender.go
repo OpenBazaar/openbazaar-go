@@ -90,7 +90,6 @@ func (ms *messageSender) ctxPrepOrInvalidate(ctx context.Context) error {
 		ms.invalidate()
 		return ErrWriteTimeout
 	}
-	return nil
 }
 
 func (ms *messageSender) prep() error {
