@@ -113,6 +113,10 @@ func (p *ClientPool) runLoop() error {
 
 // Close proxies the same request to the active InsightClient
 func (p *ClientPool) Close() {
+	if p.cancelListenChan != nil {
+		p.cancelListenChan()
+		p.cancelListenChan = nil
+	}
 	p.unblockStart <- struct{}{}
 	p.poolManager.CloseCurrent()
 }
@@ -155,7 +159,7 @@ func (p *ClientPool) listenChans(ctx context.Context) {
 // error will this method return an error.
 func (p *ClientPool) doRequest(endpoint, method string, body []byte, query url.Values) (*http.Response, error) {
 	for e := p.newMaximumTryEnumerator(); e.next(); {
-		var client = p.poolManager.AcquireCurrent()
+		var client = p.poolManager.AcquireCurrentWhenReady()
 		requestUrl := client.EndpointURL()
 		requestUrl.Path = path.Join(client.EndpointURL().Path, endpoint)
 		req, err := http.NewRequest(method, requestUrl.String(), bytes.NewReader(body))
@@ -209,56 +213,56 @@ func (p *ClientPool) BlockNotify() <-chan model.Block {
 
 // Broadcast proxies the same request to the active InsightClient
 func (p *ClientPool) Broadcast(tx []byte) (string, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.Broadcast(tx)
 }
 
 // EstimateFee proxies the same request to the active InsightClient
 func (p *ClientPool) EstimateFee(nBlocks int) (int, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.EstimateFee(nBlocks)
 }
 
 // GetBestBlock proxies the same request to the active InsightClient
 func (p *ClientPool) GetBestBlock() (*model.Block, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetBestBlock()
 }
 
 // GetInfo proxies the same request to the active InsightClient
 func (p *ClientPool) GetInfo() (*model.Info, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetInfo()
 }
 
 // GetRawTransaction proxies the same request to the active InsightClient
 func (p *ClientPool) GetRawTransaction(txid string) ([]byte, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetRawTransaction(txid)
 }
 
 // GetTransactions proxies the same request to the active InsightClient
 func (p *ClientPool) GetTransactions(addrs []btcutil.Address) ([]model.Transaction, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetTransactions(addrs)
 }
 
 // GetTransaction proxies the same request to the active InsightClient
 func (p *ClientPool) GetTransaction(txid string) (*model.Transaction, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetTransaction(txid)
 }
 
 // GetUtxos proxies the same request to the active InsightClient
 func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	return client.GetUtxos(addrs)
 }
@@ -267,7 +271,7 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 func (p *ClientPool) ListenAddress(addr btcutil.Address) {
 	p.listenAddrsLock.Lock()
 	defer p.listenAddrsLock.Unlock()
-	var client = p.poolManager.AcquireCurrent()
+	var client = p.poolManager.AcquireCurrentWhenReady()
 	defer p.poolManager.ReleaseCurrent()
 	p.listenAddrs = append(p.listenAddrs, addr)
 	client.ListenAddress(addr)
