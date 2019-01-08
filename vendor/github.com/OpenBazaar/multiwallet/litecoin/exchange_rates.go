@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	exchange "github.com/OpenBazaar/spvwallet/exchangerates"
 	"golang.org/x/net/proxy"
-	"strings"
 )
 
 type ExchangeRateProvider struct {
@@ -103,7 +104,7 @@ func (z *LitecoinPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, er
 	return copy, nil
 }
 
-func (z *LitecoinPriceFetcher) UnitsPerCoin() int {
+func (z *LitecoinPriceFetcher) UnitsPerCoin() int64 {
 	return exchange.SatoshiPerBTC
 }
 

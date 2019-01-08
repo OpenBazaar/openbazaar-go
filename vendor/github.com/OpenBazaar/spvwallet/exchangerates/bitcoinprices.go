@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"strings"
+
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
-	"strings"
 )
 
 const SatoshiPerBTC = 100000000
@@ -103,7 +104,7 @@ func (b *BitcoinPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, err
 	return copy, nil
 }
 
-func (b *BitcoinPriceFetcher) UnitsPerCoin() int {
+func (b *BitcoinPriceFetcher) UnitsPerCoin() int64 {
 	return SatoshiPerBTC
 }
 
