@@ -75,23 +75,46 @@ func newRotationManager(targets []string, proxyDialer proxy.Dialer, doReq reqFun
 		currentTarget: nilTarget,
 		targetHealth:  targetHealth,
 	}
-	m.Lock()
 	return m, nil
 }
 
 func (r *rotationManager) AcquireCurrent() *blockbook.BlockBookClient {
-	r.RLock()
-	return r.clientCache[r.currentTarget]
+	for {
+		r.rLock()
+		if client, ok := r.clientCache[r.currentTarget]; !ok {
+			r.rUnlock()
+			r.SelectNext()
+			continue
+		} else {
+			return client
+		}
+	}
+}
+
+func (r *rotationManager) AcquireCurrentWhenReady() *blockbook.BlockBookClient {
+	if r.started {
+		return r.AcquireCurrent()
+	}
+	var t = time.NewTicker(1 * time.Second)
+	defer t.Stop()
+	for range t.C {
+		if r.started {
+			break
+		}
+	}
+	return r.AcquireCurrent()
 }
 
 func (r *rotationManager) ReleaseCurrent() {
-	r.RUnlock()
+	r.rUnlock()
 }
 
 func (r *rotationManager) CloseCurrent() {
+	r.lock()
+	defer r.unlock()
+
 	if r.currentTarget != nilTarget {
 		if r.started {
-			r.Lock()
 			r.clientCache[r.currentTarget].Close()
 		}
 		r.currentTarget = nilTarget
@@ -99,20 +122,28 @@ func (r *rotationManager) CloseCurrent() {
 }
 
 func (r *rotationManager) StartCurrent(done chan<- error) error {
+	r.lock()
+	defer r.unlock()
+
 	if err := r.clientCache[r.currentTarget].Start(done); err != nil {
 		return err
 	}
 	r.started = true
-	r.Unlock()
 	return nil
 }
 
 func (r *rotationManager) FailCurrent() {
+	r.lock()
+	defer r.unlock()
+
 	r.started = false
 	r.targetHealth[r.currentTarget].markUnhealthy()
 }
 
 func (r *rotationManager) SelectNext() {
+	r.lock()
+	defer r.unlock()
+
 	if r.currentTarget == nilTarget {
 		var nextAvailableAt time.Time
 		for {
@@ -132,18 +163,18 @@ func (r *rotationManager) SelectNext() {
 	}
 }
 
-func (r *rotationManager) Lock() {
+func (r *rotationManager) lock() {
 	r.rotateLock.Lock()
 }
 
-func (r *rotationManager) Unlock() {
+func (r *rotationManager) unlock() {
 	r.rotateLock.Unlock()
 }
 
-func (r *rotationManager) RLock() {
+func (r *rotationManager) rLock() {
 	r.rotateLock.RLock()
 }
 
-func (r *rotationManager) RUnlock() {
+func (r *rotationManager) rUnlock() {
 	r.rotateLock.RUnlock()
 }
