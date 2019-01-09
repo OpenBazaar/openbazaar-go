@@ -209,7 +209,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 			if err != nil {
 				return "", "", 0, false, err
 			}
-			log.Debugf("sending offline message failed for vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
+			log.Debugf("sending offline message failed for vendor %s", contract.VendorListings[0].VendorID.PeerID)
 			err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_AWAITING_PAYMENT, false)
 			if err != nil {
 				log.Errorf("persisting purchase for vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
@@ -224,7 +224,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 		if resp.MessageType != pb.Message_ORDER_CONFIRMATION {
 			return "", "", 0, false, errors.New("vendor responded to the order with an incorrect message type")
 		}
-		log.Debugf("order confirmation received from vendor %s: %s", contract.VendorListings[0].VendorID.PeerID, err.Error())
+		log.Debugf("order confirmation received from vendor %s", contract.VendorListings[0].VendorID.PeerID)
 		rc := new(pb.RicardianContract)
 		err = proto.Unmarshal(resp.Payload.Value, rc)
 		if err != nil {
