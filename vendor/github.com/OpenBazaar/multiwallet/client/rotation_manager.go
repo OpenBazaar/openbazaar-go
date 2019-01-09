@@ -47,11 +47,12 @@ const nilTarget = RotationTarget("")
 type (
 	RotationTarget  string
 	rotationManager struct {
-		clientCache   map[RotationTarget]*blockbook.BlockBookClient
-		currentTarget RotationTarget
-		targetHealth  map[RotationTarget]*healthState
-		rotateLock    sync.RWMutex
-		started       bool
+		clientCache     map[RotationTarget]*blockbook.BlockBookClient
+		currentTarget   RotationTarget
+		targetHealth    map[RotationTarget]*healthState
+		rotateLock      sync.RWMutex
+		rotateReadLocks int
+		started         bool
 	}
 	reqFunc func(string, string, []byte, url.Values) (*http.Response, error)
 )
@@ -165,16 +166,22 @@ func (r *rotationManager) SelectNext() {
 
 func (r *rotationManager) lock() {
 	r.rotateLock.Lock()
+	Log.Debugf("wallet write lock")
 }
 
 func (r *rotationManager) unlock() {
+	Log.Debugf("wallet write unlock")
 	r.rotateLock.Unlock()
 }
 
 func (r *rotationManager) rLock() {
 	r.rotateLock.RLock()
+	r.rotateReadLocks++
+	Log.Debugf("wallet read lock - %d", r.rotateReadLocks)
 }
 
 func (r *rotationManager) rUnlock() {
+	r.rotateReadLocks--
+	Log.Debugf("wallet read unlock - %d", r.rotateReadLocks)
 	r.rotateLock.RUnlock()
 }
