@@ -362,6 +362,11 @@ const insuffientFundsJSON = `{
 	"reason": "ERROR_INSUFFICIENT_FUNDS"
 }`
 
+const invalidCoinJSON = `{
+    	"success": false,
+    	"reason": "multiwallet does not contain an implementation for the given coin"
+}`
+
 //
 // Posts
 //
