@@ -1598,12 +1598,15 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, net.OutOfOrderMessage
 	}
 
-	if contract.VendorOrderConfirmation != nil {
+	if contract.VendorOrderConfirmation != nil &&
+		contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
+
 		// the seller has confirmed the order, so a simple check of
 		// the addresses and we are good to proceed
 		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
 			return nil, errors.New("the addresses dont match")
 		}
+
 	} else {
 		// the seller has not confirmed, so we need to compare the
 		// peerID in the vendorListing to the node peerID

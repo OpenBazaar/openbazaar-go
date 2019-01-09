@@ -875,9 +875,9 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 
 	fmt.Println("in create multisig ... ")
 	fmt.Println("ins : ")
-	spew.Dump(ins)
+	//spew.Dump(ins)
 	fmt.Println("outs :")
-	spew.Dump(outs)
+	//spew.Dump(outs)
 
 	var sigs []wi.Signature
 
@@ -1008,14 +1008,14 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 
 	fmt.Println("in multisign ....")
-	fmt.Println("ins : ")
-	spew.Dump(ins)
-	fmt.Println("outs :")
-	spew.Dump(outs)
-	fmt.Println("sigs1 : ")
-	spew.Dump(sigs1)
-	fmt.Println("sigs2 :")
-	spew.Dump(sigs2)
+	fmt.Println("ins : ", ins)
+	//spew.Dump(ins)
+	fmt.Println("outs :", outs)
+	//spew.Dump(outs)
+	fmt.Println("sigs1 : ", sigs1)
+	//spew.Dump(sigs1)
+	fmt.Println("sigs2 :", sigs2)
+	//spew.Dump(sigs2)
 
 	//var buf bytes.Buffer
 
