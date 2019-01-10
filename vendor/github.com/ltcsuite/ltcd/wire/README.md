@@ -1,9 +1,10 @@
 wire
 ====
 
-[![Build Status](http://img.shields.io/travis/ltcsuite/ltcd.svg)](https://travis-ci.org/ltcsuite/ltcd) [![ISC License]
-(http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
+[![Build Status](http://img.shields.io/travis/ltcsuite/ltcd.svg)](https://travis-ci.org/ltcsuite/ltcd)
+[![ISC License](http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)](http://godoc.org/github.com/ltcsuite/ltcd/wire)
+=======
 
 Package wire implements the bitcoin wire protocol.  A comprehensive suite of
 tests with 100% test coverage is provided to ensure proper functionality.
