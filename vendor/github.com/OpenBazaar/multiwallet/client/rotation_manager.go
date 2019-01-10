@@ -1,8 +1,6 @@
 package client
 
 import (
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -53,10 +51,9 @@ type (
 		rotateLock    sync.RWMutex
 		started       bool
 	}
-	reqFunc func(string, string, []byte, url.Values) (*http.Response, error)
 )
 
-func newRotationManager(targets []string, proxyDialer proxy.Dialer, doReq reqFunc) (*rotationManager, error) {
+func newRotationManager(targets []string, proxyDialer proxy.Dialer) (*rotationManager, error) {
 	var (
 		targetHealth = make(map[RotationTarget]*healthState)
 		clients      = make(map[RotationTarget]*blockbook.BlockBookClient)
@@ -66,7 +63,6 @@ func newRotationManager(targets []string, proxyDialer proxy.Dialer, doReq reqFun
 		if err != nil {
 			return nil, err
 		}
-		c.RequestFunc = doReq
 		clients[RotationTarget(apiUrl)] = c
 		targetHealth[RotationTarget(apiUrl)] = &healthState{}
 	}
@@ -78,6 +74,9 @@ func newRotationManager(targets []string, proxyDialer proxy.Dialer, doReq reqFun
 	return m, nil
 }
 
+// AcquireCurrent locks the current client for reading and returns a pointer to the current
+// client. ReleaseCurrent is required at the end of using the active client to ensure rotation
+// does not lock indefinitely.
 func (r *rotationManager) AcquireCurrent() *blockbook.BlockBookClient {
 	for {
 		r.rLock()
@@ -91,6 +90,8 @@ func (r *rotationManager) AcquireCurrent() *blockbook.BlockBookClient {
 	}
 }
 
+// AcquireCurrentWhenReady will block until the current client is ready for use. This method
+// should always be used before the AcquireCurrent variety to minimize time within a read lock.
 func (r *rotationManager) AcquireCurrentWhenReady() *blockbook.BlockBookClient {
 	if r.started {
 		return r.AcquireCurrent()
@@ -105,10 +106,13 @@ func (r *rotationManager) AcquireCurrentWhenReady() *blockbook.BlockBookClient {
 	return r.AcquireCurrent()
 }
 
+// ReleaseCurrent unlocks the current client for reading and cleans up outstanding resources as
+// needed.
 func (r *rotationManager) ReleaseCurrent() {
 	r.rUnlock()
 }
 
+// CloseCurrent locks the client for changing which prevents further read locks from being accessed.
 func (r *rotationManager) CloseCurrent() {
 	r.lock()
 	defer r.unlock()
@@ -121,6 +125,7 @@ func (r *rotationManager) CloseCurrent() {
 	}
 }
 
+// StartCurrent unlocks the client for use after successfully starting the active client.
 func (r *rotationManager) StartCurrent(done chan<- error) error {
 	r.lock()
 	defer r.unlock()
@@ -132,6 +137,7 @@ func (r *rotationManager) StartCurrent(done chan<- error) error {
 	return nil
 }
 
+// FailCurrent marks the current client as having failed and ensures it is not rotated into too soon.
 func (r *rotationManager) FailCurrent() {
 	r.lock()
 	defer r.unlock()
@@ -140,6 +146,8 @@ func (r *rotationManager) FailCurrent() {
 	r.targetHealth[r.currentTarget].markUnhealthy()
 }
 
+// SelectNext finds the next healthy and available server to activate with StartCurrent. This call will
+// block until a server is healthy and available.
 func (r *rotationManager) SelectNext() {
 	r.lock()
 	defer r.unlock()
