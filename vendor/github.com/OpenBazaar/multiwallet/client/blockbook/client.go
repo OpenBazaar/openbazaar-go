@@ -206,6 +206,12 @@ func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query 
 		}
 	}
 	if resp.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			Log.Warningf("unable to read non-ok response body")
+			return nil, fmt.Errorf("status not ok: %s", resp.Status)
+		}
+		Log.Warningf("non-ok response body:\n%s", string(body))
 		return nil, fmt.Errorf("status not ok: %s", resp.Status)
 	}
 	return resp, nil
