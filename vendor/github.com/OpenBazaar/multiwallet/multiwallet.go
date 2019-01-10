@@ -5,12 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/OpenBazaar/multiwallet/client/blockbook"
-	"github.com/OpenBazaar/multiwallet/client/insight"
-
 	eth "github.com/OpenBazaar/go-ethwallet/wallet"
 	"github.com/OpenBazaar/multiwallet/bitcoin"
 	"github.com/OpenBazaar/multiwallet/bitcoincash"
+	"github.com/OpenBazaar/multiwallet/client/blockbook"
+	"github.com/OpenBazaar/multiwallet/client/insight"
 	"github.com/OpenBazaar/multiwallet/config"
 	"github.com/OpenBazaar/multiwallet/litecoin"
 	"github.com/OpenBazaar/multiwallet/service"

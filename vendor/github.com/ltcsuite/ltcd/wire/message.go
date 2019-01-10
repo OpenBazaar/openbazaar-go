@@ -51,10 +51,12 @@ const (
 	CmdReject       = "reject"
 	CmdSendHeaders  = "sendheaders"
 	CmdFeeFilter    = "feefilter"
-	CmdGetCFilter   = "getcfilter"
+	CmdGetCFilters  = "getcfilters"
 	CmdGetCFHeaders = "getcfheaders"
+	CmdGetCFCheckpt = "getcfcheckpt"
 	CmdCFilter      = "cfilter"
 	CmdCFHeaders    = "cfheaders"
+	CmdCFCheckpt    = "cfcheckpt"
 )
 
 // MessageEncoding represents the wire message encoding format to be used.
@@ -160,17 +162,23 @@ func makeEmptyMessage(command string) (Message, error) {
 	case CmdFeeFilter:
 		msg = &MsgFeeFilter{}
 
-	case CmdGetCFilter:
-		msg = &MsgGetCFilter{}
+	case CmdGetCFilters:
+		msg = &MsgGetCFilters{}
 
 	case CmdGetCFHeaders:
 		msg = &MsgGetCFHeaders{}
+
+	case CmdGetCFCheckpt:
+		msg = &MsgGetCFCheckpt{}
 
 	case CmdCFilter:
 		msg = &MsgCFilter{}
 
 	case CmdCFHeaders:
 		msg = &MsgCFHeaders{}
+
+	case CmdCFCheckpt:
+		msg = &MsgCFCheckpt{}
 
 	default:
 		return nil, fmt.Errorf("unhandled command [%s]", command)

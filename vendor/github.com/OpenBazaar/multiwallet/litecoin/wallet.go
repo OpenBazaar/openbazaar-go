@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"github.com/ltcsuite/ltcutil"
 	"io"
 	"time"
 
@@ -22,7 +23,6 @@ import (
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ltcsuite/ltcwallet/wallet/txrules"
-	rb "github.com/roasbeef/btcutil"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/net/proxy"
 )
@@ -101,7 +101,7 @@ func (w *LitecoinWallet) CurrencyCode() string {
 }
 
 func (w *LitecoinWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(rb.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+	return txrules.IsDustAmount(ltcutil.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *LitecoinWallet) MasterPrivateKey() *hd.ExtendedKey {
