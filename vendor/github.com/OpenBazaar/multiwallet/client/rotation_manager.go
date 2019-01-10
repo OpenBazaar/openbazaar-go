@@ -143,7 +143,10 @@ func (r *rotationManager) FailCurrent() {
 	defer r.unlock()
 
 	r.started = false
-	r.targetHealth[r.currentTarget].markUnhealthy()
+	hs, ok := r.targetHealth[r.currentTarget]
+	if ok {
+		hs.markUnhealthy()
+	}
 }
 
 // SelectNext finds the next healthy and available server to activate with StartCurrent. This call will
