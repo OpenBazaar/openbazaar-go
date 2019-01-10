@@ -11,6 +11,7 @@ import (
 var maximumBackoff = 60 * time.Second
 
 type healthState struct {
+	lock            sync.RWMutex
 	lastFailedAt    time.Time
 	backoffDuration time.Duration
 }
@@ -21,6 +22,9 @@ func (h *healthState) markUnhealthy() {
 		// can't be unhealthy before it's available
 		return
 	}
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
 	if now.Before(h.lastFailedAt.Add(5 * time.Minute)) {
 		h.backoffDuration *= 2
 		if h.backoffDuration > maximumBackoff {
@@ -33,10 +37,14 @@ func (h *healthState) markUnhealthy() {
 }
 
 func (h *healthState) isHealthy() bool {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	return time.Now().After(h.nextAvailable())
 }
 
 func (h *healthState) nextAvailable() time.Time {
+	h.lock.RLock()
+	defer h.lock.RUnlock()
 	return h.lastFailedAt.Add(h.backoffDuration)
 }
 
