@@ -179,6 +179,7 @@ func (p *ClientPool) Broadcast(tx []byte) (string, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.Broadcast(tx)
 			if err != nil {
+				Log.Errorf("broadcast tx: %s", err.Error())
 				return err
 			}
 			txid = r
@@ -197,6 +198,7 @@ func (p *ClientPool) EstimateFee(nBlocks int) (int, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.EstimateFee(nBlocks)
 			if err != nil {
+				Log.Errorf("estimate fee: %s", err.Error())
 				return err
 			}
 			fee = r
@@ -215,6 +217,7 @@ func (p *ClientPool) GetBestBlock() (*model.Block, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetBestBlock()
 			if err != nil {
+				Log.Errorf("getting best block: %s", err.Error())
 				return err
 			}
 			block = r
@@ -233,6 +236,7 @@ func (p *ClientPool) GetInfo() (*model.Info, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetInfo()
 			if err != nil {
+				Log.Errorf("getting api info: %s", err.Error())
 				return err
 			}
 			info = r
@@ -251,6 +255,7 @@ func (p *ClientPool) GetRawTransaction(txid string) ([]byte, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetRawTransaction(txid)
 			if err != nil {
+				Log.Errorf("getting raw tx: %s", err.Error())
 				return err
 			}
 			tx = r
@@ -268,6 +273,7 @@ func (p *ClientPool) GetTransactions(addrs []btcutil.Address) ([]model.Transacti
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetTransactions(addrs)
 			if err != nil {
+				Log.Errorf("getting txs: %s", err.Error())
 				return err
 			}
 			txs = r
@@ -286,6 +292,7 @@ func (p *ClientPool) GetTransaction(txid string) (*model.Transaction, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetTransaction(txid)
 			if err != nil {
+				Log.Errorf("getting tx: %s", err.Error())
 				return nil
 			}
 			tx = r
@@ -304,6 +311,7 @@ func (p *ClientPool) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error) {
 		queryFunc = func(c *blockbook.BlockBookClient) error {
 			r, err := c.GetUtxos(addrs)
 			if err != nil {
+				Log.Errorf("getting utxos: %s", err.Error())
 				return err
 			}
 			utxos = r
