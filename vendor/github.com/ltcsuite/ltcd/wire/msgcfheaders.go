@@ -27,34 +27,41 @@ const (
 // of committed filter headers per message is currently 2000. See
 // MsgGetCFHeaders for details on requesting the headers.
 type MsgCFHeaders struct {
-	StopHash     chainhash.Hash
-	Extended     bool
-	HeaderHashes []*chainhash.Hash
+	FilterType       FilterType
+	StopHash         chainhash.Hash
+	PrevFilterHeader chainhash.Hash
+	FilterHashes     []*chainhash.Hash
 }
 
-// AddCFHeader adds a new committed filter header to the message.
-func (msg *MsgCFHeaders) AddCFHeader(headerHash *chainhash.Hash) error {
-	if len(msg.HeaderHashes)+1 > MaxCFHeadersPerMsg {
+// AddCFHash adds a new filter hash to the message.
+func (msg *MsgCFHeaders) AddCFHash(hash *chainhash.Hash) error {
+	if len(msg.FilterHashes)+1 > MaxCFHeadersPerMsg {
 		str := fmt.Sprintf("too many block headers in message [max %v]",
 			MaxBlockHeadersPerMsg)
-		return messageError("MsgCFHeaders.AddCFHeader", str)
+		return messageError("MsgCFHeaders.AddCFHash", str)
 	}
 
-	msg.HeaderHashes = append(msg.HeaderHashes, headerHash)
+	msg.FilterHashes = append(msg.FilterHashes, hash)
 	return nil
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
 // This is part of the Message interface implementation.
 func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) error {
-	// Read stop hash
-	err := readElement(r, &msg.StopHash)
+	// Read filter type
+	err := readElement(r, &msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	// Read extended flag
-	err = readElement(r, &msg.Extended)
+	// Read stop hash
+	err = readElement(r, &msg.StopHash)
+	if err != nil {
+		return err
+	}
+
+	// Read prev filter header
+	err = readElement(r, &msg.PrevFilterHeader)
 	if err != nil {
 		return err
 	}
@@ -73,16 +80,16 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 		return messageError("MsgCFHeaders.BtcDecode", str)
 	}
 
-	// Create a contiguous slice of headers to deserialize into in order to
+	// Create a contiguous slice of hashes to deserialize into in order to
 	// reduce the number of allocations.
-	msg.HeaderHashes = make([]*chainhash.Hash, 0, count)
+	msg.FilterHashes = make([]*chainhash.Hash, 0, count)
 	for i := uint64(0); i < count; i++ {
 		var cfh chainhash.Hash
 		err := readElement(r, &cfh)
 		if err != nil {
 			return err
 		}
-		msg.AddCFHeader(&cfh)
+		msg.AddCFHash(&cfh)
 	}
 
 	return nil
@@ -91,20 +98,26 @@ func (msg *MsgCFHeaders) BtcDecode(r io.Reader, pver uint32, _ MessageEncoding) 
 // BtcEncode encodes the receiver to w using the bitcoin protocol encoding.
 // This is part of the Message interface implementation.
 func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) error {
-	// Write stop hash
-	err := writeElement(w, msg.StopHash)
+	// Write filter type
+	err := writeElement(w, msg.FilterType)
 	if err != nil {
 		return err
 	}
 
-	// Write extended flag
-	err = writeElement(w, msg.Extended)
+	// Write stop hash
+	err = writeElement(w, msg.StopHash)
+	if err != nil {
+		return err
+	}
+
+	// Write prev filter header
+	err = writeElement(w, msg.PrevFilterHeader)
 	if err != nil {
 		return err
 	}
 
 	// Limit to max committed headers per message.
-	count := len(msg.HeaderHashes)
+	count := len(msg.FilterHashes)
 	if count > MaxCFHeadersPerMsg {
 		str := fmt.Sprintf("too many committed filter headers for "+
 			"message [count %v, max %v]", count,
@@ -117,7 +130,7 @@ func (msg *MsgCFHeaders) BtcEncode(w io.Writer, pver uint32, _ MessageEncoding) 
 		return err
 	}
 
-	for _, cfh := range msg.HeaderHashes {
+	for _, cfh := range msg.FilterHashes {
 		err := writeElement(w, cfh)
 		if err != nil {
 			return err
@@ -150,10 +163,11 @@ func (msg *MsgCFHeaders) Command() string {
 }
 
 // MaxPayloadLength returns the maximum length the payload can be for the
-// receiver.  This is part of the Message interface implementation.
+// receiver. This is part of the Message interface implementation.
 func (msg *MsgCFHeaders) MaxPayloadLength(pver uint32) uint32 {
-	// Hash size + num headers (varInt) + (header size * max headers).
-	return chainhash.HashSize + 1 + MaxVarIntPayload +
+	// Hash size + filter type + num headers (varInt) +
+	// (header size * max headers).
+	return 1 + chainhash.HashSize + chainhash.HashSize + MaxVarIntPayload +
 		(MaxCFHeaderPayload * MaxCFHeadersPerMsg)
 }
 
@@ -161,6 +175,6 @@ func (msg *MsgCFHeaders) MaxPayloadLength(pver uint32) uint32 {
 // the Message interface. See MsgCFHeaders for details.
 func NewMsgCFHeaders() *MsgCFHeaders {
 	return &MsgCFHeaders{
-		HeaderHashes: make([]*chainhash.Hash, 0, MaxCFHeadersPerMsg),
+		FilterHashes: make([]*chainhash.Hash, 0, MaxCFHeadersPerMsg),
 	}
 }

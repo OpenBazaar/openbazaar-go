@@ -27,6 +27,10 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/OpenBazaar/go-ethwallet"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/OpenBazaar/golang-socketio"
 
 [[constraint]]
@@ -87,11 +91,11 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/op/go-logging"
+  name = "github.com/minio/blake2b-simd"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/roasbeef/btcutil"
+  name = "github.com/op/go-logging"
 
 [[constraint]]
   branch = "master"
@@ -116,11 +120,3 @@
 [prune]
   go-tests = true
   unused-packages = true
-
-[[override]]
-  name = "github.com/ethereum/go-ethereum"
-  version = "1.8.19"
-
-[[prune.project]]
-    name = "github.com/ethereum/go-ethereum"
-    unused-packages = false

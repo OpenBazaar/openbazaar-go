@@ -181,9 +181,9 @@ func validateScheme(target *url.URL) error {
 }
 
 func (i *BlockBookClient) doRequest(endpoint, method string, body []byte, query url.Values) (*http.Response, error) {
-	requestUrl := i.apiUrl
-	requestUrl.Path = path.Join(i.apiUrl.Path, endpoint)
-	req, err := http.NewRequest(method, requestUrl.String()+"/", bytes.NewReader(body))
+	requestUrl := i.EndpointURL()
+	requestUrl.Path = path.Join(i.EndpointURL().Path, endpoint)
+	req, err := http.NewRequest(method, requestUrl.String(), bytes.NewReader(body))
 	if query != nil {
 		req.URL.RawQuery = query.Encode()
 	}
@@ -401,7 +401,6 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 		for _, addr := range addrs {
 			go func(addr btcutil.Address) {
 				defer wg.Done()
-
 				resp, err := i.RequestFunc("/utxo/"+maybeConvertCashAddress(addr), http.MethodGet, nil, nil)
 				if err != nil {
 					utxoChan <- utxoOrError{nil, err}
