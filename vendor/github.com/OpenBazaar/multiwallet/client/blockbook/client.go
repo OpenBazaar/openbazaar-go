@@ -52,8 +52,10 @@ func (w *wsWatchdog) guardWebsocket() {
 		case <-w.wsStopped:
 			Log.Warningf("reconnecting stopped websocket (%s)", w.client.apiUrl.Host)
 			w.client.socketMutex.Lock()
-			w.client.SocketClient.Close()
-			w.client.SocketClient = nil
+			if w.client.SocketClient != nil {
+				w.client.SocketClient.Close()
+				w.client.SocketClient = nil
+			}
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
 				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
@@ -352,7 +354,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 		Transactions []string `json:"transactions"`
 	}
 	type txOrError struct {
-		Tx  model.Transaction
+		Tx  *model.Transaction
 		Err error
 	}
 	page := 1
@@ -378,7 +380,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 			for _, txid := range res.Transactions {
 				go func(id string) {
 					tx, err := i.GetTransaction(id)
-					txChan <- txOrError{*tx, err}
+					txChan <- txOrError{tx, err}
 					wg.Done()
 				}(txid)
 			}
@@ -389,7 +391,9 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 			if toe.Err != nil {
 				return nil, err
 			}
-			ret = append(ret, toe.Tx)
+			if toe.Tx != nil {
+				ret = append(ret, *toe.Tx)
+			}
 		}
 		if res.TotalPages <= page {
 			break
@@ -464,7 +468,9 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 		if toe.Err != nil {
 			return nil, toe.Err
 		}
-		ret = append(ret, *toe.Utxo)
+		if toe.Utxo != nil {
+			ret = append(ret, *toe.Utxo)
+		}
 	}
 	return ret, nil
 }
