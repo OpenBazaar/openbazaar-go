@@ -21,8 +21,8 @@ import (
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/btcsuite/btcutil/txsort"
 	"github.com/btcsuite/btcwallet/wallet/txauthor"
-	"github.com/ltcsuite/ltcwallet/wallet/txrules"
 	"github.com/ltcsuite/ltcutil"
+	"github.com/ltcsuite/ltcwallet/wallet/txrules"
 
 	laddr "github.com/OpenBazaar/multiwallet/litecoin/address"
 	"github.com/OpenBazaar/multiwallet/util"
