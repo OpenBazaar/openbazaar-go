@@ -121,6 +121,7 @@ func (r *rotationManager) CloseCurrent() {
 		if r.started {
 			r.clientCache[r.currentTarget].Close()
 		}
+		r.started = false
 		r.currentTarget = nilTarget
 	}
 }
@@ -142,7 +143,6 @@ func (r *rotationManager) FailCurrent() {
 	r.lock()
 	defer r.unlock()
 
-	r.started = false
 	hs, ok := r.targetHealth[r.currentTarget]
 	if ok {
 		hs.markUnhealthy()
