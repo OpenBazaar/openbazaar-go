@@ -30,7 +30,7 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-var (
+const (
 	// VERSION - current version
 	VERSION = "0.13.0"
 	// USERAGENT - user-agent header string
