@@ -38,9 +38,11 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, k, &message); err != nil {
-			return err
-		}
+		go func() {
+			if err := n.SendOfflineMessage(p, k, &message); err != nil {
+				log.Errorf("Error sending offline message %s", err.Error())
+			}
+		}()
 	}
 	return nil
 }
