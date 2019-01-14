@@ -24,42 +24,6 @@ import (
 	ipfspath "github.com/ipfs/go-ipfs/path"
 )
 
-type option struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-}
-
-type shippingOption struct {
-	Name    string `json:"name"`
-	Service string `json:"service"`
-}
-
-type item struct {
-	ListingHash    string         `json:"listingHash"`
-	Quantity       uint64         `json:"quantity"`
-	Options        []option       `json:"options"`
-	Shipping       shippingOption `json:"shipping"`
-	Memo           string         `json:"memo"`
-	Coupons        []string       `json:"coupons"`
-	PaymentAddress string         `json:"paymentAddress"`
-}
-
-// PurchaseData - record purchase data
-type PurchaseData struct {
-	ShipTo               string  `json:"shipTo"`
-	Address              string  `json:"address"`
-	City                 string  `json:"city"`
-	State                string  `json:"state"`
-	PostalCode           string  `json:"postalCode"`
-	CountryCode          string  `json:"countryCode"`
-	AddressNotes         string  `json:"addressNotes"`
-	Moderator            string  `json:"moderator"`
-	Items                []item  `json:"items"`
-	AlternateContactInfo string  `json:"alternateContactInfo"`
-	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
-	PaymentCoin          string  `json:"paymentCoin"`
-}
-
 const (
 	// We use this to check to see if the approximate fee to release funds from escrow is greater than 1/4th of the amount
 	// being released. If so, we prevent the purchase from being made as it severely cuts into the vendor's profits.
