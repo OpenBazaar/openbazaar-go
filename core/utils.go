@@ -9,7 +9,7 @@ import (
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
-	"strings"
+	"runtime"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -145,7 +145,17 @@ func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract,
 
 // NormalizeCurrencyCode standardizes the format for the given currency code
 func NormalizeCurrencyCode(currencyCode string) string {
-	return strings.ToUpper(currencyCode)
+	var c, err = repo.NewCurrencyCode(currencyCode)
+	if err != nil {
+		log.Errorf("invalid currency code (%s), please report this bug: %s", currencyCode, err.Error())
+		var (
+			stack     = make([]byte, 1<<16)
+			stackSize = runtime.Stack(stack, false)
+		)
+		log.Debugf(string(stack[:stackSize-1]))
+		return ""
+	}
+	return c.String()
 }
 
 func (n *OpenBazaarNode) ValidateMultiwalletHasPreferredCurrencies(data repo.SettingsData) error {
