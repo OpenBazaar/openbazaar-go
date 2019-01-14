@@ -1,5 +1,9 @@
 package core
 
+import (
+	v "github.com/RussellLuo/validating"
+)
+
 // Option represents the selected option of an item's varient
 type Option struct {
 	Name  string `json:"name"`
@@ -37,4 +41,15 @@ type PurchaseData struct {
 	AlternateContactInfo string  `json:"alternateContactInfo"`
 	RefundAddress        *string `json:"refundAddress"` //optional, can be left out of json
 	PaymentCoin          string  `json:"paymentCoin"`
+}
+
+func (p PurchaseData) Schema() v.Schema {
+	return v.Schema{
+		v.F("shipTo", &p.ShipTo):   v.Nonzero(),
+		v.F("address", &p.Address): v.Nonzero(),
+	}
+}
+
+func (p PurchaseData) Validate() error {
+	return v.Validate(p.Schema())
 }

@@ -38,6 +38,10 @@ const (
 
 // Purchase - add ricardian contract
 func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAddress string, paymentAmount uint64, vendorOnline bool, err error) {
+	if err := data.Validate(); err != nil {
+		return "", "", 0, false, err
+	}
+
 	contract, err := n.createContractWithOrder(data)
 	if err != nil {
 		return "", "", 0, false, err
@@ -206,7 +210,7 @@ func (n *OpenBazaarNode) Purchase(data *PurchaseData) (orderID string, paymentAd
 	// Direct payment
 	payment := new(pb.Order_Payment)
 	payment.Method = pb.Order_Payment_ADDRESS_REQUEST
-	payment.Coin = data.PaymentCoin
+	payment.Coin = NormalizeCurrencyCode(data.PaymentCoin)
 	contract.BuyerOrder.Payment = payment
 	total, err := n.CalculateOrderTotal(contract)
 	if err != nil {
