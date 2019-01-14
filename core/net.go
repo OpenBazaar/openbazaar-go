@@ -38,9 +38,11 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, k, &message); err != nil {
-			return err
-		}
+		go func() {
+			if err := n.SendOfflineMessage(p, k, &message); err != nil {
+				log.Errorf("Error sending offline message %s", err.Error())
+			}
+		}()
 	}
 	return nil
 }
@@ -64,6 +66,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	if merr != nil {
 		return merr
 	}
+	// TODO: this function blocks if the recipient's public key is not on the local machine
 	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
 	if cerr != nil {
 		return cerr
