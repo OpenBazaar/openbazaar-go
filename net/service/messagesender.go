@@ -84,7 +84,9 @@ func (ms *messageSender) ctxPrepOrInvalidate(ctx context.Context) error {
 
 	select {
 	case err := <-errCh:
-		ms.invalidate()
+		if err != nil {
+			ms.invalidate()
+		}
 		return err
 	case <-ctx.Done():
 		ms.invalidate()
