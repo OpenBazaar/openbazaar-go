@@ -55,12 +55,12 @@ func MigrateUp(repoPath, dbPassword string, testnet bool) error {
 		return err
 	}
 	if v > len(Migrations) {
-		log.Errorf("binary can migrate schemas up to version %03d but this schema is already at %03d", len(Migrations)-1, v)
+		log.Errorf("binary can migrate schemas up to version %03d but this schema is already at %03d", len(Migrations), v)
 		return ErrUnknownSchema
 	}
 	x := v
-	for i, m := range Migrations[v:] {
-		log.Noticef("running migration %03d changing schema to version %03d...\n", i, x+1)
+	for _, m := range Migrations[v:] {
+		log.Noticef("running migration %03d changing schema to version %03d...\n", x, x+1)
 		err := m.Up(repoPath, dbPassword, testnet)
 		if err != nil {
 			log.Error(err)
