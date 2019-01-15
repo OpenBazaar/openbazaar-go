@@ -311,7 +311,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 		Payload:     a,
 	}
 	//try to get public key from order
-	order, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+	order, _, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 	var kp *libp2p.PubKey
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
@@ -337,7 +337,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 	}
 	var kp *libp2p.PubKey
 	//try to get public key from order
-	order, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
+	order, _, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
 	} else {

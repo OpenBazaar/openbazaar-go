@@ -534,6 +534,7 @@ func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 func TestZECSalesCannotReleaseEscrow(t *testing.T) {
 	sale := factory.NewSaleRecord()
 	sale.Contract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"ZEC"}
+	sale.Contract.BuyerOrder.Payment.Coin = "ZEC"
 	dbSetup := func(testRepo *test.Repository) error {
 		if err := testRepo.DB.Sales().Put(sale.OrderID, *sale.Contract, sale.OrderState, false); err != nil {
 			return err

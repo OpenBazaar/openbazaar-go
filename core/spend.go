@@ -128,7 +128,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 func (n *OpenBazaarNode) getOrderContractBySpendRequest(args *SpendRequest) (*pb.RicardianContract, error) {
 	var errorStr = "unable to find order from order id or spend address"
 	if args.OrderID != "" {
-		contract, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(args.OrderID)
+		contract, _, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(args.OrderID)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %s", errorStr, err)
 		}

@@ -308,7 +308,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		DisputeeID = contract.VendorListings[0].VendorID.PeerID
 		DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 		// Load out version of the contract from the db
-		myContract, state, _, records, _, err := n.Datastore.Sales().GetByOrderId(orderID)
+		myContract, state, _, records, _, _, err := n.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
 			return net.OutOfOrderMessage
 		}
@@ -362,7 +362,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
 
 		// Load out version of the contract from the db
-		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+		myContract, state, _, records, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 		if err != nil {
 			return err
 		}
