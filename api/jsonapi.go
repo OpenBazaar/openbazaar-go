@@ -1628,16 +1628,19 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
-	var err error
-	var isSale bool
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var funded bool
-	var records []*wallet.TransactionRecord
-	var read bool
-	contract, state, funded, records, read, _, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
+	var (
+		err         error
+		isSale      bool
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		funded      bool
+		records     []*wallet.TransactionRecord
+		read        bool
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
 	if err != nil {
-		contract, state, funded, records, read, _, err = i.node.Datastore.Sales().GetByOrderId(orderID)
+		contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -1649,6 +1652,12 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.Funded = funded
 	resp.Read = read
 	resp.State = state
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
 
 	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
 	if err != nil {
