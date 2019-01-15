@@ -18,6 +18,16 @@ func TestNewCurrencyCode(t *testing.T) {
 			input:        "btc",
 		},
 		{
+			expectErr:    nil,
+			expectString: "TBTC",
+			input:        "tbtc", // only "t" permitted as first of 4 characters
+		},
+		{
+			expectErr:    repo.ErrCurrencyCodeTestSymbolInvalid,
+			expectString: "",
+			input:        "xbtc",
+		},
+		{
 			expectErr:    repo.ErrCurrencyCodeLengthInvalid,
 			expectString: "",
 			input:        "bt",

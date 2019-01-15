@@ -36,13 +36,13 @@ func (l *TransactionListener) getOrderDetails(orderID string, address btc.Addres
 	var err error
 	if isSales {
 		if orderID != "" {
-			contract, state, funded, records, _, err = l.db.Sales().GetByOrderId(orderID)
+			contract, state, funded, records, _, _, err = l.db.Sales().GetByOrderId(orderID)
 		} else {
 			contract, state, funded, records, err = l.db.Sales().GetByPaymentAddress(address)
 		}
 	} else {
 		if orderID != "" {
-			contract, state, funded, records, _, err = l.db.Purchases().GetByOrderId(orderID)
+			contract, state, funded, records, _, _, err = l.db.Purchases().GetByOrderId(orderID)
 		} else {
 			contract, state, funded, records, err = l.db.Purchases().GetByPaymentAddress(address)
 		}

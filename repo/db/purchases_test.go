@@ -321,21 +321,32 @@ func TestPurchasesGetByPaymentAddress(t *testing.T) {
 }
 
 func TestPurchasesGetByOrderId(t *testing.T) {
-	purdb, teardown, err := buildNewPurchaseStore()
+	var (
+		expectedCoin         = "ABC"
+		purdb, teardown, err = buildNewPurchaseStore()
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer teardown()
 
+	_, _, _, _, _, _, err = purdb.GetByOrderId("fasdfas")
+	if err == nil {
+		t.Error("Get by unknown orderId failed to return error")
+	}
+
 	contract := factory.NewContract()
-	purdb.Put("orderID", *contract, 0, false)
-	_, _, _, _, _, err = purdb.GetByOrderId("orderID")
+	contract.BuyerOrder.Payment.Coin = expectedCoin
+	if err := purdb.Put("orderID", *contract, 0, false); err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, _, _, _, actualCoin, err := purdb.GetByOrderId("orderID")
 	if err != nil {
 		t.Error(err)
 	}
-	_, _, _, _, _, err = purdb.GetByOrderId("fasdfas")
-	if err == nil {
-		t.Error("Get by unknown orderId failed to return error")
+	if actualCoin == nil || actualCoin.String() != expectedCoin {
+		t.Errorf("expected paymentCoin to be returned in the result")
 	}
 }
 
