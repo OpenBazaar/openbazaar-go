@@ -1932,7 +1932,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 
 	// TODO: Remove once broken contracts are migrated
 	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderID)
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderId)
 		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
@@ -2038,19 +2038,29 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var isSale bool
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	var (
+		isSale      bool
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
 	if err != nil {
-		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
 		isSale = true
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", d.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		ErrorResponse(w, http.StatusBadRequest, "Only moderated orders can be disputed")
 		return
