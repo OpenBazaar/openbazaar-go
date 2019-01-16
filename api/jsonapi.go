@@ -2154,17 +2154,27 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	var (
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state == pb.OrderState_DECIDED {
 		err = i.node.ReleaseFunds(contract, records)
 		if err != nil {
