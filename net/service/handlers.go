@@ -1617,7 +1617,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	toAddress, _ := wal.DecodeAddress(txn.ToAddress)
-	fromAddress, _ := wal.DecodeAddress(txn.FromAddress)
+	//fromAddress, _ := wal.DecodeAddress(txn.FromAddress)
 
 	output := wallet.TransactionOutput{
 		Address: toAddress,
@@ -1627,11 +1627,11 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 	}
 
 	input := wallet.TransactionInput{
-		OutpointHash:  []byte(txn.Txid[:32]),
-		OutpointIndex: 1,
-		LinkedAddress: fromAddress,
-		Value:         txn.Value,
-		OrderID:       paymentDetails.OrderID,
+		//OutpointHash:  []byte(txn.Txid[:32]),
+		//OutpointIndex: 1,
+		//LinkedAddress: fromAddress,
+		//Value:         txn.Value,
+		//OrderID:       paymentDetails.OrderID,
 	}
 
 	cb := wallet.TransactionCallback{
