@@ -1734,7 +1734,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1743,6 +1743,13 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, or PARTIALLY_FULFILLED")
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	err = i.node.RefundOrder(contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
