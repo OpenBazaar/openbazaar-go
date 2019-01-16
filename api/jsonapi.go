@@ -1924,11 +1924,18 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
 		ErrorResponse(w, http.StatusBadRequest, "order must be in state AWAITING_FULFILLMENT or PARTIALLY_FULFILLED to fulfill")
 		return
