@@ -267,27 +267,30 @@ func (s *SalesDB) GetByPaymentAddress(addr btc.Address) (*pb.RicardianContract, 
 	return rc, pb.OrderState(stateInt), funded, records, nil
 }
 
-func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, bool, error) {
+func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderState, bool, []*wallet.TransactionRecord, bool, *repo.CurrencyCode, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	stmt, err := s.db.Prepare("select contract, state, funded, transactions, read from sales where orderID=?")
+	stmt, err := s.db.Prepare("select contract, state, funded, transactions, read, paymentCoin from sales where orderID=?")
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	defer stmt.Close()
-	var contract []byte
-	var stateInt int
-	var fundedInt *int
-	var readInt *int
-	var serializedTransactions []byte
-	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt)
+	var (
+		contract               []byte
+		stateInt               int
+		fundedInt              *int
+		readInt                *int
+		serializedTransactions []byte
+		paymentCoin            string
+	)
+	err = stmt.QueryRow(orderId).Scan(&contract, &stateInt, &fundedInt, &serializedTransactions, &readInt, &paymentCoin)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	rc := new(pb.RicardianContract)
 	err = jsonpb.UnmarshalString(string(contract), rc)
 	if err != nil {
-		return nil, pb.OrderState(0), false, nil, false, err
+		return nil, pb.OrderState(0), false, nil, false, nil, err
 	}
 	funded := false
 	if fundedInt != nil && *fundedInt == 1 {
@@ -297,9 +300,13 @@ func (s *SalesDB) GetByOrderId(orderId string) (*pb.RicardianContract, pb.OrderS
 	if readInt != nil && *readInt == 1 {
 		read = true
 	}
+	cc, err := repo.NewCurrencyCode(paymentCoin)
+	if err != nil {
+		return nil, pb.OrderState(0), false, nil, false, nil, err
+	}
 	var records []*wallet.TransactionRecord
 	json.Unmarshal(serializedTransactions, &records)
-	return rc, pb.OrderState(stateInt), funded, records, read, nil
+	return rc, pb.OrderState(stateInt), funded, records, read, cc, nil
 }
 
 func (s *SalesDB) Count() int {

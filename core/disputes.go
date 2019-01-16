@@ -308,7 +308,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		DisputeeID = contract.VendorListings[0].VendorID.PeerID
 		DisputeeHandle = contract.VendorListings[0].VendorID.Handle
 		// Load out version of the contract from the db
-		myContract, state, _, records, _, err := n.Datastore.Sales().GetByOrderId(orderID)
+		myContract, state, _, records, _, _, err := n.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
 			return net.OutOfOrderMessage
 		}
@@ -362,7 +362,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
 
 		// Load out version of the contract from the db
-		myContract, state, _, records, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+		myContract, state, _, records, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 		if err != nil {
 			return err
 		}
@@ -1100,12 +1100,6 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		return err
 	}
 
-	// Build, sign, and broadcast transaction
-	_, err = wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
-	if err != nil {
-		return err
-	}
-
 	// Update database
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DECIDED, true)
@@ -1114,6 +1108,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 	if err != nil {
 		log.Errorf("ReleaseFunds error updating database: %s", err.Error())
+	}
+
+	// Build, sign, and broadcast transaction
+	_, err = wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
+	if err != nil {
+		return err
 	}
 
 	return nil

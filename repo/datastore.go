@@ -200,7 +200,7 @@ type PurchaseStore interface {
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, err error)
 
 	// Return a purchase given the order ID
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, currencyCode *CurrencyCode, err error)
 
 	// Return the metadata for all purchases. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Purchase, int, error)
@@ -245,7 +245,7 @@ type SaleStore interface {
 	GetByPaymentAddress(addr btc.Address) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, err error)
 
 	// Return a sale given the order ID
-	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, err error)
+	GetByOrderId(orderId string) (contract *pb.RicardianContract, state pb.OrderState, funded bool, records []*wallet.TransactionRecord, read bool, currencyCode *CurrencyCode, err error)
 
 	// Return the metadata for all sales. Also returns the original size of the query.
 	GetAll(stateFilter []pb.OrderState, searchTerm string, sortByAscending bool, sortByRead bool, limit int, exclude []string) ([]Sale, int, error)

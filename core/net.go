@@ -38,9 +38,11 @@ func (n *OpenBazaarNode) sendMessage(peerID string, k *libp2p.PubKey, message pb
 	defer cancel()
 	err = n.Service.SendMessage(ctx, p, &message)
 	if err != nil {
-		if err := n.SendOfflineMessage(p, k, &message); err != nil {
-			return err
-		}
+		go func() {
+			if err := n.SendOfflineMessage(p, k, &message); err != nil {
+				log.Errorf("Error sending offline message %s", err.Error())
+			}
+		}()
 	}
 	return nil
 }
@@ -64,6 +66,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	if merr != nil {
 		return merr
 	}
+	// TODO: this function blocks if the recipient's public key is not on the local machine
 	ciphertext, cerr := n.EncryptMessage(p, k, messageBytes)
 	if cerr != nil {
 		return cerr
@@ -260,7 +263,7 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 		return resp, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
 	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
@@ -308,7 +311,7 @@ func (n *OpenBazaarNode) SendCancel(peerID, orderID string) error {
 		Payload:     a,
 	}
 	//try to get public key from order
-	order, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+	order, _, _, _, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
 	var kp *libp2p.PubKey
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
@@ -334,7 +337,7 @@ func (n *OpenBazaarNode) SendReject(peerID string, rejectMessage *pb.OrderReject
 	}
 	var kp *libp2p.PubKey
 	//try to get public key from order
-	order, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
+	order, _, _, _, _, _, err := n.Datastore.Sales().GetByOrderId(rejectMessage.OrderID)
 	if err != nil { //probably implies we can't find the order in the Datastore
 		kp = nil //instead SendOfflineMessage can try to get the key from the peerId
 	} else {

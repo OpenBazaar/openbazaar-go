@@ -203,9 +203,9 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	ct := wi.Bitcoin
-	if x.BitcoinCash {
+	if x.BitcoinCash || strings.Contains(repoPath, "-bitcoincash") {
 		ct = wi.BitcoinCash
-	} else if x.ZCash != "" {
+	} else if x.ZCash != "" || strings.Contains(repoPath, "-zcash") {
 		ct = wi.Zcash
 	}
 

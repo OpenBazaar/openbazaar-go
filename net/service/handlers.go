@@ -441,7 +441,7 @@ func (service *OpenBazaarService) handleOrderConfirmation(p peer.ID, pmes *pb.Me
 	orderId := vendorContract.VendorOrderConfirmation.OrderID
 
 	// Load the order
-	contract, state, funded, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
+	contract, state, funded, _, _, _, err := service.datastore.Purchases().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -500,7 +500,7 @@ func (service *OpenBazaarService) handleOrderCancel(p peer.ID, pmes *pb.Message,
 	orderId := string(pmes.Payload.Value)
 
 	// Load the order
-	contract, state, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
+	contract, state, _, _, _, _, err := service.datastore.Sales().GetByOrderId(orderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -545,7 +545,7 @@ func (service *OpenBazaarService) handleReject(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Load the order
-	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
+	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rejectMsg.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -716,7 +716,7 @@ func (service *OpenBazaarService) handleRefund(p peer.ID, pmes *pb.Message, opti
 	}
 
 	// Load the order
-	contract, state, _, records, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
+	contract, state, _, records, _, _, err := service.datastore.Purchases().GetByOrderId(rc.Refund.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -835,7 +835,7 @@ func (service *OpenBazaarService) handleOrderFulfillment(p peer.ID, pmes *pb.Mes
 	}
 
 	// Load the order
-	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
+	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(rc.VendorOrderFulfillment[0].OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -904,7 +904,7 @@ func (service *OpenBazaarService) handleOrderCompletion(p peer.ID, pmes *pb.Mess
 	}
 
 	// Load the order
-	contract, state, _, records, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
+	contract, state, _, records, _, _, err := service.datastore.Sales().GetByOrderId(rc.BuyerOrderCompletion.OrderId)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
@@ -1134,9 +1134,9 @@ func (service *OpenBazaarService) handleDisputeClose(p peer.ID, pmes *pb.Message
 	var otherPartyID string
 	var otherPartyHandle string
 	var buyer string
-	contract, state, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
+	contract, state, _, _, _, _, err = service.datastore.Sales().GetByOrderId(rc.DisputeResolution.OrderId)
 	if err != nil {
-		contract, state, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
+		contract, state, _, _, _, _, err = service.datastore.Purchases().GetByOrderId(rc.DisputeResolution.OrderId)
 		if err != nil {
 			return nil, net.OutOfOrderMessage
 		}
@@ -1413,7 +1413,7 @@ func (service *OpenBazaarService) handleVendorFinalizedPayment(pid peer.ID, pmes
 		return nil, err
 	}
 
-	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(paymentFinalizedMessage.OrderID)
+	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(paymentFinalizedMessage.OrderID)
 	if err != nil {
 		return nil, err
 	}
@@ -1496,7 +1496,7 @@ func (service *OpenBazaarService) handleError(peer peer.ID, pmes *pb.Message, op
 	}
 
 	// Load the order
-	contract, state, _, _, _, err := service.datastore.Purchases().GetByOrderId(errorMessage.OrderID)
+	contract, state, _, _, _, _, err := service.datastore.Purchases().GetByOrderId(errorMessage.OrderID)
 	if err != nil {
 		return nil, err
 	}
