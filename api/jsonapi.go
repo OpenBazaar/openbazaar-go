@@ -1584,10 +1584,16 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
+	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
