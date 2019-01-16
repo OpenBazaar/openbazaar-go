@@ -2216,9 +2216,10 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		rel struct {
 			OrderID string `json:"orderId"`
 		}
-		contract *pb.RicardianContract
-		state    pb.OrderState
-		records  []*wallet.TransactionRecord
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
 	)
 
 	decoder := json.NewDecoder(r.Body)
@@ -2228,10 +2229,16 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return
+	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {
