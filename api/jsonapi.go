@@ -1544,11 +1544,18 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
+	contract, state, funded, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", conf.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state != pb.OrderState_PENDING {
 		ErrorResponse(w, http.StatusBadRequest, "order has already been confirmed")
 		return
