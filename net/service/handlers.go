@@ -1593,7 +1593,7 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		return nil, err
 	}
 
-	contract, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
+	contract, _, _, _, _, _, err := service.datastore.Sales().GetByOrderId(paymentDetails.OrderID)
 	if err != nil {
 		return nil, net.OutOfOrderMessage
 	}
