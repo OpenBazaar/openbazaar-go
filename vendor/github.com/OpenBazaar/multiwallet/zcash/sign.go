@@ -304,6 +304,8 @@ func (w *ZCashWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Addre
 		if err == nil {
 			txType = P2SH_Multisig_Timelock_1Sig
 		}
+	} else {
+		redeemScript = &[]byte{}
 	}
 	estimatedSize := EstimateSerializeSize(len(ins), []*wire.TxOut{out}, false, txType)
 

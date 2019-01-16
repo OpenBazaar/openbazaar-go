@@ -82,7 +82,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 		return
 	}
 
-	ms, err := service.messageSenderForPeer(mPeer)
+	ms, err := service.messageSenderForPeer(service.ctx, mPeer)
 	if err != nil {
 		log.Error("Error getting message sender")
 		return
@@ -161,7 +161,7 @@ func (service *OpenBazaarService) handleNewMessage(s inet.Stream) {
 
 func (service *OpenBazaarService) SendRequest(ctx context.Context, p peer.ID, pmes *pb.Message) (*pb.Message, error) {
 	log.Debugf("Sending %s request to %s", pmes.MessageType.String(), p.Pretty())
-	ms, err := service.messageSenderForPeer(p)
+	ms, err := service.messageSenderForPeer(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (service *OpenBazaarService) SendMessage(ctx context.Context, p peer.ID, pm
 	if pmes.MessageType != pb.Message_BLOCK {
 		log.Debugf("Sending %s message to %s", pmes.MessageType.String(), p.Pretty())
 	}
-	ms, err := service.messageSenderForPeer(p)
+	ms, err := service.messageSenderForPeer(ctx, p)
 	if err != nil {
 		return err
 	}

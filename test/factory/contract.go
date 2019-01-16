@@ -25,6 +25,7 @@ func NewContract() *pb.RicardianContract {
 				Amount:  10,
 				Method:  pb.Order_Payment_DIRECT,
 				Address: "3BDbGsH5h5ctDiFtWMmZawcf3E7iWirVms",
+				Coin:    "BTC",
 			},
 			Timestamp: nowData,
 		}

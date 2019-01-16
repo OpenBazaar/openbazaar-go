@@ -1557,7 +1557,7 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, records, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
+	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
@@ -1597,7 +1597,7 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1641,16 +1641,19 @@ func (i *jsonAPIHandler) POSTResyncBlockchain(w http.ResponseWriter, r *http.Req
 
 func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	_, orderID := path.Split(r.URL.Path)
-	var err error
-	var isSale bool
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var funded bool
-	var records []*wallet.TransactionRecord
-	var read bool
-	contract, state, funded, records, read, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
+	var (
+		err         error
+		isSale      bool
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		funded      bool
+		records     []*wallet.TransactionRecord
+		read        bool
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(orderID)
 	if err != nil {
-		contract, state, funded, records, read, err = i.node.Datastore.Sales().GetByOrderId(orderID)
+		contract, state, funded, records, read, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(orderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -1662,6 +1665,12 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.Funded = funded
 	resp.Read = read
 	resp.State = state
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
 
 	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
 	if err != nil {
@@ -1725,7 +1734,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1915,7 +1924,7 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1947,7 +1956,7 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
+	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -2020,9 +2029,9 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
 	if err != nil {
-		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -2148,9 +2157,9 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	var contract *pb.RicardianContract
 	var state pb.OrderState
 	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
@@ -2186,7 +2195,7 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contract, state, _, records, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return

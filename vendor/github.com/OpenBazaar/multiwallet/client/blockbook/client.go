@@ -45,21 +45,23 @@ func newWebsocketWatchdog(client *BlockBookClient) *wsWatchdog {
 }
 
 func (w *wsWatchdog) guardWebsocket() {
-	for {
+	var t = time.NewTicker(1 * time.Second)
+	defer t.Stop()
+	for range t.C {
 		select {
 		case <-w.wsStopped:
-			time.Sleep(1 * time.Second)
 			Log.Warningf("reconnecting stopped websocket (%s)", w.client.apiUrl.Host)
 			w.client.socketMutex.Lock()
-			w.client.SocketClient.Close()
-			w.client.SocketClient = nil
+			if w.client.SocketClient != nil {
+				w.client.SocketClient.Close()
+				w.client.SocketClient = nil
+			}
 			w.drainAndRollover()
 			if err := w.client.setupListeners(); err != nil {
 				Log.Warningf("failed reconnecting websocket (%s)", w.client.apiUrl.Host)
 				w.client.socketMutex.Unlock()
-				w.client.closeChan <- fmt.Errorf("websocket unavailable")
-				close(w.client.closeChan)
-				go w.putDown()
+				w.client.sendAndDiscardCloseChan(fmt.Errorf("websocket unavailable: %s", err.Error()))
+				go w.putAway()
 				return
 			}
 			w.client.socketMutex.Unlock()
@@ -86,9 +88,11 @@ func (w *wsWatchdog) bark() {
 	}
 }
 
-func (w *wsWatchdog) putDown() {
-	w.done <- struct{}{}
-	close(w.done)
+func (w *wsWatchdog) putAway() {
+	select {
+	case w.done <- struct{}{}:
+	default:
+	}
 }
 
 type BlockBookClient struct {
@@ -133,6 +137,7 @@ func NewBlockBookClient(apiUrl string, proxyDialer proxy.Dialer) (*BlockBookClie
 		txNotifyChan:    tch,
 		listenLock:      sync.Mutex{},
 	}
+	ic.websocketWatchdog = newWebsocketWatchdog(ic)
 	ic.RequestFunc = ic.doRequest
 	return ic, nil
 }
@@ -164,12 +169,20 @@ func (i *BlockBookClient) Close() {
 	i.socketMutex.Lock()
 	defer i.socketMutex.Unlock()
 	if i.SocketClient != nil {
-		go i.websocketWatchdog.putDown()
+		if i.websocketWatchdog != nil {
+			go i.websocketWatchdog.putAway()
+		}
 		i.SocketClient.Close()
 		i.SocketClient = nil
 	}
-	i.closeChan <- nil
-	close(i.closeChan)
+	i.sendAndDiscardCloseChan(nil)
+}
+
+func (i *BlockBookClient) sendAndDiscardCloseChan(err error) {
+	if i.closeChan != nil {
+		i.closeChan <- err
+		i.closeChan = nil
+	}
 }
 
 func validateScheme(target *url.URL) error {
@@ -341,7 +354,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 		Transactions []string `json:"transactions"`
 	}
 	type txOrError struct {
-		Tx  model.Transaction
+		Tx  *model.Transaction
 		Err error
 	}
 	page := 1
@@ -367,7 +380,7 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 			for _, txid := range res.Transactions {
 				go func(id string) {
 					tx, err := i.GetTransaction(id)
-					txChan <- txOrError{*tx, err}
+					txChan <- txOrError{tx, err}
 					wg.Done()
 				}(txid)
 			}
@@ -378,7 +391,9 @@ func (i *BlockBookClient) getTransactions(addr string) ([]model.Transaction, err
 			if toe.Err != nil {
 				return nil, err
 			}
-			ret = append(ret, toe.Tx)
+			if toe.Tx != nil {
+				ret = append(ret, *toe.Tx)
+			}
 		}
 		if res.TotalPages <= page {
 			break
@@ -453,7 +468,9 @@ func (i *BlockBookClient) GetUtxos(addrs []btcutil.Address) ([]model.Utxo, error
 		if toe.Err != nil {
 			return nil, toe.Err
 		}
-		ret = append(ret, *toe.Utxo)
+		if toe.Utxo != nil {
+			ret = append(ret, *toe.Utxo)
+		}
 	}
 	return ret, nil
 }
@@ -535,7 +552,6 @@ func (i *BlockBookClient) setupListeners() error {
 		}
 	}
 	i.SocketClient = client
-	i.websocketWatchdog = newWebsocketWatchdog(i)
 	go i.websocketWatchdog.guardWebsocket()
 
 	i.SocketClient.On(gosocketio.OnError, func(c *gosocketio.Channel, args interface{}) {
