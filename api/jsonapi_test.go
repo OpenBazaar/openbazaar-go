@@ -513,8 +513,10 @@ func TestPosts(t *testing.T) {
 
 func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	dbSetup := func(testRepo *test.Repository) error {
+		paymentCoin := repo.CurrencyCode("BTC")
 		expired := factory.NewExpiredDisputeCaseRecord()
 		expired.CaseID = "expiredCase"
+		expired.PaymentCoin = &paymentCoin
 		for _, r := range []*repo.DisputeCaseRecord{expired} {
 			if err := testRepo.DB.Cases().PutRecord(r); err != nil {
 				return err

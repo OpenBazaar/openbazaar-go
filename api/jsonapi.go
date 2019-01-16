@@ -2096,21 +2096,26 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request) {
-	type dispute struct {
+	type disputeParams struct {
 		OrderID          string  `json:"orderId"`
 		Resolution       string  `json:"resolution"`
 		BuyerPercentage  float32 `json:"buyerPercentage"`
 		VendorPercentage float32 `json:"vendorPercentage"`
 	}
 	decoder := json.NewDecoder(r.Body)
-	var d dispute
+	var d disputeParams
 	err := decoder.Decode(&d)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
+	disputeCase, err := i.node.Datastore.Cases().GetByCaseID(d.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+	}
+
+	err = i.node.CloseDispute(disputeCase.CaseID, d.BuyerPercentage, d.VendorPercentage, d.Resolution, disputeCase.PaymentCoin)
 	if err != nil {
 		switch err {
 		case core.ErrCaseNotFound:
