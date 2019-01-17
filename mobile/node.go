@@ -99,11 +99,10 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	backendFile := logging.NewLogBackend(w, "", 0)
 	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-	logging.SetBackend(backendFileFormatter)
 
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(logger)
+	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
 
 	migrations.WalletCoinType = config.CoinType
 
