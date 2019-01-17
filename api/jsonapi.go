@@ -1544,11 +1544,18 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, funded, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
+	contract, state, funded, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(conf.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, err.Error())
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", conf.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state != pb.OrderState_PENDING {
 		ErrorResponse(w, http.StatusBadRequest, "order has already been confirmed")
 		return
@@ -1584,10 +1591,16 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Purchases().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
+	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -1721,7 +1734,7 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(can.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
@@ -1730,6 +1743,13 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusBadRequest, "order must be AWAITING_FULFILLMENT, or PARTIALLY_FULFILLED")
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	err = i.node.RefundOrder(contract, records)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1911,11 +1931,18 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Sales().GetByOrderId(fulfill.OrderId)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderId)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
 		ErrorResponse(w, http.StatusBadRequest, "order must be in state AWAITING_FULFILLMENT or PARTIALLY_FULFILLED to fulfill")
 		return
@@ -1943,10 +1970,16 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	contract, state, _, records, _, _, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
+	contract, state, _, records, _, paymentCoin, err := i.node.Datastore.Purchases().GetByOrderId(or.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "order not found")
 		return
+	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", or.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_FULFILLED &&
@@ -2012,19 +2045,29 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var isSale bool
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
+	var (
+		isSale      bool
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(d.OrderID)
 	if err != nil {
-		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
+		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(d.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
 		isSale = true
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", d.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
 		ErrorResponse(w, http.StatusBadRequest, "Only moderated orders can be disputed")
 		return
@@ -2053,21 +2096,26 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 }
 
 func (i *jsonAPIHandler) POSTCloseDispute(w http.ResponseWriter, r *http.Request) {
-	type dispute struct {
+	type disputeParams struct {
 		OrderID          string  `json:"orderId"`
 		Resolution       string  `json:"resolution"`
 		BuyerPercentage  float32 `json:"buyerPercentage"`
 		VendorPercentage float32 `json:"vendorPercentage"`
 	}
 	decoder := json.NewDecoder(r.Body)
-	var d dispute
+	var d disputeParams
 	err := decoder.Decode(&d)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	err = i.node.CloseDispute(d.OrderID, d.BuyerPercentage, d.VendorPercentage, d.Resolution)
+	disputeCase, err := i.node.Datastore.Cases().GetByCaseID(d.OrderID)
+	if err != nil {
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+	}
+
+	err = i.node.CloseDispute(disputeCase.CaseID, d.BuyerPercentage, d.VendorPercentage, d.Resolution, disputeCase.PaymentCoin)
 	if err != nil {
 		switch err {
 		case core.ErrCaseNotFound:
@@ -2141,17 +2189,27 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	var contract *pb.RicardianContract
-	var state pb.OrderState
-	var records []*wallet.TransactionRecord
-	contract, state, _, records, _, _, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
+	var (
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
+	)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Purchases().GetByOrderId(rel.OrderID)
 	if err != nil {
-		contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+		contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Order not found")
 			return
 		}
 	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+	}
+
 	if state == pb.OrderState_DECIDED {
 		err = i.node.ReleaseFunds(contract, records)
 		if err != nil {
@@ -2170,9 +2228,10 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		rel struct {
 			OrderID string `json:"orderId"`
 		}
-		contract *pb.RicardianContract
-		state    pb.OrderState
-		records  []*wallet.TransactionRecord
+		contract    *pb.RicardianContract
+		state       pb.OrderState
+		records     []*wallet.TransactionRecord
+		paymentCoin *repo.CurrencyCode
 	)
 
 	decoder := json.NewDecoder(r.Body)
@@ -2182,10 +2241,16 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	contract, state, _, records, _, _, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
+	contract, state, _, records, _, paymentCoin, err = i.node.Datastore.Sales().GetByOrderId(rel.OrderID)
 	if err != nil {
 		ErrorResponse(w, http.StatusNotFound, "Order not found")
 		return
+	}
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
+		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {

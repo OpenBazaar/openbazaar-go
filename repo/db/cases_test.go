@@ -46,7 +46,7 @@ func TestCasesDB_Count(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 5, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 5, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +71,7 @@ func TestPutCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -111,7 +111,7 @@ func TestUpdateWithNil(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -125,7 +125,7 @@ func TestUpdateWithNil(t *testing.T) {
 	}
 	buyerContract, _, _, _, _, _, _, _, _, _, err := casesdb.GetCaseMetadata("caseID")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if buyerContract != nil {
 		t.Error("Vendor contract was not nil")
@@ -144,7 +144,7 @@ func TestDeleteCase(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -172,7 +172,7 @@ func TestMarkCaseAsRead(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -202,7 +202,7 @@ func TestMarkCaseAsUnread(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -238,7 +238,7 @@ func TestUpdateBuyerInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -290,7 +290,7 @@ func TestUpdateVendorInfo(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 0, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 0, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -343,7 +343,7 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -407,6 +407,7 @@ func TestCasesGetCaseMetaData(t *testing.T) {
 
 func TestGetByCaseID(t *testing.T) {
 	var (
+		expectedPaymentCoin     = "BCH"
 		casesdb, teardown, err  = buildNewCaseStore()
 		contract                = factory.NewContract()
 		expectedBuyerOutpoints  = []*pb.Outpoint{{Hash: "hash1", Index: 0, Value: 5}}
@@ -417,7 +418,7 @@ func TestGetByCaseID(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", expectedPaymentCoin, "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -478,6 +479,9 @@ func TestGetByCaseID(t *testing.T) {
 	if dispute.OrderState != pb.OrderState_DISPUTED {
 		t.Errorf("Expected state %s got %s", pb.OrderState_DISPUTED, dispute.OrderState)
 	}
+	if dispute.PaymentCoin.String() != expectedPaymentCoin {
+		t.Errorf("Expected paymentCoin %s got %s", expectedPaymentCoin, dispute.PaymentCoin.String())
+	}
 }
 
 func TestMarkAsClosed(t *testing.T) {
@@ -492,7 +496,7 @@ func TestMarkAsClosed(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", pb.OrderState_DISPUTED, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -512,7 +516,7 @@ func TestMarkAsClosed(t *testing.T) {
 	}
 	_, _, _, _, state, _, _, _, _, resolution, err := casesdb.GetCaseMetadata("caseID")
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if state != pb.OrderState_RESOLVED {
 		t.Error("Mark as closed failed to set state to resolved")
@@ -534,7 +538,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 	}
 	defer teardown()
 
-	err = casesdb.Put("caseID", 10, true, "blah", "", "btc")
+	err = casesdb.Put("caseID", 10, true, "blah", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -547,7 +551,7 @@ func TestCasesDB_GetAll(t *testing.T) {
 		t.Error(err)
 	}
 	time.Sleep(time.Second)
-	err = casesdb.Put("caseID2", 11, true, "asdf", "", "btc")
+	err = casesdb.Put("caseID2", 11, true, "asdf", "btc", "btc")
 	if err != nil {
 		t.Error(err)
 	}
@@ -969,7 +973,6 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 			{[]string{"TBTC", "TBCH"}, "TBTC", "TBTC"},
 			{[]string{"TBCH", "TBTC"}, "TBTC", "TBTC"},
 			{[]string{"TBTC", "TBCH"}, "TBCH", "TBCH"},
-			{[]string{}, "", ""},
 		}
 		contract = factory.NewContract()
 	)
@@ -982,13 +985,17 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 
 		contract.VendorListings[0].Metadata.AcceptedCurrencies = test.acceptedCurrencies
 		contract.BuyerOrder.Payment.Coin = test.paymentCoin
+		paymentCoin, err := repo.NewCurrencyCode(test.paymentCoin)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
 			CaseID:           "paymentCoinTest",
 			BuyerContract:    contract,
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
-			PaymentCoin:      test.paymentCoin,
+			PaymentCoin:      paymentCoin,
 		})
 		if err != nil {
 			t.Error(err)
@@ -1010,7 +1017,7 @@ func TestCasesDB_Put_PaymentCoin(t *testing.T) {
 
 func TestCasesDB_Put_CoinType(t *testing.T) {
 	var (
-		testsCoins = []string{"", "TBTC", "TETH"}
+		testsCoins = []string{"TBTC", "TETH"}
 		contract   = factory.NewContract()
 	)
 
@@ -1020,6 +1027,10 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		paymentCoinCode, err := repo.NewCurrencyCode(testCoin)
+		if err != nil {
+			t.Fatal(err)
+		}
 		contract.VendorListings[0].Metadata.CoinType = testCoin
 
 		err = casesdb.PutRecord(&repo.DisputeCaseRecord{
@@ -1028,6 +1039,7 @@ func TestCasesDB_Put_CoinType(t *testing.T) {
 			VendorContract:   contract,
 			IsBuyerInitiated: true,
 			CoinType:         testCoin,
+			PaymentCoin:      paymentCoinCode,
 		})
 		if err != nil {
 			t.Error(err)

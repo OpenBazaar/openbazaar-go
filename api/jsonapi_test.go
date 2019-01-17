@@ -513,8 +513,10 @@ func TestPosts(t *testing.T) {
 
 func TestCloseDisputeBlocksWhenExpired(t *testing.T) {
 	dbSetup := func(testRepo *test.Repository) error {
+		paymentCoin := repo.CurrencyCode("BTC")
 		expired := factory.NewExpiredDisputeCaseRecord()
 		expired.CaseID = "expiredCase"
+		expired.PaymentCoin = &paymentCoin
 		for _, r := range []*repo.DisputeCaseRecord{expired} {
 			if err := testRepo.DB.Cases().PutRecord(r); err != nil {
 				return err
@@ -652,12 +654,13 @@ func TestPurchasesGet(t *testing.T) {
 }
 
 func TestCasesGet(t *testing.T) {
+	paymentCoinCode := repo.CurrencyCode("BTC")
 	disputeCaseRecord := factory.NewDisputeCaseRecord()
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.AcceptedCurrencies = []string{"BTC"}
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.CoinType = "ZEC"
 	disputeCaseRecord.BuyerContract.VendorListings[0].Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	disputeCaseRecord.CoinType = "ZEC"
-	disputeCaseRecord.PaymentCoin = "BTC"
+	disputeCaseRecord.PaymentCoin = &paymentCoinCode
 	dbSetup := func(testRepo *test.Repository) error {
 		return testRepo.DB.Cases().PutRecord(disputeCaseRecord)
 	}

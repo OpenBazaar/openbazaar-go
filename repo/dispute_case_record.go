@@ -29,7 +29,7 @@ type DisputeCaseRecord struct {
 	VendorPayoutAddress         string
 	IsBuyerInitiated            bool
 	CoinType                    string
-	PaymentCoin                 string
+	PaymentCoin                 *CurrencyCode
 }
 
 // BuildModeratorDisputeExpiryFirstNotification returns a Notification with ExpiresIn set for the First Interval
