@@ -9,7 +9,7 @@ import (
 	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
 	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
@@ -51,8 +51,9 @@ import (
 	ipath "github.com/ipfs/go-ipfs/path"
 	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/op/go-logging"
-	"github.com/tyler-smith/go-bip39"
+	"github.com/natefinch/lumberjack"
+	logging "github.com/op/go-logging"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 // Node configuration structure
@@ -90,6 +91,16 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	os.Remove(repoLockFile)
 
 	// Logging
+	w := &lumberjack.Logger{
+		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
+		MaxSize:    10, // Megabytes
+		MaxBackups: 3,
+		MaxAge:     30, // Days
+	}
+	backendFile := logging.NewLogBackend(w, "", 0)
+	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
+	logging.SetBackend(backendFileFormatter)
+
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
 	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
 	logging.SetBackend(logger)
