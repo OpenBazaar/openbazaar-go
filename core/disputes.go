@@ -433,7 +433,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 }
 
 // CloseDispute - close a dispute
-func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string) error {
+func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string, paymentCoinHint *repo.CurrencyCode) error {
 	var payDivision = repo.PayoutRatio{Buyer: buyerPercentage, Vendor: vendorPercentage}
 	if err := payDivision.Validate(); err != nil {
 		return err
@@ -467,6 +467,12 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		dispute.BuyerContract = dispute.VendorContract
 	}
 	preferredContract := dispute.ResolutionPaymentContract(payDivision)
+
+	// TODO: Remove once broken contracts are migrated
+	if _, err := repo.NewCurrencyCode(preferredContract.BuyerOrder.Payment.Coin); err != nil {
+		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
+		preferredContract.BuyerOrder.Payment.Coin = paymentCoinHint.String()
+	}
 
 	var d = new(pb.DisputeResolution)
 

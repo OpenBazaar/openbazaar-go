@@ -50,7 +50,7 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 		dispute.Claim,
 		"",
 		"",
-		dispute.PaymentCoin,
+		dispute.PaymentCoin.String(),
 		dispute.CoinType,
 	)
 	if err != nil {
@@ -65,12 +65,16 @@ func (c *CasesDB) PutRecord(dispute *repo.DisputeCaseRecord) error {
 }
 
 func (c *CasesDB) Put(caseID string, state pb.OrderState, buyerOpened bool, claim string, paymentCoin string, coinType string) error {
+	paymentCoinCode, err := repo.NewCurrencyCode(paymentCoin)
+	if err != nil {
+		return fmt.Errorf("verifying paymentCoin: %s", err.Error())
+	}
 	record := &repo.DisputeCaseRecord{
 		CaseID:           caseID,
 		Claim:            claim,
 		IsBuyerInitiated: buyerOpened,
 		OrderState:       state,
-		PaymentCoin:      paymentCoin,
+		PaymentCoin:      paymentCoinCode,
 		CoinType:         coinType,
 		Timestamp:        time.Now(),
 	}
@@ -388,22 +392,30 @@ func (c *CasesDB) GetCaseMetadata(caseID string) (buyerContract, vendorContract 
 func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	var buyerCon []byte
-	var vendorCon []byte
-	var buyerOuts []byte
-	var vendorOuts []byte
-	var buyerAddr string
-	var vendorAddr string
-	var stateInt int
-	var isBuyerInitiated int
-	var buyerInitiated bool
-	var createdAt int64
+	var (
+		buyerAddr        string
+		buyerCon         []byte
+		buyerInitiated   bool
+		buyerOuts        []byte
+		createdAt        int64
+		isBuyerInitiated int
+		paymentCoin      string
+		stateInt         int
+		vendorAddr       string
+		vendorCon        []byte
+		vendorOuts       []byte
+	)
 
-	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, buyerOpened, timestamp from cases where caseID=?")
+	stmt, err := c.db.Prepare("select buyerContract, vendorContract, buyerPayoutAddress, vendorPayoutAddress, buyerOutpoints, vendorOutpoints, state, buyerOpened, timestamp, paymentCoin from cases where caseID=?")
 	if err != nil {
 		return nil, err
 	}
-	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts, &stateInt, &isBuyerInitiated, &createdAt)
+	err = stmt.QueryRow(caseID).Scan(&buyerCon, &vendorCon, &buyerAddr, &vendorAddr, &buyerOuts, &vendorOuts, &stateInt, &isBuyerInitiated, &createdAt, &paymentCoin)
+	if err != nil {
+		return nil, err
+	}
+
+	paymentCoinCode, err := repo.NewCurrencyCode(paymentCoin)
 	if err != nil {
 		return nil, err
 	}
@@ -458,16 +470,17 @@ func (c *CasesDB) GetByCaseID(caseID string) (*repo.DisputeCaseRecord, error) {
 		return ret
 	}
 	return &repo.DisputeCaseRecord{
+		BuyerContract:       brc,
+		BuyerOutpoints:      toPointer(buyerOutpointsOut),
+		BuyerPayoutAddress:  buyerAddr,
 		CaseID:              caseID,
 		IsBuyerInitiated:    buyerInitiated,
-		BuyerContract:       brc,
-		BuyerPayoutAddress:  buyerAddr,
-		BuyerOutpoints:      toPointer(buyerOutpointsOut),
-		VendorContract:      vrc,
-		VendorPayoutAddress: vendorAddr,
-		VendorOutpoints:     toPointer(vendorOutpointsOut),
 		OrderState:          pb.OrderState(stateInt),
+		PaymentCoin:         paymentCoinCode,
 		Timestamp:           time.Unix(createdAt, 0),
+		VendorContract:      vrc,
+		VendorOutpoints:     toPointer(vendorOutpointsOut),
+		VendorPayoutAddress: vendorAddr,
 	}, nil
 }
 
