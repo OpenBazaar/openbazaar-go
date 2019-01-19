@@ -282,14 +282,17 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int) (common.Hash, 
 func (wallet *EthereumWallet) Start() {
 	// start the ticker to check for pending txn rcpts
 	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
 	go func() {
 		for range ticker.C {
 			// get the pending txns
+			fmt.Println("tick...tick...")
 			txns, err := wallet.db.Txns().GetAll(true)
 			if err != nil {
 				continue
 			}
 			for _, txn := range txns {
+				fmt.Println("fetch txn from ticker : ", txn.Txid)
 				hash := common.HexToHash(txn.Txid)
 				go wallet.CheckTxnRcpt(&hash, txn.Bytes)
 			}
