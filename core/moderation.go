@@ -178,6 +178,74 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, c
 	}
 }
 
+// SetCurrencyOnListings - set currencies accepted for a listing
+func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
+	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
+	if err != nil {
+		return err
+	}
+	hashes := make(map[string]string)
+	walkpath := func(p string, f os.FileInfo, err error) error {
+		if !f.IsDir() {
+			file, err := ioutil.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			sl := new(pb.SignedListing)
+			err = jsonpb.UnmarshalString(string(file), sl)
+			if err != nil {
+				return err
+			}
+
+			sl.Listing.Metadata.AcceptedCurrencies = currencies
+			sl, err = n.SignListing(sl.Listing)
+			if err != nil {
+				return err
+			}
+			m := jsonpb.Marshaler{
+				EnumsAsInts:  false,
+				EmitDefaults: false,
+				Indent:       "    ",
+				OrigName:     false,
+			}
+			fi, err := os.Create(p)
+			if err != nil {
+				return err
+			}
+			out, err := m.MarshalToString(sl)
+			if err != nil {
+				return err
+			}
+			if _, err := fi.WriteString(out); err != nil {
+				return err
+			}
+			hash, err := ipfs.GetHashOfFile(n.IpfsNode, p)
+			if err != nil {
+				return err
+			}
+			hashes[sl.Listing.Slug] = hash
+
+			return nil
+		}
+		return nil
+	}
+
+	err = filepath.Walk(absPath, walkpath)
+	if err != nil {
+		return err
+	}
+
+	// Update accepted currencies and hashes on index
+	updater := func(listing *ListingData) error {
+		listing.AcceptedCurrencies = currencies
+		if hash, ok := hashes[listing.Slug]; ok {
+			listing.Hash = hash
+		}
+		return nil
+	}
+	return n.UpdateEachListingOnIndex(updater)
+}
+
 // SetModeratorsOnListings - set moderators for a listing
 func (n *OpenBazaarNode) SetModeratorsOnListings(moderators []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))

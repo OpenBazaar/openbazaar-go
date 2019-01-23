@@ -3793,6 +3793,24 @@ func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
 	SanitizedResponse(w, string(out))
 }
 
+func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.Request) {
+	// Retrieve attribute and values to update
+	type BulkUpdateRequest struct {
+		Currencies []string `json:"currencies"`
+	}
+
+	var bulkUpdate BulkUpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&bulkUpdate)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	log.Info("Updating currencies for all listings to: ", bulkUpdate.Currencies)
+	i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
+
+	SanitizedResponse(w, `{"success": "true"}`)
+}
+
 // POSTS
 
 // Post a post
