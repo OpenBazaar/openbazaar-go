@@ -3886,7 +3886,7 @@ func (i *jsonAPIHandler) POSTBulkUpdateCoupons(w http.ResponseWriter, r *http.Re
 			}
 
 			couponDiscount := &pb.Listing_Coupon_PercentDiscount{
-				PercentDiscount: float32(coupon.PercentDiscount),
+				PercentDiscount: coupon.PercentDiscount,
 			}
 			newCoupon = &pb.Listing_Coupon{
 				Title:    coupon.Title,
