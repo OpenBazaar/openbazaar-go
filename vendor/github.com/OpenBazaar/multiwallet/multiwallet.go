@@ -95,7 +95,11 @@ func NewMultiWallet(cfg *config.Config) (MultiWallet, error) {
 			if err != nil {
 				return nil, err
 			}
-			multiwallet[coin.CoinType] = w
+			if cfg.Params.Name == chaincfg.MainNetParams.Name {
+				multiwallet[wallet.Ethereum] = w
+			} else {
+				multiwallet[wallet.TestnetEthereum] = w
+			}
 		}
 	}
 	return multiwallet, nil

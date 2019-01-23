@@ -223,6 +223,8 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	ethConfig.RegistryAddress = regAddr.(string)
 
+	fmt.Println("registry addr : ", ethConfig.RegistryAddress)
+
 	/*
 		_, filename, _, _ := runtime.Caller(0)
 		conf, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../configuration.yaml"))
@@ -281,9 +283,11 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int) (common.Hash, 
 // Start will start the wallet daemon
 func (wallet *EthereumWallet) Start() {
 	// start the ticker to check for pending txn rcpts
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	go func() {
+	fmt.Println("in eth wallet start....")
+	go func(wallet *EthereumWallet) {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
 		for range ticker.C {
 			// get the pending txns
 			fmt.Println("tick...tick...")
@@ -297,7 +301,8 @@ func (wallet *EthereumWallet) Start() {
 				go wallet.CheckTxnRcpt(&hash, txn.Bytes)
 			}
 		}
-	}()
+	}(wallet)
+
 }
 
 // CurrencyCode returns ETH
@@ -992,10 +997,10 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		//amountStr = amountStr + amnt
 	}
 
-	//fmt.Println("destarr     : ", destArr)
-	//fmt.Println("amountArr   : ", amountArr)
+	fmt.Println("destarr     : ", destArr)
+	fmt.Println("amountArr   : ", amountArr)
 
-	//spew.Dump(rScript)
+	spew.Dump(rScript)
 
 	shash, _, err := GenScriptHash(rScript)
 	if err != nil {
@@ -1030,6 +1035,8 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	payload = append(payload, destArr...)
 	payload = append(payload, amountArr...)
 	payload = append(payload, shash[:]...)
+
+	fmt.Println("payload is : ", payload)
 
 	//script.MultisigAddress.String()[2:]
 
