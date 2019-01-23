@@ -184,7 +184,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	if err != nil {
 		return err
 	}
-	hashes := make(map[string]string)
+
 	walkpath := func(p string, f os.FileInfo, err error) error {
 		if !f.IsDir() && filepath.Ext(p) == ".json" {
 			file, err := ioutil.ReadFile(p)
@@ -210,15 +210,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 		return err
 	}
 
-	// Update accepted currencies and hashes on index
-	updater := func(listing *ListingData) error {
-		listing.AcceptedCurrencies = currencies
-		if hash, ok := hashes[listing.Slug]; ok {
-			listing.Hash = hash
-		}
-		return nil
-	}
-	return n.UpdateEachListingOnIndex(updater)
+	return nil
 }
 
 // SetModeratorsOnListings - set moderators for a listing
