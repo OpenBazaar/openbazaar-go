@@ -186,7 +186,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	}
 	hashes := make(map[string]string)
 	walkpath := func(p string, f os.FileInfo, err error) error {
-		if !f.IsDir() {
+		if !f.IsDir() && filepath.Ext(p) == ".json" {
 			file, err := ioutil.ReadFile(p)
 			if err != nil {
 				return err
