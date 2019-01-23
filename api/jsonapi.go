@@ -3805,8 +3805,13 @@ func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.R
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
 	log.Info("Updating currencies for all listings to: ", bulkUpdate.Currencies)
-	i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
+	err = i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 
 	SanitizedResponse(w, `{"success": "true"}`)
 }
