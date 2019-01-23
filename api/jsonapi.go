@@ -3816,6 +3816,98 @@ func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.R
 	SanitizedResponse(w, `{"success": "true"}`)
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func (i *jsonAPIHandler) POSTBulkUpdateCoupons(w http.ResponseWriter, r *http.Request) {
+	// Retrieve attribute and values to update
+	type Coupon struct {
+		Title           string  `json:"title"`
+		Code            string  `json:"code"`
+		PercentDiscount float32 `json:"percentDiscount"`
+		PriceDiscount   int     `json:"priceDiscount"`
+	}
+	type BulkUpdateRequest struct {
+		Coupons []Coupon `json:"coupons"`
+	}
+
+	var bulkUpdate BulkUpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&bulkUpdate)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	var bulkCoupons []*pb.Listing_Coupon
+	var couponCodeDupes []string
+
+	for _, coupon := range bulkUpdate.Coupons {
+
+		if stringInSlice(coupon.Code, couponCodeDupes) {
+			http.Error(w, "Discount code must be unique", 400)
+			return
+		}
+		couponCodeDupes = append(couponCodeDupes, coupon.Code)
+
+		// Set discount code phrase
+		discountCode := &pb.Listing_Coupon_DiscountCode{
+			DiscountCode: coupon.Code,
+		}
+
+		var newCoupon *pb.Listing_Coupon
+		if coupon.PriceDiscount != 0 {
+
+			// Ensure the fixed price is less than the cost of the item
+			if coupon.PriceDiscount < 0 {
+				http.Error(w, "Discount must be greater than 0", 400)
+				return
+			}
+
+			couponDiscount := &pb.Listing_Coupon_PriceDiscount{
+				PriceDiscount: uint64(coupon.PriceDiscount),
+			}
+			newCoupon = &pb.Listing_Coupon{
+				Title:    coupon.Title,
+				Code:     discountCode,
+				Discount: couponDiscount,
+			}
+		} else {
+
+			// Check to make sure percent discount is greater than 0 and less than or equal to 100%
+			if coupon.PercentDiscount < 0 || coupon.PercentDiscount >= 100 {
+				http.Error(w, "Percent discount must be between 0 and 100", 400)
+				return
+			}
+
+			couponDiscount := &pb.Listing_Coupon_PercentDiscount{
+				PercentDiscount: float32(coupon.PercentDiscount),
+			}
+			newCoupon = &pb.Listing_Coupon{
+				Title:    coupon.Title,
+				Code:     discountCode,
+				Discount: couponDiscount,
+			}
+		}
+
+		bulkCoupons = append(bulkCoupons, newCoupon)
+	}
+
+	fmt.Println("Updating coupons for all listings to: ", bulkCoupons)
+	err = i.node.SetCouponsOnListings(bulkCoupons)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	SanitizedResponse(w, `{"success": "true"}`)
+}
+
 // POSTS
 
 // Post a post

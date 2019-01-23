@@ -109,6 +109,8 @@ func post(i *jsonAPIHandler, path string, w http.ResponseWriter, r *http.Request
 		i.POSTPost(w, r)
 	case strings.HasPrefix(path, "/ob/bulkupdatecurrency"):
 		i.POSTBulkUpdateCurrency(w, r)
+	case strings.HasPrefix(path, "/ob/bulkupdatecoupons"):
+		i.POSTBulkUpdateCoupons(w, r)
 	default:
 		ErrorResponse(w, http.StatusNotFound, "Not Found")
 	}
