@@ -3,8 +3,8 @@ package ipfs
 import (
 	"context"
 	"errors"
-	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	routing "gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht"
 
 	"github.com/ipfs/go-ipfs/core"
 )

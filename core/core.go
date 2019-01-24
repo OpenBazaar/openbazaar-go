@@ -2,12 +2,12 @@ package core
 
 import (
 	"errors"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
 	"net/url"
 	"path"
 	"strings"
@@ -16,7 +16,6 @@ import (
 
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/OpenBazaar/openbazaar-go/namesys"
 	"github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
@@ -82,12 +81,6 @@ type OpenBazaarNode struct {
 
 	// A service that periodically republishes active pointers
 	PointerRepublisher *rep.PointerRepublisher
-
-	// Used to resolve domains to OpenBazaar IDs
-	NameSystem *namesys.NameSystem
-
-	// A service that periodically fetches and caches the bitcoin exchange rates
-	//ExchangeRates wallet.ExchangeRates
 
 	// Optional nodes to push user data to
 	PushNodes []peer.ID
@@ -201,7 +194,7 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 
 	var graph []cid.Cid
 	if len(n.PushNodes) > 0 {
-		graph, err = ipfs.FetchGraph(n.IpfsNode, id)
+		graph, err = ipfs.FetchGraph(n.IpfsNode, &id)
 		if err != nil {
 			return err
 		}
@@ -220,7 +213,7 @@ func (n *OpenBazaarNode) sendToPushNodes(hash string) error {
 				if err != nil {
 					continue
 				}
-				graph = append(graph, *c)
+				graph = append(graph, c)
 			}
 		}
 	}
@@ -275,15 +268,15 @@ func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, 
 	defer cancel()
 	if peerKey == nil {
 		var pubKey libp2p.PubKey
-		keyval, err := n.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(KeyCachePrefix + peerID.Pretty())))
+		keyval, err := n.IpfsNode.Repo.Datastore().Get(datastore.NewKey(KeyCachePrefix + peerID.Pretty()))
 		if err != nil {
-			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, []byte(peerID))
+			pubKey, err = routing.GetPublicKey(n.IpfsNode.Routing, ctx, peerID)
 			if err != nil {
 				log.Errorf("Failed to find public key for %s", peerID.Pretty())
 				return nil, err
 			}
 		} else {
-			pubKey, err = libp2p.UnmarshalPublicKey(keyval.([]byte))
+			pubKey, err = libp2p.UnmarshalPublicKey(keyval)
 			if err != nil {
 				log.Errorf("Failed to find public key for %s", peerID.Pretty())
 				return nil, err

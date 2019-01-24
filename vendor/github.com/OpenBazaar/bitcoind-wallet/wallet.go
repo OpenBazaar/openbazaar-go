@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/OpenBazaar/spvwallet"
+	"github.com/OpenBazaar/spvwallet/exchangerates"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/blockchain"
 	"github.com/btcsuite/btcd/btcec"
@@ -26,6 +27,7 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
+	"golang.org/x/net/proxy"
 	"os"
 	"os/exec"
 	"path"
@@ -33,8 +35,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"github.com/OpenBazaar/spvwallet/exchangerates"
-	"golang.org/x/net/proxy"
 )
 
 var log = logging.MustGetLogger("bitcoind")
@@ -67,7 +67,7 @@ var connCfg *btcrpcclient.ConnConfig = &btcrpcclient.ConnConfig{
 	DisableConnectOnNew:  false,
 }
 
-func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer) (*BitcoindWallet, error) {
+func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string, trustedPeer string, binary string, useTor bool, torControlPort int, proxy proxy.Dialer, disableExchangeRates bool) (*BitcoindWallet, error) {
 	seed := b39.NewSeed(mnemonic, "")
 	mPrivKey, _ := hd.NewMaster(seed, params)
 	mPubKey, _ := mPrivKey.Neuter()
@@ -87,7 +87,6 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		trustedPeer = strings.Split(trustedPeer, ":")[0]
 	}
 
-	er := exchangerates.NewBitcoinPriceFetcher(proxy)
 	w := BitcoindWallet{
 		params:           params,
 		repoPath:         dataDir,
@@ -98,7 +97,9 @@ func NewBitcoindWallet(mnemonic string, params *chaincfg.Params, repoPath string
 		controlPort:      torControlPort,
 		useTor:           useTor,
 		initChan:         make(chan struct{}),
-		exchangeRates:    er,
+	}
+	if !disableExchangeRates {
+		w.exchangeRates = exchangerates.NewBitcoinPriceFetcher(proxy)
 	}
 	return &w, nil
 }

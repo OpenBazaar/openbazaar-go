@@ -5,26 +5,21 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
-	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
-	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
-	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	ipnet "gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
-	oniontp "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
+	oniontp "gx/ipfs/QmXsGirmFALkAbRuj2yi991xamiqHBiU4wCmXv2mNsnFUq/go-onion-transport"
+	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
+	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	"gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	"gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	"gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht"
+	"gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht/opts"
+	"gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
 	"io"
 	"io/ioutil"
 	"net"
@@ -38,11 +33,9 @@ import (
 	"syscall"
 	"time"
 
-	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	"github.com/OpenBazaar/openbazaar-go/net/service"
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -63,17 +56,15 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/namesys"
-	namepb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipath "github.com/ipfs/go-ipfs/path"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/natefinch/lumberjack"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -274,11 +265,6 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan dropbox api token:", err)
 		return err
 	}
-	resolverConfig, err := schema.GetResolverConfig(configFile)
-	if err != nil {
-		log.Error("scan resolver config:", err)
-		return err
-	}
 	republishInterval, err := schema.GetRepublishInterval(configFile)
 	if err != nil {
 		log.Error("scan republish interval config:", err)
@@ -325,7 +311,7 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
@@ -374,13 +360,6 @@ func (x *Start) Execute(args []string) error {
 			break
 		} else if p[0].Name == "onion" {
 			usingTor = true
-			addrutil.SupportedTransportStrings = append(addrutil.SupportedTransportStrings, "/onion")
-			t, err := ma.ProtocolsWithString("/onion")
-			if err != nil {
-				log.Error("wrapping onion protocol:", err)
-				return err
-			}
-			addrutil.SupportedTransportProtocols = append(addrutil.SupportedTransportProtocols, t)
 		} else {
 			usingClearnet = true
 		}
@@ -406,8 +385,7 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	}
-	// If we're only using Tor set the proxy dialer and dns resolver
-	dnsResolver := namesys.NewDNSResolver()
+	// If we're only using Tor set the proxy dialer
 	if usingTor && !usingClearnet {
 		log.Notice("Using Tor exclusively")
 		torDialer, err = onionTransport.TorDialer()
@@ -415,50 +393,30 @@ func (x *Start) Execute(args []string) error {
 			log.Error("dailing tor network:", err)
 			return err
 		}
-		// TODO: maybe create a tor resolver impl later
-		dnsResolver = nil
+		cfg.Swarm.DisableNatPortMap = true
 	}
 
 	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, bwr metrics.Reporter, fs []*net.IPNet, tpt smux.Transport, protec ipnet.Protector, opts *ipfscore.ConstructPeerHostOpts) (p2phost.Host, error) {
-		// no addresses to begin with. we'll start later.
-		swrm, err := swarm.NewSwarmWithProtector(ctx, nil, id, ps, protec, tpt, bwr)
-		if err != nil {
-			return nil, err
+	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, options ...libp2p.Option) (p2phost.Host, error) {
+		pkey := ps.PrivKey(id)
+		if pkey == nil {
+			return nil, fmt.Errorf("missing private key for node ID: %s", id.Pretty())
 		}
-
-		network := (*swarm.Network)(swrm)
-		network.Swarm().AddTransport(onionTransport)
-
-		for _, f := range fs {
-			network.Swarm().Filters.AddDialFilter(f)
+		options = append([]libp2p.Option{libp2p.Identity(pkey), libp2p.Peerstore(ps)}, options...)
+		if usingTor {
+			options = append(options, libp2p.Transport(onionTransport.Constructor))
 		}
-
-		var host *p2pbhost.BasicHost
-		if usingTor && !usingClearnet {
-			host = p2pbhost.New(network)
-		} else {
-			hostOpts := []interface{}{bwr}
-			if !opts.DisableNatPortMap {
-				hostOpts = append(hostOpts, p2pbhost.NATPortMap)
-			}
-			host = p2pbhost.New(network, hostOpts...)
-		}
-		return host, nil
+		return libp2p.New(ctx, options...)
 	}
 
 	ncfg := &ipfscore.BuildCfg{
 		Repo:   r,
 		Online: true,
 		ExtraOpts: map[string]bool{
-			"mplex": true,
+			"mplex":  true,
+			"ipnsps": true,
 		},
-		DNSResolver: dnsResolver,
-		Routing:     DHTOption,
-	}
-
-	if cfg.Ipns.UsePersistentCache {
-		ncfg.ExtraOpts["ipnsps"] = true
+		Routing: DHTOption,
 	}
 
 	if onionTransport != nil {
@@ -480,33 +438,18 @@ func (x *Start) Execute(args []string) error {
 		return nd, nil
 	}
 
-	// Set IPNS query size
-	querySize := cfg.Ipns.QuerySize
-	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
-	} else {
-		dhtutil.QuerySize = 16
-	}
-
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
 	// Get current directory root hash
-	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
+	ipnskey := namesys.IpnsDsKey(nd.Identity)
+	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
 	if hasherr != nil {
 		log.Error("get ipns key:", hasherr)
 		return hasherr
 	}
-	val := ival.([]byte)
-	dhtrec := new(recpb.Record)
-	err = proto.Unmarshal(val, dhtrec)
-	if err != nil {
-		log.Error("unmarshal record", err)
-		return err
-	}
-	e := new(namepb.IpnsEntry)
-	err = proto.Unmarshal(dhtrec.GetValue(), e)
+	ourIpnsRecord := new(ipnspb.IpnsEntry)
+	err = proto.Unmarshal(ival, ourIpnsRecord)
 	if err != nil {
 		log.Error("unmarshal record value", err)
 		return err
@@ -579,7 +522,7 @@ func (x *Start) Execute(args []string) error {
 	}
 
 	// Authenticated gateway
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway[0])
 	if err != nil {
 		log.Error(err)
 		return err
@@ -653,26 +596,13 @@ func (x *Start) Execute(args []string) error {
 	}
 	bm := obnet.NewBanManager(blockedNodes)
 
-	// Create namesys resolvers
-	resolvers := []obns.Resolver{
-		bstk.NewBlockStackClient(resolverConfig.Id, torDialer),
-	}
-	if !(usingTor && !usingClearnet) {
-		resolvers = append(resolvers, obns.NewDNSResolver())
-	}
-	ns, err := obns.NewNameSystem(resolvers)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
 	if x.Testnet {
 		setTestmodeRecordAgingIntervals()
 	}
 
 	// Build pubsub
-	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
-	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 
 	// OpenBazaar node setup
@@ -680,17 +610,16 @@ func (x *Start) Execute(args []string) error {
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 cfg.Ipns.BackUpAPI,
+		IPNSBackupAPI:                 "", // TODO [cp]: need a migration to set this field in another location.
 		IpfsNode:                      nd,
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
-		NameSystem:                    ns,
 		OfflineMessageFailoverTimeout: 30 * time.Second,
 		Pubsub:               ps,
 		PushNodes:            pushNodes,
 		RegressionTestEnable: x.Regtest,
 		RepoPath:             repoPath,
-		RootHash:             ipath.Path(e.Value).String(),
+		RootHash:             string(ourIpnsRecord.Value),
 		TestnetEnable:        x.Testnet,
 		TorDialer:            torDialer,
 		UserAgent:            core.USERAGENT,
@@ -737,7 +666,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	if cfg.Addresses.API != "" {
+	if cfg.Addresses.API[0] != "" {
 		if _, err := serveHTTPApi(&ctx); err != nil {
 			log.Error(err)
 			return err
@@ -768,7 +697,6 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
-		<-dht.DefaultBootstrapConfig.DoneChan
 		core.Node.Service = service.New(core.Node, sqliteDB)
 
 		core.Node.StartMessageRetriever()
@@ -863,7 +791,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	}
 
 	// Create a network listener
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway[0])
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
 	}
@@ -921,18 +849,19 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	apiFileFormatter := logging.NewBackendFormatter(apiFile, fileLogFormat)
 	ml := logging.MultiLogger(apiFileFormatter)
 
-	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, ml, opts...)
+	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
 }
 
 var DHTOption ipfscore.RoutingOption = constructDHTRouting
 
 const IpnsValidatorTag = "ipns"
 
-func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
-	dhtRouting := dht.NewDHT(ctx, host, dstore)
-	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
-	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
-	return dhtRouting, nil
+func constructDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	return dht.New(
+		ctx, host,
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
 }
 
 // serveHTTPApi collects options, creates listener, prints status message and starts serving requests
@@ -942,7 +871,7 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 		return nil, fmt.Errorf("serveHTTPApi: GetConfig() failed: %s", err)
 	}
 
-	apiAddr := cfg.Addresses.API
+	apiAddr := cfg.Addresses.API[0]
 	apiMaddr, err := ma.NewMultiaddr(apiAddr)
 	if err != nil {
 		return nil, fmt.Errorf("serveHTTPApi: invalid API address: %q (err: %s)", apiAddr, err)
@@ -991,7 +920,7 @@ func serveHTTPApi(cctx *commands.Context) (<-chan error, error) {
 
 	errc := make(chan error)
 	go func() {
-		errc <- corehttp.Serve(node, apiLis.NetListener(), opts...)
+		errc <- corehttp.Serve(node, manet.NetListener(apiLis), opts...)
 		close(errc)
 	}()
 	return errc, nil

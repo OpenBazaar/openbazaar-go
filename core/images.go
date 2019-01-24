@@ -17,9 +17,9 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
-	"github.com/ipfs/go-ipfs/unixfs/io"
 	"github.com/nfnt/resize"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	"gx/ipfs/QmfB3oNXGGq9S4B2a9YeCajoATms3Zw2VvDm8fK7VeLSV8/go-unixfs/io"
 )
 
 // SetAvatarImages - set avatar image from the base64 encoded image string
@@ -157,7 +157,7 @@ func (n *OpenBazaarNode) FetchHeader(peerID string, size string, useCache bool) 
 // FetchImage - fetch ipfs image
 func (n *OpenBazaarNode) FetchImage(peerID string, imageType string, size string, useCache bool) (io.DagReader, error) {
 	query := "/" + peerID + "/images/" + size + "/" + imageType
-	b, err := n.IPNSResolveThenCat(ipnspath.FromString(query), time.Minute, useCache)
+	b, err := n.IPNSResolveThenCat(ipath.FromString(query), time.Minute, useCache)
 	if err != nil {
 		return nil, err
 	}

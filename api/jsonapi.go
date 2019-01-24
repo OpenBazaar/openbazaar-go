@@ -8,12 +8,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+	"github.com/ipfs/go-ipfs/namesys"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	routing "gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -39,10 +42,8 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipnspath "github.com/ipfs/go-ipfs/path"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
+	ipnspath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
 )
 
 type JSONAPIConfig struct {
@@ -1074,12 +1075,6 @@ func (i *jsonAPIHandler) GETFollowers(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "followers.json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1133,12 +1128,6 @@ func (i *jsonAPIHandler) GETFollowing(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(ret))
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		followBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "following.json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1350,12 +1339,6 @@ func (i *jsonAPIHandler) GETListings(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(listingsBytes))
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		listingsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings.json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1441,12 +1424,6 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 		hash = listingID
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		listingBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "listings", listingID+".json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -1491,12 +1468,6 @@ func (i *jsonAPIHandler) GETProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		profile, err = i.node.FetchProfile(peerID, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -2615,11 +2586,20 @@ func (i *jsonAPIHandler) GETImage(w http.ResponseWriter, r *http.Request) {
 	_, imageHash := path.Split(r.URL.Path)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 	defer cancel()
-	dr, err := coreunix.Cat(ctx, i.node.IpfsNode, "/ipfs/"+imageHash)
+
+	api := coreapi.NewCoreAPI(i.node.IpfsNode)
+	pth, err := iface.ParsePath("/ipfs/" + imageHash)
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+
+	dr, err := api.Unixfs().Get(ctx, pth)
+	if err != nil {
+		ErrorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	defer dr.Close()
 	w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	w.Header().Del("Content-Type")
@@ -3686,38 +3666,30 @@ func (i *jsonAPIHandler) GETWalletStatus(w http.ResponseWriter, r *http.Request)
 	SanitizedResponse(w, string(out))
 }
 
-func (i *jsonAPIHandler) GETResolve(w http.ResponseWriter, r *http.Request) {
-	_, name := path.Split(r.URL.Path)
-	pid, err := i.node.NameSystem.Resolve(context.Background(), name)
-	if err != nil {
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
-	}
-	fmt.Fprint(w, pid.Pretty())
-}
-
 func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	_, peerID := path.Split(r.URL.Path)
 
-	val, err := i.node.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte("/ipns/" + peerID)))
-	if err != nil { // No record in datastore
-		ErrorResponse(w, http.StatusNotFound, err.Error())
-		return
-	}
 	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	val, err := i.node.IpfsNode.Repo.Datastore().Get(namesys.IpnsDsKey(pid))
+	if err != nil { // No record in datastore
+		ErrorResponse(w, http.StatusNotFound, err.Error())
+		return
+	}
+
 	var keyBytes []byte
 	pubkey := i.node.IpfsNode.Peerstore.PubKey(pid)
 	if pubkey == nil || !pid.MatchesPublicKey(pubkey) {
-		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(core.KeyCachePrefix + peerID)))
+		keyval, err := i.node.IpfsNode.Repo.Datastore().Get(datastore.NewKey(core.KeyCachePrefix + peerID))
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
 			return
 		}
-		keyBytes = keyval.([]byte)
+		keyBytes = keyval
 	} else {
 		keyBytes, err = pubkey.Bytes()
 		if err != nil {
@@ -3727,22 +3699,11 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type KeyAndRecord struct {
-		Pubkey           string `json:"pubkey"`
-		SerializedRecord string `json:"serializedRecord"`
+		Pubkey string `json:"pubkey"`
+		Record string `json:"record"`
 	}
 
-	entry := new(ipnspb.IpnsEntry)
-	err = proto.Unmarshal(val.([]byte), entry)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	b, err := proto.Marshal(entry)
-	if err != nil {
-		ErrorResponse(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	ret := KeyAndRecord{hex.EncodeToString(keyBytes), hex.EncodeToString(b)}
+	ret := KeyAndRecord{hex.EncodeToString(keyBytes), string(val)}
 	retBytes, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3979,12 +3940,6 @@ func (i *jsonAPIHandler) GETPosts(w http.ResponseWriter, r *http.Request) {
 		}
 		SanitizedResponse(w, string(postsBytes))
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		postsBytes, err := i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "posts.json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())
@@ -4051,12 +4006,6 @@ func (i *jsonAPIHandler) GETPost(w http.ResponseWriter, r *http.Request) {
 		hash = postID
 		w.Header().Set("Cache-Control", "public, max-age=29030400, immutable")
 	} else {
-		pid, err := i.node.NameSystem.Resolve(context.Background(), peerID)
-		if err != nil {
-			ErrorResponse(w, http.StatusNotFound, err.Error())
-			return
-		}
-		peerID = pid.Pretty()
 		postBytes, err = i.node.IPNSResolveThenCat(ipnspath.FromString(path.Join(peerID, "posts", postID+".json")), time.Minute, useCache)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, err.Error())

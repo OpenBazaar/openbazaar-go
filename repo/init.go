@@ -171,18 +171,11 @@ func addConfigExtensions(repoRoot string) error {
 		}
 
 		t = schema.TorConfig{}
-
-		resolvers = schema.ResolverConfig{
-			Id: "https://resolver.onename.com/",
-		}
 	)
 	if err := r.SetConfigKey("Wallets", schema.DefaultWalletsConfig()); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("DataSharing", ds); err != nil {
-		return err
-	}
-	if err := r.SetConfigKey("Resolvers", resolvers); err != nil {
 		return err
 	}
 	if err := r.SetConfigKey("Bootstrap-testnet", schema.BootstrapAddressesTestnet); err != nil {

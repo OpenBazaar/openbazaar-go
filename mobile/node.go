@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
-	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	record "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	manet "gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
+	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
+	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	dht "gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht"
+	dhtopts "gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht/opts"
+	proto "gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -22,11 +21,9 @@ import (
 	"path/filepath"
 	"time"
 
-	bstk "github.com/OpenBazaar/go-blockstackclient"
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	obns "github.com/OpenBazaar/openbazaar-go/namesys"
 	obnet "github.com/OpenBazaar/openbazaar-go/net"
 	rep "github.com/OpenBazaar/openbazaar-go/net/repointer"
 	ret "github.com/OpenBazaar/openbazaar-go/net/retriever"
@@ -45,14 +42,14 @@ import (
 	"github.com/ipfs/go-ipfs/commands"
 	ipfscore "github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/corehttp"
-	bitswap "github.com/ipfs/go-ipfs/exchange/bitswap/network"
 	"github.com/ipfs/go-ipfs/namesys"
-	namepb "github.com/ipfs/go-ipfs/namesys/pb"
-	ipath "github.com/ipfs/go-ipfs/path"
-	ipfsconfig "github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	ipfsconfig "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 // Node configuration structure
@@ -163,7 +160,7 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 			return nil, err
 		}
 		cfg.Bootstrap = testnetBootstrapAddrs
-		dht.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
+		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
@@ -178,14 +175,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 			"mplex":  true,
 			"ipnsps": true,
 		},
-	}
-
-	// Set IPNS query size
-	querySize := cfg.Ipns.QuerySize
-	if querySize <= 20 && querySize > 0 {
-		dhtutil.QuerySize = querySize
-	} else {
-		dhtutil.QuerySize = 16
 	}
 
 	// Mnemonic
@@ -242,16 +231,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	}
 	bm := obnet.NewBanManager(blockedNodes)
 
-	// Create namesys resolvers
-	resolvers := []obns.Resolver{
-		bstk.NewBlockStackClient(resolverConfig.Id, nil),
-		obns.NewDNSResolver(),
-	}
-	ns, err := obns.NewNameSystem(resolvers)
-	if err != nil {
-		return nil, err
-	}
-
 	// Push nodes
 	var pushNodes []peer.ID
 	for _, pnd := range dataSharing.PushTo {
@@ -268,7 +247,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		Datastore:                     sqliteDB,
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
-		NameSystem:                    ns,
 		OfflineMessageFailoverTimeout: 5 * time.Second,
 		PushNodes:                     pushNodes,
 		RepoPath:                      config.RepoPath,
@@ -314,16 +292,13 @@ func (n *Node) Start() error {
 	n.OpenBazaarNode.IpfsNode = nd
 
 	// Get current directory root hash
-	_, ipnskey := namesys.IpnsKeysForID(nd.Identity)
-	ival, hasherr := nd.Repo.Datastore().Get(dshelp.NewKeyFromBinary([]byte(ipnskey)))
+	ipnskey := namesys.IpnsDsKey(nd.Identity)
+	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
 	if hasherr != nil {
 		return hasherr
 	}
-	val := ival.([]byte)
-	dhtrec := new(recpb.Record)
-	proto.Unmarshal(val, dhtrec)
-	e := new(namepb.IpnsEntry)
-	proto.Unmarshal(dhtrec.GetValue(), e)
+	e := new(ipnspb.IpnsEntry)
+	proto.Unmarshal(ival, e)
 	n.OpenBazaarNode.RootHash = ipath.Path(e.Value).String()
 
 	configFile, err := ioutil.ReadFile(path.Join(n.OpenBazaarNode.RepoPath, "config"))
@@ -339,8 +314,8 @@ func (n *Node) Start() error {
 	n.OpenBazaarNode.MessageStorage = selfhosted.NewSelfHostedStorage(n.OpenBazaarNode.RepoPath, n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.SendStore)
 
 	// Build pubsub
-	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
-	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.Floodsub)
+	publisher := ipfs.NewPubsubPublisher(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
+	subscriber := ipfs.NewPubsubSubscriber(context.Background(), nd.PeerHost, nd.Routing, nd.Repo.Datastore(), nd.PubSub)
 	ps := ipfs.Pubsub{Publisher: publisher, Subscriber: subscriber}
 	n.OpenBazaarNode.Pubsub = ps
 
@@ -382,7 +357,6 @@ func (n *Node) Start() error {
 				}()
 			}
 		}
-		<-dht.DefaultBootstrapConfig.DoneChan
 		n.OpenBazaarNode.Service = service.New(n.OpenBazaarNode, n.OpenBazaarNode.Datastore)
 		MR := ret.NewMessageRetriever(ret.MRConfig{
 			Db:        n.OpenBazaarNode.Datastore,
@@ -449,7 +423,7 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 	}
 
 	// Create a network listener
-	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway)
+	gatewayMaddr, err := ma.NewMultiaddr(cfg.Addresses.Gateway[0])
 	if err != nil {
 		return nil, fmt.Errorf("newHTTPGateway: invalid gateway address: %q (err: %s)", cfg.Addresses.Gateway, err)
 	}
@@ -476,19 +450,18 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 		return nil, fmt.Errorf("newHTTPGateway: ConstructNode() failed: %s", err)
 	}
 
-	return api.NewGateway(node, authCookie, gwLis.NetListener(), config, logger, opts...)
+	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, logger, opts...)
 }
 
 // DHTClientOption required for constructClientDHTRouting()
 var DHTClientOption ipfscore.RoutingOption = constructClientDHTRouting
 
-// IpnsValidatorTag required for constructClientDHTRouting()
-const IpnsValidatorTag = "ipns"
-
 // constructClientDHTRouting create DHT routing
-func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching) (routing.IpfsRouting, error) {
-	dhtRouting := dht.NewDHTClient(ctx, host, dstore)
-	dhtRouting.Validator[IpnsValidatorTag] = namesys.NewIpnsRecordValidator(host.Peerstore())
-	dhtRouting.Selector[IpnsValidatorTag] = namesys.IpnsSelectorFunc
-	return dhtRouting, nil
+func constructClientDHTRouting(ctx context.Context, host p2phost.Host, dstore ds.Batching, validator record.Validator) (routing.IpfsRouting, error) {
+	return dht.New(
+		ctx, host,
+		dhtopts.Client(true),
+		dhtopts.Datastore(dstore),
+		dhtopts.Validator(validator),
+	)
 }

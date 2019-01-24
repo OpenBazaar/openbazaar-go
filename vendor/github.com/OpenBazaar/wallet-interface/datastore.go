@@ -22,11 +22,11 @@ const (
 	BitcoinCash          = 145
 	Ethereum             = 60
 
-	TestnetBitcoin       = 1000000
-	TestnetLitecoin      = 1000001
-	TestnetZcash         = 1000133
-	TestnetBitcoinCash   = 1000145
-	TestnetEthereum      = 1000060
+	TestnetBitcoin     = 1000000
+	TestnetLitecoin    = 1000001
+	TestnetZcash       = 1000133
+	TestnetBitcoinCash = 1000145
+	TestnetEthereum    = 1000060
 )
 
 func (c *CoinType) String() string {

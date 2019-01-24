@@ -24,11 +24,6 @@ type TorConfig struct {
 	TorControl string
 }
 
-type ResolverConfig struct {
-	Id  string `json:".id"`
-	Eth string `json:".eth"`
-}
-
 type WalletsConfig struct {
 	BTC *CoinConfig `json:"BTC"`
 	BCH *CoinConfig `json:"BCH"`
@@ -458,41 +453,4 @@ func GetTestnetBootstrapAddrs(cfgBytes []byte) ([]string, error) {
 	}
 
 	return addrs, nil
-}
-
-func GetResolverConfig(cfgBytes []byte) (*ResolverConfig, error) {
-	var cfgIface interface{}
-	err := json.Unmarshal(cfgBytes, &cfgIface)
-	if err != nil {
-		return nil, MalformedConfigError
-	}
-
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	r, ok := cfg["Resolvers"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	resolverMap, ok := r.(map[string]interface{})
-	if !ok {
-		return nil, MalformedConfigError
-	}
-	blockstack, ok := resolverMap[".id"]
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	idStr, ok := blockstack.(string)
-	if !ok {
-		return nil, MalformedConfigError
-	}
-
-	resolvers := &ResolverConfig{
-		Id: idStr,
-	}
-
-	return resolvers, nil
 }

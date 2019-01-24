@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/tyler-smith/go-bip39"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 )
 
 const (
@@ -484,8 +484,8 @@ func MustDefaultConfig() *config.Config {
 				"/ip4/0.0.0.0/tcp/9005/ws",
 				"/ip6/::/tcp/9005/ws",
 			},
-			API:     "",
-			Gateway: "/ip4/127.0.0.1/tcp/4002",
+			API:     []string{""},
+			Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
 		},
 
 		Datastore: config.Datastore{
@@ -534,11 +534,9 @@ func MustDefaultConfig() *config.Config {
 		},
 
 		Ipns: config.Ipns{
-			ResolveCacheSize:   128,
-			RecordLifetime:     "7d",
-			RepublishPeriod:    "24h",
-			QuerySize:          5,
-			UsePersistentCache: true,
+			ResolveCacheSize: 128,
+			RecordLifetime:   "7d",
+			RepublishPeriod:  "24h",
 		},
 
 		Gateway: config.Gateway{

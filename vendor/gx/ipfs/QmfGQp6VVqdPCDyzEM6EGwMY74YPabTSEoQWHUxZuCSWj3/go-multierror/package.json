@@ -1,0 +1,24 @@
+{
+  "author": "hashicorp",
+  "bugs": {
+    "url": "https://github.com/hashicorp/go-multierror"
+  },
+  "gx": {
+    "dvcsimport": "github.com/hashicorp/go-multierror"
+  },
+  "gxDependencies": [
+    {
+      "author": "hashicorp",
+      "hash": "Qmbg4PQLEvf2XW8vrai9STFDerV7kttkfKcVdkoRf9Z7Xu",
+      "name": "go-errwrap",
+      "version": "0.1.0"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MPL",
+  "name": "go-multierror",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.0"
+}
+

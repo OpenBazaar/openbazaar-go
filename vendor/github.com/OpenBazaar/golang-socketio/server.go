@@ -43,7 +43,7 @@ type Server struct {
 
 /**
 Close current channel
- */
+*/
 func (c *Channel) Close() {
 	if c.server != nil {
 		closeChannel(c, &c.server.methods)

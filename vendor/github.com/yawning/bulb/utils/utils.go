@@ -18,19 +18,19 @@ import (
 // SplitQuoted splits s by sep if it is found outside substring
 // quoted by quote.
 func SplitQuoted(s string, quote, sep rune) (splitted []string) {
-        quoteFlag := false
+	quoteFlag := false
 NewSubstring:
-        for i, c := range s {
-                if c == quote {
-                        quoteFlag = !quoteFlag
-                }
-                if c == sep && !quoteFlag {
-                        splitted = append(splitted, s[:i])
-                        s = s[i+1:]
-                        goto NewSubstring
-                }
-        }
-        return append(splitted, s)
+	for i, c := range s {
+		if c == quote {
+			quoteFlag = !quoteFlag
+		}
+		if c == sep && !quoteFlag {
+			splitted = append(splitted, s[:i])
+			s = s[i+1:]
+			goto NewSubstring
+		}
+	}
+	return append(splitted, s)
 }
 
 // ParseControlPortString parses a string representation of a control port

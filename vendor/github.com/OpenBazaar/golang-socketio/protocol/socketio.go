@@ -15,8 +15,8 @@ const (
 	ackMessage    = "43"
 
 	CloseMessage = "1"
-	PingMessage = "2"
-	PongMessage = "3"
+	PingMessage  = "2"
+	PongMessage  = "3"
 )
 
 var (
@@ -213,7 +213,7 @@ func Decode(data string) (*Message, error) {
 	return msg, nil
 }
 
-func ToArgArray(arg interface{})(i []interface{}) {
+func ToArgArray(arg interface{}) (i []interface{}) {
 	i = append(i, arg)
 	return i
 }

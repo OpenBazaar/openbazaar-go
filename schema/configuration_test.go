@@ -187,16 +187,6 @@ func TestRepublishInterval(t *testing.T) {
 	}
 }
 
-func TestGetResolverConfig(t *testing.T) {
-	resolvers, err := GetResolverConfig(configFixture())
-	if err != nil {
-		t.Error("GetResolverUrl threw an unexpected error")
-	}
-	if resolvers.Id != "https://resolver.onename.com/" {
-		t.Error("resolverUrl does not equal expected value")
-	}
-}
-
 func configFixture() []byte {
 	return []byte(`{
   "API": {
@@ -313,9 +303,6 @@ func configFixture() []byte {
     "Strategy": ""
   },
   "RepublishInterval": "24h",
-  "Resolvers": {
-    ".id": "https://resolver.onename.com/"
-  },
   "SupernodeRouting": {
     "Servers": null
   },

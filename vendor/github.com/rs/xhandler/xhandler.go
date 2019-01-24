@@ -31,4 +31,3 @@ type HandlerFuncC func(context.Context, http.ResponseWriter, *http.Request)
 func (f HandlerFuncC) ServeHTTPC(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	f(ctx, w, r)
 }
-

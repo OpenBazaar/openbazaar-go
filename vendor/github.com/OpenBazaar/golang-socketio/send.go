@@ -90,4 +90,3 @@ func (c *Channel) Ack(method string, args interface{}, timeout time.Duration) (s
 		return "", ErrorSendTimeout
 	}
 }
-

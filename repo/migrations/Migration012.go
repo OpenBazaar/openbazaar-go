@@ -3,7 +3,7 @@ package migrations
 import (
 	"context"
 	"encoding/json"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"io/ioutil"
 	"os"
 	"path"
@@ -160,8 +160,7 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		ExtraOpts: map[string]bool{
 			"mplex": true,
 		},
-		DNSResolver: nil,
-		Routing:     nil,
+		Routing: nil,
 	}
 
 	nd, err := ipfscore.NewNode(cctx, ncfg)
