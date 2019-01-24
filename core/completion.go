@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/jsonpb"
@@ -177,7 +178,7 @@ func (n *OpenBazaarNode) CompleteOrder(orderRatings *OrderRatings, contract *pb.
 				if err != nil {
 					return err
 				}
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return fmt.Errorf("decoding transaction hash: %s", err.Error())
 				}
@@ -320,7 +321,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 	var txInputs []wallet.TransactionInput
 	for _, r := range records {
 		if !r.Spent && r.Value > 0 {
-			hash, err := chainhash.NewHashFromStr(r.Txid)
+			hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
 			if err != nil {
 				return err
 			}
@@ -339,7 +340,7 @@ func (n *OpenBazaarNode) ReleaseFundsAfterTimeout(contract *pb.RicardianContract
 			if err != nil {
 				return err
 			}
-			outpointHash, err := hex.DecodeString(r.Txid)
+			outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 			if err != nil {
 				return fmt.Errorf("decoding transaction hash: %s", err.Error())
 			}

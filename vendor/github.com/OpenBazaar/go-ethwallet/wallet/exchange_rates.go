@@ -116,7 +116,7 @@ func (z *EthereumPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64, er
 }
 
 // UnitsPerCoin - return weis in 1 ETH
-func (z *EthereumPriceFetcher) UnitsPerCoin() int {
+func (z *EthereumPriceFetcher) UnitsPerCoin() int64 {
 	return 1000000000000000000
 }
 

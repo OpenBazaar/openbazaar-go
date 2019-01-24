@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 type ExchangeRateProvider struct {
@@ -88,7 +89,7 @@ func (b *BitcoinCashPriceFetcher) GetAllRates(cacheOK bool) (map[string]float64,
 	return b.cache, nil
 }
 
-func (b *BitcoinCashPriceFetcher) UnitsPerCoin() int {
+func (b *BitcoinCashPriceFetcher) UnitsPerCoin() int64 {
 	return 100000000
 }
 

@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -33,7 +34,7 @@ func (n *OpenBazaarNode) RefundOrder(contract *pb.RicardianContract, records []*
 		var outValue int64
 		for _, r := range records {
 			if !r.Spent && r.Value > 0 {
-				outpointHash, err := hex.DecodeString(r.Txid)
+				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return err
 				}

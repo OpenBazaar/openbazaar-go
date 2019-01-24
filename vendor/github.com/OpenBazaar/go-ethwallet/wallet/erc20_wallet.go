@@ -80,7 +80,7 @@ type TokenDetail struct {
 }
 
 // NewERC20Wallet will return a reference to the ERC20 Wallet
-func NewERC20Wallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Dialer) (*ERC20Wallet, error) {
+func NewERC20Wallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*ERC20Wallet, error) {
 	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
@@ -88,7 +88,7 @@ func NewERC20Wallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Dialer) 
 	}
 	var myAccount *Account
 
-	myAccount, err = NewAccountFromMnemonic(mnemonic, "")
+	myAccount, err = NewAccountFromMnemonic(mnemonic, "", params)
 	if err != nil {
 		log.Errorf("mnemonic based pk generation failed: %s", err.Error())
 		return nil, err

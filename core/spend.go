@@ -36,12 +36,14 @@ type SpendResponse struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
 	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+	PeerID             string    `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	var feeLevel wallet.FeeLevel
+	peerID := ""
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
 	if err != nil {
@@ -87,10 +89,13 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		title     string
 		memo      = args.Memo
 	)
-	if contract != nil {
+	if contract != nil && contract.VendorListings[0] != nil {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
 			title = contract.VendorListings[0].Item.Title
+		}
+		if contract.VendorListings[0].VendorID != nil {
+			peerID = contract.VendorListings[0].VendorID.PeerID
 		}
 	}
 	if memo == "" && title != "" {
@@ -122,6 +127,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
+		PeerID:             peerID,
 	}, nil
 }
 

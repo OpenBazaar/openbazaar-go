@@ -14,7 +14,9 @@ import (
 	"net/http"
 	"path"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/config"
@@ -179,7 +181,7 @@ func NewEthereumWalletWithKeyfile(url, keyFile, passwd string) *EthereumWallet {
 }
 
 // NewEthereumWallet will return a reference to the Eth Wallet
-func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
+func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic string, proxy proxy.Dialer) (*EthereumWallet, error) {
 	client, err := NewEthClient(cfg.ClientAPIs[0] + "/" + InfuraAPIKey)
 	if err != nil {
 		log.Errorf("error initializing wallet: %v", err)
@@ -201,7 +203,7 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Diale
 
 		myAccount = &Account{key}
 	*/
-	myAccount, err = NewAccountFromMnemonic(mnemonic, "")
+	myAccount, err = NewAccountFromMnemonic(mnemonic, "", params)
 	if err != nil {
 		log.Errorf("mnemonic based pk generation failed: %s", err.Error())
 		return nil, err
@@ -218,6 +220,8 @@ func NewEthereumWallet(cfg config.CoinConfig, mnemonic string, proxy proxy.Diale
 	}
 
 	ethConfig.RegistryAddress = regAddr.(string)
+
+	fmt.Println("registry addr : ", ethConfig.RegistryAddress)
 
 	/*
 		_, filename, _, _ := runtime.Caller(0)
@@ -277,8 +281,10 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int) (common.Hash, 
 // Start will start the wallet daemon
 func (wallet *EthereumWallet) Start() {
 	// start the ticker to check for pending txn rcpts
-	ticker := time.NewTicker(5 * time.Second)
-	go func() {
+	go func(wallet *EthereumWallet) {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
 		for range ticker.C {
 			// get the pending txns
 			txns, err := wallet.db.Txns().GetAll(true)
@@ -290,7 +296,8 @@ func (wallet *EthereumWallet) Start() {
 				go wallet.CheckTxnRcpt(&hash, txn.Bytes)
 			}
 		}
-	}()
+	}(wallet)
+
 }
 
 // CurrencyCode returns ETH
@@ -325,10 +332,25 @@ func (wallet *EthereumWallet) MasterPublicKey() *hd.ExtendedKey {
 // ChildKey Generate a child key using the given chaincode. The key is used in multisig transactions.
 // For most implementations this should just be child key 0.
 func (wallet *EthereumWallet) ChildKey(keyBytes []byte, chaincode []byte, isPrivateKey bool) (*hd.ExtendedKey, error) {
-	if isPrivateKey {
-		return wallet.MasterPrivateKey(), nil
+
+	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
+	version := []byte{0x04, 0x88, 0xad, 0xe4} // starts with xprv
+	if !isPrivateKey {
+		version = []byte{0x04, 0x88, 0xb2, 0x1e}
 	}
-	return wallet.MasterPublicKey(), nil
+	/*
+		hdKey := hd.NewExtendedKey(
+			version,
+			keyBytes,
+			chaincode,
+			parentFP,
+			0,
+			0,
+			isPrivateKey)
+		return hdKey.Child(0)
+	*/
+
+	return hd.NewExtendedKey(version, keyBytes, chaincode, parentFP, 0, 0, isPrivateKey), nil
 }
 
 // CurrentAddress - Get the current address for the given purpose
@@ -417,13 +439,26 @@ func (wallet *EthereumWallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error
 	if err != nil {
 		return wi.Txn{}, err
 	}
+
+	chainID, err := wallet.client.NetworkID(context.Background())
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
+	msg, err := tx.AsMessage(types.NewEIP155Signer(chainID)) // HomesteadSigner{})
+	if err != nil {
+		return wi.Txn{}, err
+	}
+
 	return wi.Txn{
-		Txid:      tx.Hash().String(),
-		Value:     tx.Value().Int64(),
-		Height:    0,
-		Timestamp: time.Now(),
-		WatchOnly: false,
-		Bytes:     tx.Data(),
+		Txid:        tx.Hash().Hex(),
+		Value:       tx.Value().Int64(),
+		Height:      0,
+		Timestamp:   time.Now(),
+		WatchOnly:   false,
+		Bytes:       tx.Data(),
+		ToAddress:   tx.To().String(),
+		FromAddress: msg.From().Hex(),
 	}, nil
 }
 
@@ -449,6 +484,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
+	actualRecipient := addr
 
 	if referenceID == "" {
 		// no referenceID means this is a direct transfer
@@ -465,7 +501,8 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			return nil, err
 		}
 		isScript := false
-		key := []byte(addr.String())
+		addrEth := common.HexToAddress(addr.String())
+		key := addrEth.Bytes()
 		redeemScript := []byte{}
 
 		for _, script := range scripts {
@@ -481,6 +518,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			if err != nil {
 				return nil, err
 			}
+			//actualRecipient = EthAddress{address: &ethScript.Seller}
 			hash, err = wallet.callAddTransaction(ethScript, big.NewInt(amount))
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
@@ -512,7 +550,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.callListeners(wallet.createTxnCallback(hash.Hex(), referenceID, addr, amount, time.Now()))
+				go wallet.CallTransactionListeners(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now()))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
@@ -523,7 +561,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 						OrderID: referenceID,
 						Nonce:   nonce,
 						From:    wallet.address.EncodeAddress(),
-						To:      addr.EncodeAddress(),
+						To:      actualRecipient.EncodeAddress(),
 					})
 					if err == nil {
 						wallet.db.Txns().Put(data, hash.Hex(), 0, 0, time.Now(), true)
@@ -550,11 +588,11 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 	}
 
 	input := wi.TransactionInput{
-		OutpointHash:  []byte(txID[:32]),
-		OutpointIndex: 1,
-		LinkedAddress: wallet.address,
-		Value:         value,
-		OrderID:       orderID,
+		//OutpointHash:  []byte(txID[:32]),
+		//OutpointIndex: 1,
+		//LinkedAddress: toAddress,
+		//Value:         value,
+		//OrderID:       orderID,
 	}
 
 	return wi.TransactionCallback{
@@ -569,7 +607,7 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 	}
 }
 
-func (wallet *EthereumWallet) callListeners(txnCB wi.TransactionCallback) {
+func (wallet *EthereumWallet) CallTransactionListeners(txnCB wi.TransactionCallback) {
 	for _, l := range wallet.listeners {
 		go l(txnCB)
 	}
@@ -600,7 +638,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 			}
 			wallet.db.Txns().Delete(chash)
 			toAddr := common.HexToAddress(pTxn.To)
-			go wallet.callListeners(
+			go wallet.CallTransactionListeners(
 				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
 					pTxn.Amount, time.Now()))
 		}
@@ -637,7 +675,43 @@ func (wallet *EthereumWallet) EstimateSpendFee(amount int64, feeLevel wi.FeeLeve
 
 // SweepAddress - Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
 func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
-	return chainhash.NewHashFromStr("")
+	fmt.Println("in sweep address ...")
+	fmt.Println(utxos)
+	fmt.Println("addr : ", address)
+	fmt.Println("key : ")
+	fmt.Println(key)
+
+	outs := []wi.TransactionOutput{}
+	for i, in := range utxos {
+		out := wi.TransactionOutput{
+			Address: wallet.address,
+			Value:   in.Value,
+			Index:   uint32(i),
+			OrderID: in.OrderID,
+		}
+		outs = append(outs, out)
+	}
+
+	sigs, err := wallet.CreateMultisigSignature([]wi.TransactionInput{}, outs, key, *redeemScript, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := wallet.Multisign([]wi.TransactionInput{}, outs, sigs, []wi.Signature{}, *redeemScript, 1, false)
+	if err != nil {
+		return nil, err
+	}
+
+	tx := types.Transaction{}
+
+	err = tx.UnmarshalJSON(data)
+	if err != nil {
+		return nil, err
+	}
+
+	hash := tx.Hash()
+
+	return chainhash.NewHashFromStr(hash.Hex()[2:])
 }
 
 // ExchangeRates - return the exchangerates
@@ -727,7 +801,8 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 		if err != nil {
 			return nil, nil, err
 		}
-		ecKeys = append(ecKeys, common.BytesToAddress(ecKey.SerializeUncompressed()))
+		ePubkey := ecKey.ToECDSA()
+		ecKeys = append(ecKeys, crypto.PubkeyToAddress(*ePubkey))
 	}
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
@@ -785,10 +860,65 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 // CreateMultisigSignature - Create a signature for a multisig transaction
 func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
 
+	payouts := []wi.TransactionOutput{}
+	//delta1 := int64(0)
+	//delta2 := int64(0)
+	difference := int64(0)
+
+	if len(ins) > 0 {
+		totalVal := ins[0].Value
+		//num := len(outs)
+		outVal := int64(0)
+		for _, out := range outs {
+			outVal += out.Value
+		}
+		if totalVal != outVal {
+			if totalVal < outVal {
+				return nil, errors.New("payout greater than initial amount")
+			}
+			difference = totalVal - outVal
+			//delta1 = difference / int64(num)
+		}
+		//delta2 = totalVal - (outVal + (int64(num) * delta1))
+	}
+
+	rScript, err := DeserializeEthScript(redeemScript)
+	if err != nil {
+		return nil, err
+	}
+
+	indx := []int{}
+
+	for i, out := range outs {
+		if out.Address.String() != rScript.Moderator.Hex() {
+			indx = append(indx, i)
+		}
+		p := wi.TransactionOutput{
+			Address: out.Address,
+			Value:   out.Value,
+			Index:   out.Index,
+			OrderID: out.OrderID,
+		}
+		payouts = append(payouts, p)
+	}
+
+	if len(indx) > 0 {
+		diff := difference / int64(len(indx))
+		delta := difference - (diff * int64(len(indx)))
+		for _, i := range indx {
+			payouts[i].Value = payouts[i].Value + diff
+		}
+		payouts[indx[0]].Value = payouts[indx[0]].Value + delta
+	}
+
+	sort.Slice(payouts, func(i, j int) bool {
+		return strings.Compare(payouts[i].Address.String(), payouts[j].Address.String()) == -1
+	})
+
 	var sigs []wi.Signature
 
 	payables := make(map[string]*big.Int)
-	for _, out := range outs {
+	for _, out := range payouts {
 		if out.Value <= 0 {
 			continue
 		}
@@ -830,16 +960,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		//amnt := fmt.Sprintf("%064s", fmt.Sprintf("%x", v.Int64()))
 		//amountStr = amountStr + amnt
 	}
-
-	//fmt.Println("destarr     : ", destArr)
-	//fmt.Println("amountArr   : ", amountArr)
-
-	rScript, err := DeserializeEthScript(redeemScript)
-	if err != nil {
-		return nil, err
-	}
-
-	//spew.Dump(rScript)
 
 	shash, _, err := GenScriptHash(rScript)
 	if err != nil {
@@ -908,8 +1028,63 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 
 	//var buf bytes.Buffer
 
+	payouts := []wi.TransactionOutput{}
+	//delta1 := int64(0)
+	//delta2 := int64(0)
+	difference := int64(0)
+
+	if len(ins) > 0 {
+		totalVal := ins[0].Value
+		//num := len(outs)
+		outVal := int64(0)
+		for _, out := range outs {
+			outVal += out.Value
+		}
+		if totalVal != outVal {
+			if totalVal < outVal {
+				return nil, errors.New("payout greater than initial amount")
+			}
+			difference = totalVal - outVal
+			//delta1 = difference / int64(num)
+		}
+		//delta2 = totalVal - (outVal + (int64(num) * delta1))
+	}
+
+	rScript, err := DeserializeEthScript(redeemScript)
+	if err != nil {
+		return nil, err
+	}
+
+	indx := []int{}
+
+	for i, out := range outs {
+		if out.Address.String() != rScript.Moderator.Hex() {
+			indx = append(indx, i)
+		}
+		p := wi.TransactionOutput{
+			Address: out.Address,
+			Value:   out.Value,
+			Index:   out.Index,
+			OrderID: out.OrderID,
+		}
+		payouts = append(payouts, p)
+	}
+
+	if len(indx) > 0 {
+		diff := difference / int64(len(indx))
+		delta := difference - (diff * int64(len(indx)))
+		for _, i := range indx {
+			payouts[i].Value = payouts[i].Value + diff
+		}
+		payouts[indx[0]].Value = payouts[indx[0]].Value + delta
+	}
+
+	sort.Slice(payouts, func(i, j int) bool {
+		return strings.Compare(payouts[i].Address.String(), payouts[j].Address.String()) == -1
+	})
+
 	payables := make(map[string]*big.Int)
-	for _, out := range outs {
+	for _, out := range payouts {
 		if out.Value <= 0 {
 			continue
 		}
@@ -931,8 +1106,15 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	var s [32]byte
 	var v uint8
 
-	if len(sigs1[0].Signature) > 0 {
+	if len(sigs1) > 0 && len(sigs1[0].Signature) > 0 {
 		r, s, v = util.SigRSV(sigs1[0].Signature)
+		rSlice = append(rSlice, r)
+		sSlice = append(sSlice, s)
+		vSlice = append(vSlice, v)
+	}
+
+	if len(sigs2) > 0 && len(sigs2[0].Signature) > 0 {
+		r, s, v = util.SigRSV(sigs2[0].Signature)
 		rSlice = append(rSlice, r)
 		sSlice = append(sSlice, s)
 		vSlice = append(vSlice, v)
@@ -941,18 +1123,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	//r = [32]byte{}
 	//s = [32]byte{}
 	//v = uint8(0)
-
-	if len(sigs2[0].Signature) > 0 {
-		r, s, v = util.SigRSV(sigs2[0].Signature)
-		rSlice = append(rSlice, r)
-		sSlice = append(sSlice, s)
-		vSlice = append(vSlice, v)
-	}
-
-	rScript, err := DeserializeEthScript(redeemScript)
-	if err != nil {
-		return nil, err
-	}
 
 	shash, _, err := GenScriptHash(rScript)
 	if err != nil {
@@ -991,9 +1161,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	var tx *types.Transaction
 
 	tx, err = smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
-
-	//fmt.Println(tx)
-	//fmt.Println(err)
 
 	if err != nil {
 		return nil, err
@@ -1072,6 +1239,23 @@ func (wallet *EthereumWallet) CreateAddress() (common.Address, error) {
 	addr := crypto.CreateAddress(fromAddress, nonce)
 	//fmt.Println("Addr : ", addr.String())
 	return addr, err
+}
+
+func (wallet *EthereumWallet) printKeys() {
+	privateKeyBytes := crypto.FromECDSA(wallet.account.privateKey)
+	fmt.Println("Priv Key: ", hexutil.Encode(privateKeyBytes)[2:]) // fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19
+
+	publicKey := wallet.account.privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+
+	publicKeyBytes := crypto.FromECDSAPub(publicKeyECDSA)
+	fmt.Println("Pub Key: ", hexutil.Encode(publicKeyBytes)[4:]) // 9a7df67f79246283fdc93af76d4f8cdd62c4886e8cd870944e817dd0b97934fdd7719d0810951e03418205868a5c1b40b192451367f28e0088dd75e15de40c05
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	fmt.Println("Address: ", address) // 0x96216849c49358B10257cb55b28eA603c874b05E
 }
 
 // GenWallet creates a wallet

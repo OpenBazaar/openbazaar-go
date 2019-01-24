@@ -41,7 +41,7 @@ func (x Moderator_Fee_FeeType) String() string {
 	return proto.EnumName(Moderator_Fee_FeeType_name, int32(x))
 }
 func (Moderator_Fee_FeeType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 0, 0}
+	return fileDescriptor_moderator_e62b8bc2252dc9e8, []int{0, 0, 0}
 }
 
 type Moderator struct {
@@ -59,7 +59,7 @@ func (m *Moderator) Reset()         { *m = Moderator{} }
 func (m *Moderator) String() string { return proto.CompactTextString(m) }
 func (*Moderator) ProtoMessage()    {}
 func (*Moderator) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0}
+	return fileDescriptor_moderator_e62b8bc2252dc9e8, []int{0}
 }
 func (m *Moderator) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator.Unmarshal(m, b)
@@ -127,7 +127,7 @@ func (m *Moderator_Fee) Reset()         { *m = Moderator_Fee{} }
 func (m *Moderator_Fee) String() string { return proto.CompactTextString(m) }
 func (*Moderator_Fee) ProtoMessage()    {}
 func (*Moderator_Fee) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 0}
+	return fileDescriptor_moderator_e62b8bc2252dc9e8, []int{0, 0}
 }
 func (m *Moderator_Fee) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator_Fee.Unmarshal(m, b)
@@ -180,7 +180,7 @@ func (m *Moderator_Price) Reset()         { *m = Moderator_Price{} }
 func (m *Moderator_Price) String() string { return proto.CompactTextString(m) }
 func (*Moderator_Price) ProtoMessage()    {}
 func (*Moderator_Price) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{0, 1}
+	return fileDescriptor_moderator_e62b8bc2252dc9e8, []int{0, 1}
 }
 func (m *Moderator_Price) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Moderator_Price.Unmarshal(m, b)
@@ -228,7 +228,7 @@ func (m *DisputeUpdate) Reset()         { *m = DisputeUpdate{} }
 func (m *DisputeUpdate) String() string { return proto.CompactTextString(m) }
 func (*DisputeUpdate) ProtoMessage()    {}
 func (*DisputeUpdate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_moderator_30fcf04c353ab1b7, []int{1}
+	return fileDescriptor_moderator_e62b8bc2252dc9e8, []int{1}
 }
 func (m *DisputeUpdate) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_DisputeUpdate.Unmarshal(m, b)
@@ -284,9 +284,9 @@ func init() {
 	proto.RegisterEnum("Moderator_Fee_FeeType", Moderator_Fee_FeeType_name, Moderator_Fee_FeeType_value)
 }
 
-func init() { proto.RegisterFile("moderator.proto", fileDescriptor_moderator_30fcf04c353ab1b7) }
+func init() { proto.RegisterFile("moderator.proto", fileDescriptor_moderator_e62b8bc2252dc9e8) }
 
-var fileDescriptor_moderator_30fcf04c353ab1b7 = []byte{
+var fileDescriptor_moderator_e62b8bc2252dc9e8 = []byte{
 	// 429 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x92, 0xdf, 0x6a, 0xdb, 0x30,
 	0x14, 0x87, 0xe7, 0x38, 0x69, 0xe6, 0x93, 0x36, 0x0d, 0x82, 0x15, 0x2f, 0x8c, 0x61, 0xc2, 0x60,

@@ -5,14 +5,16 @@ import (
 	"time"
 
 	"github.com/OpenBazaar/multiwallet"
-	"github.com/OpenBazaar/openbazaar-go/core"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	btc "github.com/btcsuite/btcutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/op/go-logging"
+
+	"github.com/OpenBazaar/openbazaar-go/core"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/util"
 )
 
 var log = logging.MustGetLogger("transaction-listener")
@@ -101,7 +103,7 @@ func (l *TransactionListener) OnTransactionReceived(cb wallet.TransactionCallbac
 
 		fundsReleased := true
 		for i, r := range records {
-			if input.LinkedAddress.String() == r.Address {
+			if util.AreAddressesEqual(input.LinkedAddress.String(), r.Address) {
 				records[i].Spent = true
 			}
 			if records[i].Value > 0 && !records[i].Spent {

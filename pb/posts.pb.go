@@ -42,7 +42,7 @@ func (x Post_PostType) String() string {
 	return proto.EnumName(Post_PostType_name, int32(x))
 }
 func (Post_PostType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0, 0}
+	return fileDescriptor_posts_e335f5b84530dd55, []int{0, 0}
 }
 
 type Post struct {
@@ -65,7 +65,7 @@ func (m *Post) Reset()         { *m = Post{} }
 func (m *Post) String() string { return proto.CompactTextString(m) }
 func (*Post) ProtoMessage()    {}
 func (*Post) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0}
+	return fileDescriptor_posts_e335f5b84530dd55, []int{0}
 }
 func (m *Post) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post.Unmarshal(m, b)
@@ -171,7 +171,7 @@ func (m *Post_Image) Reset()         { *m = Post_Image{} }
 func (m *Post_Image) String() string { return proto.CompactTextString(m) }
 func (*Post_Image) ProtoMessage()    {}
 func (*Post_Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{0, 0}
+	return fileDescriptor_posts_e335f5b84530dd55, []int{0, 0}
 }
 func (m *Post_Image) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Post_Image.Unmarshal(m, b)
@@ -246,7 +246,7 @@ func (m *SignedPost) Reset()         { *m = SignedPost{} }
 func (m *SignedPost) String() string { return proto.CompactTextString(m) }
 func (*SignedPost) ProtoMessage()    {}
 func (*SignedPost) Descriptor() ([]byte, []int) {
-	return fileDescriptor_posts_590fe5621382a1af, []int{1}
+	return fileDescriptor_posts_e335f5b84530dd55, []int{1}
 }
 func (m *SignedPost) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SignedPost.Unmarshal(m, b)
@@ -294,9 +294,9 @@ func init() {
 	proto.RegisterEnum("Post_PostType", Post_PostType_name, Post_PostType_value)
 }
 
-func init() { proto.RegisterFile("posts.proto", fileDescriptor_posts_590fe5621382a1af) }
+func init() { proto.RegisterFile("posts.proto", fileDescriptor_posts_e335f5b84530dd55) }
 
-var fileDescriptor_posts_590fe5621382a1af = []byte{
+var fileDescriptor_posts_e335f5b84530dd55 = []byte{
 	// 429 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x44, 0x92, 0x4f, 0x8b, 0xdb, 0x30,
 	0x10, 0xc5, 0xeb, 0xc4, 0xf6, 0xda, 0xe3, 0xb2, 0x5d, 0x44, 0x29, 0x6a, 0x28, 0xac, 0x49, 0x2f,

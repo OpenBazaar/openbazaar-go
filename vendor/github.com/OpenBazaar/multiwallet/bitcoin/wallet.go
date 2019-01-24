@@ -289,6 +289,10 @@ func (w *BitcoinWallet) AddTransactionListener(callback func(wi.TransactionCallb
 	w.ws.AddTransactionListener(callback)
 }
 
+func (w *BitcoinWallet) CallTransactionListeners(callback wi.TransactionCallback) {
+	// invoke the listeners
+}
+
 func (w *BitcoinWallet) ReSyncBlockchain(fromTime time.Time) {
 	go w.ws.UpdateState()
 }

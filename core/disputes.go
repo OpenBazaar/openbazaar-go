@@ -4,17 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
+	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -22,6 +20,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
+
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
 // ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
@@ -69,7 +72,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	var outpoints []*pb.Outpoint
 	for _, r := range records {
 		o := new(pb.Outpoint)
-		o.Hash = r.Txid
+		o.Hash = strings.TrimPrefix(r.Txid, "0x")
 		o.Index = r.Index
 		o.Value = uint64(r.Value)
 		outpoints = append(outpoints, o)
@@ -145,7 +148,7 @@ func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianC
 		return false
 	}
 	for _, r := range records {
-		hash, err := chainhash.NewHashFromStr(r.Txid)
+		hash, err := chainhash.NewHashFromStr(strings.TrimPrefix(r.Txid, "0x"))
 		if err != nil {
 			log.Errorf("Failed NewHashFromStr(%s): %s", r.Txid, err.Error())
 			return false
@@ -330,7 +333,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = r.Txid
+			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
 			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
@@ -387,7 +390,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		var outpoints []*pb.Outpoint
 		for _, r := range records {
 			o := new(pb.Outpoint)
-			o.Hash = r.Txid
+			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
 			o.Value = uint64(r.Value)
 			outpoints = append(outpoints, o)
@@ -438,7 +441,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err := payDivision.Validate(); err != nil {
 		return err
 	}
-
 	dispute, err := n.Datastore.Cases().GetByCaseID(orderID)
 	if err != nil {
 		return ErrCaseNotFound
@@ -674,7 +676,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{buyerAddr.String()}, Amount: uint64(amt)}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 	if _, ok := outMap["vendor"]; ok {
 		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
@@ -682,7 +687,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{vendorAddr.String()}, Amount: uint64(amt)}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 	if _, ok := outMap["moderator"]; ok {
 		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
@@ -690,7 +698,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{modAddr.String()}, Amount: uint64(amt)}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 
 	d.Payout = payout
@@ -998,7 +1009,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	// Create inputs
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
-		decodedHash, err := hex.DecodeString(o.Hash)
+		decodedHash, err := hex.DecodeString(strings.TrimPrefix(o.Hash, "0x"))
 		if err != nil {
 			return err
 		}
