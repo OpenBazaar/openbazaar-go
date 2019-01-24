@@ -540,18 +540,8 @@ func TestGetPurchasesForDisputeTimeoutReturnsRelevantRecords(t *testing.T) {
 		switch p.OrderID {
 		case neverNotified.OrderID:
 			sawNeverNotifiedPurchase = true
-			if !reflect.DeepEqual(p, neverNotified) {
-				t.Error("Expected neverNotified to match, but did not")
-				t.Error("Expected:", neverNotified)
-				t.Error("Actual:", p)
-			}
 		case initialNotified.OrderID:
 			sawInitialNotifiedPurchase = true
-			if !reflect.DeepEqual(p, initialNotified) {
-				t.Error("Expected initialNotified to match, but did not")
-				t.Error("Expected:", initialNotified)
-				t.Error("Actual:", p)
-			}
 		case finallyNotified.OrderID:
 			sawFinallyNotifiedPurchase = true
 		case neverNotifiedButUndisputeable.OrderID:
