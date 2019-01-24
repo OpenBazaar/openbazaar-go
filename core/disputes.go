@@ -4,21 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
+	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -26,6 +20,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
+
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
 // ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
@@ -56,9 +55,6 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		isPurchase = true
 	}
-
-	fmt.Println("in open dispute ....")
-	spew.Dump(records)
 
 	dispute := new(pb.Dispute)
 
@@ -441,20 +437,14 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 
 // CloseDispute - close a dispute
 func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPercentage float32, resolution string, paymentCoinHint *repo.CurrencyCode) error {
-	fmt.Println("in close dispute ... i should be called by a mod only...")
 	var payDivision = repo.PayoutRatio{Buyer: buyerPercentage, Vendor: vendorPercentage}
 	if err := payDivision.Validate(); err != nil {
 		return err
 	}
-	fmt.Println("payout ratio : ", payDivision)
-
 	dispute, err := n.Datastore.Cases().GetByCaseID(orderID)
 	if err != nil {
 		return ErrCaseNotFound
 	}
-
-	fmt.Println("dispute : ")
-	spew.Dump(dispute)
 
 	if dispute.OrderState != pb.OrderState_DISPUTED {
 		log.Errorf("unable to resolve expired dispute for order %s", orderID)
@@ -470,8 +460,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		log.Errorf("no outpoints to resolve in dispute for order %s", orderID)
 		return ErrCloseFailureNoOutpoints
 	}
-	fmt.Println("outpoints are : ")
-	spew.Dump(outpoints)
 
 	if dispute.VendorContract == nil && vendorPercentage > 0 {
 		return errors.New("Vendor must provide his copy of the contract before you can release funds to the vendor")
@@ -525,8 +513,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		totalOut += o.Value
 	}
 
-	fmt.Println("total value : ", totalOut)
-
 	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.Coin)
 	if err != nil {
 		return err
@@ -542,8 +528,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	fmt.Println("mod addr : ", modAddr)
-	fmt.Println("mod fees : ", modValue)
 	if modValue > 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
@@ -552,40 +536,30 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outputs = append(outputs, out)
 		outMap["moderator"] = out
 	}
-	fmt.Println("after mod chk : ")
-	fmt.Println(outMap)
 
 	var buyerAddr btcutil.Address
 	var buyerValue uint64
 	if payDivision.BuyerAny() {
-		fmt.Println("dispute.BuyerPayoutAddress : ", dispute.BuyerPayoutAddress)
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
 		}
-		fmt.Println("dispute.BuyerPayoutAddress addr : ", buyerAddr)
 		buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
-		fmt.Println("buyer val : ", buyerValue)
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
 			Value:   int64(buyerValue),
 		}
 		outputs = append(outputs, out)
 		outMap["buyer"] = out
-		fmt.Println("after buyer chk : ")
-		fmt.Println(outMap)
 	}
 	var vendorAddr btcutil.Address
 	var vendorValue uint64
 	if payDivision.VendorAny() {
-		fmt.Println("dispute.VendorPayoutAddress : ", dispute.VendorPayoutAddress)
 		vendorAddr, err = wal.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err
 		}
-		fmt.Println("disp vendor addr : ", vendorAddr)
 		vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
-		fmt.Println("vendor val : ", vendorValue)
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,
 			Value:   int64(vendorValue),
@@ -593,8 +567,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outputs = append(outputs, out)
 		outMap["vendor"] = out
 	}
-	fmt.Println("after vendor chk : ")
-	fmt.Println(outMap)
 
 	if len(outputs) == 0 {
 		return errors.New("Transaction has no outputs")
@@ -629,7 +601,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outPercentage := float64(output.Value) / float64(totalOut)
 		outputShareOfFee := outPercentage * float64(txFee)
 		val := output.Value - int64(outputShareOfFee)
-		fmt.Println(" role : ", role, " val : ", val, " isDust : ", wal.IsDust(val))
 		if !wal.IsDust(val) {
 			o := wallet.TransactionOutput{
 				Value:   val,
@@ -641,7 +612,6 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 			delete(outMap, role)
 		}
 	}
-	fmt.Println(outs)
 
 	// Create moderator key
 	chaincode := preferredContract.BuyerOrder.Payment.Chaincode
@@ -706,7 +676,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{buyerAddr.String()}, Amount: uint64(amt)}
+		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 	if _, ok := outMap["vendor"]; ok {
 		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
@@ -714,7 +687,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{vendorAddr.String()}, Amount: uint64(amt)}
+		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 	if _, ok := outMap["moderator"]; ok {
 		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
@@ -722,7 +698,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if amt < 0 {
 			amt = 0
 		}
-		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{modAddr.String()}, Amount: uint64(amt)}
+		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{
+			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
+			Amount:          uint64(amt),
+		}
 	}
 
 	d.Payout = payout

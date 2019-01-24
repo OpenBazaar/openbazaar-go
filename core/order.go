@@ -1346,7 +1346,6 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("chain code : ", chaincode)
 	wal, err := n.Multiwallet.WalletForCurrencyCode(order.Payment.Coin)
 	if err != nil {
 		return err
@@ -1363,17 +1362,10 @@ func (n *OpenBazaarNode) ValidateDirectPaymentAddress(order *pb.Order) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("buyer key : ", buyerKey.String())
-	fmt.Println("seller key : ", vendorKey.String())
 	addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey}, 1, time.Duration(0), nil)
 	if err != nil {
 		return err
 	}
-	fmt.Println("in validate direct payment address ...")
-	fmt.Println("addr : ", addr)
-	fmt.Println(hex.EncodeToString(redeemScript))
-	fmt.Println("payment address : ", order.Payment.Address)
-	fmt.Println(addr.String())
 
 	if order.Payment.Address != addr.String() {
 		return errors.New("invalid payment address")

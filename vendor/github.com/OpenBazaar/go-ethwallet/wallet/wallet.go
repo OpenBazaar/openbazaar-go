@@ -19,8 +19,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/OpenBazaar/multiwallet/config"
 	wi "github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -283,20 +281,17 @@ func (wallet *EthereumWallet) Transfer(to string, value *big.Int) (common.Hash, 
 // Start will start the wallet daemon
 func (wallet *EthereumWallet) Start() {
 	// start the ticker to check for pending txn rcpts
-	fmt.Println("in eth wallet start....")
 	go func(wallet *EthereumWallet) {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
 
 		for range ticker.C {
 			// get the pending txns
-			fmt.Println("tick...tick...")
 			txns, err := wallet.db.Txns().GetAll(true)
 			if err != nil {
 				continue
 			}
 			for _, txn := range txns {
-				fmt.Println("fetch txn from ticker : ", txn.Txid)
 				hash := common.HexToHash(txn.Txid)
 				go wallet.CheckTxnRcpt(&hash, txn.Bytes)
 			}
@@ -508,13 +503,9 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 		isScript := false
 		addrEth := common.HexToAddress(addr.String())
 		key := addrEth.Bytes()
-		fmt.Println("in spend ...")
-		fmt.Println("key is : ", key)
 		redeemScript := []byte{}
 
 		for _, script := range scripts {
-			fmt.Println("script is : ", script)
-			fmt.Println("partial script : ", script[:common.AddressLength])
 			if bytes.Equal(key, script[:common.AddressLength]) {
 				isScript = true
 				redeemScript = script[common.AddressLength:]
@@ -523,13 +514,10 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 		}
 
 		if isScript {
-			fmt.Println("we have escrow address")
 			ethScript, err := DeserializeEthScript(redeemScript)
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("ethScript : ")
-			spew.Dump(ethScript)
 			//actualRecipient = EthAddress{address: &ethScript.Seller}
 			hash, err = wallet.callAddTransaction(ethScript, big.NewInt(amount))
 			if err != nil {
@@ -732,7 +720,6 @@ func (wallet *EthereumWallet) ExchangeRates() wi.ExchangeRates {
 }
 
 func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *big.Int) (common.Hash, error) {
-	fmt.Println("in call add txn")
 
 	h := common.BigToHash(big.NewInt(0))
 
@@ -782,11 +769,6 @@ func (wallet *EthereumWallet) callAddTransaction(script EthRedeemScript, value *
 	//		script.Timeout, shash, script.TxnID)
 	//}
 
-	fmt.Println("the ret txn : ")
-	spew.Dump(tx)
-
-	fmt.Println("and err : ", err)
-
 	if err == nil {
 		h = tx.Hash()
 	}
@@ -822,7 +804,6 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 		ePubkey := ecKey.ToECDSA()
 		ecKeys = append(ecKeys, crypto.PubkeyToAddress(*ePubkey))
 	}
-	fmt.Println("after parsing the pub keys : ", ecKeys)
 
 	ver, err := wallet.registry.GetRecommendedVersion(nil, "escrow")
 	if err != nil {
@@ -841,9 +822,6 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 	builder.Buyer = ecKeys[0]
 	builder.Seller = ecKeys[1]
 	builder.MultisigAddress = ver.Implementation
-
-	fmt.Println("eth redeemscript : ")
-	spew.Dump(builder)
 
 	if threshold > 1 {
 		builder.Moderator = ecKeys[2]
@@ -874,9 +852,6 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 	retAddr := EthAddress{&addr}
 
 	scriptKey := append(addr.Bytes(), redeemScript...)
-	fmt.Println("in genmultisig ....")
-	fmt.Println("addr : ", addr.Bytes())
-	fmt.Println("scriptkey : ", scriptKey)
 	wallet.db.WatchedScripts().Put(scriptKey)
 
 	return retAddr, redeemScript, nil
@@ -884,14 +859,6 @@ func (wallet *EthereumWallet) GenerateMultisigScript(keys []hd.ExtendedKey, thre
 
 // CreateMultisigSignature - Create a signature for a multisig transaction
 func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput, outs []wi.TransactionOutput, key *hd.ExtendedKey, redeemScript []byte, feePerByte uint64) ([]wi.Signature, error) {
-
-	fmt.Println("in create multisig ... ")
-	fmt.Println("ins : ")
-	fmt.Println(ins)
-	fmt.Println("outs :")
-	fmt.Println(outs)
-
-	wallet.printKeys()
 
 	payouts := []wi.TransactionOutput{}
 	//delta1 := int64(0)
@@ -965,9 +932,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		}
 	}
 
-	fmt.Println("payables : ")
-	spew.Dump(payables)
-
 	//destinations := []common.Address{}
 	//amounts := []*big.Int{}
 
@@ -996,11 +960,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 		//amnt := fmt.Sprintf("%064s", fmt.Sprintf("%x", v.Int64()))
 		//amountStr = amountStr + amnt
 	}
-
-	fmt.Println("destarr     : ", destArr)
-	fmt.Println("amountArr   : ", amountArr)
-
-	spew.Dump(rScript)
 
 	shash, _, err := GenScriptHash(rScript)
 	if err != nil {
@@ -1036,8 +995,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	payload = append(payload, amountArr...)
 	payload = append(payload, shash[:]...)
 
-	fmt.Println("payload is : ", payload)
-
 	//script.MultisigAddress.String()[2:]
 
 	//payloadStr := "0x19" + "00" + rScript.MultisigAddress.String()[2:] + destStr + amountStr +
@@ -1063,25 +1020,11 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	}
 	sigs = append(sigs, wi.Signature{InputIndex: 1, Signature: sig})
 
-	fmt.Println("the gen sigs are : ")
-	spew.Dump(sigs)
-	fmt.Println("and the err : ", err)
-
 	return sigs, err
 }
 
 // Multisign - Combine signatures and optionally broadcast
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
-
-	fmt.Println("in multisign ....")
-	fmt.Println("ins : ", ins)
-	//spew.Dump(ins)
-	fmt.Println("outs :", outs)
-	//spew.Dump(outs)
-	fmt.Println("sigs1 : ", sigs1)
-	//spew.Dump(sigs1)
-	fmt.Println("sigs2 :", sigs2)
-	//spew.Dump(sigs2)
 
 	//var buf bytes.Buffer
 
@@ -1155,9 +1098,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 	}
 
-	fmt.Println("payables : ")
-	spew.Dump(payables)
-
 	rSlice := [][32]byte{} //, 2)
 	sSlice := [][32]byte{} //, 2)
 	vSlice := []uint8{}    //, 2)
@@ -1221,10 +1161,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	var tx *types.Transaction
 
 	tx, err = smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
-
-	fmt.Println(" smt ct exec txn : ")
-	spew.Dump(tx)
-	fmt.Println(" and err : ", err)
 
 	if err != nil {
 		return nil, err

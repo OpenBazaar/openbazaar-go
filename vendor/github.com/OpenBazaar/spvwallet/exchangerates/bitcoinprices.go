@@ -7,10 +7,9 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
-
-	"strings"
 
 	"github.com/op/go-logging"
 	"golang.org/x/net/proxy"
