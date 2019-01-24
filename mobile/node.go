@@ -117,11 +117,6 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 		return nil, err
 	}
 
-	resolverConfig, err := apiSchema.GetResolverConfig(configFile)
-	if err != nil {
-		return nil, err
-	}
-
 	walletsConfig, err := apiSchema.GetWalletsConfig(configFile)
 	if err != nil {
 		return nil, err
