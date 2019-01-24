@@ -33,7 +33,7 @@
       "hash": "QmeUjhpfGkrMtE6s7JjU2xLhfzprSDh16QUxGVr3wTrKSx",
       "name": "go-libp2p-transport-upgrader",
       "version": "0.1.16"
-    },
+    }
   ],
   "gxVersion": "0.11.0",
   "language": "English",

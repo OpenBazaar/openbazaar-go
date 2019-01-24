@@ -15,7 +15,7 @@ import (
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
-	oniontp "gx/ipfs/QmXsGirmFALkAbRuj2yi991xamiqHBiU4wCmXv2mNsnFUq/go-onion-transport"
+	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
 	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
 	"io"
 	"io/ioutil"
@@ -182,9 +182,12 @@ func (x *Restore) Execute(args []string) error {
 		}
 	}
 	// Create Tor transport
-	var onionTransport *oniontp.OnionTransport
+	var (
+		onionTransport *oniontp.OnionTransport
+		torPw          = torConfig.Password
+		torControl     = torConfig.TorControl
+	)
 	if usingTor {
-		torControl := torConfig.TorControl
 		if torControl == "" {
 			controlPort, err = obnet.GetTorControlPort()
 			if err != nil {
@@ -193,17 +196,9 @@ func (x *Restore) Execute(args []string) error {
 			}
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
 		}
-		torPw := torConfig.Password
+
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
-		}
-		if x.TorPassword != "" {
-			torPw = x.TorPassword
-		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
-		if err != nil {
-			PrintError(err.Error())
-			return err
 		}
 	}
 
@@ -215,7 +210,7 @@ func (x *Restore) Execute(args []string) error {
 		}
 		options = append([]libp2p.Option{libp2p.Identity(pkey), libp2p.Peerstore(ps)}, options...)
 		if usingTor {
-			options = append(options, libp2p.Transport(onionTransport.Constructor))
+			options = append(options, libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
 		}
 		return libp2p.New(ctx, options...)
 	}

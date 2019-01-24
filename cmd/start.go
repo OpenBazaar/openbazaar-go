@@ -11,7 +11,7 @@ import (
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
-	oniontp "gx/ipfs/QmXsGirmFALkAbRuj2yi991xamiqHBiU4wCmXv2mNsnFUq/go-onion-transport"
+	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
 	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
 	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
 	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
@@ -336,10 +336,14 @@ func (x *Start) Execute(args []string) error {
 		cfg.Addresses.Swarm = append(cfg.Addresses.Swarm, "/ip4/0.0.0.0/tcp/9005/ws")
 	}
 	// Iterate over our address and process them as needed
-	var onionTransport *oniontp.OnionTransport
-	var torDialer proxy.Dialer
-	var usingTor, usingClearnet bool
-	var controlPort int
+	var (
+		onionTransport          *oniontp.OnionTransport
+		torDialer               proxy.Dialer
+		usingTor, usingClearnet bool
+		controlPort             int
+		torControl              = torConfig.TorControl
+		torPw                   = torConfig.Password
+	)
 	for i, addr := range cfg.Addresses.Swarm {
 		m, err := ma.NewMultiaddr(addr)
 		if err != nil {
@@ -366,7 +370,6 @@ func (x *Start) Execute(args []string) error {
 	}
 	// Create Tor transport
 	if usingTor {
-		torControl := torConfig.TorControl
 		if torControl == "" {
 			controlPort, err = obnet.GetTorControlPort()
 			if err != nil {
@@ -375,14 +378,8 @@ func (x *Start) Execute(args []string) error {
 			}
 			torControl = "127.0.0.1:" + strconv.Itoa(controlPort)
 		}
-		torPw := torConfig.Password
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
-		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
-		if err != nil {
-			log.Error("setup tor transport:", err)
-			return err
 		}
 	}
 	// If we're only using Tor set the proxy dialer
@@ -404,7 +401,7 @@ func (x *Start) Execute(args []string) error {
 		}
 		options = append([]libp2p.Option{libp2p.Identity(pkey), libp2p.Peerstore(ps)}, options...)
 		if usingTor {
-			options = append(options, libp2p.Transport(onionTransport.Constructor))
+			options = append(options, libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
 		}
 		return libp2p.New(ctx, options...)
 	}
