@@ -3,7 +3,7 @@ package db_test
 import (
 	"bytes"
 	"database/sql"
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"reflect"
 	"strings"
 	"sync"

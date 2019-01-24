@@ -446,13 +446,11 @@ func (x *Start) Execute(args []string) error {
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
 	if hasherr != nil {
 		log.Error("get ipns key:", hasherr)
-		return hasherr
 	}
 	ourIpnsRecord := new(ipnspb.IpnsEntry)
 	err = proto.Unmarshal(ival, ourIpnsRecord)
 	if err != nil {
 		log.Error("unmarshal record value", err)
-		return err
 	}
 
 	// Wallet
@@ -666,7 +664,7 @@ func (x *Start) Execute(args []string) error {
 		return err
 	}
 
-	if cfg.Addresses.API[0] != "" {
+	if len(cfg.Addresses.API) > 0 && cfg.Addresses.API[0] != "" {
 		if _, err := serveHTTPApi(&ctx); err != nil {
 			log.Error(err)
 			return err

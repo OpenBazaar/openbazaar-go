@@ -9,6 +9,7 @@ import (
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 	routing "gx/ipfs/Qmdfkd5HZgR2xc38TTb2afbM8nVHM8X1UowL5o7QFVb8uc/go-libp2p-kad-dht"
 	"io/ioutil"
@@ -49,6 +50,7 @@ type MRConfig struct {
 type MessageRetriever struct {
 	db         repo.Datastore
 	node       *core.IpfsNode
+	routing    *routing.IpfsDHT
 	bm         *net.BanManager
 	service    net.NetworkService
 	prefixLen  int
@@ -72,23 +74,37 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	if cfg.Dialer != nil {
 		dial = cfg.Dialer.Dial
 	}
+
 	tbTransport := &http.Transport{Dial: dial}
 	client := &http.Client{Transport: tbTransport, Timeout: time.Second * 30}
 	mr := MessageRetriever{
-		cfg.Db,
-		cfg.IPFSNode,
-		cfg.BanManger,
-		cfg.Service,
-		cfg.PrefixLen,
-		cfg.SendAck,
-		cfg.SendError,
-		client,
-		cfg.PushNodes,
-		new(sync.Mutex),
-		make(chan struct{}),
-		make(chan struct{}, 5),
-		new(sync.WaitGroup),
+		db:         cfg.Db,
+		node:       cfg.IPFSNode,
+		bm:         cfg.BanManger,
+		service:    cfg.Service,
+		prefixLen:  cfg.PrefixLen,
+		sendAck:    cfg.SendAck,
+		sendError:  cfg.SendError,
+		httpClient: client,
+		dataPeers:  cfg.PushNodes,
+		queueLock:  new(sync.Mutex),
+		DoneChan:   make(chan struct{}),
+		inFlight:   make(chan struct{}, 5),
+		WaitGroup:  new(sync.WaitGroup),
 	}
+	tiered, ok := cfg.IPFSNode.Routing.(routinghelpers.Tiered)
+	if !ok {
+		panic("message retriever: IPFSNode.Routing is not type routinghelpers.Tiered")
+	}
+	for _, router := range tiered.Routers {
+		if _, ok := router.(*routing.IpfsDHT); ok {
+			mr.routing = router.(*routing.IpfsDHT)
+		}
+	}
+	if mr.routing == nil {
+		panic("message retriever: IPFSNode.Routing is nil")
+	}
+
 	mr.Add(1)
 	return &mr
 }
@@ -131,7 +147,7 @@ func (m *MessageRetriever) fetchPointers(useDHT bool) {
 		if useDHT {
 			pwg.Add(1)
 			go func(c chan ps.PeerInfo) {
-				iout := ipfs.FindPointersAsync(m.node.Routing.(*routing.IpfsDHT), ctx, mh, m.prefixLen)
+				iout := ipfs.FindPointersAsync(m.routing, ctx, mh, m.prefixLen)
 				for p := range iout {
 					c <- p
 				}
