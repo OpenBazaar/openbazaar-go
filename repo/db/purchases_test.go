@@ -940,3 +940,38 @@ func TestPurchasesDB_Put_CoinType(t *testing.T) {
 		teardown()
 	}
 }
+
+func TestPurchaseDB_Put_DisputedAt(t *testing.T) {
+	var (
+		now                  = time.Now()
+		nowData, tErr        = ptypes.TimestampProto(now)
+		contract             = factory.NewDisputedContract()
+		purdb, teardown, err = buildNewPurchaseStore()
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer teardown()
+	if tErr != nil {
+		t.Fatal(tErr)
+	}
+	contract.Dispute.Timestamp = nowData
+
+	err = purdb.Put("orderID", *contract, pb.OrderState_DISPUTED, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := purdb.GetPurchasesForDisputeExpiryNotification()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(p) != 1 {
+		t.Fatalf("expected one purchase to be returned but found %d", len(p))
+	}
+
+	if p[0].DisputedAt.Unix() != now.Unix() {
+		t.Errorf("expected disputedAt to be %s, but was %s", now.String(), p[0].DisputedAt.String())
+	}
+}
