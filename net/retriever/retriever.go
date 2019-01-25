@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
-	multihash "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	routing "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
-	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
-	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 	"io/ioutil"
 	gonet "net"
@@ -38,6 +37,7 @@ var log = logging.MustGetLogger("retriever")
 type MRConfig struct {
 	Db        repo.Datastore
 	IPFSNode  *core.IpfsNode
+	DHT       *routing.IpfsDHT
 	BanManger *net.BanManager
 	Service   net.NetworkService
 	PrefixLen int
@@ -80,6 +80,7 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 	mr := MessageRetriever{
 		db:         cfg.Db,
 		node:       cfg.IPFSNode,
+		routing:    cfg.DHT,
 		bm:         cfg.BanManger,
 		service:    cfg.Service,
 		prefixLen:  cfg.PrefixLen,
@@ -91,18 +92,6 @@ func NewMessageRetriever(cfg MRConfig) *MessageRetriever {
 		DoneChan:   make(chan struct{}),
 		inFlight:   make(chan struct{}, 5),
 		WaitGroup:  new(sync.WaitGroup),
-	}
-	tiered, ok := cfg.IPFSNode.Routing.(routinghelpers.Tiered)
-	if !ok {
-		panic("message retriever: IPFSNode.Routing is not type routinghelpers.Tiered")
-	}
-	for _, router := range tiered.Routers {
-		if _, ok := router.(*routing.IpfsDHT); ok {
-			mr.routing = router.(*routing.IpfsDHT)
-		}
-	}
-	if mr.routing == nil {
-		panic("message retriever: IPFSNode.Routing is nil")
 	}
 
 	mr.Add(1)
@@ -219,7 +208,7 @@ func (m *MessageRetriever) getPointersFromDataPeersRoutine(peerOut chan ps.PeerI
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
-			provs, err := ipfs.GetPointersFromPeer(m.node, ctx, pid, &k)
+			provs, err := ipfs.GetPointersFromPeer(m.routing, ctx, pid, &k)
 			if err != nil {
 				return
 			}

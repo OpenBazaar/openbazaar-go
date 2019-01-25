@@ -12,6 +12,7 @@ import (
 	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
 	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
+	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
 	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
 	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
 	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
@@ -438,6 +439,22 @@ func (x *Start) Execute(args []string) error {
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)
 
+	// Extract the DHT from the tiered routing so it will be more accessible later
+	tiered, ok := nd.Routing.(routinghelpers.Tiered)
+	if !ok {
+		return errors.New("IPFS routing is not a type routinghelpers.Tiered")
+	}
+	var dhtRouting *dht.IpfsDHT
+	for _, router := range tiered.Routers {
+		if _, ok := router.(*dht.IpfsDHT); ok {
+			dhtRouting = router.(*dht.IpfsDHT)
+		}
+	}
+	if dhtRouting == nil {
+		return errors.New("IPFS DHT routing is not configured")
+	}
+
+
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
@@ -607,6 +624,7 @@ func (x *Start) Execute(args []string) error {
 		Datastore:                     sqliteDB,
 		IPNSBackupAPI:                 "", // TODO [cp]: need a migration to set this field in another location.
 		IpfsNode:                      nd,
+		DHT:                           dhtRouting,
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
 		OfflineMessageFailoverTimeout: 30 * time.Second,

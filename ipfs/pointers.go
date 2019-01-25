@@ -14,8 +14,6 @@ import (
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"sync"
 	"time"
-
-	"github.com/ipfs/go-ipfs/core"
 )
 
 const MagicPointerID string = "000000000000000000000000"
@@ -62,8 +60,8 @@ func NewPointer(mhKey multihash.Multihash, prefixLen int, addr ma.Multiaddr, ent
 	return Pointer{Cid: &k, Value: pi}, nil
 }
 
-func PublishPointer(node *core.IpfsNode, ctx context.Context, pointer Pointer) error {
-	return addPointer(node, ctx, pointer.Cid, pointer.Value)
+func PublishPointer(dht *routing.IpfsDHT, ctx context.Context, pointer Pointer) error {
+	return addPointer(dht, ctx, pointer.Cid, pointer.Value)
 }
 
 // Fetch pointers from the dht. They will be returned asynchronously.
@@ -83,13 +81,11 @@ func FindPointers(dht *routing.IpfsDHT, ctx context.Context, mhKey multihash.Mul
 	return providers, nil
 }
 
-func PutPointerToPeer(node *core.IpfsNode, ctx context.Context, peer peer.ID, pointer Pointer) error {
-	dht := node.Routing.(*routing.IpfsDHT)
+func PutPointerToPeer(dht *routing.IpfsDHT, ctx context.Context, peer peer.ID, pointer Pointer) error {
 	return putPointer(ctx, dht, peer, pointer.Value, pointer.Cid.Bytes())
 }
 
-func GetPointersFromPeer(node *core.IpfsNode, ctx context.Context, p peer.ID, key *cid.Cid) ([]*ps.PeerInfo, error) {
-	dht := node.Routing.(*routing.IpfsDHT)
+func GetPointersFromPeer(dht *routing.IpfsDHT, ctx context.Context, p peer.ID, key *cid.Cid) ([]*ps.PeerInfo, error) {
 	pmes := dhtpb.NewMessage(dhtpb.Message_GET_PROVIDERS, key.Bytes(), 0)
 	resp, err := dht.SendRequest(ctx, p, pmes)
 	if err != nil {
@@ -98,8 +94,7 @@ func GetPointersFromPeer(node *core.IpfsNode, ctx context.Context, p peer.ID, ke
 	return dhtpb.PBPeersToPeerInfos(resp.GetProviderPeers()), nil
 }
 
-func addPointer(node *core.IpfsNode, ctx context.Context, k *cid.Cid, pi ps.PeerInfo) error {
-	dht := node.Routing.(*routing.IpfsDHT)
+func addPointer(dht *routing.IpfsDHT, ctx context.Context, k *cid.Cid, pi ps.PeerInfo) error {
 	peers, err := dht.GetClosestPeers(ctx, k.KeyString())
 	if err != nil {
 		return err

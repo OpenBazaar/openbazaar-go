@@ -8,6 +8,7 @@ import (
 	dhtopts "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
 	record "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
 	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 	manet "gx/ipfs/Qmaabb1tJZ2CX5cp6MuuiGgns71NYoxdgQP6Xdid1dVceC/go-multiaddr-net"
@@ -284,7 +285,23 @@ func (n *Node) Start() error {
 		return err
 	}
 
+	// Extract the DHT from the tiered routing so it will be more accessible later
+	tiered, ok := nd.Routing.(routinghelpers.Tiered)
+	if !ok {
+		return errors.New("IPFS routing is not a type routinghelpers.Tiered")
+	}
+	var dhtRouting *dht.IpfsDHT
+	for _, router := range tiered.Routers {
+		if _, ok := router.(*dht.IpfsDHT); ok {
+			dhtRouting = router.(*dht.IpfsDHT)
+		}
+	}
+	if dhtRouting == nil {
+		return errors.New("IPFS DHT routing is not configured")
+	}
+
 	n.OpenBazaarNode.IpfsNode = nd
+	n.OpenBazaarNode.DHT = dhtRouting
 
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
@@ -356,6 +373,7 @@ func (n *Node) Start() error {
 		MR := ret.NewMessageRetriever(ret.MRConfig{
 			Db:        n.OpenBazaarNode.Datastore,
 			IPFSNode:  n.OpenBazaarNode.IpfsNode,
+			DHT:       n.OpenBazaarNode.DHT,
 			BanManger: n.OpenBazaarNode.BanManager,
 			Service:   core.Node.Service,
 			PrefixLen: 14,
@@ -366,7 +384,7 @@ func (n *Node) Start() error {
 		})
 		go MR.Run()
 		n.OpenBazaarNode.MessageRetriever = MR
-		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.IpfsNode, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
+		PR := rep.NewPointerRepublisher(n.OpenBazaarNode.DHT, n.OpenBazaarNode.Datastore, n.OpenBazaarNode.PushNodes, n.OpenBazaarNode.IsModerator)
 		go PR.Run()
 		n.OpenBazaarNode.PointerRepublisher = PR
 		MR.Wait()
