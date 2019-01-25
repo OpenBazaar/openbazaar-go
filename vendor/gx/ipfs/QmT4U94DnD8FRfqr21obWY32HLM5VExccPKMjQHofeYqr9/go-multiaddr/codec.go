@@ -156,6 +156,8 @@ func sizeForAddr(p Protocol, b []byte) (skip, size int, err error) {
 		return 0, (p.Size / 8), nil
 	case p.Size == 0:
 		return 0, 0, nil
+	case p.Code == P_IPFS:
+		return 0, len(b), nil
 	default:
 		size, n, err := ReadVarintCode(b)
 		if err != nil {
