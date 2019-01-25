@@ -535,7 +535,7 @@ func MustDefaultConfig() *config.Config {
 
 		Ipns: config.Ipns{
 			ResolveCacheSize: 128,
-			RecordLifetime:   "7d",
+			RecordLifetime:   "168h",
 			RepublishPeriod:  "24h",
 		},
 

@@ -69,10 +69,10 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	}
 
 	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
+	conf.Identity = identity
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
-	conf.Identity = identity
 
 	if err := addConfigExtensions(repoRoot); err != nil {
 		return err
