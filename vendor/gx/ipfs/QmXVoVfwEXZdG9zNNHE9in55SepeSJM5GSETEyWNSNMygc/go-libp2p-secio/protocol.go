@@ -198,6 +198,7 @@ func (s *secureSession) runHandshakeSync() error {
 	if err != nil {
 		return err
 	}
+
 	switch s.remotePeer {
 	case actualRemotePeer:
 		// All good.
@@ -205,10 +206,28 @@ func (s *secureSession) runHandshakeSync() error {
 		// No peer set. We're accepting a remote connection.
 		s.remotePeer = actualRemotePeer
 	default:
-		// Peer mismatch. Bail.
-		s.insecure.Close()
-		log.Debugf("expected peer %s, got peer %s", s.remotePeer, actualRemotePeer)
-		return ErrWrongPeer
+		// OpenBazaar: check that this peerID isn't the old style
+		// If it is then we're good. If not then we error.
+		// This code will be removed after enough OpenBazaar nodes
+		// upgrade to inline pubkeys.
+		pubkeyBytes, err := s.remote.permanentPubKey.Bytes()
+		if err != nil {
+			return err
+		}
+		oldMultihash, err := mh.Sum(pubkeyBytes, mh.SHA2_256, 32)
+		if err != nil {
+			return err
+		}
+		oldStylePeer, err := peer.IDB58Decode(oldMultihash.B58String())
+		if err != nil {
+			return err
+		}
+		if s.remotePeer != oldStylePeer {
+			// Peer mismatch. Bail.
+			s.insecure.Close()
+			log.Debugf("expected peer %s, got peer %s", s.remotePeer, actualRemotePeer)
+			return ErrWrongPeer
+		}
 	}
 
 	log.Debugf("1.1 Identify: %s Remote Peer Identified as %s", s.localPeer, s.remotePeer)

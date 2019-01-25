@@ -170,8 +170,9 @@ func onionBtS(b []byte) (string, error) {
 
 var TranscoderP2P = NewTranscoderFromFunctions(p2pStB, p2pBtS, p2pVal)
 
+// OpenBazaar: this function has been updated to parse CIDs as well as PeerIDs
 func p2pStB(s string) ([]byte, error) {
-	if len(s) == 46 && s[:2] == "Qm" {
+	if len(s) == 46 && (s[:2] == "Qm" || s[:4] == "12D3") {
 		m, err := mh.FromB58String(s)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse ipfs addr: %s %s", s, err)
@@ -193,6 +194,7 @@ func p2pVal(b []byte) error {
 	return err
 }
 
+// OpenBazaar: this function has been updated to also parse a CID
 func p2pBtS(b []byte) (string, error) {
 	id, err := cid.Parse(b)
 	if err != nil {

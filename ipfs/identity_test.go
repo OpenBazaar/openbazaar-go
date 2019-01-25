@@ -3,7 +3,6 @@ package ipfs
 import (
 	"bytes"
 	"encoding/hex"
-	"fmt"
 	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"testing"
 
@@ -46,17 +45,4 @@ func TestIdentityKeyFromSeed(t *testing.T) {
 	if !bytes.Equal(key, keyBytes) {
 		t.Error("Failed to extract correct private key from seed")
 	}
-}
-
-func TestCat(t *testing.T) {
-	seed := bip39.NewSeed("allow valve hair crime wrist grace orchard thumb drink person found history", "Secret Passphrase")
-	key, err := IdentityKeyFromSeed(seed, 4096)
-	if err != nil {
-		t.Error(err)
-	}
-	ident, err := IdentityFromKey(key)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(ident.PeerID)
 }
