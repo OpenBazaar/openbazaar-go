@@ -221,8 +221,6 @@ func NewEthereumWallet(cfg config.CoinConfig, params *chaincfg.Params, mnemonic 
 
 	ethConfig.RegistryAddress = regAddr.(string)
 
-	fmt.Println("registry addr : ", ethConfig.RegistryAddress)
-
 	/*
 		_, filename, _, _ := runtime.Caller(0)
 		conf, err := ioutil.ReadFile(path.Join(path.Dir(filename), "../configuration.yaml"))
@@ -675,11 +673,6 @@ func (wallet *EthereumWallet) EstimateSpendFee(amount int64, feeLevel wi.FeeLeve
 
 // SweepAddress - Build and broadcast a transaction that sweeps all coins from an address. If it is a p2sh multisig, the redeemScript must be included
 func (wallet *EthereumWallet) SweepAddress(utxos []wi.TransactionInput, address *btcutil.Address, key *hd.ExtendedKey, redeemScript *[]byte, feeLevel wi.FeeLevel) (*chainhash.Hash, error) {
-	fmt.Println("in sweep address ...")
-	fmt.Println(utxos)
-	fmt.Println("addr : ", address)
-	fmt.Println("key : ")
-	fmt.Println(key)
 
 	outs := []wi.TransactionOutput{}
 	for i, in := range utxos {
