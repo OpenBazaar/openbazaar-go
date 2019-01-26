@@ -191,6 +191,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 			if err != nil {
 				return err
 			}
+
 			sl := new(pb.SignedListing)
 			err = jsonpb.UnmarshalString(string(file), sl)
 			if err != nil {
@@ -198,9 +199,44 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 			}
 
 			sl.Listing.Metadata.AcceptedCurrencies = currencies
+
+			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			for _, coupon := range sl.Listing.Coupons {
+				for _, c := range savedCoupons {
+					if coupon.GetHash() == c.Hash {
+						coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+						break
+					}
+				}
+			}
+			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+				for _, so := range sl.Listing.ShippingOptions {
+					for _, ser := range so.Services {
+						ser.AdditionalItemPrice = ser.Price
+					}
+				}
+			}
+
+			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+
+			// Build the inventory list
+			for variant, count := range inventory {
+				for i, s := range sl.Listing.Item.Skus {
+					if variant == i {
+						s.Quantity = count
+						break
+					}
+				}
+			}
+
 			n.UpdateListing(sl.Listing)
 
-			return nil
 		}
 		return nil
 	}
