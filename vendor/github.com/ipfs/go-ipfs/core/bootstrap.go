@@ -95,21 +95,21 @@ func Bootstrap(n *IpfsNode, cfg BootstrapConfig) (io.Closer, error) {
 	proc.Go(periodic) // run one right now.
 
 	// kick off Routing.Bootstrap
-	if n.Routing != nil {
-		ctx := procctx.OnClosingContext(proc)
-		if err := n.Routing.Bootstrap(ctx); err != nil {
-			proc.Close()
-			return nil, err
+	go func() {
+		doneWithRound <- struct{}{}
+		close(doneWithRound) // it no longer blocks periodic
+		if n.Routing != nil {
+			ctx := procctx.OnClosingContext(proc)
+			if err := n.Routing.Bootstrap(ctx); err != nil {
+				proc.Close()
+				log.Error(err)
+			}
 		}
-	}
-
-	doneWithRound <- struct{}{}
-	close(doneWithRound) // it no longer blocks periodic
+	}()
 	return proc, nil
 }
 
 func bootstrapRound(ctx context.Context, host host.Host, cfg BootstrapConfig) error {
-
 	ctx, cancel := context.WithTimeout(ctx, cfg.ConnectionTimeout)
 	defer cancel()
 	id := host.ID()

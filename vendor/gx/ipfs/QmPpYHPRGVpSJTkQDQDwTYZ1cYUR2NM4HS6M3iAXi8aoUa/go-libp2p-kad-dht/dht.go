@@ -64,6 +64,8 @@ type IpfsDHT struct {
 	plk sync.Mutex
 
 	protocols []protocol.ID // DHT protocols
+
+	BootstrapChan chan struct{}
 }
 
 // New creates a new DHT with the specified host and options.
@@ -91,6 +93,7 @@ func New(ctx context.Context, h host.Host, options ...opts.Option) (*IpfsDHT, er
 			h.SetStreamHandler(p, dht.handleNewStream)
 		}
 	}
+	dht.BootstrapChan = make(chan struct{})
 	return dht, nil
 }
 
