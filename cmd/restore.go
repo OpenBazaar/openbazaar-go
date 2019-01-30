@@ -51,6 +51,7 @@ type Restore struct {
 }
 
 func (x *Restore) Execute(args []string) error {
+	ipfscore.DHTOption = constructDHTRouting
 	reader := bufio.NewReader(os.Stdin)
 	if x.Mnemonic == "" {
 		fmt.Print("This command will override any current user data. Do you want to continue? (y/n): ")
@@ -146,6 +147,8 @@ func (x *Restore) Execute(args []string) error {
 		cfg.Bootstrap = testnetBootstrapAddrs
 		dhtopts.ProtocolDHT = "/openbazaar/kad/testnet/1.0.0"
 		bitswap.ProtocolBitswap = "/openbazaar/bitswap/testnet/1.1.0"
+	} else {
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
 	}
 
 	cfg.Identity = identity
@@ -222,7 +225,6 @@ func (x *Restore) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
-		Routing: DHTOption,
 	}
 	if onionTransport != nil {
 		ncfg.Host = defaultHostOption

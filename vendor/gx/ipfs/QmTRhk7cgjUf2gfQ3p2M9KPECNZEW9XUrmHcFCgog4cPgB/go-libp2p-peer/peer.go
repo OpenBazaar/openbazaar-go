@@ -62,12 +62,17 @@ func (id ID) MatchesPrivateKey(sk ic.PrivKey) bool {
 }
 
 // MatchesPublicKey tests whether this ID was derived from pk
+// OpenBazaar: test both inline and and hashes pubkeys.
 func (id ID) MatchesPublicKey(pk ic.PubKey) bool {
 	oid, err := IDFromPublicKey(pk)
 	if err != nil {
 		return false
 	}
-	return oid == id
+	iid, err := InlineIDFromPublicKey(pk)
+	if err != nil {
+		return false
+	}
+	return oid == id || iid == id
 }
 
 // ExtractPublicKey attempts to extract the public key from an ID
@@ -144,6 +149,17 @@ func IDHexEncode(id ID) string {
 	return hex.EncodeToString([]byte(id))
 }
 
+// OpenBazaar: temporary helper function to remain forward compatible with
+// inline keys
+func InlineIDFromPublicKey(pk ic.PubKey) (ID, error) {
+	b, err := pk.Bytes()
+	if err != nil {
+		return "", err
+	}
+	hash, _ := mh.Sum(b, mh.ID, -1)
+	return ID(hash), nil
+}
+
 // IDFromPublicKey returns the Peer ID corresponding to pk
 func IDFromPublicKey(pk ic.PubKey) (ID, error) {
 	b, err := pk.Bytes()
@@ -152,7 +168,9 @@ func IDFromPublicKey(pk ic.PubKey) (ID, error) {
 	}
 	var alg uint64 = mh.SHA2_256
 	if len(b) <= MaxInlineKeyLength {
-		alg = mh.ID
+		// OpenBazaar: in the next version once enough people have upgraded we will
+		// uncomment this line and generate inline keys.
+		//alg = mh.ID
 	}
 	hash, _ := mh.Sum(b, alg, -1)
 	return ID(hash), nil

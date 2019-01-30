@@ -103,6 +103,7 @@ type Start struct {
 }
 
 func (x *Start) Execute(args []string) error {
+	ipfscore.DHTOption = constructDHTRouting
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
@@ -317,6 +318,8 @@ func (x *Start) Execute(args []string) error {
 		service.ProtocolOpenBazaar = "/openbazaar/app/testnet/1.0.0"
 
 		dataSharing.PushTo = []string{}
+	} else {
+		bitswap.ProtocolBitswap = "/openbazaar/bitswap/1.1.0"
 	}
 
 	onionAddr, err := obnet.MaybeCreateHiddenServiceKey(repoPath)
@@ -414,7 +417,6 @@ func (x *Start) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
-		Routing: DHTOption,
 	}
 
 	if onionTransport != nil {
@@ -865,8 +867,6 @@ func newHTTPGateway(node *core.OpenBazaarNode, ctx commands.Context, authCookie 
 
 	return api.NewGateway(node, authCookie, manet.NetListener(gwLis), config, ml, opts...)
 }
-
-var DHTOption ipfscore.RoutingOption = constructDHTRouting
 
 const IpnsValidatorTag = "ipns"
 
