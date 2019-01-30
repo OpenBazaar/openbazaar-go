@@ -1049,6 +1049,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	}
 
 	indx := []int{}
+	referenceID := ""
 
 	for i, out := range outs {
 		if out.Address.String() != rScript.Moderator.Hex() {
@@ -1060,6 +1061,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 			Index:   out.Index,
 			OrderID: out.OrderID,
 		}
+		referenceID = out.OrderID
 		payouts = append(payouts, p)
 	}
 
@@ -1159,6 +1161,48 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		return nil, err
 	}
 
+	start := time.Now()
+	flag := false
+	var rcpt *types.Receipt
+	for !flag {
+		rcpt, err = wallet.client.TransactionReceipt(context.Background(), tx.Hash())
+		if rcpt != nil {
+			flag = true
+		}
+		if time.Since(start).Seconds() > 120 {
+			flag = true
+		}
+		if err != nil {
+			log.Errorf("error fetching txn rcpt: %v", err)
+		}
+	}
+	if rcpt != nil {
+		// good. so the txn has been processed but we have to account for failed
+		// but valid txn like some contract condition causing revert
+		if rcpt.Status > 0 {
+			// all good to update order state
+			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, 0, time.Now()))
+		} else {
+			// there was some error processing this txn
+			nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
+			if err == nil {
+				data, err := SerializePendingTxn(PendingTxn{
+					TxnID:   tx.Hash(),
+					Amount:  int64(0),
+					OrderID: referenceID,
+					Nonce:   nonce,
+					From:    wallet.address.EncodeAddress(),
+					To:      rScript.MultisigAddress.Hex()[2:],
+				})
+				if err == nil {
+					wallet.db.Txns().Put(data, tx.Hash().Hex(), 0, 0, time.Now(), true)
+				}
+			}
+
+			return nil, errors.New("transaction pending")
+		}
+	}
+
 	ret, err := tx.MarshalJSON()
 
 	return ret, err
@@ -1234,7 +1278,8 @@ func (wallet *EthereumWallet) CreateAddress() (common.Address, error) {
 	return addr, err
 }
 
-func (wallet *EthereumWallet) printKeys() {
+// PrintKeys - used to print the keys for this wallet
+func (wallet *EthereumWallet) PrintKeys() {
 	privateKeyBytes := crypto.FromECDSA(wallet.account.privateKey)
 	fmt.Println("Priv Key: ", hexutil.Encode(privateKeyBytes)[2:]) // fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19
 
