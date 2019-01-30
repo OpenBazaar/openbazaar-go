@@ -235,7 +235,7 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 				}
 			}
 
-			n.UpdateListing(sl.Listing)
+			n.UpdateListing(sl.Listing, false)
 
 		}
 		return nil
@@ -245,6 +245,8 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	if err != nil {
 		return err
 	}
+
+	n.SeedNode()
 
 	return nil
 }

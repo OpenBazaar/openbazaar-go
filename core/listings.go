@@ -325,11 +325,11 @@ func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
 		}
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, true)
 }
 
 // UpdateListing - update the listing
-func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing, publish bool) error {
 	exists, err := n.listingExists(listing.Slug)
 	if err != nil {
 		return err
@@ -339,10 +339,10 @@ func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 		return ErrListingDoesNotExist
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, publish)
 }
 
-func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
+func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 	if len(listing.Moderators) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
@@ -391,13 +391,27 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) saveListing(listing *pb.Listing, publish bool) error {
+
+	err := prepListingForPublish(n, listing)
+	if err != nil {
+		return err
+	}
+
 	// Update followers/following
 	err = n.UpdateFollow()
 	if err != nil {
 		return err
 	}
-	if err = n.SeedNode(); err != nil {
-		return err
+
+	if publish {
+		if err = n.SeedNode(); err != nil {
+			return err
+		}
 	}
 
 	return nil
