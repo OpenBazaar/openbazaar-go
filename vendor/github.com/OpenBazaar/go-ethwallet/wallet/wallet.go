@@ -83,12 +83,13 @@ func DeserializeEthScript(b []byte) (EthRedeemScript, error) {
 
 // PendingTxn used to record a pending eth txn
 type PendingTxn struct {
-	TxnID   common.Hash
-	OrderID string
-	Amount  int64
-	Nonce   int32
-	From    string
-	To      string
+	TxnID     common.Hash
+	OrderID   string
+	Amount    int64
+	Nonce     int32
+	From      string
+	To        string
+	WithInput bool
 }
 
 // SerializePendingTxn - used to serialize eth pending txn
@@ -548,18 +549,19 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			// but valid txn like some contract condition causing revert
 			if rcpt.Status > 0 {
 				// all good to update order state
-				go wallet.CallTransactionListeners(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now()))
+				go wallet.CallTransactionListeners(wallet.createTxnCallback(hash.Hex(), referenceID, actualRecipient, amount, time.Now(), false))
 			} else {
 				// there was some error processing this txn
 				nonce, err := wallet.client.GetTxnNonce(hash.Hex())
 				if err == nil {
 					data, err := SerializePendingTxn(PendingTxn{
-						TxnID:   hash,
-						Amount:  amount,
-						OrderID: referenceID,
-						Nonce:   nonce,
-						From:    wallet.address.EncodeAddress(),
-						To:      actualRecipient.EncodeAddress(),
+						TxnID:     hash,
+						Amount:    amount,
+						OrderID:   referenceID,
+						Nonce:     nonce,
+						From:      wallet.address.EncodeAddress(),
+						To:        actualRecipient.EncodeAddress(),
+						WithInput: false,
 					})
 					if err == nil {
 						wallet.db.Txns().Put(data, hash.Hex(), 0, 0, time.Now(), true)
@@ -577,7 +579,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 	return h, err
 }
 
-func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value int64, bTime time.Time) wi.TransactionCallback {
+func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value int64, bTime time.Time, withInput bool) wi.TransactionCallback {
 	output := wi.TransactionOutput{
 		Address: toAddress,
 		Value:   value,
@@ -585,12 +587,17 @@ func (wallet *EthereumWallet) createTxnCallback(txID, orderID string, toAddress 
 		OrderID: orderID,
 	}
 
-	input := wi.TransactionInput{
-		//OutpointHash:  []byte(txID[:32]),
-		//OutpointIndex: 1,
-		//LinkedAddress: toAddress,
-		//Value:         value,
-		//OrderID:       orderID,
+	input := wi.TransactionInput{}
+
+	if withInput {
+		input = wi.TransactionInput{
+			OutpointHash:  []byte(txID[:32]),
+			OutpointIndex: 1,
+			LinkedAddress: toAddress,
+			Value:         value,
+			OrderID:       orderID,
+		}
+
 	}
 
 	return wi.TransactionCallback{
@@ -638,7 +645,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 			toAddr := common.HexToAddress(pTxn.To)
 			go wallet.CallTransactionListeners(
 				wallet.createTxnCallback(hash.Hex(), pTxn.OrderID, EthAddress{&toAddr},
-					pTxn.Amount, time.Now()))
+					pTxn.Amount, time.Now(), pTxn.WithInput))
 		}
 	}
 
@@ -1181,7 +1188,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, 0, time.Now()))
+			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, 0, time.Now(), true))
 		} else {
 			// there was some error processing this txn
 			nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
