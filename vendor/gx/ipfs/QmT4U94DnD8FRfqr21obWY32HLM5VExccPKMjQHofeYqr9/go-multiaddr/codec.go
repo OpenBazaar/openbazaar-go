@@ -48,7 +48,9 @@ func stringToBytes(s string) ([]byte, error) {
 			return nil, fmt.Errorf("failed to parse %s: %s %s", p.Name, sp[0], err)
 		}
 		if p.Size < 0 { // varint size.
-			_, _ = b.Write(CodeToVarint(len(a)))
+			if p.Code != P_P2P { // OpenBazaar: for backwards compatibility we will avoid writing len here until more nodes upgrade
+				_, _ = b.Write(CodeToVarint(len(a)))
+			}
 		}
 		b.Write(a)
 		sp = sp[1:]
@@ -157,13 +159,15 @@ func sizeForAddr(p Protocol, b []byte) (skip, size int, err error) {
 	case p.Size == 0:
 		return 0, 0, nil
 	case p.Code == P_P2P:
-		// OpenBazaar: this has to be patched to handle cids in this field
-		// until most nodes on the network upgrade and we do not need this
-		// anymore.
+		// OpenBazaar: this has to be patched to handle cids and multiaddrs
+		// serialized in both the new and old format until enough nodes
+		// upgrade that this isn't needed any more.
 		if b[0] == 0x01 {
 			return 0, len(b), nil
 		} else if len(b) == 37 {
 			return 3, 34, nil
+		} else if len(b) == 35 {
+			return 1, 34, nil
 		} else {
 			return 2, 34, nil
 		}
