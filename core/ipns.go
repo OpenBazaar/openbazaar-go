@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 /*
@@ -109,7 +107,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 			return "", fmt.Errorf("Invalid key. Does not hash to %s", peerID)
 		}
 
-		p, err := ipath.ParsePath(string(rec.Record))
+		p, err := ipath.ParsePath(rec.Record)
 		if err != nil {
 			log.Error(err)
 			return "", err
@@ -124,15 +122,6 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 		return val, nil
 	}
 	return val, err
-}
-
-func ipnsEntryDataForSig(e *ipnspb.IpnsEntry) []byte {
-	return bytes.Join([][]byte{
-		e.Value,
-		e.Validity,
-		[]byte(fmt.Sprint(e.GetValidityType())),
-	},
-		[]byte{})
 }
 
 func ipnsAPIPathTransform(url, peerID string) string {

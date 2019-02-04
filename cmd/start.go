@@ -34,6 +34,9 @@ import (
 	"syscall"
 	"time"
 
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -64,8 +67,6 @@ import (
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/net/proxy"
-	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
-	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
 )
 
 var stdoutLogFormat = logging.MustStringFormatter(
@@ -635,15 +636,15 @@ func (x *Start) Execute(args []string) error {
 		MasterPrivateKey:              mPrivKey,
 		Multiwallet:                   mw,
 		OfflineMessageFailoverTimeout: 30 * time.Second,
-		Pubsub:               ps,
-		PushNodes:            pushNodes,
-		RegressionTestEnable: x.Regtest,
-		RepoPath:             repoPath,
-		RootHash:             string(ourIpnsRecord.Value),
-		TestnetEnable:        x.Testnet,
-		TorDialer:            torDialer,
-		UserAgent:            core.USERAGENT,
-		IPNSQuorumSize:       uint(ipnsExtraConfig.DHTQuorumSize),
+		Pubsub:                        ps,
+		PushNodes:                     pushNodes,
+		RegressionTestEnable:          x.Regtest,
+		RepoPath:                      repoPath,
+		RootHash:                      string(ourIpnsRecord.Value),
+		TestnetEnable:                 x.Testnet,
+		TorDialer:                     torDialer,
+		UserAgent:                     core.USERAGENT,
+		IPNSQuorumSize:                uint(ipnsExtraConfig.DHTQuorumSize),
 	}
 	core.PublishLock.Lock()
 
