@@ -3079,7 +3079,7 @@ func (i *jsonAPIHandler) POSTBlockNode(w http.ResponseWriter, r *http.Request) {
 			nodes = append(nodes, pid)
 		}
 	}
-	go ipfs.RemoveAll(i.node.IpfsNode, peerID)
+	go ipfs.RemoveAll(i.node.IpfsNode, peerID, i.node.IPNSQuorumSize)
 	nodes = append(nodes, peerID)
 	settings.BlockedNodes = &nodes
 	if err := i.node.Datastore.Settings().Put(settings); err != nil {
@@ -3709,7 +3709,7 @@ func (i *jsonAPIHandler) GETIPNS(w http.ResponseWriter, r *http.Request) {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute, false)
+	go ipfs.Resolve(i.node.IpfsNode, pid, time.Minute, i.node.IPNSQuorumSize, false)
 	fmt.Fprint(w, string(retBytes))
 }
 

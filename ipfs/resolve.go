@@ -22,13 +22,13 @@ import (
 // If the DHT query returns nothing it will finally attempt to return from cache.
 // All subsequent resolves will return from cache as the pubsub will update the cache in real time
 // as new records are published.
-func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, usecache bool) (string, error) {
+func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint, usecache bool) (string, error) {
 	if usecache {
 		pth, err := getFromDatastore(n.Repo.Datastore(), p)
 		if err == nil {
 			// Update the cache in background
 			go func() {
-				pth, err := resolve(n, p, timeout)
+				pth, err := resolve(n, p, timeout, quorum)
 				if err != nil {
 					return
 				}
@@ -39,7 +39,7 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, usecache bool) 
 			return pth.Segments()[1], nil
 		}
 	}
-	pth, err := resolve(n, p, timeout)
+	pth, err := resolve(n, p, timeout, quorum)
 	if err != nil {
 		// Resolving fail. See if we have it in the db.
 		pth, err := getFromDatastore(n.Repo.Datastore(), p)
@@ -55,13 +55,13 @@ func Resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, usecache bool) 
 	return pth.Segments()[1], nil
 }
 
-func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration) (ipath.Path, error) {
+func resolve(n *core.IpfsNode, p peer.ID, timeout time.Duration, quorum uint) (ipath.Path, error) {
 	cctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// TODO [cp]: we should load the record count from our config and set it here. We'll need a
 	// migration for this.
-	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty(), nameopts.DhtRecordCount(1))
+	pth, err := n.Namesys.Resolve(cctx, "/ipns/"+p.Pretty(), nameopts.DhtRecordCount(quorum))
 	if err != nil {
 		return pth, err
 	}

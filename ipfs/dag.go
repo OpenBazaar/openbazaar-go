@@ -44,12 +44,12 @@ func FetchGraph(n *core.IpfsNode, id *cid.Cid) ([]cid.Cid, error) {
 	return ret, nil
 }
 
-func RemoveAll(nd *core.IpfsNode, peerID string) error {
+func RemoveAll(nd *core.IpfsNode, peerID string, quorum uint) error {
 	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
 		return nil
 	}
-	hash, err := Resolve(nd, pid, time.Minute*5, true)
+	hash, err := Resolve(nd, pid, time.Minute*5, quorum, true)
 	if err != nil {
 		return err
 	}

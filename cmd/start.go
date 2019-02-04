@@ -278,6 +278,11 @@ func (x *Start) Execute(args []string) error {
 		log.Error("scan wallets config:", err)
 		return err
 	}
+	ipnsExtraConfig, err := schema.GetIPNSExtraConfig(configFile)
+	if err != nil {
+		log.Error("scan wallets config:", err)
+		return err
+	}
 
 	// IPFS node setup
 	r, err := fsrepo.Open(repoPath)
@@ -624,7 +629,7 @@ func (x *Start) Execute(args []string) error {
 		AcceptStoreRequests:           dataSharing.AcceptStoreRequests,
 		BanManager:                    bm,
 		Datastore:                     sqliteDB,
-		IPNSBackupAPI:                 "", // TODO [cp]: need a migration to set this field in another location.
+		IPNSBackupAPI:                 ipnsExtraConfig.FallbackAPI,
 		IpfsNode:                      nd,
 		DHT:                           dhtRouting,
 		MasterPrivateKey:              mPrivKey,
@@ -638,6 +643,7 @@ func (x *Start) Execute(args []string) error {
 		TestnetEnable:        x.Testnet,
 		TorDialer:            torDialer,
 		UserAgent:            core.USERAGENT,
+		IPNSQuorumSize:       uint(ipnsExtraConfig.DHTQuorumSize),
 	}
 	core.PublishLock.Lock()
 

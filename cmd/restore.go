@@ -169,6 +169,11 @@ func (x *Restore) Execute(args []string) error {
 		PrintError(err.Error())
 		return err
 	}
+	ipnsExtraConfig, err := schema.GetIPNSExtraConfig(configFile)
+	if err != nil {
+		PrintError(err.Error())
+		return err
+	}
 	var usingTor, usingClearnet bool
 	var controlPort int
 	for _, addr := range cfg.Addresses.Swarm {
@@ -243,7 +248,7 @@ func (x *Restore) Execute(args []string) error {
 		PrintError(err.Error())
 		return err
 	}
-	k, err := ipfs.Resolve(nd, pid, time.Minute, false)
+	k, err := ipfs.Resolve(nd, pid, time.Minute, uint(ipnsExtraConfig.DHTQuorumSize), false)
 	if err != nil || k == "" {
 		PrintError(fmt.Sprintf("IPNS record for %s not found on network\n", identity.PeerID))
 		return err
@@ -276,19 +281,19 @@ func (x *Restore) Execute(args []string) error {
 		}
 	}
 
-	go RestoreFile(repoPath, identity.PeerID, "profile.json", nd, wg)
-	go RestoreFile(repoPath, identity.PeerID, "ratings.json", nd, wg)
-	go RestoreFile(repoPath, identity.PeerID, "listings.json", nd, wg)
-	go RestoreFile(repoPath, identity.PeerID, "following.json", nd, wg)
-	go RestoreFile(repoPath, identity.PeerID, "followers.json", nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "profile.json", uint(ipnsExtraConfig.DHTQuorumSize), nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "ratings.json", uint(ipnsExtraConfig.DHTQuorumSize), nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "listings.json", uint(ipnsExtraConfig.DHTQuorumSize), nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "following.json", uint(ipnsExtraConfig.DHTQuorumSize), nd, wg)
+	go RestoreFile(repoPath, identity.PeerID, "followers.json", uint(ipnsExtraConfig.DHTQuorumSize), nd, wg)
 	wg.Wait()
 	fmt.Println("Finished")
 	return nil
 }
 
-func RestoreFile(repoPath, peerID, filename string, n *core.IpfsNode, wg *sync.WaitGroup) {
+func RestoreFile(repoPath, peerID, filename string, quorum uint, n *core.IpfsNode, wg *sync.WaitGroup) {
 	defer wg.Done()
-	b, err := ipfs.ResolveThenCat(n, ipath.FromString(path.Join(peerID, filename)), time.Minute, false)
+	b, err := ipfs.ResolveThenCat(n, ipath.FromString(path.Join(peerID, filename)), time.Minute, quorum, false)
 	if err != nil {
 		PrintError(fmt.Sprintf("Failed to find %s\n", filename))
 	} else {

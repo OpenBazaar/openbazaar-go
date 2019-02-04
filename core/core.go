@@ -114,6 +114,10 @@ type OpenBazaarNode struct {
 	// The master private key derived from the mnemonic
 	MasterPrivateKey *hdkeychain.ExtendedKey
 
+	// The number of DHT records to collect before returning. The larger the number
+	// the slower the query but the less likely we will get an old record.
+	IPNSQuorumSize uint
+
 	TestnetEnable        bool
 	RegressionTestEnable bool
 }

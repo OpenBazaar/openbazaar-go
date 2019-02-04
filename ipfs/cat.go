@@ -34,13 +34,13 @@ func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
-func ResolveThenCat(n *core.IpfsNode, ipnsPath ipath.Path, timeout time.Duration, usecache bool) ([]byte, error) {
+func ResolveThenCat(n *core.IpfsNode, ipnsPath ipath.Path, timeout time.Duration, quorum uint, usecache bool) ([]byte, error) {
 	var ret []byte
 	pid, err := peer.IDB58Decode(ipnsPath.Segments()[0])
 	if err != nil {
 		return nil, err
 	}
-	hash, err := Resolve(n, pid, timeout, usecache)
+	hash, err := Resolve(n, pid, timeout, quorum, usecache)
 	if err != nil {
 		return ret, err
 	}

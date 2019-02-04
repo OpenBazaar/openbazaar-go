@@ -52,7 +52,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 	if err != nil {
 		return "", err
 	}
-	val, err := ipfs.Resolve(n.IpfsNode, pid, timeout, usecache)
+	val, err := ipfs.Resolve(n.IpfsNode, pid, timeout, n.IPNSQuorumSize, usecache)
 	if err != nil && n.IPNSBackupAPI != "" {
 		dial := net.Dial
 		if n.TorDialer != nil {
@@ -60,7 +60,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 		}
 		tbTransport := &http.Transport{Dial: dial}
 		client := &http.Client{Transport: tbTransport, Timeout: time.Second * 5}
-		resp, err := client.Get(n.IPNSBackupAPI + peerID)
+		resp, err := client.Get(ipnsAPIPathTransform(n.IPNSBackupAPI, peerID))
 		if err != nil {
 			log.Error(err)
 			return "", err
@@ -133,4 +133,11 @@ func ipnsEntryDataForSig(e *ipnspb.IpnsEntry) []byte {
 		[]byte(fmt.Sprint(e.GetValidityType())),
 	},
 		[]byte{})
+}
+
+func ipnsAPIPathTransform(url, peerID string) string {
+	if !strings.HasSuffix(url, "/") {
+		url = url + "/"
+	}
+	return url + "ob/ipns/" + peerID
 }
