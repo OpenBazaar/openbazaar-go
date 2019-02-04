@@ -169,6 +169,19 @@ func TestGetDropboxApiToken(t *testing.T) {
 	}
 }
 
+func TestGetIPNSExtraConfig(t *testing.T) {
+	ipnsConfig, err := GetIPNSExtraConfig(configFixture())
+	if err != nil {
+		t.Error(err)
+	}
+	if ipnsConfig.DHTQuorumSize != 1 {
+		t.Error("GetIPNSExtraConfig returned incorrect DHTQuorumSize")
+	}
+	if ipnsConfig.FallbackAPI != "https://gateway.ob1.io" {
+		t.Error("GetIPNSExtraConfig returned incorrect FallbackAPI")
+	}
+}
+
 func TestRepublishInterval(t *testing.T) {
 	interval, err := GetRepublishInterval(configFixture())
 	if interval != time.Hour*24 {
@@ -278,6 +291,10 @@ func configFixture() []byte {
     "RepublishPeriod": "24h",
     "ResolveCacheSize": 128,
     "UsePersistentCache": true
+  },
+  "IpnsExtra": {
+    "DHTQuorumSize": 1,
+    "FallbackAPI": "https://gateway.ob1.io"
   },
   "JSON-API": {
     "AllowedIPs": [

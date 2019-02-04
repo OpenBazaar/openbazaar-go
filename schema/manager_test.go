@@ -96,7 +96,7 @@ func TestMustDefaultConfig(t *testing.T) {
 	if config == nil {
 		t.Error("Expected config to not be empty")
 	}
-	if config.Addresses.Gateway != "/ip4/127.0.0.1/tcp/4002" {
+	if config.Addresses.Gateway[0] != "/ip4/127.0.0.1/tcp/4002" {
 		t.Error("config.Addresses.Gateway is not set")
 	}
 }

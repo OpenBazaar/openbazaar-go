@@ -2,8 +2,10 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -17,7 +19,7 @@ import (
 	"github.com/tyler-smith/go-bip39"
 )
 
-const RepoVersion = "17"
+const RepoVersion = "19"
 
 var log = logging.MustGetLogger("repo")
 var ErrRepoExists = errors.New("IPFS configuration file exists. Reinitializing would overwrite your keys. Use -f to force overwrite.")
@@ -67,12 +69,12 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if err != nil {
 		return err
 	}
+	conf.Identity = identity
 
 	log.Infof("Initializing OpenBazaar node at %s\n", repoRoot)
 	if err := fsrepo.Init(repoRoot, conf); err != nil {
 		return err
 	}
-	conf.Identity = identity
 
 	if err := addConfigExtensions(repoRoot); err != nil {
 		return err
@@ -90,7 +92,10 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if werr != nil {
 		return werr
 	}
-	return initializeIpnsKeyspace(repoRoot, identityKey)
+	if err := initializeIpnsKeyspace(repoRoot, identityKey); err != nil {
+		return err
+	}
+	return cleanIdentityFromConfig(repoRoot)
 }
 
 func checkWriteable(dir string) error {
@@ -149,7 +154,6 @@ func initializeIpnsKeyspace(repoRoot string, privKeyBytes []byte) error {
 	if err != nil {
 		return err
 	}
-
 	return namesys.InitializeKeyspace(ctx, nd.Namesys, nd.Pinning, nd.PrivateKey)
 }
 
@@ -169,6 +173,10 @@ func addConfigExtensions(repoRoot string) error {
 			AcceptStoreRequests: false,
 			PushTo:              schema.DataPushNodes,
 		}
+		ie = schema.IpnsExtraConfig{
+			DHTQuorumSize: 1,
+			FallbackAPI:   "https://gatewaya.ob1.io",
+		}
 
 		t = schema.TorConfig{}
 	)
@@ -184,6 +192,9 @@ func addConfigExtensions(repoRoot string) error {
 	if err := r.SetConfigKey("Dropbox-api-token", ""); err != nil {
 		return err
 	}
+	if err := r.SetConfigKey("IpnsExtra", ie); err != nil {
+		return err
+	}
 	if err := r.SetConfigKey("RepublishInterval", "24h"); err != nil {
 		return err
 	}
@@ -193,6 +204,7 @@ func addConfigExtensions(repoRoot string) error {
 	if err := r.SetConfigKey("Tor-config", t); err != nil {
 		return err
 	}
+
 	if err := r.Close(); err != nil {
 		return err
 	}
@@ -221,4 +233,24 @@ func GetRepoPath(isTestnet bool) (string, error) {
 		return "", err
 	}
 	return paths.DataPath(), nil
+}
+
+func cleanIdentityFromConfig(repoPath string) error {
+	configPath := path.Join(repoPath, "config")
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+	var cfgIface interface{}
+	json.Unmarshal(configFile, &cfgIface)
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return errors.New("Invalid config file")
+	}
+	delete(cfg, "Identity")
+	out, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(configPath, out, os.ModePerm)
 }

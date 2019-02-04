@@ -205,6 +205,7 @@ func (x *Start) Execute(args []string) error {
 	migrations.WalletCoinType = ct
 	sqliteDB, err := InitializeRepo(repoPath, x.Password, "", isTestnet, time.Now(), ct)
 	if err != nil && err != repo.ErrRepoExists {
+		log.Error("repo init:", err)
 		return err
 	}
 

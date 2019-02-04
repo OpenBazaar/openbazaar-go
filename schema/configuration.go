@@ -24,6 +24,11 @@ type TorConfig struct {
 	TorControl string
 }
 
+type IpnsExtraConfig struct {
+	DHTQuorumSize int
+	FallbackAPI   string
+}
+
 type WalletsConfig struct {
 	BTC *CoinConfig `json:"BTC"`
 	BCH *CoinConfig `json:"BCH"`
@@ -313,6 +318,47 @@ func GetTorConfig(cfgBytes []byte) (*TorConfig, error) {
 	}
 
 	return &TorConfig{TorControl: controlUrlStr, Password: pwStr}, nil
+}
+
+func GetIPNSExtraConfig(cfgBytes []byte) (*IpnsExtraConfig, error) {
+	var cfgIface interface{}
+	err := json.Unmarshal(cfgBytes, &cfgIface)
+	if err != nil {
+		return nil, MalformedConfigError
+	}
+
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	ieIface, ok := cfg["IpnsExtra"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	ieCfg, ok := ieIface.(map[string]interface{})
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	quorumSize, ok := ieCfg["DHTQuorumSize"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	qsInt, ok := quorumSize.(float64)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	fallbackAPI, ok := ieCfg["FallbackAPI"]
+	if !ok {
+		return nil, MalformedConfigError
+	}
+	fallbackAPIStr, ok := fallbackAPI.(string)
+	if !ok {
+		return nil, MalformedConfigError
+	}
+
+	return &IpnsExtraConfig{int(qsInt), fallbackAPIStr}, nil
 }
 
 func GetDropboxApiToken(cfgBytes []byte) (string, error) {
