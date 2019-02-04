@@ -156,6 +156,17 @@ func sizeForAddr(p Protocol, b []byte) (skip, size int, err error) {
 		return 0, (p.Size / 8), nil
 	case p.Size == 0:
 		return 0, 0, nil
+	case p.Code == P_P2P:
+		// OpenBazaar: this has to be patched to handle cids in this field
+		// until most nodes on the network upgrade and we do not need this
+		// anymore.
+		if b[0] == 0x01 {
+			return 0, len(b), nil
+		} else if len(b) == 37 {
+			return 3, 34, nil
+		} else {
+			return 2, 34, nil
+		}
 
 	default:
 		size, n, err := ReadVarintCode(b)

@@ -17,7 +17,7 @@ const kRepointFrequency = time.Hour * 12
 const kPointerExpiration = time.Hour * 24 * 30
 
 type PointerRepublisher struct {
-	routing *dht.IpfsDHT
+	routing     *dht.IpfsDHT
 	db          repo.Datastore
 	pushNodes   []peer.ID
 	isModerator func() bool
@@ -25,7 +25,7 @@ type PointerRepublisher struct {
 
 func NewPointerRepublisher(dht *dht.IpfsDHT, database repo.Datastore, pushNodes []peer.ID, isModerator func() bool) *PointerRepublisher {
 	return &PointerRepublisher{
-		routing: dht,
+		routing:     dht,
 		db:          database,
 		pushNodes:   pushNodes,
 		isModerator: isModerator,

@@ -6,8 +6,8 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"time"
 	"sync"
+	"time"
 
 	u "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
 	goprocess "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess"
@@ -124,7 +124,9 @@ func (dht *IpfsDHT) bootstrapWorker(cfg BootstrapConfig) func(worker goprocess.P
 		}
 	}
 }
+
 var bootstrapOnce sync.Once
+
 // runBootstrap builds up list of peers by requesting random peer IDs
 func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error {
 	bslog := func(msg string) {
@@ -180,7 +182,7 @@ func (dht *IpfsDHT) runBootstrap(ctx context.Context, cfg BootstrapConfig) error
 	if len(merr) > 0 {
 		return merr
 	}
-	bootstrapOnce.Do(func(){
+	bootstrapOnce.Do(func() {
 		close(dht.BootstrapChan)
 	})
 	return nil

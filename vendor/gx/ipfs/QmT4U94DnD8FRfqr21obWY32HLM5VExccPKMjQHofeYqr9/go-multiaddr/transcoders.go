@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 )
 
 type Transcoder interface {
@@ -189,8 +189,12 @@ func p2pStB(s string) ([]byte, error) {
 	}
 }
 
+// OpenBazaar: this has been patched to parse CIDs as well as multihashes
 func p2pVal(b []byte) error {
-	_, err := mh.Cast(b)
+	_, err := cid.Cast(b)
+	if err != nil {
+		_, err = mh.Cast(b)
+	}
 	return err
 }
 

@@ -456,7 +456,6 @@ func (x *Start) Execute(args []string) error {
 		return errors.New("IPFS DHT routing is not configured")
 	}
 
-
 	// Get current directory root hash
 	ipnskey := namesys.IpnsDsKey(nd.Identity)
 	ival, hasherr := nd.Repo.Datastore().Get(ipnskey)
@@ -712,7 +711,7 @@ func (x *Start) Execute(args []string) error {
 				}()
 			}
 		}
-		<- core.Node.DHT.BootstrapChan
+		<-core.Node.DHT.BootstrapChan
 		core.Node.Service = service.New(core.Node, sqliteDB)
 
 		core.Node.StartMessageRetriever()
