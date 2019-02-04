@@ -7,12 +7,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/OpenBazaar/golang-socketio/protocol"
-	"github.com/OpenBazaar/golang-socketio/transport"
 	"math/rand"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/OpenBazaar/golang-socketio/protocol"
+	"github.com/OpenBazaar/golang-socketio/transport"
 )
 
 const (

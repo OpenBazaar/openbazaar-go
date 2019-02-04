@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"fmt"
+
 	"github.com/btcsuite/btcd/addrmgr"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -94,11 +95,11 @@ func NewPeerManager(config *PeerManagerConfig) (*PeerManager, error) {
 	}
 
 	pm := &PeerManager{
-		addrManager: addrmgr.New(config.AddressCacheDir, nil),
-		peerMutex:   new(sync.RWMutex),
-		sourceAddr:  wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), defaultPort, 0),
-		trustedPeer: config.TrustedPeer,
-		proxy:       config.Proxy,
+		addrManager:            addrmgr.New(config.AddressCacheDir, nil),
+		peerMutex:              new(sync.RWMutex),
+		sourceAddr:             wire.NewNetAddressIPPort(net.ParseIP("0.0.0.0"), defaultPort, 0),
+		trustedPeer:            config.TrustedPeer,
+		proxy:                  config.Proxy,
 		recentlyTriedAddresses: make(map[string]bool),
 		connectedPeers:         make(map[uint64]*peer.Peer),
 		msgChan:                config.MsgChan,

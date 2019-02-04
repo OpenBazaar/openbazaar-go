@@ -6,8 +6,9 @@ import (
 	"crypto/x509"
 	"errors"
 
-	"github.com/bifurcation/mint"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/protocol"
+
+	"github.com/bifurcation/mint"
 )
 
 func tlsToMintConfig(tlsConf *tls.Config, pers protocol.Perspective) (*mint.Config, error) {

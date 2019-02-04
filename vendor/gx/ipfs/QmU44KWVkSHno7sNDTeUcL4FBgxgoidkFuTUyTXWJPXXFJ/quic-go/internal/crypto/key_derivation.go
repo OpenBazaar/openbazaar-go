@@ -4,8 +4,9 @@ import (
 	"crypto"
 	"encoding/binary"
 
-	"github.com/bifurcation/mint"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/protocol"
+
+	"github.com/bifurcation/mint"
 )
 
 const (

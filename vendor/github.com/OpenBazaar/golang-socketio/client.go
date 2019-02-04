@@ -1,8 +1,9 @@
 package gosocketio
 
 import (
-	"github.com/OpenBazaar/golang-socketio/transport"
 	"strconv"
+
+	"github.com/OpenBazaar/golang-socketio/transport"
 )
 
 const (

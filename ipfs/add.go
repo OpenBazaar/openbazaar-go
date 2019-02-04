@@ -10,10 +10,11 @@ import (
 	"strconv"
 	"strings"
 
+	"gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
+
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	_ "github.com/ipfs/go-ipfs/core/mock"
-	"gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
 )
 
 // Recursively add a directory to IPFS and return the root hash

@@ -3,6 +3,7 @@ package mint
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/bifurcation/mint/syntax"
 )
 

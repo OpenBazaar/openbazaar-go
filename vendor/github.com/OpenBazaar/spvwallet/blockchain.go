@@ -5,14 +5,15 @@ package spvwallet
 
 import (
 	"errors"
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
 	"math/big"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/btcsuite/btcd/blockchain"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
 )
 
 // Blockchain settings.  These are kindof Bitcoin specific, but not contained in

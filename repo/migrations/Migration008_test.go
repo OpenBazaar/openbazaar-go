@@ -79,18 +79,18 @@ func TestMigration008(t *testing.T) {
 	_, err = db.Exec(dbSetupSql,
 		caseID, // dispute case id
 		migrations.Migration008_OrderState_PENDING, // order state int
-		0, // dispute read bool
+		0,                      // dispute read bool
 		int(executedAt.Unix()), // dispute timestamp
-		0,           // dispute buyerOpened bool
-		"claimtext", // dispute claim text
-		"",          // dispute buyerPayoutAddres
-		"",          // dispute vendorPayoutAddres
-		0,           // lastNotifiedAt unix timestamp
+		0,                      // dispute buyerOpened bool
+		"claimtext",            // dispute claim text
+		"",                     // dispute buyerPayoutAddres
+		"",                     // dispute vendorPayoutAddres
+		0,                      // lastNotifiedAt unix timestamp
 
 		purchaseID, // purchase order id
 		"",         // purchase contract blob
 		migrations.Migration008_OrderState_AWAITING_PAYMENT, // order state int
-		0, // purchase read bool
+		0,                      // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
 		int(0),                 // purchase total int
 		"thumbnailHash",        // purchase thumbnail text
@@ -106,7 +106,7 @@ func TestMigration008(t *testing.T) {
 		disputedPurchaseID,                          // purchase order id
 		disputedPurchaseContractData,                // purchase contract blob
 		migrations.Migration008_OrderState_DISPUTED, // order state int
-		0, // purchase read bool
+		0,                      // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
 		int(0),                 // purchase total int
 		"thumbnailHash",        // purchase thumbnail text
@@ -122,8 +122,8 @@ func TestMigration008(t *testing.T) {
 		saleID, // sale order id
 		"",     // sale contract blob
 		migrations.Migration008_OrderState_AWAITING_PAYMENT, // order state int
-		0, // purchase read bool
-		0, // sale read bool
+		0,                      // purchase read bool
+		0,                      // sale read bool
 		int(executedAt.Unix()), // sale timestamp
 		int(0),                 // sale total int
 		"thumbnailHash",        // sale thumbnail text

@@ -6,9 +6,10 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bifurcation/mint"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/crypto"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/protocol"
+
+	"github.com/bifurcation/mint"
 )
 
 // KeyDerivationFunction is used for key derivation

@@ -61,19 +61,19 @@ func TestMigration007(t *testing.T) {
 	}
 
 	_, err = db.Exec(dbSetupSql,
-		caseID, // dispute case id
-		int(0), // dispute OrderState
-		0,      // dispute read bool
+		caseID,                 // dispute case id
+		int(0),                 // dispute OrderState
+		0,                      // dispute read bool
 		int(executedAt.Unix()), // dispute timestamp
-		0,           // dispute buyerOpened bool
-		"claimtext", // dispute claim text
-		"",          // dispute buyerPayoutAddres
-		"",          // dispute vendorPayoutAddres
+		0,                      // dispute buyerOpened bool
+		"claimtext",            // dispute claim text
+		"",                     // dispute buyerPayoutAddres
+		"",                     // dispute vendorPayoutAddres
 
-		purchaseID, // purchase order id
-		"",         // purchase contract blob
-		1,          // purchase state
-		0,          // purchase read bool
+		purchaseID,             // purchase order id
+		"",                     // purchase contract blob
+		1,                      // purchase state
+		0,                      // purchase read bool
 		int(executedAt.Unix()), // purchase timestamp
 		int(0),                 // purchase total int
 		"thumbnailHash",        // purchase thumbnail text
@@ -85,10 +85,10 @@ func TestMigration007(t *testing.T) {
 		"paymentAddress",       // purchase paymentAddr text
 		0,                      // purchase funded bool
 
-		saleID, // sale order id
-		"",     // sale contract blob
-		1,      // sale state
-		0,      // sale read bool
+		saleID,                 // sale order id
+		"",                     // sale contract blob
+		1,                      // sale state
+		0,                      // sale read bool
 		int(executedAt.Unix()), // sale timestamp
 		int(0),                 // sale total int
 		"thumbnailHash",        // sale thumbnail text

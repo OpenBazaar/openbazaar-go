@@ -2,9 +2,10 @@ package gosocketio
 
 import (
 	"encoding/json"
-	"github.com/OpenBazaar/golang-socketio/protocol"
 	"reflect"
 	"sync"
+
+	"github.com/OpenBazaar/golang-socketio/protocol"
 )
 
 const (

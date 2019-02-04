@@ -2,10 +2,11 @@ package transport
 
 import (
 	"errors"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (

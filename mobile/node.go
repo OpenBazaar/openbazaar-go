@@ -22,6 +22,11 @@ import (
 	"path/filepath"
 	"time"
 
+	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
+	ipfsconfig "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
+
 	"github.com/OpenBazaar/openbazaar-go/api"
 	"github.com/OpenBazaar/openbazaar-go/core"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
@@ -47,10 +52,6 @@ import (
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	"github.com/op/go-logging"
 	"github.com/tyler-smith/go-bip39"
-	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
-	ipfsconfig "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
-	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
-	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
 )
 
 // Node configuration structure

@@ -9,8 +9,9 @@ import (
 	"hash/fnv"
 	"sort"
 
-	"github.com/ipfs/go-ipfs/pin/internal/pb"
 	"gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
+
+	"github.com/ipfs/go-ipfs/pin/internal/pb"
 
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"

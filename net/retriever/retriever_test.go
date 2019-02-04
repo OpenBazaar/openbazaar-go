@@ -1,8 +1,9 @@
 package net
 
 import (
-	"github.com/OpenBazaar/openbazaar-go/pb"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 // TestEnsureNoOmissionsInMessageProcessingOrder ensures that

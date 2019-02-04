@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ipfs/go-ipfs/core"
 	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+
+	"github.com/ipfs/go-ipfs/core"
 
 	"github.com/op/go-logging"
 )

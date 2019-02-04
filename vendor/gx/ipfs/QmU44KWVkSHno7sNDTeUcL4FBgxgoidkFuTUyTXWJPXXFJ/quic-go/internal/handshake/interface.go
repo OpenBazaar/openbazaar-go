@@ -3,9 +3,10 @@ package handshake
 import (
 	"crypto/x509"
 
-	"github.com/bifurcation/mint"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/crypto"
 	"gx/ipfs/QmU44KWVkSHno7sNDTeUcL4FBgxgoidkFuTUyTXWJPXXFJ/quic-go/internal/protocol"
+
+	"github.com/bifurcation/mint"
 )
 
 // Sealer seals a packet
