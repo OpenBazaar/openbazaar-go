@@ -3,10 +3,12 @@ package ipfs
 import (
 	"context"
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmZMWMvWMVKCbHetJ4RgndbuEF1io2UpUxwQwtNjtYPzSC/go-ipfs-files"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -21,7 +23,7 @@ import (
 func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 	s := strings.Split(root, "/")
 	dirName := s[len(s)-1]
-	h, err := coreunix.AddR(n, root)
+	h, err := addAndPin(n, root)
 	if err != nil {
 		return "", err
 	}
@@ -59,11 +61,7 @@ func AddDirectory(n *core.IpfsNode, root string) (rootHash string, err error) {
 }
 
 func AddFile(n *core.IpfsNode, file string) (string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return "", nil
-	}
-	return coreunix.Add(n, f)
+	return addAndPin(n, file)
 }
 
 func GetHashOfFile(n *core.IpfsNode, fpath string) (string, error) {
@@ -82,4 +80,30 @@ func GetHash(n *core.IpfsNode, reader io.Reader) (string, error) {
 	f.Write(b)
 	defer f.Close()
 	return GetHashOfFile(n, f.Name())
+}
+
+func addAndPin(n *core.IpfsNode, root string) (rootHash string, err error) {
+	defer n.Blockstore.PinLock().Unlock()
+
+	stat, err := os.Lstat(root)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := files.NewSerialFile(filepath.Base(root), root, false, stat)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	fileAdder, err := coreunix.NewAdder(n.Context(), n.Pinning, n.Blockstore, n.DAG)
+	if err != nil {
+		return "", err
+	}
+
+	node, err := fileAdder.AddAllAndPin(f)
+	if err != nil {
+		return "", err
+	}
+	return node.Cid().String(), nil
 }
