@@ -2281,7 +2281,7 @@ func (i *jsonAPIHandler) POSTSignMessage(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	keyBytes, err := i.node.IpfsNode.PrivateKey.Bytes()
+	keyBytes, err := i.node.IpfsNode.Identity.ExtractPublicKey().Bytes()
 	if err != nil {
 		ErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
