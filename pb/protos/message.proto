@@ -89,4 +89,5 @@ message OrderPaymentTxn {
     string coin          = 1;
     string orderID       = 2;
     string transactionID = 3;
+    bool withInput = 4;
 }

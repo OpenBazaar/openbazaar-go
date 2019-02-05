@@ -1626,12 +1626,16 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		OrderID: paymentDetails.OrderID,
 	}
 
-	input := wallet.TransactionInput{
-		//OutpointHash:  []byte(txn.Txid[:32]),
-		//OutpointIndex: 1,
-		//LinkedAddress: fromAddress,
-		//Value:         txn.Value,
-		//OrderID:       paymentDetails.OrderID,
+	input := wallet.TransactionInput{}
+
+	if paymentDetails.WithInput {
+		input = wallet.TransactionInput{
+			OutpointHash:  []byte(txn.Txid[:32]),
+			OutpointIndex: 1,
+			LinkedAddress: toAddress,
+			Value:         txn.Value,
+			OrderID:       paymentDetails.OrderID,
+		}
 	}
 
 	cb := wallet.TransactionCallback{

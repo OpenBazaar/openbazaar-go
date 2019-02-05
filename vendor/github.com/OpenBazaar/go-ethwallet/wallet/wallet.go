@@ -517,7 +517,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 			if err != nil {
 				return nil, err
 			}
-			//actualRecipient = EthAddress{address: &ethScript.Seller}
+			actualRecipient = EthAddress{address: &ethScript.MultisigAddress}
 			hash, err = wallet.callAddTransaction(ethScript, big.NewInt(amount))
 			if err != nil {
 				log.Errorf("error call add txn: %v", err)
@@ -1027,14 +1027,16 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 
 	//var buf bytes.Buffer
+	fmt.Println("in multisgin")
 
 	payouts := []wi.TransactionOutput{}
 	//delta1 := int64(0)
 	//delta2 := int64(0)
 	difference := int64(0)
+	totalVal := int64(0)
 
 	if len(ins) > 0 {
-		totalVal := ins[0].Value
+		totalVal = ins[0].Value
 		//num := len(outs)
 		outVal := int64(0)
 		for _, out := range outs {
@@ -1059,6 +1061,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	referenceID := ""
 
 	for i, out := range outs {
+		fmt.Println("out : ", out)
 		if out.Address.String() != rScript.Moderator.Hex() {
 			indx = append(indx, i)
 		}
@@ -1070,6 +1073,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 		referenceID = out.OrderID
 		payouts = append(payouts, p)
+		fmt.Println("referenceId : ", referenceID)
 	}
 
 	if len(indx) > 0 {
@@ -1188,14 +1192,14 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, 0, time.Now(), true))
+			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, totalVal, time.Now(), true))
 		} else {
 			// there was some error processing this txn
 			nonce, err := wallet.client.GetTxnNonce(tx.Hash().Hex())
 			if err == nil {
 				data, err := SerializePendingTxn(PendingTxn{
 					TxnID:   tx.Hash(),
-					Amount:  int64(0),
+					Amount:  totalVal,
 					OrderID: referenceID,
 					Nonce:   nonce,
 					From:    wallet.address.EncodeAddress(),
@@ -1210,9 +1214,9 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 	}
 
-	ret, err := tx.MarshalJSON()
+	//ret, err := tx.MarshalJSON()
 
-	return ret, err
+	return tx.Hash().Bytes(), nil
 }
 
 // AddWatchedAddress - Add a script to the wallet and get notifications back when coins are received or spent from it

@@ -84,11 +84,22 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		}
 	}
 
+	txn, err := wal.GetTransaction(*txid)
+	if err != nil {
+		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
+	}
+
 	var (
 		thumbnail string
 		title     string
 		memo      = args.Memo
+		toAddress = args.Address
 	)
+
+	if txn.ToAddress != "" {
+		toAddress = txn.ToAddress
+	}
+
 	if contract != nil && contract.VendorListings[0] != nil {
 		if contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
 			thumbnail = contract.VendorListings[0].Item.Images[0].Tiny
@@ -104,7 +115,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	if err := n.Datastore.TxMetadata().Put(repo.Metadata{
 		Txid:       txid.String(),
-		Address:    args.Address,
+		Address:    toAddress,
 		Memo:       memo,
 		OrderId:    args.OrderID,
 		Thumbnail:  thumbnail,
@@ -114,10 +125,6 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	}
 
 	confirmed, unconfirmed := wal.Balance()
-	txn, err := wal.GetTransaction(*txid)
-	if err != nil {
-		return nil, fmt.Errorf("failed retrieving new wallet balance: %s", err)
-	}
 
 	return &SpendResponse{
 		Txid:               txid.String(),

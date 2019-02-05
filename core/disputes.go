@@ -1006,6 +1006,11 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 
 // ReleaseFunds - release funds
 func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []*wallet.TransactionRecord) error {
+	orderID, err := n.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		return err
+	}
+
 	// Create inputs
 	var inputs []wallet.TransactionInput
 	for _, o := range contract.DisputeResolution.Payout.Inputs {
@@ -1017,6 +1022,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
 			Value:         int64(o.Value),
+			OrderID:       orderID,
 		}
 		inputs = append(inputs, input)
 	}
@@ -1039,6 +1045,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
+			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
 	}
@@ -1050,6 +1057,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
+			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
 	}
@@ -1061,6 +1069,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		output := wallet.TransactionOutput{
 			Address: addr,
 			Value:   int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
+			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
 	}
@@ -1112,14 +1121,12 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	accept.ClosedBy = n.IpfsNode.Identity.Pretty()
 	contract.DisputeAcceptance = accept
 
-	orderID, err := n.CalcOrderID(contract.BuyerOrder)
-	if err != nil {
-		return err
-	}
+	peerID := contract.BuyerOrder.BuyerID.PeerID
 
 	// Update database
 	if n.IpfsNode.Identity.Pretty() == contract.BuyerOrder.BuyerID.PeerID {
 		err = n.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_DECIDED, true)
+		peerID = contract.VendorListings[0].VendorID.PeerID
 	} else {
 		err = n.Datastore.Sales().Put(orderID, *contract, pb.OrderState_DECIDED, true)
 	}
@@ -1128,9 +1135,21 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Build, sign, and broadcast transaction
-	_, err = wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
+	txnID, err := wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
 	if err != nil {
 		return err
+	}
+
+	msg := pb.OrderPaymentTxn{
+		Coin:          contract.BuyerOrder.Payment.Coin,
+		OrderID:       orderID,
+		TransactionID: string(txnID),
+		WithInput:     true,
+	}
+
+	err = n.SendOrderPayment(peerID, &msg)
+	if err != nil {
+		log.Errorf("error sending order payment: %v", err)
 	}
 
 	return nil

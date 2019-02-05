@@ -760,6 +760,7 @@ func (i *jsonAPIHandler) POSTSpendCoinsForOrder(w http.ResponseWriter, r *http.R
 		Coin:          spendArgs.Wallet,
 		OrderID:       result.OrderID,
 		TransactionID: result.Txid,
+		WithInput:     false,
 	}
 
 	err = i.node.SendOrderPayment(result.PeerID, &msg)
