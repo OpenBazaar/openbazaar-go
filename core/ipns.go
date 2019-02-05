@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
-	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
 	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"io/ioutil"
@@ -120,13 +120,13 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 		}
 		if !id.MatchesPublicKey(pubkey) {
 			log.Error(err)
-			return "", fmt.Errorf("invalid key. Does not hash to %s", peerID)
+			return "", fmt.Errorf("Invalid key. Does not hash to %s", peerID)
 		}
 
 		// check sig with pk
 		if ok, err := pubkey.Verify(ipnsEntryDataForSig(entry), entry.Signature); err != nil || !ok {
 			log.Errorf("Signature on IPNS record from gateway validated to %t", ok)
-			return "", fmt.Errorf("invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
+			return "", fmt.Errorf("Invalid value. Not signed by PrivateKey corresponding to %v", pubkey)
 		}
 
 		go func() {

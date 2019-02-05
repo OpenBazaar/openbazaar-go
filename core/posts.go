@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"os"
 	"path"
@@ -243,7 +243,7 @@ func (n *OpenBazaarNode) extractpostData(post *pb.SignedPost) (postData, error) 
 	}
 
 	// Add images to postData if they exist
-	var imageArray []postImage
+	imageArray := []postImage{}
 	if len(post.Post.Images) > 0 {
 		for _, imageSlice := range post.Post.Images {
 			imageObject := postImage{imageSlice.Tiny, imageSlice.Small, imageSlice.Medium}
@@ -500,7 +500,7 @@ func (n *OpenBazaarNode) GetPostFromHash(hash string) (*pb.SignedPost, error) {
 	}
 
 	if slug == "" {
-		return nil, errors.New("post does not exist")
+		return nil, errors.New("Post does not exist")
 	}
 	return n.GetPostFromSlug(slug)
 }

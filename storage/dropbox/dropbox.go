@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial"
@@ -30,10 +30,10 @@ func NewDropBoxStorage(apiToken string) (*DropBoxStorage, error) {
 func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr, error) {
 	api := dropbox.Client(s.apiToken, dropbox.Options{Verbose: true})
 	hash := sha256.Sum256(ciphertext)
-	hexStr := hex.EncodeToString(hash[:])
+	hex := hex.EncodeToString(hash[:])
 
 	// Upload ciphertext
-	uploadArg := files.NewCommitInfo("/" + hexStr)
+	uploadArg := files.NewCommitInfo("/" + hex)
 	r := bytes.NewReader(ciphertext)
 	_, err := api.Upload(uploadArg, r)
 	if err != nil {
@@ -41,7 +41,7 @@ func (s *DropBoxStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiaddr,
 	}
 
 	// Set public sharing
-	sharingArg := sharing.NewCreateSharedLinkArg("/" + hexStr)
+	sharingArg := sharing.NewCreateSharedLinkArg("/" + hex)
 	res, err := api.CreateSharedLink(sharingArg)
 	if err != nil {
 		return nil, err

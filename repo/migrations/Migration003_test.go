@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testConfig3 = `{
+var testConfig3 string = `{
     "RepublishInterval": "24h"
 }`
 

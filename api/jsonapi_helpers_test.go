@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
+	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	"io/ioutil"
 	"net/http"
@@ -202,9 +202,9 @@ func httpGet(endpoint string) ([]byte, error) {
 func jsonFor(t *testing.T, fixture proto.Message) string {
 	m := jsonpb.Marshaler{}
 
-	jsonStr, err := m.MarshalToString(fixture)
+	json, err := m.MarshalToString(fixture)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return jsonStr
+	return json
 }

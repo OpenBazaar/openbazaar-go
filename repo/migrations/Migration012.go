@@ -87,13 +87,13 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 		return err
 	}
 
-	var listingsIndex []*Migration012_ListingData
+	listingsIndex := []*Migration012_ListingData{}
 	err = json.Unmarshal(listingsIndexJSONBytes, &listingsIndex)
 	if err != nil {
 		return err
 	}
 
-	var cryptoListings []*Migration012_ListingData
+	cryptoListings := []*Migration012_ListingData{}
 	for _, listingAbstract := range listingsIndex {
 		if listingAbstract.ContractType == "CRYPTOCURRENCY" {
 			cryptoListings = append(cryptoListings, listingAbstract)
@@ -106,7 +106,7 @@ func (Migration012) Up(repoPath, databasePassword string, testnetEnabled bool) e
 	}
 
 	// Check each crypto listing for markup
-	var markupListings []*pb.SignedListing
+	markupListings := []*pb.SignedListing{}
 	for _, listingAbstract := range cryptoListings {
 		listingJSONBytes, err := ioutil.ReadFile(migration012_listingFilePath(repoPath, listingAbstract.Slug))
 		if err != nil {

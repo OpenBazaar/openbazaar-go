@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
@@ -128,7 +128,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		}
 
 		if len(txInputs) == 0 {
-			return errors.New("no unspent transactions found to fund order")
+			return errors.New("No unspent transactions found to fund order")
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -262,10 +262,10 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 		return err
 	}
 	if contract.VendorOrderConfirmation.OrderID != orderID {
-		return errors.New("vendor's response contained invalid order ID")
+		return errors.New("Vendor's response contained invalid order ID")
 	}
 	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
-		return errors.New("vendor requested an amount different from what we calculated")
+		return errors.New("Vendor requested an amount different from what we calculated")
 	}
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {
@@ -281,7 +281,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 				}
 			}
 			if !exists {
-				return errors.New("rating signatures do not cover all purchased listings")
+				return errors.New("Rating signatures do not cover all purchased listings")
 			}
 			pubkey, err := crypto.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 			if err != nil {
@@ -289,7 +289,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			}
 
 			if !bytes.Equal(sig.Metadata.ModeratorKey, contract.BuyerOrder.Payment.ModeratorKey) {
-				return errors.New("rating signature does not contain moderatory key")
+				return errors.New("Rating signature does not contain moderatory key")
 			}
 			ser, err := proto.Marshal(sig.Metadata)
 			if err != nil {
@@ -297,7 +297,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 			}
 			valid, err := pubkey.Verify(ser, sig.Signature)
 			if err != nil || !valid {
-				return errors.New("failed to verify signature on rating keys")
+				return errors.New("Failed to verify signature on rating keys")
 			}
 		}
 	}
@@ -344,11 +344,11 @@ func verifySignaturesOnOrderConfirmation(contract *pb.RicardianContract) error {
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
-			return errors.New("contract does not contain a signature for the order confirmation")
+			return errors.New("Contract does not contain a signature for the order confirmation")
 		case invalidSigError:
-			return errors.New("vendor's guid signature on contact failed to verify")
+			return errors.New("Vendor's guid signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("public key in order confirmation does not match reported vendor ID")
+			return errors.New("Public key in order confirmation does not match reported vendor ID")
 		default:
 			return err
 		}

@@ -297,5 +297,5 @@ func Migration013_AddressToScript(coinType string, addr string, testmodeEnanable
 		}
 		return script, nil
 	}
-	return nil, fmt.Errorf("unable to migrate coinType %s", coinType)
+	return nil, fmt.Errorf("Unable to migrate coinType %s", coinType)
 }

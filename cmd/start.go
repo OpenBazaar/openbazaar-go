@@ -5,25 +5,25 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
+	addrutil "gx/ipfs/QmNSWW3Sb4eju4o2djPQ1L1c2Zj9XN9sMYJL8r1cbxdc6b/go-addr-util"
 	p2pbhost "gx/ipfs/QmNh1kGFFdsPu79KNSaL4NUKUPb4Eiz4KHdMtFY6664RDp/go-libp2p/p2p/host/basic"
 	p2phost "gx/ipfs/QmNmJZL7FQySMtE2BQuLMuZg2EB2CLEunJJUSVSc9YnnbV/go-libp2p-host"
-	"gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
-	"gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
+	manet "gx/ipfs/QmRK2LxanhK2gZq6k6R7vk5ZoYZk8ULSSTB7FzDsMUX6CB/go-multiaddr-net"
+	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
 	dhtutil "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht/util"
 	ipfslogging "gx/ipfs/QmSpJByNKFX1sCsHBEp3R73FL4NF6FnQTEGyNAXHm2GS52/go-log"
-	"gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
-	"gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
-	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	swarm "gx/ipfs/QmSwZMWwFZSUpe5muU2xgTUwppH24KfMwdPXiwbEp2c6G5/go-libp2p-swarm"
+	routing "gx/ipfs/QmTiWLZ6Fo5j4KcTVutZJ5KWRRJrbxzmxA4td8NfEdrPh7/go-libp2p-routing"
+	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	recpb "gx/ipfs/QmUpttFinNDmNPgFwKN8sZK6BUtBmA68Y4KdSBDXa8t9sJ/go-libp2p-record/pb"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
 	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
 	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
 	smux "gx/ipfs/QmY9JXR3FupnYAYJWK9aMr9bCpqWKcToQ1tz8DVGTrHpHw/go-stream-muxer"
-	"gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
-	"gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
+	proto "gx/ipfs/QmZ4Qi3GaRbjcx28Sme5eMH7RQjGkt8wHxt2a65oLaeFEV/gogo-protobuf/proto"
+	ipnet "gx/ipfs/QmZPrWxuM8GHr4cGKbyF5CCT11sFUP9hgqpeUHALvx2nUr/go-libp2p-interface-pnet"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	metrics "gx/ipfs/QmdeBtQGXjSt7cb97nx9JyLHHv5va2LyEAue7Q5tDFzpLy/go-libp2p-metrics"
 	oniontp "gx/ipfs/Qmdh86HZtNap3ktHvjyiVhBnp4uRpQWMCRAASieh8fDH8J/go-onion-transport"
 	"io"
 	"io/ioutil"
@@ -85,7 +85,7 @@ var fileLogFormat = logging.MustStringFormatter(
 )
 
 var (
-	ErrNoGateways = errors.New("no gateway addresses configured")
+	ErrNoGateways = errors.New("No gateway addresses configured")
 )
 
 type Start struct {
@@ -114,11 +114,11 @@ func (x *Start) Execute(args []string) error {
 	printSplashScreen(x.Verbose)
 
 	if x.Testnet && x.Regtest {
-		return errors.New("invalid combination of testnet and regtest modes")
+		return errors.New("Invalid combination of testnet and regtest modes")
 	}
 
 	if x.Tor && x.DualStack {
-		return errors.New("invalid combination of tor and dual stack modes")
+		return errors.New("Invalid combination of tor and dual stack modes")
 	}
 
 	isTestnet := false
@@ -126,7 +126,7 @@ func (x *Start) Execute(args []string) error {
 		isTestnet = true
 	}
 	if x.BitcoinCash && x.ZCash != "" {
-		return errors.New("bitcoin cash and zcash cannot be used at the same time")
+		return errors.New("Bitcoin Cash and ZCash cannot be used at the same time")
 	}
 
 	// Set repo path
@@ -400,7 +400,7 @@ func (x *Start) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
-		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, usingTor && usingClearnet)
+		onionTransport, err = oniontp.NewOnionTransport("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))
 		if err != nil {
 			log.Error("setup tor transport:", err)
 			return err
@@ -628,7 +628,7 @@ func (x *Start) Execute(args []string) error {
 			f.Close()
 		} else {
 			if string(cookie)[:len(cookiePrefix)] != cookiePrefix {
-				return errors.New("invalid authentication cookie. Delete it to generate a new one")
+				return errors.New("Invalid authentication cookie. Delete it to generate a new one")
 			}
 			split := strings.SplitAfter(string(cookie), cookiePrefix)
 			authCookie.Value = split[1]
@@ -703,12 +703,12 @@ func (x *Start) Execute(args []string) error {
 		storage = selfhosted.NewSelfHostedStorage(repoPath, core.Node.IpfsNode, pushNodes, core.Node.SendStore)
 	} else if x.Storage == "dropbox" {
 		if usingTor && !usingClearnet {
-			log.Error("dropbox can not be used with tor")
-			return errors.New("dropbox can not be used with tor")
+			log.Error("Dropbox can not be used with Tor")
+			return errors.New("Dropbox can not be used with Tor")
 		}
 
 		if dropboxToken == "" {
-			err = errors.New("dropbox token not set in config file")
+			err = errors.New("Dropbox token not set in config file")
 			log.Error(err)
 			return err
 		}
@@ -718,7 +718,7 @@ func (x *Start) Execute(args []string) error {
 			return err
 		}
 	} else {
-		err = errors.New("invalid storage option")
+		err = errors.New("Invalid storage option")
 		log.Error(err)
 		return err
 	}

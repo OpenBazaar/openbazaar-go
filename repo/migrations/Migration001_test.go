@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testConfig1 = `{
+var testConfig1 string = `{
     "Datastore": {
 	    "BloomFilterSize": 0,
 	    "GCPeriod": "1h",

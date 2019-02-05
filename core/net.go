@@ -2,8 +2,8 @@ package core
 
 import (
 	"errors"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
 	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"sync"
@@ -183,11 +183,11 @@ func (n *OpenBazaarNode) Follow(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	pbAny, err := ptypes.MarshalAny(sd)
+	any, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = pbAny
+	m.Payload = any
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -235,11 +235,11 @@ func (n *OpenBazaarNode) Unfollow(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	pbAny, err := ptypes.MarshalAny(sd)
+	any, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = pbAny
+	m.Payload = any
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -265,13 +265,13 @@ func (n *OpenBazaarNode) SendOrder(peerID string, contract *pb.RicardianContract
 
 	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
-	pbAny, err := ptypes.MarshalAny(contract)
+	any, err := ptypes.MarshalAny(contract)
 	if err != nil {
 		return resp, err
 	}
 	m := pb.Message{
 		MessageType: pb.Message_ORDER,
-		Payload:     pbAny,
+		Payload:     any,
 	}
 
 	resp, err = n.Service.SendRequest(ctx, p, &m)
@@ -509,11 +509,11 @@ func (n *OpenBazaarNode) SendModeratorAdd(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	pbAny, err := ptypes.MarshalAny(sd)
+	any, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = pbAny
+	m.Payload = any
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -553,11 +553,11 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerID string) error {
 		SenderPubkey:   pubkeyBytes,
 		Signature:      sig,
 	}
-	pbAny, err := ptypes.MarshalAny(sd)
+	any, err := ptypes.MarshalAny(sd)
 	if err != nil {
 		return err
 	}
-	m.Payload = pbAny
+	m.Payload = any
 
 	err = n.sendMessage(peerID, nil, m)
 	if err != nil {
@@ -624,11 +624,11 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 	}
 	defer n.Service.DisconnectFromPeer(p)
 	if pmes.Payload == nil {
-		return errors.New("peer responded with nil payload")
+		return errors.New("Peer responded with nil payload")
 	}
 	if pmes.MessageType == pb.Message_ERROR {
 		log.Errorf("Error response from %s: %s", peerID, string(pmes.Payload.Value))
-		return errors.New("peer responded with error message")
+		return errors.New("Peer responded with error message")
 	}
 
 	resp := new(pb.CidList)
