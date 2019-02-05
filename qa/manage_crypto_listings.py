@@ -9,10 +9,10 @@ class ManageCryptoListingsTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 1
+        self.num_nodes = 2
 
     def run_test(self):
-        vendor = self.nodes[0]
+        vendor = self.nodes[1]
 
         # post profile for vendor
         with open('testdata/profile.json') as profile_file:

@@ -9,12 +9,12 @@ class CompleteModeratedOnlineTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 3
+        self.num_nodes = 4
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
-        charlie = self.nodes[2]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
+        charlie = self.nodes[3]
 
         # generate some coins and send them to bob
         time.sleep(4)
