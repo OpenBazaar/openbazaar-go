@@ -3,7 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	"time"
 
 	"github.com/OpenBazaar/openbazaar-go/repo"
@@ -12,7 +12,7 @@ import (
 var (
 	ipfsInventoryCacheMaxDuration = 1 * time.Hour
 	// ErrInventoryNotFoundForSlug - inventory not found error
-	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
+	ErrInventoryNotFoundForSlug = errors.New("could not find slug in inventory")
 )
 
 // InventoryListing is the listing representation stored on IPFS

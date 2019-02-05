@@ -57,8 +57,8 @@ func (r *PointerRepublisher) Republish() {
 				r.db.Pointers().Delete(p.Value.ID)
 			} else {
 				go ipfs.PublishPointer(r.ipfsNode, ctx, p)
-				for _, peer := range r.pushNodes {
-					go ipfs.PutPointerToPeer(r.ipfsNode, context.Background(), peer, p)
+				for _, peerID := range r.pushNodes {
+					go ipfs.PutPointerToPeer(r.ipfsNode, context.Background(), peerID, p)
 				}
 			}
 		case ipfs.MODERATOR:

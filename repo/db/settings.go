@@ -10,7 +10,7 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 )
 
-var SettingsNotSetError error = errors.New("Settings not set")
+var SettingsNotSetError = errors.New("settings not set")
 
 type SettingsDB struct {
 	modelStore
@@ -74,7 +74,7 @@ func (s *SettingsDB) Get() (repo.SettingsData, error) {
 func (s *SettingsDB) Update(settings repo.SettingsData) error {
 	current, err := s.Get()
 	if err != nil {
-		return errors.New("Not Found")
+		return errors.New("not found")
 	}
 	if settings.PaymentDataInQR == nil {
 		settings.PaymentDataInQR = current.PaymentDataInQR

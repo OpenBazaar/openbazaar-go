@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	routing "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	dshelp "gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
+	"gx/ipfs/QmTmqJGRQfuH8eKWD1FjThwPRipt1QhqJQNZ8MpzmfAAxo/go-ipfs-ds-help"
 	ps "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 	mh "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	cid "gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -42,7 +42,7 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreunix"
 	ipnspb "github.com/ipfs/go-ipfs/namesys/pb"
 	ipnspath "github.com/ipfs/go-ipfs/path"
-	fsrepo "github.com/ipfs/go-ipfs/repo/fsrepo"
+	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
 type JSONAPIConfig struct {
@@ -1165,7 +1165,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If we want our own inventory get it from the local database and return
-	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
+	getPersonalInventory := peerIDString == "" || peerIDString == i.node.IPFSIdentityString()
 	if getPersonalInventory {
 		var (
 			err       error
@@ -3271,7 +3271,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
+	fmt.Fprintf(w, `{"estimatedFee": %d}`, fee)
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {

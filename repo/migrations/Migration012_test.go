@@ -285,7 +285,7 @@ func testMigration012_verifySignature(msg proto.Message, pk []byte, signature []
 		return err
 	}
 	if !valid {
-		return errors.New("Invalid signature")
+		return errors.New("invalid signature")
 	}
 	pid, err := peer.IDB58Decode(peerID)
 	if err != nil {
@@ -293,7 +293,7 @@ func testMigration012_verifySignature(msg proto.Message, pk []byte, signature []
 	}
 
 	if !pid.MatchesPublicKey(pubkey) {
-		return errors.New("Pubkey does not match peer ID")
+		return errors.New("pubkey does not match peer ID")
 	}
 	return nil
 }
@@ -322,7 +322,7 @@ func testMigration012_assertListingIndexMigratedCorrectly(t *testing.T) {
 	}
 
 	// Check that correct listing's hashes changed
-	listingsIndex := []*migrations.Migration012_ListingData{}
+	var listingsIndex []*migrations.Migration012_ListingData
 	err = json.Unmarshal(listingsIndexJSON, &listingsIndex)
 	if err != nil {
 		t.Fatal(err)

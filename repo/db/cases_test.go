@@ -723,7 +723,7 @@ func TestGetDisputesForDisputeExpiryReturnsRelevantRecords(t *testing.T) {
 		OrigName:     false,
 	}
 	for _, r := range existingRecords {
-		var isBuyerInitiated int = 0
+		var isBuyerInitiated = 0
 		if r.IsBuyerInitiated {
 			isBuyerInitiated = 1
 		}
