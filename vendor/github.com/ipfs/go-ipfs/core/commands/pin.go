@@ -628,7 +628,7 @@ func pinVerify(ctx context.Context, n *core.IpfsNode, opts pinVerifyOpts) <-chan
 		if err := verifcid.ValidateCid(root); err != nil {
 			status := PinStatus{Ok: false}
 			if opts.explain {
-				status.BadNodes = []BadNode{BadNode{Cid: key, Err: err.Error()}}
+				status.BadNodes = []BadNode{{Cid: key, Err: err.Error()}}
 			}
 			visited[key] = status
 			return status
@@ -638,7 +638,7 @@ func pinVerify(ctx context.Context, n *core.IpfsNode, opts pinVerifyOpts) <-chan
 		if err != nil {
 			status := PinStatus{Ok: false}
 			if opts.explain {
-				status.BadNodes = []BadNode{BadNode{Cid: key, Err: err.Error()}}
+				status.BadNodes = []BadNode{{Cid: key, Err: err.Error()}}
 			}
 			visited[key] = status
 			return status

@@ -470,23 +470,23 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"dir-index-html": &bintree{nil, map[string]*bintree{
-		"LICENSE":              &bintree{dirIndexHtmlLicense, map[string]*bintree{}},
-		"README.md":            &bintree{dirIndexHtmlReadmeMd, map[string]*bintree{}},
-		"dir-index-uncat.html": &bintree{dirIndexHtmlDirIndexUncatHtml, map[string]*bintree{}},
-		"dir-index.html":       &bintree{dirIndexHtmlDirIndexHtml, map[string]*bintree{}},
-		"index.go":             &bintree{dirIndexHtmlIndexGo, map[string]*bintree{}},
-		"knownIcons.txt":       &bintree{dirIndexHtmlKnowniconsTxt, map[string]*bintree{}},
-		"package.json":         &bintree{dirIndexHtmlPackageJson, map[string]*bintree{}},
+	"dir-index-html": {nil, map[string]*bintree{
+		"LICENSE":              {dirIndexHtmlLicense, map[string]*bintree{}},
+		"README.md":            {dirIndexHtmlReadmeMd, map[string]*bintree{}},
+		"dir-index-uncat.html": {dirIndexHtmlDirIndexUncatHtml, map[string]*bintree{}},
+		"dir-index.html":       {dirIndexHtmlDirIndexHtml, map[string]*bintree{}},
+		"index.go":             {dirIndexHtmlIndexGo, map[string]*bintree{}},
+		"knownIcons.txt":       {dirIndexHtmlKnowniconsTxt, map[string]*bintree{}},
+		"package.json":         {dirIndexHtmlPackageJson, map[string]*bintree{}},
 	}},
-	"init-doc": &bintree{nil, map[string]*bintree{
-		"about":          &bintree{initDocAbout, map[string]*bintree{}},
-		"contact":        &bintree{initDocContact, map[string]*bintree{}},
-		"help":           &bintree{initDocHelp, map[string]*bintree{}},
-		"ping":           &bintree{initDocPing, map[string]*bintree{}},
-		"quick-start":    &bintree{initDocQuickStart, map[string]*bintree{}},
-		"readme":         &bintree{initDocReadme, map[string]*bintree{}},
-		"security-notes": &bintree{initDocSecurityNotes, map[string]*bintree{}},
+	"init-doc": {nil, map[string]*bintree{
+		"about":          {initDocAbout, map[string]*bintree{}},
+		"contact":        {initDocContact, map[string]*bintree{}},
+		"help":           {initDocHelp, map[string]*bintree{}},
+		"ping":           {initDocPing, map[string]*bintree{}},
+		"quick-start":    {initDocQuickStart, map[string]*bintree{}},
+		"readme":         {initDocReadme, map[string]*bintree{}},
+		"security-notes": {initDocSecurityNotes, map[string]*bintree{}},
 	}},
 }}
 

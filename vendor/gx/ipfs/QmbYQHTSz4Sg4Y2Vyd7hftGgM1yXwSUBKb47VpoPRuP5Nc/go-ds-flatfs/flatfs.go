@@ -499,7 +499,7 @@ func (fs *Datastore) putMany(data map[datastore.Key]interface{}) error {
 	ops := make(map[*os.File]int)
 
 	defer func() {
-		for fi, _ := range files {
+		for fi := range files {
 			val, _ := ops[fi]
 			switch val {
 			case 0:
@@ -513,7 +513,7 @@ func (fs *Datastore) putMany(data map[datastore.Key]interface{}) error {
 
 	// Now we sync everything
 	// sync and close files
-	for fi, _ := range files {
+	for fi := range files {
 		if fs.sync {
 			if err := syncFile(fi); err != nil {
 				return err
@@ -1048,7 +1048,7 @@ func (bt *flatfsBatch) Commit() error {
 		return err
 	}
 
-	for k, _ := range bt.deletes {
+	for k := range bt.deletes {
 		if err := bt.ds.Delete(k); err != nil {
 			return err
 		}

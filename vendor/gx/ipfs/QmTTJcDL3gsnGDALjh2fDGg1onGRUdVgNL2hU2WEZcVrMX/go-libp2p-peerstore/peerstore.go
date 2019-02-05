@@ -107,7 +107,7 @@ func (ps *peerstore) GetProtocols(p peer.ID) ([]string, error) {
 	}
 
 	var out []string
-	for k, _ := range pmap {
+	for k := range pmap {
 		out = append(out, k)
 	}
 

@@ -160,7 +160,7 @@ var RefsROCmd = &oldcmds.Command{}
 var rootROSubcommands = map[string]*cmds.Command{
 	"commands": CommandsDaemonROCmd,
 	"cat":      CatCmd,
-	"block": &cmds.Command{
+	"block": {
 		Subcommands: map[string]*cmds.Command{
 			"stat": blockStatCmd,
 			"get":  blockGetCmd,

@@ -212,7 +212,7 @@ func (bl *Bloom) AddIfNotHasTS(entry []byte) (added bool) {
 func (bl *Bloom) Clear() {
 	bl.Mtx.Lock()
 	defer bl.Mtx.Unlock()
-	for i, _ := range (*bl).bitset {
+	for i := range (*bl).bitset {
 		bl.bitset[i] = 0
 	}
 	bl.content = 0

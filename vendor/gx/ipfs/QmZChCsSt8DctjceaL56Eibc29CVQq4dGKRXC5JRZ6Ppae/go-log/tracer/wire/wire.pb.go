@@ -134,7 +134,7 @@ func (m *TracerState) MarshalTo(dAtA []byte) (int, error) {
 		i++
 	}
 	if len(m.BaggageItems) > 0 {
-		for k, _ := range m.BaggageItems {
+		for k := range m.BaggageItems {
 			dAtA[i] = 0x22
 			i++
 			v := m.BaggageItems[k]

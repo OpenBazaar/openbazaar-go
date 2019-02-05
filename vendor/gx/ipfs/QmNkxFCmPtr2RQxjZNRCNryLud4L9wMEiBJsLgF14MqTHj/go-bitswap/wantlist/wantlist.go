@@ -74,7 +74,7 @@ func (w *ThreadSafe) Add(c cid.Cid, priority int, ses uint64) bool {
 	w.set[c] = &Entry{
 		Cid:      c,
 		Priority: priority,
-		SesTrk:   map[uint64]struct{}{ses: struct{}{}},
+		SesTrk:   map[uint64]struct{}{ses: {}},
 	}
 
 	return true

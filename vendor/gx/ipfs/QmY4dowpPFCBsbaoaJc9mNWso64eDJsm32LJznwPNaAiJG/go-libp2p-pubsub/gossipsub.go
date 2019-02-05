@@ -142,7 +142,7 @@ func (gs *GossipSubRouter) handleIHave(p peer.ID, ctl *pb.ControlMessage) []*pb.
 		iwantlst = append(iwantlst, mid)
 	}
 
-	return []*pb.ControlIWant{&pb.ControlIWant{MessageIDs: iwantlst}}
+	return []*pb.ControlIWant{{MessageIDs: iwantlst}}
 }
 
 func (gs *GossipSubRouter) handleIWant(p peer.ID, ctl *pb.ControlMessage) []*pb.Message {
@@ -302,13 +302,13 @@ func (gs *GossipSubRouter) Leave(topic string) {
 }
 
 func (gs *GossipSubRouter) sendGraft(p peer.ID, topic string) {
-	graft := []*pb.ControlGraft{&pb.ControlGraft{TopicID: &topic}}
+	graft := []*pb.ControlGraft{{TopicID: &topic}}
 	out := rpcWithControl(nil, nil, nil, graft, nil)
 	gs.sendRPC(p, out)
 }
 
 func (gs *GossipSubRouter) sendPrune(p peer.ID, topic string) {
-	prune := []*pb.ControlPrune{&pb.ControlPrune{TopicID: &topic}}
+	prune := []*pb.ControlPrune{{TopicID: &topic}}
 	out := rpcWithControl(nil, nil, nil, nil, prune)
 	gs.sendRPC(p, out)
 }
