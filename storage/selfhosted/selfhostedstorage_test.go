@@ -27,7 +27,7 @@ func TestSelfHostedStorage_Store(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if ma.String() != "/ipfs/zb2rhj7crUKTQYRGCRATFaQ6YFLTde2YzdqbbhAASkL9uRDXn" {
+	if ma.String() != "/ipfs/Qmf412jQZiuVUtdgnB36FXFX7xg5V6KEbSJ4dpQuhkLyfD" {
 		t.Error("Self-hosted storage returned incorrect multiaddr")
 	}
 	os.RemoveAll("./outbox")

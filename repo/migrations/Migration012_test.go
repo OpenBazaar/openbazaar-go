@@ -605,8 +605,8 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 }
 
 var testMigraion012_listingFixtureHashes = map[string]string{
-	"slug-4": "zb2rhYFPk5iVCTJYFoGR5gEpzKodhDWu5jESE2yzvWrCou54n",
-	"slug-5": "zb2rhbNjVXhbtKkSXbf6hpGUV2CujPTBx9jWsRJpvzKdgpwj9",
+	"slug-4": "QmXC26R4PNnArmVssrviaA4WGxP1zzmx8y2AiybF6hQpRM",
+	"slug-5": "QmaEUP6zWvZkrWAbVAvcxRiV5Fou8jQnHc4nmarAUVLoQr",
 }
 
 var testMigration012_configFixture = `{
