@@ -55,7 +55,7 @@ type DataSharing struct {
 	PushTo              []string
 }
 
-var MalformedConfigError = errors.New("config file is malformed")
+var MalformedConfigError error = errors.New("config file is malformed")
 
 func DefaultWalletsConfig() *WalletsConfig {
 	var feeAPI = "https://btc.fees.openbazaar.org"

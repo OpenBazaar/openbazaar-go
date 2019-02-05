@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	inet "gx/ipfs/QmXfkENeeBvh3zYA51MaSdGUdBjhQ99cP5WQe8zgr6wchG/go-libp2p-net"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (
-	OutOfOrderMessage = errors.New("message arrived out of order")
-	DuplicateMessage  = errors.New("duplicate message")
+	OutOfOrderMessage error = errors.New("Message arrived out of order")
+	DuplicateMessage  error = errors.New("Duplicate Message")
 )
 
 type NetworkService interface {

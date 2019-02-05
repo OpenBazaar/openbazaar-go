@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	"gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
 	"io/ioutil"
 	"os"
 	"path"
@@ -49,10 +49,10 @@ func (n *OpenBazaarNode) IsModerator() bool {
 func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 	if moderator != nil {
 		if moderator.Fee == nil {
-			return errors.New("moderator must have a fee set")
+			return errors.New("Moderator must have a fee set")
 		}
 		if (int(moderator.Fee.FeeType) == 0 || int(moderator.Fee.FeeType) == 2) && moderator.Fee.FixedFee == nil {
-			return errors.New("fixed fee must be set when using a fixed fee type")
+			return errors.New("Fixed fee must be set when using a fixed fee type")
 		}
 
 		// Update profile
@@ -146,7 +146,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, c
 
 		if NormalizeCurrencyCode(profile.ModeratorInfo.Fee.FixedFee.CurrencyCode) == NormalizeCurrencyCode(currencyCode) {
 			if profile.ModeratorInfo.Fee.FixedFee.Amount >= transactionTotal {
-				return 0, errors.New("fixed moderator fee exceeds transaction amount")
+				return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 			}
 			return profile.ModeratorInfo.Fee.FixedFee.Amount, nil
 		}
@@ -154,7 +154,7 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, c
 		if err != nil {
 			return 0, err
 		} else if fee >= transactionTotal {
-			return 0, errors.New("fixed moderator fee exceeds transaction amount")
+			return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 		}
 		return fee, err
 
@@ -170,11 +170,11 @@ func (n *OpenBazaarNode) GetModeratorFee(transactionTotal uint64, paymentCoin, c
 		}
 		percentage := uint64(float64(transactionTotal) * (float64(profile.ModeratorInfo.Fee.Percentage) / 100))
 		if fixed+percentage >= transactionTotal {
-			return 0, errors.New("fixed moderator fee exceeds transaction amount")
+			return 0, errors.New("Fixed moderator fee exceeds transaction amount")
 		}
 		return fixed + percentage, nil
 	default:
-		return 0, errors.New("unrecognized fee type")
+		return 0, errors.New("Unrecognized fee type")
 	}
 }
 

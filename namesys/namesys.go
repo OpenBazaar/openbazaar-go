@@ -9,10 +9,10 @@ import (
 )
 
 // ErrResolveFailed signals an error when attempting to resolve.
-var ErrResolveFailed = errors.New("could not resolve name")
+var ErrResolveFailed = errors.New("Could not resolve name.")
 
 // ErrNoResolver signals no resolver exists for the specified domain.
-var ErrNoResolver = errors.New("no resolver for domain")
+var ErrNoResolver = errors.New("No resover for domain.")
 
 const cacheTTL = time.Minute
 

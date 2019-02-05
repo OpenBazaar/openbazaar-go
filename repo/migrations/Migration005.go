@@ -19,16 +19,16 @@ func (Migration005) Up(repoPath string, dbPassword string, testnet bool) error {
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("invalid config file")
+		return errors.New("Invalid config file")
 	}
 
 	ipns, ok := cfg["Ipns"]
 	if !ok {
-		return errors.New("ipns config not found")
+		return errors.New("Ipns config not found")
 	}
 	ipnsCfg, ok := ipns.(map[string]interface{})
 	if !ok {
-		return errors.New("ipns config not found")
+		return errors.New("Ipns config not found")
 	}
 	ipnsCfg["QuerySize"] = 1
 	ipnsCfg["BackUpAPI"] = "https://gateway.ob1.io/ob/ipns/"
@@ -68,16 +68,16 @@ func (Migration005) Down(repoPath string, dbPassword string, testnet bool) error
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("invalid config file")
+		return errors.New("Invalid config file")
 	}
 
 	ipns, ok := cfg["Ipns"]
 	if !ok {
-		return errors.New("ipns config not found")
+		return errors.New("Ipns config not found")
 	}
 	ipnsCfg, ok := ipns.(map[string]interface{})
 	if !ok {
-		return errors.New("ipns config not found")
+		return errors.New("Ipns config not found")
 	}
 	ipnsCfg["QuerySize"] = 5
 	ipnsCfg["BackUpAPI"] = ""

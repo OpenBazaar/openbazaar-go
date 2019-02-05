@@ -103,7 +103,7 @@ func checkWriteable(dir string) error {
 			if os.IsPermission(err) {
 				return fmt.Errorf("%s is not writeable by the current user", dir)
 			}
-			return fmt.Errorf("unexpected error while checking writeablility of repo root: %s", err)
+			return fmt.Errorf("Unexpected error while checking writeablility of repo root: %s", err)
 		}
 		fi.Close()
 		return os.Remove(testfile)
@@ -115,7 +115,7 @@ func checkWriteable(dir string) error {
 	}
 
 	if os.IsPermission(err) {
-		return fmt.Errorf("cannot write to %s, incorrect permissions", err)
+		return fmt.Errorf("Cannot write to %s, incorrect permissions", err)
 	}
 
 	return err
