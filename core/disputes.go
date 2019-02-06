@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
@@ -1143,7 +1144,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	msg := pb.OrderPaymentTxn{
 		Coin:          contract.BuyerOrder.Payment.Coin,
 		OrderID:       orderID,
-		TransactionID: string(txnID),
+		TransactionID: strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
 		WithInput:     true,
 	}
 

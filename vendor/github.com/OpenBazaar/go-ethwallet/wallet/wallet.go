@@ -1164,12 +1164,12 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	auth.GasLimit = 4000000    // in units
 	auth.GasPrice = gasPrice
 
-	var tx *types.Transaction
+	//var tx *types.Transaction
 
-	tx, err = smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
+	tx, txnErr := smtct.Execute(auth, vSlice, rSlice, sSlice, shash, destinations, amounts)
 
-	if err != nil {
-		return nil, err
+	if txnErr != nil {
+		return nil, txnErr
 	}
 
 	start := time.Now()
@@ -1192,6 +1192,7 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
+			fmt.Println("txn successfull")
 			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, totalVal, time.Now(), true))
 		} else {
 			// there was some error processing this txn
