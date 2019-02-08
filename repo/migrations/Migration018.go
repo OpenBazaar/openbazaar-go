@@ -20,10 +20,12 @@ func (Migration018) Up(repoPath string, dbPassword string, testnet bool) error {
 		return err
 	}
 	var cfgIface interface{}
-	json.Unmarshal(configFile, &cfgIface)
+	if err := json.Unmarshal(configFile, &cfgIface); err != nil {
+		return err
+	}
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	// Update API address to use nil instead of ""
@@ -133,10 +135,12 @@ func (Migration018) Down(repoPath string, dbPassword string, testnet bool) error
 		return err
 	}
 	var cfgIface interface{}
-	json.Unmarshal(configFile, &cfgIface)
+	if err := json.Unmarshal(configFile, &cfgIface); err != nil {
+		return err
+	}
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	// Update API address to use "" instead of nil
