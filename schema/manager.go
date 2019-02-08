@@ -2,10 +2,12 @@ package schema
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -438,6 +440,28 @@ func (m *openbazaarSchemaManager) InitializeIPFSRepo() error {
 
 func (m *openbazaarSchemaManager) initializeIPFSDirectoryWithConfig(c *config.Config) error {
 	return fsrepo.Init(m.DataPath(), c)
+}
+
+func (m *openbazaarSchemaManager) CleanIdentityFromConfig() error {
+	configPath := path.Join(m.dataPath, "config")
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+	var cfgIface interface{}
+	if err := json.Unmarshal(configFile, &cfgIface); err != nil {
+		return err
+	}
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config file")
+	}
+	delete(cfg, "Identity")
+	out, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(configPath, out, os.ModePerm)
 }
 
 // IdentityKey will return a []byte representing a node's verifiable identity

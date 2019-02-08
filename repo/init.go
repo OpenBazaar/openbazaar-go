@@ -2,10 +2,8 @@ package repo
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -95,7 +93,7 @@ func DoInit(repoRoot string, nBitsForKeypair int, testnet bool, password string,
 	if err := initializeIpnsKeyspace(repoRoot, identityKey); err != nil {
 		return err
 	}
-	return cleanIdentityFromConfig(repoRoot)
+	return nodeSchema.CleanIdentityFromConfig()
 }
 
 func checkWriteable(dir string) error {
@@ -233,24 +231,4 @@ func GetRepoPath(isTestnet bool) (string, error) {
 		return "", err
 	}
 	return paths.DataPath(), nil
-}
-
-func cleanIdentityFromConfig(repoPath string) error {
-	configPath := path.Join(repoPath, "config")
-	configFile, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		return err
-	}
-	var cfgIface interface{}
-	json.Unmarshal(configFile, &cfgIface)
-	cfg, ok := cfgIface.(map[string]interface{})
-	if !ok {
-		return errors.New("Invalid config file")
-	}
-	delete(cfg, "Identity")
-	out, err := json.MarshalIndent(cfg, "", "    ")
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(configPath, out, os.ModePerm)
 }

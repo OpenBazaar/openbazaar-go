@@ -3,8 +3,11 @@ package schema
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"runtime"
 	"strings"
 	"testing"
@@ -377,5 +380,65 @@ func TestInitializeIPFSRepo(t *testing.T) {
 	}
 	if !creationDatePresent {
 		t.Error("Expected creationDate key to be created in config table")
+	}
+}
+
+func TestOpenbazaarSchemaManager_CleanIdentityFromConfig(t *testing.T) {
+	subject := MustNewCustomSchemaManager(SchemaContext{
+		DataPath:        GenerateTempPath(),
+		TestModeEnabled: true,
+	})
+	if err := subject.BuildSchemaDirectories(); err != nil {
+		t.Fatal(err)
+	}
+	defer subject.DestroySchemaDirectories()
+
+	if err := subject.InitializeDatabase(); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := subject.InitializeIPFSRepo(); err != nil {
+		t.Error(err)
+	}
+
+	loadConfig := func() (map[string]interface{}, error) {
+		configPath := path.Join(subject.dataPath, "config")
+		configFile, err := ioutil.ReadFile(configPath)
+		if err != nil {
+			t.Error(err)
+		}
+		var cfgIface interface{}
+		if err := json.Unmarshal(configFile, &cfgIface); err != nil {
+			t.Error(err)
+		}
+		cfg, ok := cfgIface.(map[string]interface{})
+		if !ok {
+			t.Error("invalid config file")
+		}
+		return cfg, nil
+	}
+
+	// First load the config and make sure the identity object is indeed set.
+
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	_, ok := cfg["Identity"]
+	if !ok {
+		t.Error("Identity object does not exist in config but should")
+	}
+
+	// Now clean and check again
+	if err := subject.CleanIdentityFromConfig(); err != nil {
+		t.Error(err)
+	}
+	cfg, err = loadConfig()
+	if err != nil {
+		t.Error(err)
+	}
+	_, ok = cfg["Identity"]
+	if ok {
+		t.Error("Identity object was not deleted from config")
 	}
 }
