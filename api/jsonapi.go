@@ -3806,6 +3806,12 @@ func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Check for no currencies selected
+	if len(bulkUpdate.Currencies) == 0 {
+		SanitizedResponse(w, `{"success": "false", "reason":"No currencies specified"}`)
+		return
+	}
+
 	log.Info("Updating currencies for all listings to: ", bulkUpdate.Currencies)
 	err = i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
 	if err != nil {
