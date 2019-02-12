@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"github.com/ltcsuite/ltcutil"
 	"io"
+	"math/big"
 	"time"
+
+	"github.com/ltcsuite/ltcutil"
 
 	"github.com/OpenBazaar/multiwallet/cache"
 	"github.com/OpenBazaar/multiwallet/client"
@@ -40,6 +42,13 @@ type LitecoinWallet struct {
 
 	exchangeRates wi.ExchangeRates
 }
+
+var (
+	LitecoinCurrencyDefinition = wi.CurrencyDefinition{
+		Code:         "LTC",
+		Divisibility: 8,
+	}
+)
 
 func NewLitecoinWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*LitecoinWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
@@ -165,10 +174,12 @@ func (w *LitecoinWallet) HasKey(addr btcutil.Address) bool {
 	return true
 }
 
-func (w *LitecoinWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *LitecoinWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	utxos, _ := w.db.Utxos().GetAll()
 	txns, _ := w.db.Txns().GetAll(false)
-	return util.CalcBalance(utxos, txns)
+	c, u := util.CalcBalance(utxos, txns)
+	return wi.CurrencyValue{Value: *big.NewInt(c), Currency: LitecoinCurrencyDefinition},
+		wi.CurrencyValue{Value: *big.NewInt(u), Currency: LitecoinCurrencyDefinition}
 }
 
 func (w *LitecoinWallet) Transactions() ([]wi.Txn, error) {

@@ -701,8 +701,8 @@ func (i *jsonAPIHandler) GETMnemonic(w http.ResponseWriter, r *http.Request) {
 func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type balance struct {
-		Confirmed   int64  `json:"confirmed"`
-		Unconfirmed int64  `json:"unconfirmed"`
+		Confirmed   string `json:"confirmed"`
+		Unconfirmed string `json:"unconfirmed"`
 		Height      uint32 `json:"height"`
 	}
 	if coinType == "balance" {
@@ -710,7 +710,11 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 		for ct, wal := range i.node.Multiwallet {
 			height, _ := wal.ChainTip()
 			confirmed, unconfirmed := wal.Balance()
-			ret[ct.CurrencyCode()] = balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+			ret[ct.CurrencyCode()] = balance{
+				Confirmed:   confirmed.Value.String(),
+				Unconfirmed: unconfirmed.Value.String(),
+				Height:      height,
+			}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -727,7 +731,11 @@ func (i *jsonAPIHandler) GETBalance(w http.ResponseWriter, r *http.Request) {
 	}
 	height, _ := wal.ChainTip()
 	confirmed, unconfirmed := wal.Balance()
-	bal := balance{Confirmed: confirmed, Unconfirmed: unconfirmed, Height: height}
+	bal := balance{
+		Confirmed:   confirmed.Value.String(),
+		Unconfirmed: unconfirmed.Value.String(),
+		Height:      height,
+	}
 	out, err := json.MarshalIndent(bal, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3214,8 +3222,8 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Txid               string    `json:"txid"`
 		Amount             int64     `json:"amount"`
-		ConfirmedBalance   int64     `json:"confirmedBalance"`
-		UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+		ConfirmedBalance   string    `json:"confirmedBalance"`
+		UnconfirmedBalance string    `json:"unconfirmedBalance"`
 		Timestamp          time.Time `json:"timestamp"`
 		Memo               string    `json:"memo"`
 	}
@@ -3227,8 +3235,8 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	resp := &response{
 		Txid:               newTxid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
+		ConfirmedBalance:   confirmed.Value.String(),
+		UnconfirmedBalance: unconfirmed.Value.String(),
 		Amount:             -(txn.Value),
 		Timestamp:          txn.Timestamp,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),

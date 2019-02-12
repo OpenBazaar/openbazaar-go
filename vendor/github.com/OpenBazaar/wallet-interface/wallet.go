@@ -106,7 +106,7 @@ type Wallet interface {
 	// The reason for this that if the spend never confirms, no coins will be lost to the wallet.
 	//
 	// The returned balances should be in the coin's base unit (for example: satoshis)
-	Balance() (confirmed, unconfirmed int64)
+	Balance() (confirmed, unconfirmed CurrencyValue)
 
 	// Transactions returns a list of transactions for this wallet.
 	Transactions() ([]Txn, error)

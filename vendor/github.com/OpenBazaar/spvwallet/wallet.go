@@ -3,6 +3,7 @@ package spvwallet
 import (
 	"errors"
 	"io"
+	"math/big"
 	"sync"
 	"time"
 
@@ -54,6 +55,13 @@ type SPVWallet struct {
 var log = logging.MustGetLogger("bitcoin")
 
 const WALLET_VERSION = "0.1.0"
+
+var (
+	BitcoinCurrencyDefinition = wallet.CurrencyDefinition{
+		Code:         "BTC",
+		Divisibility: 8,
+	}
+)
 
 func NewSPVWallet(config *Config) (*SPVWallet, error) {
 
@@ -303,9 +311,10 @@ func (w *SPVWallet) ListKeys() []btcec.PrivateKey {
 	return list
 }
 
-func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *SPVWallet) Balance() (wallet.CurrencyValue, wallet.CurrencyValue) {
 	utxos, _ := w.txstore.Utxos().GetAll()
 	stxos, _ := w.txstore.Stxos().GetAll()
+	var confirmed, unconfirmed int64
 	for _, utxo := range utxos {
 		if !utxo.WatchOnly {
 			if utxo.AtHeight > 0 {
@@ -319,7 +328,8 @@ func (w *SPVWallet) Balance() (confirmed, unconfirmed int64) {
 			}
 		}
 	}
-	return confirmed, unconfirmed
+	return wallet.CurrencyValue{Value: *big.NewInt(confirmed), Currency: BitcoinCurrencyDefinition},
+		wallet.CurrencyValue{Value: *big.NewInt(unconfirmed), Currency: BitcoinCurrencyDefinition}
 }
 
 func (w *SPVWallet) Transactions() ([]wallet.Txn, error) {

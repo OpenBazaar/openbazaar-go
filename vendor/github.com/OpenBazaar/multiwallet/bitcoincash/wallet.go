@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/big"
 	"time"
 
 	"github.com/OpenBazaar/multiwallet/cache"
@@ -41,6 +42,13 @@ type BitcoinCashWallet struct {
 
 	exchangeRates wi.ExchangeRates
 }
+
+var (
+	BitcoinCashCurrencyDefinition = wi.CurrencyDefinition{
+		Code:         "BCH",
+		Divisibility: 8,
+	}
+)
 
 func NewBitcoinCashWallet(cfg config.CoinConfig, mnemonic string, params *chaincfg.Params, proxy proxy.Dialer, cache cache.Cacher, disableExchangeRates bool) (*BitcoinCashWallet, error) {
 	seed := bip39.NewSeed(mnemonic, "")
@@ -167,10 +175,12 @@ func (w *BitcoinCashWallet) HasKey(addr btcutil.Address) bool {
 	return true
 }
 
-func (w *BitcoinCashWallet) Balance() (confirmed, unconfirmed int64) {
+func (w *BitcoinCashWallet) Balance() (wi.CurrencyValue, wi.CurrencyValue) {
 	utxos, _ := w.db.Utxos().GetAll()
 	txns, _ := w.db.Txns().GetAll(false)
-	return util.CalcBalance(utxos, txns)
+	c, u := util.CalcBalance(utxos, txns)
+	return wi.CurrencyValue{Value: *big.NewInt(c), Currency: BitcoinCashCurrencyDefinition},
+		wi.CurrencyValue{Value: *big.NewInt(u), Currency: BitcoinCashCurrencyDefinition}
 }
 
 func (w *BitcoinCashWallet) Transactions() ([]wi.Txn, error) {

@@ -44,6 +44,14 @@ const (
 	InfuraAPIKey = "openbazaar"
 )
 
+var (
+	// EthCurrencyDefinition is eth defaults
+	EthCurrencyDefinition = wi.CurrencyDefinition{
+		Code:         "ETH",
+		Divisibility: 18,
+	}
+)
+
 // EthConfiguration - used for eth specific configuration
 type EthConfiguration struct {
 	RopstenPPAddress string `yaml:"ROPSTEN_PPv2_ADDRESS"`
@@ -385,21 +393,27 @@ func (wallet *EthereumWallet) HasKey(addr btcutil.Address) bool {
 }
 
 // Balance - Get the confirmed and unconfirmed balances
-func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed int64) {
-	var balance, ucbalance int64
+func (wallet *EthereumWallet) Balance() (confirmed, unconfirmed wi.CurrencyValue) {
+	var balance, ucbalance wi.CurrencyValue
 	bal, err := wallet.GetBalance()
 	if err == nil {
-		balance = bal.Int64()
+		balance = wi.CurrencyValue{
+			Value:    *bal,
+			Currency: EthCurrencyDefinition,
+		}
 	}
 	ucbal, err := wallet.GetUnconfirmedBalance()
+	ucb := big.NewInt(0)
 	if err == nil {
-		ucbalance = ucbal.Int64()
+		if ucbal.Cmp(bal) > 0 {
+			ucb.Sub(ucbal, bal)
+		}
 	}
-	ucb := int64(0)
-	if ucbalance > balance {
-		ucb = ucbalance - balance
+	ucbalance = wi.CurrencyValue{
+		Value:    *ucb,
+		Currency: EthCurrencyDefinition,
 	}
-	return balance, ucb
+	return balance, ucbalance
 }
 
 // Transactions - Returns a list of transactions for this wallet

@@ -30,12 +30,12 @@ type SpendRequest struct {
 
 type SpendResponse struct {
 	Amount             int64     `json:"amount"`
-	ConfirmedBalance   int64     `json:"confirmedBalance"`
+	ConfirmedBalance   string    `json:"confirmedBalance"`
 	Memo               string    `json:"memo"`
 	OrderID            string    `json:"orderId"`
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
-	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
+	UnconfirmedBalance string    `json:"unconfirmedBalance"`
 	PeerID             string    `json:"-"`
 }
 
@@ -128,8 +128,8 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 
 	return &SpendResponse{
 		Txid:               txid.String(),
-		ConfirmedBalance:   confirmed,
-		UnconfirmedBalance: unconfirmed,
+		ConfirmedBalance:   confirmed.Value.String(),
+		UnconfirmedBalance: unconfirmed.Value.String(),
 		Amount:             -(txn.Value),
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
