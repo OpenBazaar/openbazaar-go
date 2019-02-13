@@ -211,8 +211,8 @@ func (w *SPVWallet) CreationDate() time.Time {
 	return w.creationDate
 }
 
-func (w *SPVWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *SPVWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *SPVWallet) MasterPrivateKey() *hd.ExtendedKey {

@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
@@ -602,7 +603,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		outPercentage := float64(output.Value) / float64(totalOut)
 		outputShareOfFee := outPercentage * float64(txFee)
 		val := output.Value - int64(outputShareOfFee)
-		if !wal.IsDust(val) {
+		if !wal.IsDust(*big.NewInt(val)) {
 			o := wallet.TransactionOutput{
 				Value:   val,
 				Address: output.Address,

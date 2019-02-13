@@ -312,9 +312,9 @@ func (wallet *EthereumWallet) CurrencyCode() string {
 	return "ETH"
 }
 
-// IsDust Check if this amount is considered dust - 10000 wei
-func (wallet *EthereumWallet) IsDust(amount int64) bool {
-	return amount < 10000
+// IsDust Check if this amount is considered dust - 1000000 wei
+func (wallet *EthereumWallet) IsDust(amount big.Int) bool {
+	return amount.Cmp(big.NewInt(1000000)) <= 0
 }
 
 // MasterPrivateKey - Get the master private key

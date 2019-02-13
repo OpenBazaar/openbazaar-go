@@ -108,8 +108,8 @@ func (w *ZCashWallet) CurrencyCode() string {
 	}
 }
 
-func (w *ZCashWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btcutil.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *ZCashWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btcutil.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *ZCashWallet) MasterPrivateKey() *hd.ExtendedKey {

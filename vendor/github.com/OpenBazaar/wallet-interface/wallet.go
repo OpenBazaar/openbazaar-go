@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"errors"
+	"math/big"
 	"time"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -59,7 +60,7 @@ type Wallet interface {
 	// participants. If the amount that is supposed to be sent to a given party is below
 	// the dust threshold, openbazaar-go will not pay that party to avoid building a transaction
 	// that never confirms.
-	IsDust(amount int64) bool
+	IsDust(amount big.Int) bool
 
 	// ChildKey generate a child key using the given chaincode. Each openbazaar-go node
 	// keeps a master key (an hd secp256k1 key) that it uses in multisig transactions.

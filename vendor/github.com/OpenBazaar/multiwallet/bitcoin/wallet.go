@@ -107,8 +107,8 @@ func (w *BitcoinWallet) CurrencyCode() string {
 	}
 }
 
-func (w *BitcoinWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(btc.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *BitcoinWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(btc.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *BitcoinWallet) MasterPrivateKey() *hd.ExtendedKey {

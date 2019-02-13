@@ -109,8 +109,8 @@ func (w *LitecoinWallet) CurrencyCode() string {
 	}
 }
 
-func (w *LitecoinWallet) IsDust(amount int64) bool {
-	return txrules.IsDustAmount(ltcutil.Amount(amount), 25, txrules.DefaultRelayFeePerKb)
+func (w *LitecoinWallet) IsDust(amount big.Int) bool {
+	return txrules.IsDustAmount(ltcutil.Amount(amount.Int64()), 25, txrules.DefaultRelayFeePerKb)
 }
 
 func (w *LitecoinWallet) MasterPrivateKey() *hd.ExtendedKey {
