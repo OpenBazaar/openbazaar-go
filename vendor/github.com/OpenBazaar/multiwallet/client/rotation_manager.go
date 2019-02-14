@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -131,9 +132,22 @@ func (r *rotationManager) StartCurrent(done chan<- error) error {
 	r.lock()
 	defer r.unlock()
 
-	if err := r.clientCache[r.currentTarget].Start(done); err != nil {
+	client, ok := r.clientCache[r.currentTarget]
+	if !ok {
+		// ensure this isn't the result of r.currentTarget being nilTarget
+		r.unlock()
+		r.SelectNext()
+		r.lock()
+		client, ok = r.clientCache[r.currentTarget]
+		if !ok {
+			return errors.New("current client unavailable")
+		}
+	}
+
+	if err := client.Start(done); err != nil {
 		return err
 	}
+
 	r.started = true
 	return nil
 }
