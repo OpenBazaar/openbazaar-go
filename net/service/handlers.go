@@ -1604,7 +1604,10 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// the seller has confirmed the order, so a simple check of
 		// the addresses and we are good to proceed
 		if !u.AreAddressesEqual(contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress) {
-			return nil, errors.New("the addresses dont match")
+			log.Debugf("mismatched payment address details: orderID: %s, expectedAddr: %s, actualAddr: %s",
+				paymentDetails.OrderID, contract.VendorOrderConfirmation.PaymentAddress, txn.ToAddress)
+			return nil, errors.New("mismatched payment addresses")
+
 		}
 
 	} else {
@@ -1612,6 +1615,8 @@ func (service *OpenBazaarService) handleOrderPayment(peer peer.ID, pmes *pb.Mess
 		// peerID in the vendorListing to the node peerID
 		if !(contract.VendorListings[0].VendorID.PeerID ==
 			service.node.IpfsNode.Identity.Pretty()) {
+			log.Debugf("mismatched peerID. wrong node is processing : orderID: %s, contractPeerID: %s, nodePeerID: %s",
+				paymentDetails.OrderID, contract.VendorListings[0].VendorID.PeerID, service.node.IpfsNode.Identity.Pretty())
 			return nil, errors.New("the seller details dont match")
 		}
 	}

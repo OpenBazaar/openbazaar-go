@@ -135,6 +135,7 @@ func (z *EthereumPriceFetcher) fetchCurrentRates() error {
 func (z *EthereumPriceFetcher) run() {
 	z.fetchCurrentRates()
 	ticker := time.NewTicker(time.Minute * 15)
+	defer ticker.Stop()
 	for range ticker.C {
 		z.fetchCurrentRates()
 	}

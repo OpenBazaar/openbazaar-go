@@ -1010,8 +1010,8 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 	//txData = append(txData, byte(32))
 	txData = append(txData, payloadHash[:]...)
 	txnHash := crypto.Keccak256(txData)
-	//fmt.Println("txnHash        : ", hexutil.Encode(txnHash))
-	//fmt.Println("phash          : ", hexutil.Encode(payloadHash[:]))
+	log.Debugf("txnHash        : %s", hexutil.Encode(txnHash))
+	log.Debugf("phash          : %s", hexutil.Encode(payloadHash[:]))
 	copy(txHash[:], txnHash)
 
 	sig, err := crypto.Sign(txHash[:], wallet.account.privateKey)
@@ -1027,7 +1027,6 @@ func (wallet *EthereumWallet) CreateMultisigSignature(ins []wi.TransactionInput,
 func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.TransactionOutput, sigs1 []wi.Signature, sigs2 []wi.Signature, redeemScript []byte, feePerByte uint64, broadcast bool) ([]byte, error) {
 
 	//var buf bytes.Buffer
-	fmt.Println("in multisgin")
 
 	payouts := []wi.TransactionOutput{}
 	//delta1 := int64(0)
@@ -1061,7 +1060,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 	referenceID := ""
 
 	for i, out := range outs {
-		fmt.Println("out : ", out)
 		if out.Address.String() != rScript.Moderator.Hex() {
 			indx = append(indx, i)
 		}
@@ -1073,7 +1071,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		}
 		referenceID = out.OrderID
 		payouts = append(payouts, p)
-		fmt.Println("referenceId : ", referenceID)
 	}
 
 	if len(indx) > 0 {
@@ -1192,7 +1189,6 @@ func (wallet *EthereumWallet) Multisign(ins []wi.TransactionInput, outs []wi.Tra
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			fmt.Println("txn successfull")
 			go wallet.CallTransactionListeners(wallet.createTxnCallback(tx.Hash().Hex(), referenceID, EthAddress{&rScript.MultisigAddress}, totalVal, time.Now(), true))
 		} else {
 			// there was some error processing this txn
@@ -1227,7 +1223,7 @@ func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
 	return nil
 }
 
-// AddTransactionListener - add a txn listener
+// AddTransactionListener will call the function callback when new transactions are discovered
 func (wallet *EthereumWallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service
 	wallet.listeners = append(wallet.listeners, callback)
