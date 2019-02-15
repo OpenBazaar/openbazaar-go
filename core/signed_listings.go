@@ -22,12 +22,11 @@ func GetSignedListingFromPath(p string) (*pb.SignedListing, error) {
 	return sl, nil
 }
 
-func SetAcceptedCurrencies(sl *pb.SignedListing, currencies []string) *pb.SignedListing {
+func SetAcceptedCurrencies(sl *pb.SignedListing, currencies []string) {
 	sl.Listing.Metadata.AcceptedCurrencies = currencies
-	return sl
 }
 
-func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) (*pb.SignedListing, error) {
+func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) error {
 	for _, coupon := range sl.Listing.Coupons {
 		for _, c := range savedCoupons {
 			if coupon.GetHash() == c.Hash {
@@ -36,7 +35,7 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) (*p
 			}
 		}
 	}
-	return sl, nil
+	return nil
 }
 
 func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) (*pb.SignedListing, error) {
@@ -51,18 +50,18 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) (*p
 	return sl, nil
 }
 
-func ApplyCouponsToListing(n *OpenBazaarNode, sl *pb.SignedListing) (*pb.SignedListing, error) {
+func ApplyCouponsToListing(n *OpenBazaarNode, sl *pb.SignedListing) error {
 	savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	sl, err = AssignMatchingCoupons(savedCoupons, sl)
+	err = AssignMatchingCoupons(savedCoupons, sl)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return sl, nil
+	return nil
 }
 
 func ApplyShippingOptions(sl *pb.SignedListing) (*pb.SignedListing, error) {

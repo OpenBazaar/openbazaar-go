@@ -1403,9 +1403,9 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 				return err
 			}
 
-			sl = SetAcceptedCurrencies(sl, currencies)
+			SetAcceptedCurrencies(sl, currencies)
 
-			sl, err = ApplyCouponsToListing(n, sl)
+			err = ApplyCouponsToListing(n, sl)
 			if err != nil {
 				return err
 			}

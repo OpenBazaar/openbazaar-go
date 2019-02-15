@@ -1,0 +1,184 @@
+{
+  "listing": {
+    "slug": "example-file-1",
+    "vendorID": {
+      "peerID": "QmeJ3vRqsYVJXtFZr2MRo47KS9LStvW9g4LRK8uqGX2bt5",
+      "pubkeys": {
+        "identity": "CAESIII6nbBUBtCkK0blWtYRwm2lKS4kuAm36sElyoeC0n0u",
+        "bitcoin": "AwD4y8eIx7F0bnwNmssZGi+XFqydypxuFRtA4TPyWiqJ"
+      },
+      "bitcoinSig": "MEQCIGqBDqGyLGs8tVewab+b8BIMCY73uGrxg7wPro3+JuVmAiBa2wk55FwGWWQoyLYW1mGhP62FLHyk6pfkAt59A1tU8Q=="
+    },
+    "metadata": {
+      "version": 4,
+      "contractType": "PHYSICAL_GOOD",
+      "format": "FIXED_PRICE",
+      "expiry": "2037-12-31T05:00:00.000Z",
+      "acceptedCurrencies": [
+        "ZEC",
+        "LTC",
+        "BTC",
+        "BCH"
+      ],
+      "pricingCurrency": "USD",
+      "escrowTimeoutHours": 1080,
+      "coinDivisibility": 100000000
+    },
+    "item": {
+      "title": "EXAMPLE FILE 1",
+      "description": "THIS IS A TEST FILE.",
+      "price": 1000,
+      "tags": [
+      ],
+      "images": [
+        {
+          "filename": "test-examen-de-taxi.jpg",
+          "original": "zb2rhdgUD9r3ieY1LGuiCGjEzZoCiw13da3y3ZJC24whMDSGM",
+          "large": "zb2rhdgUD9r3ieY1LGuiCGjEzZoCiw13da3y3ZJC24whMDSGM",
+          "medium": "zb2rhgXNXs79dmXvsZZWGDTxXSarTyqcKQ1CVkuBUrSgj1b2e",
+          "small": "zb2rhbX27ByKjzTCufaSZsiM1V8xiktZtXUEPSvnLNAPfAPfh",
+          "tiny": "zb2rhbhWku2iSEA5wSkgBMsoAGiUK2aeGaQsjHZRjRh3V4YmN"
+        }
+      ],
+      "categories": [
+      ],
+      "condition": "NEW",
+      "options": [
+        {
+          "name": "Size",
+          "variants": [
+            {
+              "name": "Small"
+            },
+            {
+              "name": " Medium"
+            },
+            {
+              "name": "Large"
+            }
+          ]
+        },
+        {
+          "name": "Color",
+          "variants": [
+            {
+              "name": "Blue"
+            },
+            {
+              "name": "Red"
+            },
+            {
+              "name": "Green"
+            }
+          ]
+        }
+      ],
+      "skus": [
+        {
+          "variantCombo": [
+            0,
+            0
+          ],
+          "productID": "A",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            0,
+            1
+          ],
+          "productID": "B",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            0,
+            2
+          ],
+          "productID": "C",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            1,
+            0
+          ],
+          "productID": "D",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            1,
+            1
+          ],
+          "productID": "E",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            1,
+            2
+          ],
+          "productID": "F",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            2,
+            0
+          ],
+          "productID": "G",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            2,
+            1
+          ],
+          "productID": "H",
+          "surcharge": 100
+        },
+        {
+          "variantCombo": [
+            2,
+            2
+          ],
+          "productID": "I",
+          "surcharge": 100
+        }
+      ]
+    },
+    "shippingOptions": [
+      {
+        "name": "USA Shipping",
+        "type": "FIXED_PRICE",
+        "regions": [
+          "UNITED_STATES"
+        ],
+        "services": [
+          {
+            "name": "USPS",
+            "price": 100,
+            "estimatedDelivery": "1-2 Days",
+            "additionalItemPrice": 100
+          }
+        ]
+      }
+    ],
+    "coupons": [
+      {
+        "title": "FREE",
+        "hash": "QmQ5vueeX64fsSo6fU9Z1dDFMR9rky5FjowEr7m7cSiGd8",
+        "percentDiscount": 50
+      },
+      {
+        "title": "ALMOSTFREE",
+        "hash": "QmbrfL76FTwBzkMvKiLzUdwuzWUtEMwg2wYhZ2kTo3WQyS",
+        "percentDiscount": 25
+      }
+    ],
+    "moderators": [
+    ]
+  },
+  "signature": "yfz4mplL2nDrbAp20bNTvy0bq19eYPPfrAbzHSBImpv10QACHVWLXSsYmScAluKE0U/m8iKRqZWBEjWxo/TvBg=="
+}
