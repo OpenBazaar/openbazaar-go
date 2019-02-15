@@ -1388,49 +1388,6 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	return nil
 }
 
-func GetSignedListingFromPath(p string) (*pb.SignedListing, error) {
-	file, err := ioutil.ReadFile(p)
-	if err != nil {
-		return nil, err
-	}
-
-	sl := new(pb.SignedListing)
-	err = jsonpb.UnmarshalString(string(file), sl)
-	if err != nil {
-		return nil, err
-	}
-	return sl, nil
-}
-
-func SetAcceptedCurrencies(sl *pb.SignedListing, currencies []string) *pb.SignedListing {
-	sl.Listing.Metadata.AcceptedCurrencies = currencies
-	return sl
-}
-
-func ApplyCouponsToListing(n *OpenBazaarNode, sl *pb.SignedListing) (*pb.SignedListing, error) {
-	savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
-	if err != nil {
-		return nil, err
-	}
-	for _, coupon := range sl.Listing.Coupons {
-		for _, c := range savedCoupons {
-			if coupon.GetHash() == c.Hash {
-				coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-				break
-			}
-		}
-	}
-	if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-		for _, so := range sl.Listing.ShippingOptions {
-			for _, ser := range so.Services {
-				ser.AdditionalItemPrice = ser.Price
-			}
-		}
-	}
-
-	return sl, nil
-}
-
 // SetCurrencyOnListings - set currencies accepted for a listing
 func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
@@ -1453,22 +1410,22 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 				return err
 			}
 
-			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+				sl, err = ApplyShippingOptions(sl)
+				if err != nil {
+					return err
+				}
+			}
+
+			sl, err = UpdateInventoryQuantities(n, sl)
 			if err != nil {
 				return err
 			}
 
-			// Build the inventory list
-			for variant, count := range inventory {
-				for i, s := range sl.Listing.Item.Skus {
-					if variant == i {
-						s.Quantity = count
-						break
-					}
-				}
+			err = n.UpdateListing(sl.Listing, false)
+			if err != nil {
+				return err
 			}
-
-			n.UpdateListing(sl.Listing, false)
 
 		}
 		return nil
