@@ -1399,25 +1399,11 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 			sl.Hash = hash
 		}
-		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
+
+		sl, err = core.ApplyCouponsToListing(i.node, sl)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
+			ErrorResponse(w, http.StatusNotFound, "Could not apply coupons to listing.")
 			return
-		}
-		for _, coupon := range sl.Listing.Coupons {
-			for _, c := range savedCoupons {
-				if coupon.GetHash() == c.Hash {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-					break
-				}
-			}
-		}
-		if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-			for _, so := range sl.Listing.ShippingOptions {
-				for _, ser := range so.Services {
-					ser.AdditionalItemPrice = ser.Price
-				}
-			}
 		}
 
 		out, err := m.MarshalToString(sl)

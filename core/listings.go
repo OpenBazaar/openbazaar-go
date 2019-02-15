@@ -1388,6 +1388,49 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 	return nil
 }
 
+func GetSignedListingFromPath(p string) (*pb.SignedListing, error) {
+	file, err := ioutil.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+
+	sl := new(pb.SignedListing)
+	err = jsonpb.UnmarshalString(string(file), sl)
+	if err != nil {
+		return nil, err
+	}
+	return sl, nil
+}
+
+func SetAcceptedCurrencies(sl *pb.SignedListing, currencies []string) *pb.SignedListing {
+	sl.Listing.Metadata.AcceptedCurrencies = currencies
+	return sl
+}
+
+func ApplyCouponsToListing(n *OpenBazaarNode, sl *pb.SignedListing) (*pb.SignedListing, error) {
+	savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+	if err != nil {
+		return nil, err
+	}
+	for _, coupon := range sl.Listing.Coupons {
+		for _, c := range savedCoupons {
+			if coupon.GetHash() == c.Hash {
+				coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
+				break
+			}
+		}
+	}
+	if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+		for _, so := range sl.Listing.ShippingOptions {
+			for _, ser := range so.Services {
+				ser.AdditionalItemPrice = ser.Price
+			}
+		}
+	}
+
+	return sl, nil
+}
+
 // SetCurrencyOnListings - set currencies accepted for a listing
 func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
@@ -1397,37 +1440,17 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 
 	walkpath := func(p string, f os.FileInfo, err error) error {
 		if !f.IsDir() && filepath.Ext(p) == ".json" {
-			file, err := ioutil.ReadFile(p)
+
+			sl, err := GetSignedListingFromPath(p)
 			if err != nil {
 				return err
 			}
 
-			sl := new(pb.SignedListing)
-			err = jsonpb.UnmarshalString(string(file), sl)
+			sl = SetAcceptedCurrencies(sl, currencies)
+
+			sl, err = ApplyCouponsToListing(n, sl)
 			if err != nil {
 				return err
-			}
-
-			sl.Listing.Metadata.AcceptedCurrencies = currencies
-
-			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
-			if err != nil {
-				return err
-			}
-			for _, coupon := range sl.Listing.Coupons {
-				for _, c := range savedCoupons {
-					if coupon.GetHash() == c.Hash {
-						coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-						break
-					}
-				}
-			}
-			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-				for _, so := range sl.Listing.ShippingOptions {
-					for _, ser := range so.Services {
-						ser.AdditionalItemPrice = ser.Price
-					}
-				}
 			}
 
 			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
