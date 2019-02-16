@@ -1405,19 +1405,27 @@ func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
 
 			SetAcceptedCurrencies(sl, currencies)
 
-			err = ApplyCouponsToListing(n, sl)
+			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingCoupons(savedCoupons, sl)
 			if err != nil {
 				return err
 			}
 
 			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-				sl, err = ApplyShippingOptions(sl)
+				err = ApplyShippingOptions(sl)
 				if err != nil {
 					return err
 				}
 			}
 
-			sl, err = UpdateInventoryQuantities(n, sl)
+			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingQuantities(inventory, sl)
 			if err != nil {
 				return err
 			}

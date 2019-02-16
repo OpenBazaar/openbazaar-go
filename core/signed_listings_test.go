@@ -71,6 +71,45 @@ func TestOpenBazaarSignedListings_AssignMatchingCoupons(t *testing.T) {
 	}
 }
 
+func TestOpenBazaarSignedListings_AssignMatchingQuantities(t *testing.T) {
+	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
+
+	inventory := map[int]int64{
+		0: 1000,
+	}
+
+	listing, err := core.GetSignedListingFromPath(absPath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = core.AssignMatchingQuantities(inventory, listing)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if listing.Listing.Item.Skus[0].Quantity != 1000 {
+		t.Error("Inventory was not set properly")
+	}
+}
+
+func TestOpenBazaarSignedListings_ApplyShippingOptions(t *testing.T) {
+	absPath, _ := filepath.Abs("../test/contracts/signed_listings_1.json")
+
+	listing, err := core.GetSignedListingFromPath(absPath)
+	if err != nil {
+		t.Error(err)
+	}
+
+	option := listing.Listing.ShippingOptions[0].Services[0]
+
+	core.ApplyShippingOptions(listing)
+
+	if option.AdditionalItemPrice != 100 {
+		t.Error("Shipping options were not applied properly")
+	}
+}
+
 func EqualStringSlices(a, b []string) bool {
 	if len(a) != len(b) {
 		return false

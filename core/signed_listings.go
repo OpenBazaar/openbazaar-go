@@ -38,7 +38,7 @@ func AssignMatchingCoupons(savedCoupons []repo.Coupon, sl *pb.SignedListing) err
 	return nil
 }
 
-func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) (*pb.SignedListing, error) {
+func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) error {
 	for variant, count := range inventory {
 		for i, s := range sl.Listing.Item.Skus {
 			if variant == i {
@@ -47,43 +47,14 @@ func AssignMatchingQuantities(inventory map[int]int64, sl *pb.SignedListing) (*p
 			}
 		}
 	}
-	return sl, nil
-}
-
-func ApplyCouponsToListing(n *OpenBazaarNode, sl *pb.SignedListing) error {
-	savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
-	if err != nil {
-		return err
-	}
-
-	err = AssignMatchingCoupons(savedCoupons, sl)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func ApplyShippingOptions(sl *pb.SignedListing) (*pb.SignedListing, error) {
+func ApplyShippingOptions(sl *pb.SignedListing) error {
 	for _, so := range sl.Listing.ShippingOptions {
 		for _, ser := range so.Services {
 			ser.AdditionalItemPrice = ser.Price
 		}
 	}
-	return sl, nil
-}
-
-func UpdateInventoryQuantities(n *OpenBazaarNode, sl *pb.SignedListing) (*pb.SignedListing, error) {
-	inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the inventory list
-	sl, err = AssignMatchingQuantities(inventory, sl)
-	if err != nil {
-		return nil, err
-	}
-
-	return sl, nil
+	return nil
 }

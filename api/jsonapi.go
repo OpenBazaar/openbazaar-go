@@ -1400,7 +1400,11 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			sl.Hash = hash
 		}
 
-		err = core.ApplyCouponsToListing(i.node, sl)
+		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
+		if err != nil {
+			return
+		}
+		err = core.AssignMatchingCoupons(savedCoupons, sl)
 		if err != nil {
 			ErrorResponse(w, http.StatusNotFound, "Could not apply coupons to listing.")
 			return
