@@ -19,46 +19,47 @@ func (n *OpenBazaarNode) UpdateFollow() error {
 	if err != nil {
 		return err
 	}
-	f1, err := os.Create(followPath)
-	if err != nil {
-		return err
-	}
-	defer f1.Close()
-
-	j, jerr := json.MarshalIndent(followers, "", "    ")
-	if jerr != nil {
-		return jerr
-	}
-	if string(j) == "null" {
-		j = []byte("[]")
-	}
-	_, werr := f1.Write(j)
-	if werr != nil {
-		return werr
-	}
+	UpdateConnectionsInFile(followPath, followers)
 
 	// Update following file
 	following, err := n.Datastore.Following().Get("", -1)
 	if err != nil {
 		return err
 	}
-	f2, err := os.Create(followingPath)
+	UpdateConnectionsInFile(followingPath, following)
+
+	return n.updateProfileCounts()
+}
+
+func UpdateConnectionsInFile(filepath string, connections interface{}) error {
+
+	f2, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
 	defer f2.Close()
 
-	j, jerr = json.MarshalIndent(following, "", "    ")
-	if jerr != nil {
-		return jerr
+	connections_bytes, err := ConnectionsToBytes(connections)
+	if err != nil {
+		return err
 	}
-	if string(j) == "null" {
-		j = []byte("[]")
-	}
-	_, werr = f2.Write(j)
+
+	_, werr := f2.Write(connections_bytes)
 	if werr != nil {
 		return werr
 	}
 
-	return n.updateProfileCounts()
+	return nil
+}
+
+func ConnectionsToBytes(connections interface{}) ([]byte, error) {
+	j, jerr := json.MarshalIndent(connections, "", "    ")
+	if jerr != nil {
+		return nil, jerr
+	}
+	if string(j) == "null" {
+		j = []byte("[]")
+	}
+
+	return j, nil
 }

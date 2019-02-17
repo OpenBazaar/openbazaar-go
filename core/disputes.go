@@ -46,7 +46,7 @@ var ErrOpenFailureOrderExpired = errors.New("unable to open case because order i
 
 // OpenDispute - open a dispute
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
-	if !n.verifyEscrowFundsAreDisputeable(contract, records) {
+	if !n.VerifyEscrowFundsAreDisputable(contract, records) {
 		return ErrOpenFailureOrderExpired
 	}
 	var isPurchase bool
@@ -138,11 +138,15 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	return nil
 }
 
-func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
+func (n *OpenBazaarNode) VerifyEscrowFundsAreDisputable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
+	if len(contract.VendorListings) < 1 {
+		return false
+	}
+
 	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {
-		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
+		log.Errorf("Failed VerifyEscrowFundsAreDisputable(): %s", err.Error())
 		return false
 	}
 	for _, r := range records {
