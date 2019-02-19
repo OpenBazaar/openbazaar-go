@@ -173,7 +173,7 @@ func addConfigExtensions(repoRoot string) error {
 		}
 		ie = schema.IpnsExtraConfig{
 			DHTQuorumSize: 1,
-			FallbackAPI:   "https://gatewaya.ob1.io",
+			FallbackAPI:   "https://gateway.ob1.io",
 		}
 
 		t = schema.TorConfig{}
