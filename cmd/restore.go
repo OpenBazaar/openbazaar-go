@@ -11,10 +11,10 @@ import (
 	ipld "gx/ipfs/QmR7TcHkR9nxkUorfi8XMTAMLUK7GiP64TWWBzY3aacc1o/go-ipld-format"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmTkKN1x5Jvhc5Np55gJzD3PQ6GL74aKm9145t9WbvJyrB/go-tcp-transport"
 	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
 	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
-	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
 	"io"
 	"io/ioutil"
 	"os"
@@ -193,9 +193,8 @@ func (x *Restore) Execute(args []string) error {
 	}
 	// Create Tor transport
 	var (
-		onionTransport *oniontp.OnionTransport
-		torPw          = torConfig.Password
-		torControl     = torConfig.TorControl
+		torPw      = torConfig.Password
+		torControl = torConfig.TorControl
 	)
 	if usingTor {
 		if torControl == "" {
@@ -210,19 +209,18 @@ func (x *Restore) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
-	}
-
-	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, options ...libp2p.Option) (p2phost.Host, error) {
-		pkey := ps.PrivKey(id)
-		if pkey == nil {
-			return nil, fmt.Errorf("missing private key for node ID: %s", id.Pretty())
+		transportOptions := libp2p.ChainOptions(libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
+		if usingClearnet {
+			transportOptions = libp2p.ChainOptions(
+				transportOptions,
+				libp2p.Transport(ws.New),
+			)
+			transportOptions = libp2p.ChainOptions(
+				transportOptions,
+				libp2p.Transport(tcp.NewTCPTransport),
+			)
 		}
-		options = append([]libp2p.Option{libp2p.Identity(pkey), libp2p.Peerstore(ps)}, options...)
-		if usingTor {
-			options = append(options, libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
-		}
-		return libp2p.New(ctx, options...)
+		libp2p.DefaultTransports = transportOptions
 	}
 
 	ncfg := &ipfscore.BuildCfg{
@@ -232,9 +230,6 @@ func (x *Restore) Execute(args []string) error {
 			"mplex":  true,
 			"ipnsps": true,
 		},
-	}
-	if onionTransport != nil {
-		ncfg.Host = defaultHostOption
 	}
 	fmt.Println("Starting node...")
 	nd, err := ipfscore.NewNode(cctx, ncfg)

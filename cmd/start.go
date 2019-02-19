@@ -9,10 +9,11 @@ import (
 	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	"gx/ipfs/QmTkKN1x5Jvhc5Np55gJzD3PQ6GL74aKm9145t9WbvJyrB/go-tcp-transport"
 	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
 	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
 	"gx/ipfs/QmX3syBjwRd12qJGaKbFBWFfrBinKsaTC43ry3PsgiXCLK/go-libp2p-routing-helpers"
+	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
 	ipfslogging "gx/ipfs/QmZChCsSt8DctjceaL56Eibc29CVQq4dGKRXC5JRZ6Ppae/go-log/writer"
 	"gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
 	ipnspb "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns/pb"
@@ -348,7 +349,6 @@ func (x *Start) Execute(args []string) error {
 	}
 	// Iterate over our address and process them as needed
 	var (
-		onionTransport          *oniontp.OnionTransport
 		torDialer               proxy.Dialer
 		usingTor, usingClearnet bool
 		controlPort             int
@@ -392,29 +392,23 @@ func (x *Start) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
-	}
-	// If we're only using Tor set the proxy dialer
-	if usingTor && !usingClearnet {
-		log.Notice("Using Tor exclusively")
-		torDialer, err = onionTransport.TorDialer()
-		if err != nil {
-			log.Error("dailing tor network:", err)
-			return err
+		transportOptions := libp2p.ChainOptions(libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
+		if usingClearnet {
+			transportOptions = libp2p.ChainOptions(
+				transportOptions,
+				libp2p.Transport(ws.New),
+			)
+			transportOptions = libp2p.ChainOptions(
+				transportOptions,
+				libp2p.Transport(tcp.NewTCPTransport),
+			)
 		}
-		cfg.Swarm.DisableNatPortMap = true
+		libp2p.DefaultTransports = transportOptions
 	}
 
-	// Custom host option used if Tor is enabled
-	defaultHostOption := func(ctx context.Context, id peer.ID, ps pstore.Peerstore, options ...libp2p.Option) (p2phost.Host, error) {
-		pkey := ps.PrivKey(id)
-		if pkey == nil {
-			return nil, fmt.Errorf("missing private key for node ID: %s", id.Pretty())
-		}
-		options = append([]libp2p.Option{libp2p.Identity(pkey), libp2p.Peerstore(ps)}, options...)
-		if usingTor {
-			options = append(options, libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
-		}
-		return libp2p.New(ctx, options...)
+	if usingTor && !usingClearnet {
+		log.Notice("Using Tor exclusively")
+		cfg.Swarm.DisableNatPortMap = true
 	}
 
 	ncfg := &ipfscore.BuildCfg{
@@ -426,9 +420,6 @@ func (x *Start) Execute(args []string) error {
 		},
 	}
 
-	if onionTransport != nil {
-		ncfg.Host = defaultHostOption
-	}
 	nd, err := ipfscore.NewNode(cctx, ncfg)
 	if err != nil {
 		log.Error("create new ipfs node:", err)
@@ -444,6 +435,7 @@ func (x *Start) Execute(args []string) error {
 	ctx.ConstructNode = func() (*ipfscore.IpfsNode, error) {
 		return nd, nil
 	}
+	torDialer = oniontp.TorDialer
 
 	log.Info("Peer ID: ", nd.Identity.Pretty())
 	printSwarmAddrs(nd)

@@ -69,6 +69,8 @@ func IsValidOnionMultiAddr(a ma.Multiaddr) bool {
 	return true
 }
 
+var TorDialer proxy.Dialer
+
 // OnionTransport implements go-libp2p-transport's Transport interface
 type OnionTransport struct {
 	controlConn *bulb.Conn
@@ -109,12 +111,14 @@ func NewOnionTransport(controlNet, controlAddr, controlPass string, auth *proxy.
 		auth:        auth,
 		keysDir:     keysDir,
 		onlyOnion:   onlyOnion,
+		Upgrader:    upgrader,
 	}
 	keys, err := o.loadKeys()
 	if err != nil {
 		return nil, err
 	}
 	o.keys = keys
+	TorDialer, _ = o.controlConn.Dialer(o.auth)
 	return &o, nil
 }
 
@@ -128,17 +132,6 @@ func NewOnionTransportC(controlNet, controlAddr, controlPass string, auth *proxy
 	return func(upgrader *tptu.Upgrader) (tpt.Transport, error) {
 		return NewOnionTransport(controlNet, controlAddr, controlPass, auth, keysDir, upgrader, onlyOnion)
 	}
-}
-
-// Returns a proxy dialer gathered from the control interface.
-// This isn't needed for the IPFS transport but it provides
-// easy access to Tor for other functions.
-func (t *OnionTransport) TorDialer() (proxy.Dialer, error) {
-	dialer, err := t.controlConn.Dialer(t.auth)
-	if err != nil {
-		return nil, err
-	}
-	return dialer, nil
 }
 
 // loadKeys loads keys into our keys map from files in the keys directory
