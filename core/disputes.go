@@ -44,6 +44,9 @@ var ErrCloseFailureNoOutpoints = errors.New("unable to close case with missing o
 // ErrOpenFailureOrderExpired - tried disputing expired order err
 var ErrOpenFailureOrderExpired = errors.New("unable to open case because order is too old to dispute")
 
+// ErrVendorListingIsMissing - listing was missing from contract
+var ErrVendorListingIsMissing = errors.New("contract has no vendor listings attached")
+
 // OpenDispute - open a dispute
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
 	if !n.VerifyEscrowFundsAreDisputable(contract, records) {
@@ -91,6 +94,9 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 	isPurchase := n.IsMyPeerID(contract.BuyerOrder.BuyerID.PeerID)
 
 	if isPurchase {
+		if len(contract.VendorListings) < 1 {
+			return ErrVendorListingIsMissing
+		}
 		counterparty = contract.VendorListings[0].VendorID.PeerID
 		counterkey, err = libp2p.UnmarshalPublicKey(contract.VendorListings[0].VendorID.Pubkeys.Identity)
 		if err != nil {

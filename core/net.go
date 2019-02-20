@@ -118,11 +118,15 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		OfflineMessageWaitGroup.Done()
 	}()
 	go func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-		err := n.Pubsub.Publisher.Publish(ctx, ipfs.MessageTopicPrefix+pointer.Cid.String(), ciphertext)
-		if err != nil {
-			log.Error(err)
+		if n.Pubsub.Publisher == nil {
+			log.Error("no pubsub publisher configured for this node")
+		} else {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			err := n.Pubsub.Publisher.Publish(ctx, ipfs.MessageTopicPrefix+pointer.Cid.String(), ciphertext)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 		OfflineMessageWaitGroup.Done()
 	}()

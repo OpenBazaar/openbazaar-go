@@ -2,7 +2,14 @@ package core_test
 
 import (
 	"fmt"
+	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"os"
 	"testing"
+
+	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+
+	"github.com/OpenBazaar/openbazaar-go/core"
 
 	"github.com/btcsuite/btcutil"
 
@@ -18,13 +25,39 @@ import (
 	"github.com/OpenBazaar/wallet-interface/mocks"
 )
 
-func TestOpenBazaarDisputes_SignDispute(t *testing.T) {
-	node, err := test.NewNode()
+var node *core.OpenBazaarNode
+
+func TestMain(m *testing.M) {
+
+	// Setup
+	err := os.MkdirAll("./tmp/outbox", os.ModePerm)
 	if err != nil {
-		t.Error(err)
+		fmt.Println(err)
+		return
 	}
+
+	node, err = test.NewNode()
+	if err != nil {
+		return
+	}
+
+	storage := selfhosted.NewSelfHostedStorage("./tmp", node.IpfsNode, []peer.ID{}, func(peerID string, cids []cid.Cid) error { return nil })
+	node.MessageStorage = storage
+
+	retCode := m.Run()
+
+	// Teardown
+	os.RemoveAll("./tmp")
+
+	// call with result of m.Run()
+	os.Exit(retCode)
+
+}
+
+func TestOpenBazaarDisputes_SignDispute(t *testing.T) {
+
 	contract := new(pb.RicardianContract)
-	_, err = node.SignDispute(contract)
+	_, err := node.SignDispute(contract)
 	if err == nil {
 		t.Fail()
 	}
@@ -37,10 +70,6 @@ func TestOpenBazaarDisputes_SignDispute(t *testing.T) {
 }
 
 func TestOpenBazaarDisputes_VerifyEscrowFundsAreDisputable(t *testing.T) {
-	node, err := test.NewNode()
-	if err != nil {
-		t.Error(err)
-	}
 
 	// Test Invalid contract with no listings
 	contract := factory.NewDisputeableContract()
@@ -92,14 +121,36 @@ func TestOpenBazaarDisputes_VerifyEscrowFundsAreDisputable(t *testing.T) {
 
 	contract.BuyerOrder.Payment.Moderator = "QmfU2ELKbhTG5515rF18F6nSLKuySDK47YKDfHWxjsbT7v"
 	contract.BuyerOrder.BuyerID.PeerID = "QmfU2ELKbhTG5515rF18F6nSLKuySDK47YKDfHWxjsbT7x"
-	//contract.BuyerOrder.Payment.Coin = "TBTC"
 
+	// Test opening a dispute on a sale
 	err = node.OpenDispute("12345", contract, records, "TEST CLAIM")
 	if err != nil {
 		t.Error("Expired contract was able to be disputed:", err)
 	}
 
-	fmt.Println(node.Datastore.Sales().GetByOrderId("12345"))
+	// Ensure dispute got attached to the contract
+	disputedSaleContract, _, _, _, _, _, err := node.Datastore.Sales().GetByOrderId("12345")
+	if err != nil {
+		t.Error("Could not retrieve disputed sale", err)
+	}
+	if disputedSaleContract.Dispute == nil {
+		t.Error("Sale contract does not have a dispute attached")
+	}
+
+	// Test opening a dispute on a purchase
+	contract.BuyerOrder.BuyerID.PeerID = node.IpfsNode.Identity.Pretty()
+
+	err = node.OpenDispute("12345", contract, records, "TEST CLAIM")
+	if err != nil {
+		t.Error("Expired contract was able to be disputed:", err)
+	}
+	disputedPurchaseContract, _, _, _, _, _, err := node.Datastore.Purchases().GetByOrderId("12345")
+	if err != nil {
+		t.Error("Could not retrieve disputed purchase", err)
+	}
+	if disputedPurchaseContract.Dispute == nil {
+		t.Error("Purchase contract does not have a dispute attached")
+	}
 
 	// Expired test
 	records[0].Txid = "00000000922e2aa9e84a474350a3555f49f06061fd49df50a9352f156692a843"

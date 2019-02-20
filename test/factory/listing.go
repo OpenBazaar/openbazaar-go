@@ -1,13 +1,25 @@
 package factory
 
 import (
+	"encoding/base64"
+
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 func NewListing(slug string) *pb.Listing {
+	bitcoinKeyBytes, _ := base64.StdEncoding.DecodeString("AlQyeudfJAp4FZ3GGqOlXhWTTGzMi64G152s2eBHWJ4w")
+	identityKeyBytes, _ := base64.StdEncoding.DecodeString("CAESIGt1XyNvQvzi2ZGUyqWQuHX7lVXuIEXjjkXjve0bon7T")
 	return &pb.Listing{
-		Slug:               slug,
+		Slug: slug,
+		VendorID: &pb.ID{
+			PeerID: "QmcUDmZK8PsPYWw5FRHKNZFjszm2K6e68BQSTpnJYUsML7",
+			Handle: "TEST HANDLE",
+			Pubkeys: &pb.ID_Pubkeys{
+				Identity: identityKeyBytes,
+				Bitcoin:  bitcoinKeyBytes,
+			},
+		},
 		TermsAndConditions: "Sample Terms and Conditions",
 		RefundPolicy:       "Sample Refund policy",
 		Metadata: &pb.Listing_Metadata{
