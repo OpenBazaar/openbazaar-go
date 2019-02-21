@@ -154,10 +154,7 @@ func GetRecordOutpoints(records []*wallet.TransactionRecord) []*pb.Outpoint {
 }
 
 func (n *OpenBazaarNode) IsMyPeerID(peerID string) bool {
-	if n.IpfsNode.Identity.Pretty() == peerID {
-		return true
-	}
-	return false
+	return n.IpfsNode.Identity.Pretty() == peerID
 }
 
 func GetFreshDispute() (*pb.Dispute, error) {

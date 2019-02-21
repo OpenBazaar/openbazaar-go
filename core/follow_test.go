@@ -50,19 +50,27 @@ func TestOpenBazaarFollow_UpdateFollow(t *testing.T) {
 	followers = []repo.Follower{
 		{"QmTEST", []byte("bytes")},
 	}
-	follower_bytes, err := core.ConnectionsToBytes(followers)
+	followerBytes, err := core.ConnectionsToBytes(followers)
+	if err != nil {
+		t.Error(err)
+	}
+
 	test_bytes := []uint8{91, 10, 32, 32, 32, 32, 123, 10, 32, 32, 32, 32, 32, 32, 32, 32, 34, 112, 101, 101, 114, 73, 100, 34, 58, 32, 34, 81, 109, 84, 69, 83, 84, 34, 44, 10, 32, 32, 32, 32, 32, 32, 32, 32, 34, 112, 114, 111, 111, 102, 34, 58, 32, 34, 89, 110, 108, 48, 90, 88, 77, 61, 34, 10, 32, 32, 32, 32, 125, 10, 93}
-	if string(follower_bytes) != string(test_bytes) {
+	if string(followerBytes) != string(test_bytes) {
 		t.Fail()
 	}
 
 	following = []string{
 		"QmTEST",
 	}
-	following_bytes, err := core.ConnectionsToBytes(following)
+	followingBytes, err := core.ConnectionsToBytes(following)
+	if err != nil {
+		t.Error(err)
+	}
+
 	test_bytes = []uint8{91, 10, 32, 32, 32, 32, 34, 81, 109, 84, 69, 83, 84, 34, 10, 93}
-	if string(following_bytes) != string(test_bytes) {
-		fmt.Println(following_bytes)
+	if string(followingBytes) != string(test_bytes) {
+		fmt.Println(followingBytes)
 		t.Fail()
 	}
 }
