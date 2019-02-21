@@ -21,6 +21,7 @@ import (
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
 	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
 	"github.com/OpenBazaar/wallet-interface"
 	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
@@ -1016,27 +1017,55 @@ func quantityForItem(version uint32, item *pb.Order_Item) uint64 {
 }
 
 func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amount uint64) (uint64, error) {
+	const reserveCurrency = "BTC"
 	if NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) || "T"+NormalizeCurrencyCode(currencyCode) == NormalizeCurrencyCode(paymentCoin) {
 		return amount, nil
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(paymentCoin)
+	originValue, err := repo.NewCurrencyValueFromUint(amount, currencyCode)
 	if err != nil {
-		return 0, fmt.Errorf("currency %s not found in multiwallet", paymentCoin)
+		return 0, fmt.Errorf("parsing amount: %s", err.Error())
+	}
+
+	wal, err := n.Multiwallet.WalletForCurrencyCode(reserveCurrency)
+	if err != nil {
+		return 0, fmt.Errorf("%s wallet not found for exchange rates", reserveCurrency)
 	}
 
 	if wal.ExchangeRates() == nil {
 		return 0, ErrPriceCalculationRequiresExchangeRates
 	}
-	exchangeRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
+	reserveIntoOriginRate, err := wal.ExchangeRates().GetExchangeRate(currencyCode)
 	if err != nil {
 		return 0, err
 	}
+	originIntoReserveRate := 1 / reserveIntoOriginRate
+	reserveIntoResultRate, err := wal.ExchangeRates().GetExchangeRate(paymentCoin)
+	if err != nil {
+		// TODO: remove hack once ExchangeRates can be made aware of testnet currencies
+		if strings.HasPrefix(paymentCoin, "T") {
+			reserveIntoResultRate, err = wal.ExchangeRates().GetExchangeRate(strings.TrimPrefix(paymentCoin, "T"))
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			return 0, err
+		}
+	}
 
-	formatedAmount := float64(amount) / 100
-	btc := formatedAmount / exchangeRate
-	satoshis := btc * float64(wal.ExchangeRates().UnitsPerCoin())
-	return uint64(satoshis), nil
+	reserveValue, err := originValue.ConvertTo(reserveCurrency, originIntoReserveRate)
+	if err != nil {
+		return 0, fmt.Errorf("converting to reserve: %s", err.Error())
+	}
+	resultValue, err := reserveValue.ConvertTo(paymentCoin, reserveIntoResultRate)
+	if err != nil {
+		return 0, fmt.Errorf("converting from reserve: %s", err.Error())
+	}
+	result, err := resultValue.AmountUint64()
+	if err != nil {
+		return 0, fmt.Errorf("unable to represent (%s) as uint64: %s", resultValue.String(), err.Error())
+	}
+	return result, nil
 }
 
 func (n *OpenBazaarNode) getMarketPriceInSatoshis(pricingCurrency, currencyCode string, amount uint64) (uint64, error) {
