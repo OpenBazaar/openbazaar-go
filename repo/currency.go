@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"runtime/debug"
-	"strings"
+	"strconv"
 )
 
 const (
@@ -14,57 +13,35 @@ const (
 )
 
 var (
-	ErrCurrencyCodeLengthInvalid     = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
-	ErrCurrencyCodeTestSymbolInvalid = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
-	ErrInsufficientPrecision         = errors.New("unable to accurately represent value as int64")
-	ErrNegativeRate                  = errors.New("convertion rate must be greater than zero")
+	ErrInsufficientPrecision = errors.New("unable to accurately represent value as int64")
+	ErrNegativeRate          = errors.New("convertion rate must be greater than zero")
 )
 
-type (
-	CurrencyCode  string
-	CurrencyValue struct {
-		Amount *big.Int
-	}
-)
-
-func NewCurrencyCode(c string) (*CurrencyCode, error) {
-	if len(c) < CurrencyCodeValidMinimumLength || len(c) > CurrencyCodeValidMaximumLength {
-		return nil, ErrCurrencyCodeLengthInvalid
-	}
-	if len(c) == 4 && strings.Index(strings.ToLower(c), "t") != 0 {
-		return nil, ErrCurrencyCodeTestSymbolInvalid
-	}
-	var cc = CurrencyCode(strings.ToUpper(c))
-	return &cc, nil
+type CurrencyValue struct {
+	Amount   *big.Int
+	Currency *CurrencyDefinition
 }
 
-func (c *CurrencyCode) String() string {
-	if c == nil {
-		log.Errorf("returning nil CurrencyCode, please report this bug")
-		debug.PrintStack()
-		return "nil"
-	}
-	return string(*c)
-}
-
+// NewCurrencyValueFromInt is a convenience function which converts an int64
+// into a string and passes the arguments to NewCurrencyValue
 func NewCurrencyValueFromInt(amount int64, currencyCode string) (*CurrencyValue, error) {
-	var i = new(big.Int)
-	i.SetInt64(amount)
-	return &CurrencyValue{Amount: i}, nil
+	return NewCurrencyValue(strconv.FormatInt(amount, 10), currencyCode)
 }
 
+// NewCurrencyValueFromUint is a convenience function which converts an int64
+// into a string and passes the arguments to NewCurrencyValue
 func NewCurrencyValueFromUint(amount uint64, currencyCode string) (*CurrencyValue, error) {
-	var i = new(big.Int)
-	i.SetUint64(amount)
-	return &CurrencyValue{Amount: i}, nil
+	return NewCurrencyValue(strconv.FormatUint(amount, 10), currencyCode)
 }
 
+// NewCurrencyValue accepts string amounts and currency codes, and creates
+// a valid CurrencyValue
 func NewCurrencyValue(amount, currencyCode string) (*CurrencyValue, error) {
 	var (
 		i  = new(big.Int)
 		ok bool
 	)
-	if i, ok = i.SetString(amount, 0); !ok {
+	if _, ok = i.SetString(amount, 0); !ok {
 		return nil, fmt.Errorf("invalid amount")
 	}
 	return &CurrencyValue{Amount: i}, nil
