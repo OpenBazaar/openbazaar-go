@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
+	"github.com/OpenBazaar/openbazaar-go/test"
 
 	"github.com/OpenBazaar/openbazaar-go/core"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/test/factory"
 
-	"github.com/OpenBazaar/openbazaar-go/test"
 	"github.com/OpenBazaar/wallet-interface/mocks"
 )
 
@@ -29,7 +29,17 @@ var node *core.OpenBazaarNode
 
 func TestMain(m *testing.M) {
 
-	// Setup
+	setUp()
+	retCode := m.Run()
+	tearDown()
+
+	// call with result of m.Run()
+	os.Exit(retCode)
+
+}
+
+func setUp() {
+	// Setup offline messaging outbox
 	err := os.MkdirAll("./tmp/outbox", os.ModePerm)
 	if err != nil {
 		fmt.Println(err)
@@ -43,15 +53,10 @@ func TestMain(m *testing.M) {
 
 	storage := selfhosted.NewSelfHostedStorage("./tmp", node.IpfsNode, []peer.ID{}, func(peerID string, cids []cid.Cid) error { return nil })
 	node.MessageStorage = storage
+}
 
-	retCode := m.Run()
-
-	// Teardown
+func tearDown() {
 	os.RemoveAll("./tmp")
-
-	// call with result of m.Run()
-	os.Exit(retCode)
-
 }
 
 func TestOpenBazaarDisputes_SignDispute(t *testing.T) {
@@ -97,7 +102,7 @@ func TestOpenBazaarDisputes_VerifyEscrowFundsAreDisputable(t *testing.T) {
 
 	contract.BuyerOrder.Payment.Coin = "XXX"
 
-	mockWallet := new(mocks.Wallet)
+	mockWallet := &mocks.Wallet{}
 	node.Multiwallet[100000] = mockWallet
 
 	mockWallet.On("CurrencyCode").Return("XXX")
@@ -166,4 +171,25 @@ func TestOpenBazaarDisputes_VerifyEscrowFundsAreDisputable(t *testing.T) {
 		t.Error("Expired contract was able to be disputed")
 	}
 
+}
+
+func TestOpenBazaarDisputes_VerifySignatureOnDisputeOpen(t *testing.T) {
+	contract := factory.NewDisputeableContract()
+	peerID := contract.BuyerOrder.BuyerID.PeerID
+
+	// Set up transaction records
+	transactionRecord := new(wallet.TransactionRecord)
+	records := []*wallet.TransactionRecord{transactionRecord}
+
+	records[0].Txid = "00000000922e2aa9e84a474350a3555f49f06061fd49df50a9352f156692a842"
+	//disputablehash, _ := chainhash.NewHashFromStr(records[0].Txid)
+
+	err := node.OpenDispute("12345", contract, records, "TEST CLAIM")
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(contract.Dispute)
+
+	node.VerifySignatureOnDisputeOpen(contract, peerID)
 }
