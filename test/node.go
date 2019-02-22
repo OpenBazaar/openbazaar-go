@@ -55,6 +55,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		return nil, err
 	}
 
+	ipfsNode.PrivateKey = sk
 	ipfsNode.Identity = id
 
 	// Create test wallet
