@@ -147,12 +147,3 @@ func TestCurrencyDictionaryValid(t *testing.T) {
 		t.Fatalf("expected error map to match, but did not")
 	}
 }
-
-func TestMainnetCurrencyDictionaryIsValid(t *testing.T) {
-	_, err := repo.LoadMainnetDictionary()
-	if err != nil {
-		mappedErr := map[string]error(err.(repo.CurrencyDictionaryProcessingError))
-		t.Logf("invalid definitions: %s", mappedErr)
-		t.Fatalf("mainnet currency definitions are invalid: %s", err.Error())
-	}
-}

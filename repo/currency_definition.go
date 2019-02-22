@@ -218,10 +218,11 @@ func (c CurrencyDictionaryProcessingError) Error() string {
 	return fmt.Sprintf("dictionary contains %d invalid definitions", len(c))
 }
 
-// LoadMainnetDictionary returns an CurrencyDictionary which accesses all predefined
-// mainnet CurrencyDefinitions
-func LoadMainnetDictionary() (CurrencyDictionary, error) {
-	return NewCurrencyDictionary(mainnetCurrencyDefinitions)
+// LoadCurrencyDefinitions returns the mainnet CurrencyDictionary singleton which
+// references all pre-defined mainnet CurrencyDefinitions
+func LoadCurrencyDefinitions() CurrencyDictionary {
+	dict, _ := NewCurrencyDictionary(mainnetCurrencyDefinitions)
+	return dict
 }
 
 // NewCurrencyDictionary returns a CurrencyDictionary for managing CurrencyDefinitions
