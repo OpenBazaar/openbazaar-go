@@ -47,10 +47,20 @@ var ErrOpenFailureOrderExpired = errors.New("unable to open case because order i
 // ErrVendorListingIsMissing - listing was missing from contract
 var ErrVendorListingIsMissing = errors.New("contract has no vendor listings attached")
 
+// ErrNoModerator - contract is missing a moderator
+var ErrNoModerator = errors.New("contract has no moderator specified")
+
+// ErrNoDispute - contract is missing the dispute
+var ErrNoDispute = errors.New("contract has no dispute information")
+
 // OpenDispute - open a dispute
 func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContract, records []*wallet.TransactionRecord, claim string) error {
 	if !n.VerifyEscrowFundsAreDisputable(contract, records) {
 		return ErrOpenFailureOrderExpired
+	}
+
+	if contract.BuyerOrder.Payment.Moderator == "" {
+		return ErrNoModerator
 	}
 
 	dispute, err := GetFreshDispute()
@@ -172,6 +182,7 @@ func GetFreshDispute() (*pb.Dispute, error) {
 
 func (n *OpenBazaarNode) VerifyEscrowFundsAreDisputable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
 	if len(contract.VendorListings) < 1 {
+		log.Error("There are no vendor listings in the contract")
 		return false
 	}
 
@@ -207,9 +218,6 @@ func (n *OpenBazaarNode) SignDispute(contract *pb.RicardianContract) (*pb.Ricard
 	}
 	s := new(pb.Signature)
 	s.Section = pb.Signature_DISPUTE
-	if err != nil {
-		return contract, err
-	}
 	guidSig, err := n.IpfsNode.PrivateKey.Sign(serializedDispute)
 	if err != nil {
 		return contract, err
@@ -223,13 +231,21 @@ func (n *OpenBazaarNode) SignDispute(contract *pb.RicardianContract) (*pb.Ricard
 func (n *OpenBazaarNode) VerifySignatureOnDisputeOpen(contract *pb.RicardianContract, peerID string) error {
 	var pubkey []byte
 	deser := new(pb.RicardianContract)
+
+	if contract.Dispute == nil {
+		log.Error("Contract has no dispute attached")
+		return ErrNoDispute
+	}
+
 	err := proto.Unmarshal(contract.Dispute.SerializedContract, deser)
 	if err != nil {
+		log.Error("Could not unmarshal the contract")
 		return err
 	}
-	if len(deser.VendorListings) == 0 || deser.BuyerOrder == nil {
+	if len(deser.VendorListings) == 0 || deser.BuyerOrder.BuyerID == nil {
 		return errors.New("invalid serialized contract")
 	}
+
 	if peerID == deser.BuyerOrder.BuyerID.PeerID {
 		pubkey = deser.BuyerOrder.BuyerID.Pubkeys.Identity
 	} else if peerID == deser.VendorListings[0].VendorID.PeerID {
@@ -249,7 +265,7 @@ func (n *OpenBazaarNode) VerifySignatureOnDisputeOpen(contract *pb.RicardianCont
 		case noSigError:
 			return errors.New("contract does not contain a signature for the dispute")
 		case invalidSigError:
-			return errors.New("guid signature on contact failed to verify")
+			return errors.New("guid signature on contract failed to verify")
 		case matchKeyError:
 			return errors.New("public key in dispute does not match reported ID")
 		default:
