@@ -9,27 +9,33 @@ import (
 	"syscall"
 	"time"
 
-	bserv "github.com/ipfs/go-ipfs/blockservice"
+	dag "gx/ipfs/QmSei8kFMfqdJq7Q68d2LMnHbTWKKg2daA29ezUYFAUNgc/go-merkledag"
+	resolver "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path/resolver"
+	bserv "gx/ipfs/QmWfhv1D18DRSiSm73r4QGcByspzPtxxRTcmHW3axFXZo8/go-blockservice"
+	uio "gx/ipfs/QmfB3oNXGGq9S4B2a9YeCajoATms3Zw2VvDm8fK7VeLSV8/go-unixfs/io"
+
 	filestore "github.com/ipfs/go-ipfs/filestore"
-	dag "github.com/ipfs/go-ipfs/merkledag"
-	resolver "github.com/ipfs/go-ipfs/path/resolver"
 	pin "github.com/ipfs/go-ipfs/pin"
 	repo "github.com/ipfs/go-ipfs/repo"
-	cfg "github.com/ipfs/go-ipfs/repo/config"
+	cidv0v1 "github.com/ipfs/go-ipfs/thirdparty/cidv0v1"
 	"github.com/ipfs/go-ipfs/thirdparty/verifbs"
-	uio "github.com/ipfs/go-ipfs/unixfs/io"
 
-	"github.com/ipfs/go-ipfs/namesys"
-	metrics "gx/ipfs/QmRg1gKTHzc3CZXSKzem8aR4E3TubFhbgXwfVuWnSK5CC5/go-metrics-interface"
+	cfg "gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+	ci "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	goprocessctx "gx/ipfs/QmSF8fPo3jgVBAy8fpdjjYqgG87dkJgUprRBHRd2tmfgpP/goprocess/context"
-	offline "gx/ipfs/QmWM5HhdG5ZQNyHQ5XhMdGmV9CvLpFynQfGpTxN2MEM7Lc/go-ipfs-exchange-offline"
-	ds "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore"
-	retry "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore/retrystore"
-	dsync "gx/ipfs/QmXRKBQA4wXP7xWbFiZsR1GP4HV6wMDQ1aWFxZZ4uBcPX9/go-datastore/sync"
-	pstore "gx/ipfs/QmXauCuJzmzapetmC6W4TuDJLL1yFFrVzSHoWv8YdbmnxH/go-libp2p-peerstore"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	bstore "gx/ipfs/QmaG4DZ4JaqEfvPWt5nPPgoTzhc1tr1T3f4Nu9Jpdm8ymY/go-ipfs-blockstore"
-	ci "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	offline "gx/ipfs/QmT6dHGp3UYd3vUMpy7rzX2CXQv7HLcj42Vtq8qwwjgASb/go-ipfs-exchange-offline"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	pstore "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+	pstoremem "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore/pstoremem"
+	libp2p "gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
+	record "gx/ipfs/Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL/go-libp2p-record"
+	ipns "gx/ipfs/QmaRFtZhVAwXBk4Z3zEsvjScH9fjsDZmhXfa1Gm8eMb9cg/go-ipns"
+	ds "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+	retry "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore/retrystore"
+	dsync "gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore/sync"
+	bstore "gx/ipfs/QmcDDgAXDbpDUpadCJKLr49KYR4HuL7T8Z1dZTHt6ixsoR/go-ipfs-blockstore"
+	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
+	metrics "gx/ipfs/QmekzFM3hPZjTjUFGTABdQkEnQ3PTiMstY198PwSFr5w1Q/go-metrics-interface"
 )
 
 type BuildCfg struct {
@@ -43,13 +49,16 @@ type BuildCfg struct {
 	// that will improve performance in long run
 	Permanent bool
 
+	// DisableEncryptedConnections disables connection encryption *entirely*.
+	// DO NOT SET THIS UNLESS YOU'RE TESTING.
+	DisableEncryptedConnections bool
+
 	// If NilRepo is set, a repo backed by a nil datastore will be constructed
 	NilRepo bool
 
-	Routing     RoutingOption
-	Host        HostOption
-	Repo        repo.Repo
-	DNSResolver namesys.Resolver
+	Routing RoutingOption
+	Host    HostOption
+	Repo    repo.Repo
 }
 
 func (cfg *BuildCfg) getOpt(key string) bool {
@@ -128,14 +137,21 @@ func NewNode(ctx context.Context, cfg *BuildCfg) (*IpfsNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	ctx = metrics.CtxScope(ctx, "ipfs")
 
 	n := &IpfsNode{
 		mode:      offlineMode,
 		Repo:      cfg.Repo,
 		ctx:       ctx,
-		Peerstore: pstore.NewPeerstore(),
+		Peerstore: pstoremem.NewPeerstore(),
 	}
+
+	n.RecordValidator = record.NamespacedValidator{
+		"pk":   record.PublicKeyValidator{},
+		"ipns": ipns.Validator{KeyBook: n.Peerstore},
+	}
+
 	if cfg.Online {
 		n.mode = onlineMode
 	}
@@ -191,16 +207,22 @@ func setupNode(ctx context.Context, n *IpfsNode, cfg *BuildCfg) error {
 		opts.HasBloomFilterSize = 0
 	}
 
-	cbs, err := bstore.CachedBlockstore(ctx, bs, opts)
-	if err != nil {
-		return err
+	if !cfg.NilRepo {
+		bs, err = bstore.CachedBlockstore(ctx, bs, opts)
+		if err != nil {
+			return err
+		}
 	}
 
-	n.BaseBlocks = cbs
-	n.GCLocker = bstore.NewGCLocker()
-	n.Blockstore = bstore.NewGCBlockstore(cbs, n.GCLocker)
+	bs = bstore.NewIdStore(bs)
 
-	if conf.Experimental.FilestoreEnabled {
+	bs = cidv0v1.NewBlockstore(bs)
+
+	n.BaseBlocks = bs
+	n.GCLocker = bstore.NewGCLocker()
+	n.Blockstore = bstore.NewGCBlockstore(bs, n.GCLocker)
+
+	if conf.Experimental.FilestoreEnabled || conf.Experimental.UrlstoreEnabled {
 		// hash security
 		n.Filestore = filestore.NewFilestore(bs, n.Repo.FileManager())
 		n.Blockstore = bstore.NewGCBlockstore(n.Filestore, n.GCLocker)
@@ -216,9 +238,19 @@ func setupNode(ctx context.Context, n *IpfsNode, cfg *BuildCfg) error {
 		bs.HashOnRead(true)
 	}
 
+	hostOption := cfg.Host
+	if cfg.DisableEncryptedConnections {
+		innerHostOption := hostOption
+		hostOption = func(ctx context.Context, id peer.ID, ps pstore.Peerstore, options ...libp2p.Option) (p2phost.Host, error) {
+			return innerHostOption(ctx, id, ps, append(options, libp2p.NoSecurity)...)
+		}
+		log.Warningf(`Your IPFS node has been configured to run WITHOUT ENCRYPTED CONNECTIONS.
+		You will not be able to connect to any nodes configured to use encrypted connections`)
+	}
+
 	if cfg.Online {
 		do := setupDiscoveryOption(rcfg.Discovery)
-		if err := n.startOnlineServices(ctx, cfg.Routing, cfg.Host, do, cfg.getOpt("pubsub"), cfg.getOpt("ipnsps"), cfg.getOpt("mplex"), cfg.DNSResolver); err != nil {
+		if err := n.startOnlineServices(ctx, cfg.Routing, hostOption, do, cfg.getOpt("pubsub"), cfg.getOpt("ipnsps"), cfg.getOpt("mplex")); err != nil {
 			return err
 		}
 	} else {

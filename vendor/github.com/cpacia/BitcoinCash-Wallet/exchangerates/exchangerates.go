@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/http"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
+
+	"golang.org/x/net/proxy"
 )
 
 type ExchangeRateProvider struct {

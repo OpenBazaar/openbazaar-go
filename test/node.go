@@ -1,8 +1,11 @@
 package test
 
 import (
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"context"
+	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
+	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"gx/ipfs/QmUDTcnDp2WssbmiDLC6aYurUeyt7QeRakHUQMxA2mZ5iB/go-libp2p"
 
 	"github.com/OpenBazaar/multiwallet"
 	"github.com/OpenBazaar/multiwallet/config"
@@ -77,6 +80,15 @@ func NewNode() (*core.OpenBazaarNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	host, err := libp2p.New(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	routing, err := dht.New(context.Background(), host)
+	if err != nil {
+		return nil, err
+	}
+	close(routing.BootstrapChan)
 
 	// Put it all together in an OpenBazaarNode
 	node := &core.OpenBazaarNode{
@@ -86,6 +98,7 @@ func NewNode() (*core.OpenBazaarNode, error) {
 		Multiwallet:      mw,
 		BanManager:       net.NewBanManager([]peer.ID{}),
 		MasterPrivateKey: mPrivKey,
+		DHT:              routing,
 	}
 
 	node.Service = service.New(node, repository.DB)

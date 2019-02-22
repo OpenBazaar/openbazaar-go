@@ -2,13 +2,14 @@ package zcashd
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"time"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
-	"io/ioutil"
-	"net/http"
-	"time"
 )
 
 type NotificationListener struct {

@@ -3,6 +3,7 @@ package bchutil
 import (
 	"errors"
 	"fmt"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
