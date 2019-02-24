@@ -1,11 +1,16 @@
 package core
 
 import (
+	"encoding/hex"
 	"errors"
 	"strconv"
+	"time"
+
+	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
+	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -161,6 +166,9 @@ func ContractHasBuyerOrder(contract *pb.RicardianContract) bool {
 }
 
 func ContractIsMissingVendorID(contract *pb.RicardianContract) bool {
+	if len(contract.VendorListings) == 0 {
+		return true
+	}
 	return contract.VendorListings[0].VendorID == nil || contract.VendorListings[0].VendorID.Pubkeys == nil
 }
 
@@ -214,6 +222,49 @@ func CheckListingSignatures(contract *pb.RicardianContract) []string {
 			if i == len(listingSigs)-1 {
 				break
 			}
+		}
+	}
+	return validationErrors
+}
+
+func VerifyRedeemScript(contract *pb.RicardianContract, wal wallet.Wallet, masterECPubkey *btcec.PublicKey) []string {
+	var validationErrors []string
+
+	if contract.BuyerOrder.Payment != nil {
+		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
+			return validationErrors
+		}
+
+		moderatorKey, err := wal.ChildKey(masterECPubkey.SerializeCompressed(), chaincode, false)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
+			return validationErrors
+		}
+		buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
+			return validationErrors
+		}
+		vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
+			return validationErrors
+		}
+		timeout, _ := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
+		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
+		if err != nil {
+			validationErrors = append(validationErrors, "Error generating multisig script")
+			return validationErrors
+		}
+
+		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() {
+			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
+		}
+
+		if hex.EncodeToString(redeemScript) != contract.BuyerOrder.Payment.RedeemScript {
+			validationErrors = append(validationErrors, "The calculated redeem script doesn't match the redeem script in the order")
 		}
 	}
 	return validationErrors
