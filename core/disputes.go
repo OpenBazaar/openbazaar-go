@@ -7,7 +7,6 @@ import (
 	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 
-	"strconv"
 	"sync"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
-	hd "github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
@@ -901,52 +899,22 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 		validationErrors = append(validationErrors, "The vendor's bitcoin signature which covers his guid is invalid. This could be an attempt to forge the vendor's identity.")
 	}
 
-	// Verify the redeem script matches all the bitcoin keys
-	if contract.BuyerOrder.Payment != nil {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
-		if err != nil {
-			validationErrors = append(validationErrors, "Contract uses a coin not found in wallet")
-			return validationErrors
-		}
-		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
-		if err != nil {
-			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
-			return validationErrors
-		}
-		mECKey, err := n.MasterPrivateKey.ECPubKey()
-		if err != nil {
-			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
-			return validationErrors
-		}
-		moderatorKey, err := wal.ChildKey(mECKey.SerializeCompressed(), chaincode, false)
-		if err != nil {
-			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
-			return validationErrors
-		}
-		buyerKey, err := wal.ChildKey(contract.BuyerOrder.BuyerID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
-			return validationErrors
-		}
-		vendorKey, err := wal.ChildKey(contract.VendorListings[0].VendorID.Pubkeys.Bitcoin, chaincode, false)
-		if err != nil {
-			validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
-			return validationErrors
-		}
-		timeout, _ := time.ParseDuration(strconv.Itoa(int(contract.VendorListings[0].Metadata.EscrowTimeoutHours)) + "h")
-		addr, redeemScript, err := wal.GenerateMultisigScript([]hd.ExtendedKey{*buyerKey, *vendorKey, *moderatorKey}, 2, timeout, vendorKey)
-		if err != nil {
-			validationErrors = append(validationErrors, "Error generating multisig script")
-			return validationErrors
-		}
+	// Verify the redeem script matches all the Bitcoin keys
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	if err != nil {
+		validationErrors = append(validationErrors, "Contract uses a coin not found in wallet")
+		return validationErrors
+	}
 
-		if contract.BuyerOrder.Payment.Address != addr.EncodeAddress() {
-			validationErrors = append(validationErrors, "The calculated bitcoin address doesn't match the address in the order")
-		}
+	masterECPubkey, err := n.MasterPrivateKey.ECPubKey()
+	if err != nil {
+		validationErrors = append(validationErrors, "Error validating bitcoin address and redeem script")
+		return validationErrors
+	}
 
-		if hex.EncodeToString(redeemScript) != contract.BuyerOrder.Payment.RedeemScript {
-			validationErrors = append(validationErrors, "The calculated redeem script doesn't match the redeem script in the order")
-		}
+	redeemScriptErrors := VerifyRedeemScript(contract, wal, masterECPubkey)
+	if len(redeemScriptErrors) > 0 {
+		validationErrors = append(validationErrors, redeemScriptErrors...)
 	}
 
 	return validationErrors
