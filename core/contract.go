@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"strconv"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
@@ -70,6 +71,10 @@ func GetBuyerHandle(contract *pb.RicardianContract) string {
 	return contract.BuyerOrder.BuyerID.Handle
 }
 
+func GetBuyerPubkey(contract *pb.RicardianContract) []byte {
+	return contract.BuyerOrder.BuyerID.Pubkeys.Identity
+}
+
 func GetRole(contract *pb.RicardianContract, peerID string) string {
 	if contract.BuyerOrder.Payment.Moderator == peerID {
 		return "moderator"
@@ -87,6 +92,10 @@ func GetVendor(contract *pb.RicardianContract) string {
 
 func GetVendorHandle(contract *pb.RicardianContract) string {
 	return contract.VendorListings[0].VendorID.Handle
+}
+
+func GetVendorPubkey(contract *pb.RicardianContract) []byte {
+	return contract.VendorListings[0].VendorID.Pubkeys.Identity
 }
 
 func IsOrderStateDisputableForVendor(orderState pb.OrderState) bool {
@@ -130,4 +139,139 @@ func GetDisputeUpdateMessage(contract *pb.RicardianContract, orderID string, pay
 	update.Outpoints = outpoints
 
 	return update, nil
+}
+
+func GetListingSignatures(contract *pb.RicardianContract) []*pb.Signature {
+	var listingSigs []*pb.Signature
+	for _, sig := range contract.Signatures {
+		if sig.Section == pb.Signature_LISTING {
+			listingSigs = append(listingSigs, sig)
+		}
+	}
+	return listingSigs
+}
+
+func HasListings(contract *pb.RicardianContract) bool {
+	// Contract should have a listing and order to make it to this point
+	return len(contract.VendorListings) > 0
+}
+
+func ContractHasBuyerOrder(contract *pb.RicardianContract) bool {
+	return contract.BuyerOrder != nil
+}
+
+func ContractIsMissingVendorID(contract *pb.RicardianContract) bool {
+	return contract.VendorListings[0].VendorID == nil || contract.VendorListings[0].VendorID.Pubkeys == nil
+}
+
+func ContractIsMissingBuyerID(contract *pb.RicardianContract) bool {
+	return contract.BuyerOrder.BuyerID == nil || contract.BuyerOrder.BuyerID.Pubkeys == nil
+}
+
+func ContractIsMissingPayment(contract *pb.RicardianContract) bool {
+	return contract.BuyerOrder.Payment == nil
+}
+
+func GetUnmatchedListingHashes(contract *pb.RicardianContract) []string {
+	var listingHashes []string
+	for _, item := range contract.BuyerOrder.Items {
+		listingHashes = append(listingHashes, item.ListingHash)
+	}
+	for _, listing := range contract.VendorListings {
+		ser, err := proto.Marshal(listing)
+		if err != nil {
+			continue
+		}
+		listingMH, err := EncodeCID(ser)
+		if err != nil {
+			continue
+		}
+		for i, l := range listingHashes {
+			if l == listingMH.String() {
+				// Delete from listingHashes
+				listingHashes = append(listingHashes[:i], listingHashes[i+1:]...)
+				break
+			}
+		}
+	}
+	return listingHashes
+}
+
+func CheckListingSignatures(contract *pb.RicardianContract) []string {
+	var validationErrors []string
+	listingSigs := GetListingSignatures(contract)
+	vendorPubkey := GetVendorPubkey(contract)
+	vendorID := GetVendor(contract)
+
+	if len(listingSigs) < len(contract.VendorListings) {
+		return []string{"Not all listings are signed by the vendor"}
+	} else {
+		// Verify the listing signatures only if there are enough signatures to validate
+		for i, listing := range contract.VendorListings {
+			if err := verifyMessageSignature(listing, vendorPubkey, []*pb.Signature{listingSigs[i]}, pb.Signature_LISTING, vendorID); err != nil {
+				validationErrors = append(validationErrors, "Invalid vendor signature on listing "+strconv.Itoa(i)+err.Error())
+			}
+			if i == len(listingSigs)-1 {
+				break
+			}
+		}
+	}
+	return validationErrors
+}
+
+func ValidBuyerOrderSignature(contract *pb.RicardianContract) bool {
+	buyerPubkey := GetBuyerPubkey(contract)
+	buyerGUID := GetBuyer(contract)
+	err := verifyMessageSignature(contract.BuyerOrder, buyerPubkey, contract.Signatures, pb.Signature_ORDER, buyerGUID)
+	if err != nil {
+		log.Error(err)
+		return false
+	}
+	return true
+}
+
+func ValidOrderConfirmationSignature(contract *pb.RicardianContract) bool {
+	vendorPubkey := GetVendorPubkey(contract)
+	vendorGUID := GetVendor(contract)
+	if contract.VendorOrderConfirmation != nil {
+		err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGUID)
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func GetFulfillmentSignatures(contract *pb.RicardianContract) []*pb.Signature {
+	var fulfillmentSigs []*pb.Signature
+	for _, sig := range contract.Signatures {
+		if sig.Section == pb.Signature_ORDER_FULFILLMENT {
+			fulfillmentSigs = append(fulfillmentSigs, sig)
+		}
+	}
+	return fulfillmentSigs
+}
+
+func GetFulfillments(contract *pb.RicardianContract) []*pb.OrderFulfillment {
+	return contract.VendorOrderFulfillment
+}
+
+func CheckFulfillmentSignatures(contract *pb.RicardianContract) []string {
+	var validationErrors []string
+
+	vendorPubkey := GetVendorPubkey(contract)
+	vendorGUID := GetVendor(contract)
+	fulfillmentSigs := GetFulfillmentSignatures(contract)
+
+	for i, f := range contract.VendorOrderFulfillment {
+		if err := verifyMessageSignature(f, vendorPubkey, []*pb.Signature{fulfillmentSigs[i]}, pb.Signature_ORDER_FULFILLMENT, vendorGUID); err != nil {
+			validationErrors = append(validationErrors, "Invalid vendor signature on fulfilment "+strconv.Itoa(i))
+		}
+		if i == len(fulfillmentSigs)-1 {
+			break
+		}
+	}
+	return validationErrors
 }

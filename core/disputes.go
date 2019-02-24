@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-
 	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 
@@ -275,25 +274,111 @@ func (n *OpenBazaarNode) VerifySignatureOnDisputeOpen(contract *pb.RicardianCont
 	return nil
 }
 
+func (n OpenBazaarNode) UpdateDisputeCase(orderID string, state pb.OrderState, openedByBuyer bool, dispute *pb.Dispute, contract *pb.RicardianContract, errors []string) error {
+	err := n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, false, dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
+	if err != nil {
+		return err
+	}
+
+	if openedByBuyer {
+		err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, errors, dispute.PayoutAddress, dispute.Outpoints)
+		if err != nil {
+			return err
+		}
+	} else {
+		err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, errors, dispute.PayoutAddress, dispute.Outpoints)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (n OpenBazaarNode) GetMatchingSaleForDispute(orderID string) (*pb.RicardianContract, pb.OrderState, []*wallet.TransactionRecord, error) {
+	// Load out version of the contract from the db
+	contract, orderState, _, txRecords, _, _, err := n.Datastore.Sales().GetByOrderId(orderID)
+	if err != nil {
+		log.Error("cannot find a matching sale for this dispute")
+		return nil, 0, nil, net.OutOfOrderMessage
+	}
+	return contract, orderState, txRecords, err
+}
+
+func (n OpenBazaarNode) GetMatchingPurchaseForDispute(orderID string) (*pb.RicardianContract, pb.OrderState, []*wallet.TransactionRecord, error) {
+	contract, orderState, _, txRecords, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+	if err != nil {
+		log.Error("cannot find a matching purchase for this dispute")
+		return nil, 0, nil, net.OutOfOrderMessage
+	}
+	return contract, orderState, txRecords, err
+}
+
+func (n OpenBazaarNode) UpdateDisputeInDatabase(localContract *pb.RicardianContract, serializedContract *pb.RicardianContract, orderID string) error {
+	// Append the dispute and signature
+	localContract.Dispute = serializedContract.Dispute
+	for _, sig := range serializedContract.Signatures {
+		if sig.Section == pb.Signature_DISPUTE {
+			localContract.Signatures = append(localContract.Signatures, sig)
+		}
+	}
+
+	orderType := GetContractOrderType(localContract, n.IpfsNode.Identity.Pretty())
+
+	// Save it back to the db with the new state
+	if orderType == "sale" {
+		err := n.Datastore.Sales().Put(orderID, *localContract, pb.OrderState_DISPUTED, false)
+		if err != nil {
+			return err
+		}
+	} else if orderType == "purchase" {
+		err := n.Datastore.Purchases().Put(orderID, *localContract, pb.OrderState_DISPUTED, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) SendDisputeNotification(orderID string, thumbs map[string]string, disputerID string, disputerHandle string, disputeeID string, disputeeHandle string, buyer string) {
+	notif := repo.DisputeOpenNotification{
+		ID:             repo.NewNotificationID(),
+		Type:           "disputeOpen",
+		OrderId:        orderID,
+		Thumbnail:      repo.Thumbnail{Tiny: thumbs["tiny"], Small: thumbs["small"]},
+		DisputerID:     disputerID,
+		DisputerHandle: disputerHandle,
+		DisputeeID:     disputeeID,
+		DisputeeHandle: disputeeHandle,
+		Buyer:          buyer,
+	}
+	n.Broadcast <- notif
+	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+}
+
 // ProcessDisputeOpen - process an open dispute
-func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID string) error {
+func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, openerPeerID string) error {
 	DisputeWg.Add(1)
 	defer DisputeWg.Done()
+
+	myPeerID := n.IpfsNode.Identity.Pretty()
 
 	if rc.Dispute == nil {
 		return errors.New("dispute message is nil")
 	}
 
-	// Deserialize contract
-	contract := new(pb.RicardianContract)
-	err := proto.Unmarshal(rc.Dispute.SerializedContract, contract)
+	contract, err := GetDeserializedContract(rc.Dispute.SerializedContract)
 	if err != nil {
 		return err
 	}
-	if len(contract.VendorListings) == 0 || contract.BuyerOrder == nil || contract.BuyerOrder.Payment == nil {
-		return errors.New("serialized contract is malformatted")
+
+	err = CheckContractFormatting(contract)
+	if err != nil {
+		return err
 	}
 
+	// Calculate the order ID multihash
 	orderID, err := n.CalcOrderID(contract.BuyerOrder)
 	if err != nil {
 		return err
@@ -304,164 +389,118 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return err
 	}
 
-	var thumbnailTiny string
-	var thumbnailSmall string
-	var buyer string
-	if len(contract.VendorListings) > 0 && contract.VendorListings[0].Item != nil && len(contract.VendorListings[0].Item.Images) > 0 {
-		thumbnailTiny = contract.VendorListings[0].Item.Images[0].Tiny
-		thumbnailSmall = contract.VendorListings[0].Item.Images[0].Small
-		if contract.BuyerOrder != nil && contract.BuyerOrder.BuyerID != nil {
-			buyer = contract.BuyerOrder.BuyerID.PeerID
-		}
-	}
+	thumbs := GetThumbnails(contract)
 
 	// Figure out what role we have in this dispute and process it
+
+	myRole := GetRole(contract, myPeerID)
+	if myRole == "" {
+		return errors.New("could not figure out what role matches the peer id")
+	}
+
 	var DisputerID string
 	var DisputerHandle string
 	var DisputeeID string
 	var DisputeeHandle string
-	if contract.BuyerOrder.Payment.Moderator == n.IpfsNode.Identity.Pretty() { // Moderator
+
+	vendor := GetVendor(contract)
+	vendorHandle := GetVendorHandle(contract)
+	buyer := GetBuyer(contract)
+	buyerHandle := GetBuyerHandle(contract)
+	moderator := GetModerator(contract)
+
+	if myRole == "moderator" {
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
-		if contract.VendorListings[0].VendorID.PeerID == peerID {
-			DisputerID = contract.VendorListings[0].VendorID.PeerID
-			DisputerHandle = contract.VendorListings[0].VendorID.Handle
-			DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-			DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
-			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, false, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
+		fmt.Println(validationErrors)
+		if vendor == openerPeerID {
+			DisputerID = vendor
+			DisputerHandle = vendorHandle
+			DisputeeID = buyer
+			DisputeeHandle = buyerHandle
+
+			err = n.UpdateDisputeCase(orderID, pb.OrderState_DISPUTED, false, rc.Dispute, contract, validationErrors)
 			if err != nil {
 				return err
 			}
-			err = n.Datastore.Cases().UpdateVendorInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
+
+		} else if buyer == openerPeerID {
+			DisputerID = buyer
+			DisputerHandle = buyerHandle
+			DisputeeID = vendor
+			DisputeeHandle = vendorHandle
+
+			err = n.UpdateDisputeCase(orderID, pb.OrderState_DISPUTED, true, rc.Dispute, contract, validationErrors)
 			if err != nil {
 				return err
 			}
-		} else if contract.BuyerOrder.BuyerID.PeerID == peerID {
-			DisputerID = contract.BuyerOrder.BuyerID.PeerID
-			DisputerHandle = contract.BuyerOrder.BuyerID.Handle
-			DisputeeID = contract.VendorListings[0].VendorID.PeerID
-			DisputeeHandle = contract.VendorListings[0].VendorID.Handle
-			err = n.Datastore.Cases().Put(orderID, pb.OrderState_DISPUTED, true, rc.Dispute.Claim, db.PaymentCoinForContract(contract), db.CoinTypeForContract(contract))
-			if err != nil {
-				return err
-			}
-			err = n.Datastore.Cases().UpdateBuyerInfo(orderID, contract, validationErrors, rc.Dispute.PayoutAddress, rc.Dispute.Outpoints)
-			if err != nil {
-				return err
-			}
+
 		} else {
 			return errors.New("peer ID doesn't match either buyer or vendor")
 		}
+	} else if myRole == "vendor" {
+		DisputerID = buyer
+		DisputerHandle = buyerHandle
+		DisputeeID = vendor
+		DisputeeHandle = vendorHandle
+
+		localContract, orderState, txRecords, err := n.GetMatchingSaleForDispute(orderID)
 		if err != nil {
 			return err
 		}
-	} else if contract.VendorListings[0].VendorID.PeerID == n.IpfsNode.Identity.Pretty() { // Vendor
-		DisputerID = contract.BuyerOrder.BuyerID.PeerID
-		DisputerHandle = contract.BuyerOrder.BuyerID.Handle
-		DisputeeID = contract.VendorListings[0].VendorID.PeerID
-		DisputeeHandle = contract.VendorListings[0].VendorID.Handle
-		// Load out version of the contract from the db
-		myContract, state, _, records, _, _, err := n.Datastore.Sales().GetByOrderId(orderID)
-		if err != nil {
-			return net.OutOfOrderMessage
-		}
+
 		// Check this order is currently in a state which can be disputed
-		if state == pb.OrderState_COMPLETED || state == pb.OrderState_DISPUTED || state == pb.OrderState_DECIDED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_DECLINED || state == pb.OrderState_PROCESSING_ERROR {
+		if !IsOrderStateDisputableForVendor(orderState) {
 			return errors.New("contract can no longer be disputed")
 		}
 
 		// Build dispute update message
-		update := new(pb.DisputeUpdate)
-		ser, err := proto.Marshal(myContract)
-		if err != nil {
-			return err
-		}
-		update.SerializedContract = ser
-		update.OrderId = orderID
-		update.PayoutAddress = wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
-
-		var outpoints []*pb.Outpoint
-		for _, r := range records {
-			o := new(pb.Outpoint)
-			o.Hash = r.Txid
-			o.Index = r.Index
-			o.Value = uint64(r.Value)
-			outpoints = append(outpoints, o)
-		}
-		update.Outpoints = outpoints
+		payoutAddress := wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
+		updateMessage, err := GetDisputeUpdateMessage(localContract, orderID, payoutAddress, txRecords)
 
 		// Send the message
-		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)
+		err = n.SendDisputeUpdate(moderator, updateMessage)
 		if err != nil {
 			return err
 		}
 
-		// Append the dispute and signature
-		myContract.Dispute = rc.Dispute
-		for _, sig := range rc.Signatures {
-			if sig.Section == pb.Signature_DISPUTE {
-				myContract.Signatures = append(myContract.Signatures, sig)
-			}
-		}
-		// Save it back to the db with the new state
-		err = n.Datastore.Sales().Put(orderID, *myContract, pb.OrderState_DISPUTED, false)
+		err = n.UpdateDisputeInDatabase(localContract, rc, orderID)
 		if err != nil {
 			return err
 		}
-	} else if contract.BuyerOrder.BuyerID.PeerID == n.IpfsNode.Identity.Pretty() { // Buyer
-		DisputerID = contract.VendorListings[0].VendorID.PeerID
-		DisputerHandle = contract.VendorListings[0].VendorID.Handle
-		DisputeeID = contract.BuyerOrder.BuyerID.PeerID
-		DisputeeHandle = contract.BuyerOrder.BuyerID.Handle
 
-		// Load out version of the contract from the db
-		myContract, state, _, records, _, _, err := n.Datastore.Purchases().GetByOrderId(orderID)
+	} else if myRole == "buyer" { // Buyer
+		DisputerID = vendor
+		DisputerHandle = vendorHandle
+		DisputeeID = buyer
+		DisputeeHandle = buyerHandle
+
+		localContract, orderState, txRecords, err := n.GetMatchingPurchaseForDispute(orderID)
 		if err != nil {
 			return err
 		}
-		if state == pb.OrderState_AWAITING_PAYMENT || state == pb.OrderState_AWAITING_FULFILLMENT || state == pb.OrderState_PARTIALLY_FULFILLED || state == pb.OrderState_PENDING {
+
+		if orderState == pb.OrderState_AWAITING_PAYMENT || orderState == pb.OrderState_AWAITING_FULFILLMENT ||
+			orderState == pb.OrderState_PARTIALLY_FULFILLED || orderState == pb.OrderState_PENDING {
 			return net.OutOfOrderMessage
 		}
+
 		// Check this order is currently in a state which can be disputed
-		if state == pb.OrderState_COMPLETED || state == pb.OrderState_DISPUTED || state == pb.OrderState_DECIDED || state == pb.OrderState_RESOLVED || state == pb.OrderState_REFUNDED || state == pb.OrderState_CANCELED || state == pb.OrderState_DECLINED {
+		if !IsOrderStateDisputableForBuyer(orderState) {
 			return errors.New("contract can no longer be disputed")
 		}
 
 		// Build dispute update message
-		update := new(pb.DisputeUpdate)
-		ser, err := proto.Marshal(myContract)
-		if err != nil {
-			return err
-		}
-		update.SerializedContract = ser
-		update.OrderId = orderID
-		update.PayoutAddress = wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
-
-		var outpoints []*pb.Outpoint
-		for _, r := range records {
-			o := new(pb.Outpoint)
-			o.Hash = r.Txid
-			o.Index = r.Index
-			o.Value = uint64(r.Value)
-			outpoints = append(outpoints, o)
-		}
-		update.Outpoints = outpoints
+		payoutAddress := wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
+		updateMessage, err := GetDisputeUpdateMessage(localContract, orderID, payoutAddress, txRecords)
 
 		// Send the message
-		err = n.SendDisputeUpdate(myContract.BuyerOrder.Payment.Moderator, update)
+		err = n.SendDisputeUpdate(moderator, updateMessage)
 		if err != nil {
 			return err
 		}
 
-		// Append the dispute and signature
-		myContract.Dispute = rc.Dispute
-		for _, sig := range rc.Signatures {
-			if sig.Section == pb.Signature_DISPUTE {
-				myContract.Signatures = append(myContract.Signatures, sig)
-			}
-		}
-		// Save it back to the db with the new state
-		err = n.Datastore.Purchases().Put(orderID, *myContract, pb.OrderState_DISPUTED, false)
+		err = n.UpdateDisputeInDatabase(localContract, rc, orderID)
 		if err != nil {
 			return err
 		}
@@ -469,19 +508,8 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return errors.New("we are not involved in this dispute")
 	}
 
-	notif := repo.DisputeOpenNotification{
-		ID:             repo.NewNotificationID(),
-		Type:           "disputeOpen",
-		OrderId:        orderID,
-		Thumbnail:      repo.Thumbnail{Tiny: thumbnailTiny, Small: thumbnailSmall},
-		DisputerID:     DisputerID,
-		DisputerHandle: DisputerHandle,
-		DisputeeID:     DisputeeID,
-		DisputeeHandle: DisputeeHandle,
-		Buyer:          buyer,
-	}
-	n.Broadcast <- notif
-	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
+	n.SendDisputeNotification(orderID, thumbs, DisputerID, DisputerHandle, DisputeeID, DisputeeHandle, buyer)
+
 	return nil
 }
 
@@ -797,113 +825,62 @@ func (n *OpenBazaarNode) SignDisputeResolution(contract *pb.RicardianContract) (
 func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []string {
 	var validationErrors []string
 
-	// Contract should have a listing and order to make it to this point
-	if len(contract.VendorListings) == 0 {
+	if !HasListings(contract) {
 		validationErrors = append(validationErrors, "Contract contains no listings")
 	}
-	if contract.BuyerOrder == nil {
+
+	if !ContractHasBuyerOrder(contract) {
 		validationErrors = append(validationErrors, "Contract is missing the buyer's order")
 	}
 
-	if contract.VendorListings[0].VendorID == nil || contract.VendorListings[0].VendorID.Pubkeys == nil {
+	if ContractIsMissingVendorID(contract) {
 		validationErrors = append(validationErrors, "The listing is missing the vendor ID information. Unable to validate any signatures.")
 		return validationErrors
 	}
-	if contract.BuyerOrder.BuyerID == nil || contract.BuyerOrder.BuyerID.Pubkeys == nil {
+
+	if ContractIsMissingBuyerID(contract) {
 		validationErrors = append(validationErrors, "The listing is missing the buyer ID information. Unable to validate any signatures.")
 		return validationErrors
 	}
 
-	vendorPubkey := contract.VendorListings[0].VendorID.Pubkeys.Identity
-	vendorGUID := contract.VendorListings[0].VendorID.PeerID
-
-	buyerPubkey := contract.BuyerOrder.BuyerID.Pubkeys.Identity
-	buyerGUID := contract.BuyerOrder.BuyerID.PeerID
-
-	// Make sure the order contains a payment object
-	if contract.BuyerOrder.Payment == nil {
+	if ContractIsMissingPayment(contract) {
 		validationErrors = append(validationErrors, "The buyer's order is missing the payment section")
 	}
 
 	// There needs to be one listing for each unique item in the order
-	var listingHashes []string
-	for _, item := range contract.BuyerOrder.Items {
-		listingHashes = append(listingHashes, item.ListingHash)
-	}
-	for _, listing := range contract.VendorListings {
-		ser, err := proto.Marshal(listing)
-		if err != nil {
-			continue
-		}
-		listingMH, err := EncodeCID(ser)
-		if err != nil {
-			continue
-		}
-		for i, l := range listingHashes {
-			if l == listingMH.String() {
-				// Delete from listingHases
-				listingHashes = append(listingHashes[:i], listingHashes[i+1:]...)
-				break
-			}
-		}
-	}
-	// This should have a length of zero if there is one vendorListing for each item in buyerOrder
-	if len(listingHashes) > 0 {
+	unmatchedListingHashes := GetUnmatchedListingHashes(contract)
+	if len(unmatchedListingHashes) > 0 {
 		validationErrors = append(validationErrors, "Not all items in the order have a matching vendor listing")
 	}
 
 	// There needs to be one listing signature for each listing
-	var listingSigs []*pb.Signature
-	for _, sig := range contract.Signatures {
-		if sig.Section == pb.Signature_LISTING {
-			listingSigs = append(listingSigs, sig)
-		}
-	}
-	if len(listingSigs) < len(contract.VendorListings) {
-		validationErrors = append(validationErrors, "Not all listings are signed by the vendor")
-	}
-
-	// Verify the listing signatures
-	for i, listing := range contract.VendorListings {
-		if err := verifyMessageSignature(listing, vendorPubkey, []*pb.Signature{listingSigs[i]}, pb.Signature_LISTING, vendorGUID); err != nil {
-			validationErrors = append(validationErrors, "Invalid vendor signature on listing "+strconv.Itoa(i)+err.Error())
-		}
-		if i == len(listingSigs)-1 {
-			break
-		}
+	invalidSignatureErrors := CheckListingSignatures(contract)
+	if len(invalidSignatureErrors) > 0 {
+		validationErrors = append(validationErrors, invalidSignatureErrors...)
 	}
 
 	// Verify the order signature
-	if err := verifyMessageSignature(contract.BuyerOrder, buyerPubkey, contract.Signatures, pb.Signature_ORDER, buyerGUID); err != nil {
+	if !ValidBuyerOrderSignature(contract) {
 		validationErrors = append(validationErrors, "Invalid buyer signature on order")
 	}
 
 	// Verify the order confirmation signature
-	if contract.VendorOrderConfirmation != nil {
-		if err := verifyMessageSignature(contract.VendorOrderConfirmation, vendorPubkey, contract.Signatures, pb.Signature_ORDER_CONFIRMATION, vendorGUID); err != nil {
-			validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
-		}
+	if !ValidOrderConfirmationSignature(contract) {
+		validationErrors = append(validationErrors, "Invalid vendor signature on order confirmation")
 	}
 
 	// There should be one fulfillment signature for each vendorOrderFulfilment object
-	var fulfilmentSigs []*pb.Signature
-	for _, sig := range contract.Signatures {
-		if sig.Section == pb.Signature_ORDER_FULFILLMENT {
-			fulfilmentSigs = append(fulfilmentSigs, sig)
-		}
-	}
-	if len(fulfilmentSigs) < len(contract.VendorOrderFulfillment) {
-		validationErrors = append(validationErrors, "Not all order fulfilments are signed by the vendor")
+	fulfillmentSigs := GetFulfillmentSignatures(contract)
+	fulfillments := GetFulfillments(contract)
+
+	if len(fulfillmentSigs) != len(fulfillments) {
+		validationErrors = append(validationErrors, "Not all order fulfillments are signed by the vendor")
 	}
 
-	// Verify the signature of the order fulfilments
-	for i, f := range contract.VendorOrderFulfillment {
-		if err := verifyMessageSignature(f, vendorPubkey, []*pb.Signature{fulfilmentSigs[i]}, pb.Signature_ORDER_FULFILLMENT, vendorGUID); err != nil {
-			validationErrors = append(validationErrors, "Invalid vendor signature on fulfilment "+strconv.Itoa(i))
-		}
-		if i == len(fulfilmentSigs)-1 {
-			break
-		}
+	// Verify the signature of the order fulfillments
+	fulfillmentSignatureErrors := CheckFulfillmentSignatures(contract)
+	if len(fulfillmentSignatureErrors) > 0 {
+		validationErrors = append(validationErrors, fulfillmentSignatureErrors...)
 	}
 
 	// Verify the buyer's bitcoin signature on his guid
@@ -1017,7 +994,7 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	pubkey, err := n.DHT.GetPublicKey(ctx, moderatorID)
+	pubkey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, moderatorID)
 	if err != nil {
 		log.Errorf("Failed to find public key for %s", moderatorID.Pretty())
 		return err
