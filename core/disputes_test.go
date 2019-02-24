@@ -6,6 +6,9 @@ import (
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"os"
 	"testing"
+	"time"
+
+	"github.com/golang/protobuf/ptypes"
 
 	"github.com/OpenBazaar/openbazaar-go/storage/selfhosted"
 	"github.com/OpenBazaar/openbazaar-go/test"
@@ -316,6 +319,79 @@ func TestOpenBazaarDisputes_VerifySignatureOnDisputeOpen(t *testing.T) {
 			t.Error(err)
 		}
 
+	}
+
+}
+
+func TestOpenBazaarDisputes_HandleOpenDispute(t *testing.T) {
+
+	contract := &pb.RicardianContract{
+		BuyerOrder: &pb.Order{
+			BuyerID: &pb.ID{
+				PeerID: node.IpfsNode.Identity.Pretty(),
+			},
+		},
+	}
+
+	peerID := contract.BuyerOrder.BuyerID.PeerID
+
+	// Check for no dispute message
+	err := node.ProcessDisputeOpen(contract, peerID)
+	if err == nil {
+		t.Error(err)
+	}
+
+	// Test no listings
+	contract.Dispute = &pb.Dispute{
+		Claim: "TEST CLAIM",
+	}
+	contract.Dispute.SerializedContract, err = core.GetSerializedContract(contract)
+	err = node.ProcessDisputeOpen(contract, peerID)
+	if err == nil {
+		t.Error(err)
+	}
+
+	// Test no payment
+	contract.VendorListings = []*pb.Listing{
+		factory.NewListing("TEST"),
+	}
+	contract.Dispute.SerializedContract, err = core.GetSerializedContract(contract)
+	err = node.ProcessDisputeOpen(contract, peerID)
+	if err == nil {
+		t.Error(err)
+	}
+
+	ts, err := ptypes.TimestampProto(time.Now())
+	if err != nil {
+		t.Fail()
+	}
+
+	contract.BuyerOrder = &pb.Order{
+		BuyerID: &pb.ID{
+			PeerID: node.IpfsNode.Identity.Pretty(),
+		},
+		Payment: &pb.Order_Payment{
+			Coin:      "BTC",
+			Amount:    1000,
+			Moderator: testModerator,
+		},
+		Timestamp: ts,
+	}
+	contract.VendorOrderConfirmation = &pb.OrderConfirmation{
+		OrderID: "12345",
+	}
+
+	contract.Dispute.SerializedContract, err = core.GetSerializedContract(contract)
+	orderID, err := node.CalcOrderID(contract.BuyerOrder)
+	if err != nil {
+		t.Error(err)
+	}
+
+	node.Datastore.Purchases().Put(orderID, *contract, pb.OrderState_FULFILLED, false)
+
+	err = node.ProcessDisputeOpen(contract, peerID)
+	if err != nil {
+		t.Error(err)
 	}
 
 }

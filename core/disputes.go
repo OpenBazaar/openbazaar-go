@@ -6,7 +6,6 @@ import (
 	"errors"
 	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
-
 	"sync"
 	"time"
 
@@ -116,6 +115,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 			return err
 		}
 	}
+
 	err = n.SendDisputeOpen(counterparty, &counterkey, rc)
 	if err != nil {
 		return err
@@ -320,7 +320,6 @@ func (n OpenBazaarNode) UpdateDisputeInDatabase(localContract *pb.RicardianContr
 			localContract.Signatures = append(localContract.Signatures, sig)
 		}
 	}
-
 	orderType := GetContractOrderType(localContract, n.IpfsNode.Identity.Pretty())
 
 	// Save it back to the db with the new state
@@ -351,7 +350,10 @@ func (n *OpenBazaarNode) SendDisputeNotification(orderID string, thumbs map[stri
 		DisputeeHandle: disputeeHandle,
 		Buyer:          buyer,
 	}
-	n.Broadcast <- notif
+	select {
+	case n.Broadcast <- notif:
+	default:
+	}
 	n.Datastore.Notifications().PutRecord(repo.NewNotification(notif, time.Now(), false))
 }
 
@@ -410,7 +412,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, openerPeer
 	if myRole == "moderator" {
 		validationErrors := n.ValidateCaseContract(contract)
 		var err error
-		fmt.Println(validationErrors)
+
 		if vendor == openerPeerID {
 			DisputerID = vendor
 			DisputerHandle = vendorHandle
@@ -455,6 +457,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, openerPeer
 		// Build dispute update message
 		payoutAddress := wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
 		updateMessage, err := GetDisputeUpdateMessage(localContract, orderID, payoutAddress, txRecords)
+		if err != nil {
+			return err
+		}
 
 		// Send the message
 		err = n.SendDisputeUpdate(moderator, updateMessage)
@@ -491,6 +496,9 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, openerPeer
 		// Build dispute update message
 		payoutAddress := wal.CurrentAddress(wallet.EXTERNAL).EncodeAddress()
 		updateMessage, err := GetDisputeUpdateMessage(localContract, orderID, payoutAddress, txRecords)
+		if err != nil {
+			return err
+		}
 
 		// Send the message
 		err = n.SendDisputeUpdate(moderator, updateMessage)
@@ -962,7 +970,7 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	pubkey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, moderatorID)
+	pubkey, err := n.DHT.GetPublicKey(ctx, moderatorID)
 	if err != nil {
 		log.Errorf("Failed to find public key for %s", moderatorID.Pretty())
 		return err

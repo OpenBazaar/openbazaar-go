@@ -26,8 +26,12 @@ func GetDeserializedContract(serialized []byte) (*pb.RicardianContract, error) {
 }
 
 func CheckContractFormatting(contract *pb.RicardianContract) error {
-	if len(contract.VendorListings) == 0 || contract.BuyerOrder == nil || contract.BuyerOrder.Payment == nil {
-		return errors.New("serialized contract is malformatted")
+	if len(contract.VendorListings) == 0 {
+		return errors.New("serialized contract has no listings")
+	} else if contract.BuyerOrder == nil {
+		return errors.New("serialized contract has no order")
+	} else if contract.BuyerOrder.Payment == nil {
+		return errors.New("serialized contract has no payment")
 	}
 	return nil
 }
@@ -108,9 +112,9 @@ func IsOrderStateDisputableForVendor(orderState pb.OrderState) bool {
 		orderState == pb.OrderState_DECIDED || orderState == pb.OrderState_RESOLVED ||
 		orderState == pb.OrderState_REFUNDED || orderState == pb.OrderState_CANCELED ||
 		orderState == pb.OrderState_DECLINED || orderState == pb.OrderState_PROCESSING_ERROR {
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 func IsOrderStateDisputableForBuyer(orderState pb.OrderState) bool {
@@ -118,9 +122,9 @@ func IsOrderStateDisputableForBuyer(orderState pb.OrderState) bool {
 		orderState == pb.OrderState_DECIDED || orderState == pb.OrderState_RESOLVED ||
 		orderState == pb.OrderState_REFUNDED || orderState == pb.OrderState_CANCELED ||
 		orderState == pb.OrderState_DECLINED {
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
 func GetDisputeUpdateMessage(contract *pb.RicardianContract, orderID string, payoutAddress string, txRecords []*wallet.TransactionRecord) (*pb.DisputeUpdate, error) {
