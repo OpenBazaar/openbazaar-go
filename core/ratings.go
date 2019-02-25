@@ -5,8 +5,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
+
 	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+
 	"io/ioutil"
 	"os"
 	"path"
@@ -139,8 +141,8 @@ func (n *OpenBazaarNode) GetRatingCounts() (uint32, float32, error) {
 	var totalRating float32
 	for _, i := range index {
 		ratingCount += uint32(i.Count)
-		totalRating += (float32(i.Count) * i.Average)
+		totalRating += float32(i.Count) * i.Average
 	}
-	averageRating := (totalRating / float32(ratingCount))
+	averageRating := totalRating / float32(ratingCount)
 	return ratingCount, averageRating, nil
 }

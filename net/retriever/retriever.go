@@ -3,6 +3,7 @@ package net
 import (
 	"context"
 	"errors"
+
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	routing "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
@@ -11,6 +12,7 @@ import (
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+
 	"io/ioutil"
 	gonet "net"
 	"net/http"
@@ -373,7 +375,7 @@ func (m *MessageRetriever) handleMessage(env pb.Envelope, addr string, id *peer.
 	handler := m.service.HandlerForMsgType(env.Message.MessageType)
 	if handler == nil {
 		log.Errorf("Nil handler for message type %s", env.Message.MessageType)
-		return errors.New("Nil handler for message")
+		return errors.New("nil handler for message")
 	}
 
 	// Dispatch handler

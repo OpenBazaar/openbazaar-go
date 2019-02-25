@@ -118,7 +118,7 @@ func (k *KeysDB) GetPathForKey(scriptAddress []byte) (wallet.KeyPath, error) {
 	var index int
 	err = stmt.QueryRow(hex.EncodeToString(scriptAddress), k.coinType.CurrencyCode()).Scan(&purpose, &index)
 	if err != nil {
-		return wallet.KeyPath{}, errors.New("Key not found")
+		return wallet.KeyPath{}, errors.New("key not found")
 	}
 	p := wallet.KeyPath{
 		Purpose: wallet.KeyPurpose(purpose),
@@ -139,7 +139,7 @@ func (k *KeysDB) GetKey(scriptAddress []byte) (*btcec.PrivateKey, error) {
 	var keyHex string
 	err = stmt.QueryRow(hex.EncodeToString(scriptAddress), k.coinType.CurrencyCode()).Scan(&keyHex)
 	if err != nil {
-		return nil, errors.New("Key not found")
+		return nil, errors.New("key not found")
 	}
 	keyBytes, err := hex.DecodeString(keyHex)
 	if err != nil {

@@ -19,24 +19,24 @@ func (Migration000) Up(repoPath string, dbPassword string, testnet bool) error {
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	walletIface, ok := cfg["Wallet"]
 	if !ok {
-		return errors.New("Missing wallet config")
+		return errors.New("missing wallet config")
 	}
 	wallet, ok := walletIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Error parsing wallet config")
+		return errors.New("error parsing wallet config")
 	}
 	feeAPI, ok := wallet["FeeAPI"]
 	if !ok {
-		return errors.New("Missing FeeAPI config")
+		return errors.New("missing FeeAPI config")
 	}
 	feeAPIstr, ok := feeAPI.(string)
 	if !ok {
-		return errors.New("Error parsing FeeAPI")
+		return errors.New("error parsing FeeAPI")
 	}
 	if feeAPIstr == "https://bitcoinfees.21.co/api/v1/fees/recommended" {
 		wallet["FeeAPI"] = "https://btc.fees.openbazaar.org"
@@ -76,24 +76,24 @@ func (Migration000) Down(repoPath string, dbPassword string, testnet bool) error
 	json.Unmarshal(configFile, &cfgIface)
 	cfg, ok := cfgIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Invalid config file")
+		return errors.New("invalid config file")
 	}
 
 	walletIface, ok := cfg["Wallet"]
 	if !ok {
-		return errors.New("Missing wallet config")
+		return errors.New("missing wallet config")
 	}
 	wallet, ok := walletIface.(map[string]interface{})
 	if !ok {
-		return errors.New("Error parsing wallet config")
+		return errors.New("error parsing wallet config")
 	}
 	feeAPI, ok := wallet["FeeAPI"]
 	if !ok {
-		return errors.New("Missing FeeAPI config")
+		return errors.New("missing FeeAPI config")
 	}
 	feeAPIstr, ok := feeAPI.(string)
 	if !ok {
-		return errors.New("Error parsing FeeAPI")
+		return errors.New("error parsing FeeAPI")
 	}
 	if feeAPIstr == "https://btc.fees.openbazaar.org" {
 		wallet["FeeAPI"] = "https://bitcoinfees.21.co/api/v1/fees/recommended"

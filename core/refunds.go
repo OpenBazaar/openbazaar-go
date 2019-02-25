@@ -144,11 +144,11 @@ func (n *OpenBazaarNode) VerifySignaturesOnRefund(contract *pb.RicardianContract
 	); err != nil {
 		switch err.(type) {
 		case noSigError:
-			return errors.New("Contract does not contain a signature for the refund")
+			return errors.New("contract does not contain a signature for the refund")
 		case invalidSigError:
-			return errors.New("Vendor's guid signature on contact failed to verify")
+			return errors.New("vendor's guid signature on contact failed to verify")
 		case matchKeyError:
-			return errors.New("Public key in order does not match reported vendor ID")
+			return errors.New("public key in order does not match reported vendor ID")
 		default:
 			return err
 		}

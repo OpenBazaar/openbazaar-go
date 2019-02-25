@@ -3,9 +3,11 @@ package selfhosted
 import (
 	"crypto/sha256"
 	"encoding/hex"
+
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+
 	"os"
 	"path"
 
@@ -50,6 +52,7 @@ func (s *SelfHostedStorage) Store(peerID peer.ID, ciphertext []byte) (ma.Multiad
 	if err != nil {
 		return nil, err
 	}
+
 	for _, peer := range s.pushNodes {
 		go s.store(peer.Pretty(), []cid.Cid{id})
 	}
