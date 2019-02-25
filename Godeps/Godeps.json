@@ -528,9 +528,19 @@
 			"Rev": "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
 		},
 		{
+			"ImportPath": "github.com/google/uuid",
+			"Comment": "1.0.0-8-g9b3b1e0",
+			"Rev": "9b3b1e0f5f99ae461456d768e7d301a7acdaa2d8"
+		},
+		{
 			"ImportPath": "github.com/gorilla/websocket",
 			"Comment": "v1.4.0-5-g483fb8d",
 			"Rev": "483fb8d7c32fcb4b5636cd293a92e3935932e2f4"
+		},
+		{
+			"ImportPath": "github.com/gosimple/slug",
+			"Comment": "v1.4.2",
+			"Rev": "42ac18c34c2c6f4843fa48167317dcaa9416d1e2"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/golang-lru",
@@ -790,11 +800,6 @@
 			"Rev": "1c38ed7ad0cc3d9e66649ac398c30e45f395c4eb"
 		},
 		{
-			"ImportPath": "github.com/kennygrant/sanitize",
-			"Comment": "v1.2.3",
-			"Rev": "2e6820834a1f36c626bf19a253b7d3cc060e9b8b"
-		},
-		{
 			"ImportPath": "github.com/konsorten/go-windows-terminal-sequences",
 			"Comment": "v1.0.1",
 			"Rev": "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
@@ -898,6 +903,10 @@
 			"Rev": "8b1b92947f46224e3b97bb1a3a5b0382be00d31e"
 		},
 		{
+			"ImportPath": "github.com/rainycape/unidecode",
+			"Rev": "cb7f23ec59bec0d61b19c56cd88cee3d0cc1870c"
+		},
+		{
 			"ImportPath": "github.com/rjeczalik/notify",
 			"Comment": "v0.9.1",
 			"Rev": "0f065fa99b48b842c3fd3e2c8b194c6f2b69f6b8"
@@ -906,11 +915,6 @@
 			"ImportPath": "github.com/rs/cors",
 			"Comment": "v1.5.0-3-gdc7332a",
 			"Rev": "dc7332ab32be5dfec05dae2a6ab79cbfa53b6407"
-		},
-		{
-			"ImportPath": "github.com/rs/xhandler",
-			"Comment": "v.11-5-g1eb70cf",
-			"Rev": "1eb70cf1520d43c307a89c5dabb7a7efd132fccd"
 		},
 		{
 			"ImportPath": "github.com/shopspring/decimal",
