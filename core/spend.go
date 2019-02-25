@@ -104,7 +104,7 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 			title = contract.VendorListings[0].Item.Title
 		}
 		if contract.VendorListings[0].VendorID != nil {
-			peerID = contract.VendorListings[0].VendorID.PeerID
+			//peerID = contract.VendorListings[0].VendorID.PeerID
 		}
 	}
 	if memo == "" && title != "" {
