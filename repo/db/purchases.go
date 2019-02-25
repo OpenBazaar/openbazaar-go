@@ -45,23 +45,30 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 	if err != nil {
 		return err
 	}
-	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"))`
+	stm := `insert or replace into purchases(orderID, contract, state, read, timestamp, total, thumbnail, vendorID, vendorHandle, title, shippingName, shippingAddress, paymentAddr, paymentCoin, coinType, funded, transactions, disputedAt) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,(select funded from purchases where orderID="` + orderID + `"),(select transactions from purchases where orderID="` + orderID + `"),?)`
 	stmt, err := tx.Prepare(stm)
 	if err != nil {
 		return err
 	}
-	handle := contract.VendorListings[0].VendorID.Handle
-	shippingName := ""
-	shippingAddress := ""
+	var (
+		paymentAddr, shippingName, shippingAddress string
+		disputedAt                                 int
+
+		dispute = contract.Dispute
+		handle  = contract.VendorListings[0].VendorID.Handle
+	)
 	if contract.BuyerOrder.Shipping != nil {
 		shippingName = contract.BuyerOrder.Shipping.ShipTo
 		shippingAddress = contract.BuyerOrder.Shipping.Address
 	}
-	var paymentAddr string
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_DIRECT || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		paymentAddr = contract.BuyerOrder.Payment.Address
 	} else if contract.BuyerOrder.Payment.Method == pb.Order_Payment_ADDRESS_REQUEST {
 		paymentAddr = contract.VendorOrderConfirmation.PaymentAddress
+	}
+
+	if dispute != nil {
+		disputedAt = int(dispute.Timestamp.Seconds)
 	}
 
 	defer stmt.Close()
@@ -81,6 +88,7 @@ func (p *PurchasesDB) Put(orderID string, contract pb.RicardianContract, state p
 		paymentAddr,
 		PaymentCoinForContract(&contract),
 		CoinTypeForContract(&contract),
+		disputedAt,
 	)
 	if err != nil {
 		tx.Rollback()
