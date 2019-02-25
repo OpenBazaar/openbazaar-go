@@ -8,7 +8,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	wallet "github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcutil"
 )
 
@@ -36,14 +36,12 @@ type SpendResponse struct {
 	Timestamp          time.Time `json:"timestamp"`
 	Txid               string    `json:"txid"`
 	UnconfirmedBalance int64     `json:"unconfirmedBalance"`
-	PeerID             string    `json:"-"`
 }
 
 // Spend will attempt to move funds from the node to the destination address described in the
 // SpendRequest for the amount indicated.
 func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 	var feeLevel wallet.FeeLevel
-	peerID := ""
 
 	wal, err := n.Multiwallet.WalletForCurrencyCode(args.Wallet)
 	if err != nil {
@@ -134,7 +132,6 @@ func (n *OpenBazaarNode) Spend(args *SpendRequest) (*SpendResponse, error) {
 		Timestamp:          txn.Timestamp,
 		Memo:               memo,
 		OrderID:            args.OrderID,
-		PeerID:             peerID,
 	}, nil
 }
 

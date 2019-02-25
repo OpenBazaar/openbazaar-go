@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 
+	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
-
-	"github.com/OpenBazaar/openbazaar-go/pb"
 )
 
 var (

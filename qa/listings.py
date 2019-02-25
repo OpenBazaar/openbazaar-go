@@ -7,14 +7,14 @@ from test_framework.test_framework import OpenBazaarTestFramework, TestFailure
 class ListingsTest(OpenBazaarTestFramework):
     def __init__(self):
         super().__init__()
-        self.num_nodes = 2
+        self.num_nodes = 3
 
     def setup_network(self):
         self.setup_nodes()
 
     def run_test(self):
-        vendor = self.nodes[0]
-        browser = self.nodes[1]
+        vendor = self.nodes[1]
+        browser = self.nodes[2]
 
         currency = "tbtc"
 

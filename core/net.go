@@ -2,10 +2,10 @@ package core
 
 import (
 	"errors"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	multihash "gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-	"gx/ipfs/QmcZfnkapfECQGcLZaf9B79NRg7cRa9EnZh4LSbkCzwNvY/go-cid"
+	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
+	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"sync"
 	"time"
 
@@ -98,7 +98,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	go func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		err := ipfs.PublishPointer(n.IpfsNode, ctx, pointer)
+		err := ipfs.PublishPointer(n.DHT, ctx, pointer)
 		if err != nil {
 			log.Error(err)
 		}
@@ -107,7 +107,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 		for _, p := range n.PushNodes {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			err := ipfs.PutPointerToPeer(n.IpfsNode, ctx, p, pointer)
+			err := ipfs.PutPointerToPeer(n.DHT, ctx, p, pointer)
 			if err != nil {
 				log.Error(err)
 			}
@@ -570,7 +570,7 @@ func (n *OpenBazaarNode) SendModeratorRemove(peerID string) error {
 func (n *OpenBazaarNode) SendBlock(peerID string, id cid.Cid) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	block, err := n.IpfsNode.Blocks.GetBlock(ctx, &id)
+	block, err := n.IpfsNode.Blocks.GetBlock(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -647,7 +647,7 @@ func (n *OpenBazaarNode) SendStore(peerID string, ids []cid.Cid) error {
 			log.Debugf("failed decoding store block (%s) for peer (%s)", id, peerID)
 			continue
 		}
-		if err := n.SendBlock(peerID, *decoded); err != nil {
+		if err := n.SendBlock(peerID, decoded); err != nil {
 			log.Debugf("failed sending store block (%s) to peer (%s)", id, peerID)
 			continue
 		}

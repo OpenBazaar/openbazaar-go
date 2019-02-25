@@ -91,12 +91,12 @@ const (
 	DeploymentTestDummy = iota
 
 	// DeploymentCSV defines the rule change deployment ID for the CSV
-	// soft-fork package. The CSV package includes the deployment of BIPS
+	// soft-fork package. The CSV package includes the depolyment of BIPS
 	// 68, 112, and 113.
 	DeploymentCSV
 
 	// DeploymentSegwit defines the rule change deployment ID for the
-	// Segregated Witness (segwit) soft-fork package. The segwit package
+	// Segragated Witness (segwit) soft-fork package. The segwit package
 	// includes the deployment of BIPS 141, 142, 144, 145, 147 and 173.
 	DeploymentSegwit
 
@@ -308,7 +308,7 @@ var MainNetParams = Params{
 
 	// Address encoding magics
 	PubKeyHashAddrID:        0x30, // starts with L
-	ScriptHashAddrID:        0x32, // starts with M
+	ScriptHashAddrID:        0x50, // starts with M
 	PrivateKeyID:            0xB0, // starts with 6 (uncompressed) or T (compressed)
 	WitnessPubKeyHashAddrID: 0x06, // starts with p2
 	WitnessScriptHashAddrID: 0x0A, // starts with 7Xh
@@ -380,7 +380,7 @@ var RegressionNetParams = Params{
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
-	Bech32HRPSegwit: "bcrt", // always bcrt for reg test net
+	Bech32HRPSegwit: "tltc", // always tltc for test net
 
 	// Address encoding magics
 	PubKeyHashAddrID: 0x6f, // starts with m or n
@@ -464,11 +464,11 @@ var TestNet4Params = Params{
 
 	// Human-readable part for Bech32 encoded segwit addresses, as defined in
 	// BIP 173.
-	Bech32HRPSegwit: "tltc", // always tltc for test net
+	Bech32HRPSegwit: "tltc", // always tb for test net
 
 	// Address encoding magics
 	PubKeyHashAddrID:        0x6f, // starts with m or n
-	ScriptHashAddrID:        0x3a, // starts with Q
+	ScriptHashAddrID:        0xc4, // starts with 2
 	WitnessPubKeyHashAddrID: 0x52, // starts with QW
 	WitnessScriptHashAddrID: 0x31, // starts with T7n
 	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)

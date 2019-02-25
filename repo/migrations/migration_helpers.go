@@ -61,3 +61,15 @@ func writeRepoVer(repoPath string, version int) error {
 	}
 	return f1.Close()
 }
+
+func writeIPFSVer(repoPath string, version int) error {
+	f1, err := os.Create(path.Join(repoPath, "version"))
+	if err != nil {
+		return err
+	}
+	_, err = f1.Write([]byte(strconv.Itoa(version)))
+	if err != nil {
+		return err
+	}
+	return f1.Close()
+}

@@ -4,15 +4,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	dht "gx/ipfs/QmRaVcGchmC1stHHK7YhcgEuTk5k1JiGS568pfYWMgT91H/go-libp2p-kad-dht"
-	peer "gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	libp2p "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
-
+	"github.com/OpenBazaar/openbazaar-go/net"
+	"github.com/OpenBazaar/openbazaar-go/pb"
+	"github.com/OpenBazaar/openbazaar-go/repo"
+	"github.com/OpenBazaar/openbazaar-go/repo/db"
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcutil"
@@ -21,11 +23,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"golang.org/x/net/context"
-
-	"github.com/OpenBazaar/openbazaar-go/net"
-	"github.com/OpenBazaar/openbazaar-go/pb"
-	"github.com/OpenBazaar/openbazaar-go/repo"
-	"github.com/OpenBazaar/openbazaar-go/repo/db"
 )
 
 // ConfirmationsPerHour is temporary until the Wallet interface has Attributes() to provide this value
@@ -442,6 +439,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err := payDivision.Validate(); err != nil {
 		return err
 	}
+
 	dispute, err := n.Datastore.Cases().GetByCaseID(orderID)
 	if err != nil {
 		return ErrCaseNotFound
@@ -974,7 +972,7 @@ func (n *OpenBazaarNode) verifySignatureOnDisputeResolution(contract *pb.Ricardi
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	pubkey, err := n.IpfsNode.Routing.(*dht.IpfsDHT).GetPublicKey(ctx, moderatorID)
+	pubkey, err := n.DHT.GetPublicKey(ctx, moderatorID)
 	if err != nil {
 		log.Errorf("Failed to find public key for %s", moderatorID.Pretty())
 		return err

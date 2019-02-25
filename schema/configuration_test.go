@@ -169,6 +169,19 @@ func TestGetDropboxApiToken(t *testing.T) {
 	}
 }
 
+func TestGetIPNSExtraConfig(t *testing.T) {
+	ipnsConfig, err := GetIPNSExtraConfig(configFixture())
+	if err != nil {
+		t.Error(err)
+	}
+	if ipnsConfig.DHTQuorumSize != 1 {
+		t.Error("GetIPNSExtraConfig returned incorrect DHTQuorumSize")
+	}
+	if ipnsConfig.FallbackAPI != "https://gateway.ob1.io" {
+		t.Error("GetIPNSExtraConfig returned incorrect FallbackAPI")
+	}
+}
+
 func TestRepublishInterval(t *testing.T) {
 	interval, err := GetRepublishInterval(configFixture())
 	if interval != time.Hour*24 {
@@ -184,16 +197,6 @@ func TestRepublishInterval(t *testing.T) {
 	}
 	if err == nil {
 		t.Error("GetRepublishInterval didn't throw an error")
-	}
-}
-
-func TestGetResolverConfig(t *testing.T) {
-	resolvers, err := GetResolverConfig(configFixture())
-	if err != nil {
-		t.Error("GetResolverUrl threw an unexpected error")
-	}
-	if resolvers.Id != "https://resolver.onename.com/" {
-		t.Error("resolverUrl does not equal expected value")
 	}
 }
 
@@ -289,6 +292,10 @@ func configFixture() []byte {
     "ResolveCacheSize": 128,
     "UsePersistentCache": true
   },
+  "IpnsExtra": {
+    "DHTQuorumSize": 1,
+    "FallbackAPI": "https://gateway.ob1.io"
+  },
   "JSON-API": {
     "AllowedIPs": [
       "127.0.0.1"
@@ -313,9 +320,6 @@ func configFixture() []byte {
     "Strategy": ""
   },
   "RepublishInterval": "24h",
-  "Resolvers": {
-    ".id": "https://resolver.onename.com/"
-  },
   "SupernodeRouting": {
     "Servers": null
   },
