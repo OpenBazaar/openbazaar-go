@@ -1,0 +1,70 @@
+{
+  "author": "Stebalien",
+  "bugs": {
+    "url": "https://github.com/libp2p/go-libp2p-routing-helpers"
+  },
+  "gx": {
+    "dvcsimport": "github.com/libp2p/go-libp2p-routing-helpers"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7",
+      "name": "go-cid",
+      "version": "0.9.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n",
+      "name": "go-libp2p-crypto",
+      "version": "2.0.1"
+    },
+    {
+      "author": "multiformats",
+      "hash": "QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8",
+      "name": "go-multihash",
+      "version": "1.0.8"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB",
+      "name": "go-libp2p-peer",
+      "version": "2.4.0"
+    },
+    {
+      "author": "whyrusleeping",
+      "hash": "QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX",
+      "name": "go-libp2p-peerstore",
+      "version": "2.0.6"
+    },
+    {
+      "hash": "QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c",
+      "name": "go-libp2p-routing",
+      "version": "2.7.1"
+    },
+    {
+      "author": "hashicorp",
+      "hash": "Qmbg4PQLEvf2XW8vrai9STFDerV7kttkfKcVdkoRf9Z7Xu",
+      "name": "go-errwrap",
+      "version": "0.1.0"
+    },
+    {
+      "author": "hashicorp",
+      "hash": "QmfGQp6VVqdPCDyzEM6EGwMY74YPabTSEoQWHUxZuCSWj3",
+      "name": "go-multierror",
+      "version": "0.1.0"
+    },
+    {
+      "hash": "Qma9Eqp16mNHDX1EL73pcxhFfzbyXVcAYtaDd1xdmDRDtL",
+      "name": "go-libp2p-record",
+      "version": "4.1.8"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-libp2p-routing-helpers",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.3.8"
+}
+
