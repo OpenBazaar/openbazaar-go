@@ -96,7 +96,7 @@ func (n *OpenBazaarNode) SendOfflineMessage(p peer.ID, k *libp2p.PubKey, m *pb.M
 	log.Debugf("Sending offline message to: %s, Message Type: %s, PointerID: %s, Location: %s", p.Pretty(), m.MessageType.String(), pointer.Cid.String(), pointer.Value.Addrs[0].String())
 	OfflineMessageWaitGroup.Add(2)
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
+		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		err := ipfs.PublishPointer(n.DHT, ctx, pointer)
 		if err != nil {
