@@ -161,9 +161,9 @@ func TestListingsAcceptedCurrencies(t *testing.T) {
 	}
 	resp.Body.Close()
 
-	respObj := []struct {
+	var respObj []struct {
 		AcceptedCurrencies []string `json:"acceptedCurrencies"`
-	}{}
+	}
 	err = json.Unmarshal(respBody, &respObj)
 	if err != nil {
 		t.Fatal(err)

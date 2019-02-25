@@ -3,6 +3,7 @@ package net
 import (
 	"context"
 	"errors"
+
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	inet "gx/ipfs/QmXuRkCR7BNQa9uqfpTiFWsTQLzmTWYg91Ja1w95gnqb6u/go-libp2p-net"
 
@@ -10,8 +11,8 @@ import (
 )
 
 var (
-	OutOfOrderMessage error = errors.New("Message arrived out of order")
-	DuplicateMessage  error = errors.New("Duplicate Message")
+	OutOfOrderMessage = errors.New("message arrived out of order")
+	DuplicateMessage  = errors.New("duplicate message")
 )
 
 type NetworkService interface {

@@ -4,11 +4,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	util "gx/ipfs/QmPdKqUcHGFdeSpvjVoaTRPPstGif9GBZb5Q56RVw9o69A/go-ipfs-util"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
+
 	"runtime"
 	"time"
 
@@ -69,7 +71,7 @@ func FormatRFC3339PB(ts google_protobuf.Timestamp) string {
 
 // BuildTransactionRecords - Used by the GET order API to build transaction records suitable to be included in the order response
 func (n *OpenBazaarNode) BuildTransactionRecords(contract *pb.RicardianContract, records []*wallet.TransactionRecord, state pb.OrderState) ([]*pb.TransactionRecord, *pb.TransactionRecord, error) {
-	paymentRecords := []*pb.TransactionRecord{}
+	var paymentRecords []*pb.TransactionRecord
 	payments := make(map[string]*pb.TransactionRecord)
 	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
 	if err != nil {

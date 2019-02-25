@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	bitswap "gx/ipfs/QmNkxFCmPtr2RQxjZNRCNryLud4L9wMEiBJsLgF14MqTHj/go-bitswap/network"
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
@@ -16,6 +17,7 @@ import (
 	oniontp "gx/ipfs/QmVSfWChGxC5AkUhM6ZyZxbcBmZoPrUmrPuW6BnHU3YDA9/go-onion-transport"
 	ws "gx/ipfs/QmY957dCFYVPKpj21xRs6KA3XAGA9tBt73UE5kfUGdNgD9/go-ws-transport"
 	"io"
+
 	"io/ioutil"
 	"os"
 	"path"
@@ -81,7 +83,7 @@ func (x *Restore) Execute(args []string) error {
 		if x.WalletCreationDate != "" {
 			creationDate, err = time.Parse(time.RFC3339, x.WalletCreationDate)
 			if err != nil {
-				return errors.New("Wallet creation date timestamp must be in RFC3339 format")
+				return errors.New("wallet creation date timestamp must be in RFC3339 format")
 			}
 		}
 		os.RemoveAll(repoPath)
@@ -209,6 +211,7 @@ func (x *Restore) Execute(args []string) error {
 		if x.TorPassword != "" {
 			torPw = x.TorPassword
 		}
+
 		transportOptions := libp2p.ChainOptions(libp2p.Transport(oniontp.NewOnionTransportC("tcp4", torControl, torPw, nil, repoPath, (usingTor && usingClearnet))))
 		if usingClearnet {
 			transportOptions = libp2p.ChainOptions(

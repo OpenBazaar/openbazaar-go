@@ -26,7 +26,7 @@ func GetTorControlPort() (int, error) {
 		conn.Close()
 		return 9051, nil
 	}
-	return 0, errors.New("Tor control unavailable")
+	return 0, errors.New("tor control unavailable")
 }
 
 // Generate a new RSA key and onion address and save it to the repo

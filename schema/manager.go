@@ -168,10 +168,10 @@ func (m *openbazaarSchemaManager) DataPathJoin(pathArgs ...string) string {
 func (m *openbazaarSchemaManager) VerifySchemaVersion(expectedVersion string) error {
 	schemaVersion, err := ioutil.ReadFile(m.SchemaVersionFilePath())
 	if err != nil {
-		return fmt.Errorf("Accessing schema version: %s", err.Error())
+		return fmt.Errorf("accessing schema version: %s", err.Error())
 	}
 	if string(schemaVersion) != expectedVersion {
-		return fmt.Errorf("Schema does not match expected version %s", expectedVersion)
+		return fmt.Errorf("schema does not match expected version %s", expectedVersion)
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"errors"
+
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 var (
 	ipfsInventoryCacheMaxDuration = 1 * time.Hour
 	// ErrInventoryNotFoundForSlug - inventory not found error
-	ErrInventoryNotFoundForSlug = errors.New("Could not find slug in inventory")
+	ErrInventoryNotFoundForSlug = errors.New("could not find slug in inventory")
 )
 
 // InventoryListing is the listing representation stored on IPFS
