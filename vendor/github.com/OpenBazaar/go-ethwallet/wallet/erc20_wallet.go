@@ -299,7 +299,7 @@ func (wallet *ERC20Wallet) Transactions() ([]wi.Txn, error) {
 		}
 		tnew := wi.Txn{
 			Txid:          t.Hash,
-			Value:         t.Value.Int().Int64(),
+			Value:         t.Value.Int().String(),
 			Height:        int32(t.BlockNumber),
 			Timestamp:     t.TimeStamp.Time(),
 			WatchOnly:     false,
@@ -321,7 +321,7 @@ func (wallet *ERC20Wallet) GetTransaction(txid chainhash.Hash) (wi.Txn, error) {
 	}
 	return wi.Txn{
 		Txid:      tx.Hash().String(),
-		Value:     tx.Value().Int64(),
+		Value:     tx.Value().String(),
 		Height:    0,
 		Timestamp: time.Now(),
 		WatchOnly: false,
@@ -346,7 +346,7 @@ func (wallet *ERC20Wallet) GetFeePerByte(feeLevel wi.FeeLevel) uint64 {
 }
 
 // Spend - Send ether to an external wallet
-func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
+func (wallet *ERC20Wallet) Spend(amount big.Int, addr btcutil.Address, feeLevel wi.FeeLevel, referenceID string) (*chainhash.Hash, error) {
 	var hash common.Hash
 	var h *chainhash.Hash
 	var err error
@@ -373,12 +373,12 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 		if err != nil {
 			return nil, err
 		}
-		hash, err = wallet.callAddTokenTransaction(ethScript, big.NewInt(amount))
+		hash, err = wallet.callAddTokenTransaction(ethScript, &amount)
 		if err != nil {
 			log.Errorf("error call add token txn: %v", err)
 		}
 	} else {
-		hash, err = wallet.Transfer(addr.String(), big.NewInt(amount))
+		hash, err = wallet.Transfer(addr.String(), &amount)
 	}
 
 	if err != nil {
@@ -414,7 +414,7 @@ func (wallet *ERC20Wallet) Spend(amount int64, addr btcutil.Address, feeLevel wi
 	return h, err
 }
 
-func (wallet *ERC20Wallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value int64, bTime time.Time) wi.TransactionCallback {
+func (wallet *ERC20Wallet) createTxnCallback(txID, orderID string, toAddress btcutil.Address, value big.Int, bTime time.Time) wi.TransactionCallback {
 	output := wi.TransactionOutput{
 		Address: toAddress,
 		Value:   value,
@@ -458,7 +458,7 @@ func (wallet *ERC20Wallet) EstimateFee(ins []wi.TransactionInput, outs []wi.Tran
 	sum := big.NewInt(0)
 	for _, out := range outs {
 		gas, err := wallet.client.EstimateTxnGas(wallet.account.Address(),
-			common.HexToAddress(out.Address.String()), big.NewInt(out.Value))
+			common.HexToAddress(out.Address.String()), &out.Value)
 		if err != nil {
 			return sum.Uint64()
 		}
@@ -682,10 +682,10 @@ func (wallet *ERC20Wallet) CreateMultisigSignature(ins []wi.TransactionInput, ou
 
 	payables := make(map[string]*big.Int)
 	for _, out := range outs {
-		if out.Value <= 0 {
+		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
 		}
-		val := big.NewInt(out.Value)
+		val := &out.Value
 		if p, ok := payables[out.Address.String()]; ok {
 			sum := big.NewInt(0)
 			sum.Add(val, p)
@@ -775,10 +775,10 @@ func (wallet *ERC20Wallet) Multisign(ins []wi.TransactionInput, outs []wi.Transa
 
 	payables := make(map[string]*big.Int)
 	for _, out := range outs {
-		if out.Value <= 0 {
+		if out.Value.Cmp(big.NewInt(0)) <= 0 {
 			continue
 		}
-		val := big.NewInt(out.Value)
+		val := &out.Value
 		if p, ok := payables[out.Address.String()]; ok {
 			sum := big.NewInt(0)
 			sum.Add(val, p)

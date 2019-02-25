@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	crypto "gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"math/big"
 	"strings"
 	"time"
 
@@ -25,7 +26,7 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 	oc.OrderID = orderID
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +81,14 @@ func (n *OpenBazaarNode) NewOrderConfirmation(contract *pb.RicardianContract, ad
 	}
 
 	if calculateNewTotal {
-		oc.RequestedAmount, err = n.CalculateOrderTotal(contract)
+		val, err := n.CalculateOrderTotal(contract)
+
 		if err != nil {
 			return nil, err
+		}
+		oc.RequestedAmount = &pb.CurrencyValue{
+			Currency: contract.BuyerOrder.Payment.Amount.Currency,
+			Value:    val.String(),
 		}
 	} else {
 		oc.RequestedAmount = contract.BuyerOrder.Payment.Amount
@@ -101,7 +107,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 	if err != nil {
 		return err
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -109,7 +115,7 @@ func (n *OpenBazaarNode) ConfirmOfflineOrder(contract *pb.RicardianContract, rec
 		// Sweep the temp address into our wallet
 		var txInputs []wallet.TransactionInput
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return err
@@ -177,16 +183,16 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 	if err != nil {
 		return fmt.Errorf("marshal timestamp: %s", err.Error())
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
 	rejectMsg.Timestamp = ts
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		var ins []wallet.TransactionInput
-		var outValue int64
+		var outValue *big.Int
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				addr, err := wal.DecodeAddress(r.Address)
 				if err != nil {
 					return fmt.Errorf("decode prior transactions address: %s", err.Error())
@@ -202,7 +208,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 					Value:         r.Value,
 				}
 				ins = append(ins, in)
-				outValue += r.Value
+				outValue.Add(outValue, &r.Value)
 			}
 		}
 
@@ -212,7 +218,7 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		}
 		var output = wallet.TransactionOutput{
 			Address: refundAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
@@ -235,7 +241,8 @@ func (n *OpenBazaarNode) RejectOfflineOrder(contract *pb.RicardianContract, reco
 		if err != nil {
 			return fmt.Errorf("generate child key: %s", err.Error())
 		}
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, contract.BuyerOrder.RefundFee)
+		fee, _ := new(big.Int).SetString(contract.BuyerOrder.RefundFee.Value, 10)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return fmt.Errorf("generate multisig: %s", err.Error())
 		}
@@ -268,7 +275,7 @@ func (n *OpenBazaarNode) ValidateOrderConfirmation(contract *pb.RicardianContrac
 	if contract.VendorOrderConfirmation.RequestedAmount != contract.BuyerOrder.Payment.Amount {
 		return errors.New("Vendor requested an amount different from what we calculated")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}

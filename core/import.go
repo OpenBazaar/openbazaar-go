@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/url"
 	"os"
 	"path"
@@ -128,7 +129,10 @@ listingLoop:
 				errChan <- fmt.Errorf("Error in record %d: %s", i, "pricing_currency is a mandatory field")
 				return
 			}
-			listing.Metadata.PricingCurrency = strings.ToUpper(record[pos])
+			listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{
+				Code:         strings.ToUpper(record[pos]),
+				Divisibility: 8,
+			}
 			pos, ok = fields["language"]
 			if ok {
 				listing.Metadata.Language = record[pos]
@@ -160,17 +164,26 @@ listingLoop:
 				return
 			}
 			if !listingCurrencyIsBTC(listing) {
-				f, err := strconv.ParseFloat(record[pos], 64)
-				if err != nil {
-					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				//f, err := strconv.ParseFloat(record[pos], 64)
+				f, ok := new(big.Int).SetString(record[pos], 10)
+				if !ok {
+					errChan <- fmt.Errorf("Error in record %d: %s", i, "invalid price")
 					return
 				}
-				listing.Item.Price = uint64(f * 100)
+				listing.Item.Price = &pb.CurrencyValue{
+					Currency: listing.Metadata.PricingCurrency,
+					Value:    f.Mul(f, big.NewInt(100)).String(),
+				} // uint64(f * 100)
 			} else {
-				listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
-				if err != nil {
-					errChan <- fmt.Errorf("Error in record %d: %s", i, err.Error())
+				//listing.Item.Price, err = strconv.ParseUint(record[pos], 10, 64)
+				f, ok := new(big.Int).SetString(record[pos], 10)
+				if !ok {
+					errChan <- fmt.Errorf("Error in record %d: %s", i, "invalid price")
 					return
+				}
+				listing.Item.Price = &pb.CurrencyValue{
+					Currency: listing.Metadata.PricingCurrency,
+					Value:    f.String(),
 				}
 			}
 			pos, ok = fields["nsfw"]
@@ -675,5 +688,5 @@ listingLoop:
 }
 
 func listingCurrencyIsBTC(l *pb.Listing) bool {
-	return NormalizeCurrencyCode(l.Metadata.PricingCurrency) == "BTC"
+	return NormalizeCurrencyCode(l.Metadata.PricingCurrency.Code) == "BTC"
 }

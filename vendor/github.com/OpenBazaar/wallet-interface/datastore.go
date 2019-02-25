@@ -121,7 +121,7 @@ type Stxos interface {
 
 type Txns interface {
 	// Put a new transaction to the database
-	Put(raw []byte, txid string, value, height int, timestamp time.Time, watchOnly bool) error
+	Put(raw []byte, txid, value string, height int, timestamp time.Time, watchOnly bool) error
 
 	// Fetch a tx and it's metadata given a hash
 	Get(txid chainhash.Hash) (Txn, error)
@@ -191,7 +191,7 @@ type Utxo struct {
 	AtHeight int32
 
 	// The higher the better
-	Value int64
+	Value string
 
 	// Output script
 	ScriptPubkey []byte
@@ -266,7 +266,7 @@ type Txn struct {
 	Txid string
 
 	// The value relevant to the wallet
-	Value int64
+	Value string
 
 	// The height at which it was mined
 	Height int32

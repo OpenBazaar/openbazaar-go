@@ -9,6 +9,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"os"
+	"os/exec"
+	"path"
+	"runtime"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/OpenBazaar/bitcoind-wallet"
 	"github.com/OpenBazaar/spvwallet"
 	"github.com/OpenBazaar/wallet-interface"
@@ -25,13 +34,6 @@ import (
 	"github.com/btcsuite/btcwallet/wallet/txrules"
 	"github.com/op/go-logging"
 	b39 "github.com/tyler-smith/go-bip39"
-	"os"
-	"os/exec"
-	"path"
-	"runtime"
-	"strconv"
-	"strings"
-	"time"
 	"golang.org/x/net/proxy"
 )
 
@@ -450,7 +452,7 @@ func (w *ZcashdWallet) Transactions() ([]wallet.Txn, error) {
 
 		t := wallet.Txn{
 			Txid:          r.TxID,
-			Value:         int64(amt.ToUnit(btc.AmountSatoshi)),
+			Value:         strconv.FormatInt(int64(amt.ToUnit(btc.AmountSatoshi)), 10),
 			Height:        height,
 			Timestamp:     ts,
 			Confirmations: int64(confirmations),
@@ -470,7 +472,7 @@ func (w *ZcashdWallet) GetTransaction(txid chainhash.Hash) (wallet.Txn, error) {
 		return t, err
 	}
 	t.Txid = resp.TxID
-	t.Value = int64(resp.Amount * 100000000)
+	t.Value = strconv.FormatInt(int64(resp.Amount*100000000), 10)
 	t.Height = int32(resp.BlockIndex)
 	t.Timestamp = time.Unix(resp.TimeReceived, 0)
 	t.WatchOnly = false
@@ -683,7 +685,7 @@ func (w *ZcashdWallet) BumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 				LinkedAddress: addr,
 				OutpointIndex: u.Vout,
 				OutpointHash:  h.CloneBytes(),
-				Value:         int64(u.Amount),
+				Value:         *big.NewInt(int64(u.Amount)),
 			}
 			hdKey := hd.NewExtendedKey(w.params.HDPrivateKeyID[:], key.PrivKey.Serialize(), make([]byte, 32), make([]byte, 4), 0, 0, true)
 			transactionID, err := w.SweepAddress([]wallet.TransactionInput{in}, nil, hdKey, nil, wallet.FEE_BUMP)
@@ -730,7 +732,7 @@ func (w *ZcashdWallet) EstimateFee(ins []wallet.TransactionInput, outs []wallet.
 	tx := wire.NewMsgTx(wire.TxVersion)
 	for _, out := range outs {
 		scriptPubKey, _ := txscript.PayToAddrScript(out.Address)
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 	estimatedSize := spvwallet.EstimateSerializeSize(len(ins), tx.TxOut, false, spvwallet.P2PKH)
@@ -788,7 +790,7 @@ func (w *ZcashdWallet) CreateMultisigSignature(ins []wallet.TransactionInput, ou
 		if err != nil {
 			return nil, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -836,7 +838,7 @@ func (w *ZcashdWallet) Multisign(ins []wallet.TransactionInput, outs []wallet.Tr
 		if err != nil {
 			return nil, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubKey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubKey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -904,7 +906,7 @@ func (w *ZcashdWallet) SweepAddress(ins []wallet.TransactionInput, address *btc.
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
 	for _, in := range ins {
-		val += in.Value
+		val += in.Value.Int64()
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return nil, err

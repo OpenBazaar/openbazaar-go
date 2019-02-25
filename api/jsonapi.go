@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -591,11 +592,11 @@ func (i *jsonAPIHandler) POSTPurchase(w http.ResponseWriter, r *http.Request) {
 	}
 	type purchaseReturn struct {
 		PaymentAddress string `json:"paymentAddress"`
-		Amount         uint64 `json:"amount"`
+		Amount         string `json:"amount"`
 		VendorOnline   bool   `json:"vendorOnline"`
 		OrderID        string `json:"orderId"`
 	}
-	ret := purchaseReturn{paymentAddr, amount, online, orderID}
+	ret := purchaseReturn{paymentAddr, amount.String(), online, orderID}
 	b, err := json.MarshalIndent(ret, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -1573,9 +1574,10 @@ func (i *jsonAPIHandler) POSTOrderConfirmation(w http.ResponseWriter, r *http.Re
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", conf.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING {
@@ -1620,9 +1622,10 @@ func (i *jsonAPIHandler) POSTOrderCancel(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if !((state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) && len(records) > 0) || !(state == pb.OrderState_PENDING || state == pb.OrderState_PROCESSING_ERROR) || contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
@@ -1689,9 +1692,10 @@ func (i *jsonAPIHandler) GETOrder(w http.ResponseWriter, r *http.Request) {
 	resp.State = state
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	paymentTxs, refundTx, err := i.node.BuildTransactionRecords(contract, records, state)
@@ -1767,9 +1771,10 @@ func (i *jsonAPIHandler) POSTRefund(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", can.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	err = i.node.RefundOrder(contract, records)
@@ -1960,9 +1965,10 @@ func (i *jsonAPIHandler) POSTOrderFulfill(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", fulfill.OrderId)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_AWAITING_FULFILLMENT && state != pb.OrderState_PARTIALLY_FULFILLED {
@@ -1999,9 +2005,10 @@ func (i *jsonAPIHandler) POSTOrderComplete(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", or.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_FULFILLED &&
@@ -2085,9 +2092,10 @@ func (i *jsonAPIHandler) POSTOpenDispute(w http.ResponseWriter, r *http.Request)
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", d.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if contract.BuyerOrder.Payment.Method != pb.Order_Payment_MODERATED {
@@ -2227,9 +2235,10 @@ func (i *jsonAPIHandler) POSTReleaseFunds(w http.ResponseWriter, r *http.Request
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state == pb.OrderState_DECIDED {
@@ -2270,9 +2279,10 @@ func (i *jsonAPIHandler) POSTReleaseEscrow(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", rel.OrderID)
-		contract.BuyerOrder.Payment.Coin = paymentCoin.String()
+		log.Info(paymentCoin.String())
+		//contract.BuyerOrder.Payment.Coin = paymentCoin.String()
 	}
 
 	if state != pb.OrderState_PENDING && state != pb.OrderState_FULFILLED && state != pb.OrderState_DISPUTED {
@@ -2817,7 +2827,7 @@ func (i *jsonAPIHandler) GETTransactions(w http.ResponseWriter, r *http.Request)
 	offsetID := r.URL.Query().Get("offsetId")
 	type Tx struct {
 		Txid          string    `json:"txid"`
-		Value         int64     `json:"value"`
+		Value         string    `json:"value"`
 		Address       string    `json:"address"`
 		Status        string    `json:"status"`
 		ErrorMessage  string    `json:"errorMessage"`
@@ -3221,7 +3231,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 	}
 	type response struct {
 		Txid               string    `json:"txid"`
-		Amount             int64     `json:"amount"`
+		Amount             string    `json:"amount"`
 		ConfirmedBalance   string    `json:"confirmedBalance"`
 		UnconfirmedBalance string    `json:"unconfirmedBalance"`
 		Timestamp          time.Time `json:"timestamp"`
@@ -3237,7 +3247,7 @@ func (i *jsonAPIHandler) POSTBumpFee(w http.ResponseWriter, r *http.Request) {
 		Txid:               newTxid.String(),
 		ConfirmedBalance:   confirmed.Value.String(),
 		UnconfirmedBalance: unconfirmed.Value.String(),
-		Amount:             -(txn.Value),
+		Amount:             "-" + txn.Value,
 		Timestamp:          txn.Timestamp,
 		Memo:               fmt.Sprintf("Fee bump of %s", txid),
 	}
@@ -3254,9 +3264,9 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 
 	fl := r.URL.Query().Get("feeLevel")
 	amt := r.URL.Query().Get("amount")
-	amount, err := strconv.Atoi(amt)
-	if err != nil {
-		ErrorResponse(w, http.StatusBadRequest, err.Error())
+	amount, ok := new(big.Int).SetString(amt, 10) //strconv.Atoi(amt)
+	if !ok {
+		ErrorResponse(w, http.StatusBadRequest, "invalid amount")
 		return
 	}
 
@@ -3279,7 +3289,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fee, err := wal.EstimateSpendFee(int64(amount), feeLevel)
+	fee, err := wal.EstimateSpendFee(*amount, feeLevel)
 	if err != nil {
 		switch {
 		case err == wallet.ErrorInsuffientFunds:
@@ -3299,9 +3309,9 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	_, coinType := path.Split(r.URL.Path)
 	type fees struct {
-		Priority uint64 `json:"priority"`
-		Normal   uint64 `json:"normal"`
-		Economic uint64 `json:"economic"`
+		Priority string `json:"priority"`
+		Normal   string `json:"normal"`
+		Economic string `json:"economic"`
 	}
 	if coinType == "fees" {
 		ret := make(map[string]interface{})
@@ -3309,7 +3319,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 			priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 			normal := wal.GetFeePerByte(wallet.NORMAL)
 			economic := wal.GetFeePerByte(wallet.ECONOMIC)
-			ret[ct.CurrencyCode()] = fees{Priority: priority, Normal: normal, Economic: economic}
+			ret[ct.CurrencyCode()] = fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
 		}
 		out, err := json.MarshalIndent(ret, "", "    ")
 		if err != nil {
@@ -3327,7 +3337,7 @@ func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
 	priority := wal.GetFeePerByte(wallet.PRIOIRTY)
 	normal := wal.GetFeePerByte(wallet.NORMAL)
 	economic := wal.GetFeePerByte(wallet.ECONOMIC)
-	f := fees{Priority: priority, Normal: normal, Economic: economic}
+	f := fees{Priority: priority.String(), Normal: normal.String(), Economic: economic.String()}
 	out, err := json.MarshalIndent(f, "", "    ")
 	if err != nil {
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
@@ -3349,7 +3359,7 @@ func (i *jsonAPIHandler) POSTEstimateTotal(w http.ResponseWriter, r *http.Reques
 		ErrorResponse(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	fmt.Fprintf(w, "%d", int(amount))
+	fmt.Fprintf(w, "%s", amount.String())
 }
 
 func (i *jsonAPIHandler) GETRatings(w http.ResponseWriter, r *http.Request) {

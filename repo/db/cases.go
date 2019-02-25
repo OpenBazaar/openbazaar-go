@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -247,7 +248,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 		if buyerOpenedInt > 0 {
 			buyerOpened = true
 		}
-		var total uint64
+		total := new(big.Int)
 		var title, thumbnail, vendorId, vendorHandle, buyerId, buyerHandle string
 
 		contract := new(pb.RicardianContract)
@@ -277,7 +278,9 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 					buyerHandle = contract.BuyerOrder.BuyerID.Handle
 				}
 				if contract.BuyerOrder.Payment != nil {
-					total = contract.BuyerOrder.Payment.Amount
+					n := new(big.Int)
+					n, _ = n.SetString(contract.BuyerOrder.Payment.Amount.Value, 10)
+					total.Add(total, n)
 				}
 			}
 		}
@@ -288,7 +291,7 @@ func (c *CasesDB) GetAll(stateFilter []pb.OrderState, searchTerm string, sortByA
 			Timestamp:    time.Unix(int64(timestamp), 0),
 			Title:        title,
 			Thumbnail:    thumbnail,
-			Total:        total,
+			Total:        total.String(),
 			VendorId:     vendorId,
 			VendorHandle: vendorHandle,
 			BuyerId:      buyerId,

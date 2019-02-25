@@ -27,7 +27,7 @@ type SaleRecord struct {
 func (r *SaleRecord) SupportsTimedEscrowRelease() bool {
 	if r.Contract.BuyerOrder != nil &&
 		r.Contract.BuyerOrder.Payment != nil {
-		switch strings.ToUpper(r.Contract.BuyerOrder.Payment.Coin) {
+		switch strings.ToUpper(r.Contract.BuyerOrder.Payment.Amount.Currency.Code) {
 		case "BTC":
 			return true
 		case "TBTC":

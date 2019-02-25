@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strings"
 	"time"
 
@@ -31,22 +32,23 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 	rc := new(pb.RicardianContract)
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
 		payout := new(pb.OrderFulfillment_Payout)
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 		if err != nil {
 			return err
 		}
 		currentAddress := wal.CurrentAddress(wallet.EXTERNAL)
 		payout.PayoutAddress = currentAddress.String()
-		payout.PayoutFeePerByte = wal.GetFeePerByte(wallet.NORMAL)
+		f := wal.GetFeePerByte(wallet.NORMAL)
+		payout.PayoutFeePerByte = f.String()
 		var ins []wallet.TransactionInput
-		var outValue int64
+		var outValue *big.Int
 		for _, r := range records {
-			if !r.Spent && r.Value > 0 {
+			if !r.Spent && r.Value.Cmp(big.NewInt(0)) > 0 {
 				outpointHash, err := hex.DecodeString(strings.TrimPrefix(r.Txid, "0x"))
 				if err != nil {
 					return err
 				}
-				outValue += r.Value
+				outValue.Add(outValue, &r.Value)
 				in := wallet.TransactionInput{OutpointIndex: r.Index, OutpointHash: outpointHash, Value: r.Value}
 				ins = append(ins, in)
 			}
@@ -54,7 +56,7 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 
 		var output = wallet.TransactionOutput{
 			Address: currentAddress,
-			Value:   outValue,
+			Value:   *outValue,
 		}
 		chaincode, err := hex.DecodeString(contract.BuyerOrder.Payment.Chaincode)
 		if err != nil {
@@ -76,8 +78,8 @@ func (n *OpenBazaarNode) FulfillOrder(fulfillment *pb.OrderFulfillment, contract
 		if err != nil {
 			return err
 		}
-
-		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, payout.PayoutFeePerByte)
+		fee, _ := new(big.Int).SetString(payout.PayoutFeePerByte, 10)
+		signatures, err := wal.CreateMultisigSignature(ins, []wallet.TransactionOutput{output}, vendorKey, redeemScript, *fee)
 		if err != nil {
 			return err
 		}
@@ -241,7 +243,7 @@ func (n *OpenBazaarNode) ValidateOrderFulfillment(fulfillment *pb.OrderFulfillme
 	}
 
 	if contract.BuyerOrder.Payment.Method == pb.Order_Payment_MODERATED {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 		if err != nil {
 			return err
 		}

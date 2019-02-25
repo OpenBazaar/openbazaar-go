@@ -13,7 +13,7 @@ func NewListing(slug string) *pb.Listing {
 		Metadata: &pb.Listing_Metadata{
 			Version:            1,
 			AcceptedCurrencies: []string{"TBTC"},
-			PricingCurrency:    "TBTC",
+			PricingCurrency:    &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
 			Expiry:             &timestamp.Timestamp{Seconds: 2147483647},
 			Format:             pb.Listing_Metadata_FIXED_PRICE,
 			ContractType:       pb.Listing_Metadata_PHYSICAL_GOOD,
@@ -53,9 +53,12 @@ func NewListing(slug string) *pb.Listing {
 					},
 				},
 			},
-			Nsfw:           false,
-			Description:    "Example item",
-			Price:          100,
+			Nsfw:        false,
+			Description: "Example item",
+			Price: &pb.CurrencyValue{
+				Currency: &pb.CurrencyDefinition{Code: "TBTC", Divisibility: 8},
+				Value:    "100",
+			},
 			ProcessingTime: "3 days",
 			Categories:     []string{"tshirts"},
 			Grams:          14,
@@ -87,8 +90,8 @@ func NewListing(slug string) *pb.Listing {
 		Coupons: []*pb.Listing_Coupon{
 			{
 				Title:    "Insider's Discount",
-				Code:     &pb.Listing_Coupon_DiscountCode{"insider"},
-				Discount: &pb.Listing_Coupon_PercentDiscount{5},
+				Code:     &pb.Listing_Coupon_DiscountCode{DiscountCode: "insider"},
+				Discount: &pb.Listing_Coupon_PercentDiscount{PercentDiscount: 5},
 			},
 		},
 	}
@@ -96,15 +99,16 @@ func NewListing(slug string) *pb.Listing {
 
 func NewCryptoListing(slug string) *pb.Listing {
 	listing := NewListing(slug)
-	listing.Metadata.CoinType = "TETH"
-	listing.Metadata.CoinDivisibility = 1e8
 	listing.Metadata.ContractType = pb.Listing_Metadata_CRYPTOCURRENCY
 	listing.Item.Skus = []*pb.Listing_Item_Sku{{Quantity: 1e8}}
-	listing.Metadata.PricingCurrency = ""
+	listing.Metadata.PricingCurrency = &pb.CurrencyDefinition{Code: "TETH", Divisibility: 8}
 	listing.ShippingOptions = nil
 	listing.Item.Condition = ""
 	listing.Item.Options = nil
-	listing.Item.Price = 0
+	listing.Item.Price = &pb.CurrencyValue{
+		Currency: &pb.CurrencyDefinition{Code: "BTC", Divisibility: 8},
+		Value:    "0",
+	}
 	listing.Coupons = nil
 	return listing
 }

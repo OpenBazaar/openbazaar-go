@@ -76,12 +76,15 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 		o := new(pb.Outpoint)
 		o.Hash = strings.TrimPrefix(r.Txid, "0x")
 		o.Index = r.Index
-		o.Value = uint64(r.Value)
+		o.Value = &pb.CurrencyValue{
+			Currency: contract.BuyerOrder.Payment.Amount.Currency,
+			Value:    r.Value.String(),
+		}
 		outpoints = append(outpoints, o)
 	}
 	dispute.Outpoints = outpoints
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -144,7 +147,7 @@ func (n *OpenBazaarNode) OpenDispute(orderID string, contract *pb.RicardianContr
 
 func (n *OpenBazaarNode) verifyEscrowFundsAreDisputeable(contract *pb.RicardianContract, records []*wallet.TransactionRecord) bool {
 	confirmationsForTimeout := contract.VendorListings[0].Metadata.EscrowTimeoutHours * ConfirmationsPerHour
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		log.Errorf("Failed verifyEscrowFundsAreDisputeable(): %s", err.Error())
 		return false
@@ -251,7 +254,7 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 		return err
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -337,7 +340,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
-			o.Value = uint64(r.Value)
+			o.Value = &pb.CurrencyValue{
+				Currency: myContract.BuyerOrder.Payment.Amount.Currency,
+				Value:    r.Value.String(),
+			} //uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -394,7 +400,10 @@ func (n *OpenBazaarNode) ProcessDisputeOpen(rc *pb.RicardianContract, peerID str
 			o := new(pb.Outpoint)
 			o.Hash = strings.TrimPrefix(r.Txid, "0x")
 			o.Index = r.Index
-			o.Value = uint64(r.Value)
+			o.Value = &pb.CurrencyValue{
+				Currency: myContract.BuyerOrder.Payment.Amount.Currency,
+				Value:    r.Value.String(),
+			} //uint64(r.Value)
 			outpoints = append(outpoints, o)
 		}
 		update.Outpoints = outpoints
@@ -473,9 +482,9 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	preferredContract := dispute.ResolutionPaymentContract(payDivision)
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(preferredContract.BuyerOrder.Payment.Coin); err != nil {
+	if _, err := repo.NewCurrencyCode(preferredContract.BuyerOrder.Payment.Amount.Currency.Code); err != nil {
 		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
-		preferredContract.BuyerOrder.Payment.Coin = paymentCoinHint.String()
+		//preferredContract.BuyerOrder.Payment.Coin = paymentCoinHint.String()
 	}
 
 	var d = new(pb.DisputeResolution)
@@ -510,12 +519,13 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	}
 
 	// Calculate total out value
-	var totalOut uint64
+	var totalOut *big.Int
 	for _, o := range outpoints {
-		totalOut += o.Value
+		n, _ := new(big.Int).SetString(o.Value.Value, 10)
+		totalOut.Add(totalOut, n)
 	}
 
-	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(preferredContract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -524,47 +534,52 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	outMap := make(map[string]wallet.TransactionOutput)
 	var outputs []wallet.TransactionOutput
 	var modAddr btcutil.Address
-	var modValue uint64
+	var modValue big.Int
 	modAddr = wal.CurrentAddress(wallet.EXTERNAL)
-	modValue, err = n.GetModeratorFee(totalOut, preferredContract.BuyerOrder.Payment.Coin, wal.CurrencyCode())
+	modValue, err = n.GetModeratorFee(*totalOut, preferredContract.BuyerOrder.Payment.Amount.Currency.Code, wal.CurrencyCode())
 	if err != nil {
 		return err
 	}
-	if modValue > 0 {
+	if modValue.Cmp(big.NewInt(0)) > 0 {
 		out := wallet.TransactionOutput{
 			Address: modAddr,
-			Value:   int64(modValue),
+			Value:   modValue,
 		}
 		outputs = append(outputs, out)
 		outMap["moderator"] = out
 	}
 
 	var buyerAddr btcutil.Address
-	var buyerValue uint64
+	var buyerValue *big.Int
+	effectiveVal := new(big.Int).Sub(totalOut, &modValue)
 	if payDivision.BuyerAny() {
 		buyerAddr, err = wal.DecodeAddress(dispute.BuyerPayoutAddress)
 		if err != nil {
 			return err
 		}
-		buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
+		buyerValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(buyerPercentage)))
+		buyerValue = buyerValue.Div(buyerValue, big.NewInt(100))
+		//buyerValue = uint64((float64(totalOut) - float64(modValue)) * (float64(buyerPercentage) / 100))
 		out := wallet.TransactionOutput{
 			Address: buyerAddr,
-			Value:   int64(buyerValue),
+			Value:   *buyerValue,
 		}
 		outputs = append(outputs, out)
 		outMap["buyer"] = out
 	}
 	var vendorAddr btcutil.Address
-	var vendorValue uint64
+	var vendorValue *big.Int
 	if payDivision.VendorAny() {
 		vendorAddr, err = wal.DecodeAddress(dispute.VendorPayoutAddress)
 		if err != nil {
 			return err
 		}
-		vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
+		vendorValue = new(big.Int).Mul(effectiveVal, big.NewInt(int64(vendorPercentage)))
+		vendorValue = vendorValue.Div(vendorValue, big.NewInt(100))
+		//vendorValue = uint64((float64(totalOut) - float64(modValue)) * (float64(vendorPercentage) / 100))
 		out := wallet.TransactionOutput{
 			Address: vendorAddr,
-			Value:   int64(vendorValue),
+			Value:   *vendorValue,
 		}
 		outputs = append(outputs, out)
 		outMap["vendor"] = out
@@ -581,10 +596,11 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 		if err != nil {
 			return err
 		}
+		n, _ := new(big.Int).SetString(o.Value.Value, 10)
 		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
-			Value:         int64(o.Value),
+			Value:         *n,
 		}
 		inputs = append(inputs, input)
 	}
@@ -600,12 +616,12 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	// Subtract fee from each output in proportion to output value
 	var outs []wallet.TransactionOutput
 	for role, output := range outMap {
-		outPercentage := float64(output.Value) / float64(totalOut)
-		outputShareOfFee := outPercentage * float64(txFee)
-		val := output.Value - int64(outputShareOfFee)
-		if !wal.IsDust(*big.NewInt(val)) {
+		outPercentage := new(big.Int).Quo(&output.Value, totalOut)  //float64(output.Value) / float64(totalOut)
+		outputShareOfFee := new(big.Int).Mul(outPercentage, &txFee) // outPercentage * float64(txFee)
+		val := new(big.Int).Sub(&output.Value, outputShareOfFee)    //output.Value - int64(outputShareOfFee)
+		if !wal.IsDust(*val) {
 			o := wallet.TransactionOutput{
-				Value:   val,
+				Value:   *val,
 				Address: output.Address,
 				Index:   output.Index,
 			}
@@ -656,7 +672,7 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	if err != nil {
 		return err
 	}
-	sigs, err := wal.CreateMultisigSignature(inputs, outs, moderatorKey, redeemScriptBytes, 0)
+	sigs, err := wal.CreateMultisigSignature(inputs, outs, moderatorKey, redeemScriptBytes, *big.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -673,36 +689,48 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	payout.Inputs = outpoints
 	payout.Sigs = bitcoinSigs
 	if _, ok := outMap["buyer"]; ok {
-		outputShareOfFee := (float64(buyerValue) / float64(totalOut)) * float64(txFee)
-		amt := int64(buyerValue) - int64(outputShareOfFee)
-		if amt < 0 {
-			amt = 0
+		f := new(big.Int).Quo(buyerValue, totalOut)
+		outputShareOfFee := new(big.Int).Mul(f, &txFee)       //(float64(buyerValue) / float64(totalOut)) * float64(txFee)
+		amt := new(big.Int).Sub(buyerValue, outputShareOfFee) //int64(buyerValue) - int64(outputShareOfFee)
+		if amt.Cmp(big.NewInt(0)) < 0 {
+			amt = big.NewInt(0)
 		}
 		payout.BuyerOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: buyerAddr.String()},
-			Amount:          uint64(amt),
+			Amount: &pb.CurrencyValue{
+				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
+				Value:    amt.String(),
+			},
 		}
 	}
 	if _, ok := outMap["vendor"]; ok {
-		outputShareOfFee := (float64(vendorValue) / float64(totalOut)) * float64(txFee)
-		amt := int64(vendorValue) - int64(outputShareOfFee)
-		if amt < 0 {
-			amt = 0
+		f := new(big.Int).Quo(vendorValue, totalOut)
+		outputShareOfFee := new(big.Int).Mul(f, &txFee)
+		amt := new(big.Int).Sub(vendorValue, outputShareOfFee)
+		if amt.Cmp(big.NewInt(0)) < 0 {
+			amt = big.NewInt(0)
 		}
 		payout.VendorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: vendorAddr.String()},
-			Amount:          uint64(amt),
+			Amount: &pb.CurrencyValue{
+				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
+				Value:    amt.String(),
+			},
 		}
 	}
 	if _, ok := outMap["moderator"]; ok {
-		outputShareOfFee := (float64(modValue) / float64(totalOut)) * float64(txFee)
-		amt := int64(modValue) - int64(outputShareOfFee)
-		if amt < 0 {
-			amt = 0
+		f := new(big.Int).Quo(&modValue, totalOut)
+		outputShareOfFee := new(big.Int).Mul(f, &txFee)
+		amt := new(big.Int).Sub(&modValue, outputShareOfFee)
+		if amt.Cmp(big.NewInt(0)) < 0 {
+			amt = big.NewInt(0)
 		}
 		payout.ModeratorOutput = &pb.DisputeResolution_Payout_Output{
 			ScriptOrAddress: &pb.DisputeResolution_Payout_Output_Address{Address: modAddr.String()},
-			Amount:          uint64(amt),
+			Amount: &pb.CurrencyValue{
+				Currency: preferredContract.BuyerOrder.Payment.Amount.Currency,
+				Value:    amt.String(),
+			},
 		}
 	}
 
@@ -884,7 +912,7 @@ func (n *OpenBazaarNode) ValidateCaseContract(contract *pb.RicardianContract) []
 
 	// Verify the redeem script matches all the bitcoin keys
 	if contract.BuyerOrder.Payment != nil {
-		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+		wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 		if err != nil {
 			validationErrors = append(validationErrors, "Contract uses a coin not found in wallet")
 			return validationErrors
@@ -942,7 +970,7 @@ func (n *OpenBazaarNode) ValidateDisputeResolution(contract *pb.RicardianContrac
 	if contract.DisputeResolution.Payout == nil || len(contract.DisputeResolution.Payout.Sigs) == 0 {
 		return errors.New("DisputeResolution contains invalid payout")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -1020,10 +1048,11 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
+		n, _ := new(big.Int).SetString(o.Value.Value, 10)
 		input := wallet.TransactionInput{
 			OutpointHash:  decodedHash,
 			OutpointIndex: o.Index,
-			Value:         int64(o.Value),
+			Value:         *n,
 			OrderID:       orderID,
 		}
 		inputs = append(inputs, input)
@@ -1032,7 +1061,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if len(inputs) == 0 {
 		return errors.New("transaction has no inputs")
 	}
-	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Coin)
+	wal, err := n.Multiwallet.WalletForCurrencyCode(contract.BuyerOrder.Payment.Amount.Currency.Code)
 	if err != nil {
 		return err
 	}
@@ -1044,9 +1073,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.BuyerOutput.Amount.Value, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
-			Value:   int64(contract.DisputeResolution.Payout.BuyerOutput.Amount),
+			Value:   *n,
 			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
@@ -1056,9 +1086,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.VendorOutput.Amount.Value, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
-			Value:   int64(contract.DisputeResolution.Payout.VendorOutput.Amount),
+			Value:   *n,
 			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
@@ -1068,9 +1099,10 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 		if err != nil {
 			return err
 		}
+		n, _ := new(big.Int).SetString(contract.DisputeResolution.Payout.ModeratorOutput.Amount.Value, 10)
 		output := wallet.TransactionOutput{
 			Address: addr,
-			Value:   int64(contract.DisputeResolution.Payout.ModeratorOutput.Amount),
+			Value:   *n,
 			OrderID: orderID,
 		}
 		outputs = append(outputs, output)
@@ -1099,7 +1131,7 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	if err != nil {
 		return err
 	}
-	mySigs, err := wal.CreateMultisigSignature(inputs, outputs, signingKey, redeemScriptBytes, 0)
+	mySigs, err := wal.CreateMultisigSignature(inputs, outputs, signingKey, redeemScriptBytes, *big.NewInt(0))
 	if err != nil {
 		return err
 	}
@@ -1137,13 +1169,13 @@ func (n *OpenBazaarNode) ReleaseFunds(contract *pb.RicardianContract, records []
 	}
 
 	// Build, sign, and broadcast transaction
-	txnID, err := wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, 0, true)
+	txnID, err := wal.Multisign(inputs, outputs, mySigs, moderatorSigs, redeemScriptBytes, *big.NewInt(0), true)
 	if err != nil {
 		return err
 	}
 
 	msg := pb.OrderPaymentTxn{
-		Coin:          contract.BuyerOrder.Payment.Coin,
+		Coin:          contract.BuyerOrder.Payment.Amount.Currency.Code,
 		OrderID:       orderID,
 		TransactionID: strings.TrimPrefix(hexutil.Encode(txnID), "0x"),
 		WithInput:     true,

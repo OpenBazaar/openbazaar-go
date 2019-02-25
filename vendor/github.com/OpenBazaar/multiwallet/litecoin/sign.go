@@ -6,8 +6,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcd/chaincfg"
+	"math/big"
+	"strconv"
 	"time"
+
+	"github.com/btcsuite/btcd/chaincfg"
 
 	"github.com/OpenBazaar/spvwallet"
 	wi "github.com/OpenBazaar/wallet-interface"
@@ -81,7 +84,8 @@ func (w *LitecoinWallet) buildTx(amount int64, addr btc.Address, feeLevel wi.Fee
 	}
 
 	// Get the fee per kilobyte
-	feePerKB := int64(w.GetFeePerByte(feeLevel)) * 1000
+	f := w.GetFeePerByte(feeLevel)
+	feePerKB := f.Int64() * 1000
 
 	// outputs
 	out := wire.NewTxOut(amount, script)
@@ -221,11 +225,13 @@ func (w *LitecoinWallet) bumpFee(txid chainhash.Hash) (*chainhash.Hash, error) {
 			if err != nil {
 				return nil, err
 			}
+			n := new(big.Int)
+			n, _ = n.SetString(u.Value, 10)
 			in := wi.TransactionInput{
 				LinkedAddress: addr,
 				OutpointIndex: u.Op.Index,
 				OutpointHash:  h,
-				Value:         int64(u.Value),
+				Value:         *n,
 			}
 			transactionID, err := w.sweepAddress([]wi.TransactionInput{in}, nil, key, nil, wi.FEE_BUMP)
 			if err != nil {
@@ -253,7 +259,7 @@ func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Ad
 	var inputs []*wire.TxIn
 	additionalPrevScripts := make(map[wire.OutPoint][]byte)
 	for _, in := range ins {
-		val += in.Value
+		val += in.Value.Int64()
 		ch, err := chainhash.NewHashFromStr(hex.EncodeToString(in.OutpointHash))
 		if err != nil {
 			return nil, err
@@ -280,7 +286,8 @@ func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Ad
 	estimatedSize := EstimateSerializeSize(len(ins), []*wire.TxOut{out}, false, txType)
 
 	// Calculate the fee
-	feePerByte := int(w.GetFeePerByte(feeLevel))
+	f := w.GetFeePerByte(feeLevel)
+	feePerByte := int(f.Int64())
 	fee := estimatedSize * feePerByte
 
 	outVal := val - int64(fee)
@@ -353,7 +360,7 @@ func (w *LitecoinWallet) sweepAddress(ins []wi.TransactionInput, address *btc.Ad
 			}
 			txIn.SignatureScript = script
 		} else {
-			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, *redeemScript, txscript.SigHashAll, privKey)
+			sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value.Int64(), *redeemScript, txscript.SigHashAll, privKey)
 			if err != nil {
 				return nil, err
 			}
@@ -393,7 +400,7 @@ func (w *LitecoinWallet) createMultisigSignature(ins []wi.TransactionInput, outs
 		if err != nil {
 			return sigs, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubkey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubkey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -422,7 +429,7 @@ func (w *LitecoinWallet) createMultisigSignature(ins []wi.TransactionInput, outs
 
 	hashes := txscript.NewTxSigHashes(tx)
 	for i := range tx.TxIn {
-		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value, redeemScript, txscript.SigHashAll, signingKey)
+		sig, err := txscript.RawTxInWitnessSignature(tx, hashes, i, ins[i].Value.Int64(), redeemScript, txscript.SigHashAll, signingKey)
 		if err != nil {
 			continue
 		}
@@ -448,7 +455,7 @@ func (w *LitecoinWallet) multisign(ins []wi.TransactionInput, outs []wi.Transact
 		if err != nil {
 			return nil, err
 		}
-		output := wire.NewTxOut(out.Value, scriptPubkey)
+		output := wire.NewTxOut(out.Value.Int64(), scriptPubkey)
 		tx.TxOut = append(tx.TxOut, output)
 	}
 
@@ -598,7 +605,8 @@ func (w *LitecoinWallet) estimateSpendFee(amount int64, feeLevel wi.FeeLevel) (u
 	for _, input := range tx.TxIn {
 		for _, utxo := range utxos {
 			if utxo.Op.Hash.IsEqual(&input.PreviousOutPoint.Hash) && utxo.Op.Index == input.PreviousOutPoint.Index {
-				inval += utxo.Value
+				val, _ := strconv.ParseInt(utxo.Value, 10, 64)
+				inval += val
 				break
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	"strconv"
 	"sync"
 	"time"
 
@@ -316,14 +317,15 @@ func (w *SPVWallet) Balance() (wallet.CurrencyValue, wallet.CurrencyValue) {
 	stxos, _ := w.txstore.Stxos().GetAll()
 	var confirmed, unconfirmed int64
 	for _, utxo := range utxos {
+		val, _ := strconv.ParseInt(utxo.Value, 10, 64)
 		if !utxo.WatchOnly {
 			if utxo.AtHeight > 0 {
-				confirmed += utxo.Value
+				confirmed += val
 			} else {
 				if w.checkIfStxoIsConfirmed(utxo, stxos) {
-					confirmed += utxo.Value
+					confirmed += val
 				} else {
-					unconfirmed += utxo.Value
+					unconfirmed += val
 				}
 			}
 		}

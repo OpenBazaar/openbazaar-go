@@ -2,13 +2,15 @@ package bitcoind
 
 import (
 	"encoding/json"
+	"io/ioutil"
+	"math/big"
+	"net/http"
+	"time"
+
 	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	btcrpcclient "github.com/btcsuite/btcd/rpcclient"
-	"io/ioutil"
-	"net/http"
-	"time"
 )
 
 type NotificationListener struct {
@@ -41,7 +43,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 	var outputs []wallet.TransactionOutput
 	for i, txout := range tx.MsgTx().TxOut {
 		addr, _ := scriptToAddress(txout.PkScript, l.params)
-		out := wallet.TransactionOutput{Address: addr, Value: txout.Value, Index: uint32(i)}
+		out := wallet.TransactionOutput{Address: addr, Value: *big.NewInt(txout.Value), Index: uint32(i)}
 		outputs = append(outputs, out)
 	}
 	var inputs []wallet.TransactionInput
@@ -54,7 +56,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		}
 		addr, _ := scriptToAddress(prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].PkScript, l.params)
 		in.LinkedAddress = addr
-		in.Value = prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].Value
+		in.Value = *big.NewInt(prev.MsgTx().TxOut[txin.PreviousOutPoint.Index].Value)
 		inputs = append(inputs, in)
 	}
 
@@ -90,7 +92,7 @@ func (l *NotificationListener) notify(w http.ResponseWriter, r *http.Request) {
 		Inputs:    inputs,
 		Outputs:   outputs,
 		WatchOnly: watchOnly,
-		Value:     int64(txInfo.Amount * 100000000),
+		Value:     *big.NewInt(int64(txInfo.Amount * 100000000)),
 		Timestamp: time.Unix(txInfo.TimeReceived, 0),
 		Height:    height,
 	}

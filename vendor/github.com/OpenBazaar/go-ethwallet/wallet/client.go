@@ -85,7 +85,7 @@ func (client *EthClient) Transfer(from *Account, destAccount common.Address, val
 	}
 	txns = append(txns, wi.Txn{
 		Txid:      signedTx.Hash().Hex(),
-		Value:     value.Int64(),
+		Value:     value.String(),
 		Height:    int32(nonce),
 		Timestamp: time.Now(),
 		WatchOnly: false,
@@ -146,7 +146,7 @@ func (client *EthClient) TransferToken(from *Account, toAddress common.Address, 
 
 	txns = append(txns, wi.Txn{
 		Txid:      signedTx.Hash().Hex(),
-		Value:     value.Int64(),
+		Value:     value.String(),
 		Height:    int32(nonce),
 		Timestamp: time.Now(),
 		WatchOnly: false,
