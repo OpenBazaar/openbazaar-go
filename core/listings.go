@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -325,11 +326,11 @@ func (n *OpenBazaarNode) CreateListing(listing *pb.Listing) error {
 		}
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, true)
 }
 
 // UpdateListing - update the listing
-func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
+func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing, publish bool) error {
 	exists, err := n.listingExists(listing.Slug)
 	if err != nil {
 		return err
@@ -339,10 +340,10 @@ func (n *OpenBazaarNode) UpdateListing(listing *pb.Listing) error {
 		return ErrListingDoesNotExist
 	}
 
-	return n.saveListing(listing)
+	return n.saveListing(listing, publish)
 }
 
-func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
+func prepListingForPublish(n *OpenBazaarNode, listing *pb.Listing) error {
 	if len(listing.Moderators) == 0 {
 		sd, err := n.Datastore.Settings().Get()
 		if err == nil && sd.StoreModerators != nil {
@@ -391,13 +392,27 @@ func (n *OpenBazaarNode) saveListing(listing *pb.Listing) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (n *OpenBazaarNode) saveListing(listing *pb.Listing, publish bool) error {
+
+	err := prepListingForPublish(n, listing)
+	if err != nil {
+		return err
+	}
+
 	// Update followers/following
 	err = n.UpdateFollow()
 	if err != nil {
 		return err
 	}
-	if err = n.SeedNode(); err != nil {
-		return err
+
+	if publish {
+		if err = n.SeedNode(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1370,5 +1385,69 @@ func verifySignaturesOnListing(sl *pb.SignedListing) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// SetCurrencyOnListings - set currencies accepted for a listing
+func (n *OpenBazaarNode) SetCurrencyOnListings(currencies []string) error {
+	absPath, err := filepath.Abs(path.Join(n.RepoPath, "root", "listings"))
+	if err != nil {
+		return err
+	}
+
+	walkpath := func(p string, f os.FileInfo, err error) error {
+		if !f.IsDir() && filepath.Ext(p) == ".json" {
+
+			sl, err := GetSignedListingFromPath(p)
+			if err != nil {
+				return err
+			}
+
+			SetAcceptedCurrencies(sl, currencies)
+
+			savedCoupons, err := n.Datastore.Coupons().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingCoupons(savedCoupons, sl)
+			if err != nil {
+				return err
+			}
+
+			if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
+				err = ApplyShippingOptions(sl)
+				if err != nil {
+					return err
+				}
+			}
+
+			inventory, err := n.Datastore.Inventory().Get(sl.Listing.Slug)
+			if err != nil {
+				return err
+			}
+			err = AssignMatchingQuantities(inventory, sl)
+			if err != nil {
+				return err
+			}
+
+			err = n.UpdateListing(sl.Listing, false)
+			if err != nil {
+				return err
+			}
+
+		}
+		return nil
+	}
+
+	err = filepath.Walk(absPath, walkpath)
+	if err != nil {
+		return err
+	}
+
+	err = n.SeedNode()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

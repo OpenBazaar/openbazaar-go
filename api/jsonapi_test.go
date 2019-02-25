@@ -281,6 +281,9 @@ func TestListings(t *testing.T) {
 		// Mutate non-existing listings
 		{"PUT", "/ob/listing", updatedListingJSON, 404, NotFoundJSON("Listing")},
 		{"DELETE", "/ob/listing/ron-swanson-tshirt", "", 404, NotFoundJSON("Listing")},
+
+		// Bulk update currency in listings
+		{"POST", "/ob/bulkupdatecurrency", bulkUpdateCurrencyJSON, 200, `{"success": "true"}`},
 	})
 }
 

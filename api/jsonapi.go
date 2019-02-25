@@ -538,7 +538,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = i.node.UpdateListing(ld)
+	err = i.node.UpdateListing(ld, true)
 	if err != nil {
 		if err == core.ErrListingDoesNotExist {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
@@ -1384,25 +1384,15 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 			sl.Hash = hash
 		}
+
 		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		for _, coupon := range sl.Listing.Coupons {
-			for _, c := range savedCoupons {
-				if coupon.GetHash() == c.Hash {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-					break
-				}
-			}
-		}
-		if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-			for _, so := range sl.Listing.ShippingOptions {
-				for _, ser := range so.Services {
-					ser.AdditionalItemPrice = ser.Price
-				}
-			}
+		err = core.AssignMatchingCoupons(savedCoupons, sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Could not apply coupons to listing.")
+			return
 		}
 
 		out, err := m.MarshalToString(sl)
@@ -3754,6 +3744,35 @@ func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponse(w, string(out))
+}
+
+func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.Request) {
+	// Retrieve attribute and values to update
+	type BulkUpdateRequest struct {
+		Currencies []string `json:"currencies"`
+	}
+
+	var bulkUpdate BulkUpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&bulkUpdate)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Check for no currencies selected
+	if len(bulkUpdate.Currencies) == 0 {
+		SanitizedResponse(w, `{"success": "false", "reason":"No currencies specified"}`)
+		return
+	}
+
+	log.Info("Updating currencies for all listings to: ", bulkUpdate.Currencies)
+	err = i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	SanitizedResponse(w, `{"success": "true"}`)
 }
 
 // POSTS
