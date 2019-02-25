@@ -1,0 +1,36 @@
+{
+  "author": "cheggaaa",
+  "bugs": {
+    "url": "https://github.com/cheggaaa/pb/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/cheggaaa/pb"
+  },
+  "gxDependencies": [
+    {
+      "author": "mattn",
+      "hash": "QmTsHcKgTQ4VeYZd8eKYpTXeLW7KNwkRD9wjnrwsV2sToq",
+      "name": "go-colorable",
+      "version": "0.2.0"
+    },
+    {
+      "author": "mattn",
+      "hash": "QmNu2sEu7LuoBQbnSoy8u6wk6oWwFX8L5nVVUZoK7J67oQ",
+      "name": "go-runewidth",
+      "version": "0.0.1"
+    },
+    {
+      "author": "fatih",
+      "hash": "QmWsJXti4Nft4vXR8brjG2fJCUDWeJpwNVngyU42pByJxN",
+      "name": "color",
+      "version": "0.0.2"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "pb",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "1.0.25"
+}
+

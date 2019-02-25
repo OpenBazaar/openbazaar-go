@@ -15,8 +15,8 @@ class ChatOfflineTest(OpenBazaarTestFramework):
         self.setup_nodes()
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
 
         alice_id = alice["peerId"]
         bob_id = bob["peerId"]
@@ -24,7 +24,7 @@ class ChatOfflineTest(OpenBazaarTestFramework):
         # shutdown bob
         api_url = bob["gateway_url"] + "ob/shutdown"
         requests.post(api_url, data="")
-        time.sleep(12)
+        time.sleep(30)
 
         # alice send message
         message = {

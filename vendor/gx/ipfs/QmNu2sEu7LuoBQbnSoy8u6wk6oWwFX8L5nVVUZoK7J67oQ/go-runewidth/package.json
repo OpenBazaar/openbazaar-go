@@ -1,0 +1,16 @@
+{
+  "author": "mattn",
+  "bugs": {
+    "url": "https://github.com/mattn/go-runewidth/issues"
+  },
+  "gx": {
+    "dvcsimport": "github.com/mattn/go-runewidth"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "",
+  "name": "go-runewidth",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.0.1"
+}
+

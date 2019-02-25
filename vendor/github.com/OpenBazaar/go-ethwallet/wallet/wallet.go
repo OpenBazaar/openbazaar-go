@@ -400,7 +400,7 @@ func (wallet *EthereumWallet) ChainTip() (uint32, chainhash.Hash) {
 	if err != nil {
 		return 0, *h
 	}
-	h, _ = chainhash.NewHashFromStr(hash)
+	h, _ = chainhash.NewHashFromStr(hash[2:])
 	return num, *h
 }
 
@@ -494,7 +494,7 @@ func (wallet *EthereumWallet) Spend(amount int64, addr btcutil.Address, feeLevel
 	}
 
 	if err == nil {
-		h, err = chainhash.NewHashFromStr(hash.String())
+		h, err = chainhash.NewHashFromStr(hash.Hex()[2:])
 	}
 	return h, err
 }
@@ -541,7 +541,7 @@ func (wallet *EthereumWallet) CheckTxnRcpt(hash *common.Hash, data []byte) (*com
 		// but valid txn like some contract condition causing revert
 		if rcpt.Status > 0 {
 			// all good to update order state
-			chash, err := chainhash.NewHashFromStr((*hash).Hex())
+			chash, err := chainhash.NewHashFromStr((*hash).Hex()[2:])
 			if err != nil {
 				return nil, err
 			}
@@ -958,6 +958,7 @@ func (wallet *EthereumWallet) AddWatchedAddress(address btcutil.Address) error {
 // AddTransactionListener - add a txn listener
 func (wallet *EthereumWallet) AddTransactionListener(callback func(wi.TransactionCallback)) {
 	// add incoming txn listener using service
+	wallet.listeners = append(wallet.listeners, callback)
 }
 
 // ReSyncBlockchain - Use this to re-download merkle blocks in case of missed transactions

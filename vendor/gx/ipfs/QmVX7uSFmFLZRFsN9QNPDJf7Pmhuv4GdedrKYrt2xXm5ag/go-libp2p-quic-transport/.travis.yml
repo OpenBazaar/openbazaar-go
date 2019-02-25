@@ -1,0 +1,35 @@
+language: go
+
+go:
+  - "1.10.x"
+  - "1.11.x"
+
+# first part of the GOARCH workaround
+# setting the GOARCH directly doesn't work, since the value will be overwritten later
+# so set it to a temporary environment variable first
+env:
+  - TRAVIS_GOARCH=amd64
+  - TRAVIS_GOARCH=386
+
+# second part of the GOARCH workaround
+# now actually set the GOARCH env variable to the value of the temporary variable set earlier
+before_install:
+  - make deps
+  - export GOARCH=$TRAVIS_GOARCH
+  - go env # for debugging
+
+# see https://github.com/travis-ci/travis-ci/issues/8361#issuecomment-350090030
+before_script:
+  - sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6'
+
+script:
+  - ginkgo -r -v --cover --randomizeAllSpecs --randomizeSuites --trace --progress
+
+after_success:
+  - cat go-libp2p-quic-transport.coverprofile > coverage.txt
+  - cat */*.coverprofile >> coverage.txt
+  - bash <(curl -s https://codecov.io/bash) -f coverage.txt
+
+cache:
+  directories:
+    - $GOPATH/src/gx

@@ -8,6 +8,7 @@ import (
 	"errors"
 
 	"fmt"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/base58"

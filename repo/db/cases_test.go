@@ -3,12 +3,13 @@ package db_test
 import (
 	"bytes"
 	"database/sql"
-	"gx/ipfs/QmT6n4mspWYEya864BhCUJEgyxiRfmiSY9ruQwTUNpRKaM/protobuf/proto"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/golang/protobuf/proto"
 
 	"github.com/OpenBazaar/jsonpb"
 	"github.com/OpenBazaar/openbazaar-go/pb"

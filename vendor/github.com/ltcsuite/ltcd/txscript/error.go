@@ -175,71 +175,9 @@ const (
 	// one of the supported types.
 	ErrInvalidSigHashType
 
-	// ErrSigTooShort is returned when a signature that should be a
-	// canonically-encoded DER signature is too short.
-	ErrSigTooShort
-
-	// ErrSigTooLong is returned when a signature that should be a
-	// canonically-encoded DER signature is too long.
-	ErrSigTooLong
-
-	// ErrSigInvalidSeqID is returned when a signature that should be a
-	// canonically-encoded DER signature does not have the expected ASN.1
-	// sequence ID.
-	ErrSigInvalidSeqID
-
-	// ErrSigInvalidDataLen is returned a signature that should be a
-	// canonically-encoded DER signature does not specify the correct number
-	// of remaining bytes for the R and S portions.
-	ErrSigInvalidDataLen
-
-	// ErrSigMissingSTypeID is returned a signature that should be a
-	// canonically-encoded DER signature does not provide the ASN.1 type ID
-	// for S.
-	ErrSigMissingSTypeID
-
-	// ErrSigMissingSLen is returned when a signature that should be a
-	// canonically-encoded DER signature does not provide the length of S.
-	ErrSigMissingSLen
-
-	// ErrSigInvalidSLen is returned a signature that should be a
-	// canonically-encoded DER signature does not specify the correct number
-	// of bytes for the S portion.
-	ErrSigInvalidSLen
-
-	// ErrSigInvalidRIntID is returned when a signature that should be a
-	// canonically-encoded DER signature does not have the expected ASN.1
-	// integer ID for R.
-	ErrSigInvalidRIntID
-
-	// ErrSigZeroRLen is returned when a signature that should be a
-	// canonically-encoded DER signature has an R length of zero.
-	ErrSigZeroRLen
-
-	// ErrSigNegativeR is returned when a signature that should be a
-	// canonically-encoded DER signature has a negative value for R.
-	ErrSigNegativeR
-
-	// ErrSigTooMuchRPadding is returned when a signature that should be a
-	// canonically-encoded DER signature has too much padding for R.
-	ErrSigTooMuchRPadding
-
-	// ErrSigInvalidSIntID is returned when a signature that should be a
-	// canonically-encoded DER signature does not have the expected ASN.1
-	// integer ID for S.
-	ErrSigInvalidSIntID
-
-	// ErrSigZeroSLen is returned when a signature that should be a
-	// canonically-encoded DER signature has an S length of zero.
-	ErrSigZeroSLen
-
-	// ErrSigNegativeS is returned when a signature that should be a
-	// canonically-encoded DER signature has a negative value for S.
-	ErrSigNegativeS
-
-	// ErrSigTooMuchSPadding is returned when a signature that should be a
-	// canonically-encoded DER signature has too much padding for S.
-	ErrSigTooMuchSPadding
+	// ErrSigDER is returned when a signature is not a canonically-encoded
+	// DER signature.
+	ErrSigDER
 
 	// ErrSigHighS is returned when the ScriptVerifyLowS flag is set and the
 	// script contains any signatures whose S values are higher than the
@@ -376,21 +314,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrUnbalancedConditional:              "ErrUnbalancedConditional",
 	ErrMinimalData:                        "ErrMinimalData",
 	ErrInvalidSigHashType:                 "ErrInvalidSigHashType",
-	ErrSigTooShort:                        "ErrSigTooShort",
-	ErrSigTooLong:                         "ErrSigTooLong",
-	ErrSigInvalidSeqID:                    "ErrSigInvalidSeqID",
-	ErrSigInvalidDataLen:                  "ErrSigInvalidDataLen",
-	ErrSigMissingSTypeID:                  "ErrSigMissingSTypeID",
-	ErrSigMissingSLen:                     "ErrSigMissingSLen",
-	ErrSigInvalidSLen:                     "ErrSigInvalidSLen",
-	ErrSigInvalidRIntID:                   "ErrSigInvalidRIntID",
-	ErrSigZeroRLen:                        "ErrSigZeroRLen",
-	ErrSigNegativeR:                       "ErrSigNegativeR",
-	ErrSigTooMuchRPadding:                 "ErrSigTooMuchRPadding",
-	ErrSigInvalidSIntID:                   "ErrSigInvalidSIntID",
-	ErrSigZeroSLen:                        "ErrSigZeroSLen",
-	ErrSigNegativeS:                       "ErrSigNegativeS",
-	ErrSigTooMuchSPadding:                 "ErrSigTooMuchSPadding",
+	ErrSigDER:                             "ErrSigDER",
 	ErrSigHighS:                           "ErrSigHighS",
 	ErrNotPushOnly:                        "ErrNotPushOnly",
 	ErrSigNullDummy:                       "ErrSigNullDummy",

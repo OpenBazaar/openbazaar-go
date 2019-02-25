@@ -3,8 +3,8 @@ package core
 import (
 	"crypto/sha256"
 	"errors"
-	ma "gx/ipfs/QmWWQ2Txc2c6tqjsBpzg5Ar652cHPGNsQQp2SejkNmkUMb/go-multiaddr"
-	"gx/ipfs/QmZyZDi491cCNTLfAhwcaDii2Kg4pwKRkhqQzURGDvY6ua/go-multihash"
+	"gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
+	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
 	"io/ioutil"
 	"os"
 	"path"
@@ -94,14 +94,14 @@ func (n *OpenBazaarNode) SetSelfAsModerator(moderator *pb.Moderator) error {
 		if err != nil {
 			return err
 		}
-		go ipfs.PublishPointer(n.IpfsNode, ctx, pointer)
+		go ipfs.PublishPointer(n.DHT, ctx, pointer)
 		pointer.Purpose = ipfs.MODERATOR
 		err = n.Datastore.Pointers().Put(pointer)
 		if err != nil {
 			return err
 		}
 	} else {
-		go ipfs.PublishPointer(n.IpfsNode, ctx, pointers[0])
+		go ipfs.PublishPointer(n.DHT, ctx, pointers[0])
 	}
 	return nil
 }

@@ -14,11 +14,11 @@ class SMTPTest(OpenBazaarTestFramework):
 
     def __init__(self):
         super().__init__()
-        self.num_nodes = 2
+        self.num_nodes = 3
 
     def run_test(self):
-        alice = self.nodes[0]
-        bob = self.nodes[1]
+        alice = self.nodes[1]
+        bob = self.nodes[2]
 
         # post profile for alice
         with open('testdata/profile.json') as profile_file:
@@ -142,7 +142,7 @@ Subject: [OpenBazaar] Order received
 You received an order "Ron Swanson Tshirt".
 
 Order ID: QmNiPgKNq27qQE8fRxMbtDfRcFDEYMH5wDRgdqtqoWBpGg
-Buyer: QmVQzkdi3Fq6LRFG9UNqDZfSry67weCZV6ZL26QVx64UFy
+Buyer: Qmd5qDpcYkHCmkj9pMXU9TKBqEDWgEmtoHD5xjdJgumaHg
 Thumbnail: zb2rhXn3SHBuEXkHxrupGfjKcuMewMdUJyN6jLMYDEzCyue15
 Timestamp: 1487699826
 '''

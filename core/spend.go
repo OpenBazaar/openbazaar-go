@@ -8,7 +8,7 @@ import (
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/OpenBazaar/openbazaar-go/repo"
-	wallet "github.com/OpenBazaar/wallet-interface"
+	"github.com/OpenBazaar/wallet-interface"
 	"github.com/btcsuite/btcutil"
 )
 

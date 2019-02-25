@@ -2,17 +2,20 @@ package schema
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 
+	"gx/ipfs/QmPEpj17FDRpc7K1aArKZp3RsHtzRMKykeK9GVgn4WQGPR/go-ipfs-config"
+
 	"github.com/OpenBazaar/openbazaar-go/ipfs"
-	"github.com/ipfs/go-ipfs/repo/config"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	_ "github.com/mutecomm/go-sqlcipher"
 	"github.com/tyler-smith/go-bip39"
@@ -439,6 +442,28 @@ func (m *openbazaarSchemaManager) initializeIPFSDirectoryWithConfig(c *config.Co
 	return fsrepo.Init(m.DataPath(), c)
 }
 
+func (m *openbazaarSchemaManager) CleanIdentityFromConfig() error {
+	configPath := path.Join(m.dataPath, "config")
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return err
+	}
+	var cfgIface interface{}
+	if err := json.Unmarshal(configFile, &cfgIface); err != nil {
+		return err
+	}
+	cfg, ok := cfgIface.(map[string]interface{})
+	if !ok {
+		return errors.New("invalid config file")
+	}
+	delete(cfg, "Identity")
+	out, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(configPath, out, os.ModePerm)
+}
+
 // IdentityKey will return a []byte representing a node's verifiable identity
 // based on the provided mnemonic string. If the string is empty, it will return
 // an error
@@ -484,8 +509,8 @@ func MustDefaultConfig() *config.Config {
 				"/ip4/0.0.0.0/tcp/9005/ws",
 				"/ip6/::/tcp/9005/ws",
 			},
-			API:     "",
-			Gateway: "/ip4/127.0.0.1/tcp/4002",
+			API:     []string{""},
+			Gateway: []string{"/ip4/127.0.0.1/tcp/4002"},
 		},
 
 		Datastore: config.Datastore{
@@ -534,11 +559,9 @@ func MustDefaultConfig() *config.Config {
 		},
 
 		Ipns: config.Ipns{
-			ResolveCacheSize:   128,
-			RecordLifetime:     "7d",
-			RepublishPeriod:    "24h",
-			QuerySize:          5,
-			UsePersistentCache: true,
+			ResolveCacheSize: 128,
+			RecordLifetime:   "168h",
+			RepublishPeriod:  "24h",
 		},
 
 		Gateway: config.Gateway{

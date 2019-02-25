@@ -2,14 +2,16 @@ package ipfs
 
 import (
 	"context"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
+	ipath "gx/ipfs/QmT3rzed1ppXefourpmoZ7tyVQfsGPQZ1pHDngLmCvXxd3/go-path"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"io/ioutil"
 	"strings"
 	"time"
 
+	"github.com/ipfs/go-ipfs/core/coreapi"
+	"github.com/ipfs/go-ipfs/core/coreapi/interface"
+
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/coreunix"
-	"github.com/ipfs/go-ipfs/path"
 )
 
 // Fetch data from IPFS given the hash
@@ -20,21 +22,26 @@ func Cat(n *core.IpfsNode, path string, timeout time.Duration) ([]byte, error) {
 	if !strings.HasPrefix(path, "/ipfs/") {
 		path = "/ipfs/" + path
 	}
+	api := coreapi.NewCoreAPI(n)
+	pth, err := iface.ParsePath(path)
+	if err != nil {
+		return nil, err
+	}
 
-	r, err := coreunix.Cat(ctx, n, path)
+	r, err := api.Unixfs().Get(ctx, pth)
 	if err != nil {
 		return nil, err
 	}
 	return ioutil.ReadAll(r)
 }
 
-func ResolveThenCat(n *core.IpfsNode, ipnsPath path.Path, timeout time.Duration, usecache bool) ([]byte, error) {
+func ResolveThenCat(n *core.IpfsNode, ipnsPath ipath.Path, timeout time.Duration, quorum uint, usecache bool) ([]byte, error) {
 	var ret []byte
 	pid, err := peer.IDB58Decode(ipnsPath.Segments()[0])
 	if err != nil {
 		return nil, err
 	}
-	hash, err := Resolve(n, pid, timeout, usecache)
+	hash, err := Resolve(n, pid, timeout, quorum, usecache)
 	if err != nil {
 		return ret, err
 	}
@@ -43,7 +50,7 @@ func ResolveThenCat(n *core.IpfsNode, ipnsPath path.Path, timeout time.Duration,
 	for i := 0; i < len(ipnsPath.Segments())-1; i++ {
 		p[i+1] = ipnsPath.Segments()[i+1]
 	}
-	b, err := Cat(n, path.Join(p), timeout)
+	b, err := Cat(n, ipath.Join(p), timeout)
 	if err != nil {
 		return ret, err
 	}

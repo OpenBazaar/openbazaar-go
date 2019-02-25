@@ -1,0 +1,16 @@
+{
+  "author": "google",
+  "bugs": {
+    "url": "https://github.com/google/uuid"
+  },
+  "gx": {
+    "dvcsimport": "github.com/google/uuid"
+  },
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "BSD-3-Clause",
+  "name": "uuid",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.0"
+}
+

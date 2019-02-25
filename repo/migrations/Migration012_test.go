@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gx/ipfs/QmZoWKhxUmZ2seW4BzX6fJkNR8hh9PsGModr7q171yq2SS/go-libp2p-peer"
-	"gx/ipfs/QmaPbCnUMBohSGo3KnxEa2bHqyJVVeEEcwtqJAYxerieBo/go-libp2p-crypto"
+	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"io/ioutil"
 	"os"
 	"path"
@@ -605,8 +605,8 @@ var testMigraion012_listingFixtures = []pb.SignedListing{
 }
 
 var testMigraion012_listingFixtureHashes = map[string]string{
-	"slug-4": "zb2rhYFPk5iVCTJYFoGR5gEpzKodhDWu5jESE2yzvWrCou54n",
-	"slug-5": "zb2rhbNjVXhbtKkSXbf6hpGUV2CujPTBx9jWsRJpvzKdgpwj9",
+	"slug-4": "QmXC26R4PNnArmVssrviaA4WGxP1zzmx8y2AiybF6hQpRM",
+	"slug-5": "QmaEUP6zWvZkrWAbVAvcxRiV5Fou8jQnHc4nmarAUVLoQr",
 }
 
 var testMigration012_configFixture = `{

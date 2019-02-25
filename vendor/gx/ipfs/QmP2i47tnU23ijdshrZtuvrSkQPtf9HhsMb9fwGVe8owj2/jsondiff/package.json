@@ -1,0 +1,24 @@
+{
+  "author": "elgris",
+  "name": "jsondiff",
+  "version": "0.0.0",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "language": "go",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/elgris/jsondiff"
+  },
+  "gx": {
+    "dvcsimport": "github.com/elgris/jsondiff"
+  },
+  "gxDependencies": [
+    {
+      "author": "mgutz",
+      "hash": "QmRCUXvrfEEpWfqkLKqiaXE2uVaX73MGSVjLrfHDmzygTg",
+      "name": "ansi",
+      "version": "0.0.0"
+    }
+  ],
+  "gxVersion": "0.12.1"
+}
+

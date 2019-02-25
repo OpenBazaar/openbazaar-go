@@ -46,10 +46,15 @@ config := bigcache.Config {
 		// if value is reached then the oldest entries can be overridden for the new ones
 		// 0 value means no size limit
 		HardMaxCacheSize: 8192,
-		// callback fired when the oldest entry is removed because of its
-		// expiration time or no space left for the new entry. Default value is nil which
-		// means no callback and it prevents from unwrapping the oldest entry.
+		// callback fired when the oldest entry is removed because of its expiration time or no space left
+		// for the new entry, or because delete was called. A bitmask representing the reason will be returned.
+		// Default value is nil which means no callback and it prevents from unwrapping the oldest entry.
 		OnRemove: nil,
+		// OnRemoveWithReason is a callback fired when the oldest entry is removed because of its expiration time or no space left
+		// for the new entry, or because delete was called. A constant representing the reason will be passed through.
+		// Default value is nil which means no callback and it prevents from unwrapping the oldest entry.
+		// Ignored if OnRemove is specified.
+		OnRemoveWithReason: nil,
 	}
 
 cache, initErr := bigcache.NewBigCache(config)
@@ -74,20 +79,20 @@ Benchmark tests were made using an i7-6700K with 32GB of RAM on Windows 10.
 ```bash
 cd caches_bench; go test -bench=. -benchtime=10s ./... -timeout 30m
 
-BenchmarkMapSet-8                     	 2000000	       716 ns/op	     336 B/op	       3 allocs/op
-BenchmarkConcurrentMapSet-8           	 1000000	      1292 ns/op	     347 B/op	       8 allocs/op
-BenchmarkFreeCacheSet-8               	 3000000	       501 ns/op	     371 B/op	       3 allocs/op
-BenchmarkBigCacheSet-8                	 3000000	       482 ns/op	     303 B/op	       2 allocs/op
-BenchmarkMapGet-8                     	 5000000	       309 ns/op	      24 B/op	       1 allocs/op
-BenchmarkConcurrentMapGet-8           	 2000000	       659 ns/op	      24 B/op	       2 allocs/op
-BenchmarkFreeCacheGet-8               	 3000000	       541 ns/op	     152 B/op	       3 allocs/op
-BenchmarkBigCacheGet-8                	 3000000	       420 ns/op	     152 B/op	       3 allocs/op
-BenchmarkBigCacheSetParallel-8        	10000000	       184 ns/op	     313 B/op	       3 allocs/op
-BenchmarkFreeCacheSetParallel-8       	10000000	       195 ns/op	     357 B/op	       4 allocs/op
-BenchmarkConcurrentMapSetParallel-8   	 5000000	       242 ns/op	     200 B/op	       6 allocs/op
-BenchmarkBigCacheGetParallel-8        	20000000	       100 ns/op	     152 B/op	       4 allocs/op
-BenchmarkFreeCacheGetParallel-8       	10000000	       133 ns/op	     152 B/op	       4 allocs/op
-BenchmarkConcurrentMapGetParallel-8   	10000000	       202 ns/op	      24 B/op	       2 allocs/op
+BenchmarkMapSet-8                        3000000               569 ns/op             202 B/op          3 allocs/op
+BenchmarkConcurrentMapSet-8              1000000              1592 ns/op             347 B/op          8 allocs/op
+BenchmarkFreeCacheSet-8                  3000000               775 ns/op             355 B/op          2 allocs/op
+BenchmarkBigCacheSet-8                   3000000               640 ns/op             303 B/op          2 allocs/op
+BenchmarkMapGet-8                        5000000               407 ns/op              24 B/op          1 allocs/op
+BenchmarkConcurrentMapGet-8              3000000               558 ns/op              24 B/op          2 allocs/op
+BenchmarkFreeCacheGet-8                  2000000               682 ns/op             136 B/op          2 allocs/op
+BenchmarkBigCacheGet-8                   3000000               512 ns/op             152 B/op          4 allocs/op
+BenchmarkBigCacheSetParallel-8          10000000               225 ns/op             313 B/op          3 allocs/op
+BenchmarkFreeCacheSetParallel-8         10000000               218 ns/op             341 B/op          3 allocs/op
+BenchmarkConcurrentMapSetParallel-8      5000000               318 ns/op             200 B/op          6 allocs/op
+BenchmarkBigCacheGetParallel-8          20000000               178 ns/op             152 B/op          4 allocs/op
+BenchmarkFreeCacheGetParallel-8         20000000               295 ns/op             136 B/op          3 allocs/op
+BenchmarkConcurrentMapGetParallel-8     10000000               237 ns/op              24 B/op          2 allocs/op
 ```
 
 Writes and reads in bigcache are faster than in freecache.
