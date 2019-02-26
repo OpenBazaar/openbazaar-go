@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	dht "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
 	dhtopts "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht/opts"
 	ma "gx/ipfs/QmT4U94DnD8FRfqr21obWY32HLM5VExccPKMjQHofeYqr9/go-multiaddr"
@@ -16,7 +15,6 @@ import (
 	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
 	p2phost "gx/ipfs/QmdJfsSbKSZnMkfZ1kpopiyB9i3Hd6cp8VKWZmtWPa7Moc/go-libp2p-host"
 	proto "gx/ipfs/QmdxUuburamoF6zF9qjeQC4WYcWGbWuRmdLacMEsW8ioD8/gogo-protobuf/proto"
-
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -52,9 +50,8 @@ import (
 	"github.com/ipfs/go-ipfs/core/corehttp"
 	"github.com/ipfs/go-ipfs/namesys"
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
-	"github.com/natefinch/lumberjack"
-	logging "github.com/op/go-logging"
-	bip39 "github.com/tyler-smith/go-bip39"
+	"github.com/op/go-logging"
+	"github.com/tyler-smith/go-bip39"
 )
 
 // Node configuration structure
@@ -92,18 +89,9 @@ func NewNodeWithConfig(config *NodeConfig, password string, mnemonic string) (*N
 	os.Remove(repoLockFile)
 
 	// Logging
-	w := &lumberjack.Logger{
-		Filename:   path.Join(config.RepoPath, "logs", "ob.log"),
-		MaxSize:    10, // Megabytes
-		MaxBackups: 3,
-		MaxAge:     30, // Days
-	}
-	backendFile := logging.NewLogBackend(w, "", 0)
-	backendFileFormatter := logging.NewBackendFormatter(backendFile, fileLogFormat)
-
 	backendStdout := logging.NewLogBackend(os.Stdout, "", 0)
-	backendStdoutFormatter := logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
-	logging.SetBackend(backendFileFormatter, backendStdoutFormatter)
+	logger = logging.NewBackendFormatter(backendStdout, stdoutLogFormat)
+	logging.SetBackend(logger)
 
 	migrations.WalletCoinType = config.CoinType
 
