@@ -20,7 +20,8 @@ var (
 	ErrCurrencyDivisibilityNonPositive = errors.New("currency divisibility most be greater than zero")
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
 
-	mainnetCurrencyDefinitions = map[string]*CurrencyDefinition{
+	validatedMainnetCurrencyDefs map[string]*CurrencyDefinition
+	mainnetCurrencyDefinitions   = map[string]*CurrencyDefinition{
 		// Crypto
 		"BTC": {Name: "Bitcoin", Code: CurrencyCode("BTC"), CurrencyType: Crypto, Divisibility: 8},
 		"BCH": {Name: "Bitcoin Cash", Code: CurrencyCode("BCH"), CurrencyType: Crypto, Divisibility: 8},
@@ -230,8 +231,11 @@ func (c CurrencyDictionaryProcessingError) Error() string {
 // LoadCurrencyDefinitions returns the mainnet CurrencyDictionary singleton which
 // references all pre-defined mainnet CurrencyDefinitions
 func LoadCurrencyDefinitions() CurrencyDictionary {
-	dict, _ := NewCurrencyDictionary(mainnetCurrencyDefinitions)
-	return dict
+	if validatedMainnetCurrencyDefs == nil {
+		dict, _ := NewCurrencyDictionary(mainnetCurrencyDefinitions)
+		validatedMainnetCurrencyDefs = dict
+	}
+	return validatedMainnetCurrencyDefs
 }
 
 // NewCurrencyDictionary returns a CurrencyDictionary for managing CurrencyDefinitions
