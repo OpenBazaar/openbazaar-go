@@ -470,8 +470,10 @@ func (n *OpenBazaarNode) CloseDispute(orderID string, buyerPercentage, vendorPer
 	preferredContract := dispute.ResolutionPaymentContract(payDivision)
 
 	// TODO: Remove once broken contracts are migrated
-	if _, err := repo.NewCurrencyCode(preferredContract.BuyerOrder.Payment.Coin); err != nil {
-		log.Warningf("missing contract BuyerOrder.Payment.Coin on order (%s)", orderID)
+	paymentCoin := preferredContract.BuyerOrder.Payment.Coin
+	_, err = repo.LoadCurrencyDefinitions().Lookup(paymentCoin)
+	if err != nil {
+		log.Warningf("invalid BuyerOrder.Payment.Coin (%s) on order (%s)", paymentCoin, orderID)
 		preferredContract.BuyerOrder.Payment.Coin = paymentCoinHint.String()
 	}
 

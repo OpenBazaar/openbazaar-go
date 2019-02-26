@@ -1022,7 +1022,23 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		return amount, nil
 	}
 
-	originValue, err := repo.NewCurrencyValueFromUint(amount, currencyCode)
+	var (
+		currencyDict             = repo.LoadCurrencyDefinitions()
+		originCurrencyDef, oErr  = currencyDict.Lookup(currencyCode)
+		paymentCurrencyDef, pErr = currencyDict.Lookup(paymentCoin)
+		reserveCurrencyDef, rErr = currencyDict.Lookup(reserveCurrency)
+	)
+	if oErr != nil {
+		return 0, fmt.Errorf("invalid listing currency code: %s", oErr.Error())
+	}
+	if pErr != nil {
+		return 0, fmt.Errorf("invalid payment currency code: %s", pErr.Error())
+	}
+	if rErr != nil {
+		return 0, fmt.Errorf("invalid reserve currency code: %s", rErr.Error())
+	}
+
+	originValue, err := repo.NewCurrencyValueFromUint(amount, originCurrencyDef)
 	if err != nil {
 		return 0, fmt.Errorf("parsing amount: %s", err.Error())
 	}
@@ -1053,11 +1069,11 @@ func (n *OpenBazaarNode) getPriceInSatoshi(paymentCoin, currencyCode string, amo
 		}
 	}
 
-	reserveValue, err := originValue.ConvertTo(reserveCurrency, originIntoReserveRate)
+	reserveValue, err := originValue.ConvertTo(reserveCurrencyDef, originIntoReserveRate)
 	if err != nil {
 		return 0, fmt.Errorf("converting to reserve: %s", err.Error())
 	}
-	resultValue, err := reserveValue.ConvertTo(paymentCoin, reserveIntoResultRate)
+	resultValue, err := reserveValue.ConvertTo(paymentCurrencyDef, reserveIntoResultRate)
 	if err != nil {
 		return 0, fmt.Errorf("converting from reserve: %s", err.Error())
 	}

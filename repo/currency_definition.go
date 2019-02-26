@@ -15,7 +15,7 @@ const (
 var (
 	ErrCurrencyCodeLengthInvalid       = errors.New("invalid length for currency code, must be three characters or four characters and begin with a 'T'")
 	ErrCurrencyCodeTestSymbolInvalid   = errors.New("invalid test indicator for currency code, four characters must begin with a 'T'")
-	ErrCurrencyUndefined               = errors.New("currency code undefined")
+	ErrCurrencyDefinitionUndefined     = errors.New("currency definition is not defined")
 	ErrCurrencyTypeInvalid             = errors.New("currency type must be crypto or fiat")
 	ErrCurrencyDivisibilityNonPositive = errors.New("currency divisibility most be greater than zero")
 	ErrDictionaryIndexMismatchedCode   = errors.New("dictionary index mismatched with definition currency code")
@@ -190,15 +190,21 @@ var (
 )
 
 type (
-	CurrencyCode       string
+	// CurrencyCode is a string-based currency symbol
+	CurrencyCode string
+	// CurrencyDefinition defines the characteristics of a currency
 	CurrencyDefinition struct {
 		Name         string
 		Code         CurrencyCode
 		Divisibility uint
 		CurrencyType string
 	}
+	// CurrencyDictionaryProcessingError represents a list of errors after
+	// processing a CurrencyDictionary
 	CurrencyDictionaryProcessingError map[string]error
-	CurrencyDictionary                map[string]*CurrencyDefinition
+	// CurrencyDictionary represents a collection of CurrencyDefinitions keyed
+	// by their CurrencyCode in string form
+	CurrencyDictionary map[string]*CurrencyDefinition
 )
 
 // String returns a readable representation of CurrencyCode
@@ -213,6 +219,9 @@ func (c *CurrencyDefinition) String() string {
 	}
 	return c.Code.String()
 }
+
+// CurrencyCode returns the CurrencyCode of the definition
+func (c *CurrencyDefinition) CurrencyCode() *CurrencyCode { return &c.Code }
 
 func (c CurrencyDictionaryProcessingError) Error() string {
 	return fmt.Sprintf("dictionary contains %d invalid definitions", len(c))
@@ -245,6 +254,9 @@ func NewCurrencyDictionary(defs map[string]*CurrencyDefinition) (CurrencyDiction
 }
 
 func (c *CurrencyDefinition) Valid() error {
+	if c == nil {
+		return ErrCurrencyDefinitionUndefined
+	}
 	if len(c.Code) < CurrencyCodeValidMinimumLength || len(c.Code) > CurrencyCodeValidMaximumLength {
 		return ErrCurrencyCodeLengthInvalid
 	}
@@ -261,11 +273,54 @@ func (c *CurrencyDefinition) Valid() error {
 	return nil
 }
 
-// LookupCurrencyDefinition returns the CurrencyDefinition out of the loaded dictionary
+// Equal indicates if the receiver and other have the same code
+// and divisibility
+func (c *CurrencyDefinition) Equal(other *CurrencyDefinition) bool {
+	if c == nil || other == nil {
+		return false
+	}
+	if c.Code != other.Code {
+		return false
+	}
+	if c.Divisibility != other.Divisibility {
+		return false
+	}
+	if c.CurrencyType != other.CurrencyType {
+		return false
+	}
+	return true
+}
+
+// LookupCurrencyDefinition returns the CurrencyDefinition out of the loaded dictionary.
+// Lookup normalizes the code before lookup and recommends using CurrencyDefinition.Code
+// from the response as a normalized code.
 func (c CurrencyDictionary) Lookup(code string) (*CurrencyDefinition, error) {
-	def, ok := c[code]
+	var (
+		upcase    = strings.ToUpper(code)
+		isTestnet = strings.HasPrefix(upcase, "T")
+
+		def *CurrencyDefinition
+		ok  bool
+	)
+	if isTestnet {
+		def, ok = c[strings.TrimPrefix(upcase, "T")]
+	} else {
+		def, ok = c[upcase]
+	}
 	if !ok {
-		return nil, ErrCurrencyUndefined
+		return nil, ErrCurrencyDefinitionUndefined
+	}
+	if isTestnet {
+		return NewTestnetDefinition(def), nil
 	}
 	return def, nil
+}
+
+func NewTestnetDefinition(def *CurrencyDefinition) *CurrencyDefinition {
+	return &CurrencyDefinition{
+		Name:         def.Name,
+		Code:         CurrencyCode(fmt.Sprintf("T%s", def.Code)),
+		Divisibility: def.Divisibility,
+		CurrencyType: def.CurrencyType,
+	}
 }
