@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+
 	cid "gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	"gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
 	libp2p "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
@@ -9,9 +10,8 @@ import (
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
 	routing "gx/ipfs/QmcQ81jSyWCp1jpkQ8CMbtpXT3jK7Wg6ZtYmoyWFgBoF9c/go-libp2p-routing"
-	"net/url"
+
 	"path"
-	"strings"
 	"sync"
 	"time"
 
@@ -23,9 +23,9 @@ import (
 	"github.com/OpenBazaar/openbazaar-go/repo"
 	sto "github.com/OpenBazaar/openbazaar-go/storage"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/gosimple/slug"
 	"github.com/ipfs/go-ipfs/core"
-	"github.com/kennygrant/sanitize"
-	"github.com/op/go-logging"
+	logging "github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"golang.org/x/net/proxy"
 )
@@ -272,7 +272,7 @@ func (n *OpenBazaarNode) SetUpRepublisher(interval time.Duration) {
   For now we will just encrypt outgoing offline messages with the long lived identity key.
   Optionally you may provide a public key, to avoid doing an IPFS lookup */
 func (n *OpenBazaarNode) EncryptMessage(peerID peer.ID, peerKey *libp2p.PubKey, message []byte) (ct []byte, rerr error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), n.OfflineMessageFailoverTimeout)
 	defer cancel()
 	if peerKey == nil {
 		var pubKey libp2p.PubKey
@@ -308,11 +308,13 @@ func (n *OpenBazaarNode) IPFSIdentityString() string {
 	return n.IpfsNode.Identity.Pretty()
 }
 
-// createSlugFor Create a slug from a string
+// createSlugFor Create a slug from a multi-lang string
 func createSlugFor(slugName string) string {
 	l := SentenceMaxCharacters - SlugBuffer
-	if len(slugName) < SentenceMaxCharacters-SlugBuffer {
-		l = len(slugName)
+
+	slug := slug.Make(slugName)
+	if len(slug) < SentenceMaxCharacters-SlugBuffer {
+		l = len(slug)
 	}
-	return url.QueryEscape(sanitize.Path(strings.ToLower(slugName[:l])))
+	return slug[:l]
 }

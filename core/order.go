@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+
 	"strconv"
 	"strings"
 	"time"
@@ -580,7 +582,7 @@ func (n *OpenBazaarNode) createContractWithOrder(data *PurchaseData) (*pb.Ricard
 				delete(listingOptions, strings.ToLower(uopt.Name))
 			}
 			if len(listingOptions) > 0 {
-				return nil, errors.New("Not all options were selected")
+				return nil, errors.New("not all options were selected")
 			}
 
 			for _, option := range item.Options {
@@ -856,7 +858,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 						}
 						itemTotal -= satoshis
 					} else if discount := vendorCoupon.GetPercentDiscount(); discount > 0 {
-						itemTotal -= uint64((float32(itemTotal) * (discount / 100)))
+						itemTotal -= uint64(float32(itemTotal) * (discount / 100))
 					}
 				}
 			}
@@ -865,7 +867,7 @@ func (n *OpenBazaarNode) CalculateOrderTotal(contract *pb.RicardianContract) (ui
 		for _, tax := range l.Taxes {
 			for _, taxRegion := range tax.TaxRegions {
 				if contract.BuyerOrder.Shipping.Country == taxRegion {
-					itemTotal += uint64((float32(itemTotal) * (tax.Percentage / 100)))
+					itemTotal += uint64(float32(itemTotal) * (tax.Percentage / 100))
 					break
 				}
 			}
@@ -977,7 +979,7 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 	}
 
 	if len(is) == 1 {
-		shippingTotal = (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100)
+		shippingTotal = is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100
 		if is[0].quantity > 1 {
 			if is[0].version == 1 {
 				shippingTotal += (is[0].primary * uint64(((1+is[0].shippingTaxPercentage)*100)+.5) / 100) * (is[0].quantity - 1)
@@ -999,8 +1001,8 @@ func (n *OpenBazaarNode) calculateShippingTotalForListings(contract *pb.Ricardia
 		}
 		shippingTotal += (s.secondary * uint64(((1+s.shippingTaxPercentage)*100)+.5) / 100) * s.quantity
 	}
-	shippingTotal -= (is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
-	shippingTotal += (is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100)
+	shippingTotal -= is[i].primary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100
+	shippingTotal += is[i].secondary * uint64(((1+is[i].shippingTaxPercentage)*100)+.5) / 100
 
 	return shippingTotal, nil
 }

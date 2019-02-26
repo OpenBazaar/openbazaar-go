@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -106,7 +108,7 @@ func (n *OpenBazaarNode) IPNSResolve(peerID string, timeout time.Duration, useca
 		}
 		if !id.MatchesPublicKey(pubkey) {
 			log.Error(err)
-			return "", fmt.Errorf("Invalid key. Does not hash to %s", peerID)
+			return "", fmt.Errorf("invalid key. Does not hash to %s", peerID)
 		}
 
 		p, err := ipath.ParsePath(rec.Record)

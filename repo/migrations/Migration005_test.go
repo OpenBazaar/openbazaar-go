@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testConfig5 string = `{
+var testConfig5 = `{
     "Ipns": {
 	    "QuerySize": 5,
 	    "RecordLifetime": "7d",

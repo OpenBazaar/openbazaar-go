@@ -293,6 +293,12 @@ const inventoryUpdateJSON = `[{
 }]`
 
 //
+// Bulk Update Currency
+//
+
+const bulkUpdateCurrencyJSON = ` { "currencies":["ZEC", "BTC", "BCH", "LTC"] }`
+
+//
 // Moderation
 //
 

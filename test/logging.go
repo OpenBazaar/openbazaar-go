@@ -3,7 +3,7 @@ package test
 import (
 	"os"
 
-	logging "github.com/op/go-logging"
+	"github.com/op/go-logging"
 )
 
 func NewLogger() logging.LeveledBackend {

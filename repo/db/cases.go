@@ -175,7 +175,7 @@ func (c *CasesDB) MarkAsUnread(orderID string) error {
 
 func (c *CasesDB) MarkAsClosed(caseID string, resolution *pb.DisputeResolution) error {
 	if resolution == nil {
-		return errors.New("Dispute resolution should not be nil")
+		return errors.New("dispute resolution should not be nil")
 	}
 	m := jsonpb.Marshaler{
 		EnumsAsInts:  false,

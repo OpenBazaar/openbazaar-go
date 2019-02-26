@@ -8,12 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+
 	"gx/ipfs/QmPSQnBKM9g7BaUcZCvswUJVscQ1ipjmwxN5PXCjkp9EQ7/go-cid"
 	mh "gx/ipfs/QmPnFwZ2JXKnXgMw8CdBPxn7FWh6LLdjUjxV1fKHuJnkr8/go-multihash"
 	routing "gx/ipfs/QmPpYHPRGVpSJTkQDQDwTYZ1cYUR2NM4HS6M3iAXi8aoUa/go-libp2p-kad-dht"
 	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 	ps "gx/ipfs/QmTTJcDL3gsnGDALjh2fDGg1onGRUdVgNL2hU2WEZcVrMX/go-libp2p-peerstore"
 	"gx/ipfs/QmaRb5yNXKonhbkpNxNawoydk4N6es6b4fPj19sjEKsh5D/go-datastore"
+
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -45,6 +47,7 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
+
 	"github.com/ipfs/go-ipfs/repo/fsrepo"
 )
 
@@ -538,7 +541,7 @@ func (i *jsonAPIHandler) PUTListing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = i.node.UpdateListing(ld)
+	err = i.node.UpdateListing(ld, true)
 	if err != nil {
 		if err == core.ErrListingDoesNotExist {
 			ErrorResponse(w, http.StatusNotFound, "Listing not found.")
@@ -1167,7 +1170,7 @@ func (i *jsonAPIHandler) GETInventory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// If we want our own inventory get it from the local database and return
-	getPersonalInventory := (peerIDString == "" || peerIDString == i.node.IPFSIdentityString())
+	getPersonalInventory := peerIDString == "" || peerIDString == i.node.IPFSIdentityString()
 	if getPersonalInventory {
 		var (
 			err       error
@@ -1395,25 +1398,15 @@ func (i *jsonAPIHandler) GETListing(w http.ResponseWriter, r *http.Request) {
 			}
 			sl.Hash = hash
 		}
+
 		savedCoupons, err := i.node.Datastore.Coupons().Get(sl.Listing.Slug)
 		if err != nil {
-			ErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		for _, coupon := range sl.Listing.Coupons {
-			for _, c := range savedCoupons {
-				if coupon.GetHash() == c.Hash {
-					coupon.Code = &pb.Listing_Coupon_DiscountCode{c.Code}
-					break
-				}
-			}
-		}
-		if sl.Listing.Metadata != nil && sl.Listing.Metadata.Version == 1 {
-			for _, so := range sl.Listing.ShippingOptions {
-				for _, ser := range so.Services {
-					ser.AdditionalItemPrice = ser.Price
-				}
-			}
+		err = core.AssignMatchingCoupons(savedCoupons, sl)
+		if err != nil {
+			ErrorResponse(w, http.StatusNotFound, "Could not apply coupons to listing.")
+			return
 		}
 
 		out, err := m.MarshalToString(sl)
@@ -3264,7 +3257,7 @@ func (i *jsonAPIHandler) GETEstimateFee(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 	}
-	fmt.Fprintf(w, `{"estimatedFee": %d}`, (fee))
+	fmt.Fprintf(w, `{"estimatedFee": %d}`, fee)
 }
 
 func (i *jsonAPIHandler) GETFees(w http.ResponseWriter, r *http.Request) {
@@ -3765,6 +3758,35 @@ func (i *jsonAPIHandler) GETPeerInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	SanitizedResponse(w, string(out))
+}
+
+func (i *jsonAPIHandler) POSTBulkUpdateCurrency(w http.ResponseWriter, r *http.Request) {
+	// Retrieve attribute and values to update
+	type BulkUpdateRequest struct {
+		Currencies []string `json:"currencies"`
+	}
+
+	var bulkUpdate BulkUpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&bulkUpdate)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	// Check for no currencies selected
+	if len(bulkUpdate.Currencies) == 0 {
+		SanitizedResponse(w, `{"success": "false", "reason":"No currencies specified"}`)
+		return
+	}
+
+	log.Info("Updating currencies for all listings to: ", bulkUpdate.Currencies)
+	err = i.node.SetCurrencyOnListings(bulkUpdate.Currencies)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	SanitizedResponse(w, `{"success": "true"}`)
 }
 
 // POSTS

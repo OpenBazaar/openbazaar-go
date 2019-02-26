@@ -67,8 +67,8 @@ func (x *GenerateCertificates) Execute(args []string) error {
 	}
 
 	// Check if host ip or dns name and count their quantity
-	ipAddresses := []net.IP{}
-	dnsNames := []string{}
+	var ipAddresses []net.IP
+	var dnsNames []string
 	hosts := strings.Split(x.Host, ",")
 	for _, h := range hosts {
 		if ip := net.ParseIP(h); ip != nil {
