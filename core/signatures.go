@@ -1,13 +1,18 @@
 package core
 
 import (
-	"gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
-	"gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
+	"errors"
+	"fmt"
+
+	crypto "gx/ipfs/QmPvyPwuCgJ7pDmrKDxRtsScJgBaM5h4EpRL2qQJsmXf4n/go-libp2p-crypto"
+	peer "gx/ipfs/QmTRhk7cgjUf2gfQ3p2M9KPECNZEW9XUrmHcFCgog4cPgB/go-libp2p-peer"
 
 	"github.com/OpenBazaar/openbazaar-go/pb"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/golang/protobuf/proto"
 )
+
+var ErrInvalidKey = errors.New("invalid key")
 
 type noSigError struct{}
 type invalidSigError struct{}
@@ -90,4 +95,48 @@ func selectSignature(signatures []*pb.Signature, sigType pb.Signature_Section) (
 		}
 	}
 	return sig, err
+}
+
+// SignPayload produces a signature for the given private key and payload
+// and returns it and the public key or an error
+func SignPayload(payload []byte, privKey crypto.PrivKey) ([]byte, []byte, error) {
+	if privKey == nil {
+		return nil, nil, ErrInvalidKey
+	}
+	var (
+		sig, sErr    = privKey.Sign(payload)
+		pubkey, pErr = privKey.GetPublic().Bytes()
+	)
+	if sErr != nil {
+		return nil, nil, fmt.Errorf("signing payload: %s", sErr.Error())
+	}
+	if pErr != nil {
+		return nil, nil, fmt.Errorf("getting pub key: %s", pErr.Error())
+	}
+	return sig, pubkey, nil
+}
+
+// VerifyPayload proves the payload and signature are authentic
+// for the provided public key and returns the peer ID for that
+// pubkey with no error on success
+func VerifyPayload(payload, sig, pubKey []byte) (string, error) {
+	if len(pubKey) == 0 {
+		return "", ErrInvalidKey
+	}
+	pk, err := crypto.UnmarshalPublicKey(pubKey)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = pk.Verify(payload, sig)
+	if err != nil {
+		return "", err
+	}
+
+	peerID, err := peer.IDFromPublicKey(pk)
+	if err != nil {
+		return "", err
+	}
+
+	return peerID.Pretty(), nil
 }
